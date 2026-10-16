@@ -45,3 +45,14 @@ the draw helper on the appropriate final player view.
 identities and standalone compile/run commands for the original runtime isolation
 harness. It uses a separately supplied ROM and native-port checkout. Its bounded
 isolation result does not prove two players share one world.
+
+## Loopback transport helper
+
+[transport/README.md](transport/README.md) documents a standalone C11/POSIX
+framing and compatibility-handshake helper. Run `make -C transport test` for its
+two real-TCP test executables. Independent raw peers and six compile-success
+mutations check framing, compatibility, sequence replay and short-I/O handling.
+
+The helper binds and connects only to literal `127.0.0.1`. Gameplay integration,
+session security, reconnect resync, fault conditions and friend connectivity are
+still pending. It does not implement host/join for the game.

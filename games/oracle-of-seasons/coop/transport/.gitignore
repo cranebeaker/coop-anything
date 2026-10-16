@@ -1,0 +1,4 @@
+/tests/test_net
+/tests/test_short_write
+/tests/*.log
+/tests/__pycache__/

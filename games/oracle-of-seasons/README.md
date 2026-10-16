@@ -83,6 +83,9 @@ Results from 2026-10-16:
   the final guard rebuild. This ordinary-Link/sword slice does not cover travel,
   general items, dialogue or a campaign. See [NOTES.md](NOTES.md) for boundaries
   and remaining regression-test gaps.
+- Original [loopback transport helper](coop/transport/README.md): two real-TCP
+  test executables passed, with a failing baseline and six detected mutation
+  controls. This covers bounded transport plumbing, not game-client networking.
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:
   105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
   Marker rendering inside the

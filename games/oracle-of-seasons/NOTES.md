@@ -182,3 +182,25 @@
 - Simultaneous swords dispatch one collision effect in the tested case. A
   nonlethal target/HP comparison against a single-owner control is still needed
   to make that exact damage outcome an independent regression test.
+
+## 2026-10-16: original transport helper gate
+
+### Observed
+
+- The original [loopback transport helper](coop/transport/README.md) passed
+  independent implementation and behavioral-test review. Two real-TCP test
+  executables passed compatibility, malformed-peer, framing, replay, slot
+  reservation, reconnect sequence, backpressure, EOF and short-I/O cases.
+- The exported public copy also passed both test executables. Its preserved
+  buildable baseline and six compile-success mutations each failed through
+  normal behavioral assertions, including guest-direction validation and
+  unsent-tail loss. Compile errors and signal deaths were not counted.
+- Listeners and connectors accept only literal `127.0.0.1`; test listeners use
+  ephemeral ports and verify cleanup. Payloads are opaque and bounded. This
+  gate neither supplies nor tests a shared-world game adapter.
+
+### Still pending
+
+- Real native game clients, authoritative view/event encoding, reconnect
+  resynchronization, security, fault-condition gameplay tests and friend
+  reachability remain open. The helper does not make co-op playable.
