@@ -9,7 +9,7 @@ steps, comparing sampled RAM, rendered pixels and renderer history.
 
 ## Prerequisites and fixture identity
 
-Use Linux x86-64, a C compiler, CMake, and a separate native-port checkout at
+Use Linux x86-64, a C11 compiler and a C++ compiler, CMake 3.25 or later, and a separate native-port checkout at
 `533860de269e0e9b338e12f3484ce8497367e6ed`. Supply your own valid Seasons
 USA/Australia revision 0 ROM, named exactly:
 
