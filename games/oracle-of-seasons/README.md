@@ -5,8 +5,8 @@
 | Engine | Original Game Boy Color game, through the native C port |
 | Versions tested | USA/Australia revision 0; native source `533860de269e0e9b338e12f3484ce8497367e6ed`; Linux x86-64 |
 | Projects | [Native port](https://github.com/kirby-letsgo/oracles-decomp), [Oracles randomizer multiworld](https://jangle.dev/oracles-randomizer/manual.html#multiworld) |
-| Co-op QA level | none; native baseline and feasibility harness results below |
-| Last updated | 2026-10-16 |
+| Co-op QA level | none; bounded native room/campaign and helper results below |
+| Last updated | 2026-10-17 |
 
 ## Where things stand
 
@@ -54,8 +54,9 @@ Research, the design, and the implementation plan are recorded in this repositor
 The native source and game-derived fixtures stay in ignored local workspaces.
 The [original runtime harness and marker helpers](coop/README.md) are included
 here. They have been tested but do not add a playable multiplayer mode. Separate
-experimental native changes passed a bounded same-room gameplay gate; they are
-not yet packaged or integrated with host/join.
+experimental native changes passed bounded same-room and room/campaign gates;
+the engine adaptations and tests are not yet packaged/exported here or integrated
+with host/join.
 
 ## QA
 
@@ -83,6 +84,19 @@ Results from 2026-10-16 and 2026-10-17:
   the final guard rebuild. This ordinary-Link/sword slice does not cover travel,
   general items, dialogue or a campaign. See [NOTES.md](NOTES.md) for boundaries
   and remaining regression-test gaps.
+- A later bounded native room/campaign slice passed independent spec and quality
+  review. It covers split/return while the partner fights or pushes, shared
+  Satchel/Ember use, owner-only dialogue, mixed door transitions, contested
+  resources/chests, death/potion cases, atomic seasons and malformed saves.
+  Occupied enemies, blocks, scripts, fibers and clocks survive return. Final
+  affected checks passed 37/37 (34 scenarios plus players/runtime/binary); a
+  later stronger death assertion passed 1/1. The last full run was 47 passes,
+  7 skips and 3 failures: its diagnostic-wording failure was corrected; the two
+  others match the original baseline. The full suite was not rerun after the
+  narrow fix. Existing SDL libdecor CMake and upstream compiler warnings remain.
+  Save restoration is proven only for the exact Linux x86-64 little-endian
+  non-PIE build, without cross-build or arbitrary PIE/ASLR portability. See
+  [NOTES.md](NOTES.md) for admission limits and remaining campaign gates.
 - Original [loopback transport helper](coop/transport/README.md): two real-TCP
   test executables passed, with a failing baseline and six detected mutation
   controls. This covers bounded transport plumbing, not game-client networking.
@@ -95,8 +109,8 @@ Results from 2026-10-16 and 2026-10-17:
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:
   105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
   Marker rendering inside the
-  native game, shared-world gameplay, two-client networking and a co-op campaign
-  have not yet passed their gates.
+  native game, real two-client networking and a co-op campaign have not yet
+  passed their gates.
 
 ## How to play
 
@@ -106,15 +120,19 @@ game saves or decompiled game source are distributed in this playbook.
 
 ## Known issues
 
-There is no host/join package. The native two-Link fixture is limited to ordinary
-sword gameplay through in-engine bot drivers. Independent travel, shared campaign
-transactions, save compatibility, dialogue, seasons, bosses, reconnects and
-Internet reachability remain unverified.
+There is no host/join package. Native coverage remains a bounded bot-driven
+slice: enabled normal Link plus tested death/hazard/item/entry adapters,
+sword/Satchel with Ember seeds, native Satchel/small-key treasures, and limited
+ordinary edges/entries. General tools, treasures, scripts and campaign coverage
+remain open. Real clients, presence/rejoin, media and live Steam remain unverified.
 
 ## Next steps
 
-Complete independent occupied-room travel and shared campaign transactions, then
-integrate per-player views and native Steam Host/Invite/Join controls. The passing
-standalone helpers and bounded same-room fixture remain separate from those
-playable-package gates. Track progress in
+Complete per-player presentation, HUD/inventory and offscreen-marker integration,
+then native Steam Host/Invite/Join controls and real two-client validation.
+Campaign gates still include bosses/essences, capacities/maps/compasses,
+Rod/stumps, companions/transformations and fresh Din/troupe global scenes.
+Package and export the reviewed engine adaptations separately from the public
+marker/transport/Steam/patch helpers; complete campaign bot coverage before
+claiming campaign playability. Track progress in
 [claim issue #1](https://github.com/cranebeaker/coop-anything/issues/1).

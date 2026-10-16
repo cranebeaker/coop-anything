@@ -263,3 +263,46 @@
 - These are mock transport-boundary results. Native clients, actual Steam
   authentication, a visible invite flow and two-account Internet reachability
   remain unverified. No real Steam account or API was exercised by this work.
+
+## 2026-10-17: bounded native room/campaign observations
+
+### Observed
+
+- The bounded native slice passed independent spec and quality review after
+  fixing death during pending cold travel and checking restored queued dialogue,
+  pickups and chests through completion, including a fresh process execution.
+- Native P2 split rooms while P1 fought/pushed; the original Satchel unlock
+  reached absent P1, who equipped it and spent an Ember seed. Dialogue accepted
+  only its owner's input. Return preserved occupied enemies, blocks, scripts,
+  fibers and clocks. Cases covered sixteen mixed door transitions, concurrent
+  final-key/seed and chest claims, individual/both-player death and potion use,
+  original room-pack atomic season changes, unsafe water and malformed saves.
+- Shared progress uses typed claims, events and resources with physical room
+  identity. A parked pre-gameplay loader is bound to its actual stable owner;
+  shared world work steps once. Progress is not merged by whole-RAM OR.
+  Measured cold graphics took two logic ticks/three LCD frames; this does not
+  establish general one-to-one cold-travel timing.
+- Final affected checks passed 37/37: 34 scenarios plus native players, runtime
+  and binary checks. A later test-only stronger death assertion passed 1/1.
+  The last full baseline-containing run was 47 passes, 7 skips and 3 failures.
+  Its diagnostic-wording failure was corrected; the other two match the original
+  mods/app_menus baseline. The full suite was not rerun after the narrow fix.
+  Existing SDL libdecor CMake and upstream compiler warnings remain disclosed.
+- Save proof applies to the exact Linux x86-64 little-endian non-PIE build.
+  Arbitrary PIE/ASLR and cross-build save portability are unproven.
+
+### Still pending
+
+- Admission covers enabled normal Link and the tested death/hazard/item/entry
+  adapters, sword/Satchel with Ember seeds, native Satchel/small-key treasures
+  and limited ordinary edges/entry variants. There is no complete tool, treasure,
+  script or campaign registry. Boss completion/essences, capacities/maps/compasses,
+  Rod/stump use, companions/transformations and fresh Din/troupe global scenes
+  remain integration gates.
+- Per-player presentation, own HUD/inventory and offscreen-marker integration
+  are being implemented and remain unproven. Engine adaptations/tests are not
+  yet packaged/exported in this playbook; the public marker, transport, Steam
+  and patch helpers remain separate.
+- Real two-client play, presence/rejoin, media, native Steam controls, live
+  Internet and a campaign bot remain open. Co-op QA stays `none`; these bounded
+  native observations do not establish a playable package or full campaign.
