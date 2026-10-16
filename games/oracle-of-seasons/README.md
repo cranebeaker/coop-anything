@@ -86,6 +86,11 @@ Results from 2026-10-16:
 - Original [loopback transport helper](coop/transport/README.md): two real-TCP
   test executables passed, with a failing baseline and six detected mutation
   controls. This covers bounded transport plumbing, not game-client networking.
+- Original [Steam adapter](coop/steam/README.md): mock-only two-process tests
+  passed, with eight detected mutations after independent review. Steam invites
+  are the selected Internet path; live integration remains unverified.
+- Original [source-patch utility](coop/patch-tools/README.md): 28 toy tests and
+  five detected mutations passed. No generated native-source manifest is included.
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:
   105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
   Marker rendering inside the
@@ -107,8 +112,8 @@ Internet reachability remain unverified.
 
 ## Next steps
 
-Prove two actual players in one room with original movement, walls, pushblocks,
-weapons, enemy targeting and independent incoming damage, while advancing the
-world once. Then test split/rejoin room ownership and shared abilities before
-building host/join transport and the playable package. Track progress in
+Complete independent occupied-room travel and shared campaign transactions, then
+integrate per-player views and native Steam Host/Invite/Join controls. The passing
+standalone helpers and bounded same-room fixture remain separate from those
+playable-package gates. Track progress in
 [claim issue #1](https://github.com/cranebeaker/coop-anything/issues/1).

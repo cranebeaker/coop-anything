@@ -1,0 +1,4 @@
+/tests/test_steam
+/tests/libmocksteam.so
+/tests/*.log
+/tests/__pycache__/

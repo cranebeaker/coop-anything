@@ -144,8 +144,11 @@ builder chooses snapshot/event encoding, compression, prediction and correction
 after the native gameplay gates. The default first network path is direct IP on
 loopback/LAN, retaining a transport boundary so an approved VPN or relay can be
 added for friends on different networks. Internet connection setup is part of the
-playable deliverable, with the exact service chosen only after account/install
-permissions are resolved. No host firewall changes, public listeners, account use
+playable deliverable. The owner selected Steam friend invites: provide a
+friends-only two-player lobby with Host/Invite Friend and Join controls, using
+the repository Steam networking pattern. Local mock tests precede live account
+testing; a mock does not prove Internet reachability. Resolve any required
+account/install permissions before live activation. No host firewall changes, public listeners, account use
 or Steam integration are authorized by this design document itself.
 
 ## Saves and packaging

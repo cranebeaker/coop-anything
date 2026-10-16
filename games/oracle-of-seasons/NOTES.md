@@ -204,3 +204,41 @@
 - Real native game clients, authoritative view/event encoding, reconnect
   resynchronization, security, fault-condition gameplay tests and friend
   reachability remain open. The helper does not make co-op playable.
+
+## 2026-10-16: Steam target and original packaging helpers
+
+### Observed
+
+- The selected Internet path is Steam friend invites. The original Linux
+  [Steam adapter](coop/steam/README.md) passed independent spec, code-quality and
+  behavioral review after fixing a rejected-message silence-timeout bypass.
+- The exported copy passed its mock suite: friends-only two-member lobby, joined
+  peer checks, compatibility metadata, bounded messages, deadlines and cleanup.
+  Two mock processes exchanged 4096-byte payloads over loopback. A buildable
+  baseline and eight compile-success mutations failed normally. No real Steam
+  library, account, lobby, invite, overlay or relay was exercised.
+- Linux ABI declarations were checked against pinned SDK1.64 primary source.
+  Linux callback packing differs from the Windows example in the playbook.
+- The original [source-patch utility](coop/patch-tools/README.md) passed
+  independent review and 28 toy-repository tests on its exported copy, with five
+  detected behavioral mutations. It reconstructs a new private source tree from
+  a pinned Git base plus reviewed insertions/removal positions; removed source
+  bytes and surrounding decompilation context are not serialized.
+- A separate private mechanical check reconstructed all 1,377 blobs/modes of
+  the bounded native prototype, including 20 changed files. This verified bytes,
+  not source authorship, buildability or gameplay. Unchanged baseline binaries
+  remain only in the private reconstructed tree; the reference gitlink stays
+  uninitialized and no submodule is fetched. No generated manifest or native
+  source snapshot is distributed here.
+
+### Still pending
+
+- Three Steam-helper test-oracle improvements remain for later integration:
+  independently assert published metadata values, outbound recipient/retained
+  retry bytes, and send timeout while receive silence has not expired.
+- The patch utility's narrow-character test prescribes one valid edit script;
+  loosening that assertion is a minor maintenance improvement. Every actual
+  insertion/new file still needs separate origin review before publication.
+- Native game clients, common game handshake, presence/rejoin behavior, views,
+  media transport, Host/Invite/Join UI, faults and live two-account Internet
+  reachability remain open. None of these helpers makes co-op playable.

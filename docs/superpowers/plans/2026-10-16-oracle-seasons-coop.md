@@ -14,6 +14,7 @@
 
 - Pin native base `533860de269e0e9b338e12f3484ce8497367e6ed` and USA/Australia revision-0 ROM.
 - Two Linux players; independent room travel and cameras; shared permanent progression.
+- Internet connection uses the owner-selected Steam friend invites; no Tailscale requirement.
 - Work only in isolated source copies and new co-op profiles, never original installs/saves.
 - Original game source, ROMs, derived state, screenshots and personal paths stay in ignored `local/`.
 - Track original add-on code, source-patching scripts and clean documentation in the playbook; do not publish a copy of the decompilation.
@@ -81,6 +82,7 @@ Public original add-on files belong under `games/oracle-of-seasons/coop/`; `NOTE
 - [ ] Render original small pixel art blue-Link portrait plus label and outward chevron into a native game-generated image; compare visually against the approved mockup held under `local/`.
 - [ ] Integrate small P1/P2 labels for visible actors, as required by the approved design, alongside the offscreen marker.
 - [ ] Ensure each player view displays that player's health and equipped buttons, including when both players share a room runtime.
+- [ ] Expose completed player-view identity/tick/generation/buffer lifetime and matching room audio; drain each unique room once and fan out immutable PCM to its residents for the separate frontend.
 - [ ] Run focused tests and add-on suite; commit original module and integrate only after room identity and view transforms are reliable.
 
 ### Task 5: Two real clients, saves and playable package
@@ -93,6 +95,7 @@ Public original add-on files belong under `games/oracle-of-seasons/coop/`; `NOTE
 - [ ] Implement host/join and authoritative transport, starting on loopback/LAN. Keep all test listeners on loopback, with explicit binding only when the user chooses Host for an actual friend session.
 - [ ] Run two native bot clients through walk/fight/puzzle/split-room/ability/rejoin/save/load/disconnect sequences. Add in-process delay/jitter/loss/blackout injection without changing host networking.
 - [ ] Test 50ms RTT clean, 150ms RTT plus 30ms jitter and 2 percent packet loss, and a 3-second interruption. Check no duplicate claims, correct room authority, recovery or a clear safe disconnect, and graceful process exit.
+- [ ] Add Steam Host/Invite Friend and Join controls with a friends-only two-player lobby, peer membership and game/build/protocol checks; distinguish mock tests from live two-account evidence.
 - [ ] Package a separately named Linux app and one-command launchers requiring each user's own ROM. Include no test saves, ROMs, extracted assets or private data. Select approved friend reachability path (existing overlay or relay) and verify it before saying online play works.
 - [ ] Review whole branch, run complete applicable suites and a campaign bot test before claiming full-campaign coverage. Report the exact reached level if any campaign gate fails; keep unresolved gates open.
 - [ ] Update the directory/write-up with actual QA evidence, show the contribution diff, and create a draft PR only under the already-authorized repository workflow after its contents are reviewable. Never mark ready or merge on the owner's behalf.
