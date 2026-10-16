@@ -3528,26 +3528,112 @@
   year: 2018
   engine: XNA/FNA
   project: CelesteNet
-  url: https://vgtimes.com/games/celeste/files/73689-multiplayer-online.html
-  other_urls: []
+  url: https://github.com/0x0ade/CelesteNet
+  other_urls:
+  - https://gamebanana.com/mods/53695
   kind: mod
   status: playable
   coop_scope:
+    players_visible: true
     story: false
     enemies: false
     world_state: false
     items: per-player
   players: unknown
   networking: hosted-relay
-  open_source: unknown
-  last_activity: 2024-07
+  open_source: true
+  last_activity: 2026-06
   qa: community-reports
-  notes: Everest based online ghost-style multiplayer with chat, emotes and some multiplayer-only maps and modes;
-    v2.3.1 listed July 2024. Replaced the deprecated GhostNet. I did not open the official repo; the URL is a file
-    mirror.
+  notes: Everest mod that puts other players in your map as ghosts you can see, chat and emote with. It does not
+    sync the vanilla story, enemies or world state; shared-objective co-op comes only from map mods built on it
+    plus Co-op Helper. Client v2.4.2 (GameBanana mod 53695, file dated 2024-12); source is MIT. Its README still
+    links the download as gamebanana.com/gamefiles/12267, which redirects to that same mod page; GameBanana keeps
+    Mod and GameFile IDs separate, so apiv11/Mod/12267 is an unrelated Team Fortress 2 mod and confused an earlier
+    check.
   sources:
-  - https://vgtimes.com/games/celeste/files/73689-multiplayer-online.html
-  - https://steamcommunity.com/app/504230/discussions/0/1640917367346330809/
+  - https://github.com/0x0ade/CelesteNet
+  - https://gamebanana.com/mods/53695
+  checked: 2026-10-16
+- game: Celeste
+  year: 2018
+  engine: XNA/FNA
+  project: Co-op Helper
+  url: https://gamebanana.com/mods/453706
+  other_urls:
+  - https://github.com/corkr900/CoopHelper
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: true
+    story: false
+    enemies: unknown
+    world_state: partial
+    items: partial
+  players: unknown
+  networking: hosted-relay
+  open_source: true
+  last_activity: 2026-09
+  qa: community-reports
+  notes: Helper library for CelesteNet. Adds entities and triggers (spawn points, switches, gates and more) whose
+    state synchronizes between players, which is what makes shared-objective co-op maps possible. Also ships a
+    beta "Co-op Everywhere" mode that swaps supported vanilla entities for synchronized versions. Source on
+    GitHub (corkr900); the GameBanana release v1.1.4 is CC BY-NC-ND 4.0. Partnership depends on it.
+  sources:
+  - https://gamebanana.com/mods/453706
+  - https://github.com/corkr900/CoopHelper
+  checked: 2026-10-16
+- game: Celeste
+  year: 2018
+  engine: XNA/FNA
+  project: Partnership
+  url: https://gamebanana.com/mods/150725
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: true
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: per-player
+  players: "2"
+  networking: hosted-relay
+  open_source: unknown
+  last_activity: 2022-01
+  qa: community-reports
+  notes: Two-player co-op mini campaign built on CelesteNet plus Co-op Helper, and the closest thing to a playable
+    co-op campaign today. The mod page says it is designed for exactly two players, says it should not be possible
+    in single-player, and recommends a private channel so only you and your partner share the map. Depends on
+    MaxHelpingHand and LunaticHelper. Release v1.0.1 (2022-01); the GameBanana release is CC BY-NC-ND 4.0 and no
+    source repo was found.
+  sources:
+  - https://gamebanana.com/mods/150725
+  checked: 2026-10-16
+- game: Celeste
+  year: 2018
+  engine: XNA/FNA
+  project: Intertwined
+  url: https://gamebanana.com/mods/713075
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: true
+    story: false
+    enemies: unknown
+    world_state: partial
+    items: per-player
+  players: "2"
+  networking: hosted-relay
+  open_source: unknown
+  last_activity: 2026-10
+  qa: community-reports
+  notes: Two-player co-op Summit map, death-link style and aimed at Expert to Grandmaster players, by Clantis.
+    Pulls a large dependency tree (fourteen helper mods including Co-op Helper and MaxHelpingHand), so it is much
+    heavier to install than Partnership; treat it as optional. Release v1.1.3 (2026-10); the GameBanana release is
+    CC BY-NC-ND 4.0. Its dependencies were not installed or tested here.
+  sources:
+  - https://gamebanana.com/mods/713075
   checked: 2026-10-16
 - game: The Long Dark
   year: 2017
