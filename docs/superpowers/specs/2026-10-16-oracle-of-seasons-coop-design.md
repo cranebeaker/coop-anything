@@ -1,6 +1,6 @@
 # Oracle of Seasons: two-player co-op design
 
-Status: proposed; awaiting owner approval before implementation.
+Status: approved on 2026-10-16, including the edge-of-screen partner marker.
 
 ## Intent and decisions
 
@@ -17,8 +17,10 @@ Confirmed owner requirements:
 - Running off into another room while the partner is busy is desired. A forced
   party-follow rule is rejected.
 
-The policies below are the assistant's recommendations, not additional requirements
-the owner has already approved. They are offered as one coherent design for approval.
+The owner approved this design and authorized following the repository workflow,
+including the previously described project-local source/dependency builds and the
+prepared upstream claim issue. Unrelated account changes, shared-branch merges and
+other destructive operations remain outside this authorization.
 
 ## Player-facing behavior
 
@@ -28,7 +30,17 @@ Each player has their own camera. Either may use a door, staircase, screen edge 
 warp independently, subject to the original game's gates. No leash, automatic
 teleport, or partner-confirmation prompt is imposed during ordinary exploration.
 
-Show the partner's area name and an optional rendezvous marker. Provide a consensual
+Show an offscreen partner marker clamped inside the gameplay viewport edge. It
+contains the partner's blue Link portrait, the label `P2` (or `P1` when viewed by
+player 2), and an outward chevron. Its position follows the partner's direction;
+it disappears when the actual partner is visible. Keep it clear of the top HUD.
+Show the partner's area name when different rooms, floors or interiors make a
+straight-line bearing ambiguous; do not display an invented compass direction for
+unrelated coordinate spaces. Hide it when the partner is disconnected or their
+location is unknown. The approved image mockup is kept in ignored local artifacts
+because it contains a gameplay screenshot.
+
+Provide a consensual
 "join partner" action as a convenience: the other player accepts and the engine
 chooses a safe landing spot. It cannot cross an unearned story/ability gate, escape
 a locked encounter, or be required to progress. Its implementation can follow the
@@ -188,10 +200,11 @@ room runtime isolation, authoritative event schema, packet format, renderer stra
 bot implementation, dependency pinning and artifact layout. None may weaken the
 independent exploration or same-room interactive gameplay requirements.
 
-Before implementation, the owner must approve this proposed behavior. Dependency
-installation, large downloads, account use and upstream publication require the
-separate approval specified by the playbook. Research and exact local identities
-have been recorded; co-op code has not been implemented or tested.
+Implementation is authorized. Use the repository's required parallel subsystem
+workers and automated game-client tests. Keep original game data and private state
+under ignored `local/`; show contribution diffs before creating draft pull requests.
+Approval does not change the evidence standard: co-op code must pass real gameplay
+tests before it is described as playable.
 
 ## Source basis
 
