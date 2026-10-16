@@ -79,6 +79,7 @@ Public original add-on files belong under `games/oracle-of-seasons/coop/`; `NOTE
 - [ ] Write failing tests with literal expected positions: partner east/west/north/south/diagonal; marker fully inside 160x144 viewport with top 16-pixel HUD and 2-pixel padding; both P1/P2 viewpoints; hide when visible, disconnected or unknown.
 - [ ] Implement ray/rectangle clamping accounting for the full marker dimensions. Different coordinate spaces produce an area-labelled marker with no fabricated bearing. Offscreen in the same room still yields a marker; room equality alone must not hide it.
 - [ ] Render original small pixel art blue-Link portrait plus label and outward chevron into a native game-generated image; compare visually against the approved mockup held under `local/`.
+- [ ] Integrate small P1/P2 labels for visible actors, as required by the approved design, alongside the offscreen marker.
 - [ ] Run focused tests and add-on suite; commit original module and integrate only after room identity and view transforms are reliable.
 
 ### Task 5: Two real clients, saves and playable package

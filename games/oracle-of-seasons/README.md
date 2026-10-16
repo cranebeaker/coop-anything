@@ -52,8 +52,8 @@ host owns up to two occupied room simulations and resolves shared actions once.
 
 Research, the design, and the implementation plan are recorded in this repository.
 The native source and game-derived fixtures stay in ignored local workspaces.
-The first runtime harness and standalone marker layout have been tested; they
-do not add a playable multiplayer mode.
+The [original runtime harness and marker helpers](coop/README.md) are included
+here. They have been tested but do not add a playable multiplayer mode.
 
 ## QA
 
@@ -67,12 +67,16 @@ Results from 2026-10-16:
   and `app_menus` timeout failed before co-op implementation. Missing Ages ROM
   and external-service dependencies limit the baseline.
 - Native isolation command `ctest --test-dir <native build> -R '^coop_runtime$' -V`
-  passed. Two alternately stepped real instances matched isolated references
+  passed in the test workspace. The exported harness has
+  [standalone build instructions](coop/native-tests/README.md).
+  Two alternately stepped real instances matched isolated references
   over 9,530 frames per stream, then ended with different real Link positions.
   A disabled-second-input negative control failed as expected. Checkpoint reload
   reproduced the results. This proves only bounded same-title, sequential,
   complete-frame runtime isolation; it does not test shared room gameplay.
-- Standalone edge-marker layout: 149 checks passed. Marker rendering inside the
+- Standalone edge-marker layout: 149 checks passed; original pixel renderer:
+  105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
+  Marker rendering inside the
   native game, shared-world gameplay, two-client networking and a co-op campaign
   have not yet passed their gates.
 

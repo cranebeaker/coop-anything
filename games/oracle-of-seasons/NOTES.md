@@ -113,7 +113,9 @@
   co-op, thread safety, mixed-game runtimes or a full campaign.
 - The standalone marker layout passed 149 assertions, including all compass
   edges, full badge clipping, HUD clearance, player labels, visibility suppression
-  and area mode. Native game rendering remains to be integrated and tested.
+  and area mode. Its original RGB555 portrait/label/chevron/caption renderer
+  passed another 105 assertions and two targeted review-fix mutation controls.
+  Native game rendering remains to be integrated and tested.
 - The authorized claim is [issue #1](https://github.com/cranebeaker/coop-anything/issues/1).
   The public fork is [Lux-Hue/coop-anything](https://github.com/Lux-Hue/coop-anything).
 
