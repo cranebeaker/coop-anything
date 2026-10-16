@@ -233,12 +233,33 @@
 
 ### Still pending
 
-- Three Steam-helper test-oracle improvements remain for later integration:
-  independently assert published metadata values, outbound recipient/retained
-  retry bytes, and send timeout while receive silence has not expired.
+- The three Steam-helper test-oracle improvements were subsequently addressed;
+  see the 2026-10-17 entry below.
 - The patch utility's narrow-character test prescribes one valid edit script;
   loosening that assertion is a minor maintenance improvement. Every actual
   insertion/new file still needs separate origin review before publication.
 - Native game clients, common game handshake, presence/rejoin behavior, views,
   media transport, Host/Invite/Join UI, faults and live two-account Internet
   reachability remain open. None of these helpers makes co-op playable.
+
+## 2026-10-17: Steam regression-test observations
+
+### Observed
+
+- Independent review accepted three strengthened mock-helper tests: actual
+  nondefault published metadata, the intended recipient receiving the original
+  copied binary payload once after backpressure, and send timeout while a
+  recently active peer keeps receive silence below its deadline.
+- The full mock suite passed. The buildable baseline and thirteen deliberate
+  mutations compiled successfully and failed normal assertions; five new
+  mutations independently exercised the added expectations. Compiler errors,
+  signals and timeouts do not count as detection.
+- Original production adapter code is unchanged. Only original tests, mock
+  observations and mutation-runner controls changed; prior frozen evidence was
+  retained. The exported test sources match the reviewed snapshot.
+
+### Still pending
+
+- These are mock transport-boundary results. Native clients, actual Steam
+  authentication, a visible invite flow and two-account Internet reachability
+  remain unverified. No real Steam account or API was exercised by this work.

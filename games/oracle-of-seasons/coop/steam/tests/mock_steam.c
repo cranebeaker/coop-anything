@@ -11,6 +11,7 @@
 struct queued_callback {int kind,size;unsigned char data[136];};
 static struct {
     struct mock_options opt;struct mock_stats stat;
+    struct mock_delivery delivered;
     struct queued_callback callbacks[8];int callbacks_used,in_callback;
     struct steam_message message;unsigned char payload[4096];int has_message,needs_accept;
     unsigned char result[32];int result_kind,result_size;
@@ -34,7 +35,10 @@ void mock_reset(const struct mock_options *o) {
     if(m.stat.fd>=0 && m.opt.self)close(m.stat.fd);
     memset(&m,0,sizeof m);m.opt=*o;m.stat.fd=-1;
     m.count=o->self==o->owner?1:2;
-    strcpy(m.game,"oracle-seasons-coop");strcpy(m.build,"build-test");strcpy(m.protocol,"1");
+    /* A newly created host lobby has no published compatibility metadata. */
+    if(o->self!=o->owner) {
+        strcpy(m.game,"oracle-seasons-coop");strcpy(m.build,"build-test");strcpy(m.protocol,"1");
+    }
     if(o->fd>=0) {
         struct sockaddr_in a;socklen_t n=sizeof a;
         if(getsockname(o->fd,(struct sockaddr *)&a,&n)==0 && a.sin_family==AF_INET &&
@@ -45,6 +49,13 @@ void mock_reset(const struct mock_options *o) {
     }
 }
 struct mock_stats mock_stats(void){return m.stat;}
+const char *mock_lobby_data(const char *key) {
+    if(strcmp(key,"game")==0)return m.game;
+    if(strcmp(key,"build")==0)return m.build;
+    if(strcmp(key,"protocol")==0)return m.protocol;
+    return "";
+}
+struct mock_delivery mock_delivery(void){return m.delivered;}
 void SteamAPI_SteamNetworkingIdentity_SetSteamID64(struct steam_identity *id,uint64_t value) {
     uint32_t type=16,size=8;memset(id,0,sizeof *id);memcpy(id->bytes,&type,4);
     memcpy(id->bytes+4,&size,4);memcpy(id->bytes+8,&value,8);
@@ -159,10 +170,15 @@ int SteamAPI_ISteamMatchmaking_GetLobbyMemberLimit(void *self,uint64_t id){(void
 bool SteamAPI_ISteamMatchmaking_SetLobbyJoinable(void *self,uint64_t id,bool joinable){(void)self;(void)id;(void)joinable;return true;}
 void SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialog(void *self,uint64_t id){(void)self;(void)id;++m.stat.invites;}
 int SteamAPI_ISteamNetworkingMessages_SendMessageToUser(void *self,const struct steam_identity *id,const void *data,uint32_t size,int flags,int channel) {
-    (void)self;(void)id;if(flags!=9 || channel!=0)return 2;
+    (void)self;
+    uint64_t recipient=SteamAPI_SteamNetworkingIdentity_GetSteamID64(id);
+    if(flags!=9 || channel!=0 || size>4096 || (size && !data))return 2;
     if(m.busy)return 25;
     if(m.send_error)return 2;
-    ++m.stat.sends;send_packet(2,data,size);return 1;
+    if(recipient!=m.opt.peer)return 2;
+    ++m.stat.sends;++m.delivered.count;m.delivered.recipient=recipient;m.delivered.size=size;
+    if(size)memcpy(m.delivered.data,data,size);
+    send_packet(2,data,size);return 1;
 }
 int SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel(void *self,int channel,struct steam_message **out,int max) {
     (void)self;(void)channel;if(max!=1)return -1;

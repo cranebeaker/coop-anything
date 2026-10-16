@@ -59,7 +59,7 @@ not yet packaged or integrated with host/join.
 
 ## QA
 
-Results from 2026-10-16:
+Results from 2026-10-16 and 2026-10-17:
 
 - Single-player smoke test on the exact native build: ROM validation, new game,
   opening overworld movement, and save-state round trip passed.
@@ -87,8 +87,9 @@ Results from 2026-10-16:
   test executables passed, with a failing baseline and six detected mutation
   controls. This covers bounded transport plumbing, not game-client networking.
 - Original [Steam adapter](coop/steam/README.md): mock-only two-process tests
-  passed, with eight detected mutations after independent review. Steam invites
-  are the selected Internet path; live integration remains unverified.
+  passed, with thirteen detected mutations and a failing baseline after
+  independent review. Steam invites are the selected Internet path; live
+  integration remains unverified.
 - Original [source-patch utility](coop/patch-tools/README.md): 28 toy tests and
   five detected mutations passed. No generated native-source manifest is included.
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:

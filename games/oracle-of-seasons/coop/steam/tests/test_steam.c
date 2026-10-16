@@ -15,11 +15,13 @@ static const char *library="./tests/libmocksteam.so";
 static struct {
     void *handle;void (*reset)(const struct mock_options *);void (*command)(int,uint64_t);
     void (*message)(uint64_t,const void *,int,int);struct mock_stats (*stats)(void);
+    const char *(*lobby_data)(const char *);struct mock_delivery (*delivery)(void);
 } mock;
 static void controls(void) {
     mock.handle=dlopen(library,RTLD_NOW|RTLD_LOCAL);CHECK(mock.handle);
 #define LOAD(field,name) do{void *p=dlsym(mock.handle,name);CHECK(p);memcpy(&mock.field,&p,sizeof p);}while(0)
     LOAD(reset,"mock_reset");LOAD(command,"mock_command");LOAD(message,"mock_message");LOAD(stats,"mock_stats");
+    LOAD(lobby_data,"mock_lobby_data");LOAD(delivery,"mock_delivery");
 #undef LOAD
 }
 static struct mock_options options(int host) {
@@ -39,6 +41,62 @@ static void open_context(struct sa *s,int host) {
 static void guest_ready(struct sa *s) {
     struct sa_event e;open_context(s,0);CHECK(sa_join(s,9001,100)==0);
     CHECK(event(s,&e,101)==1 && e.type==SA_PARTNER_READY && e.player==2 && e.peer==1001);
+}
+/* Catches publishing a wrong key or a default/wrong configured value. */
+static void host_publishes_configured_metadata(void) {
+    struct sa s;struct sa_event e;struct mock_options o=options(1);
+    struct sa_config c={"seasons-lobby-qa","revision-7f9-oracle","coop-v7",1000};
+    mock.reset(&o);
+    CHECK(strcmp(mock.lobby_data("game"),"")==0);
+    CHECK(strcmp(mock.lobby_data("build"),"")==0);
+    CHECK(strcmp(mock.lobby_data("protocol"),"")==0);
+    CHECK(sa_open(&s,library,&c,100)==0 && sa_host(&s,100)==0);
+    CHECK(event(&s,&e,101)==1 && e.type==SA_LOBBY_READY && e.lobby==9001);
+    CHECK(strcmp(mock.lobby_data("game"),"seasons-lobby-qa")==0);
+    CHECK(strcmp(mock.lobby_data("build"),"revision-7f9-oracle")==0);
+    CHECK(strcmp(mock.lobby_data("protocol"),"coop-v7")==0);
+    sa_close(&s);
+    puts("PASS empty host lobby publishes exact nondefault game/build/protocol values");
+}
+/* Catches wrong-recipient sends and overwriting the occupied copied slot. */
+static void busy_send_delivers_original_copy_once(void) {
+    struct sa s;struct sa_event e;struct mock_delivery delivered;
+    unsigned char caller[]={0x00,0x81,0x2a,0xff,0x19,0x00,0x7e};
+    guest_ready(&s);mock.command(MOCK_SEND_BUSY,1);
+    CHECK(sa_send(&s,caller,sizeof caller,102)==1);
+    memset(caller,0x55,sizeof caller);
+    CHECK(sa_poll(&s,103,&e)==0 && e.type==SA_NONE);
+    CHECK(mock.delivery().count==0);
+    CHECK(sa_send(&s,"replace",7,104)==0);
+    CHECK(sa_poll(&s,105,&e)==0 && mock.delivery().count==0);
+    mock.command(MOCK_SEND_BUSY,0);
+    CHECK(sa_poll(&s,106,&e)==0 && e.type==SA_NONE);
+    delivered=mock.delivery();
+    CHECK(delivered.count==1 && delivered.recipient==1001 && delivered.size==7);
+    CHECK(memcmp(delivered.data,"\x00\x81\x2a\xff\x19\x00\x7e",7)==0);
+    CHECK(sa_poll(&s,107,&e)==0 && sa_poll(&s,108,&e)==0);
+    CHECK(mock.delivery().count==1);
+    sa_close(&s);
+    puts("PASS busy send delivers original copied binary bytes to peer1001 exactly once");
+}
+/* Catches removal of only the send deadline, with receive silence unexpired. */
+static void send_deadline_expires_while_peer_is_live(void) {
+    struct sa s;struct sa_event e;guest_ready(&s);
+    mock.command(MOCK_SEND_BUSY,1);
+    CHECK(sa_send(&s,"pending",7,102)==1);
+    mock.message(1001,"alive",5,0);
+    CHECK(sa_poll(&s,1100,&e)==1 && e.type==SA_MESSAGE && e.peer==1001);
+    CHECK(e.size==5 && memcmp(e.data,"alive",5)==0);
+    CHECK(mock.stats().releases==1 && mock.delivery().count==0);
+    CHECK(sa_poll(&s,1101,&e)==0 && e.type==SA_NONE);
+    CHECK(mock.stats().leaves==0 && mock.stats().shutdowns==0);
+    CHECK(sa_poll(&s,1102,&e)==-1 && e.type==SA_FAILURE);
+    CHECK(mock.delivery().count==0 && mock.stats().closes==1);
+    CHECK(mock.stats().closed==1001 && mock.stats().leaves==1 && mock.stats().shutdowns==1 && mock.stats().fd==-1);
+    CHECK(sa_poll(&s,1103,&e)==-1 && e.type==SA_FAILURE);
+    sa_close(&s);
+    CHECK(mock.stats().closes==1 && mock.stats().leaves==1 && mock.stats().shutdowns==1);
+    puts("PASS busy send fails at1102 after peer alive at1100 with exactly-once cleanup");
 }
 static void lobby_and_invite(void) {
     struct sa s;struct sa_event e;struct sa_config c=config();
@@ -185,7 +243,17 @@ static void two_process(void) {
     CHECK(bind(fd,(struct sockaddr *)&a,sizeof a)==0);close(fd);
     puts("PASS two mock processes: real loopback max-payload input/view, session accept, peer leave, exact port cleanup");
 }
-int main(void) {
-    alarm(20);controls();lobby_and_invite();rejected_metadata_and_failures();membership_and_messages();foreign_traffic_does_not_extend_partner_deadline();two_process();
+int main(int argc,char **argv) {
+    alarm(20);controls();
+    if(argc==2) {
+        if(strcmp(argv[1],"--oracle-metadata")==0)host_publishes_configured_metadata();
+        else if(strcmp(argv[1],"--oracle-send")==0)busy_send_delivers_original_copy_once();
+        else if(strcmp(argv[1],"--oracle-deadline")==0)send_deadline_expires_while_peer_is_live();
+        else CHECK(0);
+    } else {
+        CHECK(argc==1);
+        host_publishes_configured_metadata();busy_send_delivers_original_copy_once();send_deadline_expires_while_peer_is_live();
+        lobby_and_invite();rejected_metadata_and_failures();membership_and_messages();foreign_traffic_does_not_extend_partner_deadline();two_process();
+    }
     dlclose(mock.handle);puts("PASS Steam helper mock suite (no real Steam or Internet proof)");return 0;
 }

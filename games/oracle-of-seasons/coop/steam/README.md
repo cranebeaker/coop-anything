@@ -25,13 +25,20 @@ The suite has a 20-second alarm and needs an environment that permits local
 loopback sockets. It is not a network impairment, relay, Internet or real Steam
 test.
 
-The negative runner preserves the buildable RED stub and compiles eight deliberate
-bugs: public lobby type, accepting an outsider's session, delivering an outsider's
+The suite also independently checks nondefault published metadata, delivery to
+the intended peer of the original copied binary payload exactly once, and send
+deadline expiry while valid inbound traffic keeps the receive deadline live.
+
+The negative runner preserves the buildable RED stub and eight previous bugs:
+public lobby type, accepting an outsider's session, delivering an outsider's
 message, bypassing silence timeout with outsider traffic, skipping metadata,
 falsely accepting a busy output slot, leaking a received message, and reading
-LobbyCreated using a Windows-like offset. Only normal test assertion failures
-count; compile failure, signal or timeout does not. Individual
-logs remain; temporary mutation sources/binaries are removed.
+LobbyCreated using a Windows-like offset. Five additional mutations publish a
+wrong key or value, send to the wrong peer, overwrite a busy payload, or remove
+the send deadline. All thirteen mutations compile successfully. Only normal
+test assertion failures count; compile failure, signal or timeout does not. Individual
+logs remain; temporary mutation sources/binaries are removed. Use
+`--log-dir <new directory>` to keep separate runs' evidence.
 
 ## API and bounds
 
