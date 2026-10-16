@@ -76,7 +76,7 @@
   Per-player action state, owned weapon objects, shared interactions and explicit
   campaign transactions must be designed before networking can be called co-op.
 
-### Proposed, not implemented
+### Approved design; gameplay implementation in progress
 
 - Two players, each with a camera and independent room travel. Shared permanent
   upgrades and campaign progress; independently chosen equipment and health.
@@ -84,16 +84,49 @@
   enemies and puzzles have one owner even when both players occupy it.
 - First feasibility gate is two genuine interactive players in one room. Subsequent
   gates cover splitting rooms, shared progression and reuniting without resets.
-- The detailed proposed design is in the dated design document under
+- The detailed approved design is in the dated design document under
   `docs/superpowers/specs/`.
+- Offscreen partners get a small portrait, player label and outward chevron at
+  the viewport edge. P2 is blue and P1 is green. Different coordinate spaces use
+  an area label without a fabricated direction; visible or disconnected partners
+  do not get an edge marker.
+
+### Observed: source build and bounded runtime gate
+
+- Built the pinned native source with GCC 16.2.1 and a project-local SDL3 3.4.16
+  source archive. SDL archive SHA-256:
+  `7322236cd12090c3eb40b9728be4d49c76f66ad17d04369584d4ecad5cf77c68`.
+- Original full CTest baseline: 22 tests, 13 passed, 7 skipped, 2 failed.
+  `mods` failed an assertion about which timeout message occurred;
+  `app_menus` exceeded its 120-second timeout. Neither came from co-op edits.
+  Ages-dependent targets and external-service scenarios did not all run.
+- An original native runtime harness compares two alternately stepped Seasons
+  instances against two separately stepped references. All 9,530 frames per
+  stream matched sampled memory/state, rendered pixels and renderer metadata.
+  The actual gameplay checkpoint is group `00`, room `c4`, Link `(72,79)`.
+  Thirty frames of Right reached `(102,79)`; Left reached `(61,83)`.
+- Disabling the second candidate's input while preserving its reference stream
+  made the comparison fail on the first independent-input frame. Exporting and
+  reloading the checkpoint reproduced both movement outcomes and state hashes.
+- This establishes bounded sequential isolation for same-title native runtimes,
+  with defaults and complete-frame scheduling. It does not establish shared-world
+  co-op, thread safety, mixed-game runtimes or a full campaign.
+- The standalone marker layout passed 149 assertions, including all compass
+  edges, full badge clipping, HUD clearance, player labels, visibility suppression
+  and area mode. Native game rendering remains to be integrated and tested.
+- The authorized claim is [issue #1](https://github.com/cranebeaker/coop-anything/issues/1).
+  The public fork is [Lux-Hue/coop-anything](https://github.com/Lux-Hue/coop-anything).
 
 ### Unknown / untested
 
-- All co-op gameplay, campaign coverage, same-room player contexts, room runtime
-  isolation, migration, and networking remain unimplemented and untested.
+- All co-op gameplay and campaign coverage remain unverified. Same-room player
+  contexts are being implemented; migration and networking are still pending.
+- The runtime gate above is intentionally narrower than arbitrary runtime
+  isolation. Shared engine globals and renderer-slot lifetime need further work
+  if their usage expands beyond the tested boundary.
 - Every singleton consumer and runtime-global state has not yet been audited.
-- SDK/dependency build and network reachability between two actual PCs are untested.
+- Network reachability between two actual PCs is untested.
 - Seasons/boss/script policies require implementation audits against the original
   game's affected-room semantics; shared progression cannot mean copying all RAM.
-- No owner account was used and nothing was posted. A proposed claim issue and
-  contribution diff must be shown to the owner before upstream publication.
+- The owner authorized the GitHub claim and fork. Contribution diffs must still
+  be shown before opening the authorized draft PR; owner review stays unchecked.

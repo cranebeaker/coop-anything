@@ -18,7 +18,7 @@
 - Original game source, ROMs, derived state, screenshots and personal paths stay in ignored `local/`.
 - Track original add-on code, source-patching scripts and clean documentation in the playbook; do not publish a copy of the decompilation.
 - Fresh game-client evidence is required for every gameplay claim; bots live inside native code.
-- The approved edge marker uses a blue Link portrait, outward chevron and P1/P2 label; viewport clamping excludes the HUD.
+- The approved edge marker uses a blue P2 or green P1 Link portrait, outward chevron and P1/P2 label; viewport clamping excludes the HUD.
 - User approved the design, project-local source/dependency builds, claim issue and repository workflow. Continue without another plan approval prompt.
 - Repository instructions select subsystem workers. Only one worker may mutate the native engine checkout at a time; independent original add-on modules may be built in separate directories.
 

@@ -31,7 +31,7 @@ warp independently, subject to the original game's gates. No leash, automatic
 teleport, or partner-confirmation prompt is imposed during ordinary exploration.
 
 Show an offscreen partner marker clamped inside the gameplay viewport edge. It
-contains the partner's blue Link portrait, the label `P2` (or `P1` when viewed by
+contains the partner's Link portrait (blue for P2, green for P1), the label `P2` (or `P1` when viewed by
 player 2), and an outward chevron. Its position follows the partner's direction;
 it disappears when the actual partner is visible. Keep it clear of the top HUD.
 Show the partner's area name when different rooms, floors or interiors make a
