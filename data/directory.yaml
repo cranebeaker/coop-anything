@@ -5911,3 +5911,61 @@
   - https://github.com/alexsharoff/pcsx2-online
   - https://github.com/YungMoniCA1/pcsx2-netplay-reborn
   checked: 2026-10-16
+- game: 'The Legend of Zelda: Oracle of Seasons'
+  year: 2001
+  engine: Game Boy Color ROM through BizHawk
+  project: Oracles randomizer multiworld
+  url: https://jangle.dev/oracles-randomizer/manual.html#multiworld
+  other_urls:
+  - https://github.com/jangler/oracles-randomizer
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: false
+    story: false
+    enemies: false
+    world_state: false
+    items: shared
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Multiworld only. The author's manual describes items sent between separate randomized games using
+    an Oracle module for bizhawk-co-op. It does not describe two interactive Links sharing rooms or enemies.
+    Researched only; no multiworld build was installed or tested.
+  sources:
+  - https://jangle.dev/oracles-randomizer/manual.html#multiworld
+  checked: 2026-10-16
+- game: 'The Legend of Zelda: Oracle of Seasons'
+  year: 2001
+  engine: Game Boy Color native C source port
+  project: (none found)
+  url: ''
+  kind: gap
+  status: none
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No same-world two-Link co-op implementation found in the surveyed public repository ecosystem.
+    Native-port source offers a potential starting point but has one Link and one active room. Existing
+    multiworld item exchange is listed separately. See games/oracle-of-seasons/NOTES.md for search limits.
+  searched:
+  - Playbook directory, games, public issues and PRs for Oracle and Seasons, 2026-10-16.
+  - Native-port issues, PRs, branches and both public forks, 2026-10-16.
+  - All 60 public oracles-disasm forks surveyed by branch names; upstream crossover branches inspected,
+    2026-10-16. This was not a full code audit of every fork.
+  - Web queries including ModDB, Nexus, Archive.org, Steam community, Reddit and Japanese title,
+    2026-10-16. Private Discord was not accessed.
+  sources:
+  - https://github.com/kirby-letsgo/oracles-decomp/tree/533860de269e0e9b338e12f3484ce8497367e6ed
+  - https://github.com/Stewmath/oracles-disasm
+  checked: 2026-10-16
