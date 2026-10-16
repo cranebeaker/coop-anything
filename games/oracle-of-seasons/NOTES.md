@@ -121,8 +121,8 @@
 
 ### Unknown / untested
 
-- All co-op gameplay and campaign coverage remain unverified. Same-room player
-  contexts are being implemented; migration and networking are still pending.
+- General co-op gameplay and campaign coverage remain unverified. The bounded
+  same-room gate below passed; migration and networking are still pending.
 - The runtime gate above is intentionally narrower than arbitrary runtime
   isolation. Shared engine globals and renderer-slot lifetime need further work
   if their usage expands beyond the tested boundary.
@@ -132,3 +132,53 @@
   game's affected-room semantics; shared progression cannot mean copying all RAM.
 - The owner authorized the GitHub claim and fork. Contribution diffs must still
   be shown before opening the authorized draft PR; owner review stays unchecked.
+
+## 2026-10-16: bounded native same-room gate
+
+### Observed
+
+- The experimental native changes passed independent source/test review for an
+  ordinary-Link/sword fixture. Original Link state machines and owned weapons run
+  for both players while shared enemies, parts, interactions and tile work run
+  once. Discrete player/item fields are projected into canonical addresses;
+  adjacent shared object slots are preserved.
+- In-engine bot cases passed independent movement/idle controls, solid walls,
+  P2 initiating and settling an original pushblock, P2 sword damage, P2-only
+  incoming contact damage, and a real enemy choosing nearer P2. The controlled
+  combat/puzzle fixture places original enemies/tiles before input; it does not
+  establish campaign spawning or an authored route through the game.
+- A native framebuffer image showed both actual actors with different poses and
+  green/blue identification. Owner graphics are committed with matching OAM DMA.
+  The current automated render assertion checks OAM/packets; framebuffer pixel
+  regression coverage is still pending.
+- Disabling P2 dispatch and omitting private input history both made behavioral
+  controls fail. Fiber entry/yield/reset, stack loads, handoffs and bad returns
+  are rejected with caller context restored. Two real VBlank IRQs during a
+  projected call preserved canonical sampled player identity.
+- One measured workload produced 120 world ticks over 120 LCD frames, retaining
+  original clock/IRQ accounting. This is observed performance for that fixture,
+  not a general timing guarantee. The timing test currently checks counter
+  agreement; a literal cadence regression assertion remains pending.
+- Final post-guard gameplay and focused native checks passed: `coop_players`,
+  `coop_runtime`, `native_binary` (3/3). The broader 24-target run produced
+  15 passes, 7 skips and the same 2 baseline failures. It spanned the final guard
+  rebuild; the report distinguishes pre/post-change binaries. It is not a fresh
+  complete-suite run of one final source state.
+- The standalone exported runtime harness was separately compiled and run using
+  a clean pinned native checkout with SDL off. Positive and expected-failing
+  disabled-input runs reproduced the recorded movement/state results.
+- Research and original helpers were published as
+  [draft PR #3](https://github.com/cranebeaker/coop-anything/pull/3), after showing
+  the contribution diff. The draft and unchecked owner-review status were verified.
+
+### Still pending
+
+- The native gate admits ordinary state-1 Link with no item or sword, no companion,
+  text, menu, death or transition. Unsupported modes stop clearly. This is an
+  early feasibility slice, not a playable mod or a full player implementation.
+- Occupancy, portable player contexts, split/rejoin without resetting an occupied
+  room, typed campaign transactions, saves, owner dialogue/inventory and seasons
+  are the next implementation work. Network clients and packaging follow them.
+- Simultaneous swords dispatch one collision effect in the tested case. A
+  nonlethal target/HP comparison against a single-owner control is still needed
+  to make that exact damage outcome an independent regression test.

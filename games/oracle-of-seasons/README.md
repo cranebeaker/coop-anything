@@ -53,7 +53,9 @@ host owns up to two occupied room simulations and resolves shared actions once.
 Research, the design, and the implementation plan are recorded in this repository.
 The native source and game-derived fixtures stay in ignored local workspaces.
 The [original runtime harness and marker helpers](coop/README.md) are included
-here. They have been tested but do not add a playable multiplayer mode.
+here. They have been tested but do not add a playable multiplayer mode. Separate
+experimental native changes passed a bounded same-room gameplay gate; they are
+not yet packaged or integrated with host/join.
 
 ## QA
 
@@ -74,6 +76,13 @@ Results from 2026-10-16:
   A disabled-second-input negative control failed as expected. Checkpoint reload
   reproduced the results. This proves only bounded same-title, sequential,
   complete-frame runtime isolation; it does not test shared room gameplay.
+- Experimental native same-room fixture: independent movement, walls, P2 block
+  pushing, original sword/contact damage, enemy targeting and distinct owner
+  graphics passed. Final gameplay and focused native checks passed 3/3. A broader
+  24-target run had 15 passes, 7 skips and the same 2 baseline failures, spanning
+  the final guard rebuild. This ordinary-Link/sword slice does not cover travel,
+  general items, dialogue or a campaign. See [NOTES.md](NOTES.md) for boundaries
+  and remaining regression-test gaps.
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:
   105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
   Marker rendering inside the
@@ -88,9 +97,10 @@ game saves or decompiled game source are distributed in this playbook.
 
 ## Known issues
 
-Friends cannot yet control two interactive Links in one shared room. Independent
-travel, shared campaign transactions, save compatibility, dialogue, seasons,
-bosses, reconnects and Internet reachability remain unverified.
+There is no host/join package. The native two-Link fixture is limited to ordinary
+sword gameplay through in-engine bot drivers. Independent travel, shared campaign
+transactions, save compatibility, dialogue, seasons, bosses, reconnects and
+Internet reachability remain unverified.
 
 ## Next steps
 

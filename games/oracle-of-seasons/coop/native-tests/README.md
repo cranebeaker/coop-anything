@@ -70,8 +70,10 @@ cc -std=gnu11 -O2 \
 Both include directories are required: `src` supplies native APIs and `tests`
 supplies upstream `unit.h`. The compile/link command follows the verified native
 scratch-harness invocation, with the additional `tests` include needed by this
-exported source location. The exported file is byte-identical to the reviewed,
-passing native test; the standalone exported command itself has not been rerun.
+exported source location. The exported file is byte-identical to the reviewed
+native test. The standalone command was then compiled and run against a fresh,
+clean checkout of the pinned source with SDL disabled: the positive run passed,
+and the disabled-second-input control failed at the expected first branch frame.
 
 Expected success is exit 0 with `PASS native runtime isolation`. A missing
 Seasons ROM exits 77; malformed or missing required TAS/state fixtures fail.

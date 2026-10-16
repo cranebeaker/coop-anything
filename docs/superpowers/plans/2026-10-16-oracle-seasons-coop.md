@@ -80,6 +80,7 @@ Public original add-on files belong under `games/oracle-of-seasons/coop/`; `NOTE
 - [ ] Implement ray/rectangle clamping accounting for the full marker dimensions. Different coordinate spaces produce an area-labelled marker with no fabricated bearing. Offscreen in the same room still yields a marker; room equality alone must not hide it.
 - [ ] Render original small pixel art blue-Link portrait plus label and outward chevron into a native game-generated image; compare visually against the approved mockup held under `local/`.
 - [ ] Integrate small P1/P2 labels for visible actors, as required by the approved design, alongside the offscreen marker.
+- [ ] Ensure each player view displays that player's health and equipped buttons, including when both players share a room runtime.
 - [ ] Run focused tests and add-on suite; commit original module and integrate only after room identity and view transforms are reliable.
 
 ### Task 5: Two real clients, saves and playable package
