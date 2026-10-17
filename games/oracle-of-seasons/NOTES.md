@@ -1,5 +1,9 @@
 # Oracle of Seasons research notes
 
+Entries preserve the observations and pending work at each stage. The final
+native loopback-client entry updates the earlier client, presence and media
+transport gaps; broader campaign and Internet gates remain open.
+
 ## 2026-10-16: triage and research
 
 ### Observed
@@ -123,7 +127,8 @@
 ### Unknown / untested
 
 - General co-op gameplay and campaign coverage remain unverified. The bounded
-  same-room gate below passed; migration and networking are still pending.
+  same-room gate below passed; later room and loopback-client gates are recorded
+  below.
 - The runtime gate above is intentionally narrower than arbitrary runtime
   isolation. Shared engine globals and renderer-slot lifetime need further work
   if their usage expands beyond the tested boundary.
@@ -159,8 +164,8 @@
   projected call preserved canonical sampled player identity.
 - One measured workload produced 120 world ticks over 120 LCD frames, retaining
   original clock/IRQ accounting. This is observed performance for that fixture,
-  not a general timing guarantee. The timing test currently checks counter
-  agreement; a literal cadence regression assertion remains pending.
+  not a general timing guarantee. The timing test then checked counter
+  agreement; the later native-client gate adds a literal warm-workload assertion.
 - Final post-guard gameplay and focused native checks passed: `coop_players`,
   `coop_runtime`, `native_binary` (3/3). The broader 24-target run produced
   15 passes, 7 skips and the same 2 baseline failures. It spanned the final guard
@@ -182,8 +187,8 @@
   room, typed campaign transactions, saves, owner dialogue/inventory and seasons
   are the next implementation work. Network clients and packaging follow them.
 - Simultaneous swords dispatch one collision effect in the tested case. A
-  nonlethal target/HP comparison against a single-owner control is still needed
-  to make that exact damage outcome an independent regression test.
+  nonlethal target/HP comparison against a single-owner control was still needed
+  at this point; the later native-client gate adds that regression.
 
 ## 2026-10-16: original transport helper gate
 
@@ -376,3 +381,68 @@
 - The byte-identical exported test copy also passed all 28 tests (exit 0,
   3.595 seconds). Every actual insertion/new file continues to require separate
   origin review before publication.
+
+## 2026-10-17: bounded native loopback-client observations
+
+### Observed
+
+- The bounded client slice passed independent spec and quality review after
+  disconnect and defeat-rollback fixes. Separate experimental SDL and headless
+  frontends share an authoritative main-thread controller. Each guest consumes
+  its own completed view, HUD, private inventory and audio and sends independent
+  input; it runs no guest simulation and cannot save the campaign. This work
+  targets the pinned [native source](https://github.com/kirby-letsgo/oracles-decomp/tree/533860de269e0e9b338e12f3484ce8497367e6ed).
+- Two actual native OS processes over loopback demonstrated P2 sword damage and
+  block pushing, split travel, the actual shared Satchel grant once, owner-only
+  dialogue, stable-owner rejoin, inventory equip/use, one shared ammo spend and
+  return to an occupied room. Fresh startup validates each player's raw ROM and
+  uses the original button-only new-file flow from blank SRAM, preserving the
+  first controllable room/troupe prologue attachment and actual P2 movement.
+- P2 starts offline. EOF or silence detection cancels held input and owned
+  attacks before the next native tick, including busy-detach cases. A single
+  retained offline room/capsule stays frozen without media and has bounded reuse.
+  Rejoin retains the owner slot, refuses an occupied landing safely, then succeeds
+  when legal. The host can enter without resurrecting absent P2. Format-2 saves
+  persist offline presence on the exact build; fresh-execution disk load passed.
+  Simultaneous defeat preserves the current authenticated connection and restores
+  new own media and control.
+- The protocol checks raw-ROM, native/controller/build identity, connection,
+  epochs, ticks and generation, expires old input and bounds media buffers.
+  Malformed/stale inputs and views have bounded rejection coverage. A valid
+  handshake with disabled P2 actions failed an ordinary enemy-HP assertion;
+  omitting fresh-execution hook preparation also failed an ordinary assertion.
+  The malformed-group mutation produced a memory-safety fault, not a normal
+  assertion control. Stale-input negative tests still need stronger delivery
+  synchronization before each behavioral assertion.
+- Nonlethal native HP comparisons now cover the earlier simultaneous-sword test
+  gap. Literal 120 logic ticks/120 LCD frames cover the warm fixture's cadence
+  gap. Integration checks assert room/group on each of twelve movement frames;
+  the original standalone runtime helper retains its narrower endpoint proof.
+- Final affected checks passed 52/52 with no skips or failures in 24.86 seconds,
+  spanning fresh startup, CLI, native/runtime, rooms, views and clients. The
+  earlier full 66-target run had 56 passes, 7 skips and 3 failures in 168.94 seconds.
+  Its old save-format assertion was corrected; the other two match the original
+  mods/app_menus baseline. The full suite was not rerun after narrow fixes.
+  Existing upstream app compiler and SDL libdecor warnings remain. Save proof
+  remains exact non-PIE Linux x86-64 little-endian, without generalized portability.
+- Actual Wayland SDL renderer-readback PNGs were manually inspected for both
+  bodies/tags and own inventory. The automated runner checks process completion
+  and capture production only; it is not automated visual-regression coverage.
+  Audio hardware and listening were not tested.
+
+### Still pending
+
+- The first controllable fresh prologue is not a campaign proof. The mandatory
+  later dance/abduction, broader tools, bosses/essences, stock HUD/cutscenes and
+  the other campaign admission gates above remain open. Season changes affecting
+  a retained offline room are deliberately safely refused; season-aware refresh
+  remains a later gate.
+- Native Steam frontend/fault integration is in progress and is not accepted by
+  this entry. No real Steam API, account, library, lobby, invite or Internet test
+  has passed, and no owner/friend invite was sent. The public mock Steam helper
+  remains separate. Consensual two-player joining and broader fault validation
+  remain gates.
+- Engine source and generated manifests remain private and unexported. There is
+  no playable package. Packaging/export and final whole-branch review remain
+  open; the original public helpers do not provide the experimental clients.
+  Co-op QA remains `none`.

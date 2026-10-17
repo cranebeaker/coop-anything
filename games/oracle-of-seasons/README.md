@@ -54,9 +54,10 @@ Research, the design, and the implementation plan are recorded in this repositor
 The native source and game-derived fixtures stay in ignored local workspaces.
 The [original runtime harness and marker helpers](coop/README.md) are included
 here. They have been tested but do not add a playable multiplayer mode. Separate
-experimental native changes passed bounded same-room, room/campaign and native presentation/media gates;
-the engine adaptations and tests are not yet packaged/exported here or integrated
-with host/join.
+experimental native changes passed bounded same-room, room/campaign, presentation/media
+and loopback client gates. Separate experimental SDL and headless frontends now
+exercise native host/join, independent guest input and authoritative guest media.
+The engine adaptations and tests remain private and are not packaged/exported here.
 
 ## QA
 
@@ -112,6 +113,25 @@ Results from 2026-10-16 and 2026-10-17:
   before final compositor edits. Final affected checks then passed 38/38,
   including all 34 room scenarios and 7 top-level view scenarios. See
   [NOTES.md](NOTES.md) for equipment admission and remaining review limits.
+- A bounded native client slice passed independent spec and quality review after
+  lifecycle fixes. Two actual native processes over loopback exercised P2 sword
+  damage/block pushing, split/occupied return, one shared Satchel grant,
+  owner-only dialogue, stable-owner rejoin, equip/use and shared ammo. The guest
+  receives its own view/HUD/private inventory/audio from the authoritative
+  main-thread host; it runs no guest simulation and cannot save the campaign.
+  Fresh startup validates each supplied raw ROM and follows the original
+  button-only new-file flow from blank SRAM through first controllable prologue
+  attachment and P2 movement. It does not cover the later mandatory dance or
+  abduction. EOF/silence cancellation occurs before the next native tick, even
+  when safe detachment is busy. Offline presence, frozen retained rooms, safe
+  rejoin refusals and exact-build save/load have bounded coverage. Final affected
+  checks passed 52/52 in 24.86 seconds; the earlier full 66-target run had
+  56 passes, 7 skips and 3 failures. Its old save-format assertion was corrected;
+  the other failures match the original mods/app_menus baseline. The full suite
+  was not rerun after narrow fixes. Manually inspected Wayland SDL readbacks
+  showed both bodies/tags and own inventory; the automated runner checks capture
+  production only. There is no automated visual-regression, audio-hardware or
+  listening proof. See [NOTES.md](NOTES.md) for presence and campaign limits.
 - Original [loopback transport helper](coop/transport/README.md): two real-TCP
   test executables passed, with a failing baseline and six detected mutation
   controls. This covers bounded transport plumbing, not game-client networking.
@@ -124,7 +144,8 @@ Results from 2026-10-16 and 2026-10-17:
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:
   105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
   These 254 standalone checks also passed after the native presentation work.
-  Real two-client networking and a co-op campaign have not passed their gates.
+  Two native clients now have bounded loopback coverage; Internet play and a
+  co-op campaign have not passed their gates.
 
 ## How to play
 
@@ -140,17 +161,19 @@ sword/Satchel with Ember seeds, native Satchel/small-key treasures, and limited
 ordinary edges/entries. General tools, treasures, scripts and campaign coverage
 remain open. Equipment re-equipping admits only the Satchel; unsupported
 inventory entries display `UNAVAILABLE`. Native views and completed-frame audio
-have bounded coverage; real clients, gameplay presence/rejoin, media transport
-and live Steam remain unverified. Whole-branch review and native-client QA remain
+have bounded loopback client and gameplay presence/rejoin coverage. An affected
+season change involving an offline room is safely refused pending season-aware
+refresh. Live Steam, Internet play, whole-branch review and broader client QA remain
 open; equipment display tests check initial letters rather than full words.
 
 ## Next steps
 
-Integrate the completed native views/audio with real client transport and gameplay
-presence/rejoin, then native Steam Host/Invite/Join controls and real two-client
-validation.
+Complete native Steam frontend and fault integration, then validate actual
+Steam accounts, friend invites and two-PC Internet play. The bounded loopback
+client gate does not establish those outcomes.
 Campaign gates still include bosses/essences, capacities/maps/compasses,
-Rod/stumps, companions/transformations and fresh Din/troupe global scenes.
+Rod/stumps, companions/transformations and the mandatory Din/troupe dance and
+abduction beyond the tested fresh prologue.
 Package and export the reviewed engine adaptations separately from the public
 marker/transport/Steam/patch helpers; complete campaign bot coverage before
 claiming campaign playability. Track progress in
