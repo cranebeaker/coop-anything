@@ -1,8 +1,8 @@
 # Oracle of Seasons research notes
 
-Entries preserve the observations and pending work at each stage. The final
-native loopback-client entry updates the earlier client, presence and media
-transport gaps; broader campaign and Internet gates remain open.
+Entries preserve the observations and pending work at each stage. The later
+native loopback-client and native Steam entries update earlier client, presence,
+media and frontend/fault gaps; broader campaign and Internet gates remain open.
 
 ## 2026-10-16: triage and research
 
@@ -269,7 +269,8 @@ transport gaps; broader campaign and Internet gates remain open.
 
 - These are mock transport-boundary results. Native clients, actual Steam
   authentication, a visible invite flow and two-account Internet reachability
-  remain unverified. No real Steam account or API was exercised by this work.
+  remained unverified in this helper-only work. See the later native Steam entry
+  for subsequent integration and real-library initialization observations.
 
 ## 2026-10-17: bounded native room/campaign observations
 
@@ -437,12 +438,96 @@ transport gaps; broader campaign and Internet gates remain open.
   the other campaign admission gates above remain open. Season changes affecting
   a retained offline room are deliberately safely refused; season-aware refresh
   remains a later gate.
-- Native Steam frontend/fault integration is in progress and is not accepted by
-  this entry. No real Steam API, account, library, lobby, invite or Internet test
-  has passed, and no owner/friend invite was sent. The public mock Steam helper
-  remains separate. Consensual two-player joining and broader fault validation
-  remain gates.
+- Native Steam frontend/fault integration was still in progress at this stage;
+  the later native Steam entry records its accepted bounded gate. This entry
+  provided no actual Steam library/account/lobby/invite/Internet evidence. The
+  public mock Steam helper remains separate. Consensual two-player joining
+  remains a campaign gate.
 - Engine source and generated manifests remain private and unexported. There is
   no playable package. Packaging/export and final whole-branch review remain
   open; the original public helpers do not provide the experimental clients.
   Co-op QA remains `none`.
+
+
+## 2026-10-17: bounded native Steam frontend and fault observations
+
+### Observed
+
+- The native Steam frontend/common game protocol and deterministic-fault slice
+  passed independent review, followed by two scoped lifecycle fixes and source
+  origin audits. Engine adaptations and generated manifests remain private;
+  the original public Steam production helper copies are unchanged.
+- Two actual native processes use the reviewed Steam abstraction/private mock,
+  real authoritative controller and common game protocol. Clean, 50 ms RTT,
+  150 ms RTT with ±30 ms jitter and 2% seeded attempt loss, and a 3-second
+  blackout cover P2 combat/block pushing, split/occupied return, one shared
+  Satchel grant, owner dialogue, equip/use/ammo and stable-slot rejoin.
+  Reliable transmission attempts retain packets and retry; fixed 32-packet
+  staging, finite deadlines and backpressure bound recovery. These are mock
+  gameplay results, not actual Internet or Steam relay results.
+- Admission checks each supplied own ROM and exact engine/controller/frontend/
+  add-on identities in a separate game handshake beyond lobby metadata. A
+  temporary native-dispatch control kept valid admission and own media but
+  disabled later P2 actions: the ordinary enemy-HP assertion failed (2 remained
+  2). Source was restored. A transport handshake alone cannot satisfy that test.
+- Steam initialization precedes the renderer. The separate native frontend has
+  visible Host/Invite/Join/Leave/failure controls and callback-driven joining.
+  Cold-start registration is absent: launch the app first, then accept the
+  invite. Invite API dispatch does not establish a visible overlay; the owner
+  chooses and sends any actual invite. Reconnect needs a fresh lobby/invite
+  with the same retained campaign and stable slot; there is no host migration.
+- Production-main regressions cover explicit host Leave/repeated cleanup and
+  callback/explicit P2 activation, continued connection after Host-key input,
+  real independent movement, and retained-session rehosting. Both Leave checks
+  report Valgrind zero errors/zero suppressed; leak and uninitialized-value
+  analysis were disabled and native fiber stack-switch warnings remain visible.
+  This is not whole-engine memory-clean evidence.
+- Retained busy save-on-exit now settles the owner's live session with neutral
+  input and safe P2 detachment. Real transport loss plus a pending season
+  transaction, and healthy shutdown with that transaction, both produce saves
+  verified in fresh processes: retained positions/health, one season revision,
+  otherwise preserved campaign, P2 offline and resumed P1 media. The arranged
+  native fixture is targeted QA, not input-only campaign progress. Save proof
+  retains the exact Linux x86-64 little-endian non-PIE build limits above.
+- Final affected room/media/client/Steam/frontend checks passed 72/72, with no
+  failures or skips, in 37.14 seconds after all fixes. Earlier pre-fix counts
+  are historical. The original broad baseline was not rerun; its two known
+  failures and seven skips remain qualified. The known libdecor warning remains.
+- Normal Wayland/OpenGL frontend/mock capture measured about 60 host ticks and
+  58 guest completed views per second over a short 1.5-second window. Under
+  software/dummy rendering with 150 ms RTT/jitter/loss, the guest delivered
+  about 18 completed views per second, a material limitation. Manual captures
+  showed readable controls and P2 inventory; capture production is not
+  unattended visual-regression, audio-hardware or listening proof.
+- Separately, after explicit owner approval, a frozen reviewed native build
+  launched against the real Steam library and logged successful Steam API
+  initialization. This narrow observation does not validate the preceding mock
+  gameplay on actual Steam. Initially, the owner reported that the game opened
+  under native Wayland but pressing Invite did not show the overlay. A narrow
+  launch inspection found the real Steam client library and OpenGL/EGL loaded,
+  but no overlay renderer module or preload setting.
+- A subsequent per-process SDL X11/OpenGL launch with the installed 64-bit Steam
+  overlay preload loaded the overlay, GLX and X11 modules. The owner explicitly
+  confirmed that Invite now opened the invite overlay. The reviewed invite guard
+  permits dispatch only while the host is in a lobby with no partner, supporting
+  real host-lobby/invite-dialog setup. This manual owner confirmation is separate
+  from all automated mock native gameplay results. Both temporary test sessions
+  ended cleanly; no account configuration or system settings changed, and original
+  saves were untouched. The agent chose or sent no invite. No second account or
+  Internet gameplay was tested.
+
+### Still pending
+
+- Actual invite delivery, two-account Internet play and consensual partner
+  joining remain gates. The owner-confirmed XWayland overlay and host-lobby setup
+  do not prove relay use or friend reachability. Native-Wayland overlay support
+  remains unverified after its observed failure; the successful launch used a
+  per-process XWayland configuration. The launch-first limitation above remains.
+- The supported fresh input-only endpoint remains the opening troupe attachment;
+  later dance/abduction, broader tools, bosses/essences, stock HUD/cutscenes,
+  companions/transformations and the other campaign gates remain open. An
+  attempted longer route is not accepted campaign evidence.
+- Packaging/source publication and final whole-branch review remain open. No
+  native source, generated manifest, SDK/mock library, ROM, game-derived assets
+  or friend-ready package is exported here. Co-op QA remains `none`; this gate
+  does not establish playable or full-campaign co-op.

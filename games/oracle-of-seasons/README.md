@@ -57,6 +57,8 @@ here. They have been tested but do not add a playable multiplayer mode. Separate
 experimental native changes passed bounded same-room, room/campaign, presentation/media
 and loopback client gates. Separate experimental SDL and headless frontends now
 exercise native host/join, independent guest input and authoritative guest media.
+A later bounded native Steam frontend and deterministic-fault slice also passed
+review; its gameplay evidence uses the private mock, as detailed below.
 The engine adaptations and tests remain private and are not packaged/exported here.
 
 ## QA
@@ -132,6 +134,31 @@ Results from 2026-10-16 and 2026-10-17:
   showed both bodies/tags and own inventory; the automated runner checks capture
   production only. There is no automated visual-regression, audio-hardware or
   listening proof. See [NOTES.md](NOTES.md) for presence and campaign limits.
+- A later bounded native Steam frontend/common-game-protocol slice passed
+  independent review and two scoped lifecycle fixes. Two actual native processes
+  through the reviewed Steam abstraction and private mock exercised combat,
+  blocks, split/occupied return, one shared ability grant, dialogue, equip/use,
+  ammo and stable-slot rejoin under clean, 50 ms RTT, 150 ms RTT with ±30 ms
+  jitter and 2% seeded attempt loss, and a 3-second blackout. Reliable attempts
+  retain packets for retry with bounded staging, deadlines and backpressure.
+  A separate game handshake checks each player's ROM and exact engine/controller/
+  frontend/add-on identities beyond lobby metadata. Visible Host/Invite/Join/
+  Leave/failure controls and callback joining have production-frontend coverage;
+  invite dispatch does not prove a visible overlay. Launch the app before
+  accepting an invite; reconnect requires a fresh lobby/invite while retaining
+  the same campaign and stable slot. Final affected checks passed 72/72 in
+  37.14 seconds after all fixes; the original broad baseline was not rerun.
+  Retained busy save-on-exit and fresh-process load preserve campaign/player
+  state with P2 offline; this is targeted fixture QA, not campaign-route proof.
+  Normal Wayland/OpenGL mock captures measured about 60 host ticks and 58 guest
+  completed views per second in a short 1.5-second window; software/dummy output
+  under the 150 ms impairment was about 18 guest views per second. These are
+  bounded observations, not a general performance guarantee. A subsequent
+  owner-approved real-library launch initialized Steam successfully. Invite
+  initially failed to show an overlay under native Wayland; a per-process
+  XWayland/OpenGL launch with the installed overlay preload then opened the
+  invite dialog, manually confirmed by the owner. This supports actual host
+  lobby/invite-dialog setup, not friend connectivity or Internet gameplay. See [NOTES.md](NOTES.md) for lifecycle and evidence limits.
 - Original [loopback transport helper](coop/transport/README.md): two real-TCP
   test executables passed, with a failing baseline and six detected mutation
   controls. This covers bounded transport plumbing, not game-client networking.
@@ -163,14 +190,15 @@ remain open. Equipment re-equipping admits only the Satchel; unsupported
 inventory entries display `UNAVAILABLE`. Native views and completed-frame audio
 have bounded loopback client and gameplay presence/rejoin coverage. An affected
 season change involving an offline room is safely refused pending season-aware
-refresh. Live Steam, Internet play, whole-branch review and broader client QA remain
-open; equipment display tests check initial letters rather than full words.
+refresh. Actual friend-invite delivery, Internet play, whole-branch review and
+broader client QA remain open; equipment display tests check initial letters
+rather than full words.
 
 ## Next steps
 
-Complete native Steam frontend and fault integration, then validate actual
-Steam accounts, friend invites and two-PC Internet play. The bounded loopback
-client gate does not establish those outcomes.
+Validate actual friend-invite delivery and two-PC Internet play after the
+bounded native Steam frontend/fault gate and owner-confirmed XWayland invite
+dialog. Host-lobby setup and a visible dialog do not establish those outcomes.
 Campaign gates still include bosses/essences, capacities/maps/compasses,
 Rod/stumps, companions/transformations and the mandatory Din/troupe dance and
 abduction beyond the tested fresh prologue.
