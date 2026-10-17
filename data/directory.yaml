@@ -6023,3 +6023,28 @@
   sources:
   - https://github.com/NoahVl/Birdman64
   checked: '2026-10-17'
+- game: Stacklands
+  year: 2022
+  engine: Unity
+  project: Stacklands Co-op
+  url: https://github.com/Dudiebug/stacklands-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: 2-8
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Host-authoritative mirror on the official mod loader. Joiners' sims are frozen and their input is replayed on
+    the host. LAN/IP is covered by a 13-check two-instance automated test; Steam lobbies are untested. Write-up in
+    games/stacklands.
+  sources:
+  - https://github.com/Dudiebug/stacklands-coop
+  checked: '2026-10-17'

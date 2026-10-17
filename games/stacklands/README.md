@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unity 2022.3.4f1, Mono (official mod loader with Harmony) |
 | Versions tested | Steam, Windows build under Proton Experimental, buildid 16550853 |
-| Projects | Stacklands Co-op (new, see `data/directory.yaml`) |
+| Projects | Stacklands Co-op ([stacklands-coop](https://github.com/Dudiebug/stacklands-coop)) |
 | QA level | automated |
 | Last updated | 2026-10-17 |
 
