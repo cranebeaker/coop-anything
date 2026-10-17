@@ -88,12 +88,29 @@ class PackagingTests(unittest.TestCase):
 
     def test_exports_narrow_character_edits_without_original_line_context(self):
         data = self.export()
+        self.assert_narrow_changed_word(data)
+
+    def assert_narrow_changed_word(self, data):
+        # Accept equivalent scripts confined to blue -> green, including replacing
+        # the complete word, while requiring actual CLI reconstruction first.
+        result = self.apply(data)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.out / 'long.txt').read_bytes(),
+                         b'original line: red flag; green flag\n')
         entry = next(f for f in data['files'] if f['path'] == 'long.txt')
         inserted = ''.join(e['insert'] for e in entry['edits'])
-        self.assertEqual(inserted, 'gren')
-        self.assertEqual(sum(e['remove'] for e in entry['edits']), 3)
+        word_start = len(b'original line: red flag; ')
+        word_end = word_start + len(b'blue')
+        for edit in entry['edits']:
+            self.assertGreaterEqual(edit['offset'], word_start,
+                                    'edit copies unchanged line prefix')
+            self.assertLessEqual(edit['offset'] + edit['remove'], word_end,
+                                 'edit extends beyond changed word')
+        self.assertLessEqual(sum(e['remove'] for e in entry['edits']), len(b'blue'))
+        self.assertLessEqual(len(inserted.encode('utf-8')), len(b'green'))
         self.assertNotIn('original line', self.manifest.read_text())
         self.assertNotIn('blue', self.manifest.read_text())
+        self.assertNotIn(' flag', inserted)
 
     def test_two_distant_changes_do_not_reinsert_unchanged_middle(self):
         (self.repo / 'long.txt').write_text('original line: RED flag; green FLAG\n')

@@ -115,7 +115,8 @@
   edges, full badge clipping, HUD clearance, player labels, visibility suppression
   and area mode. Its original RGB555 portrait/label/chevron/caption renderer
   passed another 105 assertions and two targeted review-fix mutation controls.
-  Native game rendering remains to be integrated and tested.
+  Native game rendering was subsequently covered by the bounded 2026-10-17
+  native presentation/media observations below.
 - The authorized claim is [issue #1](https://github.com/cranebeaker/coop-anything/issues/1).
   The public fork is [Lux-Hue/coop-anything](https://github.com/Lux-Hue/coop-anything).
 
@@ -150,7 +151,8 @@
 - A native framebuffer image showed both actual actors with different poses and
   green/blue identification. Owner graphics are committed with matching OAM DMA.
   The current automated render assertion checks OAM/packets; framebuffer pixel
-  regression coverage is still pending.
+  regression coverage was subsequently added; see the 2026-10-17 native
+  presentation/media observations below.
 - Disabling P2 dispatch and omitting private input history both made behavioral
   controls fail. Fiber entry/yield/reset, stack loads, handoffs and bad returns
   are rejected with caller context restored. Two real VBlank IRQs during a
@@ -235,9 +237,9 @@
 
 - The three Steam-helper test-oracle improvements were subsequently addressed;
   see the 2026-10-17 entry below.
-- The patch utility's narrow-character test prescribes one valid edit script;
-  loosening that assertion is a minor maintenance improvement. Every actual
-  insertion/new file still needs separate origin review before publication.
+- The patch utility's narrow-character test refinement was subsequently reviewed;
+  see the 2026-10-17 patch-test observations below. Every actual insertion/new
+  file still needs separate origin review before publication.
 - Native game clients, common game handshake, presence/rejoin behavior, views,
   media transport, Host/Invite/Join UI, faults and live two-account Internet
   reachability remain open. None of these helpers makes co-op playable.
@@ -300,9 +302,77 @@
   Rod/stump use, companions/transformations and fresh Din/troupe global scenes
   remain integration gates.
 - Per-player presentation, own HUD/inventory and offscreen-marker integration
-  are being implemented and remain unproven. Engine adaptations/tests are not
+  were subsequently covered by the bounded native presentation/media entry below.
+  Engine adaptations/tests are not
   yet packaged/exported in this playbook; the public marker, transport, Steam
   and patch helpers remain separate.
 - Real two-client play, presence/rejoin, media, native Steam controls, live
   Internet and a campaign bot remain open. Co-op QA stays `none`; these bounded
   native observations do not establish a playable package or full campaign.
+
+## 2026-10-17: bounded native presentation/media observations
+
+### Observed
+
+- The bounded native presentation/media slice passed fresh independent spec and
+  quality review. Completed per-owner RGB555 160×144 views show actual different
+  room images, own hearts/capacity, A/B names, private inventory and tracked
+  P1/P2 labels. Re-equipping remains Satchel-only; unsupported entries display
+  `UNAVAILABLE`. Broader tools and the Sword equipment registry remain later gates.
+- Native blue P2/green P1 portraits, labels and outward chevrons cover actual
+  adjacent outdoor C4/C5 east/west bearings. Unrelated interiors use readable
+  neutral area captions. Markers move along the edge to avoid the owner's Link
+  while retaining viewport/HUD clamps. Explicit presentation presence hides
+  unknown/disconnected partners; neutral input does not imply disconnection.
+- Same-room offscreen coverage uses controlled real native-renderer snapshot
+  staging because admitted small-room gameplay clamps actors. It does not prove
+  large-camera gameplay. The real P2 framebuffer assertion checks 49 exact pixels;
+  disabling only owner-render selection changes 44 blue body pixels to zero.
+  This closes the earlier packet-only owner-render regression gap.
+- Completed audio is matched by room, tick, generation and epoch, with signed
+  16-bit stereo at 48 kHz and the actual sample count. Each unique runtime is
+  destructively read once, then its resident owners share the result. Prepared,
+  unoccupied and first-attachment backlog is discarded; the first boundary
+  honestly has zero samples. Views/media add no extra world tick. This is native
+  data-boundary coverage, with no audio hardware, listening or networking claim.
+- Two full builds passed. The 59-target full run had 50 passes, 7 skips and the
+  2 known baseline failures (mods cut-off-text assertion and app_menus 120-second
+  timeout), in 477.93 seconds. That run preceded the final compositor avoidance
+  and UI edits. Final affected checks passed 38/38 in 33.49 seconds, covering
+  7 top-level native-view scenarios, all 34 room scenarios, players, runtime and
+  native binary. The standalone public marker's 254 checks also passed.
+  The existing SDL libdecor CMake warning remains; the final incremental build
+  produced no new compiler warnings.
+
+### Still pending
+
+- Equipment pixel-display tests decode initial letters rather than the full
+  word or `UNAVAILABLE`; strengthening those assertions is an optional minor
+  improvement. Whole-branch review and native-client QA remain open.
+- Native client transport, actual gameplay presence/rejoin, media transport,
+  native Steam Host/Invite/Join controls, live Internet reachability, campaign
+  validation and packaging remain open. Explicit marker presentation presence
+  does not establish a working multiplayer presence lifecycle.
+- The room/campaign admission limits and exact-build save boundary above still
+  apply. Engine adaptations remain private and are not exported in this playbook.
+  Co-op QA remains `none`; these observations do not establish a playable co-op
+  package or full campaign.
+
+## 2026-10-17: patch-test observations
+
+### Observed
+
+- Independent spec, quality and behavioral review accepted a refinement to the
+  patch utility's tests with no findings. Production helper code is unchanged;
+  only `test_packager.py` changed. The reviewed tests passed all 28 cases and
+  detected the five existing compiled mutation controls.
+- New private controls show that complete changed-word replacement is accepted,
+  while an exactly reconstructing whole-line/context copy is rejected by a
+  normal assertion. This checks the test's edit-script flexibility and context
+  exclusion; it does not establish source origin or game readiness.
+
+### Still pending
+
+- The byte-identical exported test copy also passed all 28 tests (exit 0,
+  3.595 seconds). Every actual insertion/new file continues to require separate
+  origin review before publication.

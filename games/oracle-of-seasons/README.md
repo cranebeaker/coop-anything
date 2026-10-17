@@ -54,7 +54,7 @@ Research, the design, and the implementation plan are recorded in this repositor
 The native source and game-derived fixtures stay in ignored local workspaces.
 The [original runtime harness and marker helpers](coop/README.md) are included
 here. They have been tested but do not add a playable multiplayer mode. Separate
-experimental native changes passed bounded same-room and room/campaign gates;
+experimental native changes passed bounded same-room, room/campaign and native presentation/media gates;
 the engine adaptations and tests are not yet packaged/exported here or integrated
 with host/join.
 
@@ -97,6 +97,21 @@ Results from 2026-10-16 and 2026-10-17:
   Save restoration is proven only for the exact Linux x86-64 little-endian
   non-PIE build, without cross-build or arbitrary PIE/ASLR portability. See
   [NOTES.md](NOTES.md) for admission limits and remaining campaign gates.
+- A subsequent bounded native presentation/media slice passed independent spec
+  and quality review. Each owner has a completed 160×144 RGB555 room view, own
+  hearts/capacity, A/B names, private inventory and tracked P1/P2 labels. Native
+  portrait/label/chevron markers cover adjacent outdoor bearings and neutral
+  captions for unrelated interiors, avoid the owner's Link, and suppress unknown
+  or disconnected partners through explicit presentation presence. Same-room
+  offscreen coverage uses controlled native-renderer snapshot staging, not large
+  camera gameplay. Exact framebuffer pixels now regress P2's blue owner graphics.
+  Matching room/tick/generation/epoch audio is read once per unique runtime and
+  shared among resident owners; first-attachment backlog is discarded. No audio
+  hardware, listening or network playback was tested. Two full builds passed;
+  the full 59-target run had 50 passes, 7 skips and the 2 known baseline failures
+  before final compositor edits. Final affected checks then passed 38/38,
+  including all 34 room scenarios and 7 top-level view scenarios. See
+  [NOTES.md](NOTES.md) for equipment admission and remaining review limits.
 - Original [loopback transport helper](coop/transport/README.md): two real-TCP
   test executables passed, with a failing baseline and six detected mutation
   controls. This covers bounded transport plumbing, not game-client networking.
@@ -108,9 +123,8 @@ Results from 2026-10-16 and 2026-10-17:
   five detected mutations passed. No generated native-source manifest is included.
 - Standalone edge-marker layout: 149 checks passed; original pixel renderer:
   105 checks passed. Run `make test` in `games/oracle-of-seasons/coop`.
-  Marker rendering inside the
-  native game, real two-client networking and a co-op campaign have not yet
-  passed their gates.
+  These 254 standalone checks also passed after the native presentation work.
+  Real two-client networking and a co-op campaign have not passed their gates.
 
 ## How to play
 
@@ -124,12 +138,17 @@ There is no host/join package. Native coverage remains a bounded bot-driven
 slice: enabled normal Link plus tested death/hazard/item/entry adapters,
 sword/Satchel with Ember seeds, native Satchel/small-key treasures, and limited
 ordinary edges/entries. General tools, treasures, scripts and campaign coverage
-remain open. Real clients, presence/rejoin, media and live Steam remain unverified.
+remain open. Equipment re-equipping admits only the Satchel; unsupported
+inventory entries display `UNAVAILABLE`. Native views and completed-frame audio
+have bounded coverage; real clients, gameplay presence/rejoin, media transport
+and live Steam remain unverified. Whole-branch review and native-client QA remain
+open; equipment display tests check initial letters rather than full words.
 
 ## Next steps
 
-Complete per-player presentation, HUD/inventory and offscreen-marker integration,
-then native Steam Host/Invite/Join controls and real two-client validation.
+Integrate the completed native views/audio with real client transport and gameplay
+presence/rejoin, then native Steam Host/Invite/Join controls and real two-client
+validation.
 Campaign gates still include bosses/essences, capacities/maps/compasses,
 Rod/stumps, companions/transformations and fresh Din/troupe global scenes.
 Package and export the reviewed engine adaptations separately from the public
