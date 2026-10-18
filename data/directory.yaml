@@ -6387,3 +6387,30 @@
   sources:
   - https://github.com/Dudiebug/stacklands-coop
   checked: '2026-10-17'
+- game: Clive Barker's Jericho
+  year: 2007
+  engine: MercurySteam ScrapEngine (Scrapland engine, Lua 5.1)
+  project: Jericho Co-op
+  url: https://github.com/dolbaras/jericho-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: "2-4"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: Each player controls one squad member, AI keeps the rest. ENet transport in a dinput8.dll proxy (exe
+    untouched), host-authoritative enemies, story triggers, scenes and level changes; first-person cutscenes from
+    each player's own character. Tested with two real game instances and a headless bot; no full playthrough. MIT.
+    Write-up in games/clive-barkers-jericho.
+  sources:
+  - https://github.com/dolbaras/jericho-coop
+  - https://github.com/cranebeaker/coop-anything/issues/27
+  checked: '2026-10-18'
