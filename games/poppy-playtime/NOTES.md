@@ -95,11 +95,122 @@ Game slug: `poppy-playtime`. Sessions: 2026-10-18.
   specific builds).
 - Population/server health of Project Playtime long-term.
 
+## Phase 2 — Workspace (2026-10-18)
+
+Test install copied from `<game dir>` to a scratch folder on another drive
+(`<test dir>`, 122 files / 5.23 GB, robocopy, 0 failures). The owner's install and
+saves are untouched (rule 2).
+
+- Save location (owner's PC, read-only check): `%LOCALAPPDATA%\Poppy_Playtime\Saved\
+  SaveGames` — only `SG_Audio.sav`, `SG_Graphics.sav` existed (settings only, no story
+  save yet). Backed up before any test launch.
+- Tool: **RE-UE4SS v3.0.1** (official release `UE4SS-RE/RE-UE4SS`, asset
+  `UE4SS_v3.0.1.zip`, 5,523,402 bytes, SHA-256
+  `4B47D4BCEDDD2F561A4E395BFA00924CCFC945AF576A2D0C613E6537846C57EC`; the release
+  publishes no checksum, so this is our own pin). Installed into the test copy's
+  `Poppy_Playtime\Binaries\Win64`.
+
+### Observation — UE4SS works on this build
+
+Test launch of the copied game logged:
+
+```
+UE4SS - v3.0.1 Beta #0 - Git SHA #d935b5b
+Using engine version 4.27 for internal logic ...
+PS scan took ... Game: Poppy_Playtime-Win64-Shipping.exe (80168960 bytes)
+```
+
+UE4SS images the game, finds EngineVersion **4.27**, resolves its offsets, and runs our
+own Lua inside the process (see Phase 3).
+
+## Phase 3 — Understand (2026-10-18)
+
+### Method (repeatable, no keypresses)
+
+Custom Lua mod `CoopProbe` under the test copy's `Mods\`, enabled in `mods.txt`. It
+(a) proves the hook (logs the local player each second), and (b) triggers UE4SS dumps
+programmatically (`DumpAllObjects()`, `GenerateSDK()`), so nothing depends on a human
+pressing Ctrl+J/Ctrl+H. Full class coverage was obtained by setting
+`LoadAllAssetsBeforeDumpingObjects = 1` (and `...GeneratingCXXHeaders = 1`) in
+`UE4SS-settings.ini`, then dumping from the main menu — **no need to enter the chapter**
+to see its classes.
+
+### Observation — the dumps
+
+- `UE4SS_ObjectDump.txt`: 19 actors loaded at the menu, **10,701 after loading all
+  assets**; dump grew 11.2 MB → 23.7 MB.
+- Huggy is present, 1774 matches, e.g.
+  `Package /Game/Assets/Characters/Huggie/Scary/Huggy_AI/.../Huggy_RIG`,
+  `/Game/Assets/Blueprints/BridgeBreak/HuggyDeath/...`, camera rig
+  `/Game/Player/Rig/CameraRig/Huggy_Jumpscare_camera`.
+- `GenerateSDK` (`CXXHeaderDump`) crashed the game after the full-asset load — this is
+  the documented UE4SS warning ("not stable & will crash the game if you load past the
+  main menu after dumping"). The object dump is what we needed; headers can be
+  regenerated per-class without the full load if required.
+
+### Observation — levels (from the full object dump)
+
+- `/Game/Levels/PP_FinalLevel` — the main Chapter 1 playable map.
+- `/Game/Levels/Level_Streaming_Areas` — streaming sub-levels.
+- `/Game/Levels/Power_Room_LightsOn`, `/Game/Levels/AchebesLightingScenarios` — lighting
+  scenarios / sub-levels.
+- `/Game/Levels/MainMenu` (+ `MainMenu_BuiltData`).
+
+### Observation — game classes with the co-op-relevant fields (from `CXXHeaderDump`)
+
+- `APlayerBP_C : ACharacter` — WalkSpeed/RunSpeed/Crouch, `ExtendoHandR/L`,
+  `LengthOfWire`, `InventoryItems`/`StoredInventory`, `ObjectivesText`, `SlotName`/
+  `UserIndex`/`SaveVariable`, health/damage, `DeathScreen`, `StartIntro`/`SkipIntro`,
+  `DoorInteraction`. Signature detail: several functions take an explicit
+  `APlayerBP_C* PlayerBP` parameter and there is a `User Index` field → the blueprint
+  logic was written with more than one player instance in mind.
+- `UPoppyPlayTime_GameInstance_C : UGameInstance` — the story/quest **flag store**:
+  `CurrentObjective : FObjective`, `ObjectiveList : TArray<FObjective>`,
+  `CurrentQuestInt`, `SaveFileName`, `SaveSlot`, and
+  `CreateNewObjective/AnnounceObjective/CompleteObjective/FailObjective/DeleteObjective`.
+- `APlayerGameModeBP_C : AGameModeBase` — `LoadGame()`/`SaveGame()`, `AsPPSaveGame`,
+  `SlotName`.
+- `UPPSaveGame_C` — `FS_SaveData` = `PlayerLocation`, `LevelSaved`, `MapName`, and a
+  `TArray<FGuid>` (collected-item ids), `SaveSlotOne`.
+- `USG_Chapters_C` — `CreatedNewGame`.
+- GrabPack / interaction: `AExtendoHand_C`, `AExtendo_Rope_C`, `UPickUp_Component_C`,
+  `DoorInteraction`, `GrabPackUpgradeStation`, `UHandleReplacement_C`, `UHandleBox_C`.
+- UI/flow: `MainMenu_UI_Two_C` (Play/Merch/Settings/Quit), `UPlayMenu_C` (Play =
+  New Game, `Skip Intro()`, `LoadGameButton`).
+- Networking present in the build: `SteamCore`, `OnlineSubsystemSteam`,
+  `OodleNetworkHandlerComponent`, `PacketHandler`, `SessionMessages` — the engine's
+  replication/online stack is compiled in (Project Playtime heritage) but dormant; the
+  game's own actors expose no replicated properties.
+
+### Derived
+
+- Model to use is **host-authoritative state sync** (playbook `how-coop-mods-work.md`):
+  one client owns enemies/physics/objectives, the others send input and receive state.
+- The single-map structure (`PP_FinalLevel` + streaming areas) means level-transition
+  sync is mostly "keep the same streaming state", not "reload a level".
+- The centralized `UGameInstance` objective store is exactly the "one flag store"
+  practical rule for story co-op — replicate that structure and most of the campaign
+  logic follows.
+
+### Unknowns
+
+- Huggy AI's actual class/behaviour graph (class list found; not yet read in detail).
+- Which streamed sub-levels are gameplay-critical vs lighting only.
+- Whether the pak is encrypted (a raw string scan for `/Game/Levels/` returned nothing;
+  the header does not start with the standard UE4 pak magic `E1 12 6F 5A`). Asset
+  extraction is not needed for the mod and is deferred.
+
 ## TODO
 
 - [x] When install finishes: record buildid, exe SHA-256, engine version — done
       2026-10-18 (buildid 21905565, UE 4.27.2, hashes above).
-- [ ] Open "claim a game" issue in cranebeaker/coop-anything (owner approved;
-      needs gh CLI — permission to install pending).
-- [ ] Add gap entry to data/directory.yaml + regenerate DIRECTORY.md; draft PR
-      (owner approved; needs gh CLI).
+- [x] Phase 2 workspace: test copy + UE4SS v3.0.1 installed and verified running — done
+      2026-10-18.
+- [x] Phase 3 first pass: full object dump + key class inventory + level names — done
+      2026-10-18.
+- [ ] Open "claim a game" issue in cranebeaker/coop-anything.
+- [ ] Add gap entry to data/directory.yaml + regenerate DIRECTORY.md; draft PR.
+- [ ] Read Huggy AI / door / objective classes in detail; map the Chapter 1 quest flow.
+- [ ] Decide transport (GameNetworkingSockets vs Steam) and write the co-op skeleton mod.
+- [ ] Automated launch into a level for QA (console `open /Game/Levels/PP_FinalLevel`,
+      not fragile menu clicks).
