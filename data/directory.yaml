@@ -3923,6 +3923,41 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
+- game: Poppy Playtime
+  year: 2021
+  engine: Unreal Engine 4
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: >-
+    No co-op mod exists. A fan multiplayer mod was made and deleted by its author (dev confirmed on
+    Reddit). Useful lead for a build-from-zero project: the Steam build (base game = Chapter 1,
+    buildid 21905565, UE 4.27.2) ships the VoxeX voice-chat SDK (vivoxsdk_x64.dll, ortp_x64.dll)
+    in its binaries, and Chapter 2 builds contain an unused multiplayer minigame documented by
+    TCRF - multiplayer code existed in-house. Game is free-to-play on Steam; single-player only,
+    no Remote Play Together category. Claimed by issue; work in progress notes in
+    games/poppy-playtime/.
+  sources:
+  - https://www.reddit.com/r/PoppyPlaytime/comments/uut6zj/anybody_have_a_poppy_playtime_multiplayer_mod/
+  - https://www.youtube.com/watch?v=7nRBqSjCB0k
+  - https://tcrf.net/Poppy_Playtime:_Chapter_2/Multiplayer
+  - https://store.steampowered.com/app/1721470/Poppy_Playtime/
+  checked: 2026-10-18
+  searched:
+  - search GitHub (repo search, 435 results), Nexus mods list (58 mods), ModDB, Steam store API and web search, 2026-10-18
+  - coop-anything issues/PRs via GitHub search API (0 hits), 2026-10-18
 - game: God of War (2018)
   year: 2022
   engine: Santa Monica Studio proprietary
