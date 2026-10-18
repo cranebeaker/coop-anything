@@ -85,6 +85,9 @@ SIGNATURES = [
     ("GameMaker", None, lambda f, d: _has(f, "data.win")),
     ("RPG Maker", None, lambda f, d: _ext(f, ".rgss3a", ".rgss2a", ".rgssad") or _has(f, "rpg_core.js", "rmmz_core.js")),
     ("XNA / FNA / MonoGame", None, lambda f, d: _has(f, "fna.dll", "monogame.framework.dll", "microsoft.xna.framework.dll")),
+    # Java games ship a .jar plus a bundled runtime (jre or jdk folder), or a launcher that starts java.exe.
+    ("Java (JVM)", "Java",
+     lambda f, d: _ext(f, ".jar") if ("jre" in d or "jdk" in d or _has(f, "java.exe", "javaw.exe")) else None),
 ]
 
 HOOK_TOOLS = {
@@ -100,6 +103,9 @@ HOOK_TOOLS = {
     "X-Ray (STALKER)": "Lua scripts and LTX configs in .db archives, xrMPE multiplayer extension",
     "CryEngine": "Lua game scripts, mod SDK, DLL hooks",
     "RE Engine": "REFramework (Lua and C++), DLL hooks",
+    "Java (JVM)": "a -javaagent (java.lang.instrument) loaded into the unmodified game JVM, the game's own public classes "
+                  "and event bus as hook points (ByteBuddy or ASM only where no public seam exists), javap from the "
+                  "bundled JDK for API facts, a decompiler (CFR, Vineflower) to read the logic",
 }
 
 

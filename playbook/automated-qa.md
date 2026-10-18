@@ -42,6 +42,7 @@ policy and the techniques that made it work on four very different engines.
 | Fallout New Vegas | Gamebryo | xNVSE plugin serving JSON-RPC on a named pipe (`exec`, `waitFor`, `state`) | World snapshots split into shared and per-player state, diffed between clients |
 | STALKER (xrMPE) | X-Ray | Test-only script archive hooked from a space restrictor's logic | In-engine checks written to its own log file |
 | The Witcher 3 (Witcher Online port) | REDengine 3 | Test-only script mod plus a test ASI that registers natives (env, log, quit) through WitcherNativeBridge; it skips movies, loads a save and reports each second | Each client compares the remote player's ghost with the networked position; every bot must log PASS |
+| The Doors of Trithius | Java (JVM) | A text-verb driver inside each game JVM (the javaagent tails a command file and acks every verb with ok, no-effect, partial or fail). About 65 gate scripts start a real host and a real guest JVM on one PC over TCP. AI player agents then play whole evenings with keyboard and mouse through a relay with delay, outage and drop modes, while an observer agent scores a checklist | Host-authoritative state dumps from both seats, per-seat logs, and the host doing the same action as the solo control |
 
 ## Rules learned the hard way
 
@@ -65,6 +66,10 @@ policy and the techniques that made it work on four very different engines.
 - **Clean up.** Remove test-only files from anything you ship and compare the shipped
   files byte for byte afterwards. Servers that checksum packages will reject players
   with leftovers.
+- **Test the scorer, not only the test.** Make the first gate of the suite a scorer self-test: it feeds known bad output (a missing result line, a timeout, a crash text) to the real scorer function and must see FAIL. Score a gate that printed no result as a failure, and a gate that ran out of time as TIMEOUT, not FAIL (The Doors of Trithius).
+- **Measure the control before you call it a mod bug.** Let the host do the same action alone. Several co-op "bugs" were the single-player game's own rules: a downed player loses gold in vanilla, and a world-map rest never lowers weariness (The Doors of Trithius).
+- **Bots prove mechanics; agents that play like people find the rest.** Gates drive verbs, so they never exercise the join window, focus, mouse paths or a menu a person opens. An evening where AI agents play both seats with keyboard and mouse found the join-click, dialogue-pane and shop-window defects that every gate missed. Keep the host as the control and have an observer agent score a written checklist (The Doors of Trithius).
+- **Own processes positively.** Stop only a process your run started (its PID, or a marker on its command line). A blanket kill by image name once destroyed a live two-player session (The Doors of Trithius).
 
 ## Testing online features on one PC
 
