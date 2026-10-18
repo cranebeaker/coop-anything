@@ -82,3 +82,15 @@ Observed (build 7020666):
   Log only real changes (remember the last value per CRC).
 - Chapter Select (finished save) -> Ch. 02-01 as 2B: phase became `30_AB_Ruined_City_ForcedLanding`, id 256.
   The chapter menu asks 2B or 9S, which is how route A or B is picked for shared chapters.
+
+## 2026-10-18: cutscenes (story events)
+
+Observed (build 7020666):
+- Pre-rendered movies are `movie/ev%04x.usm` (format string in .rdata); story events also build sound event names
+  `ev%04x_Start` and `ev%04x_End` from the event id. The code is `mov r8d, [rdi+4]; lea rdx, <format>;
+  lea rcx, [rsp+20h]; call sprintf`, the same bytes for Start and End: hook both and tell them apart by the
+  format string the lea points to.
+- Chapter Select 03-03 (Battle with Adam): `Event start ev0250` (Adam's birth, ~57 s, "Hold to Skip"), `Event end
+  ev0250`, then `ev0251` starts and ends at once. The movie format hook did not fire for this scene.
+- A Cheat Engine style search (snapshots in and out of two cutscenes, writable sections of the exe) left 23
+  candidate bytes without a clear winner; hooking the event start/end code was simpler and gives the id.
