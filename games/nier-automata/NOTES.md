@@ -68,3 +68,5 @@ Unknown:
   is not enough (title vs main menu differ by ~5/255 on average); compare the header and the menu centre regions.
 - The bot must not run inside the present hook: the game stopped presenting (window not responding) on the new-game
   name entry screen reached by a wrong press, and a present-driven bot went silent.
+- After the owner turned off "Automatically optimize newly added games" in NVIDIA App, a first launch from a new folder
+  (slot4) still ran `OAWrapper.exe ... -g c` (read) but no `-s` (write); the owner's SystemData.dat stayed unchanged.
