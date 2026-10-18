@@ -21,8 +21,13 @@ Running notes, newest last. Observations, derived facts, guesses and unknowns ar
 Observed:
 - The game finds Documents through `SHGetSpecialFolderPathA(CSIDL_PERSONAL)` (only shell import) and
   `%APPDATA%\PlatinumGames\NierAutomata\config.ini` through `getenv("APPDATA")` (string `APPDATA` in .rdata, `getenv` import).
-- Redirecting only `SHGetSpecialFolderPathA` was not enough: the first run of a test copy still rewrote `SystemData.dat` in
-  the owner's Documents (restored from the copy made before the run). Which call wrote it: unknown.
+- The first run of each new test copy rewrote `SystemData.dat` in the owner's Documents (one byte, offset 16: 1 -> 0;
+  restored from the copy made before the run). Process Monitor showed the writer: **NVIDIA App**, not the game.
+  `nvcontainer.exe` starts `NvBackend\ApplicationOntology\OAWrapper.exe -a nier_automata -p <new install dir> -s`, which
+  "optimizes" the newly seen install by writing the settings file in the real Documents. Redirects inside the game
+  process can't stop another process. Fix: turn off automatic optimization of new games in NVIDIA App, or reuse test folders.
+- Steam Auto-Cloud uploads the owner's save folder when a test copy (same app id) exits, so a damaged file also reaches the cloud.
+  Restore before the test copy exits. Steam does not run the launch sync for exes started outside Steam.
 - With an `NtCreateFile` write guard (refuses writes to the owner's Documents, `%APPDATA%\PlatinumGames` and the store
   install) plus both redirects, 3 runs (title screen, save loaded) ended with 0 blocked writes and the owner's files unchanged.
 - Remaining writes outside the test copy: NVIDIA driver caches, D3D shader cache, Steam overlay log.
@@ -51,3 +56,15 @@ Derived:
 Unknown:
 - Meaning of the int32 before the name. Which of the four copies the game treats as the source.
 - How to switch the phase (what Chapter Select calls).
+
+## 2026-10-18: automated co-op smoke test
+
+- Two test copies on one PC (one Steam account): both load the same save through the bot, one presses Host Game
+  (starts the Go server), the other Join Game to 127.0.0.1. Checks: both in session, roles, each sees the other player
+  within 3 m of where the other game says it is, same story phase, host plays 2B and client took over 9S. Result: PASS
+  (0.12 m and 0.03 m).
+- Blind timed menu presses failed twice (a lost press on the title screen shifted the rest: once into License, once
+  Exit Game -> Yes). Recognising the menu screen from a screenshot before each press fixed it. Whole-frame comparison
+  is not enough (title vs main menu differ by ~5/255 on average); compare the header and the menu centre regions.
+- The bot must not run inside the present hook: the game stopped presenting (window not responding) on the new-game
+  name entry screen reached by a wrong press, and a present-driven bot went silent.
