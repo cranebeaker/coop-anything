@@ -1,0 +1,4 @@
+# Built proxies are reproducible via build.ps1 (llvm-mingw, i686); their SHA-256s are
+# recorded in NOTES.md. Binaries are never committed (repo rule: no .dll in PRs).
+*.dll
+*.log

@@ -6094,3 +6094,25 @@
   - https://github.com/Dudiebug/halfsword-multiplayer-mod
   - https://github.com/Dudiebug/halfsword-multiplayer-mod/releases
   checked: '2026-10-18'
+- game: "Divinity II: Developer's Cut"
+  engine: Gamebryo-derived (Larian "Divinity Application")
+  project: divinity2-split-screen
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/divinity-2-developers-cut
+  kind: framework
+  status: prototype
+  coop_scope:
+    players_visible: no
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: '2 (planned)'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: "Build from zero toward split-screen co-op, two players on one PC, started 2026-10-18. Stage 1 done; the game loads a 32-bit dinput8.dll proxy (it imports only DirectInput8Create). Stage 2 done; per-instance Profile and Savegames redirection via a MinHook hook on SHGetFolderPathA, enabled by an env-var token; verified with two real game instances, the real profile untouched in every run. No co-op gameplay yet; running two instances at the menu is flaky (a startup race in the engine's main-menu movie player, a pre-existing bug, proven not the hook). The automated test covers the isolation layer only. Tied to one exe build (addresses in the write-up); the hook is build-independent by design. MIT. Code, notes and tests in this repo's game folder."
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/divinity-2-developers-cut
+  - https://en.wikipedia.org/wiki/Divinity_II
+  checked: '2026-10-18'

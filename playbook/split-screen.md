@@ -39,7 +39,7 @@ Things to know before building on them:
 | Problem | Technique | Where to look |
 |---|---|---|
 | Game refuses a second copy | Rename or kill the single-instance mutex, defeat FindWindow checks, per-instance copies (hardlinks or symlinks) | Nucleus handler API: `KillMutex`, `RenameNotKillMutex`, `SymlinkGame`, `HardlinkGame` |
-| Copies share config and saves | Per-instance Documents / AppData folders, per-instance INIs | Nucleus `UseNucleusEnvironment`, `DocumentsConfigPath`; PartyDeck's Bubblewrap sandbox |
+| Copies share config and saves | Per-instance Documents / AppData folders, per-instance INIs. Closed engines with no env-var support: hook `SHGetFolderPathA` (or the W variant) inside your injected DLL and rewrite the returned path per instance token | Nucleus `UseNucleusEnvironment`, `DocumentsConfigPath`; PartyDeck's Bubblewrap sandbox; Divinity II write-up (dinput8 proxy + MinHook) |
 | Steam allows one copy, or the game needs Steam networking | A per-instance Steam API emulator, for copies you own, LAN play only | Nucleus `UseGoldberg`, PartyDeck's Goldberg integration |
 | Input: every copy reads every controller | Hook the input APIs (XInput, DirectInput, raw input) per instance, or isolate devices in a sandbox | Nucleus input hooks, PartyDeck's Bubblewrap device filtering |
 | Window layout and focus | Borderless windows resized per player; fake focus so background copies keep running | Nucleus `HookFocus`, `FakeFocus`; PartyDeck's Gamescope plus KWin |
