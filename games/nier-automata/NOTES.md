@@ -121,3 +121,17 @@ Unknown:
 - How the phase changes during normal play in the world (no bot run reached a natural phase change yet).
 - Whether `0x9c5a00` plus the load byte works when called from inside the world.
 - Meaning of `n` (0xf for the segment the bot picked, phase `51_AB_MainDesert`) and of the phase id (256, 512).
+
+## 2026-10-18: talking to the Commander (story step inside a phase)
+
+Observed (build 7020666, "Test" save, phase `16_AB_bunker_Order`, objective "Reboot: Speak with the Commander"):
+- The bot reaches NPCs by teleporting next to them (entity list position + `Pl0000.setPosRotResetHap`, facing them);
+  the Commander is the only entity with model `0x11020`. Holding the gamepad's B next to her starts the conversation.
+- The conversation ends with a new objective marker, but the phase name, the scene state flags set through
+  `SceneStateSystem.set` and the story event hooks show no change. Story steps inside a phase are kept somewhere else.
+- With the window out of focus the game paused the conversation ("PAUSED") and the lines did not advance on their own;
+  pressing A advanced them.
+- Teleporting to a guessed point (the hangar) dropped 2B out of the Bunker into space: teleport only to known positions.
+
+Unknown:
+- Where the current quest and its step are stored.
