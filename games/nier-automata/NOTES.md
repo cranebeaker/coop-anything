@@ -70,3 +70,15 @@ Unknown:
   name entry screen reached by a wrong press, and a present-driven bot went silent.
 - After the owner turned off "Automatically optimize newly added games" in NVIDIA App, a first launch from a new folder
   (slot4) still ran `OAWrapper.exe ... -g c` (read) but no `-s` (write); the owner's SystemData.dat stayed unchanged.
+
+## 2026-10-18: story flags (scene states)
+
+Observed (build 7020666):
+- Story scripts set and reset named flags through the script functions `SceneStateSystem.set` / `.reset`
+  (script function table entries found by CRC32 of "Class.method", AutomataMP `sdk::ScriptFunctions`).
+  The argument `hap::SceneStateName const&` points to data with the CRC32 of the name at +0x20 and the name text
+  at +0x38 for short names: `q410/REQ`, `hacking_state/last_9S`, `p300_PV_block_off`, `em2100/DIE`, `Unlock_RCtoAP`.
+- Scripts call `set` on the same flags every frame (~4000 calls a minute), and a chapter load resets ~1500 flags.
+  Log only real changes (remember the last value per CRC).
+- Chapter Select (finished save) -> Ch. 02-01 as 2B: phase became `30_AB_Ruined_City_ForcedLanding`, id 256.
+  The chapter menu asks 2B or 9S, which is how route A or B is picked for shared chapters.
