@@ -94,3 +94,30 @@ Observed (build 7020666):
   ev0250`, then `ev0251` starts and ends at once. The movie format hook did not fire for this scene.
 - A Cheat Engine style search (snapshots in and out of two cutscenes, writable sections of the exe) left 23
   candidate bytes without a clear winner; hooking the event start/end code was simpler and gives the id.
+
+## 2026-10-18: route and Chapter Select
+
+Observed (build 7020666):
+- The route and the route's hero are scene state flags: `Route/A`, `Route/B`, `Route/C` and `PL/2B`, `PL/9S`, `PL/A2`.
+  `SceneStateSystem.has` on them gives the route. Chapter Select of a shared chapter as 2B -> `Route/A` + `PL/2B`,
+  as 9S -> `Route/B` + `PL/9S`; loading both test saves (route A) -> `Route/A` + `PL/2B`.
+- `this` for `SceneStateSystem.has` must be the object the game's own `SceneStateSystem.set` calls get. AutomataMP's
+  `SceneStateSystem::get()` (from the `@SceneState` token category) is 8 bytes off on this build and `has` crashed with it.
+- Chapter Select confirm handler (exe + `0x95cb30`): reads the segment from a table of 0x54-byte entries (phase id as
+  int16 at +0xc, phase name at +0xe, hero or -1 at +0x4), sets the hero and route flags, calls exe + `0x9c5a00(id, phase
+  name, n)` which writes the phase global and resets story data, then sets a byte the main loop reads to load the world.
+  The arguments are the same for 2B and 9S: the hero choice only goes into the flags.
+- Loading a save fills the phase global by copying it from the save data, not through `0x9c5a00`.
+- Found with hardware breakpoints set from inside the game (debug registers on every thread through
+  `SetThreadContext`, a vectored exception handler records the writing instruction, the call stack unwound with
+  `RtlVirtualUnwind` over the exe's `.pdata`, and for execute breakpoints rcx/rdx/r8/r9). No debugger attached;
+  SteamStub did not interfere. One run of the bot gives the whole call chain of whoever writes a global.
+
+Derived:
+- Chapter Select can only jump to segment starts and only exists on a finished save, so it is not a general way to
+  move one player's game to the other's story point.
+
+Unknown:
+- How the phase changes during normal play in the world (no bot run reached a natural phase change yet).
+- Whether `0x9c5a00` plus the load byte works when called from inside the world.
+- Meaning of `n` (0xf for the segment the bot picked, phase `51_AB_MainDesert`) and of the phase id (256, 512).
