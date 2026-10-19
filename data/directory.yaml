@@ -6558,3 +6558,30 @@
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
   checked: '2026-10-19'
+- game: "King's Bounty: Crossworlds"
+  year: 2010
+  engine: TheEngine
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No ready-to-use co-op project surfaced in bounded searches. The Steam page lists single-player. The installed build has TCP and Lua network APIs, but the configured endpoint is named debug_server and campaign replication is unproven.
+  sources:
+  - https://store.steampowered.com/app/63910/
+  - https://www.pcgamingwiki.com/wiki/Engine:TheEngine
+  - https://www.nexusmods.com/kingsbountycrossworlds/mods/38
+  checked: '2026-10-20'
+  searched:
+  - GitHub repositories, Co-op Anything issues/PRs, ModDB, Nexus, Steam, and official Fulqrum forum web searches; no ready-to-use Crossworlds co-op surfaced.
+  - Archive.org and Discord were not searched.
