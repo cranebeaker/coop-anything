@@ -4447,6 +4447,37 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+- game: Assassin's Creed (2007)
+  year: 2007
+  engine: Scimitar (Anvil)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op mod and no netcode (series multiplayer starts at Brotherhood). The exe
+    ships full MSVC RTTI (4084 scimitar classes) and EaglePatch proves native ASI hooks on
+    the Steam/GOG 1.0.2.1 build, so a from-zero sync layer is feasible but unproven. Research
+    and design doc in games/assassins-creed/.
+  sources:
+  - https://github.com/Sergeanur/EaglePatch
+  - https://github.com/gentlegiantJGC/ACExplorer
+  - https://www.reddit.com/r/assassinscreed/comments/14ksmrc/any_coop_mod_to_any_assassins_creed_campaign/
+  checked: 2026-10-19
+  searched:
+  - 'GitHub repository search (topics coop, multiplayer, forge, eaglepatch), DuckDuckGo (co-op
+    mod / multiplayer mod / engine + coop), 2026-10-19; Nexus/ModDB site search and Reddit
+    search not run (web search tool blocked)'
 - game: Assassin's Creed Origins, Odyssey and Valhalla
   year: 2017
   engine: AnvilNext
