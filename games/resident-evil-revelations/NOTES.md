@@ -316,6 +316,168 @@ The owner played the test copy by hand with the experiment DLL (auto drop on, F9
 - Route A movement is solid: repeated switching between AI and second-player control works, and the AI stays in its idle think state while bypassed.
 - Aim works: the owner confirms Parker raised the weapon and aimed while numpad 0 was held. So `mUpperStatus` (`+0xf14`) is not the aim indicator, or it is sampled at the wrong moment; the value `2` checked in `updatePad`'s type-3 branch means something else (unknown).
 
+## 2026-10-19: fire and reload path for the partner (static analysis)
+
+### Observed
+- Pad queries for the local player are methods of an input manager at `[0x011E0388]`: 2 pad slots of `0x90` bytes at `+0x628`, current slot index at `+0x870` (checked `< 2`), enabled flag at `+0x882`. `FUN_008888c0` run button, `FUN_00888590` aim button, `FUN_0088e610` move stick, `FUN_00888190` current slot's device type.
+- Only 9 direct calls of the control-type getter `FUN_0049bea0`: 3 in `updatePad`, 2 "== 3" branches in hit/damage code (`FUN_0064a650`, `FUN_00655110`, with `FUN_00881cf0` / `FUN_00881d10`, likely session active / is host), 4 "== 1" branches (`FUN_006ac4b0`, `FUN_006cd540`, two outside known functions).
+- AI action requests are bit flags at **`think+0x158`** (think = `[uPlayer+0x1630]`), read by AI-specific state controllers:
+  - `FUN_0069c880`, `FUN_0069df60`, `FUN_0069eb60` (upper-body weapon controllers): while aiming (`+0x1151` set or `+0xf08 == 9`), **bit 0** fires (states 2/3/4 through `FUN_005f40b0` / `FUN_005c3e50`); bit 0 clear returns to state 0. **Bit 1** with `FUN_006b3840` gives state 6 (reload, guess from context).
+  - `FUN_006999a0`: bit 1 with `FUN_006b3840` -> lower state 9; aim request via `FUN_00615330` -> state 3.
+  - `FUN_0068f960`: bit 3 -> state 6 (when `FUN_006adcf0`), bit 4 -> state `0x45` (when `+0xf08 == 3`); stick input -> state 5.
+  - `FUN_00694480`, `FUN_006931b0`: bit 6 -> state `0x43`, bit 5 -> state `0x42`.
+  - `FUN_006af2d0`: bit 2 -> weapon switch to the AI-chosen weapon (`FUN_006178e0`), only when `uPlayer+0xe30 == 2`.
+- `uPlayer+0xe30` is a second "controller kind" field (1 player, 2 AI) that picks these AI controllers; the control-type switch to 3 does not change it, which is why the partner kept using the AI upper-body controller (that controller also reads our `+0x1151` aim flag, so aiming worked).
+
+### Derived
+- For the partner, fire and reload can be driven by writing bits 0 and 1 of `think+0x158` right after `updatePad`, the same place as the pad group. Implemented in the DLL: numpad 1 = bit 0 (fire), numpad 3 = bit 1 (reload), numpad 2 = bit 3 (experiment). The DLL logs when the AI had set other bits before our write (to see whether the AI still issues actions).
+
+## 2026-10-19: partner fire/reload test (think+0x158 bits)
+
+### Observed (log `run 15`, owner report)
+- Two game sessions. While aiming (`aim=1`) the fire bit (bit 0) was written in 37 input changes, reload (bit 1) in 10, bit 3 in 14. The AI set its own bits before our write only once (`08`). `uPlayer+0xe30` read `2` throughout.
+- Owner: aiming works, but **fire does nothing**, reload (numpad 3) does nothing, numpad 2 does nothing visible. The status log shows `mLowerStatus` values 3, 4 and 6 at times; not tied to a key yet.
+- Two first-chance access violations at `0x778F34D9` (system DLL, heap-like registers), both with mode `-1` (game systems already torn down) and about 2 s after the last input of each session, at 19:34:08 and 19:36:06. A new process started at 19:34:40. The owner closed the game with Alt+F4 both times: these are shutdown-time exceptions, not crashes in play.
+
+### Derived
+- Writing bits 0/1 of `think+0x158` does not make the partner fire or reload, even though the bits persist and aiming works. Either `FUN_0069c880` is not the controller that runs for the partner, a condition before the fire branch fails (`FUN_006a8050`, `+0xfec`, ammo checks), or the AI fires through another path.
+
+## 2026-10-19: what changes when the local player fires (observer on Jill)
+
+The partner never fires in the current area, so the F6 observer watched Jill (control type 1) while the owner aimed, fired about 6 shots and lowered the weapon. Log `run 17`.
+
+### Observed
+- Think manager fields of Jill: no change at all. Unit fields that changed (besides sticks and waist rotation): `+0xf10`, `+0xf14`, `+0xf18`, `+0xf80`–`+0xfac`, `+0x1230/+0x1234`, `+0x1590`, `+0x15e0/+0x15e8`, `+0x16a4`.
+- Upper-body state machine (data from `+0xf90`): `+0xfa8` current state, `+0xfac` previous state, `+0xf94` sub-step, `+0xf80/+0xf84` state object pointers.
+  - Raise weapon: `+0xf14` `0 -> 2`, `+0xfa8` `2 -> 3`, motion `+0x1230` `0x465`, then `0x404` (aim hold).
+  - **Each shot**: `+0xfa8` `3 -> 6`, motion `0x552`, `+0x1590` bit 0 set for exactly one frame, back to `3` (motion `0x404`) about 0.9 s later. Seen 4 times in the first 12 s, same pattern each time.
+  - Lower weapon: `+0xfa8` `3 -> 2`, `+0xf14` `2 -> 0`, motion `0xFFFF`.
+  - Once `+0xfa8 = 9` with motion `0x56A` for 1.3 s right after a shot sequence (reload, guess).
+- `+0xf10` (lower) / `+0xf18` (rotate) flick `0 <-> 4` and `0/1/2` during small turns.
+
+### Derived
+- `+0xfa8` is `+0xf90 + 0x18`, the slot `FUN_0049b490` writes (`*(*(ctrl+4)+0x18) = state`), so writing it requests the next upper-body state. Fire = state 6 from aim state 3.
+- `mUpperStatus = 2` is the aim state for the local player; it stayed `0` for the partner in test 2 even though he visibly aimed, so the partner's aim pose comes from another path (AI controller).
+- DLL change: numpad 1 requests state 6 when the partner's `+0xfa8 == 3`, numpad 3 requests state 9; the partner's `+0xf14`, `+0xfa8`, `+0xf94`, motion and shot pulse are logged on change. The AI action-bit writes were removed.
+
+## 2026-10-19: partner fire via upper state 6 (test)
+
+### Observed (log `run 18`, owner: "does not fire")
+- While the owner aimed with the partner (aim flag set in 23 input changes) and pressed fire (16) and reload (7), the partner's upper-body state machine never changed: `+0xfa8 = 2`, `+0xf14 = 0`, `+0xf94 = 0xFFFFFFFF`, motion `0xFFFF` for the whole session. No fire/reload request was issued because the state was never `3`.
+
+### Derived
+- The partner's visible aim does not run through the upper-body state machine at `+0xf90`. With the AI controllers (`+0xe30 = 2`), aiming is likely a lower/whole-body state (the AI transition `FUN_006999a0` requests state 3 for aim; earlier status logs showed `mLowerStatus` 3/4/6).
+
+## 2026-10-19: observer on the partner while aiming (control type 3)
+
+### Observed (log `run 20`; run 19 observed O'Brien by mistake, fixed)
+- Learning muted 2 unit fields and 1 think field. While the owner aimed three times, released, and pressed fire/reload while aiming, only these changed: `unit+0x1150` (the run/aim flag bytes, 6 times), `unit+0x1180` (waist rotation), `think+0x48`, `think+0x60`. No state-machine field changed (`+0xf10`, `+0xf14`, `+0xf80`–`+0xfac` all still).
+
+### Derived
+- With control type 3 the partner's raised weapon is only the aim pose (flag + waist), not an aim state: no controller runs aim -> fire logic for him (the AI controllers apparently run only under type 2). Fire has to be driven on his upper state machine directly.
+- DLL change: aim key requests upper state 3 from 2, release requests 2 from 3; fire (6) and reload (9) requests as before.
+
+## 2026-10-19: writing the partner's upper state directly (test)
+
+### Observed (log `run 21`, owner: "nothing happens")
+- Aim key: `+0xfa8` written `2 -> 3`; fire key: `3 -> 6`. The values stayed as written, but `+0xf94` stayed `0xFFFFFFFF`, motion stayed `0xFFFF`, `+0xf14` stayed `0`, no shot pulse. The state then sat at `6`.
+
+### Derived
+- `+0xfa8` is only storage: the partner's upper state machine is not being ticked under control type 3 with controller kind `+0xe30 = 2`. On the local player the same machine runs (state objects at `+0xf80/+0xf84` change with each state).
+- Guess: the Raid second player is control type 3 with controller kind `+0xe30 = 1`, whose player controllers read the network fields (`mIsRun_Net`, `mIsAim_Net`). DLL change: F8 also sets `+0xe30 = 1` (restored on F8 off); the direct state writes were removed.
+
+## 2026-10-19: controller kind +0xe30 = 1 (test) and the player upper-body controller
+
+### Observed (log `run 22`, owner report)
+- With `+0xe30 = 1` and control type 3, the partner's upper state machine runs by itself when the aim flag is set: `+0xf14 0 -> 2`, `+0xfa8 2 -> 3`, `+0xf94 = 1`, motion `0x465 -> 0x404`; on release `+0xfa8 -> 2`, `+0xf94 = 7`. 12 identical cycles, no exception. Same values as the local player.
+- Still no shot. Owner: right mouse button during the partner's aim makes the partner "tremble".
+- Player upper-body controller `FUN_0069c2f0` (vtable ref at `0x1064F3C`): in aim, `FUN_0088c880(FUN_006256a0())` true and `FUN_006b3840()` -> state 6 (fire); `FUN_0088ca00` + `FUN_006adf20(0)` -> state 9; `FUN_0088cab0` + `FUN_006ae000` -> state 10; `FUN_0088a050` + `FUN_006adf20(1)` -> state 9. `FUN_006256a0` is `return 0`; the four button functions are input-manager methods reading the shared input manager's current slot.
+
+### Derived
+- Controller kind `+0xe30` selects player vs AI controllers. Player controllers + control type 3 give a working remote player for aim; fire/reload buttons are read from the shared (local) input, which is also why the local mouse disturbed the partner.
+- DLL change: `uPlayer::update` (`0x6C31E0`, virtual) is wrapped; while it runs for the partner the input manager is disabled (`+0x882 = 0`) and the four button functions return the partner's keys (numpad 1, 3, 2, decimal). Query counts are logged every 300 frames.
+
+## 2026-10-19: input context via uPlayer::update (test)
+
+### Observed (log `run 23`, owner report)
+- All hooks installed (`uPlayer::update` `0x6C31E0`, four button functions). During the whole session the partner context never became active (`inP2 = 0`) and the button functions were never called in it (all counters 0).
+- When the local player aimed while the partner was taken over, the partner's upper state flipped `3 <-> 2` every 4–5 frames for seconds (motion `0x465` / `0xFFFF`), seen by the owner as "Parker repeats the aim animation on/off, trembling".
+
+### Derived
+- `0x6C31E0` is not the path that runs the partner's controllers (or it is not called with the unit pointer); the local aim button still reaches the partner's controller and fights the partner's own aim flag.
+- DLL change: the context is also set by wrapping the upper-body controller `FUN_0069c2f0` itself (unit from its stack argument), the aim button `FUN_00888590` is added to the context-aware buttons (returns the partner's aim key), and the log reports which `this` pointers reach `uPlayer::update` and how often the controller runs for the partner.
+
+## 2026-10-19: which controller runs for the partner (diagnostics) and upper-body state vtables
+
+### Observed (log `run 24`, owner: still no shot, aim animation keeps switching, Parker inches forward)
+- `uPlayer::update` (`0x6C31E0`) is called for three units about 1.5 times per frame each: Jill `241E2ED0`, Parker `241E4E10`, and `2428E400` (the O'Brien NPC). So the context did activate for Parker, yet no button function was called inside it.
+- The player upper-body controller `FUN_0069c2f0` ran 280 times, all for Jill, never for Parker.
+- Upper-body state classes have 11-slot vtables in `.rdata` `0x1064E9C`–`0x10650AC` (one per state family). Pattern: slot 4 = local-player update (`0x69C2F0`, `0x6A0770`, ...), **slot 5 = remote update** (`0x69C830`, `0x69DE40`, `0x69EB00`, `0x69F240`, `0x69FB20`, or the empty `0x42E750`), slot 6 = AI update (`0x69C880`, `0x69DF60`, `0x69EB60`, ...). `0x1064E14` is a 33-slot table of a different shape.
+- The remote updates only follow the aim flag: `FUN_0069c830` toggles the aim pose with `+0x1151`/`+0xf08 == 9` and calls `FUN_006b42c0`; no fire, reload or button logic.
+
+### Derived
+- With `+0xe30 = 1` and control type 3 the partner runs the slot-5 (remote) updates. In the Raid, a remote player's shots must come from network packets that set upper-body states directly; nothing local decides them.
+- The aim oscillation means another writer sets the partner's `+0x1151` (guess: the AI think code mirroring the player's aim).
+- DLL change: `FUN_0069c830` is hooked to force `+0x1151` to the partner's aim key right before it reads; fire / reload request upper state 6 / 9 from aim state 3 again (now that the machine runs).
+
+## 2026-10-19: remote controller hook (test) and a corrected reading of the AI fire bit
+
+### Observed (log `run 25`, owner: "nothing changed")
+- `FUN_0069c830` (remote, slot 5) was never called for the partner (counter 0); `FUN_0069c2f0` (local, slot 4) ran only for Jill when she aimed. No fire request was logged: the partner's `+0xfa8` was never `3` at the check point. The `3 <-> 2` oscillation continued.
+- Static search for the slot dispatcher (reads of `+0xe30` near indirect calls, scaled-index vtable calls, `[vt+0x10/0x14/0x18]` triads) found nothing.
+
+### Derived
+- For the partner in aim state 3 the remaining candidate is slot 6, the AI update `FUN_0069c880`. Re-reading it with the local player's numbering (state 6 = fire): **bit 1 of `think+0x158` with `FUN_006b3840` leads to state 6 (fire)**; bit 0 leads to states 2/3/4. The earlier bit test (run 15) had bit 0 as fire and ran while the partner's state machine was not ticking (`+0xe30 = 2`), so it was not a fair test.
+- DLL change: `FUN_0069c880` hooked (prologue `55 56 8B 74 24 0C`); for the partner it counts calls, logs callers (to find the dispatcher), forces `+0x1151` to the partner's aim key and writes `think+0x158` bits right before the read: numpad 1 -> bit 1 (fire), numpad 3 -> bit 0.
+
+## 2026-10-19: hot-reload split of the experiment DLL
+
+### Observed
+- Each test needed the owner to quit and relaunch the game. The DLL is now split: `dinput8.dll` (loader: proxy, `Direct3DCreate9 -> CreateDevice -> Present` chain, exception logging with the assert decoder) loads `coop_logic.dll` on the first Present and calls its `coop_frame` every frame. F5 or a file `coop_reload.txt` makes the loader call `coop_shutdown` (partner restored, every game-code patch restored from saved bytes), copy `coop_logic.dll` to `coop_logic_live<N>.dll` and load that copy. Old copies are never freed, so a game thread still inside an old stub keeps valid code.
+- Both built with MSVC 2019 x86 without SDK/CRT; exports and imports checked with dumpbin (loader 6 KB, logic 15 KB).
+
+### Derived
+- Experiments can be swapped while the owner keeps the game open next to Parker. Remaining risk: patching game code while another engine thread executes those bytes (not seen so far; hooks were installed before gameplay until now).
+
+## 2026-10-19: hot-reload tests 1–2 and the state machine layout
+
+### Observed (logic gen 1 and 2, game kept open)
+- Hot reload works: `logic gen 2` loaded at 20:31:54 while playing; shutdown restored all patches; no exception.
+- The AI upper controller `FUN_0069c880` does run for the partner (16–40 calls), called from **`0x0049B3D3`**, but only during the short `3 <-> 2` flips; the owner had held the aim key (20:30:26–33) with no state change. In no run so far did the aim key alone put the partner into upper state 3; the state-3 entries came from the AI copying the player's aim.
+- Writing `+0xfa8 = 3` with `+0xe30 = 1` (gen 2): the value stays but `+0xf94` stays `0xFFFFFFFF` and no motion plays: the transition is not executed.
+- At 20:33:14 the partner's unit pointer changed (`23F34E10 -> 23F34380`, same class); the DLL released it as designed.
+- Dispatcher `FUN_0049b3a0(sm, mode)` (virtual): state object at `sm+0xc`, owner at `sm+8`; mode 1 -> state slot `+0x18`, mode 3 -> `+0x1c`, mode 2 -> `+0x20`, then slot `+0x24` always. So the earlier "slot 4 local / 5 remote / 6 AI" reading was wrong.
+- State machine properties (`FUN_0049b4a0`): `owner` `+8`; `nowState`: `state` `+0xc`, `process` `+0x14`, `branch` `+0x18`; `beforeState`: `state` `+0x10`, `process` `+0x1c`, `branch` `+0x20`; `mIsStateEnd` `+0x24`; flags `+0x26`, `+0x27`. `FUN_0049b490` writes `nowState.branch`, `FUN_0049b150` reads it, `FUN_0049b480` writes `nowState.process`.
+
+### Derived
+- The upper-body state machine of a unit sits at `unit+0xf74`: `nowState.state` `+0xf80`, `beforeState.state` `+0xf84`, `nowState.process` `+0xf88`, **`nowState.branch` `+0xf8c`**, `beforeState.branch` `+0xf94`, `mIsStateEnd` `+0xf98`. This matches the local player's log (the `+0xf84` value copies `+0xf80` on each transition). `+0xfa8`/`+0xfac` are a separate state id pair that the game updates; writing them does not request anything. The real request slot is `+0xf8c`.
+
+## 2026-10-19: observing the AI partner firing at enemies
+
+### Observed (F7 observer on Parker under AI, owner pressed F11 at shots; about 7 shots and one reload)
+- Aim entry: `+0xf88` (`nowState.process`) `0 -> 1`, `+0xf8c` (`nowState.branch`) `-1 -> 0` for one frame, `+0xfa8` `2 -> 3`, `+0xf14` `0 -> 2`, motion `0x465 -> 0x404`, aim flag `+0x1151 = 1`.
+- **Each shot**: `think+0x158` = `1` (bit 0) for one frame; next frame `+0xf80` (state object) changes, `+0xfa8` `3 -> 6`, motion `0x552`; the bit returns to 0. About 1 s later `+0xf8c` is `0` (or `2`) for one frame and the state returns to `3` (motion `0x404`).
+- **Reload**: `think+0x158` = `2` (bit 1), `+0xf14 2 -> 3`, `+0xfa8 -> 0` (weapon lowered), then `think+0x158 = 3`, `+0xfa8 = 9`, motion `0x56A` for about 2 s, back to aim.
+- `+0x1590` (the local player's shot pulse) did not change for the AI shots.
+
+### Derived
+- AI action bits: **bit 0 = fire, bit 1 = reload** (the first reading was right; the later swap was wrong).
+- The earlier fire tests failed because the partner never truly entered aim state 3 (the aim key only set the pose; writes to `+0xfa8` are not requests). Aim entry is a request through `nowState.branch` (`+0xf8c`), as `FUN_0049b490` does.
+- Logic gen 3 (hot-reloaded): the aim key writes `+0xf8c = 3` when the partner is lowered (`+0xfa8 == 2`) and no request is pending; in the AI aim controller numpad 1 -> bit 0 (fire), numpad 3 -> bit 1 (reload).
+
+## 2026-10-19: player 2 fires and reloads (logic gen 3)
+
+### Observed (owner: "FUNZIONA"; log after `logic gen 3 loaded`)
+- F8 at 20:39:56 (partner `uPl<ParkerEp1_2>`, control type 3, controller kind 1). Aim request via `nowState.branch = 3` at 20:39:58. From then on the AI upper controller ran for the partner (caller `0x0049B3D3`).
+- **7 shots** from numpad 1: `+0xfa8 = 6`, motion `0x552`, `+0xf94 = 2`, about one per second (20:40:00.7, 01.8, 02.8, 06.7, 07.8, ...). **5 reloads** from numpad 3 (and once right after the aim request): `+0xfa8 = 9`, motion `0x56A`. No exception.
+- The first request (`branch = 3` from the lowered state) went straight to state 9 (reload), not to aim.
+
+### Derived
+- Player 2 in the campaign now moves, runs, aims, fires and reloads through the partner unit, with mode 0, no new spawn and no network yet. Recipe: control type `3` (`[[[u+0xe80]+0x38]+0x34]`), controller kind `+0xe30 = 1`, pad group written right after `updatePad`, aim flag `+0x1151` and AI action bits `think+0x158` (bit 0 fire, bit 1 reload) written right before the AI upper controller `FUN_0069c880` runs, and a `nowState.branch` request to leave the lowered state.
+- Branch `3` from the lowered state means reload, not aim; the AI uses branch `0` for aim entry (seen in the observer log). To fix.
+
 ## Next steps
-1. Fire / reload / melee for a type-3 unit (`cPlayerPadSyncData` apply / action sync).
-2. Second input source over the network (second instance), replacing the numpad.
+1. Use branch `0` for aim entry; check that the local mouse no longer disturbs the partner's aim.
+2. Melee, sub-weapon (grenade), weapon switch, interaction for player 2.
+3. Second instance over the network (Spacewar 480 or UDP) feeding the same inputs, replacing the numpad.
+4. Commit and open the draft PR (owner decision).
