@@ -476,8 +476,110 @@ The partner never fires in the current area, so the F6 observer watched Jill (co
 - Player 2 in the campaign now moves, runs, aims, fires and reloads through the partner unit, with mode 0, no new spawn and no network yet. Recipe: control type `3` (`[[[u+0xe80]+0x38]+0x34]`), controller kind `+0xe30 = 1`, pad group written right after `updatePad`, aim flag `+0x1151` and AI action bits `think+0x158` (bit 0 fire, bit 1 reload) written right before the AI upper controller `FUN_0069c880` runs, and a `nowState.branch` request to leave the lowered state.
 - Branch `3` from the lowered state means reload, not aim; the AI uses branch `0` for aim entry (seen in the observer log). To fix.
 
+## 2026-10-19: online plan, stage 1a built; Raid-session idea
+
+### Observed
+- `steam_api.dll` (2024 build) exports the flat API: `SteamClient`, `SteamAPI_GetHSteamUser/Pipe`, `SteamAPI_ISteamClient_GetISteamNetworking`, `SteamAPI_ISteamNetworking_SendP2PPacket/IsP2PPacketAvailable/ReadP2PPacket/AcceptP2PSessionWithUser`. `rerev.exe` requests `SteamClient017`, `SteamNetworking005`, `SteamUser019`, `SteamFriends015`, `SteamMatchMaking009`.
+- Logic DLL stage 1a built (not yet run): `coop.ini` (`role`, `transport=udp|steam`, `peer`, `port`); client sends its local player's pad group plus cumulative fire/reload counters (local upper state entering 6 / 9) as a 40-byte `RCI1` packet each frame; host uses it for the taken-over partner while fresh (< 500 ms), fire/reload as 3-frame bit pulses. Steam P2P on channel 7, unreliable; UDP via ws2_32 loaded at runtime.
+- Aim entry for the partner changed to `nowState.process = 1` + `branch = 0` (as the AI does), since `branch = 3` led to reload.
+
+### Derived
+- Owner reminder: the game ships a working online co-op mode (Raid). The blocking problems with mode 1 in the campaign (cutscene end waiting for the partner, net sync of enemies/doors) assume a live network partner. Inside a real Raid session those waits complete and the native sync classes (`cActivateEnemySyncData`, `cDeathEnemySyncData`, `cNetSyncGoNextBlockData`, `cPlayerPadSyncData`, ...) are active. Route B, "campaign inside a Raid session", could reuse all of it; known blockers: Episode system missing under mode 1 (save asserts), `scene_coop` arranges (mask exists), starting a campaign episode instead of a Raid stage. Policy: it would use the game's own Steam lobbies (private, friends only); VAC is not listed; owner decision.
+
+## 2026-10-19: route B feasibility, part 1 (static + campaign runtime)
+
+### Observed
+- Game-system holders (MT DTI): `sGameSystemsHolder<Resident>` `0x118133C`, `<Game>` `0x118135C`, `<Episode>` `0x118139C`, `<Cut>` `0x118137C`; `sCoopManager` DTI `0x1183E78` (size `0xE90`).
+- `FUN_00794e10` (factory, referenced from table `0x107DB04`) builds the Episode system: loads `archive\game_system\episode\episode` and creates 19 subsystems, including `sPlayer` (`FUN_006a7040`).
+- The Episode constructor `FUN_007929a0` is called from two places, neither gated by the mode: `FUN_0042a400` (creates it once the episode archive is loaded) and `FUN_0043c960` (creates `sGameSystems` and the Episode system if missing). `FUN_0042a400` and `FUN_0042b720` are both called from `FUN_0042c1f0`.
+- `FUN_0042b720` (`aEpisodeBase.cpp`) picks the two character ids of an area: mode 0 from episode data `[0x0116A340]+0x24/+0x28`; mode 1 from the session (`sCoopManager+0xE4` for the local player, `+0xE8` for the other slot when `+0xF4` is set; `FUN_00882d60` = local slot index), then loads both characters' resources. The episode framework (`aEpisodeBase`) serves campaign and Raid.
+- Runtime, campaign (Episode 1, mode 0): Episode system `220455E0` (state 0); `sCoopManager` exists (`22028F30`) with `+0xE4 = +0xE8 = 0x80011010`, `+0xF4 = 0xFFFFFFFF`; episode data `+0x24 = 0x80011110`, `+0x28 = 0x80011120` (the two campaign characters); units `uPl<JillEp1_2>` (control 1), `uPl<ParkerEp1_2>` (control 2), `uNp<OBrien>`.
+
+### Derived
+- Raid stages most likely run through the same episode framework with mode 1, taking characters from the session instead of the episode data. In a session the partner slot would be filled natively by the network player. Needed next: the same snapshot inside a Raid stage.
+
+## 2026-10-19: route B, Raid snapshot attempt 1 (invalid: auto forced mode 0)
+
+### Observed
+- The DLL's auto mode (on by default since the mode experiments) dropped mode `1 -> 0` at 22:20:30 when the Raid stage started loading (Episode pointer was null in the menus). The Raid single-player stage then ran with mode 0.
+- In that stage: units `uPl<Jill>` (control 1) and **`uPl<ParkerLight>` (control 2, think manager present)**; Episode system present (`2203A490`); episode data `+0x24 = 0x80011010` (Jill, the Raid character), `+0x28 = 0x80011420` (ParkerLight); `sCoopManager+0xF4 = 0`, `+0x8F4 = 2`.
+- Later snapshots (22:26 on) were back in the campaign (`uPl<JillEp1_2>`, `uPl<ParkerEp1_2>`, episode data back to `0x80011110/0x80011120`).
+
+### Derived
+- A Raid stage loaded with mode 0 builds an AI partner and the Episode system, like a campaign area: the stage loader is shared and follows the mode. This is the opposite direction of route B, but it shows the two content types run through one path.
+- Auto mode switched off for the next attempt.
+
+## 2026-10-19: route B, Raid snapshot attempt 2 (valid, mode 1)
+
+### Observed (Raid single player, stage 1, auto off)
+- Mode `0 -> 1` at stage start (22:32:56). The DLL's `sArrange` mask fired once (a neighbour block loaded with mode 0, i.e. campaign arranges inside the Raid stage); no visible problem, but the masks must be off for Raid tests.
+- **Episode system present** (`22038910`, state 0) in the Raid stage.
+- Episode data: `+0x24 = 0x80011010` (the local Raid character, Jill), `+0x28 = 0x80000000` (empty second slot: solo), `+0x04 = 0xFFFFFFFF` and `+0x14 = 0` (campaign: `0x436FEC58` and `0xFFFFFFFF`), `+0x18 = 0x020007D0` (same value as campaign Episode 1).
+- Units: one `uPl<Jill>` (control 1); no partner. `sCoopManager`: `+0xE4 = +0xE8 = 0x80011010`, `+0xF4 = 0`, `+0x8F4 = 2`.
+
+### Derived
+- The Episode system is not campaign-only: Raid stages create it too. The checkpoint-restart crash with mode 1 in the campaign is specific to that restart path, not a missing system in coop. Route B's main blocker shrinks.
+- In a session the second character slot (`episodeData+0x28`) is where the network player's character goes; that is the native player 2.
+- Still unknown: which value selects the stage/episode (the `+0x18` value is identical for Raid stage 1 and campaign Episode 1, both on the ship), how the Raid flow tells both machines what to load, and how campaign scripts, cutscenes and saves behave under mode 1 with a real partner.
+
+## 2026-10-19: route B, tables and episode/scene ids (static)
+
+### Observed
+- One manager loads both tables: `archive\game\campaign_table\campaign_table` (`FUN_006f66a0`) and `archive\game\coop_table\coop_table` (`FUN_006f74d0`, `prog\game\coop_table\sCoopTableManager.cpp`), plus `coop_table_dlc`.
+- Field names in the binary: `mStageNo`, `mEpisodeNo`, `mSceneNo`, `mEpisode` (registered by the Episode system's property list `FUN_00793660`), `mEpisodeID`, `mEpisodeList`, `mStage`, `mStageData`, `mJumpTable[i].mStageNo`, `mNowStageNo`.
+- `FUN_00442080` registers a structure with `mEpisodeNo` at `+4` and `mSceneNo` at `+8` (area flow code).
+- No readable property names for `sCoopManager::cStageInfo`.
+
+### Derived (feasibility verdict so far)
+- For: campaign and Raid share the episode framework (`aEpisodeBase`), the stage loader, the Episode system, the player-slot logic (slot 2 filled from the session in mode 1) and the table manager. The blocking problems seen with mode 1 in the campaign (cutscene end waiting, partner sync) need a live partner, which a Raid session provides.
+- Open: (1) which episode/scene id the loader receives and whether a Raid session can be pointed at a campaign episode/scene; (2) campaign scripts, objectives and cutscenes under mode 1 (375 mode readers); (3) campaign saving under mode 1 (the restart crash path); (4) both machines must load the same thing: the host's choice must reach the client through the session's own messages.
+- Verdict: **plausible, not proven.** The decisive experiment can be done offline and solo: in a Raid single-player stage start, replace the requested episode/scene with a campaign one (with the arrange mask on) and see whether a campaign area loads and plays in mode 1.
+
+## 2026-10-19: route B decisive test setup
+
+### Observed (static)
+- `FUN_00415b30` registers a stage load request: `mRequestData`, `mStageNo`, `mBlockNo`, `mArchive`, `mArchiveName`, `mArrangeHandle`, ... The area to load is a (stage, block) pair, the same two arguments `sArrange` functions take.
+- `FUN_00446a80`: jump point with `StageID`, `mBlockNo`, `mEpisodeNo`, `mSceneNo`, `mCutNo`, `mListNo`. `FUN_0044cfd0`: saved character state with `mCharaID`, `mEpisodeNo`, `mSceneNo`, `mStageNo[2]`, `mBlockNo[2]`, `mPosition`, `mVitality`, `mIsCoop`.
+- Prologues of the 11 mode-reading `sArrange` functions are hookable (5–8 bytes, no relative branches).
+
+### Derived
+- A Raid stage and a campaign area on the same (stage, block) share geometry; what differs is the arrange set (`scene_coop` vs `scene`: enemies, items, doors, events) and the episode script position. So "campaign content in a Raid session" can be tested by running all `sArrange` code with mode 0 inside a mode-1 Raid stage.
+- Logic gen 5: 12 mask hooks (11 `sArrange` + cut flow), groups off by default, toggled by F4 / file `arr` (arranges) and file `cut`; the neighbour loader logs every new (stage, block) with the mode. Auto mode is now off by default.
+
+## 2026-10-19: route B decisive test 1 (arrange masks) and the event archives
+
+### Observed (owner: "everything is the same")
+- Campaign Continue loaded stage 1 block 2 (mode 0); Raid stage 1 loaded stage 1 block 1 (mode 1): same ship stage.
+- With the arrange masks on, a Raid stage start hit only three masked functions (`45B2F0`, `4629F0`, `4688F0`, 5 calls). The owner saw no difference.
+- The stage content choice that was missed: two more mode reads pick `scene` vs `scene_coop` for the **event archives**: `FUN_0042bfc0` loads `archive\game\%s\%1x%1x\%1x%1x_event` (area events; called from the `aEpisodeBase` update chain `FUN_0042c1f0`), `FUN_0041b710` loads `archive\game\%s\%1x%1x\%1x%1x_%02x\%1x%1x_%02x_event` (scene events). Ids come from `FUN_0078fda0/FUN_0078fb10/FUN_0078fb50` and `FUN_0078fc10/FUN_0078f560` on the area id object.
+
+### Derived
+- Test 1 did not reach the content choice, so it says nothing yet about feasibility. Logic gen 6 adds both event-archive loaders to the F4 mask group.
+
+## 2026-10-19: route B decisive test 2: campaign content inside a Raid session (works in part)
+
+### Observed (Raid single player stage 1, F4 masks on before the stage; owner report + log)
+- Masked code ran with mode 0 inside the mode-1 Raid stage: area event archive loader `42BFC0` (3 calls), scene event archive loader `41B710` (>1200 calls), `sArrange` `45B2F0`, `4629F0`, `4688F0`; stage 1 block 1.
+- Owner report:
+  - The mission objective was the campaign one ("save/find Chris"): **correct**.
+  - Items and enemies were at their **campaign positions**: correct.
+  - The first campaign video played.
+  - Raid HUD elements stayed: the key icon at the screen side, enemy HP bars and damage numbers like the Raid.
+  - No Parker (expected: the second slot is empty in a solo session).
+  - Dialogue lines were wrong.
+  - The Raid stage **ended right after killing the first enemy and seeing the first video** (Raid results).
+- No exception logged.
+
+### Derived
+- **Route B works in principle**: a Raid session (mode 1, its own netcode and session) loaded and ran campaign Episode 1 content (objective, arranges, events, a cutscene) once the arrange and event-archive choices were made with mode 0. Geometry is shared; content comes from the `scene` archives.
+- Open problems, in order:
+  1. Episode progression: the campaign event that should continue the episode (next block / next cut) ended the Raid stage. The coop branches of the end/result flow states (`cEpisodeEndFlowState`, `cSceneResultFlowState`, area flow) treat it as a stage clear.
+  2. Raid presentation: HUD key, enemy HP bars, damage numbers (GUI and enemy code reading the mode or the coop tables); cosmetic but visible.
+  3. Dialogue lines: wrong set, probably a mode- or partner-dependent voice/subtitle table (unknown which).
+  4. Player 2: in a real session the second slot is the friend's Raid character, native network player (untested).
+  5. Enemy stats: Raid levels/HP scaling may apply (coop tables); unknown.
+  6. Saving campaign progress under mode 1 (the restart crash path).
+
 ## Next steps
-1. Use branch `0` for aim entry; check that the local mouse no longer disturbs the partner's aim.
-2. Melee, sub-weapon (grenade), weapon switch, interaction for player 2.
-3. Second instance over the network (Spacewar 480 or UDP) feeding the same inputs, replacing the numpad.
-4. Commit and open the draft PR (owner decision).
+1. Find what ended the stage after the first video (end/result flow states under mode 1) and route it to the campaign continuation.
+2. Then HUD/enemy presentation masks, dialogue table, and a two-player session test with the friend.
