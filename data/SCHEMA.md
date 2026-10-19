@@ -28,6 +28,7 @@ renders `DIRECTORY.md` from it, so edit the YAML, never the table.
   sources:                            # every claim above must be backed by one of these
     - https://example.org/source
   checked: 2026-10-16                 # date the entry was last verified
+  up_for_adoption: false              # optional; true = the author stopped and wants someone to take over
 ```
 
 ## QA levels (the flag that matters most)
@@ -42,5 +43,9 @@ renders `DIRECTORY.md` from it, so edit the YAML, never the table.
 Gaps (no project found) use `kind: gap`, `project: "(none found)"`, `status: none`, an empty
 `url`, and a `searched:` list saying where you looked and when (for example "GitHub, Nexus,
 ModDB, Steam forums via web search, 2026-10-16; Reddit not checked"). `sources` can then be empty.
+
+Set `up_for_adoption: true` when the author has stopped working on the project and is happy for
+someone else to continue it. Keep `status` honest about how far it got; the flag only says it
+needs a new owner. These entries are also listed in their own section of `DIRECTORY.md`.
 
 Rules: don't guess. Unknown is `unknown`. Every entry needs at least one source URL and a `checked` date.

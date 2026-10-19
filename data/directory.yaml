@@ -4089,41 +4089,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
-- game: Poppy Playtime
-  year: 2021
-  engine: Unreal Engine 4
-  project: (none found)
-  url: ''
-  other_urls: []
-  kind: gap
-  status: none
-  coop_scope:
-    story: unknown
-    enemies: unknown
-    world_state: unknown
-    items: unknown
-  players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
-  qa: none
-  notes: >-
-    No co-op mod exists. A fan multiplayer mod was made and deleted by its author (dev confirmed on
-    Reddit). Useful lead for a build-from-zero project: the Steam build (base game = Chapter 1,
-    buildid 21905565, UE 4.27.2) ships the VoxeX voice-chat SDK (vivoxsdk_x64.dll, ortp_x64.dll)
-    in its binaries, and Chapter 2 builds contain an unused multiplayer minigame documented by
-    TCRF - multiplayer code existed in-house. Game is free-to-play on Steam; single-player only,
-    no Remote Play Together category. Claimed by issue; work in progress notes in
-    games/poppy-playtime/.
-  sources:
-  - https://www.reddit.com/r/PoppyPlaytime/comments/uut6zj/anybody_have_a_poppy_playtime_multiplayer_mod/
-  - https://www.youtube.com/watch?v=7nRBqSjCB0k
-  - https://tcrf.net/Poppy_Playtime:_Chapter_2/Multiplayer
-  - https://store.steampowered.com/app/1721470/Poppy_Playtime/
-  checked: 2026-10-18
-  searched:
-  - search GitHub (repo search, 435 results), Nexus mods list (58 mods), ModDB, Steam store API and web search, 2026-10-18
-  - coop-anything issues/PRs via GitHub search API (0 hits), 2026-10-18
 - game: God of War (2018)
   year: 2022
   engine: Santa Monica Studio proprietary
@@ -6387,6 +6352,212 @@
   sources:
   - https://github.com/Dudiebug/stacklands-coop
   checked: '2026-10-17'
+- game: Enter the Gungeon
+  year: 2016
+  engine: Unity 2017.4 (Mono)
+  project: Gungeon Online
+  url: https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: yes
+    items: partial
+  players: '2'
+  networking: lan
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: "Gungeon Online 0.101.0, MIT, drops into BepInEx. Steam lobby invites plus LAN UDP 27460. The host shares the run seed and the world/level/save state; enemy death and HP are synced but enemy attack simulation is not, so combat can drift. Verified with two real game clients over LAN using the mod's built-in test harness: both connected, picked different characters and generated the same floor (fingerprint 2A7BE448); a ~4 minute run had no disconnect or version mismatch. Write-up in games/enter-the-gungeon."
+  sources:
+  - https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
+  checked: '2026-10-18'
+- game: Enter the Gungeon
+  year: 2016
+  engine: Unity 2017.4 (Mono)
+  project: GungeonTogether 3-Player
+  url: https://thunderstore.io/c/enter-the-gungeon/p/Rec/GungeonTogether_3Player/
+  other_urls:
+  - https://github.com/AhmetRec/GungeonTogether-3Player
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '3+'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: none
+  notes: "GungeonTogether 3-Player 0.10.8, MIT, drops into BepInEx and needs the ModTheGungeon API 1.9.2. Steam lobbies plus Steam P2P, aimed at 3 or more players. Marked AI Generated on Thunderstore and early: the published DLL (assembly 0.10.8.0) is ahead of its public repo (still 0.9.0), so it was reviewed from the decompiled binary (no URLs, file writes, process launches or native imports found). Boot-tested here in an isolated copy: the plugin loads, Steam initialises and the P2P/lobby callbacks register, but a real 3-client play session was not run (needs three Steam accounts). Incompatible with Gungeon Online; remove GungeonOnline.dll. Write-up in games/enter-the-gungeon."
+  sources:
+  - https://thunderstore.io/c/enter-the-gungeon/p/Rec/GungeonTogether_3Player/
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
+  checked: '2026-10-18'
+- game: Clive Barker's Jericho
+  year: 2007
+  engine: MercurySteam ScrapEngine (Scrapland engine, Lua 5.1)
+  project: Jericho Co-op
+  url: https://github.com/dolbaras/jericho-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: "2-4"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: Each player controls one squad member, AI keeps the rest. ENet transport in a dinput8.dll proxy (exe
+    untouched), host-authoritative enemies, story triggers, scenes and level changes; first-person cutscenes from
+    each player's own character. Tested with two real game instances and a headless bot; no full playthrough. MIT.
+    Write-up in games/clive-barkers-jericho.
+  sources:
+  - https://github.com/dolbaras/jericho-coop
+  - https://github.com/cranebeaker/coop-anything/issues/27
+  checked: '2026-10-18'
+- game: Poppy Playtime
+  year: 2021
+  engine: Unreal Engine 4
+  project: PoppyCoop
+  url: https://github.com/romannazarov057-spec/PoppyCoop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: "2"
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: >-
+    Build-from-zero UE4SS Lua mod plus a Python relay. Two real game clients over the UDP relay see
+    each other as a player-shaped puppet (same mesh, material, scale, and a single-node walk
+    animation) at the peer's reported position, both directions, checked by a scripted run with no
+    crashes. Only movement is synced; the chapter cannot be finished together. The Steam transport
+    initialises, logs on and creates/enters a lobby, but its P2P message leg is untested (needs a
+    second Steam account). Prior art: a fan multiplayer mod was made and deleted by its author (dev
+    confirmed on Reddit); Chapter 2 builds contain an unused multiplayer minigame documented by TCRF,
+    and the Steam build ships the VoxeX voice SDK, so multiplayer code existed in-house. Work notes in
+    games/poppy-playtime/.
+  sources:
+  - https://github.com/romannazarov057-spec/PoppyCoop
+  - https://www.reddit.com/r/PoppyPlaytime/comments/uut6zj/anybody_have_a_poppy_playtime_multiplayer_mod/
+  - https://tcrf.net/Poppy_Playtime:_Chapter_2/Multiplayer
+  - https://store.steampowered.com/app/1721470/Poppy_Playtime/
+  checked: 2026-10-19
+  searched:
+  - search GitHub (repo search, 435 results), Nexus mods list (58 mods), ModDB, Steam store API and web search, 2026-10-18
+  - coop-anything issues/PRs via GitHub search API (0 hits), 2026-10-18
+- game: 'Call of Duty: Modern Warfare 3'
+  year: 2011
+  engine: IW 5.0 (Call of Duty)
+  project: AlterWare IW5-Mod
+  url: https://alterware.dev/
+  other_urls:
+  - https://forum.alterware.dev/t/iw5-mod-install-guide/462
+  kind: mod
+  status: partial
+  coop_scope:
+    story: false
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2
+  networking: unknown
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: none
+  notes: Closed-source MW3 client focused on singleplayer/co-op plus multiplayer with bots and
+    dedicated servers; both players need a Steam-owned copy. Its shared play is Spec Ops/Survival,
+    not the campaign. A community Survival layer on top of it notes its Spec Ops co-op desyncs.
+  sources:
+  - https://alterware.dev/
+  - https://forum.alterware.dev/t/iw5-mod-install-guide/462
+  - https://www.moddb.com/mods/mw3-survival-mode-revived
+  checked: '2026-10-19'
+- game: 'Call of Duty: Modern Warfare 3'
+  year: 2011
+  engine: IW 5.0 (Call of Duty)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No campaign co-op has released for Modern Warfare 3 (2011) on any platform, and no project
+    ships it; the singleplayer engine carries no netcode. Spec Ops/Survival co-op does exist
+    (official, and via the AlterWare client). A from-zero attempt is written up in games/modern-warfare-3.
+  sources:
+  - https://github.com/louvenarde/open-iw5
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=2953063348
+  - https://callofduty.fandom.com/wiki/Special_Ops/Modern_Warfare_3
+  checked: '2026-10-19'
+  searched:
+  - GitHub, Nexus, ModDB, Steam and the AlterWare forums via web search, 2026-10-18
+- game: Far Cry 2
+  year: 2008
+  engine: Dunia (CryEngine 1 derivative)
+  project: fc2-coop-probe (position puppet, research prototype)
+  url: https://github.com/MortyRei/fc2-coop-probe
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: partial
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: '2 (two copies on one PC)'
+  networking: lan
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: none
+  notes: >-
+    No public Far Cry 2 co-op campaign project exists (searched 2026-10-19). Research prototype for Steam 1.03: a
+    dinput8.dll proxy runs a Lua 4.0 channel and native commands inside the game, finds the player's Havok body by
+    class, and exchanges position over its own UDP socket between two copies on one PC; each copy spawns an
+    invincible avatar of the peer and moves it smoothly. Players see each other only as a sliding, idle-pose avatar:
+    no animation, heading, weapons, health, mission or world sync. Stock multiplayer cannot carry the campaign
+    (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). Checked by hand with the owner watching, no
+    automated tests. Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
+  sources:
+  - https://github.com/MortyRei/fc2-coop-probe
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
+  - https://github.com/halvors/FC2MPPatcher
+  - https://www.nexusmods.com/farcry2/mods/368
+  - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
+  checked: '2026-10-19'
 - game: No Rest for the Wicked
   year: 2024
   engine: Unity (IL2CPP, Photon Quantum 3)

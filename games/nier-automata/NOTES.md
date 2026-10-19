@@ -121,3 +121,59 @@ Unknown:
 - How the phase changes during normal play in the world (no bot run reached a natural phase change yet).
 - Whether `0x9c5a00` plus the load byte works when called from inside the world.
 - Meaning of `n` (0xf for the segment the bot picked, phase `51_AB_MainDesert`) and of the phase id (256, 512).
+
+## 2026-10-18: talking to the Commander (story step inside a phase)
+
+Observed (build 7020666, "Test" save, phase `16_AB_bunker_Order`, objective "Reboot: Speak with the Commander"):
+- The bot reaches NPCs by teleporting next to them (entity list position + `Pl0000.setPosRotResetHap`, facing them);
+  the Commander is the only entity with model `0x11020`. Holding the gamepad's B next to her starts the conversation.
+- The conversation ends with a new objective marker, but the phase name, the scene state flags set through
+  `SceneStateSystem.set` and the story event hooks show no change. Story steps inside a phase are kept somewhere else.
+- With the window out of focus the game paused the conversation ("PAUSED") and the lines did not advance on their own;
+  pressing A advanced them.
+- Teleporting to a guessed point (the hangar) dropped 2B out of the Bunker into space: teleport only to known positions.
+
+Unknown:
+- Where the current quest and its step are stored.
+
+## 2026-10-18: where the story step is stored; does the client's game follow the host's conversation
+
+Observed (build 7020666, "Test" save, phase `16_AB_bunker_Order`; offsets from the exe base):
+- Snapshot diff of the exe's writable sections (bot `snap`/`filter`): two idle snapshots before the talk, one during it,
+  two after, kept only bytes that were stable before, changed across the talk and stable after. Two runs, about
+  1,600 bytes in both; almost all of it camera and matrix floats, a table of heap pointers and the id of the last
+  voiced line (`1010_S0030_G0200_001_a2b`).
+- One int32 changed the same way in both runs: `+0x14952c8`, 130 before, 140 after the conversation. It sits in a
+  block of int32s that are -1 (0xFFFFFFFF).
+- A hardware write breakpoint (bot `watch`) on it caught two writes during the next conversation, by the instruction at
+  `+0x9480b6` (`mov [rip+...], eax`, bytes `89 81 98 00 00 00 89 05 ? ? ? ? 89 af 54 06 00 00`). The value comes from a
+  pending field of an object (`[obj+0x650]`, with a "pending" flag at `[obj+0x654]` that the code clears); the same value
+  is also written to `[[obj+0x130]+0x98]`.
+- Code that references the global: the "start the story from a phase" function used by Chapter Select (`+0x9c5a00`)
+  writes -1 into it (`+0x9c5c0c`); `+0x8dd2b7` writes -1 too; `+0x921f03` reads it.
+- The exe has RTTI for a `QuestManager` with `StaticArray<sQuestState, 30>` and `StaticArray<sQuestMsgInfo, 100>`.
+  Instances are in `.data` (found by their vtables with a new bot command `find`), but none of their bytes changed
+  during the conversation.
+- Two test copies in one co-op session (host and client both on the "Test" save, both at step 130): the host talks to
+  the Commander, its step becomes 140 and the objective becomes "Gathering Intel". On the client the step stays 130,
+  no conversation starts and the objective does not change. Automated check:
+  `tools/qa/coop_smoke.py --scenario commander` in the owner's fork, RESULT: PASS (host 130 -> 140, client 130 -> 130).
+
+Derived:
+- The global is the story progress inside the current phase ("step"): a phase start resets it, a story conversation
+  moves it.
+- A story conversation of the host does not reach the client's game by itself. The mod has to carry its result over.
+
+Guesses (not checked):
+- Steps go up in tens, the way PlatinumGames scripts number points of a phase.
+
+Unknown:
+- What the object with the pending step is, and which function sets the pending value (the one to call on the client).
+- Which quest the step belongs to, and whether setting the step alone gives the client the new objective.
+- Whether the step changes in a natural phase change (no bot run reached one yet).
+
+Pitfalls:
+- `bot.load` sometimes picks the wrong save in the Load Game list (a lost key press?): in 2 of 9 co-op runs today a copy
+  loaded another save (once `60_05_AB_Forest_Castle` instead of the Bunker). The phase checks catch it; reruns passed.
+- In a fresh co-op session the first "hold B" next to the Commander sometimes comes before the talk prompt shows;
+  the scenario tries twice. Pressing A after the talk ends makes 2B jump, so it stops as soon as the step changes.

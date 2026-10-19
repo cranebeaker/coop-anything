@@ -2,8 +2,8 @@
 
 Most loved games already have a co-op attempt somewhere: a stalled alpha, a closed
 beta, a fork with one contributor. Finishing one of those beats starting from zero.
-This is the route that worked for Deus Ex (HX, last build 2019) and STALKER Clear Sky
-(Clear COOP, abandoned at 0.5).
+This is the route that worked for Deus Ex (HX, last build 2019) and STALKER Shadow of
+Chernobyl (Shadow of COOP fix patch).
 
 ## 1. Find every fragment
 

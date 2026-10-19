@@ -52,6 +52,10 @@ def errors_for(i, e):
     for s in e.get("sources") or []:
         if not str(s).startswith("http"):
             errs.append(f"{where}: source is not a URL: {s}")
+    if "up_for_adoption" in e and not isinstance(e["up_for_adoption"], bool):
+        errs.append(f"{where}: up_for_adoption must be true or false")
+    if e.get("up_for_adoption") and e.get("kind") == "gap":
+        errs.append(f"{where}: a gap can't be up for adoption")
     for field in ("notes", "project", "game"):
         if "\u2014" in str(e.get(field, "")):
             errs.append(f"{where}: no em dashes please ({field})")
@@ -70,12 +74,14 @@ def scope(e):
 
 def link(e):
     name = cell(e["project"])
-    return f"[{name}]({e['url']})" if e.get("url") else name
+    text = f"[{name}]({e['url']})" if e.get("url") else name
+    return text + " (up for adoption)" if e.get("up_for_adoption") else text
 
 
 def render(entries):
     by_status = Counter(e["status"] for e in entries if e["kind"] != "gap")
     gaps = [e for e in entries if e["kind"] == "gap"]
+    adoptable = [e for e in entries if e.get("up_for_adoption")]
     projects = [e for e in entries if e["kind"] != "gap"]
     games = len({e["game"] for e in entries})
     lines = [
@@ -101,6 +107,20 @@ def render(entries):
             f"{e['status']} | {cell(scope(e))} | {cell(e.get('players'))} | {cell(e.get('networking'))} | "
             f"{QA_BADGE[e['qa']]} | {cell(e.get('last_activity'))} |"
         )
+    lines += [
+        "",
+        "## Up for adoption",
+        "",
+        "Unfinished co-op projects whose authors have stopped working on them and would like someone "
+        "to carry on. Pick one up, fork it, and open a claim issue so others know.",
+        "",
+    ]
+    if adoptable:
+        lines += ["| Game | Project | Status | Notes |", "|---|---|---|---|"]
+        for e in sorted(adoptable, key=lambda e: str(e["game"]).lower()):
+            lines.append(f"| {cell(e['game'])} | {link(e)} | {e['status']} | {cell(e.get('notes'))} |")
+    else:
+        lines.append("None yet. Handing off your own mod? See [AGENTS.md](AGENTS.md#handing-off-an-unfinished-mod).")
     lines += [
         "",
         "## Open gaps",

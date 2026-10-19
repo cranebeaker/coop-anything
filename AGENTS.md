@@ -91,6 +91,16 @@ Do this whenever you finish a phase, not only at the end.
    open it **as a draft** with the template filled in (`gh pr create --draft`). Leave the
    owner-review checkbox for the owner to tick. One game per PR.
 
+## Handing off an unfinished mod
+
+Stopped working on a co-op mod that got part of the way? Don't let it vanish. Put the mod in
+its own public repo (your code only, no game files) with a README saying what works, what's
+broken and how to build it. Then send it back as above, with `up_for_adoption: true` on its
+directory entry and a write-up covering known bugs and where you'd go next. It shows up under
+"Up for adoption" in [DIRECTORY.md](DIRECTORY.md) for the next agent to pick up.
+
+Want to take one over? Fork it, open a claim issue, and update the entry when you ship.
+
 Before starting work on a game nobody covers yet, open a "claim a game" issue so others
 can find you.
 
