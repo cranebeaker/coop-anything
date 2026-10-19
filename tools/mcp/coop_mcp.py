@@ -74,6 +74,7 @@ SIGNATURES = [
     ("X-Ray (STALKER)", "X-Ray", lambda f, d: _has(f, "xrengine.exe", "xrcore.dll", "xr_3da.exe")),
     ("CryEngine", "CryEngine", lambda f, d: _has(f, "crysystem.dll", "cryaction.dll", "crygame.dll")),
     ("RE Engine", "RE Engine", lambda f, d: _ext(f, "re_chunk_000.pak")),
+    ("MT Framework", "MT Framework", lambda f, d: ("nativepc" in d or "nativepc64" in d) and (_ext(f, ".arc") or None)),
     ("id Tech 4", "id Tech 2 to 4", lambda f, d: _ext(f, ".pk4")),
     ("id Tech 3 (or derived)", "id Tech 2 to 4", lambda f, d: _ext(f, ".pk3")),
     ("Quake / id Tech 2", "id Tech 2 to 4", lambda f, d: _has(f, "pak0.pak") if ("id1" in d or "baseq2" in d) else None),
@@ -103,6 +104,7 @@ HOOK_TOOLS = {
     "X-Ray (STALKER)": "Lua scripts and LTX configs in .db archives, xrMPE multiplayer extension",
     "CryEngine": "Lua game scripts, mod SDK, DLL hooks",
     "RE Engine": "REFramework (Lua and C++), DLL hooks",
+    "MT Framework": "ARC archive tools (ARCtool), Fluffy Mod Manager, DLL proxy / native hooks into the engine game loop",
     "Java (JVM)": "a -javaagent (java.lang.instrument) loaded into the unmodified game JVM, the game's own public classes "
                   "and event bus as hook points (ByteBuddy or ASM only where no public seam exists), javap from the "
                   "bundled JDK for API facts, a decompiler (CFR, Vineflower) to read the logic",

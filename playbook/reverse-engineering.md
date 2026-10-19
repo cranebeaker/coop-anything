@@ -31,6 +31,10 @@ this hub.
    - Dedicated servers and tools may write logs or settings under `%USERPROFILE%\Documents`
      even when run from a test copy. Check for new files there after each run and move them
      into your workspace.
+   - Steam Cloud games save to the owner's account (`Steam\userdata\<id>\<appid>\remote`) no matter
+     which folder the exe runs from. A first-run "create save data?" prompt can create a save there.
+     Before launching a test copy, check that folder, back it up, and tell the owner. Seen on
+     Resident Evil Revelations ([games/resident-evil-revelations](../games/resident-evil-revelations/NOTES.md)).
 
 ## Tools
 

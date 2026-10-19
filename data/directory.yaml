@@ -3149,6 +3149,53 @@
   checked: 2026-10-16
   searched:
   - search Nexus, ModDB, GitHub and Steam via web search, 2026-10-16, no co-op results
+- game: Resident Evil Revelations
+  year: 2013
+  engine: MT Framework (Mobile)
+  project: Raid Mode
+  url: https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
+  other_urls: []
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: 2
+  networking: steam-relay
+  open_source: 'no'
+  last_activity: 2024-01
+  qa: none
+  notes: Official 2-player online co-op mode (Raid Mode). Campaign remains single-player only. Uses Steam matchmaking. The store page does not list Valve Anti-Cheat (checked 2026-10-19).
+  sources:
+  - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
+  checked: 2026-10-19
+- game: Resident Evil Revelations
+  year: 2013
+  engine: MT Framework (Mobile)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Campaign co-op gap. Story campaign is strictly single-player with AI partners. No public campaign co-op mod found. Engine is 32-bit MT Framework (SteamStub DRM, no ASLR). The Raid Mode netcode (cCoopSyncData, sCoopManager) ships in the exe and campaign code reads a shared game-mode flag (0 campaign, 1 coop), so reusing the native co-op path is a lead. Work in progress in games/resident-evil-revelations.
+  sources:
+  - https://www.nexusmods.com/residentevilrevelations
+  checked: 2026-10-19
+  searched:
+  - search Nexus, ModDB, GitHub, RE Modding forums, Steam discussions via web search, 2026-10-19, no campaign co-op mod found
 - game: Resident Evil Requiem
   year: 2026
   engine: RE Engine
