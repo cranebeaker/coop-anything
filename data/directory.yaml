@@ -6387,3 +6387,31 @@
   sources:
   - https://github.com/Dudiebug/stacklands-coop
   checked: '2026-10-17'
+- game: No Rest for the Wicked
+  year: 2024
+  engine: Unity (IL2CPP, Photon Quantum 3)
+  project: Together update (official co-op)
+  url: https://store.steampowered.com/app/1371980/No_Rest_for_the_Wicked/
+  other_urls: []
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: 1-4
+  networking: dedicated-server
+  open_source: 'no'
+  last_activity: 2026-01
+  qa: community-reports
+  notes: Early Access. Official online co-op in shared persistent Realms since 2026-01-22 (PC); needs Moon's backend
+    and Moon's Photon Quantum server plugin, so clients that cannot log in get no co-op. No community co-op or
+    private server found. Netcode research and a plan for host-run co-op in games/no-rest-for-the-wicked.
+  sources:
+  - https://www.gematsu.com/2025/12/no-rest-for-the-wicked-early-access-together-update-launches-january-22-2026-open-beta-test-now-available
+  - https://www.rpgsite.net/news/19232-no-rest-for-the-wicked-multiplayer-co-op-update-release-date-gameplay
+  - https://mp1st.com/news/no-rest-for-the-wicked-together-update-now-live-game-surpasses-1-million-early-access-sales
+  - https://forum.norestforthewicked.com/t/ongoing-permanently-offline/22173
+  checked: '2026-10-19'
