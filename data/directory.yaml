@@ -4092,35 +4092,38 @@
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
-  project: (none found)
-  url: ''
+  project: PoppyCoop
+  url: https://github.com/romannazarov057-spec/PoppyCoop
   other_urls: []
-  kind: gap
-  status: none
+  kind: mod
+  status: prototype
   coop_scope:
-    story: unknown
-    enemies: unknown
-    world_state: unknown
-    items: unknown
-  players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
-  qa: none
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: "2"
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
   notes: >-
-    No co-op mod exists. A fan multiplayer mod was made and deleted by its author (dev confirmed on
-    Reddit). Useful lead for a build-from-zero project: the Steam build (base game = Chapter 1,
-    buildid 21905565, UE 4.27.2) ships the VoxeX voice-chat SDK (vivoxsdk_x64.dll, ortp_x64.dll)
-    in its binaries, and Chapter 2 builds contain an unused multiplayer minigame documented by
-    TCRF - multiplayer code existed in-house. Game is free-to-play on Steam; single-player only,
-    no Remote Play Together category. Claimed by issue; work in progress notes in
+    Build-from-zero UE4SS Lua mod plus a Python relay. Two real game clients over the UDP relay see
+    each other as a player-shaped puppet (same mesh, material, scale, and a single-node walk
+    animation) at the peer's reported position, both directions, checked by a scripted run with no
+    crashes. Only movement is synced; the chapter cannot be finished together. The Steam transport
+    initialises, logs on and creates/enters a lobby, but its P2P message leg is untested (needs a
+    second Steam account). Prior art: a fan multiplayer mod was made and deleted by its author (dev
+    confirmed on Reddit); Chapter 2 builds contain an unused multiplayer minigame documented by TCRF,
+    and the Steam build ships the VoxeX voice SDK, so multiplayer code existed in-house. Work notes in
     games/poppy-playtime/.
   sources:
+  - https://github.com/romannazarov057-spec/PoppyCoop
   - https://www.reddit.com/r/PoppyPlaytime/comments/uut6zj/anybody_have_a_poppy_playtime_multiplayer_mod/
-  - https://www.youtube.com/watch?v=7nRBqSjCB0k
   - https://tcrf.net/Poppy_Playtime:_Chapter_2/Multiplayer
   - https://store.steampowered.com/app/1721470/Poppy_Playtime/
-  checked: 2026-10-18
+  checked: 2026-10-19
   searched:
   - search GitHub (repo search, 435 results), Nexus mods list (58 mods), ModDB, Steam store API and web search, 2026-10-18
   - coop-anything issues/PRs via GitHub search API (0 hits), 2026-10-18

@@ -60,6 +60,22 @@ For a 64-bit game, use `Windows-x64/steam_api64.dll` from the same release:
 Check the architecture before using either: a 32-bit exe needs the PE32 i386 DLL, a
 64-bit exe needs the x64 one. Several struct offsets differ between them (below).
 
+### The game's copy may not have it; and what to do with no compiler
+
+The check has to actually run, because the answer is often no: the `steam_api64.dll`
+shipped inside Poppy Playtime (Steamworks 1.51, in the install's `Engine\...\Steamv151\Win64`
+and `PlaytimeLauncher` folders) has **no `SteamAPI_InitFlat`**, so a plan that assumed the
+game's own copy would fail late. A few lines of Python settle it — `ctypes.WinDLL(path)` then
+`getattr(dll, name)` for each symbol — with no toolchain needed.
+
+That same trick is the fallback when the machine has no C/C++ compiler at all. The flat C
+API exists so a language without Steamworks headers can call it: `ctypes` can drive init, the
+`SteamAPI_ISteam*` getters, `ManualDispatch_*`, lobbies and `NetworkingMessages` directly,
+using the struct offsets on this page. One program with a `--transport udp|steam` switch then
+gives both a scriptable test stand-in (UDP over localhost, no second account, two clients on
+one PC) and the real Steam path from the same code. Evidence: Poppy Playtime,
+[games/poppy-playtime/NOTES.md](../games/poppy-playtime/NOTES.md) (Phase 6).
+
 ## Design: no SDK headers, dynamic loading only
 
 `LoadLibrary("steam_api.dll")`, then `GetProcAddress` for each **flat C API**
