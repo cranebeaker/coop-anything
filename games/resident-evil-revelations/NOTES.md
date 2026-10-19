@@ -580,6 +580,93 @@ The partner never fires in the current area, so the F6 observer watched Jill (co
   5. Enemy stats: Raid levels/HP scaling may apply (coop tables); unknown.
   6. Saving campaign progress under mode 1 (the restart crash path).
 
+## 2026-10-19: why the Raid stage ends after the first video (setup)
+
+### Observed
+- Owner (campaign knowledge): after the first cutscene the campaign changes level to the second area (the beach) with a tutorial. A Raid stage is a single area, so the campaign's "go to next area" lands in the coop flow that ends the stage (results).
+- The three `+0xFC` accesses found in `0x797xxx` belong to `uGuideFlow` (`sCoopManager+0xFC`), not to the Episode system: false lead.
+- `ReRevPrologue.java` computes safe hook prologues (whole instructions, >= 5 bytes, no branches) for a list of functions; 37 of 40 mode-reading area/flow functions in `0x412600`–`0x4519B0` qualified (skipped `0x42DE90`, `0x431510`, `0x433720`).
+- Logic gen 7: count-only probes on those 37 functions (stub = `inc counter; jmp trampoline`), first call per probe logged with mode and Episode state; file command `probe` re-arms.
+
+## 2026-10-19: what ends the Raid stage after the first video (found)
+
+### Observed (probe run, Raid stage 1 with F4; owner: "the final enemy was not there this time, the stage still ended with results")
+- Probe first calls in order: gameplay from 22:58:46; **23:00:24.9 `421030`**; **23:00:29.2 `427a50`**; **23:00:29.3 `41bd00`, `4225a0`**; 23:00:29.37 Episode system gone (`42b290` sees Episode `0`); 23:00:32 `431660`, `4358b0`, `4373c0`, `435d80`, `4383b0` (`cEpisodeEndFlowState`, results).
+- `FUN_004225a0` (area transition after a cut/event): mode 0 calls `piVar1->vfunc+0x28(&DAT_0116B2FC)` (jump to the next area with the jump data); mode 1 with `sCoopManager+0x8F0 == 2` (set by the coop branch of `cCutFlowState` at cut end) sets states 7 and 8 on the flow from `FUN_0078ee80` (stage end / results). Case 4 has the same split.
+- `FUN_00427a50`: mode 1 calls `FUN_0041e1f0(1)` instead of the campaign path. `FUN_00421030` case 0: mode 0 without a session returns; otherwise waits on session state (`FUN_00874b90(0x1c,1)`, `FUN_00874bc0`, `FUN_0087e900`). `FUN_0041bd00`: mode 1 adds `FUN_00844760(0x15)` (GUI).
+
+### Derived
+- The stage ends because the coop branch of the area-transition handler turns the campaign's "next area" into stage end. Logic gen 8 adds `4225A0`, `427A50`, `421030` to the F4 mask group (campaign path for transitions).
+- The missing enemy this run is unexplained (spawn may depend on Raid/coop code not masked, or on timing).
+
+## 2026-10-19: transition masks (test) and the campaign transition window
+
+### Observed (gen 8, owner: "results, and no final enemy")
+- `event start 421030` ran with mode 0 (23:04:24) and `area transition 4225A0` ran with mode 0 (23:04:28.9), i.e. the campaign "jump to next area" call was made. Right after, `41bd00` ran, the Episode system was destroyed (`42b290`, 23:04:29.0) and the episode-end chain (`431660`, `4358b0`, `4373c0`, `435d80`, `4383b0`) produced the results screen again.
+- The "first enemy" was missing again this run (second time since the transition/flow masks).
+
+### Derived
+- The next-area chain after the jump request also splits campaign/coop (episode end flow functions read the mode). Logic gen 10: once mask 14 (`4225A0`) runs in a Raid session with F4 on, the whole game is held in mode 0 until the next Episode system exists and has been stable for 300 frames, then mode 1 is restored ("transition window").
+- The hot-reload script now refuses to reload when the build fails (gen 9 was a stale copy of gen 8).
+
+## 2026-10-19: first campaign area change inside a Raid session (works)
+
+### Observed (gen 10, F4 on, Raid single player stage 1; owner: "we are on the beach")
+- 23:07:47 event start (`421030`, mode 0 inside); 23:07:51.9 area transition (`4225A0`): transition window opened, game held in mode 0; 23:07:52 old Episode destroyed; **23:08:02 new Episode `22241820`, arrange load stage 1 block 2** (the beach; the same block campaign Continue loads); **23:08:07 window closed, mode 1 restored**. No exception; game still running.
+
+### Derived
+- A Raid session can follow the campaign from Episode 1's first area to the second (beach) when the area-transition chain runs as campaign (mode 0) and the session mode is restored afterwards. Route B now covers: campaign content in the area, the first cutscene, and an area change.
+- Still open: Raid HUD/enemy presentation, dialogue set, the first enemy missing since the flow masks, the player-2 slot during a mode-0 transition (the window also runs the player setup `FUN_0042b720` with mode 0, which would pick the campaign partner instead of the session player), and the two-player test.
+
+## 2026-10-19: beach area built as campaign, then mode 1 (mismatch)
+
+### Observed (gen 10, owner)
+- On the beach: **Parker present** (AI partner), **normal campaign HUD**, **dialogue correct**.
+- After mode 1 was restored: the player aimed and fired at the first enemy, but with the magazine empty **could not reload** and stayed **stuck in the aim pose**; **could not pick up items**.
+
+### Derived
+- The 300-frame window built the whole beach area as campaign, including the player setup (campaign inventory, AI partner, campaign HUD). Running that with mode 1 breaks the player's weapon/item logic (coop rules on a campaign inventory). In the first area (stage start in mode 1 with masks) fire and reload worked.
+- At a Raid stage start the player setup `FUN_0042b720` runs right after the Episode is created (probe log). Logic gen 11 closes the window as soon as the new Episode exists, so player setup runs coop (session slots, coop inventory) while area content stays campaign via the F4 masks. Expected solo result: no Parker (slot 2 empty), working reload/pickups.
+
+## 2026-10-19: beach with coop player setup (gen 11)
+
+### Observed (owner + log)
+- The window closed at the new Episode (23:16:44.1); player setup then ran with mode 1. On the beach: **fire, reload and item pickup work**; Parker absent (solo session, slot 2 empty: expected); **the Genesis scanner cannot be used**; **the level looks set up like the Raid and enemies are at Raid positions**; voice lines broken but subtitles correct.
+- Masked calls after the window: `45B2F0` (arrange load stage 1 block 2, mode 0 inside), `41B710` (scene events), `4629F0`. The area event loader `42BFC0` did not run for the new block.
+
+### Derived
+- Player side is now consistent (coop player, coop inventory). The Genesis scanner is a campaign item missing from the coop loadout; a campaign co-op build will need the campaign inventory with the coop slot logic (open).
+- Enemy/object placement comes from mode readers not covered yet. Logic gen 12 adds the 14 remaining mode-reading functions in the `sArrange` area (`0x4516A0`–`0x45AA50`, prologues from `ReRevPrologue.java`) to the F4 group.
+
+## 2026-10-19: beach with 31 masks (gen 12) and a wide probe set (gen 13)
+
+### Observed (gen 12, owner)
+- Beach: **objects at campaign positions** (the 14 new masks fixed objects), **enemies still at Raid positions**, Genesis scanner still unusable.
+- Quitting to the menu runs the area-transition handler too: the transition window opened at 23:24:04 and would have held mode 0 in the menus.
+- No enemy-specific mode reader is identifiable by name (no enemy set file strings; mode readers spread over `0x410000`–`0x8D0000`).
+
+### Derived
+- Enemy placement is decided by a mode reader outside the `sArrange` area. Logic gen 13: count-only probes on 300 mode-reading functions (all 311 not already hooked whose prologue `ReRevPrologue.java` accepts, plus the earlier set), reset automatically when the transition window closes, so the log lists the functions that run while the new area is built. Window timeout: 20 s without a new Episode restores mode 1.
+
+## 2026-10-19: results vary between runs: a timing race at the window close (gen 13 -> 14)
+
+### Observed (gen 13 run, owner)
+- Beach: **enemies correct (campaign)**, **Genesis works but scans give 1% each**, voice lines still broken, **the first beach monster does not get up**, **objects are Raid ones** this time (the reverse of gen 12), and first-area enemies show Raid HP bars.
+- Probe log: the window closed at frame 14597 (first frame with the new Episode), but player setup `42b720` was first-called at **14607**. In between, unmasked mode-1 calls: `412600`, `6d1700`, `7b7b30`, `7bfee0`, `7c1790`, `42ad70`, `8c1e90`, `42ae90`. About 60 mode readers ran during the beach build (`5c8cc0`, `5ca480`, `5d5bc0`, `5f3f30`, `5f4830`, `5fa660`, `5faf90`, `60b1d0`, `6b33a0`, `6c63e0`, `72a7b0`, `855380`, `858110`, `8913b0`, `46ec80`, `56bc20`, `6ade60`, `6b54d0`, `70b0a0`, `7b5010`, `7b6cc0`, `7b72b0`, `846a60`, `846b60`, `846dd0`, `863f20`, `5f48d0`, `67dd60`, `5712f0`, `572940`, `67ee50`, ...).
+
+### Derived
+- Which loads fall before or after a per-frame window close varies run to run, hence the swapping results. Gen 14 closes the window **at the entry of player setup `FUN_0042b720`** (hooked as a never-masking entry): everything before runs campaign, player setup and later loads run coop with the F4 masks. Deterministic by construction.
+- 300 probes risk altering functions whose first bytes are a branch target inside the function (possible cause of the monster not getting up). Gen 14 is back to 31 probes.
+
+## 2026-10-19: gen 14 runs (deterministic window close)
+
+### Observed (owner + log)
+- Run 1 (F4 on): first area: no mission name banner, **no enemies**, voice lines wrong. Window: transition 23:34:43, new Episode 23:34:52.685, **closed at player setup 23:34:52.836**, beach arrange stage 1 block 2 with masks. Beach: voice **correct**, Genesis works but 1% per scan, the enemy is there but **does not move**, Raid objects.
+- Run 2: F4 was pressed again during the quit transition (23:37:06), so the masks were **off**: a normal Raid stage (Raid mission name, enemies with HP bars, results without the beach). Not a determinism failure; the F4 toggle is error-prone.
+
+### Derived
+- The deterministic close works as designed. The first-area enemy has been missing since gen 8, when the event-start function `421030` was masked; that mask probably blocks its spawn event (guess, to bisect).
+- What remains for route B is sorting each mode reader into "campaign" or "coop". Plan: masks switchable by group from `coop.ini` (no F4 toggle), bisection rounds per defect (first enemy, frozen beach enemy, Raid objects, Genesis 1%, voice lines, HP bars).
+
 ## Next steps
-1. Find what ended the stage after the first video (end/result flow states under mode 1) and route it to the campaign continuation.
-2. Then HUD/enemy presentation masks, dialogue table, and a two-player session test with the friend.
+1. Mask switchboard in `coop.ini` + bisection of the first-enemy problem.
