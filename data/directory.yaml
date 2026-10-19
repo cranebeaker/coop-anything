@@ -6387,3 +6387,30 @@
   sources:
   - https://github.com/Dudiebug/stacklands-coop
   checked: '2026-10-17'
+
+- game: 'DEATH STRANDING 2: ON THE BEACH'
+  year: 2025
+  engine: Decima
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Bounded search of GitHub, Nexus, ModDB, Steam Community, Reddit, Archive.org, and English, Japanese, and Simplified Chinese searches found no live co-op project. The built-in Social Strand System is asynchronous; see the game write-up for static-analysis findings and limits.
+  sources:
+  - https://store.steampowered.com/news/posts/?enddate=1772732685&feed=steam_community_announcements
+  - https://blog.playstation.com/?p=407261
+  - https://kojimaproductions.jp/index.php/en/deathstranding2-SupportRookiePorters
+  checked: '2026-10-19'
+  searched:
+  - GitHub topic/repository searches, Nexus, ModDB, Steam Community, Reddit, Archive.org, and English/Japanese/Simplified Chinese web searches, 2026-10-19; Discord not searched
