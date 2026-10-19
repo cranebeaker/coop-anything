@@ -6390,9 +6390,10 @@
 - game: Far Cry 2
   year: 2008
   engine: Dunia (CryEngine 1 derivative)
-  project: fc2-position-puppet (research prototype)
-  url: https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
-  other_urls: []
+  project: fc2-coop-probe (position puppet, research prototype)
+  url: https://github.com/MortyRei/fc2-coop-probe
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   kind: mod
   status: prototype
   coop_scope:
@@ -6403,7 +6404,7 @@
     items: 'no'
   players: '2 (two copies on one PC)'
   networking: lan
-  open_source: 'no'
+  open_source: 'yes'
   last_activity: '2026-10'
   qa: none
   notes: >-
@@ -6413,9 +6414,9 @@
     invincible avatar of the peer and moves it smoothly. Players see each other only as a sliding, idle-pose avatar:
     no animation, heading, weapons, health, mission or world sync. Stock multiplayer cannot carry the campaign
     (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). Checked by hand with the owner watching, no
-    automated tests. The probe code is not published yet (game code belongs in a game repo). Write-up and dated
-    notes in games/far-cry-2.
+    automated tests. Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
   sources:
+  - https://github.com/MortyRei/fc2-coop-probe
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368

@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Dunia (a CryEngine 1 derivative), 32-bit x86. The 28 KB `FarCry2.exe` is a stub that calls `Dunia.dll!RunGame`; engine and netcode are in `Dunia.dll`, Lua game logic is in the archives |
 | Versions tested | Steam, app id 19900, version 1.03, build id 52164. `Dunia.dll` SHA-256 `6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765` (20,183,176 bytes). Every address in this write-up is for that file |
-| Projects | None public. A research prototype (position puppet, below) exists; its code is not in this repo, see "How to play" |
+| Projects | No public co-op project. A research prototype (position puppet, below): https://github.com/MortyRei/fc2-coop-probe (MIT) |
 | QA level | none (the prototype was checked by hand, the owner looking at the screen; there is no automated test) |
 | Last updated | 2026-10-19 |
 
@@ -88,7 +88,7 @@ All changes are in test copies only; nothing touched the owner's install, profil
    copy's `Dunia.dll`): lets two copies run at once, each with its own windowed profile.
    Proof: two copies running together in the world for minutes.
 2. **In-process probe** (`dinput8.dll` proxy for the test copies, built with MinGW,
-   about 900 lines of C). It hooks the engine's Winsock, file and `PeekMessage` imports and
+   about 850 lines of C, source in https://github.com/MortyRei/fc2-coop-probe). It hooks the engine's Winsock, file and `PeekMessage` imports and
    adds: a Lua channel (a file `coop_cmd.lua` is run on the main thread through
    `lua_dobuffer`, the result is read back from a Lua global), native commands (peek,
    entity lookup, body search by class, teleport of the body), memory scans, and the
@@ -114,9 +114,9 @@ assert on the `net:` log lines and the entity positions; that harness does not e
 ## How to play
 
 Not playable. The probe is a research tool, not an installer: it lives in the test copies,
-needs per-copy patches, and the two copies are started and connected by hand. Its source
-is not published in this repo (the rules put game code in the game's own repo); a repository
-for it is pending the owner's decision and will be linked here.
+needs per-copy patches, and the two copies are started and connected by hand. Source, build
+steps, the command list and the two-copy recipe are in
+https://github.com/MortyRei/fc2-coop-probe (MIT); the game code is kept there, not in this repo.
 
 ## Known issues
 
@@ -139,4 +139,5 @@ for it is pending the owner's decision and will be linked here.
 2. Mission state: reproduce the set of active mission layers and Domino state in the
    second copy; `Game:MissionSetState` and `SaveGame` are the entry points seen.
 3. A real transport (hosted or direct, with a join code) instead of loopback ports.
-4. Publish the probe in a game repo and add a test harness.
+4. Add a test harness to the probe repository (two copies driven by its own commands,
+   asserting on the `net:` log lines and entity positions).
