@@ -26,6 +26,7 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=1948676361
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3749212454
   checked: '2026-10-16'
+
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -48,6 +49,7 @@
   sources:
   - https://github.com/MisterCalvin/dxhx-coop-server
   checked: '2026-10-16'
+
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -72,6 +74,7 @@
   - https://www.moddb.com/mods/roleplay-coop
   - https://www.moddb.com/mods/roleplay-coop/downloads
   checked: '2026-10-16'
+
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -94,6 +97,38 @@
   sources:
   - https://github.com/roman-dzieciol/ue-deus-ex-coop
   checked: '2026-10-16'
+
+- game: State of Decay
+  year: 2013
+  engine: CryEngine 3
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No shared-world co-op mod found for the 2013 Steam release (app 241540, build 305948). Undead Labs cancelled
+    official co-op in 2013. A Steam thread is an idea with no build. ModDB's three mods are not multiplayer. State of
+    Decay 2 is a different game and already has official co-op. In-progress investigation of this build's dormant
+    CryEngine netcode is in games/state-of-decay. On isolated test copies (not the Steam install) a second process connects and the host spawns a second player character, but it is not playable yet (host does not render gameplay; joiner does not control its character). That result depends on runtime helpers kept under gitignored local/ (join NULL patch, UDP relay, pak reader) and is not reproducible from the published write-up alone.
+  sources:
+  - https://www.gamesradar.com/state-decay-scraps-plans-co-op/
+  - https://www.eurogamer.net/heres-whats-new-in-state-of-decay-year-one-survival-edition
+  - https://steamcommunity.com/app/241540/discussions/0/810939351105827815
+  - https://www.moddb.com/games/state-of-decay/mods
+  checked: '2026-10-19'
+  searched:
+  - 'GitHub search API repo:cranebeaker/coop-anything State of Decay, total_count 0, 2026-10-19 (gh CLI not installed)'
+  - 'WebSearch: State of Decay 2013 co-op mod multiplayer CryEngine; Nucleus handler; GitHub coop/multiplayer'
+  - 'ModDB mods page fetched 2026-10-19 (3 mods, none multiplayer)'
+  - 'Nexus site search for multiplayer/coop under stateofdecay returned single-player mods; full catalog not paged'
+  - 'Not checked: archive.org, Discord export, playground.ru file contents, forks of every GitHub hit'
+
 - game: System Shock 2
   year: 1999
   engine: Dark Engine (Thief engine fork)
@@ -121,6 +156,7 @@
   - https://www.systemshock.org/index.php?topic=10910.0
   - https://www.systemshock.org/index.php?topic=12190.0
   checked: '2026-10-16'
+
 - game: System Shock 2
   year: 1999
   engine: Nightdive KEX / Dark Engine
@@ -146,6 +182,7 @@
   - https://steamcommunity.com/app/866570/discussions/0/601897401881495589/
   - https://github.com/partydeck/partydeck/issues/229
   checked: '2026-10-16'
+
 - game: 'Thief II: The Metal Age'
   year: 2000
   engine: Dark Engine (NewDark)
@@ -174,6 +211,7 @@
   - https://steamcommunity.com/app/211740/discussions/0/1473095331498569970/
   - https://github.com/vfig/t2mpfun
   checked: '2026-10-16'
+
 - game: Half-Life
   year: 1998
   engine: GoldSrc
@@ -200,6 +238,7 @@
   - https://www.svencoop.com/description.php
   - https://www.pcgamesn.com/sven-co-op-brings-communal-half-life-to-steam-its-out-now-and-its-completely-free
   checked: '2026-10-16'
+
 - game: Half-Life 2
   year: 2004
   engine: Source
@@ -226,6 +265,7 @@
   - https://www.moddb.com/mods/synergy
   - https://www.co-optimus.com/game/101/pc/synergy-hl2-mod.html
   checked: '2026-10-16'
+
 - game: Half-Life 2
   year: 2004
   engine: Source
@@ -251,6 +291,7 @@
   - https://www.moddb.com/mods/obsidian-conflict
   - https://steamcommunity.com/app/320/discussions/0/1648791520844781371/
   checked: '2026-10-16'
+
 - game: Half-Life 2
   year: 2004
   engine: Source
@@ -275,6 +316,7 @@
   - https://store.steampowered.com/app/3564500/Lambda_Fortress/
   - https://www.pcgamesn.com/half-life-2/mod-lambda-fortress-steam
   checked: '2026-10-16'
+
 - game: Doom 3
   year: 2004
   engine: id Tech 4
@@ -300,6 +342,7 @@
   - https://github.com/Stradex/librecoop
   - https://www.moddb.com/members/stradexengine/downloads
   checked: '2026-10-16'
+
 - game: Doom 3
   year: 2004
   engine: id Tech 4
@@ -325,6 +368,7 @@
   - https://www.fileplanet.com/archive/p-45635/DOOM-3-OpenCoop-v1-1
   - https://steamcommunity.com/app/9070/discussions/0/1488861734103585263
   checked: '2026-10-16'
+
 - game: Quake 4
   year: 2005
   engine: id Tech 4
@@ -349,6 +393,7 @@
   - https://www.moddb.com/mods/q4-opencoop
   - https://steamcommunity.com/app/2210/discussions/0/5183064363534214418/
   checked: '2026-10-16'
+
 - game: Quake
   year: 1996
   engine: Quake engine
@@ -375,6 +420,7 @@
   - https://www.moddb.com/mods/millennium-co-op
   - https://github.com/Hezkore/q1-survival
   checked: '2026-10-16'
+
 - game: Quake II
   year: 1997
   engine: id Tech 2
@@ -398,6 +444,7 @@
   sources:
   - https://www.co-optimus.com/amparticle/13383/quake-2-co-op-or-die-stream-recap.html
   checked: '2026-10-16'
+
 - game: 'Hexen: Beyond Heretic'
   year: 1995
   engine: Doom engine
@@ -424,6 +471,7 @@
   - https://zandronum.com/forum/viewtopic.php?t=4498
   - https://www.moddb.com/games/zandronum
   checked: '2026-10-16'
+
 - game: Duke Nukem 3D
   year: 1996
   engine: Build engine (EDuke32)
@@ -450,6 +498,7 @@
   - https://openports.pl/path/games/eduke32
   - https://www.co-optimus.com/game/358/classic/duke-nukem-3d.html
   checked: '2026-10-16'
+
 - game: F.E.A.R.
   year: 2005
   engine: Jupiter EX (LithTech)
@@ -475,6 +524,7 @@
   - https://www.moddb.com/downloads/fear-cooperative
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3123894206
   checked: '2026-10-16'
+
 - game: F.E.A.R.
   year: 2005
   engine: Jupiter EX (LithTech)
@@ -498,6 +548,7 @@
   sources:
   - https://github.com/Vityacv/fearservmod
   checked: '2026-10-16'
+
 - game: BioShock Remastered
   year: 2016
   engine: Unreal Engine 2.5/3
@@ -523,6 +574,7 @@
   - https://www.nexusmods.com/bioshock/mods/178
   - https://www.keengamer.com/articles/news/new-game-mod-enables-a-bioshock-multiplayer-co-op-mode/
   checked: '2026-10-16'
+
 - game: 'S.T.A.L.K.E.R.: Shadow of Chernobyl'
   year: 2007
   engine: X-Ray (xrMPE)
@@ -549,6 +601,7 @@
   - https://steamcommunity.com/app/4500/discussions/0/4326349159969780968/
   - https://github.com/M4dMurloc/xrMPE_Launcher_Release
   checked: '2026-10-16'
+
 - game: 'S.T.A.L.K.E.R.: Shadow of Chernobyl'
   year: 2007
   engine: X-Ray (xrMPE)
@@ -574,6 +627,7 @@
   sources:
   - https://github.com/cranebeaker/stalker-soc-coop-fixes
   checked: '2026-10-16'
+
 - game: 'S.T.A.L.K.E.R.: Clear Sky'
   year: 2008
   engine: X-Ray (xrMPE)
@@ -599,6 +653,7 @@
   - https://ap-pro.ru/index/modding/25032024/
   - https://ap-pro.ru/forums/topic/6156-clear-coop/
   checked: '2026-10-16'
+
 - game: 'S.T.A.L.K.E.R.: Call of Pripyat'
   year: 2009
   engine: X-Ray (xrMPE)
@@ -625,6 +680,7 @@
   - https://dsogaming.com/?p=184267
   - https://steamcommunity.com/app/41700/discussions/0/6400272691576709710
   checked: '2026-10-16'
+
 - game: 'S.T.A.L.K.E.R.: Call of Pripyat'
   year: 2009
   engine: X-Ray
@@ -647,6 +703,7 @@
   sources:
   - https://www.moddb.com/mods/ray-of-hope-co-op-online
   checked: '2026-10-16'
+
 - game: Gothic / Gothic II
   year: 2001
   engine: ZenGin
@@ -672,6 +729,7 @@
   - https://github.com/Gothic-Workshop/GothicCoop
   - https://vgtimes.com/games/gothic/files/73962-modo-cooperativo.html
   checked: '2026-10-16'
+
 - game: 'Gothic II: Night of the Raven'
   year: 2003
   engine: ZenGin
@@ -697,6 +755,7 @@
   - https://github.com/skejt23/GothicMultiplayer
   - https://www.gamestar.de/artikel/gothic-mmo-hunderte-spieler-rollenspiel-traum-deutscher-server,3411240.html
   checked: '2026-10-16'
+
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -723,6 +782,7 @@
   - https://www.nexusmods.com/gothic3/mods/1?tab=forum
   - https://steamcommunity.com/app/39500/discussions/0/361798516951039653/
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls III: Morrowind'
   year: 2002
   engine: OpenMW
@@ -747,6 +807,7 @@
   - https://github.com/TES3MP/TES3MP
   - https://www.gamingonlinux.com/2022/02/online-multiplayer-for-openmw-morrowind-tes3mp-is-alive-again/page=1
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -771,6 +832,7 @@
   - https://www.moddb.com/mods/obliviononline
   - https://steamcommunity.com/groups/TESOR
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -794,6 +856,7 @@
   sources:
   - https://www.nexusmods.com/oblivion/mods/47303
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -818,6 +881,7 @@
   - https://www.nexusmods.com/oblivion/mods/40325
   - https://www.nexusmods.com/oblivion/mods/40393
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -840,6 +904,7 @@
   sources:
   - https://gamebanshee.com/fpca
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls V: Skyrim'
   year: 2011
   engine: Creation Engine
@@ -865,6 +930,7 @@
   - https://primagames.com/news/skyrim-together-reborn-co-op-mod-released-90000-downloads
   - https://twinfinite.net/news/skyrim-together-reborn-mod-multiplayer/
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls V: Skyrim'
   year: 2011
   engine: Creation Engine
@@ -887,6 +953,7 @@
   sources:
   - https://github.com/tiltedphoques/TiltedEvolution
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls V: Skyrim'
   year: 2011
   engine: Creation Engine
@@ -910,6 +977,7 @@
   sources:
   - https://github.com/skyrim-multiplayer/skymp
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls II: Daggerfall'
   year: 1996
   engine: Daggerfall Unity
@@ -933,6 +1001,7 @@
   sources:
   - https://github.com/sixthlaw/DaggerfallMultiplayer_Sixthlaw
   checked: '2026-10-16'
+
 - game: 'The Elder Scrolls II: Daggerfall'
   year: 1996
   engine: Daggerfall Unity
@@ -957,6 +1026,7 @@
   - https://github.com/EmptyBottleInc/DFU-Tanguy-Multiplayer/releases
   - https://github.com/EmptyBottleInc/DFU-Tanguy-Multiplayer
   checked: '2026-10-16'
+
 - game: Fallout
   year: 1997
   engine: Fallout CE (fallout1-ce)
@@ -981,6 +1051,7 @@
   - https://github.com/FadingTwo/fallout1-coop
   - https://github.com/FadingTwo/fallout1-coop/releases/tag/v1.5.9
   checked: '2026-10-16'
+
 - game: Fallout
   year: 1997
   engine: Fallout CE (fallout1-ce)
@@ -1005,6 +1076,7 @@
   - https://github.com/00kopatich00-alt/fallout1-companion-coop
   - https://github.com/00kopatich00-alt/fallout1-companion-coop/releases/tag/v0.6
   checked: '2026-10-16'
+
 - game: Fallout 2
   year: 1998
   engine: Fallout 2 CE
@@ -1030,6 +1102,7 @@
   - https://github.com/Cahb/fallout2-ce-coop
   - https://newreleases.io/project/github/Cahb/fallout2-ce-coop/release/v0.2
   checked: '2026-10-16'
+
 - game: Fallout 3
   year: 2008
   engine: Gamebryo
@@ -1054,6 +1127,7 @@
   - https://github.com/foxtacles/vaultmp
   - https://code.google.com/archive/p/vaultmp
   checked: '2026-10-16'
+
 - game: 'Fallout: New Vegas'
   year: 2010
   engine: Gamebryo
@@ -1082,6 +1156,7 @@
   - https://github.com/NVMP/ClientLauncher
   - https://github.com/clayne/NVMP-SDK
   checked: '2026-10-16'
+
 - game: 'Fallout: New Vegas'
   year: 2010
   engine: Gamebryo
@@ -1106,6 +1181,7 @@
   sources:
   - https://github.com/cranebeaker/fnv-coop
   checked: '2026-10-16'
+
 - game: 'Vampire: The Masquerade - Bloodlines'
   year: 2004
   engine: Source (2004)
@@ -1132,6 +1208,7 @@
   - https://steamcommunity.com/app/2600/discussions/0/530647080137558731/
   - https://www.moddb.com/mods/bloodlines-resurgence
   checked: '2026-10-16'
+
 - game: 'Vampire: The Masquerade - Redemption'
   year: 2000
   engine: Nihilistic Zorro engine
@@ -1156,6 +1233,7 @@
   - https://www.gamebanshee.com/kdc6r
   - https://www.co-optimus.com/game/1553/pc/vampire-the-masquerade-redemption.html
   checked: '2026-10-16'
+
 - game: Dark Messiah of Might and Magic
   year: 2006
   engine: Source
@@ -1182,6 +1260,7 @@
   - https://github.com/KingDavidW/DarkMessiah-Coop-Mod-Files
   - https://wccftech.com/dark-messiah-of-might-and-magic-rtx-remix-mod-gets-new-trailer-online-co-op-mod-now-available/amp/
   checked: '2026-10-16'
+
 - game: Far Cry
   year: 2004
   engine: CryEngine 1
@@ -1207,6 +1286,7 @@
   - https://www.moddb.com/mods/assault-coop/downloads
   - https://steamcommunity.com/sharedfiles/filedetails/?id=2677117740
   checked: '2026-10-16'
+
 - game: Far Cry
   year: 2004
   engine: CryEngine 1
@@ -1230,6 +1310,7 @@
   sources:
   - https://farcry1.itch.io/far-cry-advanced-version
   checked: '2026-10-16'
+
 - game: Crysis
   year: 2007
   engine: CryEngine 2
@@ -1256,6 +1337,7 @@
   - https://overclock3d.net/news/software/co-op-crysis-mod-targets-december-release-contains-crysis-and-warhead-campaigns/
   - https://powerupgaming.co.uk/2019/11/13/crysis-co-op-mod-is-more-complete-than-ever/
   checked: '2026-10-16'
+
 - game: Crysis
   year: 2007
   engine: CryEngine 2
@@ -1280,6 +1362,7 @@
   sources:
   - https://github.com/SeniorStackOverflow/crysis-coop
   checked: '2026-10-16'
+
 - game: 'Max Payne 2: The Fall of Max Payne'
   year: 2003
   engine: MaxFX
@@ -1305,6 +1388,7 @@
   - https://www.moddb.com/mods/share-the-payne/downloads
   - https://steamcommunity.com/app/12150/discussions/0/1621726179568705445/
   checked: '2026-10-16'
+
 - game: Max Payne
   year: 2001
   engine: MaxFX
@@ -1329,6 +1413,7 @@
   - 'WebSearch: Max Payne co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com steamcommunity.com
     (nothing for MP1)'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: 'Mafia: The City of Lost Heaven'
   year: 2002
   engine: LS3D
@@ -1353,6 +1438,7 @@
   - https://www.gamepressure.com/download/mafia-the-city-of-lost-heaven-lost-heaven-multiplayer-mod/z2e436
   - https://steamcommunity.com/groups/mafiamp
   checked: '2026-10-16'
+
 - game: Mafia II
   year: 2010
   engine: Illusion Engine
@@ -1377,6 +1463,7 @@
   - https://www.moddb.com/mods/mafia-2-multiplayer
   - https://www.moddb.com/mods/mafia-2-multiplayer/downloads/mafia-2-multiplayer-01b-rc2-1
   checked: '2026-10-16'
+
 - game: Mafia II
   year: 2010
   engine: Illusion Engine
@@ -1400,6 +1487,7 @@
   sources:
   - https://github.com/mafia2online/m2o-reborn
   checked: '2026-10-16'
+
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1423,6 +1511,7 @@
   - https://github.com/Tornamic/CoopAndreas
   - https://libertycity.net/files/gta-san-andreas/230164-coopandreas.html
   checked: '2026-10-18'
+
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1446,6 +1535,7 @@
   sources:
   - https://github.com/Parricidium/SACoop
   checked: '2026-10-16'
+
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1470,6 +1560,7 @@
   sources:
   - https://github.com/xreginold/GTA-SA-Open-Co-Op
   checked: '2026-10-16'
+
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1496,6 +1587,7 @@
   - https://gtaforums.com/topic/744210-sacleowip-2-player-missions-loader/
   - https://gtaforums.com/topic/874934-cleo-2-player-mode-enhancements/
   checked: '2026-10-16'
+
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1520,6 +1612,7 @@
   - https://www.grandtheftwiki.com/SA-MP
   - https://www.gtabase.com/gta-san-andreas/multiplayer/
   checked: '2026-10-16'
+
 - game: Grand Theft Auto IV
   year: 2008
   engine: RAGE
@@ -1544,6 +1637,7 @@
   - https://gtaforums.com/topic/439665-ivwipbetamission-loadercoop-missions/
   - https://steamcommunity.com/app/12210/discussions/0/882959527722536115/
   checked: '2026-10-16'
+
 - game: Grand Theft Auto IV
   year: 2008
   engine: RAGE
@@ -1570,6 +1664,7 @@
   - https://github.com/TheFRiChicken/ivmultiplayer
   - https://www.co-optimus.com/game/954/pc/grand-theft-auto-iv.html
   checked: '2026-10-16'
+
 - game: 'Grand Theft Auto: Vice City'
   year: 2002
   engine: RenderWare
@@ -1594,6 +1689,7 @@
   - https://www.grandtheftwiki.com/Vice_City_Multiplayer
   - https://www.gamepressure.com/download/grand-theft-auto-vice-city-vice-city-multiplayer-v04-client-mod/zbce12
   checked: '2026-10-16'
+
 - game: Dungeon Keeper
   year: 1997
   engine: KeeperFX
@@ -1621,6 +1717,7 @@
   - https://github.com/dkfans/keeperfx/pull/5178
   - https://github.com/dkfans/keeperfx/pull/5171
   checked: '2026-10-16'
+
 - game: Dungeon Keeper
   year: 1997
   engine: KeeperFX
@@ -1646,6 +1743,7 @@
   sources:
   - https://github.com/cranebeaker/dungeon-keeper-coop
   checked: '2026-10-16'
+
 - game: Dungeon Keeper 2
   year: 1999
   engine: Flame patch loader
@@ -1672,6 +1770,7 @@
   - https://ciphercom.github.io/dk2-coop
   - https://github.com/ciphercom/dk2-coop
   checked: '2026-10-16'
+
 - game: 'Serious Sam: The Second Encounter'
   year: 2002
   engine: Serious Engine 1
@@ -1696,6 +1795,7 @@
   - https://store.steampowered.com/app/41060/Serious_Sam_Classic_The_Second_Encounter/
   - https://www.co-optimus.com/game/890/pc/serious-sam-the-first-encounter.html
   checked: '2026-10-16'
+
 - game: 'Serious Sam: The Second Encounter'
   year: 2002
   engine: Serious Engine 1
@@ -1719,6 +1819,7 @@
   sources:
   - https://github.com/DreamyCecil/AdvancedMultiplayer2
   checked: '2026-10-16'
+
 - game: Unreal
   year: 1998
   engine: Unreal Engine 1
@@ -1745,6 +1846,7 @@
   - https://www.moddb.com/mods/return-to-na-pali-search-prelude
   - https://www.oldunreal.com/wiki/index.php?title=Oldunreal_227_FAQ
   checked: '2026-10-16'
+
 - game: Unreal
   year: 1998
   engine: Unreal Engine 1
@@ -1768,6 +1870,7 @@
   sources:
   - https://www.moddb.com/mods/wolf-coop/articles
   checked: '2026-10-16'
+
 - game: 'Hitman: Blood Money'
   year: 2006
   engine: Glacier
@@ -1792,6 +1895,7 @@
   - 'WebSearch: Hitman co-op mod Blood Money Contracts multiplayer, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: 'Tom Clancy''s Splinter Cell: Chaos Theory'
   year: 2005
   engine: Unreal Engine 2.5
@@ -1820,6 +1924,7 @@
   - https://github.com/savvamadar/Splinter-Cell-Chaos-Theory-Co-op-Saver
   - https://www.co-optimus.com/game/188/pc/splinter-cell-chaos-theory.html
   checked: '2026-10-16'
+
 - game: Mass Effect / Mass Effect 2
   year: 2007
   engine: Unreal Engine 3
@@ -1846,6 +1951,7 @@
   - 'WebSearch: Mass Effect 1 2 co-op mod campaign multiplayer, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: 'Star Wars: Knights of the Old Republic'
   year: 2003
   engine: reone (engine reimplementation)
@@ -1872,6 +1978,7 @@
   - https://www.gamestar.de/artikel/sw-kotor-koop,3360443.html
   - https://git.wbrawner.com/wbrawner/reone/raw/commit/117012b750596a1c45a4d7fd55e670d65da01cc9/README.md
   checked: '2026-10-16'
+
 - game: Arx Fatalis
   year: 2002
   engine: Arx Libertatis
@@ -1896,6 +2003,7 @@
   - https://github.com/kingzmanh/arx-fatalis-coop
   - https://github.com/kingzmanh/arx-fatalis-coop/releases/tag/v0.22
   checked: '2026-10-16'
+
 - game: Arx Fatalis
   year: 2002
   engine: Arx Libertatis
@@ -1921,6 +2029,7 @@
   - https://github.com/Parricidium/ArxCoop
   - https://github.com/Parricidium/ArxCoop/releases/tag/v2026.09.14aj
   checked: '2026-10-16'
+
 - game: Risen
   year: 2009
   engine: Genome
@@ -1943,6 +2052,7 @@
   - 'WebSearch: Risen co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com steamcommunity.com'
   - 'WebSearch: Risen Piranha Bytes co-op multiplayer mod (unrestricted)'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: Metro 2033
   year: 2010
   engine: 4A Engine
@@ -1967,6 +2077,7 @@
   searched:
   - 'WebSearch: Metro 2033 co-op mod, unrestricted and restricted to github.com moddb.com nexusmods.com steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: Dead Space
   year: 2008
   engine: Visceral Engine
@@ -1992,6 +2103,7 @@
   - 'WebSearch: Dead Space 1 co-op mod PC and Dead Space co-op mod restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: 'Dragon Age: Origins'
   year: 2009
   engine: Eclipse Engine
@@ -2029,6 +2141,7 @@
   - https://github.com/cranebeaker/coop-anything/issues/79
   - https://github.com/Whocares66-Dev/DAOLib
   checked: '2026-10-20'
+
 - game: Psychonauts
   year: 2005
   engine: Despair Engine / Gamebryo
@@ -2052,6 +2165,7 @@
   - 'WebSearch: Psychonauts co-op OR multiplayer mod (unrestricted and restricted to github.com moddb.com nexusmods.com
     steamcommunity.com)'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: Prey (2006)
   year: 2006
   engine: id Tech 4
@@ -2076,6 +2190,7 @@
   - 'WebSearch: Prey 2006 co-op campaign mod (unrestricted and restricted to github.com moddb.com nexusmods.com
     steamcommunity.com)'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: Freedom Fighters
   year: 2003
   engine: Zero (IOI engine)
@@ -2099,6 +2214,7 @@
   searched:
   - 'WebSearch: Freedom Fighters co-op mod (unrestricted and restricted to github.com moddb.com nexusmods.com steamcommunity.com)'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: Silent Hill 2
   year: 2001
   engine: Proprietary (Konami)
@@ -2123,6 +2239,7 @@
   - 'WebSearch: Silent Hill 2 original 2001 multiplayer co-op mod, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
+
 - game: Silent Hill
   year: 1999
   engine: Proprietary (Konami)
@@ -2148,6 +2265,7 @@
   - https://github.com/Depmify/Silent-Hill-United-Public
   - https://www.gfinityesports.com/article/silent-hill-gets-co-op-mode-via-new-fan-mod
   checked: '2026-10-16'
+
 - game: Resident Evil 4 (2005)
   year: 2005
   engine: MT Framework (Ultimate HD Edition)
@@ -2173,6 +2291,7 @@
   - https://www.nexusmods.com/residentevil4/mods/934
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3452882900
   checked: '2026-10-16'
+
 - game: Resident Evil 4 (2005)
   year: 2005
   engine: MT Framework (Ultimate HD Edition)
@@ -2199,6 +2318,7 @@
   - https://github.com/googprojects/remp
   - https://steamcommunity.com/app/254700/discussions/0/2828702372996790378/
   checked: '2026-10-16'
+
 - game: 'Mount & Blade: Warband'
   year: 2010
   engine: Warband (WSE)
@@ -2226,6 +2346,7 @@
   - https://steamcommunity.com/app/48700/discussions/0/846958634252615569/
   - https://steamcommunity.com/sharedfiles/filedetails/?id=509672401
   checked: '2026-10-16'
+
 - game: Diablo
   year: 1996
   engine: DevilutionX
@@ -2251,6 +2372,7 @@
   - https://gamingonlinux.com/2021/11/diablo-and-hellfire-source-port-devilutionx-gets-a-big-upgrade
   - https://www.gamingonlinux.com/2024/02/diablo-game-engine-devilutionx-fixes-up-multiplayer-in-v152/page=1
   checked: '2026-10-16'
+
 - game: Baldur's Gate
   year: 1998
   engine: Infinity Engine
@@ -2277,6 +2399,7 @@
   - https://gamesbeat.com/baldurs-gate-enhanced-edition-cross-platform-cooperative-multiplayer/
   - https://www.gog.com/forum/baldurs_gate_series/can_i_actually_play_this_multiplayer_and_cooperative
   checked: '2026-10-16'
+
 - game: Neverwinter Nights
   year: 2002
   engine: Aurora
@@ -2300,6 +2423,7 @@
   - https://store.steampowered.com/app/704450/Neverwinter_Nights_Enhanced_Edition/
   - https://www.co-optimus.com/game/212/pc/neverwinter-nights.html
   checked: '2026-10-16'
+
 - game: 'Star Wars Jedi Knight: Jedi Academy'
   year: 2003
   engine: id Tech 3 (OpenJK)
@@ -2328,6 +2452,7 @@
   - https://github.com/JACoders/OpenJK
   - https://jkhub.org/
   checked: '2026-10-16'
+
 - game: Star Wars Republic Commando
   year: 2005
   engine: Unreal Engine 2.5
@@ -2355,6 +2480,7 @@
   - https://www.nexusmods.com/starwarsrepubliccommando/mods/9
   - https://www.gamepressure.com/download/star-wars-republic-commando-republic-commando-coop-mod-v20012019/z21176c
   checked: '2026-10-16'
+
 - game: SWAT 4
   year: 2005
   engine: Unreal Engine 2.0
@@ -2380,6 +2506,7 @@
   - https://en.wikipedia.org/wiki/SWAT_4
   - https://www.co-op.gg/pc/game/swat-4
   checked: '2026-10-16'
+
 - game: 'No One Lives Forever 2: A Spy in H.A.R.M.''s Way'
   year: 2002
   engine: LithTech Jupiter
@@ -2406,6 +2533,7 @@
   - https://www.gamepressure.com/download/no-one-lives-forever-2-a-spy-in-harms-way-coop-mod-v18072016/z1efa5
   - https://www.gamepressure.com/download/no-one-lives-forever-2-a-spy-in-harms-way-multiplayer-package-v1/z7efc9
   checked: '2026-10-16'
+
 - game: 'Thief: The Dark Project / Gold'
   year: 1998
   engine: Dark Engine
@@ -2430,6 +2558,7 @@
   - 'WebSearch: Thief Dark Project Gold co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool), TTLG forums'
+
 - game: 'The Elder Scrolls V: Skyrim Special Edition'
   year: 2016
   engine: Creation Engine
@@ -2455,6 +2584,7 @@
   - https://www.nexusmods.com/skyrimspecialedition/mods/69993
   - https://mp1st.com/news/skyrim-multiplayer-co-op-mod-together-reborn-finally-released
   checked: 2026-10-16
+
 - game: 'The Elder Scrolls V: Skyrim Special Edition'
   year: 2016
   engine: Creation Engine
@@ -2480,6 +2610,7 @@
   - https://github.com/skyrim-roleplay/skymp
   - https://discord.com/servers/skymp-699653182946803722
   checked: 2026-10-16
+
 - game: Fallout 4
   year: 2015
   engine: Creation Engine
@@ -2508,6 +2639,7 @@
   - https://github.com/tiltedphoques/TiltedEvolution/discussions/776
   - https://reddit.rtrace.io/r/SkyrimTogether
   checked: 2026-10-16
+
 - game: Fallout 4
   year: 2015
   engine: Creation Engine
@@ -2532,6 +2664,7 @@
   - https://opencollective.com/f4mp
   - https://gametree.me/blog/fallout-4-multiplayer-mod/
   checked: 2026-10-16
+
 - game: Starfield
   year: 2023
   engine: Creation Engine 2
@@ -2558,6 +2691,7 @@
   - https://starfieldportal.com/article/skyrim-together-modders-cease-work-on-starfield-together
   - https://www.gfinityesports.com/article/starfield-together-mod-abandoned
   checked: 2026-10-16
+
 - game: Starfield
   year: 2023
   engine: Creation Engine 2
@@ -2583,6 +2717,7 @@
   - https://github.com/ramisotti13-eng/pulsar-tool/
   - https://github.com/JMPZ11/sf-pulsar-next
   checked: 2026-10-16
+
 - game: Starfield
   year: 2023
   engine: Creation Engine 2
@@ -2605,6 +2740,7 @@
   sources:
   - https://github.com/OrbitOnlineTeam/OrbitOnline
   checked: 2026-10-16
+
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2643,6 +2779,7 @@
   - https://rejuvenate.gitbook.io/witcheronline/general-information/playguide
   - https://overclock3d.net/news/software/the-witcher-online-2-0-has-arrived-and-its-nuts/
   checked: 2026-10-18
+
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2674,6 +2811,7 @@
   - https://github.com/Emillock/witcher3-coop/releases/tag/v0.1.0
   - https://github.com/Emillock/WitcherOnline/tree/remastered-5.01
   checked: 2026-10-18
+
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2699,6 +2837,7 @@
   - https://github.com/eofim/WitcherMMO
   - https://github.com/eofim/WitcherMMO/commits/main
   checked: 2026-10-18
+
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2724,6 +2863,7 @@
   - https://github.com/momo5502/w3m
   - https://github.com/momo5502/w3m/issues/322
   checked: 2026-10-18
+
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2748,6 +2888,7 @@
   sources:
   - https://github.com/werasik2aa/Witcher3-Multiplayer
   checked: 2026-10-18
+
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2774,6 +2915,7 @@
   - https://github.com/Hyjarion/Witcher3-MP
   - https://github.com/Hyjarion/Witcher3-MP/releases/tag/v0.0.1
   checked: 2026-10-18
+
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2797,6 +2939,7 @@
   sources:
   - https://github.com/tiltedphoques/CyberpunkMP/blob/main/README.md
   checked: 2026-10-16
+
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2822,6 +2965,7 @@
   - https://www.pcgamesn.com/cyberpunk-2077/multiplayer-cybermp-mod
   - https://www.dsogaming.com/videotrailer-news/the-cyberpunk-2077-multiplayer-mod-is-still-alive/
   checked: 2026-10-16
+
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2845,6 +2989,7 @@
   sources:
   - https://github.com/oxylol/cp2077-coop
   checked: 2026-10-16
+
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2870,6 +3015,7 @@
   - https://github.com/KyleBuildsAI/cp2077-coop
   - https://github.com/KyleBuildsAI/cp2077-coop/pull/3
   checked: 2026-10-16
+
 - game: Elden Ring
   year: 2022
   engine: FromSoftware proprietary
@@ -2895,6 +3041,7 @@
   - https://www.nexusmods.com/eldenring/mods/510
   - https://www.exitlag.com/blog/elden-ring-seamless-co-op/
   checked: 2026-10-16
+
 - game: Elden Ring Nightreign
   year: 2025
   engine: FromSoftware proprietary
@@ -2920,6 +3067,7 @@
   - https://www.nexusmods.com/eldenringnightreign/mods/3
   - https://hothardware.com/news/elden-ring-nightreign-duos-co-op-mod
   checked: 2026-10-16
+
 - game: Dark Souls Remastered
   year: 2018
   engine: FromSoftware proprietary
@@ -2944,6 +3092,7 @@
   - https://www.nexusmods.com/darksoulsremastered/mods/899
   - https://www.timeextension.com/news/2025/04/dark-souls-remastereds-new-seamless-co-op-mod-lets-you-play-with-friends-without-interruptions
   checked: 2026-10-16
+
 - game: Dark Souls III
   year: 2016
   engine: FromSoftware proprietary
@@ -2968,6 +3117,7 @@
   - https://www.nexusmods.com/darksouls3/mods/1895
   - https://forums.nexusmods.com/topic/13508641-announcement-dark-souls-iii-seamless-co-op/
   checked: 2026-10-16
+
 - game: 'Sekiro: Shadows Die Twice'
   year: 2019
   engine: FromSoftware proprietary
@@ -2992,6 +3142,7 @@
   - https://www.nexusmods.com/sekiro/mods/577
   - https://www.siliconera.com/sekiro-online-mod-adds-co-op-and-pvp-on-pcs/
   checked: 2026-10-16
+
 - game: 'Sekiro: Shadows Die Twice'
   year: 2019
   engine: FromSoftware proprietary
@@ -3015,6 +3166,7 @@
   sources:
   - https://github.com/mstampfli/sekiro-coop
   checked: 2026-10-16
+
 - game: Lies of P
   year: 2023
   engine: Unreal Engine 4
@@ -3040,6 +3192,7 @@
   - https://www.nexusmods.com/liesofp/mods/368
   - https://kitguru.net/gaming/joao-silva/lies-of-p-co-op-mod-hits-v1-0-with-full-campaign-support/
   checked: 2026-10-16
+
 - game: 'Clair Obscur: Expedition 33'
   year: 2025
   engine: Unreal Engine 5
@@ -3064,6 +3217,7 @@
   - https://www.dsogaming.com/mods/clair-obscur-expedition-33-just-got-a-really-cool-co-op-mod/
   - https://tecnobits.com/en/Expedition-33-in-local-co-op-mode-on-PC/
   checked: 2026-10-16
+
 - game: Yakuza 0
   year: 2015
   engine: unknown
@@ -3089,6 +3243,7 @@
   - https://www.nexusmods.com/yakuza0/mods/1276
   - https://www.dsogaming.com/?p=191357
   checked: 2026-10-16
+
 - game: Resident Evil 4 (2023 remake)
   year: 2023
   engine: RE Engine
@@ -3114,6 +3269,7 @@
   - https://www.nexusmods.com/residentevil42023/mods/6539
   - https://www.kitguru.net/page/2/!https:/www.kitguru.net/gaming/matthew-wilson/resident-evil-4-remake-can-be-played-in-co-op-thanks-to-new-mod/
   checked: 2026-10-16
+
 - game: Resident Evil 2 (2019 remake)
   year: 2019
   engine: RE Engine
@@ -3138,6 +3294,7 @@
   - https://www.nexusmods.com/residentevil22019/mods/2938
   - https://www.dsogaming.com/?p=197583
   checked: 2026-10-16
+
 - game: Resident Evil Village
   year: 2021
   engine: RE Engine
@@ -3164,6 +3321,7 @@
   checked: 2026-10-16
   searched:
   - search Nexus, ModDB, GitHub and Steam via web search, 2026-10-16, no co-op results
+
 - game: Resident Evil Requiem
   year: 2026
   engine: RE Engine
@@ -3193,6 +3351,7 @@
   checked: 2026-10-18
   searched:
   - search Nexus, ModDB, GitHub, Discord and YouTube via web search, 2026-10-18, only the unreleased YouTube project
+
 - game: Hogwarts Legacy
   year: 2023
   engine: Unreal Engine 4
@@ -3216,6 +3375,7 @@
   sources:
   - https://www.nexusmods.com/hogwartslegacy/mods/2588
   checked: 2026-10-16
+
 - game: Hogwarts Legacy
   year: 2023
   engine: Unreal Engine 4
@@ -3242,6 +3402,7 @@
   - https://www.nexusmods.com/hogwartslegacy/mods/1378
   - https://github.com/hogwarts-mp/mod
   checked: 2026-10-16
+
 - game: 'The Elder Scrolls IV: Oblivion Remastered'
   year: 2025
   engine: Unreal Engine 5 with Gamebryo
@@ -3268,6 +3429,7 @@
   - https://www.pcgameshardware.de/Oblivion-Remastered-Spiel-75181/News/Neue-Multiplayer-Mod-OblivionMP-1521511/
   - https://discord.com/servers/ob-mp-readym-1477979108045754408
   checked: 2026-10-16
+
 - game: 'Black Myth: Wukong'
   year: 2024
   engine: Unreal Engine 5
@@ -3295,6 +3457,7 @@
   - https://www.dsogaming.com/?p=187707
   - https://www.nuget.org/profiles/ReadyM
   checked: 2026-10-16
+
 - game: Red Dead Redemption 2
   year: 2019
   engine: RAGE
@@ -3319,6 +3482,7 @@
   sources:
   - https://github.com/JuliPodie/rdr2-coop-story
   checked: 2026-10-16
+
 - game: Red Dead Redemption 2
   year: 2019
   engine: RAGE
@@ -3342,6 +3506,7 @@
   sources:
   - https://github.com/Chimiscuilo123/RDR2Coop
   checked: 2026-10-16
+
 - game: Red Dead Redemption 2
   year: 2019
   engine: RAGE
@@ -3365,6 +3530,7 @@
   sources:
   - https://www.nexusmods.com/reddeadredemption2/mods/10865
   checked: 2026-10-16
+
 - game: Grand Theft Auto V
   year: 2015
   engine: RAGE
@@ -3391,6 +3557,7 @@
   - https://www.gta5-mods.com/scripts/ragecoop-v
   - https://techraptor.net/gaming/news/new-mod-allows-multiplayer-co-op-in-gta-v
   checked: 2026-10-16
+
 - game: Mass Effect Legendary Edition
   year: 2021
   engine: Unreal Engine 3
@@ -3414,6 +3581,7 @@
   sources:
   - https://www.nexusmods.com/masseffectlegendaryedition/mods/3463
   checked: 2026-10-16
+
 - game: Mass Effect Legendary Edition
   year: 2021
   engine: Unreal Engine 3
@@ -3440,6 +3608,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: DOOM Eternal
   year: 2020
   engine: id Tech 7
@@ -3467,6 +3636,7 @@
   - https://www.moddb.com/mods/co-operative-mode/downloads
   - https://www.ggrecon.com/articles/doom-eternal-mod-support-could-finally-add-campaign-co-op
   checked: 2026-10-16
+
 - game: 'Wolfenstein: The New Order and Wolfenstein II'
   year: 2014
   engine: id Tech 5
@@ -3494,6 +3664,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Titanfall 2 (campaign)
   year: 2016
   engine: Source (modified)
@@ -3522,6 +3693,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB, Thunderstore and Steam via web search, 2026-10-16
+
 - game: Metro Exodus
   year: 2019
   engine: 4A Engine
@@ -3549,6 +3721,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Far Cry 3
   year: 2012
   engine: Dunia
@@ -3577,6 +3750,7 @@
   - https://www.nexusmods.com/farcry3/mods/262
   - https://www.dsogaming.com/news/there-is-now-a-co-op-mod-for-far-cry-3-that-you-can-download
   checked: 2026-10-16
+
 - game: Far Cry 4
   year: 2014
   engine: Dunia
@@ -3603,6 +3777,7 @@
   - https://www.nexusmods.com/farcry4/mods/153
   - https://www.nexusmods.com/farcry4/mods/179
   checked: 2026-10-16
+
 - game: Subnautica
   year: 2018
   engine: Unity
@@ -3630,6 +3805,7 @@
   - https://github.com/SubnauticaNitrox/Nitrox/blob/master/README.md
   - https://gittrend.io/repo/SubnauticaNitrox/Nitrox
   checked: 2026-10-16
+
 - game: 'Subnautica: Below Zero'
   year: 2021
   engine: Unity
@@ -3654,6 +3830,7 @@
   - https://subnauticamultiplayer.com/download
   - https://steamcommunity.com/app/848450/discussions/0/4408543731841128691
   checked: 2026-10-16
+
 - game: Hollow Knight
   year: 2017
   engine: Unity
@@ -3679,6 +3856,7 @@
   - https://github.com/Extremelyd1/HKMP
   - https://pypi.org/project/hk-horn
   checked: 2026-10-16
+
 - game: 'Hollow Knight: Silksong'
   year: 2025
   engine: Unity
@@ -3705,6 +3883,7 @@
   - https://allthings.how/hollow-knight-silksong-multiplayer-mod-co-op-and-pvp-install-and-setup-guide/
   - https://www.dsogaming.com/pc-performance-analyses/hollow-knight-silksong-got-a-multiplayer-mod-with-pvp-support/
   checked: 2026-10-16
+
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -3735,6 +3914,7 @@
   - https://github.com/0x0ade/CelesteNet
   - https://gamebanana.com/mods/53695
   checked: 2026-10-16
+
 - game: The Long Dark
   year: 2017
   engine: Unity
@@ -3762,6 +3942,7 @@
   - https://playco-opgame.com/multiplayer-mod/the-long-dark-multiplayer-mod/
   - https://co-optimus.com/game/16285/pc/blackfrost-the-long-dark-2.html
   checked: 2026-10-16
+
 - game: Outer Wilds
   year: 2019
   engine: Unity
@@ -3787,6 +3968,7 @@
   - https://outerwildsmods.com/mods/quantumspacebuddies/
   - https://vgtimes.com/games/outer-wilds/files/73658-quantum-space-buddies-qsb-multiplayer-mod.html
   checked: 2026-10-16
+
 - game: Hades
   year: 2020
   engine: Supergiant proprietary
@@ -3810,6 +3992,7 @@
   sources:
   - https://www.nexusmods.com/hades/mods/215
   checked: 2026-10-16
+
 - game: Hades
   year: 2020
   engine: Supergiant proprietary
@@ -3838,6 +4021,7 @@
   - https://github.com/Yarmungandr/Hades-Multiplayer-COOP-Anything
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: Hades II
   year: 2025
   engine: Supergiant proprietary
@@ -3862,6 +4046,7 @@
   - https://www.nexusmods.com/hades2/mods/125
   - https://deltiasgaming.com/?p=355456
   checked: 2026-10-16
+
 - game: Dishonored
   year: 2012
   engine: Unreal Engine 3 (modified)
@@ -3887,6 +4072,7 @@
   - https://www.nexusmods.com/dishonored/mods/450
   - https://www.nexusmods.com/dishonored/mods/motm
   checked: 2026-10-16
+
 - game: Dishonored 2
   year: 2016
   engine: Void Engine
@@ -3910,6 +4096,7 @@
   sources:
   - https://www.nexusmods.com/dishonored2/mods/222
   checked: 2026-10-16
+
 - game: Dishonored
   year: 2012
   engine: Unreal Engine 3 (modified)
@@ -3933,6 +4120,7 @@
   sources:
   - https://github.com/ectrc/dismod
   checked: 2026-10-16
+
 - game: Prey (2017)
   year: 2017
   engine: CryEngine
@@ -3960,6 +4148,7 @@
   - https://www.nexusmods.com/prey2017/mods/218?tab=description
   - https://github.com/x0rp01s0n/prey-coop
   checked: 2026-10-16
+
 - game: 'Alien: Isolation'
   year: 2014
   engine: Creative Assembly proprietary
@@ -3985,6 +4174,7 @@
   - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
   - https://steamcommunity.com/app/214490/discussions/0/598198356181958694/
   checked: 2026-10-16
+
 - game: 'Kingdom Come: Deliverance'
   year: 2018
   engine: CryEngine
@@ -4008,6 +4198,7 @@
   sources:
   - https://github.com/MafiaHub/kcdmp_archived
   checked: 2026-10-16
+
 - game: 'Kingdom Come: Deliverance II'
   year: 2025
   engine: CryEngine
@@ -4035,6 +4226,7 @@
   - https://www.dexerto.com/gaming/kingdom-come-deliverance-2-finally-gets-multiplayer-thanks-to-mod-3412974/
   - https://www.nexusmods.com/absolver/news/15627
   checked: 2026-10-16
+
 - game: 'Kingdom Come: Deliverance II'
   year: 2025
   engine: CryEngine
@@ -4058,6 +4250,7 @@
   sources:
   - https://dsogaming.com/mods/co-op-mods-for-kingdom-come-deliverance-2-and-dragons-dogma-2-released/
   checked: 2026-10-16
+
 - game: Dragon's Dogma 2
   year: 2024
   engine: RE Engine
@@ -4083,6 +4276,7 @@
   - https://www.nexusmods.com/dragonsdogma2/mods/1479
   - https://foro3d.com/en/2026/agosto/dd2gether-lleva-el-cooperativo-online-a-dragons-dogma-2.html
   checked: 2026-10-16
+
 - game: Atomic Heart
   year: 2023
   engine: Unreal Engine 4
@@ -4110,6 +4304,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: 'Star Wars Jedi: Fallen Order and Survivor'
   year: 2019
   engine: Unreal Engine 4
@@ -4137,6 +4332,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
+
 - game: God of War (2018)
   year: 2022
   engine: Santa Monica Studio proprietary
@@ -4163,6 +4359,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
+
 - game: Horizon Zero Dawn
   year: 2020
   engine: Decima
@@ -4189,6 +4386,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
+
 - game: Death Stranding
   year: 2020
   engine: Decima
@@ -4216,6 +4414,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Ghost of Tsushima Director's Cut
   year: 2024
   engine: Sucker Punch proprietary
@@ -4242,6 +4441,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
+
 - game: Marvel's Spider-Man Remastered
   year: 2022
   engine: Insomniac proprietary
@@ -4274,6 +4474,7 @@
   - https://www.patreon.com/hbgda
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
   checked: 2026-10-19
+
 - game: Marvel's Spider-Man 2
   year: 2025
   engine: Insomniac proprietary
@@ -4299,6 +4500,7 @@
   - https://www.nexusmods.com/marvelsspiderman2/mods/2412
   - https://www.nexusmods.com/marvelsspiderman2/mods/2856
   checked: 2026-10-16
+
 - game: 'Mount & Blade II: Bannerlord'
   year: 2022
   engine: TaleWorlds proprietary
@@ -4324,6 +4526,7 @@
   - https://www.moddb.com/mods/bannerlord-coop
   - https://gamebanshee.com/a9xc4
   checked: 2026-10-16
+
 - game: Just Cause 3
   year: 2015
   engine: Apex
@@ -4349,6 +4552,7 @@
   - https://pcgamesn.com/just-cause-3/just-cause-3-multiplayer-mod-cancelled
   - https://techraptor.net/gaming/news/just-cause-3-multiplayer-mod-delayed-indefinitely-another-takes-its-place
   checked: 2026-10-16
+
 - game: 'Mafia: Definitive Edition'
   year: 2020
   engine: Illusion Engine
@@ -4375,6 +4579,7 @@
   - https://github.com/MafiaHub/MafiaMP
   - https://github.com/JustAddMP/MafiaDE
   checked: 2026-10-16
+
 - game: Sifu
   year: 2022
   engine: Unreal Engine 4
@@ -4401,6 +4606,7 @@
   - https://github.com/Zanci19/SifuCoop
   - https://github.com/mashburnn/tailcoop
   checked: 2026-10-16
+
 - game: 'Batman: Arkham Knight'
   year: 2015
   engine: Unreal Engine 3
@@ -4427,6 +4633,7 @@
   - https://github.com/NightfallTogether/Nightfall-Together-Batman-Arkham-Knight-Multiplayer
   - https://www.nexusmods.com/batmanarkhamknight/mods/2505
   checked: 2026-10-16
+
 - game: 'S.T.A.L.K.E.R. 2: Heart of Chornobyl'
   year: 2024
   engine: Unreal Engine 5
@@ -4450,6 +4657,7 @@
   sources:
   - https://www.nexusmods.com/stalker2heartofchornobyl/mods/2980
   checked: 2026-10-16
+
 - game: S.T.A.L.K.E.R. Anomaly (standalone, X-Ray engine)
   year: 2018
   engine: X-Ray
@@ -4475,6 +4683,7 @@
   - https://www.moddb.com/downloads/anomaly-together-2-coop
   - https://www.moddb.com/games/stalker-call-of-pripyat/downloads/anomaly-together-20-beta-patch-211
   checked: 2026-10-16
+
 - game: The Last of Us Part I
   year: 2023
   engine: Naughty Dog proprietary
@@ -4502,6 +4711,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Assassin's Creed Origins, Odyssey and Valhalla
   year: 2017
   engine: AnvilNext
@@ -4530,6 +4740,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Dead Space (2023 remake)
   year: 2023
   engine: Frostbite
@@ -4556,6 +4767,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Alan Wake 2 and Control
   year: 2023
   engine: Northlight
@@ -4584,6 +4796,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: 'Sleeping Dogs: Definitive Edition'
   year: 2014
   engine: unknown
@@ -4610,6 +4823,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -4634,6 +4848,7 @@
   sources:
   - https://github.com/cranebeaker/deus-ex-coop
   checked: '2026-10-16'
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian, libultraship)
@@ -4664,6 +4879,7 @@
   - https://github.com/HarbourMasters/Shipwright/issues/7378
   - https://github.com/bghill95/OOT-True-Co-op
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: HarbourMasters 64 ports (libultraship)
@@ -4690,6 +4906,7 @@
   - https://github.com/garrettjoecox/Anchor
   - https://github.com/HarbourMasters/Lighthouse
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork on Anchor)
@@ -4716,6 +4933,7 @@
   sources:
   - https://github.com/bghill95/OOT-True-Co-op
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork)
@@ -4743,6 +4961,7 @@
   - https://github.com/fReEsPiRiT-Spiritsoft/Shipwright-Online
   - https://github.com/cranebeaker/ocarina-coop
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork)
@@ -4769,6 +4988,7 @@
   sources:
   - https://github.com/cranebeaker/ocarina-coop
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (OOT True Co-op fork)
@@ -4794,6 +5014,7 @@
   sources:
   - https://github.com/phattbeats/7daystozelda
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 emulation via ModLoader64 (Mupen64Plus)
@@ -4824,6 +5045,7 @@
   - https://www.zeldadungeon.net/modders-add-cooperative-multiplayer-to-ocarina-of-time/
   - https://redlib.belloworld.it/r/ZeldaOoT/comments/1f21sk7/is_modloader64_dead
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Majora''s Mask'
   year: 2000
   engine: N64 emulation via ModLoader64 (Mupen64Plus)
@@ -4848,6 +5070,7 @@
   sources:
   - https://github.com/hylian-modding/Z64Online
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Mupen64Plus-based N64 emulator host
@@ -4875,6 +5098,7 @@
   - https://github.com/hylian-modding/ModLoader64-GUI
   - https://community.linuxmint.com/software/view/com.hylianmodding.modloader64
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Majora''s Mask'
   year: 2000
   engine: Zelda64Recomp (N64 static recompilation)
@@ -4900,6 +5124,7 @@
   sources:
   - https://github.com/fern-maker/MMChat
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork with Archipelago)
@@ -4926,6 +5151,7 @@
   - https://github.com/HarbourMasters/Archipelago-SoH
   - https://github.com/Odrannnn/Shipwright-Archipelago-Android
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Python multiworld server with per-game clients
@@ -4953,6 +5179,7 @@
   - https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/network%20protocol.md
   - https://nex-3.com/blog/becoming-a-video-game-scientist-part-1/
   checked: 2026-10-16
+
 - game: Super Mario 64
   year: 1996
   engine: N64 decompilation PC port (sm64ex)
@@ -4978,6 +5205,7 @@
   sources:
   - https://github.com/coop-deluxe/sm64coopdx
   checked: 2026-10-16
+
 - game: Super Mario 64
   year: 1996
   engine: N64 decompilation PC port (sm64ex)
@@ -5002,6 +5230,7 @@
   - https://github.com/djoslin0/sm64ex-coop
   - https://github.com/coop-deluxe/sm64coopdx
   checked: 2026-10-16
+
 - game: Super Mario 64
   year: 1996
   engine: N64 emulation with memory hooks
@@ -5028,6 +5257,7 @@
   - https://github.com/net64-mod/net64-coop
   - https://github.com/Tarnadas/net64plus
   checked: 2026-10-16
+
 - game: Animal Crossing (GameCube)
   year: 2001
   engine: GameCube decompilation native PC port (ac-decomp, OpenGL 3.3)
@@ -5056,6 +5286,7 @@
   - https://github.com/vsimochi/ACGC-PC-Multiplayer
   - https://github.com/vsimochi/ACGC-PC-Multiplayer/tree/multiplayer
   checked: 2026-10-16
+
 - game: Banjo-Kazooie
   year: 1998
   engine: N64 decompilation port (Lighthouse, libultraship)
@@ -5081,6 +5312,7 @@
   sources:
   - https://github.com/HarbourMasters/Lighthouse
   checked: 2026-10-16
+
 - game: Banjo-Kazooie
   year: 1998
   engine: 'N64 static recompilation (Banjo: Recompiled)'
@@ -5105,6 +5337,7 @@
   sources:
   - https://github.com/Lebbitheplow/BanjoCoop
   checked: 2026-10-16
+
 - game: Banjo-Kazooie
   year: 1998
   engine: 'N64 static recompilation (Banjo: Recompiled)'
@@ -5130,6 +5363,7 @@
   sources:
   - https://github.com/wilrojasdev/Banjo-Recomp-Online
   checked: 2026-10-16
+
 - game: 'Banjo-Kazooie: Nuts & Bolts'
   year: 2008
   engine: Xbox 360 emulated in Xenia
@@ -5155,6 +5389,7 @@
   sources:
   - https://github.com/weighta/NB-Multiplayer
   checked: 2026-10-16
+
 - game: Super Mario Sunshine
   year: 2002
   engine: GameCube in Dolphin with Better Sunshine Engine
@@ -5182,6 +5417,7 @@
   - https://dsogaming.com/mods/super-mario-sunshine-online-mod-released-for-pc/
   - https://www.timeextension.com/news/2026/07/this-is-the-way-to-enjoy-a-vacation-with-your-friends-super-mario-sunshine-gets-new-10-player-online-mod-with-co-op-and-hide-and-seek
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: The Wind Waker'
   year: 2003
   engine: GameCube in Dolphin (memory sync)
@@ -5206,6 +5442,7 @@
   sources:
   - https://github.com/BrandenEK/Windwaker-coop
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: The Wind Waker'
   year: 2003
   engine: GameCube in Dolphin (PowerPC code injection)
@@ -5230,6 +5467,7 @@
   sources:
   - https://github.com/StephenSHorton/ww-multiplayer
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: The Wind Waker'
   year: 2003
   engine: GameCube in Dolphin
@@ -5255,6 +5493,7 @@
   sources:
   - https://github.com/datstarkey/ww-online
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Twilight Princess'
   year: 2006
   engine: Dusklight (from-scratch reimplementation)
@@ -5282,6 +5521,7 @@
   - https://github.com/remiafterdark/crests-of-courage
   - https://github.com/TwilitRealm/dusklight
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Twilight Princess'
   year: 2006
   engine: Dusklight (from-scratch reimplementation)
@@ -5306,6 +5546,7 @@
   sources:
   - https://github.com/LegendarySavageGamer/Hero-s-Of-Twilight
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: Twilight Princess'
   year: 2006
   engine: Dusklight (from-scratch reimplementation)
@@ -5330,6 +5571,7 @@
   sources:
   - https://github.com/StuartCameronW/dusklight-multiplayer
   checked: 2026-10-16
+
 - game: Perfect Dark
   year: 2000
   engine: N64 decompilation port (fgsfdsfgs port-net branch)
@@ -5357,6 +5599,7 @@
   - https://github.com/fgsfdsfgs/perfect_dark
   - https://github.com/fgsfdsfgs/perfect_dark/blob/port-net/docs/netplay.md
   checked: 2026-10-16
+
 - game: Perfect Dark
   year: 2000
   engine: N64 decompilation port (PD2 fork on port-net)
@@ -5381,6 +5624,7 @@
   sources:
   - https://github.com/MikeHazeJr/perfect-dark-2
   checked: 2026-10-16
+
 - game: Perfect Dark
   year: 2000
   engine: N64 decompilation port (fork)
@@ -5405,6 +5649,7 @@
   sources:
   - https://github.com/cylonicboom/pd-friends-of-joanna
   checked: 2026-10-16
+
 - game: GoldenEye 007
   year: 1997
   engine: N64 decompilation (goldeneye_src) fork
@@ -5429,6 +5674,7 @@
   sources:
   - https://github.com/Joshua-1248/GoldenEye-007-Plus
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: A Link to the Past'
   year: 1991
   engine: SNES in custom bsnes build (bsnes-as with AngelScript)
@@ -5455,6 +5701,7 @@
   - https://github.com/alttpo/alttpo
   - https://go-mode-a-link-to-the-past-randomizer-podcast.castos.com/episodes/smz3-w-solski-sgl2021-brackets-no-logic-co-op-infoshare
   checked: 2026-10-16
+
 - game: 'The Legend of Zelda: A Link to the Past'
   year: 1991
   engine: SNES PC port (snesrev/zelda3)
@@ -5479,6 +5726,7 @@
   sources:
   - https://github.com/aliBrita/Zelda3-Multiplayer
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: BizHawk Lua scripts
@@ -5503,6 +5751,7 @@
   sources:
   - https://github.com/TestRunnerSRL/bizhawk-co-op
   checked: 2026-10-16
+
 - game: Jak 3
   year: 2004
   engine: OpenGOAL (Jak 3 decompilation)
@@ -5528,6 +5777,7 @@
   sources:
   - https://github.com/whozghiar/jak3-multiplayer
   checked: 2026-10-16
+
 - game: Jak 3
   year: 2004
   engine: OpenGOAL (Jak 3 decompilation)
@@ -5554,6 +5804,7 @@
   sources:
   - https://github.com/FUNKI-DELIRE-LEON-GAGIN/Jak-3-Online
   checked: 2026-10-16
+
 - game: Kingdom Hearts II Final Mix
   year: 2002
   engine: PC Steam version (memory-level mod)
@@ -5579,6 +5830,7 @@
   sources:
   - https://github.com/TCM-Murray/Kingdom-Hearts-II-Coop-Multiplayer
   checked: 2026-10-16
+
 - game: Pokemon Red/Blue (Gen 1 Recomp)
   year: 1996
   engine: Gen 1 recompilation (Pokeport engine)
@@ -5603,6 +5855,7 @@
   sources:
   - https://github.com/AshJamB/SilphNet
   checked: 2026-10-16
+
 - game: Pokemon Red/Blue (Gen 1 Recomp)
   year: 1996
   engine: Gen 1 recompilation (Pokeport engine)
@@ -5627,6 +5880,7 @@
   sources:
   - https://github.com/gamecorner-033/Gen1Co-op
   checked: 2026-10-16
+
 - game: Sonic Riders
   year: 2006
   engine: PC version with mod loader
@@ -5651,6 +5905,7 @@
   sources:
   - https://github.com/Sewer56/Riders.Tweakbox
   checked: 2026-10-16
+
 - game: Sonic Adventure DX
   year: 2003
   engine: PC version with SADX Mod Loader
@@ -5675,6 +5930,7 @@
   sources:
   - https://github.com/kellsnc/sadx-multiplayer
   checked: 2026-10-16
+
 - game: Sonic Adventure 2
   year: 2001
   engine: PC Steam version with SA Mod Manager
@@ -5699,6 +5955,7 @@
   sources:
   - https://github.com/Regrant-Dev/SA2-CHAO-ONLINE
   checked: 2026-10-16
+
 - game: 'Spyro: A Hero''s Tail'
   year: 2004
   engine: GameCube in Dolphin (Dolphin NetPlay)
@@ -5723,6 +5980,7 @@
   sources:
   - https://github.com/BrinchEbsen/AHT_MultiPlayer
   checked: 2026-10-16
+
 - game: 'Spyro 2: Ripto''s Rage'
   year: 1999
   engine: PS1 (ISO patch)
@@ -5748,6 +6006,7 @@
   - https://github.com/Spyromain/Spyro2x2
   - https://retrododo.com/the-original-spyro-game-now-has-a-co-op-mod-with-two-player-split-screen/
   checked: 2026-10-16
+
 - game: Crash Team Racing
   year: 1999
   engine: PS1 in DuckStation (patched disc)
@@ -5774,6 +6033,7 @@
   - https://github.com/OnlineCTR/server
   - https://www.dsogaming.com/news/modders-bring-crash-team-racing-to-pc-with-60fps-and-online-multiplayer-support/
   checked: 2026-10-16
+
 - game: Donkey Kong 64
   year: 1999
   engine: N64 emulation via ModLoader64
@@ -5797,6 +6057,7 @@
   sources:
   - https://github.com/ml64lostmods/Dk64Online
   checked: 2026-10-16
+
 - game: 'Halo: Combat Evolved'
   year: 2001
   engine: Halo Custom Edition 1.0.10
@@ -5823,6 +6084,7 @@
   - https://github.com/Sledmine/coop-evolved
   - https://mp1st.com/news/halo-ce-mod-adds-new-way-play-co-op-worst-way
   checked: 2026-10-16
+
 - game: Super Mario Odyssey
   year: 2017
   engine: Nintendo Switch (code mod)
@@ -5849,6 +6111,7 @@
   - https://github.com/CraftyBoss/SuperMarioOdysseyOnline
   - https://github.com/Sanae6/SmoOnlineServer
   checked: 2026-10-16
+
 - game: Sonic Robo Blast 2
   year: 1998
   engine: Doom Legacy derived engine (fan game)
@@ -5875,6 +6138,7 @@
   - https://en.wikipedia.org/wiki/Sonic_Robo_Blast_2
   - https://github.com/STJr/SRB2
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Windows tool launching multiple game instances
@@ -5902,6 +6166,7 @@
   - https://github.com/SplitScreen-Me/splitscreenme-nucleus
   - https://github.com/lucasassislar/nucleuscoop
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Windows DLL injection tool
@@ -5925,6 +6190,7 @@
   sources:
   - https://github.com/UniversalSplitScreen/UniversalSplitScreen
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Steam streaming feature
@@ -5950,6 +6216,7 @@
   sources:
   - https://store.steampowered.com/remoteplay
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Remote desktop streaming
@@ -5974,6 +6241,7 @@
   sources:
   - https://parsec.app/
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Dolphin emulator NetPlay
@@ -6002,6 +6270,7 @@
   - https://ubuntuhandbook.org/index.php/2026/09/dolphin-emulator-2609-released-with-android-netplay/
   - https://github.com/dolphin-emu/dolphin
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: libretro frontend netplay
@@ -6028,6 +6297,7 @@
   - https://docs.libretro.com/guides/netplay-getting-started/
   - https://github.com/libretro/RetroArch
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: Mupen64Plus based N64 emulator
@@ -6054,6 +6324,7 @@
   - https://emulation.gametechwiki.com/index.php/Simple64
   - https://github.com/simple64/simple64
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: DuckStation PS1 emulator fork (GGPO rollback)
@@ -6080,6 +6351,7 @@
   - https://exputer.com/news/playstation/ps1-emulator-rollback-netcode/
   - https://timeextension.com/news/2023/03/popular-ps1-emulator-gets-incredible-update-for-online-multiplayer
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: RPCS3 PS3 emulator matchmaking
@@ -6106,6 +6378,7 @@
   - https://github.com/RipleyTom/rpcn
   - https://github.com/The-OPERATIONS-Team/OPERATION-ETERNAL-LIBERATION
   checked: 2026-10-16
+
 - game: (multiple)
   year: unknown
   engine: PCSX2 PS2 emulator fork
@@ -6132,6 +6405,7 @@
   - https://github.com/alexsharoff/pcsx2-online
   - https://github.com/YungMoniCA1/pcsx2-netplay-reborn
   checked: 2026-10-16
+
 - game: Jak and Daxter
   year: 2001
   engine: OpenGOAL (PC reimplementation)
@@ -6154,6 +6428,7 @@
   sources:
   - https://www.dsogaming.com/news/the-unofficial-pc-port-of-jak-daxter-now-supports-online-and-local-multiplayer/
   checked: '2026-10-16'
+
 - game: "The Legend of Zelda: Majora's Mask"
   year: 2000
   engine: 2 Ship 2 Harkinian (decomp PC port)
@@ -6176,6 +6451,7 @@
   sources:
   - https://github.com/tjoaks/anchor-2s2h
   checked: '2026-10-16'
+
 - game: Mega Man X
   year: 1993
   engine: SNES (native PC static recompilation, snesrecomp)
@@ -6199,6 +6475,7 @@
   - https://github.com/mstan/MegaManXSNESRecomp
   - https://github.com/mstan/MegaManXSNESRecomp/blob/main/docs/netplay.md
   checked: '2026-10-17'
+
 - game: Mega Man X4
   year: 1997
   engine: PS1 (native PC static recompilation, PSXRecomp)
@@ -6222,6 +6499,7 @@
   - https://github.com/mstan/MegaManX4Recomp
   - https://1379.tech/mega-man-x4-recompiled-x-zero-coop-preview/
   checked: '2026-10-17'
+
 - game: Pilotwings 64
   year: 1996
   engine: N64 (native PC build from the Pilotwings64Decomp decompilation)
@@ -6244,6 +6522,7 @@
   sources:
   - https://github.com/NoahVl/Birdman64
   checked: '2026-10-17'
+
 - game: World in Conflict (with Soviet Assault)
   year: 2007
   engine: Masstech (Massive Entertainment)
@@ -6269,6 +6548,7 @@
   - 'WebSearch: World in Conflict campaign co-op mod multiplayer singleplayer missions; "World in Conflict" coop campaign
     mod moddb; play campaign with friend co-op, 2026-10-17'
   - 'Not checked: Massgate forums, WiC Discords, Reddit, non-English searches'
+
 - game: Crab Champions
   engine: Unreal Engine 5
   project: CrabSync
@@ -6293,6 +6573,7 @@
   - https://github.com/Dudiebug/CrabMods
   - https://github.com/Dudiebug/CrabMods/releases
   checked: '2026-10-18'
+
 - game: Half Sword
   engine: Unreal Engine 5
   project: Half Sword Multiplayer Mod (HSMMod)
@@ -6315,6 +6596,7 @@
   - https://github.com/Dudiebug/halfsword-multiplayer-mod
   - https://github.com/Dudiebug/halfsword-multiplayer-mod/releases
   checked: '2026-10-18'
+
 - game: Command & Conquer 3 Tiberium Wars
   year: 2007
   engine: SAGE (C&C3 era)
@@ -6341,6 +6623,7 @@
   - https://github.com/cranebeaker/coop-anything/tree/main/games/command-and-conquer-3
   - https://forums.revora.net/topic/100755-how-to-play-c-c-3-campaign-co-op-please-help/
   checked: '2026-10-18'
+
 - game: Command & Conquer 3 Kane's Wrath
   year: 2008
   engine: SAGE (C&C3 era)
@@ -6360,6 +6643,7 @@
   searched: this repo, web search, GitHub repo search, 2026-10-17; ModDB only via search results (Cloudflare check)
   sources: []
   checked: '2026-10-18'
+
 - game: "Divinity II: Developer's Cut"
   engine: Gamebryo-derived (Larian "Divinity Application")
   project: divinity2-split-screen
@@ -6382,6 +6666,7 @@
   - https://github.com/cranebeaker/coop-anything/tree/main/games/divinity-2-developers-cut
   - https://en.wikipedia.org/wiki/Divinity_II
   checked: '2026-10-18'
+
 - game: Stacklands
   year: 2022
   engine: Unity
@@ -6407,6 +6692,7 @@
   sources:
   - https://github.com/Dudiebug/stacklands-coop
   checked: '2026-10-17'
+
 - game: Enter the Gungeon
   year: 2016
   engine: Unity 2017.4 (Mono)
@@ -6432,6 +6718,7 @@
   - https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/
   - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
   checked: '2026-10-18'
+
 - game: Enter the Gungeon
   year: 2016
   engine: Unity 2017.4 (Mono)
@@ -6458,6 +6745,7 @@
   - https://thunderstore.io/c/enter-the-gungeon/p/Rec/GungeonTogether_3Player/
   - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
   checked: '2026-10-18'
+
 - game: Clive Barker's Jericho
   year: 2007
   engine: MercurySteam ScrapEngine (Scrapland engine, Lua 5.1)
@@ -6485,6 +6773,7 @@
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/cranebeaker/coop-anything/issues/27
   checked: '2026-10-18'
+
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -6523,6 +6812,7 @@
   searched:
   - search GitHub (repo search, 435 results), Nexus mods list (58 mods), ModDB, Steam store API and web search, 2026-10-18
   - coop-anything issues/PRs via GitHub search API (0 hits), 2026-10-18
+
 - game: 'Call of Duty: Modern Warfare 3'
   year: 2011
   engine: IW 5.0 (Call of Duty)
@@ -6550,6 +6840,7 @@
   - https://forum.alterware.dev/t/iw5-mod-install-guide/462
   - https://www.moddb.com/mods/mw3-survival-mode-revived
   checked: '2026-10-19'
+
 - game: 'Call of Duty: Modern Warfare 3'
   year: 2011
   engine: IW 5.0 (Call of Duty)
@@ -6578,6 +6869,7 @@
   checked: '2026-10-19'
   searched:
   - GitHub, Nexus, ModDB, Steam and the AlterWare forums via web search, 2026-10-18
+
 - game: Far Cry 2
   year: 2008
   engine: Dunia (CryEngine 1 derivative)
@@ -6613,6 +6905,7 @@
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
   checked: '2026-10-19'
+
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
@@ -6640,6 +6933,7 @@
   sources:
   - https://www.nexusmods.com/taintedgrailthefallofavalon/mods/211
   checked: '2026-10-20'
+
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -6665,6 +6959,7 @@
   sources:
   - https://gothic.org.pl/gothic/modyfikacje/gothic-3-heroes-w-trybie-kooperacji/
   checked: '2026-10-16'
+
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -6693,6 +6988,7 @@
   - https://github.com/yevh/Gothic3/releases/tag/v0.35.0-beta.1
   - https://github.com/yevh/Gothic3/blob/327c0b0a2409db1f7ba0ba9a7f09cb171c5500e0/LICENSE
   checked: '2026-10-17'
+
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -6719,6 +7015,7 @@
   sources:
   - https://github.com/GGM1k3y23/g3-together
   checked: '2026-10-20'
+
 - game: Crimson Desert
   year: 2026
   engine: BlackSpace Engine
@@ -6754,6 +7051,7 @@
   - https://github.com/cranebeaker/coop-anything/issues/51
   checked: '2026-10-19'
   up_for_adoption: true
+
 - game: Crimson Desert
   year: 2026
   engine: BlackSpace Engine
@@ -6780,6 +7078,7 @@
   sources:
   - https://github.com/blizz3010/CrimsonDesertCoop
   checked: '2026-10-19'
+
 - game: Crimson Desert
   year: 2026
   engine: BlackSpace Engine
@@ -6807,6 +7106,7 @@
   - https://wccftech.com/crimson-desert-2-player-co-op-mod-but-more-advanced-soon/
   - https://insider-gaming.com/crimson-desert-multiplayer-mod-is-being-tested/
   checked: '2026-10-19'
+
 - game: Fear & Hunger
   year: 2020
   engine: RPG Maker MV
@@ -6836,6 +7136,7 @@
   - https://github.com/glynn568-glitch/fear-and-hunger-together
   - https://phosphopho.itch.io/fear-and-hunger-together
   checked: '2026-10-20'
+
 - game: 'Call of Duty: Modern Warfare 2'
   year: 2009
   engine: IW 4.0 (Call of Duty)
@@ -6865,6 +7166,7 @@
   - https://steamcommunity.com/app/10180/discussions/0/3087772148451672664
   - https://github.com/FreeTheTech101/cod-mod
   checked: '2026-10-19'
+
 - game: 'Call of Duty: Modern Warfare 2'
   year: 2009
   engine: IW 4.0 (Call of Duty)
@@ -6893,6 +7195,7 @@
   sources:
   - https://github.com/stxlvn/mw2_coop
   checked: '2026-10-20'
+
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -6921,6 +7224,7 @@
   - https://gamebanana.com/mods/453706
   - https://github.com/corkr900/CoopHelper
   checked: 2026-10-16
+
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -6948,6 +7252,7 @@
   sources:
   - https://gamebanana.com/mods/150725
   checked: 2026-10-16
+
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -6974,6 +7279,7 @@
   sources:
   - https://gamebanana.com/mods/713075
   checked: 2026-10-16
+
 - game: Dave the Diver
   year: 2023
   engine: Unity
@@ -7001,6 +7307,7 @@
   - https://github.com/masonan777/Daves-the-Diver-Coop-Mod
   checked: '2026-10-19'
   made_with_coop_anything: true
+
 - game: Dave the Diver
   year: 2023
   engine: Unity
@@ -7026,6 +7333,7 @@
   sources:
   - https://github.com/S1ii/Coop-Divers
   checked: '2026-10-19'
+
 - game: Pacific Drive
   year: 2024
   engine: Unreal Engine 4
@@ -7056,6 +7364,7 @@
   - https://steamcommunity.com/app/1458140/discussions/0/604153001708376779
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: BattleTech
   year: 2018
   engine: Unity
@@ -7077,6 +7386,7 @@
   - https://www.pcgamingwiki.com/wiki/BattleTech
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: 'Half-Life: Alyx'
   year: 2020
   engine: Source 2
@@ -7101,6 +7411,7 @@
   - https://www.pcgamingwiki.com/wiki/Half-Life%3A_Alyx
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: Final Fantasy VII Remake Intergrade
   year: 2021
   engine: Unreal Engine 4
@@ -7122,6 +7433,7 @@
   - https://www.pcgamingwiki.com/wiki/Final_Fantasy_VII_Remake_Intergrade
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
@@ -7143,6 +7455,7 @@
   - https://www.pcgamingwiki.com/wiki/Spider-Man%3A_Friend_or_Foe
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: 'Deep Rock Galactic: Survivor'
   year: 2024
   engine: Unity 6 (IL2CPP)
@@ -7164,6 +7477,7 @@
   sources:
   - https://github.com/Reudo/drg-survivor-coop
   checked: '2026-10-21'
+
 - game: Little Nightmares
   year: 2017
   engine: Unreal Engine 4
@@ -7186,6 +7500,7 @@
   - https://www.pcgamingwiki.com/wiki/Little_Nightmares
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: Yu-Gi-Oh! 5D's Tag Force 4
   year: 2009
   engine: unknown
@@ -7207,6 +7522,7 @@
   - https://en.wikipedia.org/wiki/List_of_Yu-Gi-Oh!_video_games
   checked: '2026-10-20'
   made_with_coop_anything: true
+
 - game: 'Middle-earth: Shadow of War'
   year: 2017
   engine: Firebird (LithTech derivative)
@@ -7236,6 +7552,7 @@
   - GitHub repository search "shadow of war" (first 30 results read), 2026-10-20
   - Nexus mod pages (automated fetch blocked, 403; search-result text only), Steam forum threads via search, 2026-10-20
   - Not searched yet; Reddit, ModDB, the game's modding Discord, non-English sources
+
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)
@@ -7267,6 +7584,7 @@
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/releases/tag/Beta1-2-0
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/issues/22
   checked: '2026-10-20'
+
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)
@@ -7299,6 +7617,7 @@
   - https://github.com/Zonda001/graveyard-keeper-multiplayer/issues
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/pull/9
   checked: '2026-10-20'
+
 - game: MDK2 HD
   year: 2011
   engine: BioWare in-house (MDK2), OpenGL 3, Lua 3.1 scripting
@@ -7329,6 +7648,7 @@
   - https://store.steampowered.com/app/213350/
   checked: '2026-10-22'
   made_with_coop_anything: true
+
 - game: Resident Evil 2 (2019 remake)
   year: 2019
   engine: RE Engine
@@ -7354,6 +7674,7 @@
   sources:
   - https://www.nexusmods.com/residentevil22019/mods/3024
   checked: '2026-10-21'
+
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -7379,6 +7700,7 @@
   sources:
   - https://www.nexusmods.com/oblivion/mods/56734
   checked: '2026-10-21'
+
 - game: 'Call of Duty: Black Ops III'
   year: 2015
   engine: IW engine (Call of Duty, Treyarch fork)
@@ -7406,6 +7728,7 @@
   - https://www.nexusmods.com/callofdutyblackops3/mods/53
   - https://github.com/LocalPlayer123/BO3-4-Player-Local-Splitscreen-on-PC
   checked: '2026-10-21'
+
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
@@ -7432,6 +7755,7 @@
   - https://www.swiftworld.net/2007/10/13/pc-spider-man-friend-or-foe-review/
   - https://www.gamespot.com/reviews/spider-man-friend-or-foe-review/1900-6180451/
   checked: '2026-10-20'
+
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
@@ -7464,6 +7788,7 @@
   checked: '2026-10-21'
   up_for_adoption: false
   made_with_coop_anything: true
+
 - game: Ghostrunner
   year: 2020
   engine: Unreal Engine 4
@@ -7492,6 +7817,7 @@
   - 'Steam forums, Steam appdetails API, Reddit r/GhostRunner, YouTube, general web, 2026-10-21'
   - 'UE4SS CustomGameConfigs list: no Ghostrunner entry, 2026-10-21'
   - 'Local binary triage of the shipping exe and pak footer, 2026-10-21'
+
 - game: Dave the Diver
   year: 2023
   engine: Unity
