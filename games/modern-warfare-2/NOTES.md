@@ -702,7 +702,35 @@ units apart, alive. The strike is forced by the bot (`mw2coop_qa_melee`): lookin
 guard and the melee key are untested. Screenshots: player 2 in sub B's lock tube, behind a
 SEAL's fins underwater, in the water under the grate during the kill, on the platform after.
 
+## No Russian elevator, crash site and Second Sun opening for two players (2026-10-20)
+
+No Russian (`airport`): the level holds player 1's view on a script_origin at the back of the
+elevator for ~20 s (zoom, gas mask overlay, `airport_vision_elevator`); player 2 shared that
+spot. He now stands at the back wall beside player 1 (free spot: floor, clear line, no team
+member within 30 units; here 36 units to the right), held the same way and let go with him
+(`_mw2coop_airport.gsc`, `airport_code.gsc.patch` 2 hunks). QA `spawn`: d 36, both linked;
+screenshot: player 2 in the right back corner, Makarov's "Remember, no Russian".
+
+Crash site (`dc_crashsite.gsc`, byte-identical in the dcburning and dcemp zones, so one patch
+serves the end of Of Their Own Accord and the start of Second Sun): player 2 gets his own rig
+with the wake-up animation beside player 1 (side picked by 5 view traces out of the wreck: the
+hull blocks one side), his own movement in the cabin grid (`player_crash_movement` per
+player), his rifle and Foley's magazine (`player_crash_gun_behavior` per player; the autosave
+in it only for player 1: twice at once gave `_autosave_game_now` script errors). The crash site
+logic is in `_mw2coop_crashsite.gsc`, which names no dcemp/dcburning script (loaded in both
+zones). Second Sun (`_mw2coop_dcemp.gsc`): at the ISS player 2 floats 64 units beside player 1
+on a tag_origin linked to player 1's animated camera; his view and stance are kept for after
+the EMP; `emp_empaftermath` and `emp_free_player` run per player (player 2 out 0.6 s later,
+40 units beside).
+QA `dcemp` (2026-10-20, both copies, 0 script errors): both in the wreck (eyes 35 units
+apart), both got a rifle, both at the ISS (64), both back in the wreck (35), both out (40),
+alive. QA `crashsite` (dcburning, start crash): both in the wreck, rifles, both still in it at
+the end; the level moves on to contingency.
+Open: `dcemp_code::street_heli_player_kill` (the street helicopter kills a player who stays in
+the open) raised a script error with the bot idle after the QA, and is written for level.player
+only: player 2 is not threatened there yet.
+
 ## Status
 
-Next: the open spawn items (airport elevator, dcemp, credits); No Russian ending
+Next: the open spawn items (credits); the dcemp street helicopter for player 2; No Russian ending
 (proposed to the owner: Makarov kills both players in turn); profile records.
