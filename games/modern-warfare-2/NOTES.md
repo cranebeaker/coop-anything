@@ -396,22 +396,142 @@ Progress saving (owner asked to check it):
   After QA `end`, `progress.txt` holds `map roadkill`.
 - Not done: profile records (mission list in the menu); the move to the next mission.
 
-## Next-mission transition (2026-10-20, in progress)
+## Next-mission transition (2026-10-20)
 
-- Spec Ops "play again" calls `ChangeLevel( level.script )` in a co-op session
-  (`maps\_specialops_code::specialops_summary_player_choice`), so `mission_complete()` now
-  waits 1 s (progress request) and calls `ChangeLevel( next, keepWeapons )` on both machines.
-- Observed: QA `end` reached the mission end on both, saved `roadkill`, then both stayed on
-  `trainer` until the run timed out; no script error.
+- Spec Ops "play again" calls `ChangeLevel( level.script )`, so the first try called
+  `ChangeLevel( next, keepWeapons )` on both machines. Observed: both stayed on `trainer`,
+  no script error.
 - Builtin table entry at rva 0x3c2dc0: `changelevel` → 0x1937e0, `missionsuccess` →
-  0x1938d0. Both only act when `g_reloading` (dvar pointer at rva 0xd9c020, registered in
-  0x172830) is 0 and the int at rva 0xd9e1d4 is above 0; then they store the map name
-  (0x174fe0 → buffer at 0xd96e30) and set the exit flag at rva 0xd97b80, which 0x170e60
-  reads. Unknown yet: what 0xd9e1d4 is (guess: a player health or client count) and what
-  0x170e60 does with the flag in a co-op session.
+  0x1938d0. Both act only when `g_reloading` (dvar pointer at rva 0xd9c020) is 0 and the int
+  at rva 0xd9e1d4 is above 0; then they store the map (buffer at rva 0xd96e30) and set the exit
+  flag at rva 0xd97b80. The exit handler (rva 0x170e60) fades out and runs `spmap <map>`, but
+  **returns at once when `gameMode` (dvar pointer at rva 0x192da20; values none/sp/so/mp) is
+  2 ("so")**, which a co-op session uses (watched: `gameMode` 0 → 2 when the lobby forms).
+- Lobby launch: the `coopLaunch` command sets the launch flag (rva 0x5dd953); the party
+  frame (rva 0xd74a0) needs the party active (rva 0x5dd951), the lobby with two members
+  (lobby +0x70 and +0xa8), rva 0x1905300 == 0 and rva 0x5dd820 <= 0; then the host sends the
+  `coopLaunch` message (rva 0x22e610) and both machines run rva 0x22e1a0: co-op slot state
+  (rva 0x533cb8, per local client, stride 16) = 3, net rate dvars, `map <coop_mapName>`.
+- Observed (watches): the party goes inactive (0x5dd951 → 0) on both machines when the level
+  starts, so a `coopLaunch` given in a level only sets the flag; and the client's
+  `coopLaunch` handler (rva 0x22d2e0, from the message table at rva 0x350ce0) ignores the
+  message unless its slot state is 0 (it is 4, then 6 after `coopLoaded`).
+- Fix: on the level-end request both DLLs set `coop_mapName` and call rva 0x22e1a0 themselves
+  (console command `mw2coop_launch_map`). **QA `end`: both machines load `roadkill`,
+  exchange `coopLoaded`, two players, campaign mode, PASS on both** (06:01). On `roadkill`
+  player 2 starts 4668 units from player 1 (player 1 starts in a convoy vehicle) and
+  `roadkill_code::player_shepherd_fov` fails on both (`LerpViewAngleClamp` on
+  `level.player`): level work for that mission.
+
+## Test god mode (2026-10-20, owner's request)
+
+- `_mw2coop::god_mode()`: every frame each living player gets `EnableInvulnerability()` and
+  full health. On unless the host sets `mw2coop_god 0`. Must match on both lockstep
+  machines (damage applied on one only would desync), so the host's launch packet now
+  carries `start=… mw2coop_god=…` and the client sets both; `mw2coop_god` also gets the
+  co-op readable flag. The `god` console command would act on one machine only.
+- QA `god`: heavy damage on both players → both alive, neither downed, health 100/100,
+  PASS on both. QA `restart` with `mw2coop_god 0` on the host only: the client got `0` from
+  the packet; all PASS, 0 errors.
+
+## Vehicles for two players (2026-10-20, in progress; owner's requirements)
+
+Owner: in a vehicle both players sit on different seats; on a vehicle turret only one player,
+whoever gets in first, and the players can swap. Places the owner named: Team Player
+(`roadkill`, the only vehicle turret), Wolverines! (`invasion`: Humvee ride at the start, getting
+into a parked Humvee at the very end after defending Burger Town).
+
+Survey (grep of each mission's own scripts for `UseBy( level.player`, `level.player
+PlayerLinkTo` and vehicle names; a starting list, not a full audit):
+
+| Mission | Player and vehicles | Status |
+|---|---|---|
+| roadkill (Team Player) | Humvee: board through a usable seat, then the 50 cal turret (`player_ride_vehicle`, `player_gets_on_turret`); ride ends in a crash slide | done, QA `rkintro`, `board`, `rideend` pass |
+| invasion (Wolverines!) | opening: passenger seat via `_utility::player_rides_shotgun_in_humvee`; end: parked Humvee seat `tag_guy1` | done, QA `ride` passes; player 2 on the rear-left seat |
+| cliffhanger | player drives a snowmobile (380 mentions). Owner: a second snowmobile for player 2; the mission-end trigger only when player 2 has arrived too | not looked at |
+| af_chase (Endgame, the chase after Shepherd) | player drives the boat (`friendly_boat UseBy( level.player )`) | not looked at |
+| oilrig (underwater start, owner named it) | SDV / underwater set piece (`PlayerLinkTo`) | not looked at |
+| gulag, oilrig, af_caves, dcemp, estate, boneyard, favela_escape, airport, contingency | `PlayerLinkTo` scenes (helicopters, boats, set pieces) | not looked at |
+| dcburning | helicopters / Humvees, no player link found by the grep | not looked at |
+
+Seats: `level.vehicle_aianims[ vehicletype ][ pos ].sittag` (Humvee: 0 tag_driver,
+1 tag_passenger, 2 tag_guy0, 3 tag_guy1; `humvee50cal` adds 4 tag_guy_turret); a vehicle's
+`usedPositions[ pos ]` marks seats AI riders hold. `_mw2coop::seat_partner_in_vehicle()` puts
+player 2 on a free non-driver, non-turret seat (marking it used), linked like player 1
+(`PlayerLinkTo` with view arcs, weapons off), else at `tag_body` offset (-50, 0, 10).
+
+- Patched `_utility::player_rides_shotgun_in_humvee` / `player_leaves_humvee` (player 2 rides
+  and leaves with player 1) and `invasion::player_enters_convoy_humvee` (seat for player 2).
+- QA `ride` on invasion: player 1 seated, player 2 seated 72 units away, still together while
+  driving, both out, player 2 next to player 1: PASS on both, 0 errors (06:18 and 06:22).
+- Observed: in the opening Humvee all rear seats hold AI (`humvee: 0=tag_driver* 1=tag_passenger
+  2=tag_guy0* 3=tag_guy1*`), so player 2 rides at the fallback spot: a screenshot from the
+  client shows the view from the roof hatch (turret ring ahead).
+- Owner chose a real seat over the roof hatch: Worm (`script_noteworthy` "worm", a squadmate
+  the mission lets die after the yards; every later use checks `isalive( level.worm )`) gives
+  up his rear-left seat. `invasion` sets `level.mw2coop_spare_rider = "worm"`;
+  `seat_partner_in_vehicle()` removes that rider (`evict_rider()`) when no seat is free. At
+  seating time the rider's spawn function has not run yet, so he is matched by animname or
+  else script_noteworthy. The opening's three unchecked `level.worm` uses got `isalive()`.
+  QA `ride`: `player 2 seated on tag_guy0 spare worm: removed`, all PASS on both, 0 errors
+  (06:37); the client screenshot shows the view from the rear seat behind the driver.
+- `follow_leader_teleports` now leaves a linked player 2 alone.
+- Seen on roadkill: player 1 is blended (1 s) into the Shepherd intro scene, too slow for the
+  512-units-per-frame teleport check, so player 2 stays 4668 units away; needs a distance
+  leash.
+
+Roadkill design (not built yet): the usable seat (and its 80-unit auto trigger) answers either
+player; the first is the gunner (`level.mw2coop_gunner`) and gets the get-in animation and the
+turret; the convoy (`player_gets_in`) waits until the second boards a recreated seat (or a
+timeout seats him); the passenger holds Use to swap; ride end unlinks both. Unknown: how to
+take a player off a turret by script (`UseBy` again?).
+
+## Team Player for two players (2026-10-20)
+
+Owner's direction: before solving a mission, look at how COD-MOD did it (a reference, not a
+base to build on). COD-MOD's `x_coop.ff` scripts (`local/`, read only, no license, nothing
+copied): in roadkill it links both players to
+the same rig in Shepherd's scene, links player 2 lying on `tag_seat_rb_attach` once player 1
+is on the turret, unlinks both at the ride end and links both to the crash slide. No choice
+of gunner, no swap, start points not handled.
+
+mw2_coop (`_mw2coop_roadkill.gsc`, patches to `roadkill_code`, `roadkill`,
+`_minigun_viewmodel`; outside co-op every patched spot does what it did):
+- The glowing seat (and its 80-unit auto trigger) answers either player; the first is the
+  gunner (`level.mw2coop_gunner`, `_mw2coop::vehicle_gunner()`), gets the get-in animation and
+  the turret; the turret hands follow the gunner's buttons.
+- The convoy flag `player_gets_in` waits until the second player reaches the seat again (or 30
+  s); he takes a free seat with weapons (`tag_passenger` was free in this Humvee).
+- Swap: the passenger holds Use for 1 s. Taking a player off a turret: `EnableTurretDismount()`
+  then a second `turret UseBy( player )` (it also unlinks him; QA `turret`).
+- Observed: doing the swap in one server frame crashed both machines on the second swap
+  (access violation writing 0x1c at rva 0x15f515, `TeleportPlayer` with `ent->client` NULL,
+  stack 0x175ca5 / 0x15b73f / 0x234331). Spreading it over three frames fixed it (QA `board`:
+  swap and swap back pass).
+- Ride end and crash: both get off where they are; player 2 lands next to player 1.
+- Start points `ride`, `ambush`, `ride_later`: observed player 1 linked in the first frame,
+  left behind when the start point moved the Humvee to its path (13375 units from the
+  turret he was using) and unlinked about 2.25 s later; he is mounted again after 1 s.
+- Shepherd's scene: player 2 is linked to the same view rig (COD-MOD's idea) and set next to
+  player 1 afterwards.
+- **Script-set dvars:** a method trace (DLL `!trace <rva of a method table entry>`, unlink at
+  rva 0x342c88 → 0x187e20) showed `_introscreen::flying_intro` unlinking player 1 at 2.25 s.
+  The slam-zoom intro runs only when `getdvarint( "newintro" )` is 0; roadkill.gsc sets it to 1,
+  but in co-op getdvar reads "" for any dvar without the 0x20c4 flags, so the SP-only intro ran
+  and broke the scene (`player_shepherd_fov` LerpViewAngleClamp error). The DLL now wraps the
+  GSC `setdvar` builtin (function table entry rva 0x3c1568 → 0x185500; name via
+  `Scr_GetString` rva 0x223440) and gives the dvar 0x80 after the set: both machines set the
+  same value, so reading it back is lockstep-safe. After that: no slam zoom, player 1 stays in
+  the scene, 0 script errors.
+- DLL crash logger (vectored exception handler): faulting RVA, registers, return addresses.
+- QA (two copies, 0 script errors on both): `rkintro` (both in the scene, 48 units apart
+  after), `board` from `convoy` (player 2 first → gunner, convoy waits, player 1 seated, swap
+  and swap back, both in the moving Humvee 47 units apart), `rideend` from `ride_later` (player
+  1 at the turret 51 units, crash at 21.5 s, both off, 48 units apart), `turret`.
 
 ## Status
 
-Next: next-mission transition (why `ChangeLevel` does nothing in co-op), then the vehicle
-survey; consider body models for campaign players. Profile records for the mission menu are
-open.
+Next: the other vehicle missions (cliffhanger snowmobile for player 2 and an end trigger that
+waits for both, af_chase boat, oilrig underwater start), a distance leash for slow scripted
+moves of player 1, an on-screen hint for the seat swap. Profile records for the mission menu
+are open.

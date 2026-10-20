@@ -5,7 +5,7 @@
 | Engine | IW 4.0 (closed; id Tech 3 derived) |
 | Versions tested | Steam app 10180, build 25374375 (the 64-bit update of September 2026): `iw4sp.exe` x64, PE timestamp `0x6aaaa257`, SHA-256 `2F8C9CFDA1B8C0FB308FD9719577154E8222FC7654F5E8F1BF54579BCA69D805`, `version` dvar `IW4 2.0 build 14 Fri Oct 03 16:56:21 2025 win64`, Russian language set |
 | Projects | [mw2_coop](https://github.com/stxlvn/mw2_coop) (campaign co-op, alpha, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
-| QA level | automated (two game copies on one PC, in-game scripted checks on the first mission; the campaign does not run through yet) |
+| QA level | automated (two game copies on one PC, in-game scripted checks on S.S.D.D., Team Player and Wolverines! set pieces; the campaign does not run through yet) |
 | Last updated | 2026-10-20 |
 
 ## Where things stand
@@ -14,8 +14,9 @@
 64-bit Steam build, two copies of the game connect through the game's own Spec Ops co-op
 netcode and play the first mission (S.S.D.D.) together: player 2 is placed and armed with
 player 1, checkpoints work, both players down restarts the level at the last checkpoint, the
-mission end is detected, and the host saves progress to continue later. The move to the next
-mission does not work yet, and only S.S.D.D. has level fixes.
+host saves progress to continue later, and both move on to the next mission. In Team Player
+both share the convoy Humvee (first to board takes the turret, the other a seat, they can
+swap); in Wolverines! both ride in the Humvees. The other missions have no co-op fixes yet.
 The older COD-MOD campaign co-op pack only runs on the 32-bit build that the 2026 update
 replaced, and players who tried it found it rough.
 
@@ -91,6 +92,15 @@ replaced, and players who tried it found it rough.
 - **Saves and progress:** in a co-op session the game writes no save; campaign records are
   local-player profile data. A level start point (`start` dvar) is the progress unit that both
   lockstep machines can share.
+- **Next mission:** `ChangeLevel()` does nothing in co-op (its exit handler skips gameMode
+  "so"), the party is inactive in a level and the client ignores a second `coopLaunch`; each
+  machine has to start the next map itself the way the lobby launch does.
+- **Dvars a level sets and reads back** read as "" in co-op (same getdvar filter): Team
+  Player's `newintro` turned an SP-only intro back on that unlinked the player from the opening
+  scene. Values a script sets are equal on both machines, so they can be made readable.
+- **Turrets:** a second `turret UseBy( player )` after `EnableTurretDismount()` takes a player
+  off; handing a turret from one player to the other in a single server frame crashed both
+  machines, over three frames it works.
 - Function addresses (RVAs) with what they do are in [NOTES.md](NOTES.md) and in
   `src/game.h` of mw2_coop.
 
@@ -109,7 +119,13 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.1.0-alpha and later co
 - Saved progress: the host keeps mission and checkpoint in `mw2coop\progress.txt`;
   `mw2coop_continue` resumes there, and the host sends the client the start point in an
   out-of-band packet next to `coopLaunch`, so both machines start at the same point.
-- Script errors logged with GSC call stacks.
+- Script errors logged with GSC call stacks; crashes logged with the faulting RVA; builtin
+  method tracing for QA.
+- Next mission: each DLL launches it (`mw2coop_launch_map`); test god mode (`mw2coop_god`).
+- Vehicles: player 2 takes a free seat of player 1's vehicle (`_mw2coop::seat_partner_in_vehicle`,
+  a named squadmate can give up his seat); Team Player turret for whoever boards first, seat
+  swap by holding Use, ride end and crash for both, Shepherd's scene for both; Wolverines!
+  opening and closing Humvee rides.
 - QA-only helpers to pair two copies on one Steam account: a shifted XUID (the host ignores
   a `coopConnect` from its own XUID) and `mw2coop_party_join`, which stands in for the Steam
   lobby step that activates the client's party.
@@ -128,6 +144,13 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.1.0-alpha and later co
     as progress. The level does not change yet (see Known issues).
   - `resume @continue`: host starts with `mw2coop_continue`, client with no start point;
     both start at the saved checkpoint `bullet_penetration`.
+  - `end` after the transition fix: both machines load Team Player and exchange `coopLoaded`.
+  - `god`: heavy damage downs neither player.
+  - Wolverines! `ride`: player 2 seated in the opening Humvee, together while driving, both
+    out together.
+  - Team Player `rkintro`, `board`, `rideend`, `turret`: see the list above (both in Shepherd's
+    scene; first to board is the gunner, the convoy waits, swap and swap back; ride end and
+    crash for both; turret hand-over).
 - 2026-10-19: `intro` ended the session at the rifle hand-out ("no viewmodel set for player
   0"); fixed by setting player 2's first-person hands.
 - Earlier run (no QA script): both copies in S.S.D.D. in co-op for about 110 s, the client
@@ -141,16 +164,17 @@ folder, hosting and joining through console commands, `mw2coop_continue` to resu
 
 ## Known issues
 
-- The move to the next mission does not happen: `ChangeLevel()` from the script returns
-  without changing the map in a co-op campaign session (being investigated; the builtin only
-  acts when `g_reloading` is 0 and a level value at rva 0xd9e1d4 is above 0).
+- Vehicles in the other missions (Cliffhanger snowmobile, Endgame boat, the underwater start of
+  The Only Easy Day...) are not done.
+- A slow scripted move of player 1 can leave player 2 behind (no distance leash yet).
 - Campaign records (missions unlocked in the menu) are not updated in co-op.
 - Only S.S.D.D. has level fixes; in-engine scenes elsewhere are scripted for player 1 only.
 - Joining through a Steam invite with two accounts is untested.
 
 ## Next steps
 
-- Next-mission transition: find why `ChangeLevel()` does nothing in a co-op campaign session.
+- The other vehicle missions (owner: a second snowmobile in Cliffhanger and an end trigger that
+  waits for both players), a distance leash, a hint for the seat swap.
 - Vehicle sections for two players (the owner asked for them): survey all missions' scripts.
 - Check whether MW3 (2011) `iw5sp.exe` carries the same co-op netcode; its write-up says the
   singleplayer engine has none, which this MW2 finding questions.

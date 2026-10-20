@@ -6517,10 +6517,11 @@
   last_activity: 2026-10
   qa: automated
   notes: Work in progress. MIT alpha for the 64-bit Steam build. A winmm.dll proxy plus load-time
-    GSC patches on top of the game's own lockstep Spec Ops co-op netcode. Two copies play the first
-    mission (S.S.D.D.) together with checkpoints, restart when both are down, mission end and saved
-    progress (in-game QA passes on both machines); the move to the next mission does not work yet.
-    Not playable through yet. Write-up in games/modern-warfare-2.
+    GSC patches on top of the game's own lockstep Spec Ops co-op netcode. Two copies play S.S.D.D.
+    together (checkpoints, restart when both are down, saved progress), move on to the next mission
+    together and share the Team Player convoy Humvee (turret for whoever boards first, seat swap) and
+    the Wolverines! Humvee rides; in-game QA passes on both machines. Other missions not done; not
+    playable through yet. Write-up in games/modern-warfare-2.
   sources:
   - https://github.com/stxlvn/mw2_coop
   checked: '2026-10-20'
