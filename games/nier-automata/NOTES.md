@@ -177,3 +177,168 @@ Pitfalls:
   loaded another save (once `60_05_AB_Forest_Castle` instead of the Bunker). The phase checks catch it; reruns passed.
 - In a fresh co-op session the first "hold B" next to the Commander sometimes comes before the talk prompt shows;
   the scenario tries twice. Pressing A after the talk ends makes 2B jump, so it stops as soon as the step changes.
+
+## 2026-10-19: the story step comes from the phase's action graph; a natural phase change
+
+Observed (build 7020666, "Test" save, phase `16_AB_bunker_Order`; offsets from the exe base):
+- The pending step lives in a static object at `+0xf68af0` (its first member is a
+  `StaticArray<UIPlHudManager::sUICtrl, ...>`, so most likely the HUD manager): value `[+0x650]`, flag `[+0x654]`.
+  The setter is the function at `+0x8fae70(int step)`: under a lock, if the step is not 0 and differs from the pending
+  value, it stores it and sets the flag; the HUD update (`+0x947f80`) copies it into the step global the next frame.
+  A phase start calls the setter with -1 (`+0x3d59a7`).
+- Calling the setter from the mod (`setstep 140` on step 130) changes nothing: the game itself calls the setter every
+  frame with 130 (from `+0x3e37f4`, `ecx = [rbx+0xb4]`), so 130 comes back at once.
+- `rbx` there is a `hap::HapGoalLocationAction` (RTTI name; read through the vtable with a new bot command `rtti`): an
+  action of the phase's script graph that keeps the objective marker on a target (the Commander, an `NPC` object) and
+  carries the step for that objective at `+0xb4`. The same function sets the marker target (`+0x8141a0`, a manager at
+  `+0x125df80`; the marker position is the float triplet at `+0x1268920`).
+- The graph is an array of 24 `hap::Action*` (`DynamicArray<Action*>` at `+0x28` of the graph object): condition blocks,
+  `SendCommand`, `MemorySaveAction`, `HapGoalLocationAction`, `AreaAction`, `CameraAction`, `DelayAction` and others.
+  Each action has an id at `+0x18` (a 32-bit hash, the same in every run), flags at `+0x1c` (byte `+0x1e`: 0x20 started,
+  0xa0 finished, 0 not reached) and a state hash at `+0x20` (`0x26b80d1f` = finished).
+- During the conversation: the `ConditionBlock` with id `0x4c4e6dc1` finishes, then the old goal action (`0x883b60bd`,
+  step 130) and the next actions; the next goal action (`0x39a20c1d`, step 140, marker on the hangar) and an
+  `AreaAction` (`0xa9864814`) start. The state change is written by `+0x3ec550(action, state)` (stores the state hash,
+  sets the "finished" flag for `0x26b80d1f`, then notifies by the action id); `+0x356080` wraps it.
+- Walking on: the `AreaAction` finishes at the far end of the hangar floor; next to the host's flight unit (model
+  `0x10010`) the launch cutscene `ev0200` starts, the step goes 140 -> -1, and after loading the phase is
+  `20_AB_buker_Aerial_battle` (spelled so by the game). The phase is applied from the main loop: `+0x3aaa30` calls
+  `+0x9c5d20()`, which copies a new story state block (0x399c0 bytes, it holds the phase name and the step) into place.
+- Two test copies in one co-op session, the host walks this path and the client stands still: the host's phase changes,
+  the client's game stays at `16_AB_bunker_Order`, step 130, no cutscene. The client showed `loading=1` for a few
+  seconds at the same moment. Automated check: `tools/qa/coop_smoke.py --scenario hangar` in the owner's fork,
+  RESULT: PASS.
+
+Derived:
+- The step global is only a mirror of the current goal action. To give the client the host's progress, the mod has to
+  move the client's phase graph (finish the same actions, found by their ids), not write the step.
+- A natural phase change of the host does not happen in the client's game either.
+
+Guesses (not checked):
+- Finishing the `ConditionBlock` `0x4c4e6dc1` on the client with `+0x3ec550` (state `0x26b80d1f`) lets the client's
+  graph go on the same way as the host's.
+- The client's short `loading=1` is the mod reacting to the host's phase change, not the game.
+
+Unknown:
+- What the `ConditionBlock` checks (the talk being over, a flag) and what the second argument of `+0x3ec550` holds
+  besides the state hash (`+0x8`, `+0x10`).
+- Whether finishing actions from outside is safe for the graph.
+- Why the write breakpoint on the phase name caught nothing (threads created after the watch are not armed?).
+
+Pitfalls:
+- The Bunker turns: positions of its parts change with time, a saved coordinate can be open space a minute later.
+  Teleport next to an entity at its current position (the bot reads it right before `goto`).
+- `bot.load` picking the wrong save: once the main menu cursor was on New Game and the bot reached
+  "Delete the current save data and create a new file?" (cursor on No); once the save pointer was on "Test" when A
+  was pressed and the other save loaded. Most likely cause (not proven): the owner's mouse pointer resting over a
+  test window, the game highlights the item under it. Test copies now get no mouse (mouse messages dropped,
+  `GetCursorPos` far away), the bot checks the highlighted main menu item and the save pointer before pressing A, and
+  backs out of New Game. 9 loads in co-op runs after that were right.
+- `find` took over 30 s because it read write-combined GPU memory; skipping `PAGE_NOCACHE`/`PAGE_WRITECOMBINE` made it
+  about 2 s.
+
+## 2026-10-19 (evening): moving the client's story graph; the player character asks for the phase change
+
+Observed (build 7020666, "Test" save, phase `16_AB_bunker_Order`; offsets from the exe base):
+- The exe is encrypted on disk (Steam DRM); code was read from the memory of a running test copy.
+- `+0x356080(action, state hash, param)` is the game's own way to change an action's state. It builds the state
+  description `{ +0x0 state hash; +0x8 a ref-counted state object looked up by the hash (+0x3eddd0); +0x10 param }`
+  (`+0x3cfeb0`) and passes it to `+0x3ec550`. That function returns false if hash and param are unchanged; otherwise
+  it stores the hash at `[action+0x20]`, the object at `+0x28`, the param at `+0x30`, sets `0x800000` in the flags
+  (`+0x1c`) for `0x26b80d1f` and notifies listeners with the action id. It runs tens of thousands of times in a few
+  minutes, almost always without a change.
+- The graph belongs to a script node named after the quest step (`M1010_S0030_GM`). Graph: `+0x18` hash
+  (`0x312961f6` in every run), `+0x30` action array, `+0x38` count. Each action points back to its graph at `+0x8`.
+- One copy, no conversation: finishing the `ConditionBlock` `0x4c4e6dc1` with `+0x356080` moves the step 130 -> 140,
+  the objective "Gathering Intel" appears and 9S says his next line. The graph goes on by itself, as after the talk.
+- "Finished" is not one state: most actions end with `0x26b80d1f`, the `AreaAction` after the Commander ended with
+  `0x4a063532` (one copy) or `0xcc7564cb` (co-op run), and its finished flag is set outside `+0x3ec550`.
+  `+0x3aaaf0` compares the state with `cee3b8c9, 26b80d1f, a09a3421, b649891d, ecbccdf8, ee3e0a30`.
+- That `AreaAction` covers the spot where the "Test" save starts (the hangar entrance), not the far end of the
+  hangar floor. The launch cutscene at the flight unit starts only after it. Yesterday's scenario walked the floor and
+  reached the area by chance; this morning it failed 2 of 2 runs.
+- The phase change is asked for by the player character, not by a `SendCommand` of the graph: about 40 s into the
+  flight after the cutscene `ev0200`, a state handler of `Pl0000` (`+0x50d6b9`, after a float comparison and a state
+  change to `0x6bff8489`) calls `+0x81a440`, which sets `[+0x11ea898] = 1` (the main loop's state). The main loop
+  (`+0x83c8f0`) then calls `+0x3aaa30` -> `+0x9c5d20`, which takes the new story block from the buffer at
+  `[+0x1421f08]` (it starts with "TY"). Call stack of the request: `+0x50d6be <- +0x503960 <- +0x42c574 <- +0x4a048f
+  <- +0x270cae`. `+0x81a440` has three more callers (`+0x47cff1`, `+0x4ab623`, `+0x691315`), not looked at.
+- The mod now moves the client's graphs (owner's fork, `StoryActionSync`, packet `ID_STORY_ACTION`): a hook on
+  `+0x3ec550` learns the graphs, the host scans them every frame and sends each action whose finished flag appears
+  (phase, graph hash, action id, state hash); the client sets the same state once its own graph has started that
+  action (0.5 s grace, so commands that finish by themselves still do their work). Automated checks with two test
+  copies (`tools/qa/coop_smoke.py` in the owner's fork): `--scenario commander` (the client's step follows to 140) and
+  `--scenario hangar` (the client's game plays `ev0200` too and changes to `20_AB_buker_Aerial_battle`) -
+  RESULT: PASS; the other three scenarios PASS too. In the hangar run the host sent 47 actions of about 20 graphs
+  (the flight scene has its own graphs).
+- With the transfer off, the client's loading flag was not written at all while the host changed phase (hardware
+  write breakpoint, 0 hits). The short `loading=1` seen this morning did not happen again.
+
+Derived:
+- Moving the graph by action ids works without knowing what each action checks: the client's game then plays its
+  own lines, the cutscene and the phase change.
+
+Guesses (not checked):
+- Intercepting `+0x81a440` in the client's game can hold back the client's own phase changes until the host's.
+
+Unknown:
+- What `M1010` / `S0030` mean (quest and step numbers?) and who fills the "TY" buffer with the next phase.
+- What the other three callers of `+0x81a440` are.
+- What the transfer does to side quest graphs, and when the client joins in the middle of a phase.
+
+Pitfalls:
+- A hardware breakpoint on `+0x3ec550` fills the bot's hit buffer at once (it is that hot); watch the caller instead.
+- Change graph state only on the game thread (the bot runs `hapset` there through the mod's per-frame hook).
+
+## 2026-10-20: holding the client's phase change; graph names; personal graphs
+
+Observed (build 7020666, offsets from the exe base):
+- `+0x81a440` is two stores and a `ret`: `[+0x11ea89c] = 1`, `[+0x11ea8a0] = 0` (the main loop's state). It can be
+  found through the call in the `Pl0000` handler: `ba 89 84 ff 6b 48 8d 4c 24 60 e8 ?? ?? ?? ?? 89 74 24 70 48 8d 54 24
+  60 48 8b cf e8 ?? ?? ?? ?? 90 48 8d 4c 24 68 e8 ?? ?? ?? ?? 90 e8` (the last `e8` is the call, return address
+  `+0x50d6be`).
+- Its other callers: `+0x691314` comes right after the game plays `BGM_Player_Die` (string next to `BGM_Sleep_In`) in a
+  state machine at `+0x690d20`; `+0x47cff0` is in `+0x47a9c0`, a state function called by 12 character handlers, on the
+  branch where the state is `0xc5` and `[+0x10668] <= 0`; `+0x4ab622` is in `+0x4aaf10` (called from a `Pl0000`
+  handler), which checks the hero's model (`0x10200`, `0x10203`).
+- Setting the hero's health to 0 does not start the death sequence, and falling below the Bunker never ends, so the
+  death caller was not seen running.
+- In the owner's fork a hook on `+0x81a440` holds the client's request from `+0x50d6be` while in a session and lets it
+  through when the host's phase changes. Hangar run with two test copies: the client's game asked for the next phase
+  4.9 s before the host's, the request was held and let through 0.04 s after the host's new phase arrived, both games
+  loaded `20_AB_buker_Aerial_battle` (`coop_smoke.py --scenario hangar`, RESULT: PASS).
+- Graphs have names: graph `[+0x0]` -> description, description `[+0x28]` -> zero-terminated Shift-JIS name. In the
+  Bunker: `M1010_S0030_GM` (the quest step graph), イベント再生 (event playback), フェーズイベント再生 (phase event
+  playback), 敵セット (enemy set), メール (mail), 武器屋/道具屋 (weapon/item shop), アイテム (item) and others.
+- In the open world (finished save, `60_05_AB_Forest_Castle`) about 100 graphs are live, most of them world objects:
+  宝箱 / 共通宝箱 (chests), 採取ポイント (gathering points), 釣りエリア (fishing spots), 自販機 (vending machines),
+  ロボショップ (robot shop), 実績 (achievements), ファストトラベル (fast travel), ベッド (bed), and 依頼者_q210 (the
+  giver of side quest q210). Graph `+0x1c` is 0 for most, `0xffffffff` for 共有スクリプト (shared script), 3, 0xa and
+  0x3e8...0x3ec for a few (meaning unknown).
+- The first pointer of a description is not a parent: following it gives names like `q150/RUN_13`, `q340_1_1/REQ`,
+  `DLC_plato/3` (they look like scene state names).
+- The host now keeps graphs whose name has one of those words or `q` + 3 digits to itself; in the open world run it
+  sent 49 actions and kept 14 (shops, vending machines, a gathering point, an achievement); `--scenario world` PASS.
+- A client that joins after the host talked to the Commander gets every action finished in the phase so far and its
+  step goes 130 -> 140 without the talk (`--scenario midjoin`, PASS).
+
+Derived:
+- Holding the request function is enough to keep the client's natural phase change in step with the host's for
+  this transition; the request is a flag, so letting it through later from the mod's per-frame hook works.
+- The story is not only the `M####` graph: the launch cutscene and the phase change come from event and enemy set
+  graphs, so filtering by "main quest graph name" would break the flight. Filtering out known personal words keeps it.
+
+Guesses (not checked):
+- `+0x47cff0` is the death of a character in another form (flight unit, hacking), `[+0x10668]` its health.
+- Side quest graphs are named after the quest (`q###`) throughout, as the giver is.
+
+Unknown:
+- Which object owns a graph (the quest or the layout file), so that story graphs can be told apart without a word list.
+- Whether the story changes phase anywhere without `+0x81a440` (a `SendCommand` of a graph).
+
+Pitfalls:
+- The Commander's fixed coordinate failed one run (the bot talked to a YoRHa soldier next to her): teleport next to
+  the entity with model `0x11020` at its current position instead.
+- While a third test copy was running, the second one quit at start in both tries ("AutomataMP shutting down" right
+  after hooking DX12); with two copies it started. Cause not checked.
+- Graph names in logs are Shift-JIS: read logs as cp932, and a Windows console in cp1251 can't print them.
