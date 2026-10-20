@@ -775,6 +775,52 @@ end of af_chase. Not changed yet.
   (owner: the game windows stayed open until the timeout). `leash` closed after 71 s instead
   of 170.
 
+## Endgame knife fight for two players, mod localized strings (2026-10-20)
+
+COD-MOD linked both players to player 1's rig and teleported them to one fixed spot; it also
+forced `level_mode = "credits_1"` in co-op (the same empty-dvar problem as ours).
+
+Observations: `af_chase_knife_fight.gsc` and `_code.gsc` are byte-identical in the af_chase and
+ending zones (192 `level.player` uses). The scene has first-person arm animations only for the
+player; a third-person `player_body` animation exists only for Price waking up. Players have no
+body model in the campaign, and the engine has no per-player entity visibility (only
+`target_showtoplayer`/`target_hidefromplayer` for HUD targets), so anybody looking at the lead
+sees floating arms (owner, watching the client: "руки только остались"). The crawl reads
+`ButtonPressed("mouse1"/"mouse2")` (local keys); the hints say +attack (right), +speed_throw
+(left). `getdvar` read `ui_char_museum_mode` empty in co-op (dvars set by another map's script).
+A player linked with `AllowStand(false)` and `AllowCrouch(false)` gets the session dropped
+("All stances (standing & crouching) disallowed for linked player"). This build's localized
+strings are Windows-1251 (`!loc COOP_WAITINGFORPLAYER`: ce e6 e8 e4 ...); a plain script string
+with Cyrillic, UTF-8 or 1251, is drawn as dots.
+
+Built (owner's decisions: both wounded, the first to strike plays the scene; then, after
+seeing the floating arms: the other player drifts in and out of consciousness):
+- `tools/gen_knife_patches.py`: every `level.player` of both files -> `level.mw2coop_lead`
+  (set to level.player in `_mw2coop::main()` for single player too); nearer player is the lead
+  candidate; a melee by any player counts; crawl buttons from the lead's usercmd.
+- Player 2 wakes up 64 units beside player 1 with his own rig; wounded walk afterwards.
+- The other player (`_mw2coop_knife.gsc`): own black overlay with breathing/heartbeat and the
+  text `MW2COOP_STUNNED` from the strike on; he comes to when the knife is out
+  (`knife_pulled_out`) and watches the throw, Shepherd's death and Price from a ground camera
+  120-240 units from the fight, turned so the lead is at least 60-81 degrees off his view (his
+  view arcs 25/25/15/10); he blacks out at once if Shepherd/Price jump (>80 units per frame:
+  the scene's cuts) and at the walk to the helicopter (floating arms again).
+- `src/localize.c`: `DB_FindXAssetHeader` trampoline (15 prologue bytes) answers
+  `MW2COOP_*` localize entries in Russian (1251) when `MENU_YES` reads "Да", else English.
+- `tools/gsc_patch.py` finds functions by brace matching (a function ending in "}		" made the
+  old `
+}
+` search run into the next function).
+
+QA `knife` (2026-10-20, ending, start wakeup; bot: striker teleported in front of Shepherd,
+alternating crawl buttons, quick Use taps, aim and "throw"): both wake up 64 units apart; player
+1 strikes and plays the whole scene (crawl 84 s, knife 23 s, throw 6 s); the other is out until
+the knife is out, awake 114 units from Shepherd with a clear line as Shepherd dies, 3 s and 30 s
+later; 0 script errors. Screenshots: the Russian stunned text; Shepherd with the knife in his
+eye; his body from the ground. Lip sync: owner reports voice and lips out of sync on both
+screens; `timescale` stayed 1 the whole scene except the throw's slow motion (back to 1), so not
+the cause; open.
+
 ## Status
 
-Next: Endgame knife fight for two (owner design above), the nrend anim_loop error; profile records.
+Next: lip sync (owner: off on both screens), knife2 check, Endgame boat, the nrend anim_loop error; profile records.
