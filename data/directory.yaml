@@ -7043,3 +7043,27 @@
   - https://steamcommunity.com/app/1458140/discussions/0/604153001708376779
   checked: '2026-10-20'
   made_with_coop_anything: true
+- game: 'Hotline Miami 2: Wrong Number'
+  year: 2015
+  engine: GameBaker 2.0 / SilverWare (Abstraction Games; GML converted to native C++)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op mod for the retail game found. HotlineMultiplayer is a separate Godot remake, and a 'Hotline Miami
+    MULTIPLAYER mod' video targets the first game with unfinished netcode. Build-from-zero work started in
+    games/hotline-miami-2.
+  sources:
+  - https://github.com/SomewhatLiz/HotlineMultiplayer
+  - https://www.youtube.com/watch?v=z87i6u27RSU
+  checked: '2026-10-20'
+  searched:
+  - 'WebSearch: Hotline Miami 2 multiplayer co-op mod; Hotline Miami 2 online multiplayer mod github (2026-10-20). ModDB
+    and itch.io mod listings seen in results but not opened; Steam Workshop not checked.'
