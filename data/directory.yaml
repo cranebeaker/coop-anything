@@ -2003,9 +2003,9 @@
   kind: mod
   status: prototype
   coop_scope:
-    players_visible: no
+    players_visible: partial
     story: no
-    enemies: no
+    enemies: partial
     world_state: no
     items: no
   players: '2'
@@ -2014,28 +2014,15 @@
   last_activity: 2026-10
   qa: automated
   notes: >-
-    Work in progress on DAOLib (GPLv3 SKSE-style native plugin framework plus a
-    100k-ID address library for the GOG/EA/Steam builds of 1.05.13263.0).
-    Verified in the game 2026-10-20: a plugin loads and reads live state; two
-    named game instances run side by side and, after loading the same save,
-    agree on object ids; a host-to-guest UDP state channel mirrors the
-    controlled creature (830 positions applied, 0.00 m last distance, 90 s
-    automated two-client test, 0 packets dropped); and a guest joins over the
-    network - the host saves, serves the slot folder over TCP, and the guest
-    writes it into its own profile and loads it (verified 2026-10-20: 4 files
-    transferred, 569 positions applied after the join, 0.15 m last distance).
-    Two avatars now work: the host creates and hires a companion before the
-    join save and the guest switches control to it with the party bar's own
-    message, each game mirroring the other player's creature (4,815 / 5,274
-    position applications, mirror distances 0.21-0.26 m, same area). A
-    host-spawned ogre's health and death state are mirrored into the guest
-    (220 to 0, applied 13 times; damage in that test is applied by the host
-    plugin as a stand-in for real combat). The UDP channel binds any interface
-    and takes a peer address, so it is LAN-capable: the join + sync test passed
-    both on the release build and with both peers on a non-loopback LAN
-    address (192.168.56.1). A 0.6.0 release package with install notes and a
-    daocoop.ini ships for players. No UI (the ini is the interface), no real
-    combat arbitration, no effect or transition sync yet. GPL-3.0.
+    Work in progress on DAOLib, a GPLv3 SKSE-style native plugin framework with
+    an address library for the GOG/EA/Steam builds of 1.05.13263.0. Verified in
+    the game: a guest joins over the network by save transfer, two players
+    control two different party members in the same world with each game
+    mirroring the other's creature, and a host-resolved hostile's health and
+    death state reach the guest. No real combat arbitration (guest attacks are
+    not relayed), no effect, quest or area-transition sync, LAN only, and the
+    ini file is the only interface. Automated two-client tests and a 0.6.0
+    install package are in the project repo.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md

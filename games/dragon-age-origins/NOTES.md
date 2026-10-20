@@ -78,7 +78,7 @@ next agent starts from here. Started 2026-10-20.
 Two processes, host-authoritative: guest joins by **save transfer**, then state
 sync (player state, orders, hostiles, effects, transitions) with host-resolved
 damage. Two players share the same party (no puppet spawning needed — both
-worlds hold the same objects). LAN UDP first (owner and friend are on the same
+worlds hold the same objects). LAN UDP first (the two players share a local
 network), Steam/Spacewar relay later. Full design and milestones in
 `dao-coop/docs/DESIGN.md`.
 
