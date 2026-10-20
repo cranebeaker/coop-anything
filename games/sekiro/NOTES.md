@@ -119,6 +119,30 @@ install on the isolated copy; identity gate passes and the restore path works.
   (Patreon Feb 2026 reportedly says development "ground to a halt"; page returned 403,
   so this is **unverified**).
 
+## Co-op test kit and the two-instance question (2026-10-20)
+
+Goal: assert a real co-op session, not just that the game boots. Findings:
+
+- The mod's HUD is readable by OCR and is the only session oracle it gives us:
+  `[Sekiro Online v2.05 ...] [Steam: Ready] [Server: Unavailable] [Connection: Offline]`.
+  `Connection:` changing off `Offline` is the pass signal. Verified 9/9 samples on build
+  5794815 with full-frame 2x OCR; a 4x crop of the top strip reads less, not more.
+- A second local client is blocked at three layers:
+  1. `sekiro.exe` creates `Global\SekiroMutex` (UTF-16 string at file offset 0x2bdb3f6).
+     A second plain launch exits in 0.6 s with code 51 and no log or dialog.
+  2. Patching that string in a copy also exits with code 51 (Arxan / code-tamper check).
+  3. me3 (`-e <copy> -n sekiro_mutex_escape.dll --disable-arxan`) attaches, then the
+     guest process still disappears. Early CreateProcess-suspended injection of the same
+     DLL crashed the guest too.
+- Even with two processes, a lobby join needs a second Steam identity; only one account
+  is signed in on this PC, and Steam multi-client is unsupported.
+
+Delivered instead: `revive-package/coop-test/` records both PCs (HUD OCR + TCP) and
+`report.py` returns PASS / NO CO-OP / INCONCLUSIVE. The verdict logic was checked against
+synthetic pass/partial/none/unreadable logs; a single-client run correctly returned
+NO CO-OP. Input automation is deliberately not part of it (raw input ignores synthetic
+keys; virtual-pad automation was dropped by request), so humans drive the two item uses.
+
 ## Plan (coop-revive)
 
 1. ~~Isolated test install, boot test of v2.05 alone.~~ done: boots on build 5794815.

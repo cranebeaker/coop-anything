@@ -80,6 +80,13 @@ What actually ran (2026-10-20), on an isolated copy of the game made with hardli
   the mod's "Sekiro - Fatal Error" dialog; a clean relaunch worked. Cause unknown.
 - Service probe: `VERSION` = `v2.05`, `DATA` = 16 item ids, TCP to `74.91.125.31:54000`
   times out.
+- Co-op test kit (`games/sekiro/revive-package/coop-test/`): a single-client run read all
+  four HUD fields in 9/9 samples and the report returned `NO CO-OP` for an offline client;
+  the verdict logic passed synthetic pass/partial/none/unreadable cases. A real two-PC
+  session has not been recorded yet.
+- Local two-client testing is blocked: `Global\SekiroMutex` stops a second launch
+  (exit code 51), patching it trips Arxan (also 51), and the me3 plus mutex-escape route
+  still ends with the guest exiting. A join would also need a second Steam identity.
 - Not run: host, join, enemy/story sync, desync, area transitions. Menu automation is
   blocked because the game reads raw input and ignores synthetic keys.
 
@@ -103,8 +110,9 @@ What actually ran (2026-10-20), on an isolated copy of the game made with hardli
 
 ## Next steps
 
-- Prove or disprove Steam-invite co-op with a real second client. That single test decides
-  whether this revive is playable.
+- Prove or disprove Steam-invite co-op with a real second client: run `coop-test/run.ps1`
+  on each PC, host with the Cursed Emblem, invite, then `report.py host.jsonl guest.jsonl`.
+  That single test decides whether this revive is playable.
 - Capture the summon-sign protocol and either reimplement the server or redirect the
   hardcoded endpoint to a community one; the address is a plain ASCII string in the DLL.
 - Reproduce the post-force-kill startup crash in a controlled loop.
