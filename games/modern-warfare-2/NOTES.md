@@ -751,7 +751,30 @@ player 1 on the museum camera and player 2 standing 1500 units away. Unknown: wh
 knife-fight starts are registered when the map is reached from af_chase; needs a run from the
 end of af_chase. Not changed yet.
 
+## Ending map mode, No Russian ending, QA runner (2026-10-20)
+
+- Ending map: in a co-op session `ending.gsc` read `ui_char_museum_mode` empty (the dvar watch
+  showed "credits_1"; cause unknown), so the map went to the free-roam museum with broken
+  credits. Co-op now treats an unknown or empty value as "credits_1" (`_mw2coop_ending.gsc`,
+  `ending.gsc.patch`): the knife fight starts (start "wakeup"; starts wakeup ... walkoff).
+  Player 2 is still 43000 units from player 1 there: the knife fight for two is next.
+- Owner decisions (2026-10-20): knife fight = both wounded, in turn (the first to reach
+  Shepherd plays the stab/monologue/revolver scene, the other crawls and watches; both pull
+  out the knife, the first throws); No Russian ending = Makarov kills both.
+- No Russian ending (`airport.gsc.patch` 8, `airport_code.gsc.patch` 11 hunks): either player
+  can be the one at the van; Makarov shoots that player first (close ending) or the nearer one
+  (far ending), then unlinks, turns (ForceTeleport to face him) and shoots the other with his
+  far-ending shooting animation; the other goes down where he stands with the far-ending player
+  animation. Each white flash on the victim's own screen; the death vision with the second shot.
+  QA `nrend` (far: player 2 first, then player 1) and `nrend2` (player 1 at the van door: close
+  ending, then player 2): both shot, both down. Screenshots: player 2 down at the ambulance with
+  Makarov over him, player 1 down by the wheel, then both white out. Open: in `nrend` (far
+  ending) one script error in `_anim::anim_loop_packet` from `escape_end_sequence` (the van
+  mate's loop) after the second shot; not in `nrend2`. Not yet known whether single player has it.
+- QA runner: `run_test.ps1 -DoneLogs` closes the test copies once every log has "qa: N: done"
+  (owner: the game windows stayed open until the timeout). `leash` closed after 71 s instead
+  of 170.
+
 ## Status
 
-Next: Endgame ending (knife fight with Shepherd, then museum credits) for two players; No Russian ending
-(proposed to the owner: Makarov kills both players in turn); profile records.
+Next: Endgame knife fight for two (owner design above), the nrend anim_loop error; profile records.
