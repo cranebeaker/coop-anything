@@ -2031,9 +2031,11 @@
     host-spawned ogre's health and death state are mirrored into the guest
     (220 to 0, applied 13 times; damage in that test is applied by the host
     plugin as a stand-in for real combat). The UDP channel binds any interface
-    and takes a peer address, so it is LAN-capable, though only loopback has
-    been run. No UI, real combat arbitration, effect or transition sync yet.
-    GPL-3.0.
+    and takes a peer address, so it is LAN-capable: the join + sync test passed
+    both on the release build and with both peers on a non-loopback LAN
+    address (192.168.56.1). A 0.6.0 release package with install notes and a
+    daocoop.ini ships for players. No UI (the ini is the interface), no real
+    combat arbitration, no effect or transition sync yet. GPL-3.0.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md

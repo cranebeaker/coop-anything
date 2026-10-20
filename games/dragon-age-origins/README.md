@@ -22,7 +22,11 @@ guest controls another**, each game mirroring the other's creature (4,815 /
 ogre's health (220 → 0, death included) is mirrored into the guest. Missing:
 real combat arbitration (the damage in that test is applied by the host
 plugin), AI/effects/loot sync, area transitions, a player-facing host/join UI
-and an internet transport.
+and an internet transport. A **0.6.0 release package** (loader + address
+files + plugin + install notes + `daocoop.ini.example`) and a player-facing
+`daocoop.ini` exist; the release build passed the join test, and the same test
+passed with both peers on a non-loopback LAN address (sockets bound `0.0.0.0`).
+A second physical PC has not been tried and there is no in-game menu yet.
 
 ## Existing work
 
@@ -94,6 +98,7 @@ design; `docs/TESTING.md` the test plan.
 | M3 | **Network join with no manual file copying** | `tools\join-test.ps1`: host wrote manual slot 91 and served its folder over TCP; guest received 4 files, wrote them into its own profile, loaded them (`game loaded: slot 91`) and reached the host's area; state sync continued afterwards (569 positions applied, last distance 0.15 m) |
 | M4 | **Two separate avatars**: host controls the Warden, guest controls a companion | `tools\two-avatar-test.ps1`: host created and hired a mabari with the engine's `AddToParty` before the join save (party list 2); guest joined, switched control to party index 1 with `SelectPartyMemberIndexMessage`; host controlled `0x82` mirroring `0x363` (4,815 applies, 0.26 m) and guest the reverse (5,274 applies, 0.21 m), same area |
 | M5 | **Hostile health/death channel** | `tools\combat-test.ps1`: host spawned an ogre with AI off (the scripts' own flag) before the join save, then damaged it after the guest connected; guest received the same hostile id and health (`220 → 0`, death state included), applying it 13 times |
+| M6 | **Release package, config file and LAN path** | `dao-coop-0.6.0.zip` (loader + address files + plugin + install notes + `daocoop.ini.example`, 6.1 MB) built from the release preset; a host instance with only `DAOLIB_INSTANCE` set read its role, autoload and handoff from `daocoop.ini`; the join + sync test **passed on the release build** and again with both peers on a non-loopback LAN address (`192.168.56.1`, sockets bound `0.0.0.0`) |
 
 ## QA
 
@@ -110,19 +115,28 @@ design; `docs/TESTING.md` the test plan.
 
 ## How to play
 
-Not yet — there is no join flow and no second avatar. When there is, a release
-will be: DAOLib release zip + the `daocoop` plugin folder, installed by both
-players from https://github.com/vmosenkov/dao-coop. Both players need the same
-game build (1.05.13263.0) and the same mod build; the plugin refuses anything
-else.
+Not a finished game yet, but two players can join and move in one world today:
+
+1. Both players: extract the `dao-coop-0.6.0.zip` release over their game
+   folder (with the game closed). It carries the DAOLib loader, the address
+   files and the plugin, so nothing else is installed.
+2. Copy `daocoop.ini.example` to
+   `bin_ship\daolib\plugins\daocoop\daocoop.ini`.
+3. Host: `role = host`, `handoff = 1`, `add_companion = 1`; load a save; wait
+   a few seconds. Guest: `role = guest`, `peer = <host LAN address>`,
+   `join = 1`, `select_party = 1`; wait at the main menu.
+4. Allow inbound UDP 45830 and TCP 45832 on the host, UDP 45831 on the guest.
+
+It is LAN-only for now and there is no in-game menu: the ini file is the
+interface. Source and install notes: https://github.com/vmosenkov/dao-coop.
 
 ## Known issues
 
-- Work in progress: hosting/joining is done by the test rig, not by an in-game
-  UI.
-- The two avatars are a host-controlled companion situation: the guest plays a
-  party member the host hired for the test; each player's creature is mirrored
-  from the other game, not simulated by one shared authority for everything.
+- Work in progress: hosting/joining is configured through `daocoop.ini`, not
+  an in-game menu.
+- LAN only: the LAN address path was exercised on one machine through its
+  non-loopback address; two physical PCs have not been tried, and there is no
+  internet transport yet.
 - No combat arbitration yet: the health channel is proven, but damage is
   applied by the host plugin in the test, guest attacks do not reach the host,
   and enemy AI, effects, animations and loot are not synced.
@@ -133,11 +147,11 @@ else.
 
 ## Next steps
 
-1. M6: real combat arbitration — guest attacks sent to the host, damage/death
-   resolved host-side, so both players fight the same enemies; then effect and
-   loot sync.
-2. Area transitions with object-id alignment (`OnAreasBuild`), then internet
-   transport (Steam relay) on top of the LAN-capable channel.
-3. A player-facing host/join UI on the options screen (the rig currently drives
-   everything by environment variables), and the automated suite extended to
-   the combat and transition scenarios.
+1. Real combat arbitration — guest attacks sent to the host and resolved there
+   (the hostile health channel is proven; damage is still applied by the host
+   plugin in the test), then effect and loot sync.
+2. A second physical PC over the LAN (the address path is exercised on one
+   machine), then the internet transport (Steam relay).
+3. Area transitions with object-id alignment (`OnAreasBuild`); a host/join
+   flow beyond the ini file; the automated suite extended to the combat and
+   transition scenarios.
