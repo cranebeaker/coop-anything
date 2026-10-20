@@ -6516,13 +6516,14 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: MIT, v0.1.0-alpha, for the 64-bit Steam build. A winmm.dll proxy plus load-time GSC patches
-    on top of the game's own lockstep Spec Ops co-op netcode. Two copies load a campaign mission
-    (S.S.D.D.) together; in-game QA passes 5 checks, then the first scripted weapon hand-out ends
-    the session. Not playable yet. Write-up in games/modern-warfare-2.
+  notes: Work in progress. MIT alpha for the 64-bit Steam build. A winmm.dll proxy plus load-time
+    GSC patches on top of the game's own lockstep Spec Ops co-op netcode. Two copies play the first
+    mission (S.S.D.D.) together with checkpoints, restart when both are down, mission end and saved
+    progress (in-game QA passes on both machines); the move to the next mission does not work yet.
+    Not playable through yet. Write-up in games/modern-warfare-2.
   sources:
   - https://github.com/stxlvn/mw2_coop
-  checked: '2026-10-19'
+  checked: '2026-10-20'
 - game: 'Call of Duty: Modern Warfare 3'
   year: 2011
   engine: IW 5.0 (Call of Duty)

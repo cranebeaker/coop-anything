@@ -316,7 +316,102 @@ Owner asked (2026-10-19): vehicle boarding for both players wherever the campaig
 it. Level scripts of all campaign maps are extracted in `local/mw2-64/gsc/<map>` for a
 survey (not done yet).
 
+## Session 2026-10-20: intro passes, restart in progress
+
+Observed (two-copy QA runs):
+- **Client-only script errors** came from `GetPlayerIntelIsFound` (builtin @0x18dea0): in
+  co-op it requires a local player (co-op client slot state == 2), so on the client the
+  host's player fails. `maps\_intelligence` ran it at level load → its thread died on the
+  client only (lockstep drift). Patch `_intelligence.gsc`: remove intel in a co-op campaign
+  session before `initialize_intel()`. After that: 0 script errors on both.
+- **"no viewmodel set for player 0"** is raised by cgame (@0xc5b70) for the *local* player of
+  the machine that draws: the client's own player (player 2). `maps\_loadout` sets hands on
+  `level.player` only. Framework now copies player 1's `GetViewModel()` to player 2 at start
+  and every 0.25 s.
+- Regroup used `PlayerPhysicsTrace` from inside the partner's hull and always fell back to
+  the same spot; now `BulletTracePassed` (ignoring the partner) + a floor trace: 48 units.
+- **QA `intro`: 6/6 PASS on host and client**, no script errors, no disconnect (04:53).
+- QA `restart`: checkpoint `timed_ads` set the `start` dvar on both; player 2 downed (not
+  dead); both down → `coop_alldowned`. Then nothing, because (a) `watch_failure` called
+  `mission_failed()` in its own thread, whose `level notify("mw2coop_level_end")` ended that
+  thread (fixed: `level thread mission_failed()`), and (b) `maps\_coop`
+  `level.revive_ent linkTo( self, "tag_origin" )` raises a script error on both machines
+  (link builtin @0x18ff30 → parent has a model index but no DObj, @0x19004d): campaign
+  players have no body model (Spec Ops sets one with SetModelFunc). Patch `_coop.gsc`: link
+  without a tag in a co-op campaign session. Both fixes deployed, **not yet tested**.
+- DLL: script errors are logged per calling site (return address RVA), so a builtin name
+  can be looked up in the method table.
+
+## Session 2026-10-20 (later): restart, mission end, progress saving
+
+Observed (two-copy QA runs, `tools/qa_pair.sh`):
+- **Script call stacks in the DLL log.** The VM keeps its live code position at rva
+  0x1900b78 and the callers' saved positions in `function_frame_start[]` (rva 0x18f44c0,
+  0x28 bytes per frame, position first; `function_count` at 0x18f44a0). Positions point into
+  the program buffer (pointer at rva 0x15a03e0). `Scr_GetFunctionHandle` (rva 0x216920)
+  returns a function's offset in that buffer, but only while the loaded-scripts table exists:
+  `Scr_EndLoadScripts` (rva 0x2166d0) frees it. The DLL hooks that function, maps every
+  function name found in the compiled source texts (5414 on S.S.D.D.) and prints
+  `file::function +offset` for the failing position and each caller.
+- Retail script errors do not always end the thread: one site logged 100 hits in 2.4 s.
+- With the stacks, all remaining errors on downing were in `maps\_coop` (patched):
+  - `flag( "special_op_terminated" )` on a flag only `maps\_specialops` creates (also read by
+    `kill_wrapper()` in any co-op session). `_mw2coop` now creates it in a co-op campaign
+    session and sets it when the level fails or ends, as Spec Ops does, so the revive HUD
+    and downed-player threads stop.
+  - `player_coop_kill()` → `kill()` on a player already made invulnerable. In the campaign it
+    now fails the mission (restart at the checkpoint) instead of killing; a bleed-out does
+    the same.
+  - `player_coop_downed()` went on after `player_coop_kill()` (in Spec Ops the player dies
+    there) and started the bleed-out HUD after its cleanup; it now returns once the level
+    has ended.
+- Patch parser bug (DLL and `check_patches.py` alike): a block right after `@@@ end` with no
+  blank line in between was swallowed. Fixed in both; `_coop` now reports 4/4.
+- **QA `restart`: all checks PASS on host and client, 0 script errors** (05:18): checkpoint,
+  player 2 down, both down, `coopRestart` sent and acked, level back at checkpoint
+  `timed_ads`, players up.
+- **QA `end` (start point `end`): PASS on both, 0 errors**: mission end reached, next
+  mission `roadkill` found. The DLL does not change map yet.
+- On PC, S.S.D.D. skips the timed-ADS drill (`AA_timed_ADS_init`: `!level.console`) and
+  sets its flag at once, so the `bullet_penetration` checkpoint follows `timed_ads` within a
+  second. Expected, not a bug.
+
+Progress saving (owner asked to check it):
+- Before: nothing outlived the game. The checkpoint is the `start` dvar in memory; in a
+  co-op session the game wrote no save (`players/save` untouched, only `config.cfg`), and
+  `mission_complete()` replaces `_nextmission()`, so the profile records (`highestMission`,
+  `missionHighestDifficulty`, `UpdateGamerProfile`) are not written either.
+- Now: the host's DLL writes `<game dir>\mw2coop\progress.txt` (`map`, `start`) on each
+  checkpoint and at mission end (next mission, no start point). `mw2coop_continue` on the
+  host sets `coop_mapName` and `start` from it. On each `coopLaunch` the host also sends the
+  client an out-of-band `mw2coop_start <start>` packet; the client sets its own `start` from
+  it and drops the packet, so both lockstep machines pick the same start point.
+- Script requests to the DLL are queued 0.3 s apart (the DLL reads the dvar every 250 ms).
+- First continue run caught a desync: the host packet carried an empty start because the
+  quoted dvar string failed the name check; host started at `bullet_penetration`, client at
+  `default`. The QA check had passed on the client because, with no start point, the level
+  writes its list of start points into `start`. Fixed both (raw dvar value; the check now
+  reads `level.start_point`).
+- **QA `resume @continue`: PASS on both, both at `bullet_penetration`, 0 errors** (05:32).
+  After QA `end`, `progress.txt` holds `map roadkill`.
+- Not done: profile records (mission list in the menu); the move to the next mission.
+
+## Next-mission transition (2026-10-20, in progress)
+
+- Spec Ops "play again" calls `ChangeLevel( level.script )` in a co-op session
+  (`maps\_specialops_code::specialops_summary_player_choice`), so `mission_complete()` now
+  waits 1 s (progress request) and calls `ChangeLevel( next, keepWeapons )` on both machines.
+- Observed: QA `end` reached the mission end on both, saved `roadkill`, then both stayed on
+  `trainer` until the run timed out; no script error.
+- Builtin table entry at rva 0x3c2dc0: `changelevel` → 0x1937e0, `missionsuccess` →
+  0x1938d0. Both only act when `g_reloading` (dvar pointer at rva 0xd9c020, registered in
+  0x172830) is 0 and the int at rva 0xd9e1d4 is above 0; then they store the map name
+  (0x174fe0 → buffer at 0xd96e30) and set the exit flag at rva 0xd97b80, which 0x170e60
+  reads. Unknown yet: what 0xd9e1d4 is (guess: a player health or client count) and what
+  0x170e60 does with the flag in a co-op session.
+
 ## Status
 
-Paused by the owner. Next: viewmodel for both players, rerun QA `intro`, then `restart`
-and `end` scenarios, then the next-map transition and the vehicle survey.
+Next: next-mission transition (why `ChangeLevel` does nothing in co-op), then the vehicle
+survey; consider body models for campaign players. Profile records for the mission menu are
+open.

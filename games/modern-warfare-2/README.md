@@ -5,15 +5,17 @@
 | Engine | IW 4.0 (closed; id Tech 3 derived) |
 | Versions tested | Steam app 10180, build 25374375 (the 64-bit update of September 2026): `iw4sp.exe` x64, PE timestamp `0x6aaaa257`, SHA-256 `2F8C9CFDA1B8C0FB308FD9719577154E8222FC7654F5E8F1BF54579BCA69D805`, `version` dvar `IW4 2.0 build 14 Fri Oct 03 16:56:21 2025 win64`, Russian language set |
 | Projects | [mw2_coop](https://github.com/stxlvn/mw2_coop) (campaign co-op, alpha, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
-| QA level | automated (two game copies on one PC, in-game scripted checks; a mission does not run through yet) |
-| Last updated | 2026-10-19 |
+| QA level | automated (two game copies on one PC, in-game scripted checks on the first mission; the campaign does not run through yet) |
+| Last updated | 2026-10-20 |
 
 ## Where things stand
 
-The campaign cannot be played together yet. On the current 64-bit Steam build, two copies of
-the game connect through the game's own Spec Ops co-op netcode and load a campaign mission
-(S.S.D.D.) together, with both players in the level. The level scripts still assume one
-player: the first scripted weapon hand-out ends the session, and only S.S.D.D. has fixes.
+**Work in progress.** The campaign cannot be played through together yet. On the current
+64-bit Steam build, two copies of the game connect through the game's own Spec Ops co-op
+netcode and play the first mission (S.S.D.D.) together: player 2 is placed and armed with
+player 1, checkpoints work, both players down restarts the level at the last checkpoint, the
+mission end is detected, and the host saves progress to continue later. The move to the next
+mission does not work yet, and only S.S.D.D. has level fixes.
 The older COD-MOD campaign co-op pack only runs on the 32-bit build that the 2026 update
 replaced, and players who tried it found it rough.
 
@@ -73,21 +75,41 @@ replaced, and players who tried it found it rough.
   `set` or by script read as "" — including `start`, so level start points do nothing in
   co-op unless the flag is set on both machines.
 - **Retail `Scr_Error` drops its message** and only longjmps out of the failing script
-  thread; runtime script errors are invisible unless the function is replaced.
+  thread; runtime script errors are invisible unless the function is replaced. A failing
+  script can be found anyway: the VM's live code position and the callers' saved positions
+  are in memory, and `Scr_GetFunctionHandle` maps function names to offsets in the program
+  buffer until `Scr_EndLoadScripts` frees its table (mw2_coop hooks it and logs
+  `file::function +offset` stacks; RVAs in NOTES.md).
+- **The revive system (`maps\_coop`) assumes Spec Ops:** it reads the flag
+  `special_op_terminated`, which only `maps\_specialops` creates, and kills a player who
+  bleeds out (Spec Ops then fails the mission). In the campaign the flag has to exist and be
+  set when the level ends.
+- **Local-player builtins break lockstep:** some builtins only work on the machine's own
+  player (seen: `GetPlayerIntelIsFound`); on the client the host's player is not local, so
+  the script fails on one machine only. (`GetLocalPlayerProfileData( "autoAim" )` in
+  S.S.D.D. ran on both machines without an error.)
+- **Saves and progress:** in a co-op session the game writes no save; campaign records are
+  local-player profile data. A level start point (`start` dvar) is the progress unit that both
+  lockstep machines can share.
 - Function addresses (RVAs) with what they do are in [NOTES.md](NOTES.md) and in
   `src/game.h` of mw2_coop.
 
 ## What we changed
 
-All in [mw2_coop](https://github.com/stxlvn/mw2_coop) v0.1.0-alpha:
+All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.1.0-alpha and later commits on main):
 - `winmm.dll` proxy that checks the build, runs console commands from a file, watches dvars
   and memory, logs co-op packets and script runtime errors.
 - Script loader replacement (`Scr_AddSourceBuffer`): own scripts plus load-time patches of the
   game's script text, so the mod never ships game scripts.
 - Co-op campaign framework (`_mw2coop.gsc`): campaign mode in a co-op session, player 2
-  regrouped with player 1, weapon sync, checkpoints as level start points, restart when both
-  players are down, mission end request. S.S.D.D. patch: checkpoints, ammo and ending for
-  both players.
+  regrouped with player 1, weapon and first-person hand sync, checkpoints as level start
+  points, restart at the checkpoint when both players are down or one bleeds out, mission
+  end. S.S.D.D. patch: checkpoints, ammo and ending for both players. Patches to
+  `maps\_coop` (revive) and `maps\_intelligence` (no intel in co-op) for the campaign.
+- Saved progress: the host keeps mission and checkpoint in `mw2coop\progress.txt`;
+  `mw2coop_continue` resumes there, and the host sends the client the start point in an
+  out-of-band packet next to `coopLaunch`, so both machines start at the same point.
+- Script errors logged with GSC call stacks.
 - QA-only helpers to pair two copies on one Steam account: a shifted XUID (the host ignores
   a `coopConnect` from its own XUID) and `mw2coop_party_join`, which stands in for the Steam
   lobby step that activates the client's party.
@@ -96,31 +118,39 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) v0.1.0-alpha:
 
 - `tools/qa_pair.sh <scenario>` in mw2_coop starts a host and a client copy, connects them,
   launches the mission and runs a scenario from `_mw2coop_qa.gsc` on both machines.
-- Last run, 2026-10-19, scenario `intro` (S.S.D.D. start): 5 PASS on host and client (two
-  players, campaign mode, player 2 placed with player 1, same weapons); the 6th step (give
-  player 1 the rifle) ended the session with the engine error "no viewmodel set for player 0
-  for 'm4_grunt'". Scenarios `restart` and `end` not run yet.
+- Runs on 2026-10-20, S.S.D.D., host and client, no script errors on either machine in any
+  of these:
+  - `intro`: two players, campaign mode, player 2 next to player 1, same weapons, player 2
+    gets the rifle with player 1 (6/6 PASS).
+  - `restart`: checkpoint reached, player 2 down (not dead), both down, `coopRestart`, level
+    back at the checkpoint, players up (all PASS).
+  - `end` (start point `end`): mission end reached, next mission `roadkill` found and saved
+    as progress. The level does not change yet (see Known issues).
+  - `resume @continue`: host starts with `mw2coop_continue`, client with no start point;
+    both start at the saved checkpoint `bullet_penetration`.
+- 2026-10-19: `intro` ended the session at the rifle hand-out ("no viewmodel set for player
+  0"); fixed by setting player 2's first-person hands.
 - Earlier run (no QA script): both copies in S.S.D.D. in co-op for about 110 s, the client
   sees the host's player model with its name tag; the host plays the intro scene, the client
   does not.
 
 ## How to play
 
-Not playable yet. Testers: see the mw2_coop README (a copy of the game folder, hosting and
-joining through console commands).
+Not playable yet (work in progress). Testers: see the mw2_coop README (a copy of the game
+folder, hosting and joining through console commands, `mw2coop_continue` to resume).
 
 ## Known issues
 
-- Giving player 1 a weapon at the start of S.S.D.D. ends the co-op session.
-- In-engine scenes are scripted for player 1 only.
-- Restart, mission end and the move to the next mission are untested.
+- The move to the next mission does not happen: `ChangeLevel()` from the script returns
+  without changing the map in a co-op campaign session (being investigated; the builtin only
+  acts when `g_reloading` is 0 and a level value at rva 0xd9e1d4 is above 0).
+- Campaign records (missions unlocked in the menu) are not updated in co-op.
+- Only S.S.D.D. has level fixes; in-engine scenes elsewhere are scripted for player 1 only.
 - Joining through a Steam invite with two accounts is untested.
 
 ## Next steps
 
-- Set the first-person hands on both players in co-op (`maps\_loadout` sets them only on
-  `level.player` in its campaign branch), rerun `intro`, then `restart` and `end`.
-- Next-mission transition: find out what `missionSuccess` does in a co-op session.
+- Next-mission transition: find why `ChangeLevel()` does nothing in a co-op campaign session.
 - Vehicle sections for two players (the owner asked for them): survey all missions' scripts.
 - Check whether MW3 (2011) `iw5sp.exe` carries the same co-op netcode; its write-up says the
   singleplayer engine has none, which this MW2 finding questions.
