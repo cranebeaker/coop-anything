@@ -2024,7 +2024,11 @@
     network - the host saves, serves the slot folder over TCP, and the guest
     writes it into its own profile and loads it (verified 2026-10-20: 4 files
     transferred, 569 positions applied after the join, 0.15 m last distance).
-    No join UI, second avatar, combat or transition sync yet. GPL-3.0.
+    Two avatars now work: the host creates and hires a companion before the
+    join save and the guest switches control to it with the party bar's own
+    message, each game mirroring the other player's creature (4,815 / 5,274
+    position applications, mirror distances 0.21-0.26 m, same area). No
+    join UI, combat, effect or transition sync yet. GPL-3.0.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md

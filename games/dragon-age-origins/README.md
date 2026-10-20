@@ -10,15 +10,16 @@
 
 ## Where things stand
 
-**No playable co-op yet**, but the whole join path is proven in the game:
-DAOLib loads native plugins; two game processes run side by side as named
-instances; a guest **joins over the network** — the host writes a save and
-serves the slot folder, the guest receives it, writes it into its own profile
-and loads it, ending up in the host's world with the same object ids — and a
-UDP state channel mirrors the host's creature into the guest (830 positions
-applied in one test; 569 after a network join; last measured distance 0.00–0.15
-m). What is still missing: two separate avatars (each player controlling their
-own party member), combat sync and area transitions.
+**Two players can now move two different avatars in the same world** — not yet
+a finished co-op game, but the core is in place and verified in the game:
+DAOLib loads native plugins; a guest **joins over the network** (the host saves
+and serves the slot folder, the guest writes it into its own profile and loads
+it, ending up in the host's world with the same object ids); and with a
+companion hired before the join save, **the host controls one party member
+while the guest controls another**, each game mirroring the other's creature
+(4,815 / 5,274 position applications, mirror distances 0.21–0.26 m). Missing:
+combat/effect sync, area transitions, a player-facing host/join UI and internet
+transport.
 
 ## Existing work
 
@@ -88,6 +89,7 @@ design; `docs/TESTING.md` the test plan.
 | M1 | Both games agree on object ids after loading the same save | both logs: controlled `0x00000082`, area `0x000000ca` |
 | M2 | Host-authoritative state channel inside two running games | `tools\sync-test.ps1`: host 34 drive orders; host 3,404 sent / 2,185 received; guest 2,169 sent / 3,346 received; **0 dropped**; guest applied **830** positions via the engine's `SetPosition`; last host→guest distance **0.00 m** |
 | M3 | **Network join with no manual file copying** | `tools\join-test.ps1`: host wrote manual slot 91 and served its folder over TCP; guest received 4 files, wrote them into its own profile, loaded them (`game loaded: slot 91`) and reached the host's area; state sync continued afterwards (569 positions applied, last distance 0.15 m) |
+| M4 | **Two separate avatars**: host controls the Warden, guest controls a companion | `tools\two-avatar-test.ps1`: host created and hired a mabari with the engine's `AddToParty` before the join save (party list 2); guest joined, switched control to party index 1 with `SelectPartyMemberIndexMessage`; host controlled `0x82` mirroring `0x363` (4,815 applies, 0.26 m) and guest the reverse (5,274 applies, 0.21 m), same area |
 
 ## QA
 
@@ -113,20 +115,22 @@ else.
 ## Known issues
 
 - Work in progress: hosting/joining is done by the test rig, not by an in-game
-  UI; the two characters are the **same creature mirrored**, not two avatars.
-- No combat, quest, inventory, pause, dialogue or area-transition sync yet.
+  UI.
+- The two avatars are a host-controlled companion situation: the guest plays a
+  party member the host hired for the test; each player's creature is mirrored
+  from the other game, not simulated by one shared authority for everything.
+- No combat, quest, inventory, pause, dialogue, effect or area-transition sync
+  yet.
 - Only GOG-build executables have been tested (inside a Steam install); the
   address library supports EA/Steam wrappers but that is untested here.
 - Tests run the debug build.
 
 ## Next steps
 
-1. M4: two separate avatars — the guest selects a different party member and
-   both games puppet each other's controlled creature; then combat — host
-   authoritative damage, guest attack intents resolved host-side, shared
-   death/loot.
-2. Transitions with object-id alignment (`OnAreasBuild`), then LAN polish and
-   the Steam relay.
+1. M5: combat sync — host-authoritative damage and death, guest attack intents
+   resolved host-side, shared loot; effects/timers.
+2. Area transitions with object-id alignment (`OnAreasBuild`), then internet
+   transport (Steam relay) on top of the LAN/loopback channel.
 3. A player-facing host/join UI on the options screen (the rig currently drives
    everything by environment variables), and the automated suite extended to
-   the two-avatar and combat scenarios.
+   the combat and transition scenarios.
