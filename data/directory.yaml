@@ -6761,3 +6761,32 @@
   - https://wccftech.com/crimson-desert-2-player-co-op-mod-but-more-advanced-soon/
   - https://insider-gaming.com/crimson-desert-multiplayer-mod-is-being-tested/
   checked: '2026-10-19'
+- game: Fear & Hunger
+  year: 2020
+  engine: RPG Maker MV
+  project: Fear & Hunger Together
+  url: https://github.com/glynn568-glitch/fear-and-hunger-together
+  other_urls:
+  - https://phosphopho.itch.io/fear-and-hunger-together
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: "2-4"
+  networking: hosted-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Each player runs the game from their own copy in a browser window; a small Node server overlays the mod as
+    plugins. Players control separate characters who can split up or fight together; world switches are shared by a
+    census built from the game's data. Online play through a Cloudflare quick tunnel and a keyed link, no port
+    forwarding. Optional AI partner. Every release passes a gate of about 50 suites driving two or more real game
+    clients. MIT, made with Claude.
+  sources:
+  - https://github.com/glynn568-glitch/fear-and-hunger-together
+  - https://phosphopho.itch.io/fear-and-hunger-together
+  checked: '2026-10-20'
