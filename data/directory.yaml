@@ -4198,27 +4198,34 @@
   year: 2022
   engine: Insomniac proprietary
   project: Spider-Man Remastered Multiplayer (hbgda)
-  url: https://www.nexusmods.com/marvelsspidermanremastered/mods/5696
+  url: https://www.patreon.com/hbgda
   other_urls:
+  - https://www.nexusmods.com/marvelsspidermanremastered/mods/5696
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
   kind: mod
   status: partial
   coop_scope:
+    players_visible: true
     story: partial
     enemies: true
     world_state: partial
     items: unknown
-  players: unknown
+  players: up to 7
   networking: unknown
   open_source: false
-  last_activity: unknown
+  last_activity: 2026-10
   qa: community-reports
-  notes: Patreon-distributed; supports free roam, hideouts and combat or stealth challenges, and some players finished
-    main missions together though it was not designed for it. The Nexus listing was removed by staff.
+  notes: Closed beta for patrons of the $10 Web-Head tier on Patreon. Free roam, hideouts and combat or stealth
+    challenges work together; the campaign and side quests can be entered but were not designed for co-op and players
+    report bugs, crashes and broken cutscenes, though some players finished main missions together. The Nexus page
+    returned HTTP 403 when rechecked on 2026-10-19. Write-up in games/marvels-spider-man-remastered.
   sources:
+  - https://comicbook.com/gaming/news/marvels-spider-man-co-op-multiplayer-mod-pc/
+  - https://kotaku.com/spider-man-ps4-pc-multiplayer-mod-great-web-insomniac-2000620767
+  - https://insider-gaming.com/spider-man-co-op-mod/
+  - https://www.patreon.com/hbgda
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
-  - https://www.nexusmods.com/marvelsspidermanremastered/mods/5696
-  checked: 2026-10-16
+  checked: 2026-10-19
 - game: Marvel's Spider-Man 2
   year: 2025
   engine: Insomniac proprietary
