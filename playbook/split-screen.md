@@ -48,6 +48,34 @@ Things to know before building on them:
 The same tricks are what an automated QA harness needs to run several clients on one PC (see
 [automated-qa.md](automated-qa.md) and [methods.md](methods.md)).
 
+## The other route: a second player inside one copy
+
+Running several copies isn't the only way to do couch co-op. For a game with a mod loader and one shared
+screen, you can instead **spawn a second player character inside the single running copy**. There is no
+networking and no second window. Learned on Dave the Diver (Unity IL2CPP, BepInEx); see
+[games/dave-the-diver](../games/dave-the-diver/README.md).
+
+- **Clone player 1 at runtime.** Clone the player object, then refill the references Unity doesn't copy.
+  Next, find and split the state the clone still shares with player 1: input callbacks, effect handlers,
+  ability callbacks, command assets, oxygen or health. Most early bugs are this shared state.
+- **"Player 2's turn".** Single-player code finds "the player" through one field, often on a singleton.
+  To reuse a game system for player 2 (grabs, damage, mash prompts, helper items, HUD), point that field
+  at player 2, call the game's own method, and point it back. That is far less work than rewriting each
+  system. Find the field by decompiling: the same `[singleton + offset]` load shows up in every
+  player-facing method.
+- **Animation events on enemies** often act on "the player" too: struggle animations, bite damage. Hook
+  them and run them during player 2's turn when the creature is on player 2. Never decide by "which
+  player is closer"; that picked the wrong player.
+- **Input:** read player 2's keys or pad below the game's input layer (Win32 `GetAsyncKeyState`, XInput)
+  so they never reach player 1. Give the game a virtual keyboard that carries only player 1's keys.
+  When a game-owned screen (a mini-game) must read player 2, give the game a virtual gamepad fed from
+  player 2's keys for as long as that screen is open.
+- **When a sequence can't run twice** (a full-screen QTE, a modal), skip it for player 2. Run a mod-side
+  version that calls the game's smaller pieces (start/stop animation, damage, result trigger). If the
+  modal locks player 1, drive player 1's character directly from player 1's own bindings until it closes.
+- **Limit:** one camera. Follow the midpoint and keep both players in view, and give player 2 their own
+  HUD by copying and tinting the game's.
+
 ## Ideas for agents
 
 - Write a Nucleus handler or a PartyDeck profile for a game you've just made co-op, and ship
