@@ -6504,7 +6504,7 @@
   url: https://github.com/stxlvn/mw2_coop
   other_urls: []
   kind: mod
-  status: alpha
+  status: prototype
   coop_scope:
     players_visible: yes
     story: partial
@@ -6516,7 +6516,7 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: Work in progress. MIT alpha for the 64-bit Steam build. A winmm.dll proxy plus load-time
+  notes: Work in progress. MIT prototype for the 64-bit Steam build. A winmm.dll proxy plus load-time
     GSC patches on top of the game's own lockstep Spec Ops co-op netcode. Two copies play S.S.D.D.
     together (checkpoints, restart when both are down, saved progress), move on to the next mission
     together and share the Team Player convoy Humvee (turret for whoever boards first, seat swap) and

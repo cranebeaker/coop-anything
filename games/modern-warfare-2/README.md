@@ -4,7 +4,7 @@
 |---|---|
 | Engine | IW 4.0 (closed; id Tech 3 derived) |
 | Versions tested | Steam app 10180, build 25374375 (the 64-bit update of September 2026): `iw4sp.exe` x64, PE timestamp `0x6aaaa257`, SHA-256 `2F8C9CFDA1B8C0FB308FD9719577154E8222FC7654F5E8F1BF54579BCA69D805`, `version` dvar `IW4 2.0 build 14 Fri Oct 03 16:56:21 2025 win64`, Russian language set |
-| Projects | [mw2_coop](https://github.com/stxlvn/mw2_coop) (campaign co-op, alpha, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
+| Projects | [mw2_coop](https://github.com/stxlvn/mw2_coop) (campaign co-op, prototype, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
 | QA level | automated (two game copies on one PC, in-game scripted checks on S.S.D.D., Team Player and Wolverines! set pieces; the campaign does not run through yet) |
 | Last updated | 2026-10-20 |
 
@@ -126,9 +126,10 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later co
   a named squadmate can give up his seat); Team Player turret for whoever boards first, seat
   swap by holding Use, ride end and crash for both, Shepherd's scene for both; Wolverines!
   opening and closing Humvee rides.
-- QA-only helpers to pair two copies on one Steam account: a shifted XUID (the host ignores
-  a `coopConnect` from its own XUID) and `mw2coop_party_join`, which stands in for the Steam
-  lobby step that activates the client's party.
+- Joining by address: `mw2coop_party_join` stands in for the Steam lobby step that activates
+  the client's party (the v0.2.0-alpha join launcher runs it before `connect`).
+- QA-only helper to pair two copies on one Steam account: a shifted XUID (`!xuid_add`; the host
+  ignores a `coopConnect` from its own XUID). No shipped launcher uses it.
 
 ## QA
 
@@ -141,7 +142,7 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later co
   - `restart`: checkpoint reached, player 2 down (not dead), both down, `coopRestart`, level
     back at the checkpoint, players up (all PASS).
   - `end` (start point `end`): mission end reached, next mission `roadkill` found and saved
-    as progress. The level does not change yet (see Known issues).
+    as progress.
   - `resume @continue`: host starts with `mw2coop_continue`, client with no start point;
     both start at the saved checkpoint `bullet_penetration`.
   - `end` after the transition fix: both machines load Team Player and exchange `coopLoaded`.
@@ -159,8 +160,8 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later co
 
 ## How to play
 
-Not playable yet (work in progress). Testers: see the mw2_coop README (a copy of the game
-folder, hosting and joining through console commands, `mw2coop_continue` to resume).
+Not playable through yet (prototype). Testers: the v0.2.0-alpha install archive of mw2_coop
+has `.bat` launchers to host, continue and join; see the mw2_coop README.
 
 ## Known issues
 
@@ -173,8 +174,8 @@ folder, hosting and joining through console commands, `mw2coop_continue` to resu
 
 ## Next steps
 
-- The other vehicle missions (owner: a second snowmobile in Cliffhanger and an end trigger that
-  waits for both players), a distance leash, a hint for the seat swap.
-- Vehicle sections for two players (the owner asked for them): survey all missions' scripts.
+- The other vehicle missions: a second snowmobile in Cliffhanger and an end trigger that
+  waits for both players; a distance leash; a hint for the seat swap.
+- Vehicle sections for two players: survey all missions' scripts.
 - Check whether MW3 (2011) `iw5sp.exe` carries the same co-op netcode; its write-up says the
   singleplayer engine has none, which this MW2 finding questions.

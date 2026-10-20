@@ -1,8 +1,8 @@
 # Modern Warfare 2 (2009) — session notes
 
-Session date: 2026-10-19. Owner request: play the **full campaign, with its cutscenes**, in
-co-op with friends. Spec Ops is explicitly not what the owner wants. The owner tried the
-existing campaign co-op mod (COD-MOD, below) on 2026-07-04 and says it works badly.
+Session date: 2026-10-19. Goal: the **full campaign, with its cutscenes**, in co-op with
+friends (Spec Ops is not the goal). The existing campaign co-op mod (COD-MOD, below) was tried
+on 2026-07-04 and works badly.
 
 ## Game identity (AGENTS.md rule 5)
 
@@ -93,7 +93,7 @@ existing campaign co-op mod (COD-MOD, below) on 2026-07-04 and says it works bad
 - Whether official Spec Ops online still works on the 64-bit build.
 - What the minidump's 0x00401772 is (needs the 1.0.159 exe in Ghidra).
 
-## Owner decision (2026-10-19)
+## Decisions (2026-10-19)
 
 - **2 players**, **target the current 64-bit Steam build** (friends must not need to
   downgrade). No 32-bit depot download for now. Path 2 (build from zero) on the 64-bit build;
@@ -201,7 +201,7 @@ Derived:
   later hook rawfile loading for our GSC.
 - Two-client QA on one PC also needs the DLL (single instance), or a second PC/VM.
 
-## Phase 3–5: native DLL on the 64-bit build (2026-10-19, owner OK'd tools)
+## Phase 3–5: native DLL on the 64-bit build (2026-10-19)
 
 Tools (pinned, SHA-256 checked, portable in `local/tools`): llvm-mingw 20261006 (ucrt x86_64,
 `317492c4…d17a`), Ghidra 12.1.4 (`ddac49f9…d4db`), Temurin JDK 21.0.12.1+1 (`f9d6e191…8b4e`).
@@ -254,7 +254,7 @@ PE timestamp `0x6aaaa257`, `version` dvar "IW4 2.0 build 14 … 2025 win64"):
   level script reports `level.players.size == 2` and `level.player2` defined on both; the
   client sees the host's player model with its name tag; ~110 s in co-op without a drop
   until the test was stopped. The host plays the intro in-engine scene, the **client does
-  not** (owner noticed it live): that scene is scripted on `level.player` only.
+  not** (seen live): that scene is scripted on `level.player` only.
 - **Lockstep:** the client also reports `sv_running 1` and compiles the level scripts
   itself; dvars `coop_maxFramesClientCanBeBehind`, `coop_fastForwardThreshold` and the old
   log's "network coop random seed" point the same way. Both PCs run the simulation, so
@@ -265,7 +265,7 @@ Derived:
   script work per mission (cutscenes, vehicles, checkpoints, fail/restart, mission end and
   next level) plus a host/join entry point.
 - Two real Steam accounts should take the native path (Steam invite → lobby → party join),
-  without `mw2coop_party_join` or `!xuid_add`. Untested: needs the owner and a friend.
+  without `mw2coop_party_join` or `!xuid_add`. Untested: needs two people with their own Steam accounts.
 
 Owner's install, follow-up to the incident: the relaunched real game had also left a hidden
 `__iw4sp` lock file (PID 24472 = the killed relaunch). Moved to `local/backup` so the next
@@ -312,7 +312,7 @@ Found on the way (observed in runs):
   `_loadout` for `trainer` sets the viewmodel only on `level.player` and only in its
   campaign branch; next: set the same viewhands on both players in co-op.
 
-Owner asked (2026-10-19): vehicle boarding for both players wherever the campaign needs
+Next step (2026-10-19): vehicle boarding for both players wherever the campaign needs
 it. Level scripts of all campaign maps are extracted in `local/mw2-64/gsc/<map>` for a
 survey (not done yet).
 
@@ -376,7 +376,7 @@ Observed (two-copy QA runs, `tools/qa_pair.sh`):
   sets its flag at once, so the `bullet_penetration` checkpoint follows `timed_ads` within a
   second. Expected, not a bug.
 
-Progress saving (owner asked to check it):
+Progress saving (checked):
 - Before: nothing outlived the game. The checkpoint is the `start` dvar in memory; in a
   co-op session the game wrote no save (`players/save` untouched, only `config.cfg`), and
   `mission_complete()` replaces `_nextmission()`, so the profile records (`highestMission`,
@@ -423,7 +423,7 @@ Progress saving (owner asked to check it):
   `roadkill_code::player_shepherd_fov` fails on both (`LerpViewAngleClamp` on
   `level.player`): level work for that mission.
 
-## Test god mode (2026-10-20, owner's request)
+## Test god mode (2026-10-20)
 
 - `_mw2coop::god_mode()`: every frame each living player gets `EnableInvulnerability()` and
   full health. On unless the host sets `mw2coop_god 0`. Must match on both lockstep
@@ -434,10 +434,10 @@ Progress saving (owner asked to check it):
   PASS on both. QA `restart` with `mw2coop_god 0` on the host only: the client got `0` from
   the packet; all PASS, 0 errors.
 
-## Vehicles for two players (2026-10-20, in progress; owner's requirements)
+## Vehicles for two players (2026-10-20, in progress)
 
-Owner: in a vehicle both players sit on different seats; on a vehicle turret only one player,
-whoever gets in first, and the players can swap. Places the owner named: Team Player
+Requirements: in a vehicle both players sit on different seats; on a vehicle turret only one
+player, whoever gets in first, and the players can swap. Places: Team Player
 (`roadkill`, the only vehicle turret), Wolverines! (`invasion`: Humvee ride at the start, getting
 into a parked Humvee at the very end after defending Burger Town).
 
@@ -448,9 +448,9 @@ PlayerLinkTo` and vehicle names; a starting list, not a full audit):
 |---|---|---|
 | roadkill (Team Player) | Humvee: board through a usable seat, then the 50 cal turret (`player_ride_vehicle`, `player_gets_on_turret`); ride ends in a crash slide | done, QA `rkintro`, `board`, `rideend` pass |
 | invasion (Wolverines!) | opening: passenger seat via `_utility::player_rides_shotgun_in_humvee`; end: parked Humvee seat `tag_guy1` | done, QA `ride` passes; player 2 on the rear-left seat |
-| cliffhanger | player drives a snowmobile (380 mentions). Owner: a second snowmobile for player 2; the mission-end trigger only when player 2 has arrived too | not looked at |
+| cliffhanger | player drives a snowmobile (380 mentions). Next step: a second snowmobile for player 2; the mission-end trigger only when player 2 has arrived too | not looked at |
 | af_chase (Endgame, the chase after Shepherd) | player drives the boat (`friendly_boat UseBy( level.player )`) | not looked at |
-| oilrig (underwater start, owner named it) | SDV / underwater set piece (`PlayerLinkTo`) | not looked at |
+| oilrig (underwater start) | SDV / underwater set piece (`PlayerLinkTo`) | not looked at |
 | gulag, oilrig, af_caves, dcemp, estate, boneyard, favela_escape, airport, contingency | `PlayerLinkTo` scenes (helicopters, boats, set pieces) | not looked at |
 | dcburning | helicopters / Humvees, no player link found by the grep | not looked at |
 
@@ -467,7 +467,7 @@ player 2 on a free non-driver, non-turret seat (marking it used), linked like pl
 - Observed: in the opening Humvee all rear seats hold AI (`humvee: 0=tag_driver* 1=tag_passenger
   2=tag_guy0* 3=tag_guy1*`), so player 2 rides at the fallback spot: a screenshot from the
   client shows the view from the roof hatch (turret ring ahead).
-- Owner chose a real seat over the roof hatch: Worm (`script_noteworthy` "worm", a squadmate
+- A real seat was chosen over the roof hatch: Worm (`script_noteworthy` "worm", a squadmate
   the mission lets die after the yards; every later use checks `isalive( level.worm )`) gives
   up his rear-left seat. `invasion` sets `level.mw2coop_spare_rider = "worm"`;
   `seat_partner_in_vehicle()` removes that rider (`evict_rider()`) when no seat is free. At
@@ -488,7 +488,7 @@ take a player off a turret by script (`UseBy` again?).
 
 ## Team Player for two players (2026-10-20)
 
-Owner's direction: before solving a mission, look at how COD-MOD did it (a reference, not a
+Method: before solving a mission, look at how COD-MOD did it (a reference, not a
 base to build on). COD-MOD's `x_coop.ff` scripts (`local/`, read only, no license, nothing
 copied): in roadkill it links both players to
 the same rig in Shepherd's scene, links player 2 lying on `tag_seat_rb_attach` once player 1
@@ -543,10 +543,10 @@ Cliffhanger snowmobiles (COD-MOD has no cliffhanger script, nothing to compare):
   player.
 - QA `snow` (start snowmobile → favela on both), `snowpick` (start icepick, player 2 takes
   player 1's snowmobile first): PASS, 0 errors.
-- Owner: No Russian is always played (this build's `_nextmission()` skips airport after
+- No Russian is always played (this build's `_nextmission()` skips airport after
   cliffhanger unconditionally, "RUSSIAN PC BUILD" comment).
 
-Ice climb (in progress; owner: fully for two players, no workarounds, quality as if
+Ice climb (in progress; goal: fully for two players, no workarounds, quality as if
 Activision shipped it): `cave_main` already runs `_climb::climb_wall` for every player at its
 own `player_climb` start (two exist: wrong, there is one, see the climb section below), but `_climb.gsc` uses `level.player` 158 times in 35
 functions, global flags (`player_in_position_to_climb`, `finished_climbing`, `final_climb`,
@@ -758,7 +758,7 @@ end of af_chase. Not changed yet.
   credits. Co-op now treats an unknown or empty value as "credits_1" (`_mw2coop_ending.gsc`,
   `ending.gsc.patch`): the knife fight starts (start "wakeup"; starts wakeup ... walkoff).
   Player 2 is still 43000 units from player 1 there: the knife fight for two is next.
-- Owner decisions (2026-10-20): knife fight = both wounded, in turn (the first to reach
+- Design (2026-10-20): knife fight = both wounded, in turn (the first to reach
   Shepherd plays the stab/monologue/revolver scene, the other crawls and watches; both pull
   out the knife, the first throws); No Russian ending = Makarov kills both.
 - No Russian ending (`airport.gsc.patch` 8, `airport_code.gsc.patch` 11 hunks): either player
@@ -772,7 +772,7 @@ end of af_chase. Not changed yet.
   ending) one script error in `_anim::anim_loop_packet` from `escape_end_sequence` (the van
   mate's loop) after the second shot; not in `nrend2`. Not yet known whether single player has it.
 - QA runner: `run_test.ps1 -DoneLogs` closes the test copies once every log has "qa: N: done"
-  (owner: the game windows stayed open until the timeout). `leash` closed after 71 s instead
+  (the game windows stayed open until the timeout). `leash` closed after 71 s instead
   of 170.
 
 ## Endgame knife fight for two players, mod localized strings (2026-10-20)
@@ -785,7 +785,7 @@ ending zones (192 `level.player` uses). The scene has first-person arm animation
 player; a third-person `player_body` animation exists only for Price waking up. Players have no
 body model in the campaign, and the engine has no per-player entity visibility (only
 `target_showtoplayer`/`target_hidefromplayer` for HUD targets), so anybody looking at the lead
-sees floating arms (owner, watching the client: "руки только остались"). The crawl reads
+sees floating arms (seen on the client: only the arms were left). The crawl reads
 `ButtonPressed("mouse1"/"mouse2")` (local keys); the hints say +attack (right), +speed_throw
 (left). `getdvar` read `ui_char_museum_mode` empty in co-op (dvars set by another map's script).
 A player linked with `AllowStand(false)` and `AllowCrouch(false)` gets the session dropped
@@ -793,7 +793,7 @@ A player linked with `AllowStand(false)` and `AllowCrouch(false)` gets the sessi
 strings are Windows-1251 (`!loc COOP_WAITINGFORPLAYER`: ce e6 e8 e4 ...); a plain script string
 with Cyrillic, UTF-8 or 1251, is drawn as dots.
 
-Built (owner's decisions: both wounded, the first to strike plays the scene; then, after
+Built (design: both wounded, the first to strike plays the scene; then, after
 seeing the floating arms: the other player drifts in and out of consciousness):
 - `tools/gen_knife_patches.py`: every `level.player` of both files -> `level.mw2coop_lead`
   (set to level.player in `_mw2coop::main()` for single player too); nearer player is the lead
@@ -819,10 +819,10 @@ the knife is out, awake 114 units from Shepherd with a clear line as Shepherd di
 later; 0 script errors. `knife2` (player 2 strikes): player 2 plays the scene, player 1 is the
 witness, awake 121 units from Shepherd as he dies; 0 script errors. Screenshots: the Russian
 stunned text; Shepherd with the knife in his
-eye; his body from the ground. Lip sync: owner reports voice and lips out of sync on both
+eye; his body from the ground. Lip sync: voice and lips seen out of sync on both
 screens; `timescale` stayed 1 the whole scene except the throw's slow motion (back to 1), so not
 the cause; open.
 
 ## Status
 
-Next: lip sync (owner: off on both screens), Endgame boat, the nrend anim_loop error; profile records.
+Next: lip sync (off on both screens), Endgame boat, the nrend anim_loop error; profile records.
