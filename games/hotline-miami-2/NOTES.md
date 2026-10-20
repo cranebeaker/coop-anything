@@ -58,3 +58,27 @@
 3. Proof of concept: DLL proxy (e.g. a d3dx9_43.dll or SDL2.dll proxy in a *copied* install) that overrides the AI
    partner's movement from a local second controller, before any networking.
 4. Then Steam relay (Spacewar 480) lockstep-ish input sharing per playbook/networking-steam-spacewar.md.
+
+### Session 1, dynamic (x32dbg 2026.05.27, test copy, windowed)
+- Observed: ASLR on; base was 0x5D0000 in this run (static VA = runtime - base + 0x400000).
+- Observed: x32dbg hung the game at the save notice screen until exceptions were passed to the game
+  (ini `[Exceptions] IgnoreRange=00000000-80000002:...,80000005-FFFFFFFF:...`). The game raises MS_VC_EXCEPTION 406D1388
+  to name its threads (AgAudioManagerFMOD, AgThread, AgRenderContext).
+- Observed: the 16-byte object handles are GML values: double at +0, type tag at +8 (3 = reference, followed through
+  3 pointer hops).
+- Observed: with hardware read breakpoints on the SwanGun/SwanChainsaw handles during ~30 s of the first level,
+  ~185 hits each, all inside generic value helpers: 0x12a1872 in fcn.012a1860 (value->int, then object lookup
+  0x12d7fe0; 1231 callers), 0x12ac60b in fcn.012ac5c0 (1392 callers), 0x44dd8a in fcn.0044dd40 (value compare; 4697 callers).
+- Derived: some code checks the Swan player objects regularly even in a non-Swan level (e.g. instance_exists in a
+  controller step). Next: log the caller of those helpers.
+- Observed (caller logging, same run): the Swan handle reads come from 3 real call sites (static VAs):
+  - fcn.0041bbe0 (4.2 KB) @0x41c1e1: `call fcn.012ac5c0(out, &objPlayerSwanGun)`, result compared `> 0`
+    (fcn.012ac5c0 looks like instance_number/instance_exists). Called from 0x76e605 and from fcn.00e6a750.
+  - fcn.00e6a750 (3 KB): queries objPlayerSwanGun at its start; called from 0x76efa7.
+  - fcn.00faca20 (861 B): references every player variant (Zebra, Bear, Cobra, Henchman, SwanChainsaw, ...);
+    guess: "which player character is active" helper. Called from 0xa69ee3 (fcn.00a69eb0).
+  - 0x76e605 / 0x76efa7 are inside fcn.0076e190 (22 KB), which references objPlayerDead, objPlayerBear, mask/style
+    menus. Guess: objPlayer Step or the level controller's Step. Unverified.
+- Caveat: object-name mapping from my hlm2_objects.bin parse is noisy (e.g. objShardRenderer shows up for many
+  handles). Trust handle addresses and ids, not the names, until the record layout is pinned down.
+- Hit cadence: GUN, GUN, SAW repeating ~185 times in ~30 s of play under HW-breakpoint logging (game slowed down).
