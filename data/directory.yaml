@@ -2020,8 +2020,11 @@
     named game instances run side by side and, after loading the same save,
     agree on object ids; a host-to-guest UDP state channel mirrors the
     controlled creature (830 positions applied, 0.00 m last distance, 90 s
-    automated two-client test, 0 packets dropped). No join handshake, second
-    avatar, combat or transition sync yet. GPL-3.0.
+    automated two-client test, 0 packets dropped); and a guest joins over the
+    network - the host saves, serves the slot folder over TCP, and the guest
+    writes it into its own profile and loads it (verified 2026-10-20: 4 files
+    transferred, 569 positions applied after the join, 0.15 m last distance).
+    No join UI, second avatar, combat or transition sync yet. GPL-3.0.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md

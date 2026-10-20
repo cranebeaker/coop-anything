@@ -10,13 +10,15 @@
 
 ## Where things stand
 
-**No playable co-op yet.** The platform underneath it is proven in the game:
-DAOLib loads native plugins; two game processes run side by side as DAOLib
-**named instances** with separate profiles; after both load the same save they
-agree on every object id; and a UDP loopback channel mirrors the host's
-controlled creature into the guest (830 positions applied, last measured
-distance 0.00 m, in a 90 s automated two-client run). A join handshake, a
-second avatar, combat sync and area transitions are still ahead.
+**No playable co-op yet**, but the whole join path is proven in the game:
+DAOLib loads native plugins; two game processes run side by side as named
+instances; a guest **joins over the network** — the host writes a save and
+serves the slot folder, the guest receives it, writes it into its own profile
+and loads it, ending up in the host's world with the same object ids — and a
+UDP state channel mirrors the host's creature into the guest (830 positions
+applied in one test; 569 after a network join; last measured distance 0.00–0.15
+m). What is still missing: two separate avatars (each player controlling their
+own party member), combat sync and area transitions.
 
 ## Existing work
 
@@ -85,6 +87,7 @@ design; `docs/TESTING.md` the test plan.
 | M1 | Two game processes run side by side as named instances with separate profiles | two live `daorigins` processes; both logs show their own seeded profile |
 | M1 | Both games agree on object ids after loading the same save | both logs: controlled `0x00000082`, area `0x000000ca` |
 | M2 | Host-authoritative state channel inside two running games | `tools\sync-test.ps1`: host 34 drive orders; host 3,404 sent / 2,185 received; guest 2,169 sent / 3,346 received; **0 dropped**; guest applied **830** positions via the engine's `SetPosition`; last host→guest distance **0.00 m** |
+| M3 | **Network join with no manual file copying** | `tools\join-test.ps1`: host wrote manual slot 91 and served its folder over TCP; guest received 4 files, wrote them into its own profile, loaded them (`game loaded: slot 91`) and reached the host's area; state sync continued afterwards (569 positions applied, last distance 0.15 m) |
 
 ## QA
 
@@ -118,10 +121,12 @@ else.
 
 ## Next steps
 
-1. M3: in-game join — host writes a save, hands the slot folder to the guest
-   over the transport, guest writes it into its profile and loads it, with no
-   manual copying.
-2. M4: combat — host-authoritative damage, guest attack intents resolved
-   host-side, shared death/loot.
-3. Two-avatar model (guest controls a second party member), transitions with
-   object-id alignment (`OnAreasBuild`), then LAN polish and the Steam relay.
+1. M4: two separate avatars — the guest selects a different party member and
+   both games puppet each other's controlled creature; then combat — host
+   authoritative damage, guest attack intents resolved host-side, shared
+   death/loot.
+2. Transitions with object-id alignment (`OnAreasBuild`), then LAN polish and
+   the Steam relay.
+3. A player-facing host/join UI on the options screen (the rig currently drives
+   everything by environment variables), and the automated suite extended to
+   the two-avatar and combat scenarios.
