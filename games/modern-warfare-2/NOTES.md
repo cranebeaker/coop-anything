@@ -730,7 +730,28 @@ Open: `dcemp_code::street_heli_player_kill` (the street helicopter kills a playe
 the open) raised a script error with the bot idle after the QA, and is written for level.player
 only: player 2 is not threatened there yet.
 
+## Second Sun street and the ending map (2026-10-20)
+
+Second Sun street (`dcemp_code::street_heli_player_kill`, `street_hide_moment`): a falling
+little bird chases level.player until the team and "street_player_hide" (any player in the
+hiding place) set `street_safe`. Co-op: one helicopter per player (`street_helis`), each stops
+when its player has hidden (per-player latch from the same trigger) or the street is safe;
+`street_safe` waits for every living player; "street_insta_death" is per player. QA `street`
+(start street, bot teleports player 1 into the hiding place, follow-teleport off): street not
+safe while player 2 is out (his helicopter reached him: `kill()` raises a script error under
+test god mode), safe once both hid, both alive.
+
+Ending map (`ending`): `ending.gsc` sets `level.level_mode` from `ui_char_museum_mode`, which
+af_chase's end sets to "credits_1" (both lockstep machines run that script, so both have it).
+"credits_1" is the knife fight with Shepherd (`af_chase_knife_fight`, starts wakeup ...
+walkoff) followed by the museum credits. Launched directly in the spawn audit, the start list
+held only the museum starts (" ** no_game arcadia ... af_caves "), the level started at
+"af_caves", and `_credits::playcredits` failed on `level.linelist.size` (8 script errors) with
+player 1 on the museum camera and player 2 standing 1500 units away. Unknown: whether the
+knife-fight starts are registered when the map is reached from af_chase; needs a run from the
+end of af_chase. Not changed yet.
+
 ## Status
 
-Next: the open spawn items (credits); the dcemp street helicopter for player 2; No Russian ending
+Next: Endgame ending (knife fight with Shepherd, then museum credits) for two players; No Russian ending
 (proposed to the owner: Makarov kills both players in turn); profile records.
