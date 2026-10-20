@@ -2027,8 +2027,13 @@
     Two avatars now work: the host creates and hires a companion before the
     join save and the guest switches control to it with the party bar's own
     message, each game mirroring the other player's creature (4,815 / 5,274
-    position applications, mirror distances 0.21-0.26 m, same area). No
-    join UI, combat, effect or transition sync yet. GPL-3.0.
+    position applications, mirror distances 0.21-0.26 m, same area). A
+    host-spawned ogre's health and death state are mirrored into the guest
+    (220 to 0, applied 13 times; damage in that test is applied by the host
+    plugin as a stand-in for real combat). The UDP channel binds any interface
+    and takes a peer address, so it is LAN-capable, though only loopback has
+    been run. No UI, real combat arbitration, effect or transition sync yet.
+    GPL-3.0.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md

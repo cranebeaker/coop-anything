@@ -10,16 +10,19 @@
 
 ## Where things stand
 
-**Two players can now move two different avatars in the same world** — not yet
-a finished co-op game, but the core is in place and verified in the game:
-DAOLib loads native plugins; a guest **joins over the network** (the host saves
-and serves the slot folder, the guest writes it into its own profile and loads
-it, ending up in the host's world with the same object ids); and with a
-companion hired before the join save, **the host controls one party member
-while the guest controls another**, each game mirroring the other's creature
-(4,815 / 5,274 position applications, mirror distances 0.21–0.26 m). Missing:
-combat/effect sync, area transitions, a player-facing host/join UI and internet
-transport.
+**Two players can now move two different avatars in the same world, and the
+host's hostile creature's health and death state reach the guest** — not yet a
+finished co-op game, but the core is in place and verified in the game: DAOLib
+loads native plugins; a guest **joins over the network** (the host saves and
+serves the slot folder, the guest writes it into its own profile and loads it,
+ending up in the host's world with the same object ids); with a companion
+hired before the join save, **the host controls one party member while the
+guest controls another**, each game mirroring the other's creature (4,815 /
+5,274 position applications, mirror distances 0.21–0.26 m); and a host-spawned
+ogre's health (220 → 0, death included) is mirrored into the guest. Missing:
+real combat arbitration (the damage in that test is applied by the host
+plugin), AI/effects/loot sync, area transitions, a player-facing host/join UI
+and an internet transport.
 
 ## Existing work
 
@@ -90,6 +93,7 @@ design; `docs/TESTING.md` the test plan.
 | M2 | Host-authoritative state channel inside two running games | `tools\sync-test.ps1`: host 34 drive orders; host 3,404 sent / 2,185 received; guest 2,169 sent / 3,346 received; **0 dropped**; guest applied **830** positions via the engine's `SetPosition`; last host→guest distance **0.00 m** |
 | M3 | **Network join with no manual file copying** | `tools\join-test.ps1`: host wrote manual slot 91 and served its folder over TCP; guest received 4 files, wrote them into its own profile, loaded them (`game loaded: slot 91`) and reached the host's area; state sync continued afterwards (569 positions applied, last distance 0.15 m) |
 | M4 | **Two separate avatars**: host controls the Warden, guest controls a companion | `tools\two-avatar-test.ps1`: host created and hired a mabari with the engine's `AddToParty` before the join save (party list 2); guest joined, switched control to party index 1 with `SelectPartyMemberIndexMessage`; host controlled `0x82` mirroring `0x363` (4,815 applies, 0.26 m) and guest the reverse (5,274 applies, 0.21 m), same area |
+| M5 | **Hostile health/death channel** | `tools\combat-test.ps1`: host spawned an ogre with AI off (the scripts' own flag) before the join save, then damaged it after the guest connected; guest received the same hostile id and health (`220 → 0`, death state included), applying it 13 times |
 
 ## QA
 
@@ -119,18 +123,21 @@ else.
 - The two avatars are a host-controlled companion situation: the guest plays a
   party member the host hired for the test; each player's creature is mirrored
   from the other game, not simulated by one shared authority for everything.
-- No combat, quest, inventory, pause, dialogue, effect or area-transition sync
-  yet.
+- No combat arbitration yet: the health channel is proven, but damage is
+  applied by the host plugin in the test, guest attacks do not reach the host,
+  and enemy AI, effects, animations and loot are not synced.
+- No quest, inventory, pause, dialogue, effect or area-transition sync yet.
 - Only GOG-build executables have been tested (inside a Steam install); the
   address library supports EA/Steam wrappers but that is untested here.
 - Tests run the debug build.
 
 ## Next steps
 
-1. M5: combat sync — host-authoritative damage and death, guest attack intents
-   resolved host-side, shared loot; effects/timers.
+1. M6: real combat arbitration — guest attacks sent to the host, damage/death
+   resolved host-side, so both players fight the same enemies; then effect and
+   loot sync.
 2. Area transitions with object-id alignment (`OnAreasBuild`), then internet
-   transport (Steam relay) on top of the LAN/loopback channel.
+   transport (Steam relay) on top of the LAN-capable channel.
 3. A player-facing host/join UI on the options screen (the rig currently drives
    everything by environment variables), and the automated suite extended to
    the combat and transition scenarios.
