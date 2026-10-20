@@ -35,4 +35,12 @@ Write-Host "Host: load a save, use the Cursed Emblem, invite from the Steam frie
 Write-Host "Guest: accept the Steam invite." -ForegroundColor Yellow
 
 python (Join-Path $here 'agent.py') --seconds ($Minutes * 60) --out $out --label $Label --save-on-change
+$agentExit = $LASTEXITCODE
+
 python (Join-Path $here 'report.py') $out
+$reportExit = $LASTEXITCODE
+
+# propagate the verdict: 0 pass, 1 no co-op, 2 inconclusive. Without this the
+# script always looks successful to a caller or CI.
+if ($agentExit -ne 0) { exit $agentExit }
+exit $reportExit
