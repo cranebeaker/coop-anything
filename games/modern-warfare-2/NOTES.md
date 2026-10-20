@@ -529,9 +529,53 @@ mw2_coop (`_mw2coop_roadkill.gsc`, patches to `roadkill_code`, `roadkill`,
   and swap back, both in the moving Humvee 47 units apart), `rideend` from `ride_later` (player
   1 at the turret 51 units, crash at 21.5 s, both off, 48 units apart), `turret`.
 
+## Cliffhanger, spawn audit, Gulag and Takedown seats (2026-10-20, later)
+
+Cliffhanger snowmobiles (COD-MOD has no cliffhanger script, nothing to compare):
+- `maps\_snowmobile_drive::drive_vehicle()` already handles a second player (Spec Ops). Player
+  2 gets his own snowmobile from the map's `playermobile_spawner` (the player's spawner spawns
+  once); either player may mount either snowmobile, the one player 1 rides becomes
+  `level.player_snowmobile`; start point `snowmobile` mounts both; after `end_begins` the
+  helicopter ending waits until player 2 is off his snowmobile within 400 units of player 1.
+- `_blizzard::blizzard_start_proc` plays the co-op blizzard on the player's `tag_origin`;
+  campaign players have no body model (the `coop_body_*` models exist only in the so_* zones:
+  grep of inflated zones), so the call failed; it now uses a tag_origin model linked to the
+  player.
+- QA `snow` (start snowmobile → favela on both), `snowpick` (start icepick, player 2 takes
+  player 1's snowmobile first): PASS, 0 errors.
+- Owner: No Russian is always played (this build's `_nextmission()` skips airport after
+  cliffhanger unconditionally, "RUSSIAN PC BUILD" comment).
+
+Ice climb (in progress; owner: fully for two players, no workarounds, quality as if
+Activision shipped it): `cave_main` already runs `_climb::climb_wall` for every player at its
+own `player_climb` start (two exist), but `_climb.gsc` uses `level.player` 158 times in 35
+functions, global flags (`player_in_position_to_climb`, `finished_climbing`, `final_climb`,
+`climb_pullup`, `climb_big_jump`, ...), `level.arm_ent_globals`, `level.stabs_completed`, and
+reads the swing buttons with `ButtonPressed( "mouse1"/"mouse2"/"j"/"k" )` - local keys, which
+desync lockstep for the remote player. Plan: `@@@ subst` level.player -> the climbing player
+per function, per-player ent_flags fed by the same trigger volumes, usercmd buttons
+(`AttackButtonPressed`/`AdsButtonPressed`), per-player arm globals, big jump with both players
+slipping and Soap MacTavish (`level.price` in the scripts) pulling both up, DLL input injection
+for QA. The snowmobile escape is done.
+
+Spawn audit (QA `spawn`, every mission's default start, 12 s): player 2 next to player 1 on
+ground in trainer, roadkill, cliffhanger, favela_escape, arcadia, dcburning, contingency,
+dc_whitehouse, estate, boneyard, af_caves, af_chase; seated in invasion. Problems where player 1
+starts linked: gulag (player 2 fell 67000 units from the map's player start), favela (car),
+oilrig (SDV underwater: player 2 on the sea floor 3530 below), airport (elevator: both on one
+spot), dcemp (crash scene), ending (credits: 8 `_credits::playcredits` errors).
+- Teleports now refuse while player 1 is linked or in the air and retry until he stands
+  (`is_standing`: `IsOnGround()` reads 0 for player 2 in co-op, so ground is traced).
+- Gulag: player 2 gets his own `get_player_view_controller` on a free seat of the fly-in
+  helicopter (COD-MOD had a second controller too), looks at the same target, gets off with
+  player 1. Takedown: player 2 rides the opening car (its `luxurysedan` aianims only have a
+  driver seat, so he is at the fallback spot for now) and gets out with player 1. Audit PASS
+  for both (53 and 66 units, linked), 0 errors.
+- Patch op `@@@ subst <function>` (DLL + check_patches.py): whole-word replace inside one
+  function, so reworks do not put game code into patch files.
+
 ## Status
 
-Next: the other vehicle missions (cliffhanger snowmobile for player 2 and an end trigger that
-waits for both, af_chase boat, oilrig underwater start), a distance leash for slow scripted
-moves of player 1, an on-screen hint for the seat swap. Profile records for the mission menu
-are open.
+Next: Cliffhanger ice climb and big jump for two players (plan above); then the open spawn
+items (Takedown rear seat, oilrig SDV, airport elevator, dcemp, credits); No Russian ending
+(proposed to the owner: Makarov kills both players in turn); profile records.
