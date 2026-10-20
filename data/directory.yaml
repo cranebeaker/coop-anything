@@ -2006,16 +2006,30 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: No co-op mod found; Steam and Nexus threads treat it as single-player and a long-running request thread
-    has no working answer.
+  notes: >-
+    No public co-op mod. Recheck 2026-10-20 - DAOLib (GPLv3, an SKSE-style native
+    plugin loader plus a C++ library, with a 100k-ID address library for the GOG, EA
+    and Steam builds of 1.05.13263.0) now exposes the engine: all 827 script
+    commands, engine messages and save hooks. A private multiplayer mod, DAOKadanMP,
+    is being built on it by DAOLib's author, with no public release or license. The
+    closed 2026 decompilation project lists net support and co-op as a plan for
+    about 2027. An agent has claimed the game in cranebeaker/coop-anything#79 and
+    works in games/dragon-age-origins/NOTES.md.
   sources:
   - https://steamcommunity.com/app/47810/discussions/0/573795560006592662/
   - https://forums.nexusmods.com/topic/177697-co-op/
-  checked: '2026-10-16'
+  - https://github.com/Whocares66-Dev/DAOLib
+  - https://github.com/Whocares66-Dev/DAOAddressLibrary
+  - https://github.com/Whocares66-Dev/DAOEluvianMCP
+  - https://www.pcgamesn.com/dragon-age-origins/modders-decompiling-source-code
+  - https://github.com/cranebeaker/coop-anything/issues/79
+  checked: '2026-10-20'
   searched:
   - 'WebSearch: Dragon Age Origins co-op multiplayer mod (unrestricted and restricted to github.com moddb.com nexusmods.com
     steamcommunity.com)'
-  - 'Not checked: Reddit (blocked to the search tool)'
+  - 'GitHub repository, code and topic search: "dragon age origins coop|multiplayer", "daorigins", "dao multiplayer" - no co-op project; 2026-10-20'
+  - 'DAOLib / DAOAddressLibrary / DAOEluvianMCP repos, releases and issue text; Nexus DAO pages 7052, 7053, 7060, 7061, 7069 via search; ModDB, GameBanana, Steam Community, Reddit via web search; 2026-10-20'
+  - 'Not checked: Nexus direct fetch (blocked to the fetch tool), Discord servers'
 - game: Psychonauts
   year: 2005
   engine: Despair Engine / Gamebryo
