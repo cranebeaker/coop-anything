@@ -6558,3 +6558,46 @@
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
   checked: '2026-10-19'
+- game: Eggs for Bart
+  year: 2019
+  engine: Unity 2019.1.4 (Mono)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    players_visible: 'no'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: >-
+    No co-op or multiplayer mod exists for Eggs for Bart (searched 2026-10-19: hub directory and games/,
+    hub issues and PRs, GitHub repo search, web search for a multiplayer mod). The itch page says "Unity 5
+    Personal" but the v3.0 Windows build is Unity 2019.1.4f1 Mono, so game logic decompiles cleanly to C#
+    (Assembly-CSharp.dll, 145 types, 0 decompile failures; Assembly-CSharp-firstpass.dll, 97 types). No netcode
+    in gameplay: zero NetworkManager/NetworkIdentity/SyncVar/UNET references across the code, though
+    com.unity.multiplayer-hlapi.Runtime.dll ships in Managed/ so the package was imported and dropped. The
+    BepInEx 5 + Harmony pipeline is proven on this build: BepInEx 5.4.23.5 win_x86 loads under Unity 2019.1.4,
+    Harmony patches apply, and the local player's position is read every frame in Chapter1Game (scene index 3;
+    scene map observed live: 0=Start, 1=TitleScene, 2=LoadScene, 3=Chapter1Game). Plugins must be x86 and
+    net472, and the AI characters call the same patched Move() method as the player. Everything keys off tag
+    "Player" and the only persistence is the single PlayerPrefs int "Level". Remaining gating design problem:
+    shared death (Endscript.Death is global and returns to the title). Triage, code map and the Stage-1 result
+    are in games/eggs-for-bart/NOTES.md.
+  sources:
+  - https://fleebs.itch.io/eggs-for-bart
+  - https://gamejolt.com/games/eggsforbart/355488
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/eggs-for-bart
+  checked: '2026-10-19'
+  searched:
+  - coop-anything directory.yaml, DIRECTORY.md and games/ (0 hits), 2026-10-19
+  - coop-anything issues and PRs via GitHub search API (0 hits), 2026-10-19
+  - web search for a co-op/multiplayer mod (nothing found), 2026-10-19
+  - 'Not checked: Discord (no server found for this game), Nexus (no page)'
