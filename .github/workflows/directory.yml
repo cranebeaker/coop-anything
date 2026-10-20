@@ -13,3 +13,4 @@ jobs:
           python-version: "3.12"
       - run: pip install pyyaml
       - run: python tools/build_directory.py --check
+      - run: python -m unittest tools/mcp/test_coop_mcp.py
