@@ -704,7 +704,7 @@
   url: https://www.nexusmods.com/gothic3/mods/1
   other_urls: []
   kind: mod
-  status: abandoned
+  status: alpha
   coop_scope:
     story: unknown
     enemies: unknown
@@ -713,12 +713,14 @@
   players: unknown
   networking: direct-ip
   open_source: unknown
-  last_activity: unknown
+  last_activity: '2024-04'
   qa: community-reports
-  notes: Shared-world co-op with fight, respawn and task synchronisation, requires Community Patch 1.75. Community
-    posts say it is no longer maintained, with no AI sync between players.
+  notes: 'Sative Update3, released 2016-03-25, requires CP 1.75.14. The author lists inventory loss and unsynchronised
+    enemy combat. The forum index shows an author reply in 2024-04, so abandonment is unconfirmed. Source, reuse
+    license and exact supported binary hashes remain unverified; the download requires Nexus login.'
   sources:
   - https://www.nexusmods.com/gothic3/mods/1
+  - https://www.nexusmods.com/gothic3/mods/1?tab=forum
   - https://steamcommunity.com/app/39500/discussions/0/361798516951039653/
   checked: '2026-10-16'
 - game: 'The Elder Scrolls III: Morrowind'
@@ -4198,27 +4200,34 @@
   year: 2022
   engine: Insomniac proprietary
   project: Spider-Man Remastered Multiplayer (hbgda)
-  url: https://www.nexusmods.com/marvelsspidermanremastered/mods/5696
+  url: https://www.patreon.com/hbgda
   other_urls:
+  - https://www.nexusmods.com/marvelsspidermanremastered/mods/5696
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
   kind: mod
   status: partial
   coop_scope:
+    players_visible: true
     story: partial
     enemies: true
     world_state: partial
     items: unknown
-  players: unknown
+  players: up to 7
   networking: unknown
   open_source: false
-  last_activity: unknown
+  last_activity: 2026-10
   qa: community-reports
-  notes: Patreon-distributed; supports free roam, hideouts and combat or stealth challenges, and some players finished
-    main missions together though it was not designed for it. The Nexus listing was removed by staff.
+  notes: Closed beta for patrons of the $10 Web-Head tier on Patreon. Free roam, hideouts and combat or stealth
+    challenges work together; the campaign and side quests can be entered but were not designed for co-op and players
+    report bugs, crashes and broken cutscenes, though some players finished main missions together. The Nexus page
+    returned HTTP 403 when rechecked on 2026-10-19. Write-up in games/marvels-spider-man-remastered.
   sources:
+  - https://comicbook.com/gaming/news/marvels-spider-man-co-op-multiplayer-mod-pc/
+  - https://kotaku.com/spider-man-ps4-pc-multiplayer-mod-great-web-insomniac-2000620767
+  - https://insider-gaming.com/spider-man-co-op-mod/
+  - https://www.patreon.com/hbgda
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
-  - https://www.nexusmods.com/marvelsspidermanremastered/mods/5696
-  checked: 2026-10-16
+  checked: 2026-10-19
 - game: Marvel's Spider-Man 2
   year: 2025
   engine: Insomniac proprietary
@@ -6614,4 +6623,198 @@
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
+  checked: '2026-10-19'
+- game: 'Tainted Grail: The Fall of Avalon'
+  year: 2025
+  engine: Unity
+  project: 2 Players Steam Coop (TGCoop)
+  url: https://www.nexusmods.com/taintedgrailthefallofavalon/mods/211
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'no'
+  last_activity: 2026-07
+  qa: community-reports
+  notes: BepInEx 5 + Harmony, needs the game's Steam beta branch "mono". Both players load their own save; the host
+    overlays story flags and places NPCs, drops are first grab wins. Latest build 0.5.36 (2026-07-28), no license
+    file. Players report softlocks, combat desync and a gate that stays closed for the guest after the Odran dialogue;
+    the author says only Act 1 was really tested. Last author reply on Nexus 2026-07-28, none to the comments
+    from August on. Write-up in games/tainted-grail-the-fall-of-avalon.
+  sources:
+  - https://www.nexusmods.com/taintedgrailthefallofavalon/mods/211
+  checked: '2026-10-20'
+- game: Gothic 3
+  year: 2006
+  engine: Genome
+  project: Gothic 3 Heroes
+  url: https://gothic.org.pl/gothic/modyfikacje/gothic-3-heroes-w-trybie-kooperacji/
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: '2026-09'
+  qa: community-reports
+  notes: 'Pigeonade project, version 0.3 reported by Gothic Up on 2026-09-19. Report describes Steam invitations and
+    trading, requiring Steam plus CP 1.75.14. Release link leads to Discord. Current archive, license, source and
+    exact supported executable hashes are not verified; this is a community report, not local QA.'
+  sources:
+  - https://gothic.org.pl/gothic/modyfikacje/gothic-3-heroes-w-trybie-kooperacji/
+  checked: '2026-10-16'
+- game: Gothic 3
+  year: 2006
+  engine: Genome
+  project: Myrtana Accord
+  url: https://github.com/yevh/Gothic3
+  other_urls:
+  - https://github.com/yevh/Gothic3/releases/tag/v0.35.0-beta.1
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'no'
+    story: partial
+    enemies: 'no'
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: vpn-needed
+  open_source: partial
+  last_activity: '2026-09'
+  qa: automated
+  notes: 'Yevh v0.35.0-beta.1, tested on Steam CP 1.75.14 with shipped settings. Automated suite with two real
+    clients on one PC: both join one campaign and shared quest state syncs both ways (3 of 3 PASS, negative control
+    FAILs); see games/gothic-3. Shipped tuning turns off remote player bodies and NPC scene/death sync. Rejoining with
+    a new game is refused by the mod. C++ core source not found in the archive or public tree.'
+  sources:
+  - https://github.com/yevh/Gothic3/releases/tag/v0.35.0-beta.1
+  - https://github.com/yevh/Gothic3/blob/327c0b0a2409db1f7ba0ba9a7f09cb171c5500e0/LICENSE
+  checked: '2026-10-17'
+- game: Gothic 3
+  year: 2006
+  engine: Genome
+  project: G3 Together
+  url: https://github.com/GGM1k3y23/g3-together
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: partial
+    items: 'yes'
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: 'Built from zero on the Gothic 3 SDK, ENet, GPL-3.0-or-later; work in progress. Steam CP 1.75.14. Bot suites
+    with two real game clients on one PC (each stage 3 passes plus a failing negative control): players, NPCs,
+    combat, quests, dialogs, items, trade, clock, saves and regional NPC ownership. Human review pending; internet
+    play, a full playthrough and more than two players untested. See games/gothic-3.'
+  sources:
+  - https://github.com/GGM1k3y23/g3-together
+  checked: '2026-10-20'
+- game: Crimson Desert
+  year: 2026
+  engine: BlackSpace Engine
+  project: Crimson Desert Multiplayer (cdmp)
+  url: https://github.com/ByJunter/CrimsonDesertMultiplayer
+  other_urls:
+  - https://www.nexusmods.com/crimsondesert/mods/3677
+  - https://github.com/CaptCapybara-cmd/CrimsonDesertMultiplayer
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/crimson-desert
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: 'no'
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: none
+  notes: >-
+    ASI mod (Ultimate ASI Loader) for Steam build 1.0.0.2976 / game version 2.03.02 only; turns itself off on other
+    builds. Each player stays in their own save and sees the other; hostile enemies near the host are shared
+    (experimental); quests, NPCs and items are not shared; Steam friends only. GPL-3.0. The author stopped work at
+    v0.2.0 and invites others to continue it. A revival focused on shared quest progress is claimed in
+    cranebeaker/coop-anything#51: builds on Linux with clang-cl + xwin, one-PC echo smoke test ran under Proton
+    (no automated two-player test yet). Research and dated notes in games/crimson-desert.
+  sources:
+  - https://github.com/ByJunter/CrimsonDesertMultiplayer
+  - https://www.nexusmods.com/crimsondesert/mods/3677
+  - https://github.com/cranebeaker/coop-anything/issues/51
+  checked: '2026-10-19'
+  up_for_adoption: true
+- game: Crimson Desert
+  year: 2026
+  engine: BlackSpace Engine
+  project: CrimsonDesertCoop (blizz3010)
+  url: https://github.com/blizz3010/CrimsonDesertCoop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: 'no'
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: partial
+  last_activity: '2026-07'
+  qa: none
+  notes: >-
+    Version 0.2.3 "in development" per its README: player 2 takes over a companion slot on the host; position, enemy HP
+    and some mount state sync are claimed; quest, cutscene and world-interaction sync are not applied. Source is public
+    but the repository has no license. Last push 2026-07-08. Claims are the author's; not tested here.
+  sources:
+  - https://github.com/blizz3010/CrimsonDesertCoop
+  checked: '2026-10-19'
+- game: Crimson Desert
+  year: 2026
+  engine: BlackSpace Engine
+  project: (unnamed, by No-Context2224)
+  url: https://wccftech.com/crimson-desert-2-player-co-op-mod-but-more-advanced-soon/
+  other_urls:
+  - https://insider-gaming.com/crimson-desert-multiplayer-mod-is-being-tested/
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: '2026-10'
+  qa: none
+  notes: >-
+    Unreleased; known only from press coverage of test footage (players see each other's moves and can damage the same
+    enemy; NPC and enemy placement differs between the two worlds). No public build or code found 2026-10-19.
+  sources:
+  - https://wccftech.com/crimson-desert-2-player-co-op-mod-but-more-advanced-soon/
+  - https://insider-gaming.com/crimson-desert-multiplayer-mod-is-being-tested/
   checked: '2026-10-19'

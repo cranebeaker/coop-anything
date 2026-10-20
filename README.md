@@ -26,7 +26,7 @@ The sky is the limit. Every game that runs on your PC is a candidate.
 
 Games being made co-op right now: **[Deus Ex](https://github.com/cranebeaker/deus-ex-coop)** (released) ·
 **[Fallout: New Vegas](https://github.com/cranebeaker/fnv-coop)** · **[Zelda: Ocarina of Time](https://github.com/cranebeaker/ocarina-coop)** (fully synced) ·
-**[Dungeon Keeper](https://github.com/cranebeaker/dungeon-keeper-coop)** · **[S.T.A.L.K.E.R. Shadow of Chernobyl](https://github.com/cranebeaker/stalker-soc-coop-fixes)** · **S.T.A.L.K.E.R. Clear Sky**
+**[Dungeon Keeper](https://github.com/cranebeaker/dungeon-keeper-coop)** · **[S.T.A.L.K.E.R. Shadow of Chernobyl](https://github.com/cranebeaker/stalker-soc-coop-fixes)**
 
 From the community: **[Mega Man X](https://github.com/mstan/MegaManXSNESRecomp)** and
 **[Mega Man X4](https://github.com/mstan/MegaManX4Recomp)** (native PC with co-op netplay) ·
@@ -35,7 +35,7 @@ From the community: **[Mega Man X](https://github.com/mstan/MegaManXSNESRecomp)*
 **[Half Sword](https://github.com/Dudiebug/halfsword-multiplayer-mod)** · **[Enter the Gungeon](https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/)** ·
 **[Clive Barker's Jericho](https://github.com/dolbaras/jericho-coop)** · **[Poppy Playtime](https://github.com/romannazarov057-spec/PoppyCoop)** ·
 **[Divinity II](games/divinity-2-developers-cut)** (split-screen) · **[Command & Conquer 3](games/command-and-conquer-3)** (campaign co-op) ·
-**[Far Cry 2](https://github.com/MortyRei/fc2-coop-probe)** · yours next?
+**[Far Cry 2](https://github.com/MortyRei/fc2-coop-probe)** · **[Gothic 3](https://github.com/GGM1k3y23/g3-together)** · yours next?
 
 ## Quick start
 
@@ -106,7 +106,7 @@ Which engine has co-op work you can reuse: [playbook/engine-families.md](playboo
 |---|---|---|---|
 | Deus Ex (2000) | Revived the HX co-op mod: fix package, Steam relay, automated test suite | [deus-ex-coop](https://github.com/cranebeaker/deus-ex-coop) | [games/deus-ex](games/deus-ex/README.md) |
 | Dungeon Keeper (1997) | Shared-keeper co-op on KeeperFX, Steam relay networking | [dungeon-keeper-coop](https://github.com/cranebeaker/dungeon-keeper-coop) | [games/dungeon-keeper](games/dungeon-keeper/README.md) |
-| S.T.A.L.K.E.R. Shadow of Chernobyl / Clear Sky | Fix patch for Shadow of COOP (true ending unlocked); finishing Clear COOP in progress | [stalker-soc-coop-fixes](https://github.com/cranebeaker/stalker-soc-coop-fixes) (SoC); Clear Sky coming soon | [games/stalker](games/stalker/README.md) |
+| S.T.A.L.K.E.R. Shadow of Chernobyl | Fix patch for Shadow of COOP (true ending unlocked) | [stalker-soc-coop-fixes](https://github.com/cranebeaker/stalker-soc-coop-fixes) | [games/stalker](games/stalker/README.md) |
 | Fallout: New Vegas | Story co-op: shared quests, dialogue results, karma and reputation | [fnv-coop](https://github.com/cranebeaker/fnv-coop) | [games/fallout-new-vegas](games/fallout-new-vegas/README.md) |
 | Zelda: Ocarina of Time | Fixes for a fully synced Ship of Harkinian co-op fork | [ocarina-coop](https://github.com/cranebeaker/ocarina-coop) | [games/ocarina-of-time](games/ocarina-of-time/README.md) |
 

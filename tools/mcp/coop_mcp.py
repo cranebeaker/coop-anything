@@ -11,6 +11,7 @@ Needs Python 3.9+ and PyYAML (pip install pyyaml).
 import hashlib
 import json
 import os
+import re
 import struct
 import sys
 from pathlib import Path
@@ -43,26 +44,68 @@ def directory():
 
 
 def compact(e):
-    keep = ("game", "year", "engine", "project", "url", "kind", "status", "coop_scope",
-            "players", "networking", "open_source", "last_activity", "qa", "notes", "checked")
+    # sources and searched come along so the agent can verify an entry before relying on it
+    keep = ("game", "year", "engine", "project", "url", "other_urls", "kind", "status", "coop_scope",
+            "players", "networking", "open_source", "last_activity", "qa", "notes", "up_for_adoption",
+            "sources", "searched", "checked")
     return {k: (str(e[k]) if k in ("checked", "last_activity") else e[k]) for k in keep if k in e}
 
 
 # ---------------------------------------------------------------- engine detection
 
 # (engine, family hint for playbook/engine-families.md, test(files, dirs) -> evidence or None)
+# files maps each lower-case file name to the first path it was seen at.
 def _has(files, *names):
     return [n for n in names if n.lower() in files]
 
 
-def _ext(files, *exts):
-    return sorted({f for f in files if any(f.endswith(x) for x in exts)})[:5]
+def _ext(files, *exts, at_least=1):
+    found = sorted(f for f in files if any(f.endswith(x) for x in exts))
+    return found[:5] if len(found) >= at_least else []
+
+
+def _magic(files, ext, magic):
+    """Names ending in ext whose first bytes are magic. Extensions like .pck are shared by
+    unrelated formats (Godot packs, Wwise sound banks), so the header decides."""
+    hits = []
+    for name in sorted(f for f in files if f.endswith(ext))[:3]:
+        try:
+            with open(files[name], "rb") as fh:
+                if fh.read(len(magic)) == magic:
+                    hits.append(name)
+        except OSError:
+            pass
+    return hits
+
+
+def _family_keys(family):
+    """Engine names a family covers: 'id Tech 2 to 4' -> id tech 2, 3, 4 and
+    'Unreal Engine 4/5' -> unreal engine 4, 5. A bare '4' would match any engine with a 4 in it."""
+    keys, prefix = [], ""
+    for part in (p.strip() for p in family.lower().split("/")):
+        span = re.fullmatch(r"(.*?)\s*(\d+)\s+to\s+(\d+)", part)
+        if span:
+            prefix = span.group(1) + " "
+            keys += [f"{prefix}{n}" for n in range(int(span.group(2)), int(span.group(3)) + 1)]
+        elif re.fullmatch(r"[\d.]+", part):
+            keys.append(prefix + part)
+        else:
+            prefix = re.sub(r"[\d.]+$", "", part)
+            keys.append(part)
+    return [k for k in keys if k]
+
+
+def _same_family(engine, keys):
+    engine = str(engine or "").lower()
+    return any(re.search(r"\b" + re.escape(k) + r"(?!\d)", engine) for k in keys)
 
 
 SIGNATURES = [
     ("Unreal Engine 1 or 2", "Unreal Engine 1",
      lambda f, d: (_has(f, "core.u", "engine.u") or None) and _has(f, "core.u", "engine.u", "engine.dll", "core.dll")),
-    ("Unreal Engine 3", "Unreal Engine 3", lambda f, d: _ext(f, ".upk", ".xxx") or (["cookedpc"] if "cookedpc" in d else None)),
+    # A real UE3 game ships hundreds of packages; one stray .upk (a mod's research folder) is not enough.
+    ("Unreal Engine 3", "Unreal Engine 3",
+     lambda f, d: [x for x in ("cookedpc", "cookedpcconsole") if x in d] or _ext(f, ".upk", ".xxx", at_least=3)),
     ("Unreal Engine 4 or 5", "Unreal Engine 4/5",
      lambda f, d: (_ext(f, ".utoc", ".ucas", ".pak") if "paks" in d or _ext(f, ".utoc") else None)),
     ("Unity (IL2CPP)", "Unity", lambda f, d: _has(f, "gameassembly.dll") and _has(f, "unityplayer.dll", "gameassembly.dll")),
@@ -73,6 +116,12 @@ SIGNATURES = [
     ("Gamebryo / Creation Engine", "Creation Engine / Gamebryo", lambda f, d: _ext(f, ".esm") and (_ext(f, ".bsa", ".ba2") or None)),
     ("X-Ray (STALKER)", "X-Ray", lambda f, d: _has(f, "xrengine.exe", "xrcore.dll", "xr_3da.exe")),
     ("CryEngine", "CryEngine", lambda f, d: _has(f, "crysystem.dll", "cryaction.dll", "crygame.dll")),
+    ("MercurySteam ScrapEngine", "ScrapEngine", lambda f, d: _magic(f, ".packed", b"BFPK")),
+    # RenderWare texture dictionaries start with chunk type 0x16 (GTA III to San Andreas, Manhunt).
+    ("RenderWare", "RenderWare", lambda f, d: _magic(f, ".txd", b"\x16\x00\x00\x00")),
+    # Volition's .vpp_pc archive header (Red Faction Guerrilla); which engine family it is stays unresolved.
+    ("Volition (.vpp_pc archives, engine family unresolved)", None,
+     lambda f, d: _magic(f, ".vpp_pc", b"\xce\x0a\x89\x51")),
     ("RE Engine", "RE Engine", lambda f, d: _ext(f, "re_chunk_000.pak")),
     ("id Tech 4", "id Tech 2 to 4", lambda f, d: _ext(f, ".pk4")),
     ("id Tech 3 (or derived)", "id Tech 2 to 4", lambda f, d: _ext(f, ".pk3")),
@@ -81,7 +130,7 @@ SIGNATURES = [
     ("Build engine", None, lambda f, d: _ext(f, ".grp")),
     ("REDengine 4", None, lambda f, d: _ext(f, ".archive") if "archive" in d else None),
     ("LithTech", None, lambda f, d: _ext(f, ".rez")),
-    ("Godot", None, lambda f, d: _ext(f, ".pck")),
+    ("Godot", None, lambda f, d: _magic(f, ".pck", b"GDPC")),
     ("GameMaker", None, lambda f, d: _has(f, "data.win")),
     ("RPG Maker", None, lambda f, d: _ext(f, ".rgss3a", ".rgss2a", ".rgssad") or _has(f, "rpg_core.js", "rmmz_core.js")),
     ("XNA / FNA / MonoGame", None, lambda f, d: _has(f, "fna.dll", "monogame.framework.dll", "microsoft.xna.framework.dll")),
@@ -103,6 +152,10 @@ HOOK_TOOLS = {
     "X-Ray (STALKER)": "Lua scripts and LTX configs in .db archives, xrMPE multiplayer extension",
     "CryEngine": "Lua game scripts, mod SDK, DLL hooks",
     "RE Engine": "REFramework (Lua and C++), DLL hooks",
+    "MercurySteam ScrapEngine": "Lua 5.1 gameplay scripts in .packed (BFPK) archives (.lc bytecode, unluac), "
+                                "-InitLuaLine: to run your Lua at startup, OnRenderDebug as a per-frame hook, "
+                                "a proxy DLL to reuse the exe's Lua Net library",
+    "RenderWare": "ASI plugins (Ultimate ASI Loader), plugin-sdk for GTA III, Vice City and San Andreas, CLEO scripts in GTA",
     "Java (JVM)": "a -javaagent (java.lang.instrument) loaded into the unmodified game JVM, the game's own public classes "
                   "and event bus as hook points (ByteBuddy or ASM only where no public seam exists), javap from the "
                   "bundled JDK for API facts, a decompiler (CFR, Vineflower) to read the logic",
@@ -113,7 +166,7 @@ def detect_engine(game_dir):
     root = Path(game_dir)
     if not root.is_dir():
         raise ValueError(f"not a folder: {game_dir}")
-    files, dirs, exes, count = set(), set(), [], 0
+    files, dirs, exes, count = {}, set(), [], 0
     for dirpath, dirnames, filenames in os.walk(root):
         depth = len(Path(dirpath).relative_to(root).parts)
         if depth >= 4:
@@ -121,7 +174,7 @@ def detect_engine(game_dir):
         for d in dirnames:
             dirs.add(d.lower())
         for n in filenames:
-            files.add(n.lower())
+            files.setdefault(n.lower(), os.path.join(dirpath, n))
             if n.lower().endswith(".exe") and depth <= 2:
                 exes.append(str(Path(dirpath, n).relative_to(root)))
             count += 1
@@ -138,8 +191,8 @@ def detect_engine(game_dir):
     best = hits[0] if hits else None
     related = []
     if best and best["family"] and yaml is not None:
-        keys = [k.strip().lower() for k in best["family"].replace(" to ", "/").split("/")]
-        related = [compact(e) for e in directory() if any(k and k in str(e.get("engine", "")).lower() for k in keys)][:15]
+        keys = _family_keys(best["family"])
+        related = [compact(e) for e in directory() if _same_family(e.get("engine"), keys)][:15]
     extras = {
         "steam_api": _has(files, "steam_api.dll", "steam_api64.dll"),
         "steam_appid": _has(files, "steam_appid.txt"),
@@ -162,10 +215,60 @@ def detect_engine(game_dir):
 
 # ---------------------------------------------------------------- exe identity
 
+VERSION_KEYS = ("CompanyName", "ProductName", "FileVersion", "ProductVersion", "OriginalFilename")
+
+
+def _version_info(data):
+    """Version numbers and strings from the exe's VS_VERSION_INFO resource, or {} without one."""
+    key = data.find("VS_VERSION_INFO\0".encode("utf-16-le"))
+    if key < 6:
+        return {}
+    block = key - 6  # wLength, wValueLength, wType come before the key
+    end = block + struct.unpack_from("<H", data, block)[0]
+    out = {}
+    fixed = data.find(struct.pack("<I", 0xFEEF04BD), key, min(end, key + 128))
+    if fixed >= 0:
+        fms, fls, pms, pls = struct.unpack_from("<IIII", data, fixed + 8)
+        out["file_version"] = f"{fms >> 16}.{fms & 0xFFFF}.{fls >> 16}.{fls & 0xFFFF}"
+        out["product_version"] = f"{pms >> 16}.{pms & 0xFFFF}.{pls >> 16}.{pls & 0xFFFF}"
+    strings = {}
+    for name in VERSION_KEYS:
+        at = data.find((name + "\0").encode("utf-16-le"), key, end)
+        if at < 6:
+            continue
+        chars = struct.unpack_from("<H", data, at - 4)[0]  # wValueLength, in UTF-16 units
+        value_at = (at + 2 * (len(name) + 1) + 3) & ~3
+        value = data[value_at:value_at + 2 * chars].decode("utf-16-le", "replace").rstrip("\0").strip()
+        if value:
+            strings[name] = value
+    if strings:
+        out["strings"] = strings
+    return out
+
+
+def _steam_build(exe):
+    """App id and build id from the appmanifest of the Steam library the exe is installed in."""
+    parts = [x.lower() for x in exe.parts]
+    for i in range(len(parts) - 2):
+        if parts[i] == "steamapps" and parts[i + 1] == "common":
+            library, installdir = Path(*exe.parts[:i + 1]), parts[i + 2]
+            for acf in sorted(library.glob("appmanifest_*.acf")):
+                kv = {}
+                for k, v in re.findall(r'^\s*"(\w+)"\s+"([^"]*)"', acf.read_text(encoding="utf-8", errors="replace"), re.M):
+                    kv.setdefault(k.lower(), v)  # top-level keys come first
+                if kv.get("installdir", "").lower() == installdir:
+                    return {"appid": kv.get("appid"), "buildid": kv.get("buildid"), "name": kv.get("name"),
+                            "manifest": acf.name}
+    return None
+
+
 def game_identity(exe_path):
     p = Path(exe_path)
     data = p.read_bytes()
     out = {"file": p.name, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    steam = _steam_build(p.resolve())
+    if steam:
+        out["steam"] = steam
     try:
         pe = struct.unpack_from("<I", data, 0x3C)[0]
         if data[pe:pe + 4] == b"PE\0\0":
@@ -180,6 +283,7 @@ def game_identity(exe_path):
             packed = [n for n in names if n.lower() in (".bind", "upx0", "upx1", ".vmp0", ".themida", ".enigma1")]
             if packed:
                 out["note"] = f"Packed or DRM-wrapped sections {packed}: analyse an unpacked copy only if that is legal for you; never publish DRM removal."
+            out.update(_version_info(data))
     except Exception as e:  # not a PE or truncated
         out["pe_error"] = str(e)
     return out
@@ -246,12 +350,12 @@ TOOLS = {
                           "limit": ("integer", "max results, default 25")}, []),
     "detect_engine": (detect_engine, "Scan a local game install folder (read-only) and identify its engine from file signatures, with the evidence, suggested hooking tools, anti-cheat warnings and co-op projects on the same engine.",
                       {"game_dir": ("string", "absolute path of the game install folder")}, ["game_dir"]),
-    "game_identity": (game_identity, "SHA-256, size, architecture and PE details of a game executable, to record the exact build before following any write-up.",
+    "game_identity": (game_identity, "SHA-256, size, architecture, PE details and version resource of a game executable, plus the Steam app id and build id when it sits in a Steam library, to record the exact build before following any write-up.",
                       {"exe_path": ("string", "absolute path of the game exe")}, ["exe_path"]),
     "list_docs": (t_list_docs, "List the playbook pages, game write-ups and agent skills available in Co-op Anything.", {}, []),
     "read_playbook": (t_read_playbook, "Read a playbook page (e.g. triage, research, reverse-engineering, tools, how-coop-mods-work, networking, automated-qa) or AGENTS.",
                       {"page": ("string", "page name without .md, or AGENTS")}, ["page"]),
-    "get_skill": (t_get_skill, "Read an agent skill (coop-triage, coop-research, coop-reverse-engineer, coop-revive, coop-build-from-zero, coop-networking, coop-qa, coop-contribute).",
+    "get_skill": (t_get_skill, "Read an agent skill by name, starting with coop-triage (list_docs lists them all).",
                   {"name": ("string", "skill name")}, ["name"]),
     "get_game": (t_get_game, "Read the write-up for a game that has been worked on (see list_docs for slugs).",
                  {"slug": ("string", "folder name under games/")}, ["slug"]),
@@ -285,10 +389,10 @@ def handle(msg):
     if method == "tools/call":
         name, args = params.get("name"), params.get("arguments") or {}
         if name not in TOOLS:
-            raise KeyError(f"unknown tool {name}")
+            raise ValueError(f"unknown tool {name}")  # MCP reports unknown tools as invalid params
         try:
             result = TOOLS[name][0](**args)
-            text = result if isinstance(result, str) else json.dumps(result, indent=1, ensure_ascii=False)
+            text = result if isinstance(result, str) else json.dumps(result, indent=1, ensure_ascii=False, default=str)
             return {"content": [{"type": "text", "text": text}], "isError": False}
         except Exception as e:
             return {"content": [{"type": "text", "text": f"{type(e).__name__}: {e}"}], "isError": True}
@@ -318,7 +422,8 @@ def main():
         except Exception as e:
             if msg.get("id") is None:
                 continue
-            reply = {"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32601 if isinstance(e, KeyError) else -32603, "message": str(e)}}
+            code = -32601 if isinstance(e, KeyError) else -32602 if isinstance(e, ValueError) else -32603
+            reply = {"jsonrpc": "2.0", "id": msg["id"], "error": {"code": code, "message": str(e.args[0]) if isinstance(e, KeyError) and e.args else str(e)}}
         sys.stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
         sys.stdout.flush()
 
