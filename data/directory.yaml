@@ -1995,41 +1995,39 @@
 - game: 'Dragon Age: Origins'
   year: 2009
   engine: Eclipse Engine
-  project: (none found)
-  url: ''
-  other_urls: []
-  kind: gap
-  status: none
-  coop_scope: {}
-  players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
-  qa: none
-  notes: >-
-    No public co-op mod. Recheck 2026-10-20 - DAOLib (GPLv3, an SKSE-style native
-    plugin loader plus a C++ library, with a 100k-ID address library for the GOG, EA
-    and Steam builds of 1.05.13263.0) now exposes the engine: all 827 script
-    commands, engine messages and save hooks. A private multiplayer mod, DAOKadanMP,
-    is being built on it by DAOLib's author, with no public release or license. The
-    closed 2026 decompilation project lists net support and co-op as a plan for
-    about 2027. An agent has claimed the game in cranebeaker/coop-anything#79 and
-    works in games/dragon-age-origins/NOTES.md.
-  sources:
-  - https://steamcommunity.com/app/47810/discussions/0/573795560006592662/
-  - https://forums.nexusmods.com/topic/177697-co-op/
-  - https://github.com/Whocares66-Dev/DAOLib
-  - https://github.com/Whocares66-Dev/DAOAddressLibrary
-  - https://github.com/Whocares66-Dev/DAOEluvianMCP
-  - https://www.pcgamesn.com/dragon-age-origins/modders-decompiling-source-code
+  project: dao-coop
+  url: https://github.com/vmosenkov/dao-coop
+  other_urls:
   - https://github.com/cranebeaker/coop-anything/issues/79
+  - https://github.com/Whocares66-Dev/DAOLib
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: no
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: '2'
+  networking: lan
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: >-
+    Work in progress on DAOLib (GPLv3 SKSE-style native plugin framework plus a
+    100k-ID address library for the GOG/EA/Steam builds of 1.05.13263.0).
+    Verified in the game 2026-10-20: a plugin loads and reads live state; two
+    named game instances run side by side and, after loading the same save,
+    agree on object ids; a host-to-guest UDP state channel mirrors the
+    controlled creature (830 positions applied, 0.00 m last distance, 90 s
+    automated two-client test, 0 packets dropped). No join handshake, second
+    avatar, combat or transition sync yet. GPL-3.0.
+  sources:
+  - https://github.com/vmosenkov/dao-coop
+  - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md
+  - https://github.com/cranebeaker/coop-anything/issues/79
+  - https://github.com/Whocares66-Dev/DAOLib
   checked: '2026-10-20'
-  searched:
-  - 'WebSearch: Dragon Age Origins co-op multiplayer mod (unrestricted and restricted to github.com moddb.com nexusmods.com
-    steamcommunity.com)'
-  - 'GitHub repository, code and topic search: "dragon age origins coop|multiplayer", "daorigins", "dao multiplayer" - no co-op project; 2026-10-20'
-  - 'DAOLib / DAOAddressLibrary / DAOEluvianMCP repos, releases and issue text; Nexus DAO pages 7052, 7053, 7060, 7061, 7069 via search; ModDB, GameBanana, Steam Community, Reddit via web search; 2026-10-20'
-  - 'Not checked: Nexus direct fetch (blocked to the fetch tool), Discord servers'
 - game: Psychonauts
   year: 2005
   engine: Despair Engine / Gamebryo
