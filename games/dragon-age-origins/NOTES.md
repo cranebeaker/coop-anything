@@ -82,7 +82,34 @@ worlds hold the same objects). LAN UDP first (owner and friend are on the same
 network), Steam/Spacewar relay later. Full design and milestones in
 `dao-coop/docs/DESIGN.md`.
 
-## Sources
+## Session log (2026-10-20)
+
+- Claimed the game: cranebeaker/coop-anything#79. Directory gap entry updated
+  with the DAOLib / DAOAddressLibrary / DAOEluvianMCP leads, the private
+  KadanMP mod, the decompilation plan and the claim issue.
+- Game identity recorded: exe `bin_ship\daorigins.exe` 9,674,752 bytes,
+  FileVersion 1.05.13263.0, SHA-256
+  `A79621C2D2020C6F838096150E30F8E51FA263DBC9121E04E3D8C633975892F8`; the copy
+  in place is the **GOG build** (no `.bind`, link stamp 0x4eb19d53) with the
+  stock Steam-wrapped exe kept beside it as a backup; Steam depot 47811, build
+  id 21245176.
+- Environment verified: DAOLib 0.5.0 loader working in the install
+  (`loader.log`: 103293 address IDs, entry point detoured, game reached the
+  main menu); two **named instances** (`DAOLIB_INSTANCE=host` and `=guest`)
+  ran side by side from an isolated full copy of the install, each with its
+  own Documents profile seeded from the player's saves, no writes to the real
+  profile.
+- Plugin skeleton (`dao-coop`) builds against DAOLib with VS 2022 C++ and
+  vcpkg (detours/spdlog/directxtex, triplet `x86-windows-static-md`).
+- Milestones 0 and 1 verified in the game (2026-10-20): the built plugin loads
+  (`daocoop.dll: loaded` in the loader log) and reads live state
+  (`mode explore`, party bar, controlled creature id/area/position/health);
+  two named instances then ran side by side, each in its own profile, both in
+  the world, and after loading the same save **both agreed on the controlled
+  creature's object id and the area id** — the object-id alignment a
+  save-transfer join depends on. A full two-instance test rig was run; no
+  networking exists yet (milestone 2 next).
+
 
 - BioWare no co-op in 2009: https://www.eurogamer.net/dragon-age-has-no-co-op-multiplayer
 - Multiplayer mode cut (2021 interviews): https://www.thegamer.com/dragon-age-origins-multiplayer-cut/
