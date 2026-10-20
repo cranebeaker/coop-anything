@@ -7007,3 +7007,66 @@
   - https://steamcommunity.com/app/1458140/discussions/0/604153001708376779
   checked: '2026-10-20'
   made_with_coop_anything: true
+- game: Graveyard Keeper
+  year: 2018
+  engine: Unity 2020.3 (Mono)
+  project: Back From The Grave
+  url: https://github.com/ZlordHUN/GYK-Back-From-The-Grave
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: automated
+  notes: BepInEx 5 + Harmony, host-authoritative, over Steam lobbies and P2P with its own reliable layer, plus LAN
+    discovery. The host's save is sent to the client. README lists shared time, weather, quests, crafting, world
+    objects, combat, drops, zones, workers, dungeons, fishing, dialogue and cutscenes, and DLC support; each player
+    keeps their own inventory. Latest release 1.2.0 Beta (2026-09-04). A 9-test two-client suite (join, shared intro
+    cutscene, movement, sleep, eating from a quick slot, ping) passes on 432b1d0 plus three fixes sent upstream as
+    pull requests; without them a client can't use food from its own inventory (issue 22). MIT. Write-up in
+    games/graveyard-keeper.
+  sources:
+  - https://github.com/ZlordHUN/GYK-Back-From-The-Grave
+  - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/releases/tag/Beta1-2-0
+  - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/issues/22
+  checked: '2026-10-20'
+- game: Graveyard Keeper
+  year: 2018
+  engine: Unity 2020.3 (Mono)
+  project: graveyard-keeper-multiplayer
+  url: https://github.com/Zonda001/graveyard-keeper-multiplayer
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: community-reports
+  notes: BepInEx 5 + Harmony over a friends-only Steam lobby and P2P, with its own reliability layer. README lists
+    movement, time, chopping, foraging, garden beds, graves, corpse carrying, building, crafting, shared chests and
+    weather; the second player has a personal save and their own quest journal over the host's world, and NPC
+    villagers and dungeon mobs are not synced yet. Latest build v0.1.5-test2 (2026-08-30, pre-release). Players
+    report a client desync with NullReferenceException spam, a host soft lock and large-item duplication. The repo
+    ships Steamworks.NET.dll and a 14 KB Stitch.dll in Multiplayer/lib. The author also wrote the reliable transport
+    in Back From The Grave. MIT.
+  sources:
+  - https://github.com/Zonda001/graveyard-keeper-multiplayer
+  - https://github.com/Zonda001/graveyard-keeper-multiplayer/releases/tag/v0.1.5-test2
+  - https://github.com/Zonda001/graveyard-keeper-multiplayer/issues
+  - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/pull/9
+  checked: '2026-10-20'

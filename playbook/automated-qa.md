@@ -46,6 +46,7 @@ animation checker.
 | Dungeon Keeper (KeeperFX) | Custom C, lockstep | `-archontest` flag: a bot inside the exe writes input packets like a human | Per-turn checksums on both sides, 0 mismatches, plus gameplay asserts |
 | Fallout New Vegas | Gamebryo | xNVSE plugin serving JSON-RPC on a named pipe (`exec`, `waitFor`, `state`) | World snapshots split into shared and per-player state, diffed between clients |
 | Gothic 3 (G3 Together) | Genome | G3 Together: the bot is compiled into the mod and active only when a flag file exists; it reads numbered commands from a file and calls the game's own scripts (quest manager, hit judgement, AI tasks, save). Menus driven by focus plus Enter posted to its own window. Two real clients per test pair, two pairs for two agents. | State read on both clients (quests, NPC lists, hit points, inventories, motions), invariant monitors at the end of each suite, the owner's real saves hashed before and after |
+| Graveyard Keeper (Back From The Grave) | Unity 2020.3 (Mono) | A test-only BepInEx plugin, inert without `-coopqa`, fakes Steamworks.NET with Harmony and runs step lists that call the same methods as the menu buttons and the hotbar; a Python launcher starts two copies on one PC | Both bots write PASS; state is exchanged between the bots (positions, clocks) and checked on both sides; the host is the control for player actions |
 | STALKER (xrMPE) | X-Ray | Test-only script archive hooked from a space restrictor's logic | In-engine checks written to its own log file |
 | The Witcher 3 (Witcher Online port) | REDengine 3 | Test-only script mod plus a test ASI that registers natives (env, log, quit) through WitcherNativeBridge; it skips movies, loads a save and reports each second | Each client compares the remote player's ghost with the networked position; every bot must log PASS |
 | The Doors of Trithius | Java (JVM) | A text-verb driver inside each game JVM (the javaagent tails a command file and acks every verb with ok, no-effect, partial or fail). About 65 gate scripts start a real host and a real guest JVM on one PC over TCP. AI player agents then play whole evenings with keyboard and mouse through a relay with delay, outage and drop modes, while an observer agent scores a checklist | Host-authoritative state dumps from both seats, per-seat logs, and the host doing the same action as the solo control |
@@ -83,7 +84,9 @@ animation checker.
 ## Testing online features on one PC
 
 - **Second Steam account:** you can't run two on one PC. Use a mock `steam_api.dll`,
-  see [networking-steam-spacewar.md](networking-steam-spacewar.md).
+  see [networking-steam-spacewar.md](networking-steam-spacewar.md). In Unity Mono
+  games that use Steamworks.NET, patch the managed wrapper with Harmony instead
+  ([same page](networking-steam-spacewar.md#unity-mono-games-mock-steamworksnet-not-the-dll); Graveyard Keeper).
 - **Internet conditions:** use the engine's packet emulation if it has one (Unreal
   Engine 1: `PktLag=150`, `PktLoss=5`, `PktOrder=1`, `PktDup=1` console commands on host
   and clients) and rerun the suite with it on.

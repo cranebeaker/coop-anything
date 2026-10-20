@@ -60,6 +60,7 @@ Many games refuse to start a second copy. Two mechanisms are common:
 |---|---|---|
 | Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a second or two, with a non-zero exit code |
 | Window class or title | The game calls `FindWindow` for its own class or title and exits or activates the old window when it finds one | Same, or the first copy's window jumps to the front |
+| Unity player setting | `<Game>_Data/boot.config` has a `single-instance=` line, and the Unity player exits when a copy is already running. Remove the line in the test copies only; it is a text file, not the exe (Graveyard Keeper, Unity 2020.3) | The second copy closes at once |
 
 How to tell which one: watch the second copy with Process Monitor or API Monitor for `CreateMutex` and
 `FindWindow`, or read what the game logs on the way out. The launcher in `gamepool` reports a copy that exits
