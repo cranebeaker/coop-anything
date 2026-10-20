@@ -816,11 +816,13 @@ QA `knife` (2026-10-20, ending, start wakeup; bot: striker teleported in front o
 alternating crawl buttons, quick Use taps, aim and "throw"): both wake up 64 units apart; player
 1 strikes and plays the whole scene (crawl 84 s, knife 23 s, throw 6 s); the other is out until
 the knife is out, awake 114 units from Shepherd with a clear line as Shepherd dies, 3 s and 30 s
-later; 0 script errors. Screenshots: the Russian stunned text; Shepherd with the knife in his
+later; 0 script errors. `knife2` (player 2 strikes): player 2 plays the scene, player 1 is the
+witness, awake 121 units from Shepherd as he dies; 0 script errors. Screenshots: the Russian
+stunned text; Shepherd with the knife in his
 eye; his body from the ground. Lip sync: owner reports voice and lips out of sync on both
 screens; `timescale` stayed 1 the whole scene except the throw's slow motion (back to 1), so not
 the cause; open.
 
 ## Status
 
-Next: lip sync (owner: off on both screens), knife2 check, Endgame boat, the nrend anim_loop error; profile records.
+Next: lip sync (owner: off on both screens), Endgame boat, the nrend anim_loop error; profile records.
