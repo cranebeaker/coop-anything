@@ -143,6 +143,24 @@ synthetic pass/partial/none/unreadable logs; a single-client run correctly retur
 NO CO-OP. Input automation is deliberately not part of it (raw input ignores synthetic
 keys; virtual-pad automation was dropped by request), so humans drive the two item uses.
 
+## Can a bot stand in for the second client? (2026-10-20)
+
+Checked the Co-op Anything MCP server directly (`tools/mcp/coop_mcp.py`, `tools/list`):
+its tools are `search_directory`, `detect_engine`, `game_identity`, `list_docs`,
+`read_playbook`, `get_skill`, `get_game`, `validate_entry`. It is a knowledge and
+analysis server. It cannot launch a game, inject a mod, or play.
+
+An in-process bot in the host's world would not be a co-op peer here: Sekiro Online
+admits players through Steam lobbies and auth tickets, and the remote player is a
+networked entity driven by that peer's client. A locally spawned phantom would prove
+nothing about the join path, the mod's sync, or the dead matchmaker. That is exactly the
+"hollow pass" the QA playbook warns about, so it is not a substitute for a second client.
+
+Two routes remain for a real session: a second PC with its own Steam login (cheap, needs
+the friend), or the playbook's one-PC Steam stand-in (a mock `steam_api64.dll` with
+lobbies and NetworkingSockets plus a working mutex bypass). The second is a project in
+itself and still needs the mutex problem solved, since a patched exe trips Arxan.
+
 ## Plan (coop-revive)
 
 1. ~~Isolated test install, boot test of v2.05 alone.~~ done: boots on build 5794815.
