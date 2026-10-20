@@ -670,7 +670,39 @@ on favela PASS. Screenshots: player 2 sees the front seat's headrest and the van
 through the open front door. Ducking was sent as the `go_crouch` notify: the real crouch key
 through `NotifyOnPlayerCommand` is untested.
 
+## The Only Easy Day... (oilrig) opening for two players (2026-10-20)
+
+COD-MOD linked both players to player 1's rig on SDV A and hid them (two cameras on one rig),
+for the grate kill too: not used. Observations: SDV A carries pilot, copilot, swimmer1 and the
+player (`oilrig_sub_A_disembark_player` = place 3); SDV B (from the second submarine, ~16900
+units away at the start) carries four SEALs, place 3 = `sdv02_swimmer1`. The grate scene is
+one synchronized kill: the player's first-person kill of guard 2 and the SEAL `sdv02_pilot`'s
+kill of guard 1 (no first-person animation exists for guard 1); then two SEALs
+(`water_helper_01/02`, `surface_helpout`) pull the player out, timed by the "help" notetrack of
+the player's kill animation. `killtrigger_ocean` is switched on once the player is out and
+kills any player touching the water.
+
+Built (`scripts/maps/_mw2coop_oilrig.gsc`, `patches/maps/oilrig.gsc.patch` 24 hunks from
+`tools/gen_oilrig_patches.py`):
+- Player 2 rides SDV B in sdv02_swimmer1's place (that SEAL is left out in co-op) with the
+  player's ride-and-swim animation; only player 1's rig drives the swim flags (same length).
+- Every player bobs and swims by the grate (`water_bob` per player); player 2's swim ends 35
+  units higher (over the walkway), so he bobs at player 1's height.
+- Stealth kill: the first player to strike (in the trigger, looking at the guard, melee) does
+  it; the hint shows when any player looks. The other player swims until the killer is out,
+  then his own rig runs the kill animation unseen (rate 8) up to "help" and he is pulled out
+  by the two SEALs (their help-out animation again), beside the killer.
+- The ocean kill trigger spares the player still waiting to be pulled out.
+- Known: the water vision (above/below) and HUD follow the killer on both screens.
+
+QA 2026-10-20 (`oilrig`: player 1 kills; `oilrig2`: player 2 kills), both copies, identical
+results, 0 script errors after the ocean fix: both on an SDV, both surfaced (235 units
+apart, same height), killer out, the other pulled out 5.75 s later, both on the platform 24
+units apart, alive. The strike is forced by the bot (`mw2coop_qa_melee`): looking at the
+guard and the melee key are untested. Screenshots: player 2 in sub B's lock tube, behind a
+SEAL's fins underwater, in the water under the grate during the kill, on the platform after.
+
 ## Status
 
-Next: the open spawn items (oilrig SDV, airport elevator, dcemp, credits); No Russian ending
+Next: the open spawn items (airport elevator, dcemp, credits); No Russian ending
 (proposed to the owner: Makarov kills both players in turn); profile records.
