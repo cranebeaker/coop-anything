@@ -2969,14 +2969,20 @@
   players: 2-6
   networking: steam-relay
   open_source: false
-  last_activity: 2021
+  last_activity: 2021-06
   qa: community-reports
-  notes: P2P co-op and PvP, 1 host plus 5 phantoms; page says no longer developed (v2.05, 2021) though a new version
-    was mentioned for 2025. Co-op uses summon signs, not seamless play.
+  notes: P2P co-op and PvP, 1 host plus 5 phantoms, summoned through an item-driven flow rather than seamless play.
+    The author marked the release discontinued on 2025-03-09 and announced a rewrite (Sekiro Seamless Co-op); no
+    public build of it exists as of 2026-10. Rechecked 2026-10-20 on Steam build 5794815; v2.05 still loads into the
+    game and the GitHub version gate still answers v2.05, but the matchmaking server at 74.91.125.31:54000 no longer
+    answers, so public summon signs and invasions are dead. Direct Steam-invite co-op is not yet verified. Revival
+    package and write-up in games/sekiro.
   sources:
   - https://www.nexusmods.com/sekiro/mods/577
   - https://www.siliconera.com/sekiro-online-mod-adds-co-op-and-pvp-on-pcs/
-  checked: 2026-10-16
+  - https://github.com/yuiamoroll/Sekiro-Online
+  - https://steamcommunity.com/app/814380/discussions/0/4521135162292556345/
+  checked: 2026-10-20
 - game: 'Sekiro: Shadows Die Twice'
   year: 2019
   engine: FromSoftware proprietary
@@ -2993,13 +2999,13 @@
   players: '2'
   networking: direct-ip
   open_source: true
-  last_activity: unknown
+  last_activity: 2026-06
   qa: none
-  notes: Rust seamless two-player co-op for Sekiro v1.06 injected via me3 with a UDP data plane; README says not
-    yet end-user playable.
+  notes: Rust seamless two-player co-op for Sekiro v1.06 injected via me3 with a UDP data plane, AGPL-3.0. README
+    says it is not yet end-user playable (the remote character is not rendered); latest commit seen 2026-06.
   sources:
   - https://github.com/mstampfli/sekiro-coop
-  checked: 2026-10-16
+  checked: 2026-10-20
 - game: Lies of P
   year: 2023
   engine: Unreal Engine 4
