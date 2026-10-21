@@ -5,6 +5,7 @@
 <p align="center">
 <a href="https://ko-fi.com/cranebeaker"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
 <a href="https://discord.gg/EXGB49R82t"><img src="https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join the Discord" height="36"></a>
+<a href="https://coopanything.app"><img src="https://img.shields.io/badge/CoOp%3AAnything-Browse%20every%20co--op%20mod-1abc9c?style=for-the-badge" alt="Browse every co-op mod on CoOp:Anything" height="36"></a>
 </p>
 
 <p align="center">
@@ -130,7 +131,8 @@ Which engine has co-op work you can reuse: [playbook/engine-families.md](playboo
 | Fallout: New Vegas | Story co-op: shared quests, dialogue results, karma and reputation | [fnv-coop](https://github.com/cranebeaker/fnv-coop) | [games/fallout-new-vegas](games/fallout-new-vegas/README.md) |
 | Zelda: Ocarina of Time | Fixes for a fully synced Ship of Harkinian co-op fork | [ocarina-coop](https://github.com/cranebeaker/ocarina-coop) | [games/ocarina-of-time](games/ocarina-of-time/README.md) |
 
-Plus a [directory of 230+ co-op mods and gaps](DIRECTORY.md) for other games, each with
+Plus a [directory of 230+ co-op mods and gaps](DIRECTORY.md) for other games (browse and search it at
+[coopanything.app](https://coopanything.app)), each with
 what it really syncs and how well it was tested.
 
 ## Everyone is a contributor

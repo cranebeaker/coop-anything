@@ -46,6 +46,7 @@ animation checker.
 | Dungeon Keeper (KeeperFX) | Custom C, lockstep | `-archontest` flag: a bot inside the exe writes input packets like a human | Per-turn checksums on both sides, 0 mismatches, plus gameplay asserts |
 | Fallout New Vegas | Gamebryo | xNVSE plugin serving JSON-RPC on a named pipe (`exec`, `waitFor`, `state`) | World snapshots split into shared and per-player state, diffed between clients |
 | Gothic 3 (G3 Together) | Genome | G3 Together: the bot is compiled into the mod and active only when a flag file exists; it reads numbered commands from a file and calls the game's own scripts (quest manager, hit judgement, AI tasks, save). Menus driven by focus plus Enter posted to its own window. Two real clients per test pair, two pairs for two agents. | State read on both clients (quests, NPC lists, hit points, inventories, motions), invariant monitors at the end of each suite, the owner's real saves hashed before and after |
+| Graveyard Keeper (Back From The Grave) | Unity 2020.3 (Mono) | A test-only BepInEx plugin, inert without `-coopqa`, fakes Steamworks.NET with Harmony and runs step lists that call the same methods as the menu buttons and the hotbar; a Python launcher starts two copies on one PC | Both bots write PASS; state is exchanged between the bots (positions, clocks) and checked on both sides; the host is the control for player actions |
 | STALKER (xrMPE) | X-Ray | Test-only script archive hooked from a space restrictor's logic | In-engine checks written to its own log file |
 | The Witcher 3 (Witcher Online port) | REDengine 3 | Test-only script mod plus a test ASI that registers natives (env, log, quit) through WitcherNativeBridge; it skips movies, loads a save and reports each second | Each client compares the remote player's ghost with the networked position; every bot must log PASS |
 | The Doors of Trithius | Java (JVM) | A text-verb driver inside each game JVM (the javaagent tails a command file and acks every verb with ok, no-effect, partial or fail). About 65 gate scripts start a real host and a real guest JVM on one PC over TCP. AI player agents then play whole evenings with keyboard and mouse through a relay with delay, outage and drop modes, while an observer agent scores a checklist | Host-authoritative state dumps from both seats, per-seat logs, and the host doing the same action as the solo control |
@@ -67,11 +68,7 @@ animation checker.
 - **Teleports fail silently.** A test put a player inside a wall and then "found" a bug.
   Assert the precondition (player really is inside the trigger) before asserting the
   result.
-- **Registered objects can belong to an earlier streamed area.** In the
-  [Friend or Foe fixture](../games/spider-man-friend-or-foe/NOTES.md), an exit stayed in
-  the global trigger pool after an area swap. Reusing it on the next step produced
-  a test-induced crash. Check the selected area's identity and avoid re-entering a
-  consumed fixture volume; the corrected gate crossed three successive boundaries.
+- **Check streamed-object ownership.** Validate current-area identity before reusing a trigger; stale registrations can survive a load ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Low memory kills long runs.** Run tests one at a time on a busy PC, in short
   batches, and clean up any game process you started.
 - **Clean up.** Remove test-only files from anything you ship and compare the shipped
@@ -85,12 +82,15 @@ animation checker.
 - **Check what the other player sees.** A motion name set on a body is not a motion running; measure "is it running". Check also that enemies pick a remote player by themselves; forced attacks hid that they never did (Gothic 3, first human look).
 - **Own processes positively.** Stop only a process your run started (its PID, or a marker on its command line). A blanket kill by image name once destroyed a live two-player session (The Doors of Trithius).
 
-- **A state checksum can be wrong too.** A serialized progress structure can include internal alignment bytes even between fields that look initialized. In Spider-Man: Friend or Foe, an uninitialized byte after the upgrade array reproduced a false tick0 divergence exactly. Compare raw failing samples and the native initializer before labeling a mismatch as a simulation bug; keep currency, unlock and mission fields checked. See [the game notes](../games/spider-man-friend-or-foe/NOTES.md).
+- **Validate the checksum itself.** Exclude padding and inactive history only with native control-flow evidence; retain mutation checks for active fields ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
+- **Respect fixture boundaries.** Inject controls before the measured binding stage and end special assertions on schedule; keep general invariants running ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 
 ## Testing online features on one PC
 
 - **Second Steam account:** you can't run two on one PC. Use a mock `steam_api.dll`,
-  see [networking-steam-spacewar.md](networking-steam-spacewar.md).
+  see [networking-steam-spacewar.md](networking-steam-spacewar.md). In Unity Mono
+  games that use Steamworks.NET, patch the managed wrapper with Harmony instead
+  ([same page](networking-steam-spacewar.md#unity-mono-games-mock-steamworksnet-not-the-dll); Graveyard Keeper).
 - **Internet conditions:** use the engine's packet emulation if it has one (Unreal
   Engine 1: `PktLag=150`, `PktLoss=5`, `PktOrder=1`, `PktDup=1` console commands on host
   and clients) and rerun the suite with it on.
@@ -103,21 +103,3 @@ animation checker.
 
 - QA level reached (see [data/SCHEMA.md](../data/SCHEMA.md)).
 - The command that runs the suite and its last summary (pass counts).
-
-### Check active state and the fixture boundary
-
-A mode structure can hold valid but inactive history. In Friend or Foe, two clients
-had identical current mode4, actors, progress and area but different previous-mode
-history from startup. Reconstructing the hash reproduced the failure; native
-control flow showed that mode4 does not consume that history. Sample restoration
-fields where their modes use them, and retain mutation checks proving that active
-pause/NIS restoration differences are detected. Do not discard a field merely
-because it differs. See [the recorded failures and derivation](../games/spider-man-friend-or-foe/NOTES.md#source-publication-and-pausestate-checks-2026-10-21).
-
-Feed scripted controls before the native binding/filter stage when an oracle
-compares native axes with normalized actions. Replacing actions after measurement
-invalidates that comparison. End a timed fixture's special assertions at its
-scheduled boundary: later legitimate tutorial/system pauses must still pass the
-continuous general state checks. The corrected Friend or Foe gate then completed
-3,600 paired combat/pause/resume ticks with normal exits; this is bounded evidence,
-not campaign or WAN certification.

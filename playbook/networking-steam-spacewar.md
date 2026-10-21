@@ -222,6 +222,50 @@ normal two-instance tests. **Copy the mock and extend it with whatever extra
 exports your game uses** (HXCoop added the friend-list calls it uses to find a
 hosting friend).
 
+### Unity Mono games: mock Steamworks.NET, not the DLL
+
+When the game or the mod talks to Steam through Steamworks.NET (the managed C#
+wrapper), you don't need a native mock. A test-only BepInEx plugin can patch the
+wrapper with Harmony and leave `steam_api64.dll` alone. Graveyard Keeper's
+co-op mod (Back From The Grave) was tested this way: about 1,100 lines of C# for
+the mock and 300 for its transport.
+
+- **Find the calls:** grep the mod for `Steam(User|Friends|Matchmaking|Networking|Utils)\.`
+  and give each one a Harmony prefix that returns fake data and skips the
+  original. Fail loudly if a method isn't found.
+- **Callbacks:** a `Callback<T>` registers with Steam's native dispatcher. Prefix
+  `Callback<T>.Register` and `Unregister` for each callback type the mod uses,
+  keep the instance and its delegate (field `m_Func`) in your own table, and invoke
+  it yourself from the plugin's `Update` on the main thread. For `CallResult<T>.Set`,
+  take over only the call handles your mock issued (start them at a high fixed
+  value) and pass real handles on to Steam.
+- **Load order:** the patches must be in place before the mod registers its
+  callbacks, so the plugin must load first. A GUID that sorts first (`aaa.coopqa`)
+  was enough there. Make it do nothing unless a command-line flag (`-coopqa`) is set.
+- **Keep real Steam for the rest:** the Steam client stays signed in, and the game
+  still checks DLC and achievements against it. Only the calls the mod uses for
+  multiplayer are faked.
+- **Ids and transport:** fake individual SteamIDs from a reserved account range
+  (900000000 + player number) and lobby ids as chat-type ids. Lobby data and P2P
+  packets go between the copies over localhost TCP, one port per player.
+- **Copy the Steam rules the mod relies on:** unreliable sends over 1200 bytes and
+  any send over 1 MB fail; the first packet from a stranger raises
+  `P2PSessionRequest_t` and is held until `AcceptP2PSessionWithUser`; create fires
+  `LobbyCreated_t` then `LobbyEnter_t`; a join fires `LobbyDataUpdate_t` then
+  `LobbyEnter_t` on the joiner and `LobbyChatUpdate_t` on the members; every data
+  change fires `LobbyDataUpdate_t` on every member; when the owner leaves, the
+  next member becomes the owner. Add switches for extra latency and unreliable
+  packet loss.
+- **A setup error must fail the run.** `AccessTools.Method` without parameter
+  types throws on an overloaded method. The plugin then stopped without starting
+  the bot, and the test only timed out. Print `RESULT: FAIL` for setup errors, and
+  have the launcher fail a copy that writes no status file.
+- **A mock picks one order of events.** Ours always delivered lobby data before the
+  first P2P packet. That made a race in the mod fail on every join: the joiner's
+  late compatibility hello locked the mod's transport to the wrong channel. The
+  other order would have hidden it. Where real Steam doesn't promise an order, add
+  a switch for each order (we haven't added one yet).
+
 ## Reusing it for Deus Ex (Unreal Engine 1) co-op
 
 KeeperFX had a swappable network layer (`struct NetSP`), so Steam slots in as one
