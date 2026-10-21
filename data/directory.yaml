@@ -1,4 +1,4 @@
-﻿- game: Deus Ex
+- game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
   project: HX
@@ -2299,7 +2299,7 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: No PC story-campaign co-op project surfaced. The original match-based multiplayer has a recent restoration, and a script extender is a promising hook, but neither is a campaign co-op solution. Research in progress on branch game/the-godfather-ii (claim issue #78): the SE v0.56 DRM-free 1.0.789.0 build now boots in an isolated copy straight into the campaign, an own-code ASI plugin loads through the extender's loader and reads the player transform from the engine, and the tooling to drive a second character is in place. No playable co-op yet.
+  notes: No PC story-campaign co-op project surfaced; the restored match multiplayer and the SE script extender are not campaign co-op. Research on branch game/the-godfather-ii (claim issue #78) has the game booting in a disposable copy from an unverified third-party executable and an own-code ASI plugin reading the player transform. No playable co-op yet.
   sources:
   - https://www.pcgamingwiki.com/wiki/The_Godfather_II
   - https://www.nexusmods.com/thegodfather2/mods/95
@@ -6583,4 +6583,3 @@
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
   checked: '2026-10-19'
-

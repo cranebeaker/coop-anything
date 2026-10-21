@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Visceral Engine (per PCGamingWiki; not confirmed from the binary) |
-| Versions tested | SE v0.56 DRM-free `1.0.789.0` in an isolated copy on the owner machine: boots to the campaign, menu and gameplay confirmed. Clean retail `1.0.764.0` inspected statically only |
+| Versions tested | `1.0.789.0` as shipped inside the SE v0.56 Nexus mod bundle - an **unverified third-party executable**, not a build to follow: run only in a disposable copy. Boots to the campaign there, menu and gameplay confirmed. Clean retail `1.0.764.0` inspected statically only |
 | Projects | Multiplayer Revival (match multiplayer, not campaign) <https://www.nexusmods.com/thegodfather2/mods/95>; The Godfather II SE script extender (modding hook, not co-op) <https://www.nexusmods.com/thegodfather2/mods/40>; VisceralToolkit (asset/stream tooling, WIP) <https://github.com/Greavesy1899/VisceralToolkit> |
 | QA level | none (no automated assertion suite yet; a repeatable manual boot path and the tooling to build one are in place) |
 | Last updated | 2026-10-21 |
@@ -16,14 +16,15 @@ project: the game is now **runnable and observable** in an isolated copy, and a
 small own-code plugin loads inside it through the SE extender's ASI loader, which
 gives a co-op mod a supported place to hook.
 
-Concretely: the SE v0.56 DRM-free `1.0.789.0` build starts on the owner
-machine from a disposable copy, reaches the main menu, loads the owner's Russian
-campaign profile and **drops straight into the campaign - no Cuba intro** - and
-runs the mission gameplay with HUD, NPCs and the world map. The player's world
-transform is read from the engine at 5 Hz by our own plugin, and character
-objects and their transform rows can be located in the live process with an
-external inspector. The single open end is the authoritative transform slot of a
-second character, which is what a "player 2" puppet would have to write.
+Concretely: the `1.0.789.0` executable bundled with SE v0.56 (again: an
+unverified third-party exe, usable only as a disposable test target) starts from
+a disposable copy, reaches the main menu, loads an existing campaign profile and
+**drops straight into the campaign - no Cuba intro** - and runs the mission
+gameplay with HUD, NPCs and the world map. The player's world transform is read
+from the engine at 5 Hz by our own plugin, and character objects and their
+transform rows can be located in the live process with an external inspector.
+The single open end is the authoritative transform slot of a second character,
+which is what a "player 2" puppet would have to write.
 
 Research log with every address, crash cause and dead end: [NOTES.md](NOTES.md).
 
@@ -39,11 +40,12 @@ Research log with every address, crash cause and dead end: [NOTES.md](NOTES.md).
 - **The Godfather II SE** (<https://www.nexusmods.com/thegodfather2/mods/40>,
   by `Greavesy`/`Greavesy899`, v0.56 last updated 2026-08-26): script
   extender/mod menu with loose-file loading, NPC/item/vehicle spawning,
-  checkpoint loading, and SimGroup overrides. It ships a DRM-free game
-  executable of unknown version and no public source or license. Its bug list
-  includes API/startup crash reports. **Its loader is the hook used here**: the
-  `dinput8.dll` in the bundle is the Ultimate ASI Loader and it loads
-  third-party `scripts\*.asi` plugins, so a co-op mod can ship as an ASI.
+  checkpoint loading, and SimGroup overrides. It ships an **unverified
+  third-party game executable** of unknown build and no public source or
+  license - do not treat it as a target build and do not redistribute it. Its
+  bug list includes API/startup crash reports. **Its loader is the hook used
+  here**: the `dinput8.dll` in the bundle is the Ultimate ASI Loader and it
+  loads third-party `scripts\*.asi` plugins, so a co-op mod can ship as an ASI.
 - **VisceralToolkit** (<https://github.com/Greavesy1899/VisceralToolkit>, no
   license published): inspection/editing tools for Visceral engine games. The
   wiki names Godfather II Version 12 `.str` stream files and lists resource
@@ -73,8 +75,9 @@ Research log with every address, crash cause and dead end: [NOTES.md](NOTES.md).
 - **DRM:** the clean retail exe is SecuROM-protected (`.securom` sections and
   `paul.dll`; PCGamingWiki lists 7.38.0015). Ghidra static decompilation of the
   SecuROM-protected exe fails (invalid flow/overlap errors); do not unpack it.
-  The SE bundle's DRM-free `1.0.789.0` build decompiles cleanly and is what the
-  work here is based on.
+  The unverified third-party `1.0.789.0` exe from the SE bundle decompiles
+  cleanly, which is why the memory addresses in the notes come from it; it is a
+  disposable test target only, not a build to follow.
 
 ## What we changed
 
@@ -92,9 +95,9 @@ only:
   finder, a container dumper, an input/screenshot driver, an exe byte patcher and
   a D3D9 environment probe.
 
-The owner's profile, settings and campaign saves were verified byte-identical
-against a pre-work backup, and the original installation's executable hash is
-unchanged.
+The machine's pre-existing profile, settings and campaign saves were verified
+byte-identical against a pre-work backup, and the original installation's
+executable hash is unchanged.
 
 ## QA
 
@@ -103,8 +106,9 @@ tooling to automate it:
 
 1. launch the disposable copy on the host; the plugin redirects the profile
    paths into the copy, so the real ones are never written;
-2. menu path: any key on the splash -> profile "22" -> "Далее" ->
-   "Возобновить игру" -> a mission; the campaign loads directly, no intro;
+2. menu path: any key on the splash -> select the existing profile with a real
+   mouse click -> resume the saved game -> a mission; the campaign loads directly,
+   no intro;
 3. `coopcore_player.txt` next to the executable then shows the live player
    position, and the external inspector can dump and compare engine objects.
 

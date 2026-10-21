@@ -43,7 +43,7 @@ programming. Check for one first.
 | sm64 decomp | sm64coopdx | The model most decomp co-op projects copy: puppet players plus synced objects. |
 | ac-decomp (Animal Crossing) | ACGC-PC-Multiplayer | Built on a native PC port of the decomp. |
 
-## Big gaps with no reusable mod/port base yet
+## Big gaps on engines with no co-op base yet
 
 From the directory's gap list: 4A Engine (Metro 2033, Exodus), Decima (Horizon, Death
 Stranding), id Tech 5 (Wolfenstein The New Order), Frostbite (Dead Space remake),
