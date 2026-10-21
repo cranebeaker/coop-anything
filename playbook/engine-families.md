@@ -43,10 +43,18 @@ programming. Check for one first.
 | sm64 decomp | sm64coopdx | The model most decomp co-op projects copy: puppet players plus synced objects. |
 | ac-decomp (Animal Crossing) | ACGC-PC-Multiplayer | Built on a native PC port of the decomp. |
 
-## Big gaps on engines with no co-op base yet
+## Big gaps with no reusable mod/port base yet
 
 From the directory's gap list: 4A Engine (Metro 2033, Exodus), Decima (Horizon, Death
 Stranding), id Tech 5 (Wolfenstein The New Order), Frostbite (Dead Space remake),
 Northlight (Alan Wake 2, Control), Visceral (Dead Space), Glacier (Hitman Blood Money),
 and console-exclusive engines ported to PC (God of War, Ghost of Tsushima, The Last of Us).
 These need a team; start with research and a design doc, and claim the game with an issue.
+
+**Visceral Engine caveat (The Godfather II, 2009):** This is a gap in reusable mod/port
+infrastructure, not an engine without multiplayer. The Godfather II shipped separate online
+match modes, while Dead Space 3 uses the same named engine and has a native two-player online
+co-op campaign. No shared framework or reusable campaign-replication layer has been
+confirmed. See [the Godfather II research notes](../games/the-godfather-ii/NOTES.md),
+[PCGamingWiki: The Godfather II](https://www.pcgamingwiki.com/wiki/The_Godfather_II), and
+[PCGamingWiki: Dead Space 3](https://www.pcgamingwiki.com/wiki/Dead_Space_3).

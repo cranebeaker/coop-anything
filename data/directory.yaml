@@ -2285,6 +2285,31 @@
   - https://store.steampowered.com/app/704450/Neverwinter_Nights_Enhanced_Edition/
   - https://www.co-optimus.com/game/212/pc/neverwinter-nights.html
   checked: '2026-10-16'
+- game: The Godfather II
+  year: 2009
+  engine: Visceral Engine
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No PC story-campaign co-op project surfaced. The original match-based multiplayer has a recent restoration, and a script extender is a promising hook, but neither is a campaign co-op solution.
+  sources:
+  - https://www.pcgamingwiki.com/wiki/The_Godfather_II
+  - https://www.nexusmods.com/thegodfather2/mods/95
+  - https://www.nexusmods.com/thegodfather2/mods/40
+  - https://www.ign.com/articles/2009/03/18/the-godfather-ii-gets-multiplayer-mode
+  checked: '2026-10-20'
+  searched:
+  - 'Repo DIRECTORY.md and games; public GitHub issue/PR and repository search for Godfather 2 / Godfather II co-op and multiplayer, 2026-10-20'
+  - 'English web searches: Godfather II co-op campaign, co-op mod, online co-op, multiplayer mod; checked Nexus, ModDB, GameBanana, GameFAQs results and PCGamingWiki, 2026-10-20'
+  - 'Not checked: game Discord, Steam guides in depth, Archive.org; attempted Russian, German, Italian and Spanish queries were rate-limited (HTTP 429)'
 - game: 'Star Wars Jedi Knight: Jedi Academy'
   year: 2003
   engine: id Tech 3 (OpenJK)
