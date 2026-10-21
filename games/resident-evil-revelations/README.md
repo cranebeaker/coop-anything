@@ -4,13 +4,15 @@
 |---|---|
 | Engine | Capcom MT Framework (Mobile / 2.x, 32-bit DirectX 9) |
 | Versions tested | Steam build 13298487 (`rerev.exe` SHA-256 `1573B79EB921B1E7F571E6DEB71C39961C7F1940FAD6D19283FC3AEA7FCA48AA`) |
-| Projects | Official Raid Mode (built-in 2-player co-op); Campaign co-op: (none found, gap) |
-| QA level | none (official Raid Mode not tested by us; campaign co-op does not exist yet) |
-| Last updated | 2026-10-19 |
+| Projects | Official Raid Mode (built-in 2-player co-op); Campaign co-op: work in progress (owner project, private repo `re-revelations-coop`) |
+| QA level | none (manual two-player playtests only, no automated suite) |
+| Last updated | 2026-10-21 |
 
 ## Where things stand
 
 Resident Evil Revelations natively features full 2-player online co-op in its arcade **Raid Mode** via Steam invites. However, the main story campaign is strictly single-player with AI-controlled partners; no released or working campaign co-op mod exists for this title today.
+
+Work in progress (2026-10-21, not released): the campaign runs inside an online Raid session between two PCs. Host and guest load campaign level 1 and the beach, see each other, and the guest drives Parker through the game's own netcode. Doors, enemy deaths and the guest's aim animation are not synced yet. Details in [NOTES.md](NOTES.md).
 
 ## Existing work
 
@@ -28,10 +30,11 @@ Resident Evil Revelations natively features full 2-player online co-op in its ar
 - **Mode 1 only between loads (2026-10-19):** dropping to mode `0` as soon as a load starts (Episode system state at `+0xFC` changes) makes a checkpoint restart with mode `1` survive. Switching to `1` while an episode is still loading soft-locks the game on a black screen. 375 functions read the mode, including the arrange loader (`scene_coop` vs `scene` assets) and the cutscene-end flow (waits for the network partner when the mode is `1`). In a manual playtest mode `1` ran for 173 s of Episode 1 without errors, including at least one door and the first enemy. Every load, video or save was announced by a change of `+0xFC` (values `1`–`4`), and the DLL dropped the mode to `0` before it ran. No second player appears yet: players are created at area load, which now always runs in mode `0`. The switch to the first video (state `+0xFC` = `4`) dropped it back to `0` in time, and the video played normally.
 - **Player 2 route (static analysis, 2026-10-19):** campaign partners (Parker, Jessica, Keith, Quint, ...) are `uPlayer` subclasses, the same class as the Raid second player. `uPlayer::updatePad` (`0x6afbd0`) picks its input by a control type (`1` local pad, `2` AI think manager at `+0x1630`, `3` remote/network) read from `[[[unit+0xe80]+0x38]+0x34]`, and writes a per-unit pad group at `+0x1138`–`+0x1151`. Plan: switch the partner from `2` to `3` and feed its pad from the second player, with no new character and mode left at `0`. First test: Parker was moved from the numpad with type `3`. Aiming did not work yet, because `updatePad` clears the aim flag for type `3`. With the pad written after `updatePad`, a second test gave about 6 minutes of control and repeated AI/player switching with no errors. **Moving, running, aiming, firing and reloading now work** from a second input (numpad) on the same PC, through the partner's own state machines. Network play and other actions are not done yet.
 - **Campaign inside a Raid session (route B, 2026-10-19):** with the arrange and event-archive loaders forced to campaign data, a Raid single-player stage loaded Episode 1's campaign objective, enemies, items and first cutscene. The Raid HUD stayed, dialogue was wrong, and the stage ended after the first video. A first area change (to the beach) now also works inside the Raid session: the transition runs as campaign, then the Raid mode is restored.
+- **Campaign base inside an online Raid session (2026-10-20/21):** the `setMode` setter is hooked; once the Raid stage creates its Episode, mode `0` is kept, so the stage is the campaign (Parker is the AI partner in solo). Player setup (`FUN_0042b720`) runs with mode `1` as an "island", so it takes the characters from the session and the second player is a remote `uPlayer` (control type `3`) fed by `cPlayerPadSyncData`; the session's Raid character ids are swapped for the stage's own pair, so models and parts are loaded. The game's "in a coop session" check (`FUN_0087e900`, 71 callers) also requires mode `1` and is made to answer from the session state; with it the opening wave event no longer freezes the guest. Two-player tests (two PCs over the Internet, private Raid lobby with a friend): lobby, level 1 and the beach, both players visible, the guest controls Parker. Open: doors (each PC opens its own copy; the remote partner walks into the viewer's closed door because received positions are walked to, not warped), area object ids that differ between the PCs when the guest places objects itself, enemy death sync, the guest's aim pose and shot sound on the host. An own Steam P2P channel (channel 8, peer found as the Steam friend playing the game) carries the host's object table so the guest can renumber its objects to the host ids.
 - **Partner AI:** `cNpcThinkManager` functions found so far (`0x614d50`, `0x61e080`) are the checkpoint save/load of the partner AI state; the per-frame update is still to be found. The engine uses MT Framework's own type system, not MSVC RTTI.
 - **Campaign vs Raid Mode:** Driven by `game_systems::sGameSystems::getInstance().getData().isCoop()` and `isCampaign()`. In Campaign, the companion is spawned as an NPC actor (`npXXXX`, e.g. Parker `np1110`) governed by `cNpcThinkManager`. In Raid Mode, player 2 is instantiated as a playable character (`plXXXX`) and replicated across the session. Notably, story episode flow code (`cEpisodeEndFlowState.cpp`) already contains `isCoop()` evaluation.
 - **Hooking vector:** `rerev.exe` imports `DINPUT8.dll` (`DirectInput8Create`), so a proxy `dinput8.dll` in the game folder loads without patching the exe.
-- **Anti-Cheat:** the Steam store page does not list Valve Anti-Cheat (checked 2026-10-19). The mod should still use its own transport (Spacewar AppID 480 or UDP) and stay out of official Raid Mode lobbies.
+- **Anti-Cheat:** the Steam store page does not list Valve Anti-Cheat (checked 2026-10-19). Owner decision (2026-10-19): the campaign build uses the game's own Raid lobbies, private and friends-only, never public matchmaking.
 - **DRM wrapper:** SteamStub (`.bind` section, entry point inside it), not Enigma. `.text` is not encrypted on disk (entropy 6.4), so static analysis works on the file as-is.
 
 ## What we changed
@@ -44,7 +47,7 @@ Resident Evil Revelations natively features full 2-player online co-op in its ar
 ## QA
 
 - Raid Mode: not tested by us.
-- Campaign co-op: none (gap).
+- Campaign co-op: manual two-player playtests (owner and a friend, two PCs, 2026-10-20/21), logged by a per-second "black box" on both PCs. No automated suite.
 - Proxy hook: manual boot check, see What we changed. The main menu was not seen (the fullscreen window was minimized), so input through DirectInput is not yet confirmed.
 
 ## How to play
@@ -59,11 +62,12 @@ Currently not supported natively or via existing mods. Building campaign co-op r
 
 ## Known issues
 
-- Campaign co-op does not exist natively or as a public mod.
+- Campaign co-op does not exist natively or as a public mod; the work-in-progress build is not released.
+- Work-in-progress build: doors not synced between the PCs, area object ids can differ, enemy deaths can diverge, the host does not see the guest aim or hear the guest's shots.
 - Keep modified clients out of official Raid Mode lobbies (VAC is not listed, but other players are).
 
 ## Next steps
 
-- Runtime check of control types and the partner's think pointer, then drive the partner from a second input with control type `3`.
-- Find how actions (fire, reload, melee) reach a type-2/type-3 player.
-- Network the partner's pad between two instances (Spacewar 480 or UDP).
+- Verify the object-id alignment over the own channel, then a door flag + acknowledgement protocol on that channel (door open state: `+0xFC8` 0→3; opening a door copy on command not found yet).
+- Warp the remote player properly (the position is also kept outside `unit+0x40`).
+- The guest's aim pose and shot sound on the host.

@@ -1,0 +1,39 @@
+{
+ "game": "example",
+ "digest_categories": {
+  "0": "story",
+  "1": "actors",
+  "2": "containers",
+  "3": "objects",
+  "4": "other"
+ },
+ "marker_kinds": {
+  "0": "note",
+  "1": "desync",
+  "2": "join",
+  "3": "leave",
+  "4": "test-step",
+  "5": "save",
+  "6": "load",
+  "7": "rebase"
+ },
+ "ownership_ops": {
+  "0": "grant",
+  "1": "transfer",
+  "2": "release",
+  "3": "rejectedStale",
+  "4": "rejectedEcho",
+  "5": "rejectedNonOwner"
+ },
+ "ownership_owner_ops": [
+  0,
+  1
+ ],
+ "apply_flags": {
+  "1": "snapshot",
+  "2": "repair",
+  "4": "baseline",
+  "8": "catch-up"
+ },
+ "restate_mask": 7
+}

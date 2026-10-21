@@ -1,0 +1,4 @@
+# Read-only static analysis: Python + capstone + pefile, pinned by hash.
+FROM docker.io/library/python:3.12-slim
+COPY requirements.txt /tmp/req.txt
+RUN pip install --no-cache-dir --only-binary=:all: --require-hashes -r /tmp/req.txt

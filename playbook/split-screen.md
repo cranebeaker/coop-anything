@@ -48,6 +48,61 @@ Things to know before building on them:
 The same tricks are what an automated QA harness needs to run several clients on one PC (see
 [automated-qa.md](automated-qa.md) and [methods.md](methods.md)).
 
+## The other route: a second player inside one copy
+
+Running several copies isn't the only way to do couch co-op. For a game with a mod loader and one shared
+screen, you can instead **spawn a second player character inside the single running copy**. There is no
+networking and no second window. Learned on Dave the Diver (Unity IL2CPP, BepInEx); see
+[games/dave-the-diver](../games/dave-the-diver/README.md).
+
+- **Clone player 1 at runtime.** Clone the player object, then refill the references Unity doesn't copy.
+  Next, find and split the state the clone still shares with player 1: input callbacks, effect handlers,
+  ability callbacks, command assets, oxygen or health. Most early bugs are this shared state.
+- **"Player 2's turn".** Single-player code finds "the player" through one field, often on a singleton.
+  To reuse a game system for player 2 (grabs, damage, mash prompts, helper items, HUD), point that field
+  at player 2, call the game's own method, and point it back. That is far less work than rewriting each
+  system. Find the field by decompiling: the same `[singleton + offset]` load shows up in every
+  player-facing method.
+- **Animation events on enemies** often act on "the player" too: struggle animations, bite damage. Hook
+  them and run them during player 2's turn when the creature is on player 2. Never decide by "which
+  player is closer"; that picked the wrong player.
+- **Input:** read player 2's keys or pad below the game's input layer (Win32 `GetAsyncKeyState`, XInput)
+  so they never reach player 1. `GetAsyncKeyState` also reads keys while the game window is not focused,
+  so check focus before acting on them. Give the game a virtual keyboard that carries only player 1's keys.
+  When a game-owned screen (a mini-game) must read player 2, give the game a virtual gamepad fed from
+  player 2's keys for as long as that screen is open.
+- **When a sequence can't run twice** (a full-screen QTE, a modal), skip it for player 2. Run a mod-side
+  version that calls the game's smaller pieces (start/stop animation, damage, result trigger). If the
+  modal locks player 1, drive player 1's character directly from player 1's own bindings until it closes.
+- **Limit:** one camera. Follow the midpoint and keep both players in view, and give player 2 their own
+  HUD by copying and tinting the game's.
+
+## Split screen inside one copy: three ways mods do it
+
+Three mods from October 2026 show the main options when everyone plays in one running copy.
+Check which case your game is before picking.
+
+| Case | Example | How it works |
+|---|---|---|
+| **The game has split screen, but fewer players on PC** | [BO3 4-Player Local Splitscreen](https://github.com/LocalPlayer123/BO3-4-Player-Local-Splitscreen-on-PC) (Black Ops III, public domain) | The PC exe was compiled for 2 local players, while the PS4 build of the same game keeps 4. The mod moves every per-local-client array that is `[2]` on PC to a new `[4]` allocation and rewrites each instruction that addresses it. Only then does it raise the local-client count and widen the loops from 2 to 4 (containers first, count second, or slots 2 and 3 overwrite live memory). A few 2-player-only decisions (pane layout, controller sign-in, sun shadow slots) are hooked. Every patch checks the original bytes first and stands down on an unknown build. |
+| **No split screen: draw the world once per player** | [SplitScreen for Oblivion](https://www.nexusmods.com/oblivion/mods/56734) (xOBSE plugin, C++) | Renders the world twice per frame, once from each player's camera, with an "alternate" mode that draws each view every other frame for weaker GPUs. Player 2 is an NPC to the engine; the plugin gives it the player's rules (inventory, levelling, crafting, dialogue) and bridges quest scripts that ask for "the player". The world only loads around player 1, so player 2 is on a leash. |
+| **No split screen: extra player characters through a script framework** | [RE2 Party Mode](https://www.nexusmods.com/residentevil22019/mods/3024) on REFramework (Lua plus a pad DLL), built on Local Couch Co-op | Spawns up to 3 extra player characters, each with its own camera, screen quarter, inventory and settings. Enemies target the nearest player instead of player 1, each player's room stays loaded within player 1's area, key and story items go to player 1. |
+
+What carries over to other games:
+
+- **Look for a console build first.** If the console version has more local players, it is the
+  reference for which arrays, loops and checks the PC build cut down. Diff the two before
+  reverse engineering the PC exe alone.
+- **Grow storage before you raise a player count.** Any loop that already reaches the new slots
+  writes over whatever sits after the old array.
+- **Keep one owner of the story.** All three keep story progress, key items and the loaded world
+  tied to player 1, and pull the other players back to them. It is the same rule as the
+  [second player inside one copy](#the-other-route-a-second-player-inside-one-copy) route above.
+- **Enemies need a target rule.** Single-player AI chases "the player"; pick the nearest player
+  explicitly.
+- **Pay for the second view.** Drawing the world twice costs frame rate (the Oblivion mod quotes
+  about 60 to 75 percent of normal). Offer an alternating mode.
+
 ## Ideas for agents
 
 - Write a Nucleus handler or a PartyDeck profile for a game you've just made co-op, and ship

@@ -57,6 +57,12 @@ disconnects). OOT True Co-op documents one: if one game crashes the other's enem
 pause for about 1.5 seconds, then resume under local AI
 ([README](https://github.com/bghill95/OOT-True-Co-op)).
 
+Copy results, not events. When an NPC dies on the owner's machine, show it dead elsewhere as a *state*, without
+running the game's own death logic again: in Gothic 3 the death script also advanced quests, paid experience
+and rolled loot, so every mirrored death did those twice on the client until the copy set only the dead state
+(G3 Together, [games/gothic-3/NOTES.md](../games/gothic-3/NOTES.md), stage 3c and C). The same holds for
+dialog side effects: passing on an NPC's resulting state is easier than interpreting each command.
+
 ### 1.3 World, quest and story state
 
 This is the part most projects skip, and it is where single-player games are hardest.
@@ -95,6 +101,13 @@ one authority and you have most of story co-op.
 
 Design question to settle early: whose save is canonical, and what do other players
 persist (usually nothing, or inventory only).
+
+Check what a save captures while remote players are present. In Gothic 3 the remote player's body is a copy
+of the hero; a save taken with it in the world aborts on load ("more than one hero"), so the save function
+itself has to be hooked to remove those bodies first, also for saves from the game's menu. A small sidecar
+file next to each save can carry the mod's own state, and each player can keep their own character record per
+host save; a joining player then loads the host's save (sent over the mod's own connection) and puts their own
+character back on top (G3 Together, stage D in [games/gothic-3/NOTES.md](../games/gothic-3/NOTES.md)).
 
 ### 1.5 Cutscenes and dialog
 
@@ -156,6 +169,12 @@ Send each client only what is near it or matters. Evidence in sources:
   and Unreal docs pages returned HTTP 403 to our fetcher, so no quote is given here.
 
 Start without interest management. Add it when profiling shows bandwidth or CPU cost.
+
+Measure the engine's own processing range early: it limits host authority more than bandwidth does. Gothic 3
+only simulates entities within about 40 m of the camera (`Entity.ROI`); far entities exist but are frozen,
+and state written into them (a kill) was reset when they were processed again. Results from far regions
+therefore go into a journal that each machine applies when it starts processing that entity
+(G3 Together, explorations 1 and 5 and stage C in [games/gothic-3/NOTES.md](../games/gothic-3/NOTES.md)).
 
 ### 1.8 Late join
 

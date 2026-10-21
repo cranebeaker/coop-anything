@@ -6,10 +6,11 @@ and nothing else. It reads your clone, so `git pull` updates it.
 
 | Tool | What it does |
 |---|---|
-| `search_directory` | Search the directory of co-op projects and gaps by game, engine, status or QA level |
-| `detect_engine` | Scan a game install folder and identify the engine from file signatures, with evidence, hooking tools, anti-cheat warnings and co-op projects on the same engine |
-| `game_identity` | SHA-256, architecture and PE details of the game exe, to record the exact build |
+| `search_directory` | Search the directory of co-op projects and gaps by game, engine, status or QA level, with each entry's sources so its claims can be checked |
+| `detect_engine` | Scan a game install folder and identify the engine from file signatures (archive headers where an extension is shared), with evidence, hooking tools, anti-cheat warnings and co-op projects on the same engine |
+| `game_identity` | SHA-256, architecture, PE details and version resource of the game exe, plus the Steam app id and build id for Steam installs, to record the exact build |
 | `list_docs`, `read_playbook`, `get_skill`, `get_game` | Read the playbook, the agent skills and the game write-ups |
+| `get_test_tool` | Read the README of a sync test tool in `tools/` (chaos box, flight recorder, fuzzer, bots and more) |
 | `validate_entry` | Check a directory entry against the schema before contributing it |
 
 Pair it with a reverse-engineering MCP such as [REA](https://github.com/morluto/rea) for the
@@ -18,9 +19,24 @@ binary work: Co-op Anything knows what to do, REA looks inside the game.
 ## Setup
 
 **Claude Code:** open this repo and the project's `.mcp.json` offers the server automatically.
-From anywhere else:
+From anywhere else (`-s user` makes it available in every folder, not only the current one):
 ```
-claude mcp add coop-anything -- python <path to clone>/tools/mcp/coop_mcp.py
+claude mcp add -s user coop-anything -- python <path to clone>/tools/mcp/coop_mcp.py
+```
+
+The `coop-*` skills live in `.claude/skills/` of this repo, so Claude Code only sees them while
+it runs inside the clone. To use them while working in a game folder, link them into your user
+skills folder; `git pull` then updates them too. Paths inside the skills (`local/`, `playbook/`,
+`games/`) stay relative to the clone. `triage-contributions` is the maintainers' skill and is
+left out on purpose.
+
+Windows, in `cmd` (a directory junction needs no admin rights):
+```
+for /d %s in ("<path to clone>\.claude\skills\coop-*") do mklink /J "%USERPROFILE%\.claude\skills\%~nxs" "%s"
+```
+Linux and macOS:
+```
+for s in <path to clone>/.claude/skills/coop-*; do ln -s "$s" ~/.claude/skills/; done
 ```
 
 **Codex** (`~/.codex/config.toml`):
@@ -36,6 +52,8 @@ args = ["<path to clone>/tools/mcp/coop_mcp.py"]
 ```
 
 Use `python3` instead of `python` on Linux and macOS.
+
+After changing the server, run its tests: `python -m unittest tools/mcp/test_coop_mcp.py`.
 
 ## Ask your agent
 

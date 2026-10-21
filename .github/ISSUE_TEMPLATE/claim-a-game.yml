@@ -2,6 +2,10 @@ name: I'm (or my agent is) working on a game
 description: Claim a game so others can find you and avoid duplicate work
 labels: [in-progress]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        💬 **Please join our [Discord](https://discord.gg/EXGB49R82t)!** Chat with other co-op modders, follow projects, and get your own Dev role and topic for your mod.
   - type: input
     id: game
     attributes: { label: Game }
