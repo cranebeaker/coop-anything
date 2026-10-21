@@ -7377,3 +7377,70 @@
   - https://www.nexusmods.com/callofdutyblackops3/mods/53
   - https://github.com/LocalPlayer123/BO3-4-Player-Local-Splitscreen-on-PC
   checked: '2026-10-21'
+- game: Forager
+  year: 2019
+  engine: GameMaker Studio 2
+  project: PencilPal
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=2843162754
+  other_urls:
+  - https://playco-opgame.com/multiplayer-mod/forager-multiplayer-mod/
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: direct-ip
+  open_source: 'no'
+  last_activity: '2023-04'
+  qa: community-reports
+  notes: >-
+    Official multiplayer was announced, beta-tested and cancelled in 2021 (too buggy; refunds offered). PencilPal was
+    the community replacement: host/join by typed IP over raw TCP port 6511 (no relay; players used Hamachi). Two
+    players share one world, syncing terrain, resources, dropped items, object health, chests, industrial structures,
+    NPC quests, slimes, drones, a shared vault, a player puppet, gold, chat, emojis and a PvP mode. It is now removed
+    from the Workshop ("violates Steam Community & Content Guidelines", "incompatible with Forager"), last updated
+    2023-04-08, and players report constant crashes into late 2025 ("unplayable"). Predecessor PenPal only rendered
+    the friend's sprite. A from-zero co-op mod is being worked on instead: Forager Co-op, see the entry below.
+  sources:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=2843162754
+  - https://playco-opgame.com/multiplayer-mod/forager-multiplayer-mod/
+  - https://www.rockpapershotgun.com/forager-cancels-multiplayer
+  - https://yal.cc/forager-retrospect/
+  checked: '2026-10-19'
+- game: Forager
+  year: 2019
+  engine: GameMaker Studio 2
+  project: Forager Co-op
+  url: https://github.com/Egolz/forager-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/forager
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: none
+  notes: >-
+    From-zero replacement for PencilPal, built on the game's own modding API (no BepInEx, no data.win editing).
+    Host-authoritative by design: the host owns the world, a client sends intents, the host validates and broadcasts
+    confirmed mutations with a sequence number. As of 2026-10-21 this is milestone M3.1 of five: host/join over TCP
+    6511, a version-checked handshake, ping/pong, the second player drawn with their body sprite and name over their
+    head, structure placement, and loot/pickup/resource sync, all verified in live build 6160665 against a
+    non-GameMaker mock peer, which also pinned down GameMaker's own socket handshake (GM:Studio-Connect) and
+    0xDEADC0DE packet framing. The world is NOT synced yet, so this is not playable co-op; the two-instance limit
+    (Forager refuses to run twice on one PC) shapes the test plan. GPL-3.0.
+  sources:
+  - https://github.com/Egolz/forager-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/forager
+  checked: '2026-10-21'
