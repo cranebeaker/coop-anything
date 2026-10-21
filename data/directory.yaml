@@ -7523,3 +7523,30 @@
   - https://github.com/cranebeaker/coop-anything/issues/42
   checked: '2026-10-21'
   made_with_coop_anything: true
+- game: World of Goo
+  year: 2008
+  engine: 2D Boy in-house ("Boy" framework, SDL2 + OpenGL)
+  project: World of Goo co-op
+  url: https://github.com/dobrodeetel/world-of-goo-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/world-of-goo
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: ''
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: community-reports
+  notes: Local two-player split screen on one PC for the Steam 1.5 build (20824155); player 1 mouse, player 2 gamepad. The PC exe still holds the Wii version's multi-cursor code (four mice, four cursors, per-player held balls); an SDL2.dll proxy feeds the second mouse from a pad and renders levels twice with a camera per half, one shared simulation. Settings in wogcoop.ini, reloaded live. Tested by the owner on chapter 1 (mouse + DualSense) plus scripted bot checks; other chapters, the time bug with two players and menus are unchecked. MIT.
+  sources:
+  - https://github.com/dobrodeetel/world-of-goo-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/world-of-goo
+  - https://www.co-optimus.com/game/514/wiiware/world-of-goo.html
+  checked: '2026-10-21'
+  made_with_coop_anything: true
