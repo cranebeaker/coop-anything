@@ -435,3 +435,31 @@ pattern (`iVar1 = *(int *)(DAT_012233f4 + 0x18)`, `FUN_00625ca0` push name,
 calling `SetPositionValues` / a `moveToPos` behaviour on the companion's SimNPC
 handle is the concrete, bounded next task - and it is also the right primitive
 for networked co-op later.
+### Script VM: object located, calling conventions disassembled (2026-10-21)
+
+Live addresses in the running game: `DAT_012233F4` holds `0x04750C4C`; the VM is
+`*(0x04750C4C + 0x18)` = `0x1ABC0108`. VM layout: `+0x08` = stack pointer,
+`+0x10` = stack-limits object (`+0x20`/`+0x24`), `+0x40` = the globals table
+(first dword 5 = table tag, `+0x44` = table object).
+
+Exact calling conventions, read from the real exe with llvm-objdump:
+
+- `FUN_00625ca0` = **cdecl(vm, const char* name)**. Prologue
+  `push ebp; mov ebp,[esp+0xC]` -> arg2 = name; `mov eax,[esp+8]` -> arg1 = vm.
+  Pushes a value on the VM stack: writes type 4 and a string id, advances
+  `vm+0x08` by 8. A NULL name pushes a zero value.
+- `FUN_00636570` = the invoke. **cdecl with 3 stack args** (a continuation code
+  pointer, a pointer to the prepared frame, a byte length) **plus the VM in
+  ESI**, i.e. a custom register convention. The only call site in the game
+  (`0x00468F2B`) pushes `0x6261E0`, `lea eax,[esp+0x10]`, and
+  `stack_top - args_start`, then `add esp,0x10`.
+- `FUN_00633cb0` = cdecl(vm, table_value, key_value, depth) lookup, returns a
+  pointer to the resolved value.
+
+Because the invoke takes the VM in ESI, a plugin call needs a small assembly
+stub (set ESI = VM, push the 3 args, call 0x00636570) - not a plain C call.
+Plan for the implementation session: mirror the exact sequence of
+`FUN_00468ea0` (push name -> lookup in globals -> push args -> invoke with the
+`0x6261E0` continuation) for a harmless getter first (`GetPlayerPosition`),
+log the result, and only then call `SetPositionValues` on the companion. Do it
+inside the plugin's own thread with the VEH active.
