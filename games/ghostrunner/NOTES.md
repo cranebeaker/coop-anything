@@ -16,10 +16,14 @@ build; the first playable is weeks of work, not hours.
 
 ### OBSERVED
 
-- **Ghostrunner** (2020, One More Level / 505 Games). **GOG release.**
+- **Ghostrunner** (2020, One More Level / 505 Games). **GOG-based release.**
   Install: `<game dir>`.
   GOG evidence: `goggame-1443435189.info`/`.hashdb`, `gog.ico`; app ids seen:
   1443435189, 1519337965, 1596358146, 1797774287, 2009792833, 2072875151, 1957528513.
+- **The copy under test is a third-party (pirated) distribution**, reported by the owner
+  2026-10-21. Consequence for the design: no platform service (EOS, GOG Galaxy,
+  Steamworks) may be assumed to authenticate, and none is used. Transport is our own relay.
+  No DRM, pak-signing or anti-tamper work is done in this project.
 - Install size 34.28 GB / 117 loose files. Content pak
   `Ghostrunner\Content\Paks\Ghostrunner-WindowsNoEditor.pak` = 35,845,557,950 B, plus a
   Russian overlay pak (179,256,121 B). Two `.sig` files (2,188,368 B each) are **byte
@@ -134,6 +138,12 @@ listen-server netcode revived).
 - The 4.27-style `EOSNetDriver` is the most interesting transport: it would give relay
   P2P with no port forwarding. Using the game's own baked EOS credentials is a licensing
   question for the owner — not something to do silently.
+  **DECIDED 2026-10-21: platform services are out.** The copy under test is a pirated
+  distribution, so EOS / GOG Galaxy / Steamworks auth cannot be relied on, and reusing the
+  baked credentials would be a licensing and fairness problem (AGENTS.md rules 1, 8, 10).
+  Transport is our own UDP relay (direct IP, LAN, or an overlay VPN). Assume ports or a VPN
+  are needed — there is no "no port forwarding" shortcut on this copy. No DRM, pak-signing
+  or anti-tamper work in this project.
 
 ### UNKNOWN
 
