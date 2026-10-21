@@ -135,10 +135,13 @@ menu path above.
 
 ## Next steps
 
-1. Identify the authoritative transform slot of a second character: hook the
-   position getter `vtable+0x48` of the character class `0x00D6B350`, capture
-   its `this`, and confirm `this+0x3C0`; then find the matching setter in the
-   same vtable.
+1. Find the authoritative transform of a second character. Established: it is
+   not a plain float triple (a whole-heap delta search finds none), and the
+   `.data`/heap pairs such as `0x01163640`/`0x04303640` are render scratch
+   written by the matrix multiply `FUN_00417560` (callers `FUN_00419b80`,
+   `FUN_0041b9d0`, source data in TLS). Catch the read path instead: watch the
+   SE NPC Inspector's display buffer while it refreshes, or hook the engine's
+   `SetPositionValues` script setter and let the engine move the character.
 2. With a writable slot, drive a second character from the player's position -
    the first visible "player 2" puppet - and check that the engine does not
    overwrite it after the write.

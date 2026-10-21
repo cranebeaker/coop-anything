@@ -309,3 +309,30 @@ holding a position), findaabb (min/max pairs), watchwrite (hardware watchpoint
 mini-debugger with register dump), deltahunt (whole-heap delta search),
 nearwatch (watch triples near a point), puppetdrive/2 (external 100 Hz rigid
 write), coopscan (dump/list/chars/snap/diff).
+
+### Render pipeline vs game state (2026-10-21, later still)
+
+Hardware-watchpoint run on 0x01163640 (the .data address that repeatedly holds
+the companion's position) caught **one instruction, 0x004175BA**, inside
+`FUN_00417560` - a 4x4 matrix multiply (`out = a * b`, written with `movaps
+[edx], xmm5` in a 4-iteration loop). Register/return-address capture identified
+three call sites: `FUN_00419b80 + 0x106` (0x00419C86) and `FUN_0041b9d0`
+(0x0041BA8C). Their decompile shows the source is a per-thread array reached
+through `fs:0x2C` (TLS), indexed by `*(entity+0x18)`, with rotation/scale at
+`+0x6C/+0x70/+0x74`. So 0x01163640/0x01163610/0x011629d0 are **render
+matrices**, and the .data/heap twins (0x01163640 <-> 0x04303640) are render
+scratch, not game state. Writing them cannot move a character - consistent with
+every failed puppet write so far.
+
+Whole-heap delta search (deltahunt with the companion's own delta from two
+inspector screenshots, -14.29/+0.04/-41.52 over a 44 m walk): **only two slots
+in the entire process moved by that delta**, and one of them is the render
+scratch above. Conclusion: **the companion's position is not stored as a float
+triple anywhere** - it is a simulation entity whose position is integrated and
+kept in a different representation (physics body, handle, or derived on demand).
+
+Next step that follows from this: don't chase float triples. Catch the *read*
+path instead - watch the SE NPC Inspector's own display buffer while the
+inspector refreshes (the SE computes the value it shows, so its code reveals
+the authoritative source), or hook the engine's script setter
+(`SetPositionValues`) from the plugin and let the engine move the character.
