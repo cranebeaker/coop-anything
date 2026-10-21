@@ -146,3 +146,24 @@ Entry format is in [`README.md`](README.md#log-entry-format).
 - Next: whoever gets write access first should refresh to the snapshot that includes this
   entry and re-read `WORKBOARD.md` — W5 and W6 changed state.
 - Claim: none (recording relayed intake; no work item transferred yet).
+
+### 2026-10-21 — lead (deepseek, session 2026-10-21) — clean Model-A test: negative, and it is now settled
+
+- Did: got into `/Game/Levels/Tutorial/L_Tutorial_Persistant` through the menus again, with
+  **no** `CreatePlayer` anywhere in the session (that was the confound last time), confirmed
+  `PlayerControllers = 1` and pawn `BP_PlayerCharacter_C`, then issued
+  `open /Game/Levels/Tutorial/L_Tutorial_Persistant?listen` from Lua.
+- Result: `ok=true`, and then at **+3 s, +6 s, +10 s, +15 s, +22 s**: world unchanged,
+  **`NetDriver = nil` every time**, `PlayerControllers = 1`, same pawn, **no crash and no
+  travel**. So `open …?listen` issued into an already-loaded standalone world is a no-op for
+  the netdriver. The earlier `NetDriver = 1` sighting was the confounded run and is **not
+  reproducible**; nobody should cite it.
+- Next: the only remaining cheap Model-A test is to have the map loaded with `?listen` **at
+  load time** — a startup map with the option, or hooking the game's own level start/travel
+  so the URL carries `listen`. If that also gives no NetDriver, Model A is closed and all
+  effort goes to Model B (puppet + relay), which is now much better armed: the pawn class is
+  known and it uses a stock `CharacterMovementComponent`.
+- Note for whoever automates the menus: the reliable pattern is to let the Lua mod detect the
+  gameplay world itself and act on that, instead of firing steps on wall-clock timers. Two
+  timed runs missed the level; the world-triggered run hit it first try.
+- Claim: W6 clean test done (still negative). W1/W2 remain done.

@@ -298,20 +298,43 @@ those runs, Model A is `unproven`, not dead.
 - A second local player existing is useful on its own: it is the local split-screen
   fallback, and it is a ready "second body" for puppet development without any netcode.
 
+### CLEAN Model-A RESULT (2026-10-21, second clean run)
+
+OBSERVED, no confounds (no `CreatePlayer` in the session):
+
+- Entered `/Game/Levels/Tutorial/L_Tutorial_Persistant` through the menus; pawn
+  `BP_PlayerCharacter_C` present, `PlayerControllers = 1`.
+- Issued `open /Game/Levels/Tutorial/L_Tutorial_Persistant?listen` via
+  `KismetSystemLibrary:ExecuteConsoleCommand` → `ok=true`.
+- At +3 s, +6 s, +10 s, +15 s, +22 s: world unchanged, **`NetDriver = nil` the whole time**,
+  `PlayerControllers = 1`, same pawn. **No crash, no travel, no netdriver.**
+- The earlier `NetDriver = count 1` observation came from a session that had already created
+  a second local player and then crashed. It is **not** reproducible in a clean session and
+  must not be cited as "listen works".
+
+Interpretation: with the map already loaded and standalone, the console `open …?listen`
+does not re-travel and does not convert the world. This is consistent with `listen` also
+doing nothing. Model A therefore needs a **real map load with `?listen` from the start**
+(launch option / GameMode travel path), not a command issued into a running standalone
+world. That is the next experiment, and it is the last cheap one for Model A.
+
 ### UNKNOWN
 
-- Whether a listen server survives a map load **when no second local player exists** (the
-  clean test was attempted but the run aborted before reaching a level).
+- Whether a fresh process launched straight into a map with `?listen` (e.g. a startup map
+  or a travel at level start) produces a NetDriver. Untested.
 - Whether two local players survive a level transition and a checkpoint respawn.
 - Whether the second local player gets a camera viewport (not observed on screen).
 
 ## Next actions
 
-0. **Run the clean Model-A test**: get into the tutorial level via the game's own flow
-   (no `CreatePlayer` in the same session), then `open /Game/Levels/Tutorial/L_Tutorial_Persistant?listen`
-   and check `FindAllOf("NetDriver")`. That decides Model A.
-1. Get into a gameplay level deterministically (level names from public mods; or call the
-   game's own level-start function), then re-run the `?listen` NetDriver probe there.
+0. **Launch-to-listen**: get a map loaded with `?listen` at load time rather than by a
+   console command into a running standalone world (options: a startup map switch, or
+   hooking the game's own level-start/travel from Lua so the URL carries `listen`).
+   If that yields no NetDriver either, close Model A and go full Model B.
+1. Model B hello-world: fake peer over a file, spawn a puppet from `BP_PlayerCharacter_C`,
+   drive it to peer coordinates. The class and a standard CMC are now both known.
+2. Split-screen viability check: does `CreatePlayer` survive a level change, and does the
+   second player get its own viewport and input ?
 2. Identify the real player pawn class and whether it has `CharacterMovement`.
 3. M0.5: fake peer via file → spawn and drive a puppet actor to peer coordinates.
 4. Two instances + file seam → M1; then replace the seam with a UDP relay.
