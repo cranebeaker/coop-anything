@@ -136,12 +136,16 @@ menu path above.
 ## Next steps
 
 1. Find the authoritative transform of a second character. Established: it is
-   not a plain float triple (a whole-heap delta search finds none), and the
+   not a plain float triple (a whole-heap delta search finds none), the
    `.data`/heap pairs such as `0x01163640`/`0x04303640` are render scratch
    written by the matrix multiply `FUN_00417560` (callers `FUN_00419b80`,
-   `FUN_0041b9d0`, source data in TLS). Catch the read path instead: watch the
-   SE NPC Inspector's display buffer while it refreshes, or hook the engine's
-   `SetPositionValues` script setter and let the engine move the character.
+   `FUN_0041b9d0`, source data in TLS), and a PRESENT-time matrix write is one
+   frame too late for the skeleton. The engine's script VM is the right path:
+   it was located live, `GetPlayerPosition` resolves to type 6 (a function) via
+   `FUN_00625ca0` + `FUN_00633cb0`, and the game's own call wrappers are
+   `FUN_00468ea0`/`FUN_00468f40` with stack cleanup in `FUN_006255e0`.
+   Next: call the wrapper (not the raw `FUN_00636570`) while the game's script
+   update is active, and move the companion with `SetPositionValues`.
 2. With a writable slot, drive a second character from the player's position -
    the first visible "player 2" puppet - and check that the engine does not
    overwrite it after the write.
