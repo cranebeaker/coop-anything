@@ -486,3 +486,25 @@ call from inside it (same thread, VM active), or better, find where the game's
 own code pushes and invokes a script function by name and reuse that wrapper.
 The lookup result (type 6, value 0x1A2E4650) is a good anchor for that work: it
 identifies the `GetPlayerPosition` function object in the VM.
+### Script VM: the safe helpers found (2026-10-21)
+
+Scanning the corpus for the VM global (`DAT_012233f4`) yields six functions:
+
+- `FUN_0043e140` - VM owner constructor (stores `param_1` in `DAT_012233f4`);
+  `FUN_0043e250` - its destructor.
+- **`FUN_0043e480`** - the safe "resolve a script name" helper: pushes the name,
+  looks it up in the globals, copies the resolved value over the stack top,
+  checks `type == 6`, then calls **`FUN_006255e0`** (the stack-pop helper) and
+  returns whether the name is a function. This is a safe, complete example of
+  the push/lookup/pop sequence with stack cleanup - use it as the reference for
+  any name lookup.
+- `FUN_00468ea0` / `FUN_00468f40` - the "call a script function" wrappers:
+  EAX = the name, EDI = the argument count, `[ebp+8]`/`[ebp+0xC]` describe the
+  arguments; `FUN_004c8460` pushes them; `FUN_00636570` invokes with the
+  `0x6261E0` continuation. `FUN_00468f40` is the same for `CallLuaFunction`.
+
+So the VM has a proper internal API (`FUN_0043e480` for lookups,
+`FUN_00468ea0`/`FUN_00468f40` for calls) that keeps the stack balanced. The next
+attempt at moving a character should call `FUN_00468ea0` (or mirror it exactly,
+including `FUN_006255e0` for every push) instead of the raw `FUN_00636570`, and
+should run while the game's script update is active.
