@@ -508,3 +508,23 @@ So the VM has a proper internal API (`FUN_0043e480` for lookups,
 attempt at moving a character should call `FUN_00468ea0` (or mirror it exactly,
 including `FUN_006255e0` for every push) instead of the raw `FUN_00636570`, and
 should run while the game's script update is active.
+
+### Script VM: the wrapper fails too - the VM needs the script update context (2026-10-21)
+
+Second live attempt used the game's own call wrapper `FUN_00468ea0` through a
+hand-assembled byte stub (name in EAX, argument count 0 in EDI, two zero stack
+dwords cleaned by the wrapper's `ret 8`), called once from the camera hook.
+The log recorded `vm: calling GetPlayerPosition via FUN_00468ea0` and the
+process died before `vm: call returned`. Together with the earlier raw-invoke
+fault this is conclusive: **the script VM cannot be driven from the camera or
+present hooks** - it is only valid while the game's own script update is
+executing. Calling it from any render/update hook corrupts its state and takes
+the process down.
+
+The VM test is disabled in the plugin again; the game is stable.
+
+Next step for this thread is therefore narrower and concrete: locate the game's
+script update (the function that pumps the VM each frame - the VM owner is
+`DAT_012233f4`, its interpreter entry `FUN_00635ab0` reached from
+`FUN_00636570`), hook that function, and issue the `FUN_00468ea0` call from
+inside it while the VM is live. Only then is `SetPositionValues` reachable.
