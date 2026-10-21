@@ -463,3 +463,26 @@ Plan for the implementation session: mirror the exact sequence of
 `0x6261E0` continuation) for a harmless getter first (`GetPlayerPosition`),
 log the result, and only then call `SetPositionValues` on the companion. Do it
 inside the plugin's own thread with the VEH active.
+### Script VM: lookup works, invoke from a render hook faults (2026-10-21)
+
+Implemented in the plugin and tested live:
+
+- `DAT_012233F4` -> `0x04750C4C` -> `+0x18` gave the VM (`0x1AB90108` in that
+  run); `FUN_00625ca0(vm, "GetPlayerPosition")` pushed the name and
+  `FUN_00633cb0(vm, vm+0x40, stack_top-8, 0)` resolved it in the globals.
+  **The lookup succeeded: type 6 (a function), value 0x1A2E4650.** So the
+  script API is reachable from the plugin and `GetPlayerPosition` really exists
+  in the VM's global table.
+- The invoke is the problem. First attempt used an inline-asm stub; second used
+  a hand-assembled byte stub (`push esi; mov esi,[esp+8]; ...; call; add esp,12;
+  pop esi; ret`) with the 0x6261E0 continuation. Both times the game died at the
+  invoke: the VEH logged ~5000 swallowed faults at a fixed plugin address and
+  the process ended. So `FUN_00636570` cannot be called from the camera hook -
+  the VM is almost certainly only valid while the game's own script update is
+  running, and calling it from a render hook corrupts its state.
+
+Next step for the VM path: hook the game's script/update function and issue the
+call from inside it (same thread, VM active), or better, find where the game's
+own code pushes and invokes a script function by name and reuse that wrapper.
+The lookup result (type 6, value 0x1A2E4650) is a good anchor for that work: it
+identifies the `GetPlayerPosition` function object in the VM.
