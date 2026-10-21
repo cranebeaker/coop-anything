@@ -242,8 +242,38 @@ No multi-area coverage is credited to this run. Static analysis found that the
 native keyboard-name search discards its count and loops without a bound.
 Internal names also depend on the active keyboard layout, while display names
 are stored separately. The actual missing name/count/layout was not recorded,
-so layout causation remains an inference. Guarded lookup diagnostics and canonical
-internal naming are under investigation; this is an unresolved startup blocker.
+so layout causation remains an inference.
+
+### Guarded startup and fresh scenario11 gates
+
+The new source bounds native keyboard-name lookup and validates native string
+headers/readable lengths before comparison. Missing/malformed bindings reject
+the owned game with exit86, with no fallback index. A guarded initializer call
+selects an already-loaded standard US layout for internal names only; it does
+not load/activate layouts or alter Windows settings. Native DirectInput display
+labels remain separate. Missing supported layout rejects startup. Pure key-name
+fixtures pass, including two caught mutation twins; full configured-binding and
+physical hardware coverage is not claimed.
+
+- Run034:7,200 consecutive selected-state ticks matched across three fixture-driven
+  Tokyo area transitions; English/Russian, keyboard/controller fixtures, jitter,
+  mock Steam stream. Games/launchers/relays exited0; each relay sent/received921,808
+  bytes, discarded0; no timeout or forced completion.
+- Run035:3,600 consecutive selected-state ticks matched with combat and native
+  pause/resume; entered243, frozen178 frames, resumed421, fixture completed430.
+  All owned exits0; each relay sent/received461,008 bytes, discarded0.
+
+Both runs reported actual/canonical US layout and102 keyboard descriptors during
+binding lookup. They validate this guarded path without proving run033's original
+layout/target or certifying ordinary campaign travel, remote delivery or other
+hardware/layouts. Run036 additionally passed361 common ticks on the quiet
+fixture-disabled gameplay path, host-only owned-window close, ordered peer stop
+and normal exits, without diagnostic game captures. Its controlled movie/bootstrap
+route was still pending at212 seconds and completed the gate at about221 seconds
+within240. No physical-input or retail-campaign QA is claimed.
+
+The progress estimate remains40/100; no new campaign/save/remote
+milestone is credited for these regressions.
 
 ### Unknown / unfinished
 

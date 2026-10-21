@@ -62,7 +62,7 @@ No native online release or human host/join procedure is available from this wor
 
 Only the identified executable and two supplied language variants have been inspected. Complete shared-world state, human input usability, remote networking, transport reconnect and full campaign progression remain incomplete or unverified. Three successive area swaps have passed in the Tokyo scenario. Selected initialized progress fields are checked; this is not a complete world or mission-state oracle. Content preflight permits the two complete known language packs while requiring identical gameplay content; this does not prove that localized audio cannot affect progression.
 
-## Current-source pause and storage foundation
+## Recent pause and storage foundation
 
 Scenario10/wire3 completed a new3,600-tick mixed English/Russian bot gate with
 keyboard/controller bindings, injected delays and a mock Steam stream. Both
@@ -79,10 +79,19 @@ foundation passed39 synthetic tests, but has no native save/load or launcher
 integration and does not establish campaign resume.
 
 The following scenario-10 multi-area regression failed on both clients during
-native startup, before network readiness or gameplay. No current-source multi-area
-pass is credited. Static analysis found an unbounded native keyboard-name lookup;
+native startup, before network readiness or gameplay. No coverage is credited
+to that failed run. Static analysis found an unbounded native keyboard-name lookup;
 whether layout-dependent names triggered this failure remains unconfirmed.
-Startup reliability remains an open blocker.
+Its exact trigger remains unconfirmed.
+
+Scenario11 now bounds keyboard-name lookup and validates an already-loaded standard
+US layout for internal names, preserving native display labels and Windows settings.
+Fresh English/Russian gates passed7,200 selected-state ticks with three fixture-driven
+area transitions (run034), and3,600 ticks with native pause/resume (run035).
+All owned game/launcher/relay processes exited0; each relay sent/received921,808
+or461,008 bytes respectively, discarded0. Both used keyboard/controller fixtures,
+jitter and mock transport. The runs reported actual US layouts, so they do not
+reconstruct run033's trigger or certify broader layout/hardware compatibility.
 
 ## Next steps
 
