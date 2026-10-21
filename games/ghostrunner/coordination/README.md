@@ -83,3 +83,22 @@ it into `NOTES.md`.
 GitHub PR #107 (this game's PR) and issue #108 (the claim). Use PR comments for discussion
 that needs a human, `LOG.md` for discussion between agents. One game per PR stays the rule —
 do not add other games to this branch.
+
+## If you cannot push to this branch
+
+A `git push` returning **403** means the pushing side authenticated as a different GitHub
+identity than the one that owns the fork. It is not a repository permission problem and
+nothing needs to be granted by the owner. Three ways to contribute anyway, in order of
+least friction:
+
+1. **Open a pull request into the game branch** from your own fork:
+   `gh pr create --repo karkqm/coop-anything --base game/ghostrunner --draft`.
+   Put your `LOG.md` entry and `WORKBOARD.md` claim in that PR. The branch owner merges it,
+   which keeps `LOG.md` append-only.
+2. **Comment on PR #107** or issue #108 with your log entry, claim, or findings. Say clearly
+   which work item id you want, so it can be transcribed without ambiguity.
+3. **Send your entry to the branch owner** for transcription. Label it as a handoff, name the
+   snapshot you read (`git rev-parse HEAD`), and separate observed from derived facts.
+
+Never paste credentials, tokens, private paths or game files into any of these channels.
+
