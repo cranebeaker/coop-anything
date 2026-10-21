@@ -863,3 +863,33 @@ Derived:
   `[controls]` keys, screen corners). Merging needed a pass over every table the features share.
 Unknowns:
 - The 96-checkpoint sweep and the earlier suites have not been re-run on this merged tree.
+
+## 2026-10-22: six parallel feature branches merged (outlines, emotes, difficulty, voice, couch, launcher)
+
+Observed:
+- All six branches started before the Controls page and chat were on master. Each merged with only small
+  textual conflicts (the Makefile source list, menu tables, event enum), but three breakages merged silently:
+  - Difficulty defined `coop.SetPreset(i)` / `coop.presets` / `coop.PresetName`, and the Controls page already had
+    `coop.SetPreset(name)` for key presets. Lua globals: whichever loaded last won, with no error. Renamed to
+    `coop.SetDiffPreset` etc.
+  - The launcher returned early from the `CreateWindowExA` hook when `!test_background`. Couch co-op had replaced
+    that test with `synth` everywhere else, so couch windows would have kept their border and size.
+  - The launcher's "Tougher enemies" row rewrote `enemy_scale` from its own four values on every Play (a Hard
+    preset's 75% became 50%), and its "Modern controls" row wrote the replaced `[controls] modern` key.
+- Key clashes: voice push-to-talk defaulted to V (Ping) and offered T (Chat). It is now a Controls-page action
+  (B, `coop_game_keys` 3). Emotes ended on fixed WASD and arrow keys, and now on the bound move, jump, fire and
+  sniper keys (`coop_emote_keys`). Co-op keys are ignored while a chat line is open.
+- Couch games: play with the Modern preset (the keys the gamepad presses), skip the launcher, and have no voice.
+- Test environment: games started with `Start-Process` from this WSL shell loaded the system `dinput8.dll`. No mod
+  code ran, in any copy or at any commit, including copies that had worked an hour earlier. `mdk_cmd` reported
+  "did not pick up" for every command, and `bridge.log` kept its old date. `MDK2_PROCESS_SERVICE=1`
+  (`Win32_Process.Create`) loads the proxy. qa_launcher's own `+connect_lobby` start now honours it too.
+- With it, on master 606132e: qa_controls 37/37, qa_voice 14/14, qa_menu 38/38, qa_chat 8/8, qa_launcher 23/23,
+  qa_hud 11/11, qa_revive 33/33, and the full sweep at 96/96 checkpoints with no Lua errors, HP mismatches or state
+  failures (`MDK2_SHARDS=4`, 236 s).
+Derived:
+- A clean merge says nothing about two features' shared inputs (keys), settings keys, screen space and global
+  names. Each pair has to be read for those.
+Unknown:
+- Why the launch path started preferring system DLLs between 23:46 and 23:58 on 2026-10-21.
+- Couch co-op with real gamepads, and voice with a real microphone, are still untested by hand.
