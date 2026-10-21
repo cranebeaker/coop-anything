@@ -3,16 +3,16 @@
 | | |
 |---|---|
 | Engine | CryEngine 3 |
-| Versions identified | Steam app 241540, buildid 305948, original DX9 release with Breakdown and Lifeline. Not launched. Not Year-One Survival Edition. |
+| Versions identified | Steam app 241540, buildid 305948, original DX9 release with Breakdown and Lifeline. Isolated test copies launched repeatedly for RE; Steam install never modified. Not Year-One Survival Edition. |
 | Projects | none shipped; in-progress investigation of the build's dormant CryEngine netcode (this repo) |
 | QA level | none |
-| Last updated | 2026-10-19 |
+| Last updated | 2026-10-21 |
 
 ## Where things stand
 
 Friends cannot play this copy together yet. The game shipped single-player. Undead Labs cancelled the co-op they had planned, and no later mod was found that adds it.
 
-Investigation is underway on the dormant CryEngine netcode in this build. So far, on test copies, a second game process connects to a host over the network and the host spawns a second player character for it without crashing. It is not playable: the host does not render the game, and the joining copy does not control its character. The remaining work to bridge that is native code. Detail is below and in [NOTES.md](NOTES.md).
+Investigation is underway on the dormant CryEngine netcode in this build. On isolated test copies (never the Steam install), a second process connects over UDP and the host spawns `CoopPeer2`; with `host_boot_coop` the host also renders gameplay. It is still not playable: the joiner stays on the title stack (`Unable to bind`), and client-owned channel 2 does not walk or send aspects. Those join/spawn results depend on runtime helpers under gitignored `local/` (NULL-join patches, UDP helpers, session scripts) and are not reproducible from this write-up alone. Detail is in [NOTES.md](NOTES.md).
 
 State of Decay 2 is a different game and already has official co-op. It is not this install.
 
@@ -51,7 +51,7 @@ Saves for `sys_user_folder = USER` go to `%USERPROFILE%\Saved Games\USER` (junct
 
 ## What we changed
 
-No shippable co-op build yet. On the test copies only: loose probe lines in `main.lua` and `singleplayer.lua`; `singleplayer.lua` names a channel > 1 actor `CoopPeer<channel>` instead of `Dude`; cfg files that load `class3`; a runtime NULL-check patch written into the joining copy's memory (exe file unchanged); and small tools (UDP relay, exit-call trap, memory patcher). All of this lives under `local/`, not in this repo.
+No shippable co-op build yet. On the test copies only: loose probe lines in `main.lua` and `singleplayer.lua`; `singleplayer.lua` names a channel > 1 actor `CoopPeer<channel>` instead of `Dude`; cfg files that load `class3`; runtime NULL-check patches written into the joining copy's memory (exe file unchanged); and session/RE helpers (UDP relay, `host_boot_coop` / `session_join_leave`, CPI bridges, etc.). **All of that lives under gitignored `local/`**, not in this repo — the spawn/join results above cannot be reproduced from the published files alone.
 
 ## QA
 
@@ -63,8 +63,8 @@ There is no co-op build to install.
 
 ## Known issues
 
-A second player cannot actually play yet. The second character spawns on the host but the host does not render gameplay (see above), and the joining copy does not take control of its character ("we are not a server", "Unable to bind object to network"). The joining copy also relies on a runtime memory patch to survive the join.
+A second player cannot actually play yet. With `host_boot_coop` the host renders and listens; console `map class3 server` alone still blacks out. The joiner needs runtime NULL patches to survive connect, then sits at menu depth 1 with `Unable to bind object to network`. Channel 2 is client-owned: host remote-CPI pose pokes do not replicate to the joiner; client OnAction floats do not move the entity. `fe_dismiss` on join-only clients often Crash Dumps.
 
 ## Next steps
 
-The networking connects and a second character spawns. The blocker is native: make one path both render the front-end game flow and host over the network (the `DLCSelected` -> `StartGame` handler, read from live process memory since the exe is SteamStub-wrapped). Then make the joining copy take control of its character and start replicating the `UL` world objects. Do not launch the Steam install.
+Make client-owned ch=2 walk (OnAction → physics) without a crashing leave-title path, or install a client-safe `AG+0x28` game-nub bind table so outbound aspects can flow. Do not launch the Steam install. See [NOTES.md](NOTES.md) for addresses and failed attempts.
