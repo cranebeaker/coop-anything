@@ -1849,29 +1849,38 @@
 - game: 'Star Wars: Knights of the Old Republic'
   year: 2003
   engine: reone (engine reimplementation)
-  project: reone multiplayer
-  url: https://github.com/seedhartha/reone
-  other_urls: []
+  project: KotOR co-op (McChaffeeFAF fork)
+  url: https://github.com/McChaffeeFAF/kotor-coop
+  other_urls:
+  - https://github.com/seedhartha/reone
   kind: decomp-port
-  status: prototype
+  status: alpha
   coop_scope:
-    story: unknown
-    enemies: unknown
-    world_state: unknown
-    items: unknown
-  players: '3'
-  networking: unknown
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: yes
+    items: shared
+  players: '2'
+  networking: direct-ip
   open_source: 'yes'
-  last_activity: 2025-04
-  qa: none
-  notes: GPL-3.0 engine reimplementation for KotOR and TSL. A GameStar article described a multiplayer demo with
-    two human-controlled party members, aiming at three-player co-op; only basic gameplay worked in v0.5.1. Repo
-    says mid-stage, last push 2025-04.
+  last_activity: 2026-10
+  qa: automated
+  notes: GPL-3.0 fork of reone (the seedhartha engine reimplementation) adding online co-op to the KotOR
+    1 campaign. alpha-0.4.0, 2026-10-15. Story Mode has a host run the story and guests take the party's
+    companions; Free Mode lets guests bring their own characters. Host runs the authoritative simulation and
+    guests send intent; the campaign, enemies and world state are shared, though store, workbench, minigame
+    and Free Mode/chargen flows are not yet gated, so the story scope is partial. Optional join-code service
+    for short codes (direct ip:port works without one). KotOR II's install is optional - it supplies the KotOR II
+    interface and systems, but the game plays KotOR 1 with the KotOR HUD without it. Verified 2 clients over
+    direct-ip with a 77-gate scripted suite, published alongside this write-up. Two packaging fixes (wrong
+    VC++ runtime; KotOR II treated as required) are an open pull request to the fork
+    (McChaffeeFAF/kotor-coop#1), not yet merged. Source-only, no releases, builds from source.
   sources:
+  - https://github.com/McChaffeeFAF/kotor-coop
   - https://github.com/seedhartha/reone
   - https://www.gamestar.de/artikel/sw-kotor-koop,3360443.html
-  - https://git.wbrawner.com/wbrawner/reone/raw/commit/117012b750596a1c45a4d7fd55e670d65da01cc9/README.md
-  checked: '2026-10-16'
+  checked: '2026-10-20'
 - game: Arx Fatalis
   year: 2002
   engine: Arx Libertatis
