@@ -1,14 +1,14 @@
 # Ghostrunner — co-op attempt notes
 
-Session 2026-10-21 (Asia/Yekaterinburg). Playbook: coop-anything.
+Session 2026-10-21. Playbook: coop-anything.
 Status: **triage + research done; hook validated; netcode probe done. No co-op yet.**
 Published: draft PR #107 / claim issue #108 in the upstream repo.
 
 Short version: no co-op mod for Ghostrunner exists anywhere. The build is Unreal Engine
 4.26 and **UE4SS v3.0.1 injects and runs Lua in it** (proved). The engine's networking
 classes (`IpNetDriver`, `SteamNetDriver`, `EOSNetDriver`) are all present and loaded, but a
-listen server does not start from a console command alone. Everything is a from-scratch
-build; the first playable is weeks of work, not hours.
+listen server does not start from a console command alone. Everything here is a from-scratch
+build, and none of the cheap shortcuts worked.
 
 ---
 
@@ -20,8 +20,8 @@ build; the first playable is weeks of work, not hours.
   Install: `<game dir>`.
   GOG evidence: `goggame-1443435189.info`/`.hashdb`, `gog.ico`; app ids seen:
   1443435189, 1519337965, 1596358146, 1797774287, 2009792833, 2072875151, 1957528513.
-- **The copy under test is a third-party (pirated) distribution**, reported by the owner
-  2026-10-21. Consequence for the design: no platform service (EOS, GOG Galaxy,
+- **The copy under test is a third-party (pirated) distribution**, reported by the person
+  testing 2026-10-21. Consequence for the design: no platform service (EOS, GOG Galaxy,
   Steamworks) may be assumed to authenticate, and none is used. Transport is our own relay.
   No DRM, pak-signing or anti-tamper work is done in this project.
 - Install size 34.28 GB / 117 loose files. Content pak
@@ -46,8 +46,6 @@ build; the first playable is weeks of work, not hours.
   `CgSDK.x64_*`, `turbojpeg.dll`, `xaudio2_9redist.dll`, `nvngx_dlss.dll`.
 - No dedicated-server executable. No EasyAntiCheat/BattlEye files or brand strings.
   EOS *AntiCheatClient* code is linked but inactive ("dummy client" per SDK log strings).
-- Owner machine: Win11 build 26300, Ryzen 5 5500 (6c/12t), 15.9 GB RAM, RX 6650 XT.
-  C: 166.6 GB free, A: 608.3 GB free.
 - Loose (non-pak) writable seams that exist on disk:
   `Content\JsonFiles\Bindings.json` (custom input: `bindPC` / `bindPAD` tables, one set per
   device family, **no player index**),
@@ -137,7 +135,7 @@ listen-server netcode revived).
   GameMode willing to log a second player in. The menu world is the wrong place to test it.
 - The 4.27-style `EOSNetDriver` is the most interesting transport: it would give relay
   P2P with no port forwarding. Using the game's own baked EOS credentials is a licensing
-  question for the owner — not something to do silently.
+  question, not something to do silently.
   **DECIDED 2026-10-21: platform services are out.** The copy under test is a pirated
   distribution, so EOS / GOG Galaxy / Steamworks auth cannot be relied on, and reusing the
   baked credentials would be a licensing and fairness problem (AGENTS.md rules 1, 8, 10).
@@ -204,9 +202,9 @@ listen-server netcode revived).
 ## 4. Test rig built in this session
 
 - Hardlinked test copy at `<test copy>` — **117 hardlinks, 0 bytes copied**
-  (same-volume NTFS hardlinks), exe SHA-256 verified identical, owner install untouched
+  (same-volume NTFS hardlinks), exe SHA-256 verified identical, original install untouched
   (verified: the real `Binaries\Win64` still has no UE4SS files).
-  Hardlinks matter here: overwriting a hardlinked *file* would edit the owner's install, so
+  Hardlinks matter here: overwriting a hardlinked *file* would edit the original install, so
   only new files are added and no existing file is replaced.
 - UE4SS v3.0.1 installed into the copy's
   `Ghostrunner\Binaries\Win64\` (`dwmapi.dll` proxy + `UE4SS.dll` + `Mods\`), with the probe
@@ -236,7 +234,7 @@ Each run = launch windowed 1280×720, drive from the `M0Probe` Lua mod, kill by 
 | 3 | `listen` with a netdriver ini placed at `<game dir>\Ghostrunner\Saved\Config\WindowsNoEditor\Engine.ini` | **INVALID TEST.** No NetDriver appeared — but see correction below: packaged UE4 games read `Saved` from `%LOCALAPPDATA%`, so that file was never loaded. Do not cite this as evidence. |
 | 4 | `open /Game/Levels/MainMenu/MainMenu?listen` | Game froze before any NetDriver was observed (~60 s, killed). One earlier run also issued `open …?listen` and the same freeze. |
 | 5 | `open /Game/Levels/01_INDUSTRIAL/01_01/01_01_World` (level path from the GhostrunnerRNG map dictionary) | **Crash.** Menu stayed up ~90 s, then the PlayerController disappeared and the process exited; one UE4 crash report (`UE4CC-Windows-C52FDF964AA3F89357D80489FF657EFB`, 8 crash/CrashContext/UE4Minidump.dmp). Jumping to a level with `open` bypasses the game's own level flow and crashes this build. |
-| 6 | `listen` with the netdriver ini in the **correct** location, `%LOCALAPPDATA%\Ghostrunner\Saved\Config\WindowsNoEditor\Engine.ini` | Config proven read — `GameEngine.NetDriverDefinitions` becomes a populated `TArray`. But `GameEngine.NetDriver` stayed `invalid` and no `NetDriver` instance appeared for 30 s after `listen`. **So a netdriver definition alone is not enough; `listen` on an already-loaded standalone world does not convert it.** Owner's config backed up and restored byte-identically (SHA-256 `C808E16C…48272B` verified before/after). |
+| 6 | `listen` with the netdriver ini in the **correct** location, `%LOCALAPPDATA%\Ghostrunner\Saved\Config\WindowsNoEditor\Engine.ini` | Config proven read — `GameEngine.NetDriverDefinitions` becomes a populated `TArray`. But `GameEngine.NetDriver` stayed `invalid` and no `NetDriver` instance appeared for 30 s after `listen`. **So a netdriver definition alone is not enough; `listen` on an already-loaded standalone world does not convert it.** the user config was backed up and restored byte-identically (SHA-256 `C808E16C…48272B` verified before/after). |
 
 ### Corrections to earlier statements in this file
 
@@ -338,7 +336,7 @@ world. That is the next experiment, and it is the last cheap one for Model A.
 2. Identify the real player pawn class and whether it has `CharacterMovement`.
 3. M0.5: fake peer via file → spawn and drive a puppet actor to peer coordinates.
 4. Two instances + file seam → M1; then replace the seam with a UDP relay.
-5. Owner approval before anything is published.
+5. No publishing without explicit approval.
 
 ## Sources
 

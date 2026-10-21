@@ -93,7 +93,7 @@ Adjacent modding that matters as prior art (not co-op):
 Nothing has been shipped. This session built a test rig and ran three experiments.
 
 - **Rig**: hardlinked test copy at `<test copy>` — **117 hardlinks, 0 bytes
-  copied** — so the owner's install is never touched (verified after every run). UE4SS
+  copied** — so the original install is never touched (verified after every run). UE4SS
   v3.0.1 in the copy's `Binaries\Win64` (`dwmapi.dll` proxy), probe mod in
   `Mods\M0Probe\Scripts\main.lua`.
 - **Experiment 1 — does UE4SS load? PASS.** Log shows `UE4SS - v3.0.1`,
@@ -143,9 +143,9 @@ Nothing has been shipped. This session built a test rig and ran three experiment
   had already created a second local player and then crashed, so it is confounded and is not
   claimed here. The clean run is the next step.
 - Not done: a clean Model A verdict, and whether two local players survive a level change.
-- Side effect to be aware of: the owner's `Engine.ini` was temporarily patched for
+- Side effect to be aware of: the user config `Engine.ini` was temporarily patched for
   Experiment 3 and **restored byte-identically** (SHA-256 verified before/after). The
-  owner's install was never written to.
+  original install was never written to.
 
 ## QA
 
@@ -168,7 +168,7 @@ Not playable in co-op. There is nothing to install from this page yet.
 - The game's input layer has one binding set for all local devices, so local split-screen
   would need the input class reworked before it could be pleasant.
 - This build's EOS integration uses the game's own baked credentials. Reusing them for
-  P2P is a licensing question for the owner, not a free win.
+  P2P is a licensing question, not a free win.
 
 ## Next steps
 
