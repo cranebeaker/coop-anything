@@ -391,3 +391,29 @@ its +0xD0 matrix directly - that is the object the SE itself trusts, and the
 same object a puppet should write. Alternative with higher long-term value:
 hook the engine's `SetPositionValues` script setter and let the engine move the
 character.
+### Inspector chain traced; why Present-time writes cannot work (2026-10-21)
+
+- The inspector entry function is `0x10091740` (`movl %ecx,%edi` at +0x2B, so
+  `this` -> EDI). It has exactly one caller, `0x1008F891`, which passes
+  `lea 0x10(%edi), %ecx` - i.e. the inspector context is `inspector_object+0x10`,
+  and `*(context)` is the inspected target object (the one whose `+0xD0` matrix
+  and `+0x100` position the SE displays).
+- The inspected object is NOT the SimNPC: `SimNPC+0xD0` holds handle/registry
+  data (`3, 0, ptr, 0, ...`), not a matrix. The target is a different entity.
+- The strings `SetPositionValues` / `moveToPos` / `GetPlayerPosition` do not
+  exist in GF2ASI.asi: the SE calls engine functions directly, not through the
+  script names. "Teleport" in the ASI is only a menu button label (referenced
+  from 0x1008D6F0 and 0x1008F793, both UI-registration calls).
+
+**Why every direct transform write failed:** the renderer poses the skeleton
+earlier in the frame than our PRESENT hook. Writing the world matrix at PRESENT
+is therefore one frame too late for the skeleton, and writing earlier is
+overwritten by the engine's own kinematics. The character can only be moved
+through the engine's own update path (its setter / script behaviour), not by
+poking a matrix. This is the conclusion of the whole transform hunt and it
+re-prioritises the work: the next task is to locate the engine's setter
+(the function the game itself calls when an NPC is told to move to a position),
+e.g. by watching the write to `entity+0xD0` earlier in the frame - set the
+watchpoint on a *known* entity's matrix and let the *engine* move that entity
+(an NPC walking on its own, or the player teleporting), then read the call stack
+of the writer - rather than by writing and observing.
