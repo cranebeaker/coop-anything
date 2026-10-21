@@ -67,6 +67,11 @@ animation checker.
 - **Teleports fail silently.** A test put a player inside a wall and then "found" a bug.
   Assert the precondition (player really is inside the trigger) before asserting the
   result.
+- **Registered objects can belong to an earlier streamed area.** In the
+  [Friend or Foe fixture](../games/spider-man-friend-or-foe/NOTES.md), an exit stayed in
+  the global trigger pool after an area swap. Reusing it on the next step produced
+  a test-induced crash. Check the selected area's identity and avoid re-entering a
+  consumed fixture volume; the corrected gate crossed three successive boundaries.
 - **Low memory kills long runs.** Run tests one at a time on a busy PC, in short
   batches, and clean up any game process you started.
 - **Clean up.** Remove test-only files from anything you ship and compare the shipped
@@ -79,6 +84,8 @@ animation checker.
 - **A flake from game behaviour is fixed in the action, not the assert.** A hit test failed because the NPC parried. The test now swings again, up to three times, as a player would; the assert stays strict (Gothic 3).
 - **Check what the other player sees.** A motion name set on a body is not a motion running; measure "is it running". Check also that enemies pick a remote player by themselves; forced attacks hid that they never did (Gothic 3, first human look).
 - **Own processes positively.** Stop only a process your run started (its PID, or a marker on its command line). A blanket kill by image name once destroyed a live two-player session (The Doors of Trithius).
+
+- **A state checksum can be wrong too.** A serialized progress structure can include internal alignment bytes even between fields that look initialized. In Spider-Man: Friend or Foe, an uninitialized byte after the upgrade array reproduced a false tick0 divergence exactly. Compare raw failing samples and the native initializer before labeling a mismatch as a simulation bug; keep currency, unlock and mission fields checked. See [the game notes](../games/spider-man-friend-or-foe/NOTES.md).
 
 ## Testing online features on one PC
 
@@ -96,3 +103,21 @@ animation checker.
 
 - QA level reached (see [data/SCHEMA.md](../data/SCHEMA.md)).
 - The command that runs the suite and its last summary (pass counts).
+
+### Check active state and the fixture boundary
+
+A mode structure can hold valid but inactive history. In Friend or Foe, two clients
+had identical current mode4, actors, progress and area but different previous-mode
+history from startup. Reconstructing the hash reproduced the failure; native
+control flow showed that mode4 does not consume that history. Sample restoration
+fields where their modes use them, and retain mutation checks proving that active
+pause/NIS restoration differences are detected. Do not discard a field merely
+because it differs. See [the recorded failures and derivation](../games/spider-man-friend-or-foe/NOTES.md#source-publication-and-pausestate-checks-2026-10-21).
+
+Feed scripted controls before the native binding/filter stage when an oracle
+compares native axes with normalized actions. Replacing actions after measurement
+invalidates that comparison. End a timed fixture's special assertions at its
+scheduled boundary: later legitimate tutorial/system pauses must still pass the
+continuous general state checks. The corrected Friend or Foe gate then completed
+3,600 paired combat/pause/resume ticks with normal exits; this is bounded evidence,
+not campaign or WAN certification.

@@ -6613,6 +6613,73 @@
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
   checked: '2026-10-19'
+- game: 'Spider-Man: Friend or Foe'
+  year: 2007
+  engine: proprietary (Next Level Games)
+  project: Official Windows local co-op
+  url: https://investor.activision.com/static-files/d8459280-fceb-49b0-9210-86bb7010c3d3
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: true
+    story: true
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2 (one PC)'
+  networking: unknown
+  open_source: unknown
+  last_activity: '2007-10'
+  qa: none
+  notes: >-
+    Published Windows local co-op for two players on one computer. Contemporary reviews
+    report no native online play. Preliminary searches and their limits are recorded
+    in games/spider-man-friend-or-foe/NOTES.md.
+    A later upstream Discord prototype listing has not been matched to this executable.
+    Windows build 1.0.0.111 inspected and tested with isolated English/Russian bots.
+    Separate online research projects are listed below; no playable online release
+    is established by this official local-co-op entry.
+  sources:
+  - https://investor.activision.com/static-files/d8459280-fceb-49b0-9210-86bb7010c3d3
+  - https://www.swiftworld.net/2007/10/13/pc-spider-man-friend-or-foe-review/
+  - https://www.gamespot.com/reviews/spider-man-friend-or-foe-review/1900-6180451/
+  checked: '2026-10-20'
+- game: 'Spider-Man: Friend or Foe'
+  year: 2007
+  engine: proprietary (exact engine name unverified)
+  project: Friend or Foe Online (native Windows research)
+  url: https://github.com/IlkinQafarov/spider-man-friend-or-foe-online
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: '2 (research)'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: none
+  notes: >-
+    Active source-only MIT research for Windows 1.0.0.111, exact executable and coherent
+    English/Russian packs pinned by hashes. Two independent same-machine clients passed
+    a 3,600-tick input/combat/pause/resume gate with keyboard/controller fixtures,
+    injected delays and mock transport. An earlier source scenario passed 7,200 ticks
+    and three fixture-driven area swaps. A one-account Spacewar lobby smoke carried
+    no game traffic. Steam relay is intended, but actual two-PC delivery, ordinary
+    campaign menus/progression, shared save/resume and physical input usability remain
+    unverified. No playable release; full co-op QA level remains none.
+  sources:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/main/docs/STATUS.md
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  checked: '2026-10-21'
+  up_for_adoption: false
+  made_with_coop_anything: true
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
