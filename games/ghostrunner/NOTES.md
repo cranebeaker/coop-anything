@@ -2,6 +2,7 @@
 
 Session 2026-10-21 (Asia/Yekaterinburg). Playbook: coop-anything.
 Status: **triage + research done; hook validated; netcode probe done. No co-op yet.**
+Published: draft PR #107 / claim issue #108 in the upstream repo.
 
 Short version: no co-op mod for Ghostrunner exists anywhere. The build is Unreal Engine
 4.26 and **UE4SS v3.0.1 injects and runs Lua in it** (proved). The engine's networking
