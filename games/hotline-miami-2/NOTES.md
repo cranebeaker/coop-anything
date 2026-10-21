@@ -119,3 +119,22 @@
   the puppet; the game derives the animation from the motion.
 - Observed: Alex +0x318 reads as ~205000 in this level (not degrees), so +0x318 is not always direction. Unknown.
 - Next: find Alex's attack (shooting) path so a remote click fires her gun; find aim/facing field.
+
+### Session 2b (2026-10-21): shooting
+- Naming: below, "chainsaw" = objPlayerSwanChainsaw (1051, player-controlled), "gun" = objPlayerSwanGun (1052,
+  follower). In this build the gun character fires only on the player's right mouse button (owner-confirmed).
+- Observed: a hardware write breakpoint on objBullet's (147) instance-vector end showed 8 bullets per shot
+  (shotgun), created from the game routine fcn.00f06f40 (115 KB, "fire weapon": creates objBullet, objShell,
+  objSmokeHit) via instance_create fcn.012abdd0(out, x, y, &objBullet). fcn.00f06f40 is one of several scripts
+  called in sequence by fcn.01123da0 (an object event made of script calls).
+- Observed at every shot of the gun character (field watcher, 9 shots): +0x338 ammo 3 > 2 > 1 > 0; +0x348 0 > ~30
+  (refire cooldown); +0x358 > 99 (timer); +0x258 sprite 1742 > 1738 and +0x118 image_index 0 > 1 (shoot animation);
+  +0x318 aim angle at the shot (343, 351, 356 deg). With ammo 0 further clicks do nothing.
+- Observed: input is Raw Input (RegisterRawInputDevices / GetRawInputData, one call site at 0x12590d6, handler
+  0x12590a0: type 0 mouse > 0x12592d0, type 1 keyboard > 0x1259120). Window class "SilverWareClass".
+- Observed: SDL_PushEvent right-click injection did nothing (SDL events are not the mouse path).
+- Observed (owner-confirmed on screen): IAT hook of GetRawInputData (exe slot static 0x1719400) plus
+  PostMessageW(WM_INPUT, tagged handle) returning a RAWMOUSE with usButtonFlags RIGHT_DOWN then RIGHT_UP 80 ms later
+  makes the gun character fire. 3 of 5 injected clicks fired (ammo 3).
+- Next: aim. The shot angle (+0x318) follows the cursor; co-op needs a per-player aim, so find where the gun
+  character takes its aim (cursor object position, or mouse_x/mouse_y) and override it for the remote player.
