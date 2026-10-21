@@ -368,3 +368,26 @@ its marker - these objects are not what the skeleton render reads. The next
 cheap step: put the hardware watchpoint on one of the trail objects
 (`0x22B0xxxx`) while the companion walks; its writer is the movement/AI code and
 its source is the simulation transform that a puppet must write.
+### Watchpoint on a "found" matrix: it is a transient buffer (2026-10-21)
+
+Hardware watchpoint on the translation row of one of the 21 findmat matches
+(`0x430B4B30`) fired 12 times at a single DLL address, `0x6EF6CC8E`, with
+`rep movsb` in the bytes before EIP and a byte-at-a-time source cursor
+(`ESI 0x015477BD..C0`), i.e. a **generic byte copy from a loading/streaming
+buffer** - not a character update. So the "orthonormal 4x4 with the right
+translation" matches in that heap region are transient buffer contents that
+happen to satisfy the test; value-based matrix hunting is exhausted.
+
+The solid result stands: the SE inspector proves the *layout*
+(`object+0xD0` = world matrix, 4th row = position at `object+0x100`). What is
+still missing is the *object identity*: which heap object is the companion's.
+
+Recommended next step (well-scoped, no more fishing): the SE keeps its
+inspector target in its own `.data` (image base 0x10000000, section .data at
+VA 0x10179000). Find the static pointer the inspector code reads
+(`movl (%edi), %ecx` at 0x100917CB) by tracing back from 0x10091802's function
+prologue and from `0x10179400`-style statics, then read the target object and
+its +0xD0 matrix directly - that is the object the SE itself trusts, and the
+same object a puppet should write. Alternative with higher long-term value:
+hook the engine's `SetPositionValues` script setter and let the engine move the
+character.
