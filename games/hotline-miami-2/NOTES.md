@@ -107,3 +107,15 @@
   while Ash walked away (owner-confirmed on screen, 2026-10-21). First working puppet primitive.
 - Observed: the earlier failed teleports used a stale instance pointer read while the object's instance vector was
   empty (count 0).
+- Tooling: `hm2loader.dll` (loaded once with x32dbg `loadlib`) hot-swaps `hm2logic_vN.dll` named in
+  `hm2logic_ver.txt`, calling its `hm2_tick` every ~1 ms on one thread. Commands via `hm2logic_cmd.txt`. No more
+  x32dbg interaction per iteration.
+- Lesson: Kaspersky (heuristic) quarantined the logic DLL within seconds (2 times) while the loader and the first
+  probe were not flagged. Owner added a folder exclusion for the test folder. Releases for players will need a plan
+  for AV false positives (open source, reproducible build, vendor false-positive reports).
+- Observed (owner-confirmed on screen): "ghost" mode writing Ash's position from 1.5 s earlier into Alex x/y every
+  ~1 ms makes Alex walk Ash's exact path with normal walk animation and facing ("anda bonito"). Log check: Alex at t
+  equals Ash at t-1.5 s (sampling granularity 100 ms). So driving x/y alone is enough for movement and animation of
+  the puppet; the game derives the animation from the motion.
+- Observed: Alex +0x318 reads as ~205000 in this level (not degrees), so +0x318 is not always direction. Unknown.
+- Next: find Alex's attack (shooting) path so a remote click fires her gun; find aim/facing field.
