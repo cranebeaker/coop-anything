@@ -336,3 +336,35 @@ path instead - watch the SE NPC Inspector's own display buffer while the
 inspector refreshes (the SE computes the value it shows, so its code reveals
 the authoritative source), or hook the engine's script setter
 (`SetPositionValues`) from the plugin and let the engine move the character.
+### The SE inspector read path, statically decoded (2026-10-21)
+
+Static analysis of `GF2ASI.asi` (a PE32 DLL, image base 0x10000000, no packing:
+the inspector strings are plain ASCII at file offsets 0x0F0C3C-0x0F1434):
+
+- The "Position:" label is at VA `0x100F21BC`, referenced from exactly one place,
+  `0x10091802` (`push 0x100F21BC`). The surrounding code is the inspector's
+  General tab: `lea eax,[ebp-0x48]; push eax; call 0x10074730` fills a 12-byte
+  buffer, then three `cvtps2pd`/`movsd` pairs and a printf push it as three
+  doubles.
+- `0x10074730`: `call 0x10074680` with ECX = the inspected object, `add eax,0x30`,
+  then `call 0x10073180` (coordinate conversion into the output). So the position
+  is `object + 0x100`.
+- `0x10074680` is the decisive one: it copies four `movups` from
+  `ecx+0xD0`, `ecx+0xE0`, `ecx+0xF0`, `ecx+0x100` into a local 16-float matrix
+  and converts each row. **A character's world transform is a 4x4 matrix at
+  `object + 0xD0`; its 4th row is the position.** This matches the engine's own
+  composer (`FUN_0088d6e0` branch A reads a position at `ctx+0x100`).
+
+`findmat.exe` (new, local) scans for exactly that structure: a 16-float matrix
+with orthonormal rows 0..2, `w = 1`, and the 4th row equal to a given position.
+On the companion it finds 30 objects: three at feet height with the inspector's
+exact value (`0x04396720`, `0x043968E0`, `0x229A9E30` in that run) and a series
+of 27 at centre height (`0x22B0xxxx`-`0x22B8xxxx`) whose positions vary smoothly
+inside a few decimetres - a movement history/trail, not a single transform.
+
+Writing the player's position into the 4th row of the three feet-height objects
+in-process at PRESENT (12-byte writes, `w` preserved) left the model standing on
+its marker - these objects are not what the skeleton render reads. The next
+cheap step: put the hardware watchpoint on one of the trail objects
+(`0x22B0xxxx`) while the companion walks; its writer is the movement/AI code and
+its source is the simulation transform that a puppet must write.
