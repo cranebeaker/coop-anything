@@ -7270,3 +7270,33 @@
   - https://github.com/Zonda001/graveyard-keeper-multiplayer/issues
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/pull/9
   checked: '2026-10-20'
+- game: MDK2 HD
+  year: 2011
+  engine: BioWare in-house (MDK2), OpenGL 3, Lua 3.1 scripting
+  project: mdk2-coop
+  url: https://github.com/TommoDotCommo/mdk2-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: up to 16 (tested with 8)
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Native dinput8.dll bridge plus Lua injected through settings.lua. The host runs the world; clients mirror
+    enemies, replay shots including delayed Doganboy grenades, share pickups, doors and checkpoints, follow level loads, and revive at a partner when
+    they go down. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP. Co-op saves and reconnect after a crash.
+    Text chat, pings, proximity voice, difficulty presets, controls presets, a launcher, couch (split-screen) co-op. Installer and a v0.1.0-alpha
+    pre-release; master is ahead of it. Automated checkpoint sweep of all 96 checkpoints with two real clients and a
+    host/client state diff (before the N-player change), plus 3- and 8-player suites; feature suites for the newer parts.
+  sources:
+  - https://github.com/TommoDotCommo/mdk2-coop
+  - https://store.steampowered.com/app/213350/
+  checked: '2026-10-22'
+  made_with_coop_anything: true
