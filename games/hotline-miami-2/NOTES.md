@@ -82,3 +82,28 @@
 - Caveat: object-name mapping from my hlm2_objects.bin parse is noisy (e.g. objShardRenderer shows up for many
   handles). Trust handle addresses and ids, not the names, until the record layout is pinned down.
 - Hit cadence: GUN, GUN, SAW repeating ~185 times in ~30 s of play under HW-breakpoint logging (game slowed down).
+- Observed (static): instance access path. `fcn.0040d9a0` resolves a GML value to an instance pointer: values
+  < 100000 are object indexes (object struct from fcn.012a1860 -> instance pointer vector at obj+8..obj+0xC,
+  returns the first instance); larger values are instance ids (fcn.012a57f0 / 012a4dd0, instance at +0x10).
+- Observed (static): `fcn.004158b0` returns a reference {inst+0x2B8, inst, -1}, `fcn.004158d0` returns
+  {inst+0x2E8, inst, -1}; they have 8426 and 8377 callers. Guess: builtin x and y. To verify at runtime.
+- Observed (static): user (non-builtin) variables are 16-byte values in an array at inst+0x28, slot = a per-name
+  index cached in a 16-bit field (+0xA2 of a per-variable descriptor), i.e. `inst + 0x28 + 16*slot`.
+- Observed: in fcn.0041bbe0, after `instance_number(objPlayerSwanGun) > 0`, it reads objPlayerSwanGun.x and .y
+  (0x41c25f / 0x41c281: `mov ecx,&objPlayerSwanGun; call 419c10 / 419c30`).
+
+### Session 2 (2026-10-21): probe DLL, first verified write
+- Tooling: `hm2probe.dll`, a freestanding 32-bit DLL (clang-cl 18 + lld-link, no CRT, kernel32 import lib from
+  llvm-dlltool). Loaded into the test copy with x32dbg `loadlib`. A worker thread logs player objects every 100 ms
+  and pins positions from a command file every 1 ms. Source: to be published in the mod repo, not here.
+- Lesson: driving x32dbg through its GUI is slow: HM2 auto-pauses when it loses focus, and instance pointers go stale
+  on every level restart. Prefer an in-process probe that resolves pointers fresh every tick.
+- Observed: object instance lists include descendants. objPlayer (36) and objPlayerSwanChainsaw (1051, Ash) list the
+  same instance, so Ash is a child of objPlayer and is the player-controlled one. objPlayerSwanGun (1052, Alex) is a
+  separate instance.
+- Observed (verified by write): inst+0x2B8 = x, inst+0x2E8 = y (GML values: double + type tag; copies at +0x2C8 / +0x2F8,
+  probably xprevious/yprevious). For Alex, inst+0x318 = facing direction in degrees (180 left, 270 down, 90 up).
+- Observed: Alex follows Ash about 35-40 px behind. Pinning Alex at (60,60) from the probe thread kept her in place
+  while Ash walked away (owner-confirmed on screen, 2026-10-21). First working puppet primitive.
+- Observed: the earlier failed teleports used a stale instance pointer read while the object's instance vector was
+  empty (count 0).
