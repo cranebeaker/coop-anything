@@ -350,3 +350,55 @@ world. That is the next experiment, and it is the last cheap one for Model A.
 - Steam appdetails (no multiplayer category): https://store.steampowered.com/api/appdetails?appids=1139900&l=english
 - Stray local co-op (UE4SS-Lua precedent): https://github.com/CyberLifeYT/Stray-Local-Co-op-Mod
 - HogWarp (closed UE4 online co-op precedent): https://hogwarp.com/
+
+## 8. Model A closed; Model B puppet primitive proven (2026-10-21)
+
+### Model A: four independent negatives — CLOSED
+
+| Attempt | Result |
+|---|---|
+| `listen` console command in a loaded standalone world | no NetDriver (earlier probe) |
+| `open <map>?listen` into a loaded level | no-op: `NetDriver=nil` at +3/6/10/15/22 s, no travel, no crash |
+| map URL as a command-line argument (`Ghostrunner-Win64-Shipping.exe /Game/Levels/…?listen`) | **ignored**: game still boots to the main menu |
+| `UGameplayStatics:OpenLevel(pc, LEVEL, true, "listen")` from the menu | **crashes immediately**: the Lua call never returns, process dies |
+
+The engine-side pieces are all present (classes loadable, `NetDriverDefinitions` honoured),
+but this build's level flow is not network-tolerant: the only paths that actually start a
+travel either ignore the option or crash. Model A is closed for now — not because the
+netcode is missing, but because the game's own game-mode/level bootstrap cannot survive a
+`?listen` load. Reopening it would need native hooking of `UEngine::LoadMap`/travel, which
+UE4SS Lua cannot do (it hooks UFunctions only).
+
+### Model B: the puppet primitive works
+
+- `bUseSplitscreen = true` + `UGameplayStatics:CreatePlayer(pc, 1, true)` adds a second
+  `PlayerControllerOML` and a second pawn (proven twice).
+- Driving that body from **external data** works: every tick the mod computed a target point
+  on a circle around the host pawn and called
+  `remotePawn:K2_SetActorLocation(target, false, hit, false)`. Result `ok=true, res=true`
+  and the pawn's actual location matched the target **exactly** on every logged tick
+  (e.g. target `(-83, 182, 0)` → actual `(-83, 182, 0)`; 9 consecutive ticks).
+  That is the receive-and-drive half of a puppet, demonstrated with real engine calls.
+- Design consequence: a remote avatar does **not** have to be a spawned actor — the proven
+  route is a "peer slot" second local player whose pawn is driven from network state.
+  The cost is that split-screen viewports appear, which is a UX problem to solve later.
+
+### Still blocked: spawning a non-player puppet actor
+
+- `UGameplayStatics:BeginSpawningActorFromClass` **exists and is bound** (the field reads
+  back as a `UFunction`), but every argument variant fails:
+  `(pc, class, xform, false, nil, nil)`, `(pc, class, xform, false)`,
+  `(pc, class, xform, true)`, `(pc, class, xform)` all raise. The raised value is not a
+  string — it comes back as a `UFunction` object, so the real cause is hidden.
+- Most likely cause: UE4SS's Lua-to-`FTransform` marshalling (the table
+  `{Translation=…, Rotation=…, Scale3D=…}` may not be accepted). Next agent should test a
+  scalar/simple-struct argument on another function to confirm, or try
+  `StaticConstructObject` + `AActor::FinishSpawning`, or use a Blueprint helper actor
+  (the community's `ModActor` + LogicMods convention) to do the spawn inside BP.
+- Not required for the first playable: the second-local-player route above avoids it.
+
+### Workflow lesson (cost me three runs)
+
+Input automation needs the game window to be foreground; `SetForegroundWindow` from a
+non-foreground process often silently fails, and then `SendKeys` goes to whatever window is
+focused. Fix by driving the game from Lua and checking game state, not by timed clicks.

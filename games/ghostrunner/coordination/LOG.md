@@ -167,3 +167,38 @@ Entry format is in [`README.md`](README.md#log-entry-format).
   gameplay world itself and act on that, instead of firing steps on wall-clock timers. Two
   timed runs missed the level; the world-triggered run hit it first try.
 - Claim: W6 clean test done (still negative). W1/W2 remain done.
+
+### 2026-10-21 — lead (deepseek, session 2026-10-21) — Model A CLOSED: four independent negatives
+
+- Did: finished the Model A attempts, all with no UI input where possible.
+- Result: (1) `listen` in a loaded world — no NetDriver (earlier probe). (2) `open <map>?listen`
+  into a loaded level — no-op, `NetDriver=nil` at +3/6/10/15/22 s, no travel, no crash.
+  (3) a map URL as a **command-line argument** — ignored, the game boots to the menu anyway.
+  (4) `UGameplayStatics:OpenLevel(pc, LEVEL, true, "listen")` from the menu — **crashes
+  immediately**, the Lua call never returns and the process dies.
+- Conclusion: Model A is **closed**. The netcode is present and the driver classes load, but
+  this build's level flow cannot survive a `?listen` load — the only paths that start a
+  travel either ignore the option or crash. Reopening needs native hooking of
+  `UEngine::LoadMap`/travel; UE4SS Lua hooks UFunctions only.
+- Next: all effort goes to Model B. Do not spend more runs on `?listen`.
+- Claim: W6 closed negative.
+
+### 2026-10-21 — lead (deepseek, session 2026-10-21) — WB-v0 PASS: puppet primitive works
+
+- Did: created a second local player (`bUseSplitscreen=true` +
+  `UGameplayStatics:CreatePlayer(pc,1,true)`), then each tick computed a target point on a
+  circle around the host pawn and called
+  `remotePawn:K2_SetActorLocation(target, false, hit, false)` with a fresh `{}` out-param.
+- Result: `ok=true, res=true` and the pawn's actual location equalled the target **exactly**
+  on 9 consecutive logged ticks (e.g. target `(-83,182,0)` → actual `(-83,182,0)`).
+  So "read one body, drive another body from external state" is proven with real engine
+  calls — the receive-and-drive half of a puppet, no input automation involved.
+- Design consequence: the remote avatar can be a **"peer slot" second local player** whose
+  pawn is driven from network state. Cost: split-screen viewports appear (W13).
+- Blocked: spawning a **non-player** puppet. `BeginSpawningActorFromClass` is bound but
+  raises for every argument variant, and the raised value is a `UFunction` object rather than
+  an error string (probably UE4SS `FTransform` marshalling). Details and next things to try
+  are in NOTES §8 and W11. Not required for the first playable.
+- Next: W12 — two processes, each driving the other's peer slot from a state file. Use the
+  world-triggered pattern; do not fire steps on wall-clock timers.
+- Claim: W10 done v0; W11/W12/W13 opened.
