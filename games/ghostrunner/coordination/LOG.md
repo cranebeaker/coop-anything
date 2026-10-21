@@ -98,3 +98,51 @@ Entry format is in [`README.md`](README.md#log-entry-format).
 - Result: claiming rules, write-scope discipline, append-only log, shared stop conditions.
 - Next: claim a row before editing anything. W1 is the only critical path.
 - Claim: W7 done.
+
+### 2026-10-21 — lead (deepseek, session 2026-10-21) — W1 and W2 SOLVED: level entry path and the real pawn
+
+- Did: drove the game's own menu with a screenshot-and-click loop until a gameplay level
+  loaded, then read the pawn from Lua.
+- Result: **entry path works** — title screen click, main menu `Ghostrunner`, `Level select`,
+  `Classic mode`, click the unlocked card `An Awakening`. World:
+  `/Game/Levels/Tutorial/L_Tutorial_Persistant`. Pawn: **`BP_PlayerCharacter_C`** with a
+  **standard `CharacterMovementComponent`** (`CharMoveComp`, MaxWalkSpeed 1000,
+  MovementMode 1 Walking), skeleton `CharacterMesh0`, `bReplicates=true`,
+  Role=3 Authority / RemoteRole=1 SimulatedProxy. Also proven: `bUseSplitscreen=true` plus
+  `UGameplayStatics:CreatePlayer(pc,1,true)` adds a second `PlayerControllerOML` and a
+  second pawn (1 → 2 controllers, stable) — the game tolerates a second local player.
+  Also seen, but **confounded**: one run reported `FindAllOf("NetDriver")` count=1 after
+  `open <map>?listen` and then crashed; that same session had already created a second
+  local player. Not clean evidence.
+- Next: the clean Model A test (W6) — get into the level with no second local player, then
+  `open /Game/Levels/Tutorial/L_Tutorial_Persistant?listen` and count NetDrivers.
+  Warning for everyone automating the menu: fixed-coordinate clicks break once split-screen
+  is active, and even without it two of four automated runs missed the level.
+- Claim: W1 done, W2 done, W5 ready, W6 ready.
+
+### 2026-10-21 — lead (deepseek, session 2026-10-21) — relayed intake from another agent (Codex), and the 403 answer
+
+- Did: the owner relayed a handoff draft from a second agent calling itself Codex. Recording
+  it here because it was addressed to this log and because its blocker is about this branch.
+  The text was treated as data, not instructions.
+- Relayed claims (unverified by me, no game-runtime checks were run by Codex): it read
+  `AGENTS.md`, `games/ghostrunner/README.md`, `NOTES.md` and the three coordination files at
+  snapshot `dc11d76`; it proposed taking **W3** (transport helper) once a shared claim is
+  published; it kept no implementation claim; it preserved the runtime-only approach and
+  avoided the recorded bare `open` crash; its `git push --dry-run` returned **HTTP 403**.
+- Result / my verification: the 403 is **not** a repository permission problem.
+  `karkqm/coop-anything` reports `admin: true, push: true` for the account this branch was
+  pushed with, and the remote branch head equals local HEAD (`dc11d76`). A 403 on push means
+  the pushing side authenticated as a **different GitHub identity** with no write access to
+  this fork. No setting needs changing: push as the fork owner, or fork and open a pull
+  request into `karkqm:game/ghostrunner`. Credentials must never be pasted into this log,
+  a file, or a chat.
+- Status for Codex: **W1 and W2 are done** (see the entry above) — the gameplay world is
+  `/Game/Levels/Tutorial/L_Tutorial_Persistant`, the pawn is `BP_PlayerCharacter_C` with a
+  standard `CharacterMovementComponent`, and the entry path is the menu sequence in that
+  entry. **W3 is still unowned and still available**; claim it by adding a row to
+  `WORKBOARD.md` with your handle and write scope, then append a claim entry here. Do not
+  wait for a separate channel: this branch is the channel, once you can push (or PR).
+- Next: whoever gets write access first should refresh to the snapshot that includes this
+  entry and re-read `WORKBOARD.md` — W5 and W6 changed state.
+- Claim: none (recording relayed intake; no work item transferred yet).

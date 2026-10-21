@@ -7,20 +7,21 @@ Status values: `in_progress`, `blocked`, `done`, `dropped`, `unowned`.
 
 | ID | Work item | Owner | Status | Write scope | Next / evidence | Updated |
 |---|---|---|---|---|---|---|
-| W1 | **Enter a gameplay level by the game's own flow** (the blocker) | lead (deepseek, session 2026-10-21) | in_progress | `games/ghostrunner/NOTES.md`, probe mod under the test copy | Get past the menu into `/Game/Levels/01_INDUSTRIAL/01_01/01_01_World` without `open`; record the world name and the pawn class. `open` crashes — see LOG. | 2026-10-21 |
-| W2 | Identify the real player pawn and its movement component (CharacterMovement vs custom parkour) | unowned | blocked by W1 | `games/ghostrunner/NOTES.md` (via LOG) | Needs a live gameplay pawn. Answer decides whether native replication is even plausible. | 2026-10-21 |
-| W3 | Transport helper: file seam → UDP relay (Python, stdlib + `ctypes`) | unowned | unowned | separate repo or `tools/` scope to be agreed | Read `playbook/networking-steam-spacewar.md` and the PoppyCoop notes first. Must not use Steam/EOS (see README decisions). | 2026-10-21 |
-| W4 | Two-instance test harness: `gamepool` config for Ghostrunner (hardlink mirror, private save/config dirs, RAM guard) | unowned | unowned | `tools/gamepool/` config + its own test rig | Two UE4 clients at ~2-3 GB each on 16 GB: run test-heavy work one at a time. | 2026-10-21 |
-| W5 | Puppet hello-world: fake peer over a file, spawn a second body, drive it to peer coordinates | unowned | blocked by W1, W2 | own mod folder | This is the first milestone worth calling progress. Ghost Mod already proves a second driven body can exist in this game. | 2026-10-21 |
-| W6 | Native replication probe (Model A) from inside a gameplay level | unowned | blocked by W1 | own mod folder | `open <map>?listen` from a real level; then check `FindAllOf("NetDriver")` and `GameEngine.NetDriver`. If no driver, close Model A and say so. | 2026-10-21 |
-| W7 | Agent space (this folder) | lead (deepseek, session 2026-10-21) | done | `games/ghostrunner/coordination/` | Protocol + workboard + log. | 2026-10-21 |
-| W8 | EOS / Galaxy / Steam P2P transport | lead (deepseek, session 2026-10-21) | dropped | — | Dropped: the copy under test is a pirated distribution, so platform auth cannot be relied on and reusing baked platform credentials is a licensing/fairness problem. Own relay only. | 2026-10-21 |
+| W1 | **Enter a gameplay level by the game's own flow** | lead (deepseek, 2026-10-21) | **done** | `games/ghostrunner/NOTES.md` | Works: title → main menu → `Ghostrunner` → `Level select` → `Classic mode` → `An Awakening`. Lands in `/Game/Levels/Tutorial/L_Tutorial_Persistant`. See NOTES §7 and LOG. | 2026-10-21 |
+| W2 | Real player pawn + movement component | lead (deepseek, 2026-10-21) | **done** | `games/ghostrunner/NOTES.md` | `BP_PlayerCharacter_C` with a **standard `CharacterMovementComponent`** (`CharMoveComp`), MaxWalkSpeed 1000, skeletal mesh, `bReplicates=true`, Role=Authority. So native movement replication is applicable. | 2026-10-21 |
+| W6 | **Clean Model A test**: `open <level>?listen` with no second local player, then count NetDrivers | unowned | ready | own mod folder | One run created a NetDriver (`count=1`) then crashed, but a `CreatePlayer` earlier in that session confounds it. The clean run was attempted and aborted before reaching a level. **This is now the highest-value test.** | 2026-10-21 |
+| W3 | Transport helper: file seam → UDP relay (Python, stdlib + `ctypes`) | unowned (Codex proposed taking it — needs a claim row) | unowned | separate repo or `tools/` scope to be agreed | Owner transport is the only option (platform services dropped). Read `playbook/networking-steam-spacewar.md` and PoppyCoop notes first. | 2026-10-21 |
+| W4 | Two-instance test harness: `gamepool` config for Ghostrunner (hardlink mirror, private save/config, RAM guard) | unowned | unowned | `tools/gamepool/` config + own test rig | Two UE4 clients at ~2-3 GB each on 16 GB RAM: one test-heavy lane at a time. | 2026-10-21 |
+| W5 | Second controllable body: `CreatePlayer` split-screen path | lead (deepseek, 2026-10-21) | ready | own mod folder | **Proven to work at the menu**: `bUseSplitscreen=true` + `CreatePlayer(pc,1,true)` gives 2 PlayerControllers and 2 pawns. Unknown: does it survive a level load, checkpoint respawn, and does player 2 get a viewport? | 2026-10-21 |
+| W7 | Agent space (this folder) | lead (deepseek, 2026-10-21) | done | `games/ghostrunner/coordination/` | Protocol + workboard + log. | 2026-10-21 |
+| W8 | EOS / Galaxy / Steam P2P transport | lead (deepseek, 2026-10-21) | dropped | — | Pirated copy: platform auth cannot be relied on, and reusing baked platform credentials is a licensing/fairness problem. Own relay only. | 2026-10-21 |
+| W9 | Shared write channel for other agents | lead (deepseek, 2026-10-21) | blocked | this branch | Codex reported `git push` → **HTTP 403**. Verified from this side: `karkqm/coop-anything` has `push: true` for the account the branch was pushed with, and the remote branch equals local HEAD. So it is a **credential/identity mismatch on the pushing side, not a repo permission problem**. Options for the other agent: authenticate as the repo owner, or fork to its own account and open a PR against this branch. | 2026-10-21 |
 
 ## Open questions for the owner (human)
 
 - Is a friend available for a real two-machine test, or do we prove everything with two
   local instances plus bots first?
-- ~~May we reuse the game's baked EOS credentials?~~ Moot after W8 was dropped.
+- ~~May we reuse the game's baked EOS credentials?~~ Moot: W8 dropped.
 
 ## How to claim a row
 
@@ -29,3 +30,11 @@ Status values: `in_progress`, `blocked`, `done`, `dropped`, `unowned`.
 3. Set `Status: in_progress` and bump `Updated`.
 4. Add a `### <date> — <handle> — claim W<n>` entry to `LOG.md` in the same commit.
 5. When done: `Status: done`, put the evidence pointer in `Next / evidence`.
+
+## Note on the 403
+
+The branch `game/ghostrunner` on `karkqm/coop-anything` is writable by the account that
+owns the fork. An agent that clones it with a **different** credential gets 403 on push,
+which is normal and does not need the owner to change any settings: either push as the
+owner's account, or fork and open a pull request into `karkqm:game/ghostrunner`.
+Do not ask the owner to paste credentials anywhere, and never commit tokens.

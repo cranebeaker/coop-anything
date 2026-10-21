@@ -124,8 +124,25 @@ Nothing has been shipped. This session built a test rig and ran three experiment
   are loadable and the config is read, but no NetDriver has been observed. Model A is
   `unproven`, not dead: the untested levers are loading a map with `?listen` through the
   game's own flow, and the Redpoint `EOSNetDriver`.
-- Not done: entering a gameplay level by the game's own route, so the real player pawn
-  class and its movement component are still unknown.
+- **Experiment 6 — can a gameplay level be reached without `open`? PASS.** Driving the
+  game's own menus (title click → `Ghostrunner` → `Level select` → `Classic mode` →
+  `An Awakening`) loads `/Game/Levels/Tutorial/L_Tutorial_Persistant`. The real player pawn
+  is **`BP_PlayerCharacter_C`** and it carries a **standard `CharacterMovementComponent`**
+  (`CharMoveComp`, MaxWalkSpeed 1000, MovementMode Walking) plus a `SkeletalMeshComponent`,
+  with `bReplicates=true` and Role=Authority. That matters: UE4's own movement replication
+  applies to a stock CMC, so Model A is now *plausible with a standard pawn* rather than
+  speculative.
+- **Experiment 7 — does the build tolerate a second local player? YES.** Setting
+  `GameMapsSettings.bUseSplitscreen = true` and calling
+  `UGameplayStatics:CreatePlayer(controller, 1, true)` produced a second
+  `PlayerControllerOML` and a second pawn; the controller count went 1 → 2 and stayed
+  stable. This is both the local split-screen fallback and a ready "second body" for
+  puppet work with no netcode at all.
+- **Experiment 8 — `open <map>?listen` from inside a level (clean test): NOT DONE YET.**
+  One run did report `FindAllOf("NetDriver")` = 1 after the travel started, but that session
+  had already created a second local player and then crashed, so it is confounded and is not
+  claimed here. The clean run is the next step.
+- Not done: a clean Model A verdict, and whether two local players survive a level change.
 - Side effect to be aware of: the owner's `Engine.ini` was temporarily patched for
   Experiment 3 and **restored byte-identically** (SHA-256 verified before/after). The
   owner's install was never written to.

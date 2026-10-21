@@ -259,8 +259,57 @@ The two untested levers are (a) load a map **with** `?listen` through the game's
 level flow rather than the console, and (b) the Redpoint `EOSNetDriver` path. Until one of
 those runs, Model A is `unproven`, not dead.
 
+## 7. W1 solved: how to get into a level, and the real player pawn (2026-10-21)
+
+### OBSERVED
+
+- **Entry path that works (game's own flow, no `open`)**:
+  title screen → click → main menu → `Ghostrunner` → `Level select` → difficulty
+  (`Classic mode`) → click the unlocked level card (`An Awakening`) → level loads.
+  Resulting world: **`/Game/Levels/Tutorial/L_Tutorial_Persistant`** (the persistent
+  tutorial map that hosts "An Awakening" and "Look Inside").
+- **The real player pawn is `BP_PlayerCharacter_C`**, at
+  `/Game/Levels/Tutorial/L_Tutorial_Persistant.L_Tutorial_Persistant:PersistentLevel.BP_PlayerCharacter_C_…`
+  - **`CharacterMovement` = `CharacterMovementComponent`** (`CharMoveComp`) — a **standard
+    UE4 CMC, not a custom parkour component**. `MaxWalkSpeed = 1000.0`, `MovementMode = 1`
+    (Walking) at spawn.
+  - `Mesh` = `SkeletalMeshComponent` (`CharacterMesh0`).
+  - `Role = 3` (Authority), `RemoteRole = 1` (SimulatedProxy), `bReplicates = true`.
+  - Spawn location `(-20179, -67068, 2099)`.
+- **`UGameplayStatics:CreatePlayer` works**: setting
+  `GameMapsSettings.bUseSplitscreen = true` and calling `CreatePlayer(pc, 1, true)` added a
+  second `PlayerControllerOML` and a second pawn. Player controller count went 1 → 2 and
+  stayed stable over several ticks. So this build tolerates a second local player.
+- **`open <map>?listen` does create a NetDriver** — in one run `FindAllOf("NetDriver")`
+  reported `count=1` after the travel started. That run then crashed, **but it was
+  confounded**: `CreatePlayer` had already added a second local player in the same session,
+  and a split-screen layout changes the menu flow. Treat "netdriver creation works" as
+  suggestive, not proven.
+- Menu automation by fixed screen coordinates is **fragile**: creating a second player
+  (split-screen viewport) shifts the layout and later clicks miss. Two of four automated
+  runs failed to reach a level for that reason.
+
+### DERIVED
+
+- Because the pawn is a stock `UCharacterMovementComponent` on a `Character`, UE4's own
+  movement replication (`ServerMove` / `ClientAdjustPosition`, both present in the binary)
+  is applicable to it. Model A went from "speculative" to "plausible with a standard pawn",
+  which is the strongest argument yet for the native-replication route.
+- A second local player existing is useful on its own: it is the local split-screen
+  fallback, and it is a ready "second body" for puppet development without any netcode.
+
+### UNKNOWN
+
+- Whether a listen server survives a map load **when no second local player exists** (the
+  clean test was attempted but the run aborted before reaching a level).
+- Whether two local players survive a level transition and a checkpoint respawn.
+- Whether the second local player gets a camera viewport (not observed on screen).
+
 ## Next actions
 
+0. **Run the clean Model-A test**: get into the tutorial level via the game's own flow
+   (no `CreatePlayer` in the same session), then `open /Game/Levels/Tutorial/L_Tutorial_Persistant?listen`
+   and check `FindAllOf("NetDriver")`. That decides Model A.
 1. Get into a gameplay level deterministically (level names from public mods; or call the
    game's own level-start function), then re-run the `?listen` NetDriver probe there.
 2. Identify the real player pawn class and whether it has `CharacterMovement`.
