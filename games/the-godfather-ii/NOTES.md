@@ -417,3 +417,21 @@ e.g. by watching the write to `entity+0xD0` earlier in the frame - set the
 watchpoint on a *known* entity's matrix and let the *engine* move that entity
 (an NPC walking on its own, or the player teleporting), then read the call stack
 of the writer - rather than by writing and observing.
+### The SE has no direct "set position" call (2026-10-21)
+
+Scanning GF2ASI.asi .text for `E8` calls whose target lands in the game's
+address range (0x00400000-0x01230000) yields exactly six sites:
+FUN_005d9ab0+0xAA, FUN_005d93e0 (a LinkedObject-style constructor),
+FUN_004b6060 (a small object ctor), FUN_0094bf90 (a UI/param ctor),
+FUN_0059fd60+0x2DF and FUN_005167d0+0x8EB. None is a position setter: the SE
+reaches game functionality through the UI/script layer, not through a direct
+engine call. So there is no shortcut to the setter inside the SE.
+
+Consequence for the next session: implement the call into the game's own script
+VM from our plugin. Relevant engine pieces (all in the decompiled corpus):
+`FUN_00468cb0` registers the script names, `FUN_00468ea0` shows the call
+pattern (`iVar1 = *(int *)(DAT_012233f4 + 0x18)`, `FUN_00625ca0` push name,
+`FUN_00633cb0` lookup, `FUN_00636570` invoke). Decoding those three helpers and
+calling `SetPositionValues` / a `moveToPos` behaviour on the companion's SimNPC
+handle is the concrete, bounded next task - and it is also the right primitive
+for networked co-op later.
