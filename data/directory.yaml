@@ -7575,3 +7575,29 @@
   - 'Repo DIRECTORY.md and games; public GitHub issue/PR and repository search for Godfather 2 / Godfather II co-op and multiplayer, 2026-10-20'
   - 'English web searches: Godfather II co-op campaign, co-op mod, online co-op, multiplayer mod; checked Nexus, ModDB, GameBanana, GameFAQs results and PCGamingWiki, 2026-10-20'
   - 'Not checked: game Discord, Steam guides in depth, Archive.org; attempted Russian, German, Italian and Spanish queries were rate-limited (HTTP 429)'
+- game: Little Inferno
+  year: 2012
+  engine: Tomorrow Corporation in-house (C++, Direct3D 11, Box2D)
+  project: Little Inferno co-op
+  url: https://github.com/dobrodeetel/little-inferno-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/little-inferno
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: ''
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: community-reports
+  notes: Local two-player co-op on one PC for the Steam build 10124709 (2.0.3); player 1 mouse, player 2 gamepad (DualSense, DualShock 4, XInput), one fireplace, shared coins and save, like the Switch edition. The engine already keeps a second pointer (touch leftover); a winmm.dll proxy feeds it from the pad after each input poll and draws its cursor with D3D11. Menus outside the fireplace are player 1 only. Checked through the tutorial and first letters by scripted screenshots and an owner playtest; later catalogs, the ending and Ho Ho Holiday are unchecked. MIT.
+  sources:
+  - https://github.com/dobrodeetel/little-inferno-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/little-inferno
+  - https://tomorrowcorporation.com/posts/grab-a-friend-switch-editions-will-have-local-multiplayer
+  checked: '2026-10-22'
+  made_with_coop_anything: true
