@@ -1251,7 +1251,7 @@
   qa: none
   notes: Stock campaign maps as a listen or dedicated server; Lua mod pak plus an ASI that hooks CryGame.dll 1.4
     (snapshot budget, area triggers for remote players). Also written, but untested in game (joining through a Steam Spacewar relay,
-    the launcher lobby and player shirt colors). 0.2 beta, 2 players checked by hand. Host saves (autosave at checkpoints, save and load commands) keep players and dead enemies, not mission progress. No helicopters or cutscenes for clients. MIT license.
+    the launcher lobby and player shirt colors). 0.2 beta, 2 players checked by hand. Host saves (autosave at checkpoints, save and load commands) keep players and dead enemies, not mission progress; a difficulty setting. A sweep of the 20 levels found 18 that load; Treehouse and Swamp crashed at the load and load now with a workaround (baked physics states are skipped). Helicopters follow once they move on the host; no cutscenes for clients. MIT license.
     Write-up in games/far-cry.
   sources:
   - https://github.com/Bantila/FarCryCoop/tree/main
