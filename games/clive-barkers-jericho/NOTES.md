@@ -225,6 +225,26 @@
 - More downloads: ffmpeg (BtbN master-latest win64 gpl) SHA-256
   `4c967363c4f369172cfec1336d8364814c181c749cb34f654d522af1542fd29e`.
 
+## Session 2026-10-22: first human session, 0.2.2
+
+- `Game.UsrEntity(n)` reads the engine's table of local users with no bounds check (0x427470).
+  The game's own scripts call `Game.UsrEntity(fp.id)` on first-person models; a model whose
+  id is not a local user (-1, or 3 used to hide a model from one split screen view) made it
+  read a bad pointer and crash (0x427489, the crash handler then calls ExitProcess with
+  0xC0000005). Wrapping it in Lua to return nil for absent users fixed it; those scripts take
+  nil without an error. A vectored exception handler in the proxy (tests only) gave the
+  faulting address; the game's own handler only shows its exit path.
+- A body placed by the network (collision off) is not kept on the floor by the engine: leaving
+  height to it under a threshold left remote players up to 40 units in or above the floor on
+  slopes and stairs. Follow the owner's height every frame.
+- `InCtrl_Crouch` crouches an AI-off body standing still, but not one that is moved by setting
+  `Pos` every frame: play the owner's `Duck*` action on it (`ForceAction`), `Relax` when it ends.
+- Invisible walls only a joining player met: levels switch `InvisibleBlocker` entities
+  (`bMapCollision`) off at the end of a team talk or of an AI walk of "the player"; on a
+  client that end may never come. Sync blockers from the host.
+- The engine refuses to start without a mouse (`Input\PcMouse.cpp` line 176), even for
+  gamepad play: a test PC without monitor and keyboard works, without a mouse it does not.
+
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download
   SHA-256 `98be0fa84ac73ca66dce2842a2e4512226f4c611b6500dc96415571fc5538fcc`

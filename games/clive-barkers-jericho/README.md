@@ -5,17 +5,19 @@
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
 | Projects | [Jericho Co-op](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op"); fork [MAK-PIVO/jericho-coop](https://github.com/MAK-PIVO/jericho-coop), merged back in 0.2.1 |
-| QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads; human playthroughs just started) |
-| Last updated | 2026-10-21 |
+| QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads); a first human session over Steam (missions 1-8) |
+| Last updated | 2026-10-22 |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Test builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.1 at the time of writing).
-Every level, power, story part and cutscene runs in automated tests; real people have only
-just started playing it, so expect rough edges.
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.2 at the time of writing),
+in English, Russian, German, French, Spanish and Italian. Every level, power, story part and
+cutscene runs in automated tests. A first session between two people over Steam (missions
+1-8) found enemies that ignored joining players, walls only they met, scripts that took their
+controls and actions the host did not see; 0.2.2 fixes those. Expect rough edges.
 
 ## Existing work
 
@@ -130,8 +132,20 @@ restored on uninstall.
   that only takes damage on a weak part carries the part's bone; Rawlings' curse, calm and
   heals act on the machine that controls the target.
 - **Robustness:** a client whose controls stay taken outside a scene or story part gets them
-  back after 12 s; a client left without a body after a skipped scene gets it back.
-- **Installer:** finds the game, backs up what it replaces, updates and uninstalls. It
+  back after 12 s; a client left without a body after a skipped scene gets it back; a player
+  cut off by a door or passage the story shut behind the others is offered to rejoin.
+- **Story steps per machine (0.2.2):** level scripts written for "the player" run on every
+  machine for that machine's own body. Steps that would lock, turn or walk a remote player's
+  body are left to that player (a turn and a hint, with the AI as fallback); invisible
+  blockers that levels switch off at the end of a talk follow the host.
+- **Enemies (0.2.2):** the engine gives enemies targets only among AI-driven squad members;
+  the host now offers them the nearest human too. Enemy generators run on the host only.
+- **Languages (0.2.2):** the mod's texts and SMOD's menu entries in the game's six
+  languages, converted to the game's code page (cp1252, or cp1251 for the Russian release);
+  the game's own aspect ratio option extended rather than a new one added.
+- **Installer:** a window with its steps, a progress bar (also on the taskbar button) and the
+  minutes left, in six languages; finds the game, backs up what it replaces, updates and
+  uninstalls. It
   carries Python's embeddable build, so it can build the cutscene animations and a fixed
   Ross model from the player's own game files, and it marks the retail exe large address
   aware (original kept and restored).
@@ -147,27 +161,23 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
 
-Results for 0.2.1 (2026-10-22, final package):
+Results for 0.2.2 (2026-10-22, final code):
 
 - Whole campaign over a LAN between two PCs (host on a second PC, client here with a split
   screen player 2): 33/33 levels to the ending, 0 Lua errors, 0 engine errors, no crash.
-- Split screen with two virtual gamepads (ViGEm), 9 scripted runs: astral projection by
-  either player, gamepads plugged in and out, every character's buttons for player 2:
-  9/9, 0 errors.
-- Network checks of the 0.2.1 sync work: a running remote player's visible jumps 23/min ->
-  0/min (snapshot interpolation); doors and destroyed objects identical on the client
-  (0 digest misses); Black's telekinesis, Church's runes, fire, ghost bullets, Ababanili and
-  Jones's astral pyrokinesis/telekinesis reach the host; shared QTE passes when one player
-  succeeds and fails when both fail; a stuck client control lock is released after 12 s.
-- Steam between two real accounts on two PCs: lobby, join, a level played (also as an
-  automated test, round trip 6-19 ms); earlier, 6 levels through a local Steam stand-in.
-- Split screen visibility: both players turned to face each squad member in turn, recorded
-  and checked frame by frame on the retail game and with SMOD (no floating arms, no body
-  shown as a weapon alone).
-- Every in-engine cutscene (27 starts) recorded next to the unmodded game, with the original
-  camera and with "own eyes", and reviewed.
-- Act 1's Ross for the other machines, vanilla and SMOD: one textured model (recorded).
-- Menus driven like a player with virtual gamepads on a clean install made by the installer.
+- Split screen with two virtual gamepads (ViGEm): astral projection by either player,
+  gamepads plugged in and out, every character's buttons for player 2. This suite had been
+  passing while the game crashed after its checks (a melee hit, 4 runs in 6, also in 0.2.1);
+  runs are now also checked for their full length, and the crash is fixed (6/6 full runs).
+- Steam between two real accounts on two PCs: lobby, join, a level played.
+- SMOD, the co-op and Clive Upscaler's textures (with DXVK) on both machines: jumps seen at
+  full height, the host's crouch and stand-up on the client, Act 1's Ross; no fault.
+- Remote bodies' height against their owner's: 20-42 units off before (in or above the
+  floor), 0-2 after (45 samples per body).
+- Each fix from the first human session checked between the two PCs, most with virtual
+  gamepads and recordings; the new menu choices, hints and the installer window gone through
+  like a player and checked on screen (installer in all six languages, install, update,
+  removal, closing during an install).
 
 ## How to play
 
@@ -180,8 +190,10 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 
 ## Known issues
 
-- Human playthroughs have only just started; the full campaign has been run by scripts, not
-  finished by people.
+- One human session so far (missions 1-8 over Steam); the full campaign has been run by
+  scripts, not finished by people. A report from that session (a cutscene taking a client's
+  controls while the host walked) could not be reproduced.
+- The game needs a mouse plugged in to start, even for gamepad play (its own check).
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
   Join Game auto-launch (game not running) are not tested yet.
 - Split screen draws the two views on alternate frames, so each runs at half the frame rate.

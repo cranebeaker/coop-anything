@@ -6507,11 +6507,12 @@
   last_activity: 2026-10
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Test builds with an installer (0.2.1). LAN/direct IP over ENet or Steam lobbies (runs as Spacewar),
-    in a dinput8.dll proxy (the exe's code is not patched); host-authoritative enemies, story, scenes, powers, doors and saves; QTE
-    and cutscene view are session settings. The whole campaign runs in automated tests over a LAN between two PCs;
-    human playthroughs just started. MIT. The MAK-PIVO fork's Steam, shared QTE, sync and boss/power work was merged
-    back in 0.2.1. Write-up in games/clive-barkers-jericho.
+    split screen. Test builds with an installer window (0.2.2), in six languages. LAN/direct IP over ENet or Steam
+    lobbies (runs as Spacewar), in a dinput8.dll proxy (one engine call redirected in memory to fix a split screen
+    crash; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes, powers,
+    doors and saves; QTE and cutscene view are session settings. The whole campaign runs in automated tests over a LAN
+    between two PCs; a first human session over Steam (missions 1-8) was fixed up in 0.2.2. MIT. The MAK-PIVO fork's
+    Steam, shared QTE, sync and boss/power work was merged back in 0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
