@@ -823,6 +823,138 @@ eye; his body from the ground. Lip sync: voice and lips seen out of sync on both
 screens; `timescale` stayed 1 the whole scene except the throw's slow motion (back to 1), so not
 the cause; open.
 
+## QA bots press real buttons (2026-10-21)
+
+Console `+activate` did nothing because the 64-bit build has no such console command (`!cmds`:
+168 commands; of the `+` ones only `+moveup`, `+speed`, `+melee_breath`, `+throw`,
+`+nightvision`, `+incAnimWeight`, `+decAnimWeight`, registered at rva 0xcf5d0 and 0xd3240).
+How a key works (Ghidra, iw4sp.exe build 25374375):
+- Bind name table at rva 0x3be770, 0x4c `char *` entries: index 0 empty, `+attack` 1, `-attack`
+  2, `+melee` 3, ... `+forward` 0x1b, `+back` 0x1d, `+gostand` 0x19, `+activate` 0x31,
+  `-activate` 0x32, `+reload` 0x33, ... then `togglemenu`, `weapnext`, ... `leaveads` 0x4b.
+- rva 0xd1810: name -> index (0 if none). Per-key bind index at 0x5300f0 (stride 0x18,
+  256 keys); rva 0xd17f0 reads it; `bind` (rva 0xd13d0) writes it.
+- rva 0xce450 `(localClient, index, key)`: the switch over the index. Odd index: kbutton down
+  (rva 0xd0620), even: up (rva 0xd06f0); a few run actions (actionslots, stance). It returns
+  early unless the client is in a level (bytes 0x5dac53 and 0x40cac8). kbutton (0x14 bytes):
+  `int down[2]; int downtime; int msec; char active; char wasPressed`; the array starts at
+  0x52fbc0 (`+left` 0x52fbc0, `+forward` 0x52fbe8, `+attack` 0x52fcd8, `+activate` 0x52fd3c).
+- rva 0xd03a0 builds the usercmd: with key catcher 0x10 (0x533cb0) set it only does stance;
+  otherwise buttons (rva 0xce200: attack 0x1, melee 0x4, Use 0x8, reload 0x10, usereload 0x20,
+  prone 0x100, ...), key moves (rva 0xcf900, forward/back/strafe from kbutton state, rva
+  0xcfbc0) and mouse. Key moves are skipped while the player state's flag 0x800 (0x535d44,
+  frozen controls) is set.
+- mw2_coop: console command `mw2coop_bind +activate` calls 0xce450 with key 0x1ff (no keyboard
+  sends it); QA scripts set `mw2coop_qa_press "<player> <button> <ms> <n>"` and only the DLL of
+  that player's machine (host = player 1) presses and lets go after ms.
+
+Results: `buttons` (S.S.D.D., Whiskey Hotel) and `pickups` (rifle, pistol, frag box) all PASS on
+both machines with real presses. Found with real input:
+- S.S.D.D.: player 1's range place (48 units left of `player_start_range`) was 10 units further
+  back than player 2's and inside the bay's back wall: traces from him were blocked to the
+  sides and back, Forward moved him 0 units in five tries. Now both stand where COD-MOD puts
+  its players: player 1 at -2515.2 5190.2 (67 units left
+  of the start, 36 forward: bags 20 ahead, wall 23 behind), player 2 on the start (bags 42
+  ahead). The bay (player traces): from 101 units left to 28 right of the start; the back wall
+  slants, 7 to 25 units behind the start's line. QA `bay` checks both inside, not stuck.
+- `maps\_introscreen` froze `level.player` only (S.S.D.D.: 12 s): player 2 could walk and take
+  the pistol while player 1 could not. Patched (tools/gen_intro_patches.py): FreezeControls,
+  DisableWeapons and EnableWeapons on `level.player` in the 12 intro functions go to every
+  player. Each of them lifts its own freeze (no early return in between). QA `introfreeze`.
+
+## Loose Ends: Shepherd's betrayal for two players (2026-10-22)
+
+Scene (estate.gsc `ending_moments()`): at the LZ a mortar drops Roach (`birchfield_knockout`,
+flag `play_ending_sequence`); Ghost drags him on rig `playerview` (anim `estate_ending_drag`,
+`PlayerLinkToDelta` arcs 30) while he fights on his back with an AK; blackout; at the Pave Low
+(`estate_ending_part1`) Ghost pulls him up, Shepherd draws (`pistol_pullout`), fires at him
+(`shepherd_fire2`: `DoDamage(99 / damagemultiplier)` with the death shield on) and at Ghost
+(`shepherd_fire1`); blackout; `estate_ending_part2`: two men throw Roach's body
+(`body_ending`), then Ghost's, into a pit; gasoline, fire, `end_the_mission`. Everything is on
+`level.player`. Before: player 2 stayed where he was (12,000 units away at start `ending`) and
+saw nothing. COD-MOD: only freeze and death shield for both at the knockout; its attempts to link
+both players to the rig are commented out.
+Design: as in COD-MOD, player 2 invisible in the
+cutscenes and thrown with Roach in the one throw; Shepherd's shot hits player 2 as well (he
+sees from Roach's eyes, the gun points at him), then a black screen without text.
+Done (tools/gen_estate_patches.py, `maps\_mw2coop_estate`): every `level.player` statement of
+`ending_moments`, `ending_gasoline_sequence`, `ending_passing_out`, `ending_slowmo`,
+`ending_mortarhit_ghost_sequence`, `startEnding`, `birchfield_knockout` runs for each player,
+except Shepherd's hit and its rumbles, the damage watch, the breathing sound and the blur cycle's
+pacing; both lose their model function (`SetModelFunc( undefined )`: Hide does not hide a co-op
+player) and names; player 2 takes the same hit after Roach's, then a client black overlay
+(sort -1, under the subtitles) fades in over 0.3 s and out with the toss's `restoreVision`.
+QA `betrayal`: with test god mode on, the hit does nothing (health stays 100, for player 1 too):
+run it with `MW2COOP_GOD=0`. The ending's death shield sends no `damage` notify; the test reads
+the lowest health instead.
+
+## UPnP on a PC with several network adapters (2026-10-22)
+
+On a PC with several network adapters the search got no answer ("no router answered"). A plain
+SSDP M-SEARCH (Python, no interface chosen) got no answer either, even for `ssdp:all`; the same
+search sent from the LAN address (bound to it, `IP_MULTICAST_IF`) or straight to the gateway got
+the router's answer at once. Windows sent the multicast out of another adapter. Fix in
+`src/upnp.c`: the address of the route to the internet (UDP `connect` to a public address,
+`getsockname`; it sends nothing) and the gateway of that route (`GetBestRoute`); the search goes
+out from that address and to the gateway as well. The router then answered and took the forward
+(UDP 28960). Also, starting a level dropped "hosting" for a moment and the forward was removed and
+added again; removal now waits for a 10 s stop.
+
+## No Russian: Makarov's crew look on the Spec Ops body (2026-10-22)
+
+Player bodies must be Spec Ops co-op bodies (`coop_body_*`): an AI body such as the crew's
+`body_airport_com_c` on a player gives a broken pose (the player animations need the co-op
+skeleton). To dress both players as Makarov's crew, the DLL (`src/transplant.c`) puts the crew's
+mesh on `coop_body_us_army` in memory: the target keeps its bones, hit locations, collision and
+bounds and takes the donor's LODs (surface copies) and material list. Every vertex's bones are
+renumbered by bone name; a donor bone the target lacks takes its nearest ancestor. Heads stay
+separate models (the crew's own heads attach to the co-op body as the co-op heads do).
+
+Observations (dumps with the new `!surfs <xmodel>` QA command, then frames):
+- 64-bit layouts. XModel: boneNames +0x28 (script string indices, interned), parentList +0x30
+  (a byte per non-root bone: its index minus its parent's), materialHandles +0x58, lodInfo[4]
+  +0x60, stride 0x38 (dist +0, numsurfs +4, surfIndex +6, modelSurfs +8, partBits[6] +0x10, surfs
+  +0x28). XModelSurfs: name +0, surfs +8, numsurfs +0x10, partBits +0x14. XSurface, 0x58 bytes:
+  deformed +1, vertCount +2, vertInfo.vertCount[4] +0x18, vertsBlend +0x20, vertListCount +0x30,
+  vertList +0x38 (0x10 each: boneOffset, vertCount, triOffset, triCount, collision tree +8),
+  partBits[6] +0x40. Checked on every surface of three models: the vertex groups add up to
+  vertCount.
+- vertsBlend: vertCount[0] vertices with 1 bone (1 value), [1] with 2 (bone, bone, weight), [2]
+  with 3 (5 values), [3] with 4 (7 values); a bone is stored as its index * 64.
+- partBits: one bit per bone used, bone 0 = the top bit of word 0, without ancestors (17 of 17
+  crew surfaces match that rule, none match "with ancestors").
+- Crew (com_c) 81 bones, 17 surfaces in 4 LODs; ranger 90 bones, 33 surfaces. Six crew bones have
+  no ranger bone of the same name (mapped to ancestors).
+- The swap runs on the main thread (a console command the control thread queues), only while the
+  requested map runs: asset lookups from another thread, or during the next level's zone load,
+  hung the game in earlier work. A level restart finds it done (the target's material list is the
+  donor's); the next level's zone load brings the original model back.
+- Frames (QA `bodyview`, airport start `stairs`): both players in the crew's jacket and trousers,
+  standing, stepping sideways and backing off with the player animations; no visible stretching
+  at the hips, where the two skeletons' bind poses differ by up to 5 units.
+
+Unknown: how it looks in the other LODs at distance (not looked at). Both players share one crew
+body (com_c) with different crew heads; whether the loaded zones hold a second co-op body that
+could take com_d is not checked.
+
+## No Russian level tour and the squad's line of fire (2026-10-22)
+
+QA `tour` on airport (9 start points, each with frames on both screens): 109 PASS, 0 FAIL. The
+script errors came from the developer start `grigs` and from one `Kill()` under the test god mode.
+That kill is the squad's line of fire: in the lobby (`intro_civilians`) and the massacre
+(`massacre_killers_shotgun`) the level waits on a final trigger with `add_wait(
+::trigger_wait_targetname )`, aborted by the squad's move-on flag, and calls `level.player
+add_call( ::Kill )`; before that, `player_line_of_fire` fires warning MagicBullets at
+`level.player`'s feet while he stands within the line's radius. The trigger fires for either
+player, so player 2 walking in killed player 1, and player 2 got no warning shots. Fix (generated
+by `tools/gen_airport_patches.py`): the warning goes to the player in the line, and the player who
+walks into the final trigger dies (player 1 outside co-op). QA `lineoffire` (start `intro`,
+`MW2COOP_GOD=0`): player 2 walks in, he dies, player 1 lives, the mission fails for both.
+
+Frames: the `intro` start is the elevator with the mission's intro screen, black for its first
+10 s, as in single player.
+
 ## Status
 
-Next: lip sync (off on both screens), Endgame boat, the nrend anim_loop error; profile records.
+Next: lip sync (off on both screens), the nrend anim_loop error, profile records, checkpoints in
+every level (a death late in a level restarts the whole mission).

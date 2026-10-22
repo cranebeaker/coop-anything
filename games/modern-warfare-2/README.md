@@ -5,18 +5,19 @@
 | Engine | IW 4.0 (closed; id Tech 3 derived) |
 | Versions tested | Steam app 10180, build 25374375 (the 64-bit update of September 2026): `iw4sp.exe` x64, PE timestamp `0x6aaaa257`, SHA-256 `2F8C9CFDA1B8C0FB308FD9719577154E8222FC7654F5E8F1BF54579BCA69D805`, `version` dvar `IW4 2.0 build 14 Fri Oct 03 16:56:21 2025 win64`, Russian language set |
 | Projects | [mw2_coop](https://github.com/stxlvn/mw2_coop) (campaign co-op, prototype, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
-| QA level | automated (two game copies on one PC, in-game scripted checks on S.S.D.D., Team Player and Wolverines! set pieces; the campaign does not run through yet) |
-| Last updated | 2026-10-20 |
+| QA level | automated (two game copies on one PC, in-game scripted checks of the reworked set pieces and a spawn and kit check per level; the campaign has not been played through end to end) |
+| Last updated | 2026-10-22 |
 
 ## Where things stand
 
-**Work in progress.** The campaign cannot be played through together yet. On the current
-64-bit Steam build, two copies of the game connect through the game's own Spec Ops co-op
-netcode and play the first mission (S.S.D.D.) together: player 2 is placed and armed with
-player 1, checkpoints work, both players down restarts the level at the last checkpoint, the
-host saves progress to continue later, and both move on to the next mission. In Team Player
-both share the convoy Humvee (first to board takes the turret, the other a seat, they can
-swap); in Wolverines! both ride in the Humvees. The other missions have no co-op fixes yet.
+**Work in progress (prototype).** On the current 64-bit Steam build, two players play the
+campaign together through the game's own Spec Ops co-op netcode, hosted and joined from the
+game's menus (lobby, list of games on the network, address, Steam invite). Reworked for two
+players: S.S.D.D. (each takes his own weapons), Team Player's convoy, the Humvees of
+Wolverines!, Takedown's car, The Only Easy Day's swim and stealth kill, Cliffhanger's ice climb
+and snowmobiles, No Russian's elevator, cover and ending, the crash site and ISS of Second Sun,
+Endgame's boat chase and the final knife fight. Enemies fight both players. Other set pieces are
+still written for one player, and nobody has played the whole campaign through together yet.
 The older COD-MOD campaign co-op pack only runs on the 32-bit build that the 2026 update
 replaced, and players who tried it found it rough.
 
@@ -41,7 +42,7 @@ replaced, and players who tried it found it rough.
   ([install guide](https://forum.alterware.dev/t/iw4x-singleplayer-install-guide/383)).
 - **IW4x** ([iw4x/iw4x-client](https://github.com/iw4x/iw4x-client)): open-source multiplayer
   client, not the campaign.
-- **mw2_coop** ([stxlvn/mw2_coop](https://github.com/stxlvn/mw2_coop), MIT, v0.2.0-alpha):
+- **mw2_coop** ([stxlvn/mw2_coop](https://github.com/stxlvn/mw2_coop), MIT, v0.3.1-alpha):
   this project, for the 64-bit build.
 
 ## How the game works (for co-op)
@@ -106,7 +107,7 @@ replaced, and players who tried it found it rough.
 
 ## What we changed
 
-All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later commits on main; v0.2.0-alpha ships an install archive with `.bat` launchers for host, continue and join):
+All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (latest release v0.3.1-alpha of 2026-10-22; since v0.3.0-alpha an install archive with `winmm.dll` and the `mw2coop` folder, hosting and joining in the game's menus, no `.bat` launchers):
 - `winmm.dll` proxy that checks the build, runs console commands from a file, watches dvars
   and memory, logs co-op packets and script runtime errors.
 - Script loader replacement (`Scr_AddSourceBuffer`): own scripts plus load-time patches of the
@@ -127,9 +128,45 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later co
   swap by holding Use, ride end and crash for both, Shepherd's scene for both; Wolverines!
   opening and closing Humvee rides.
 - Joining by address: `mw2coop_party_join` stands in for the Steam lobby step that activates
-  the client's party (the v0.2.0-alpha join launcher runs it before `connect`).
+  the client's party (QA and console joins run it before `connect`; the in-game join does the same).
 - QA-only helper to pair two copies on one Steam account: a shifted XUID (`!xuid_add`; the host
   ignores a `coopConnect` from its own XUID). No shipped launcher uses it.
+- In-game co-op menus (the `.bat` launchers are gone): host lobby with mission select and access
+  (open, Steam friends, password), a list of games on the network, join by address or Steam
+  invite, an in-game Windows Firewall popup and UPnP port forwarding for the host.
+- Third-person bodies: the game only has `coop_body_*` player models in the Spec Ops zones, so the
+  DLL loads a level's Spec Ops zone (or one with the same uniform) with it in a co-op session.
+  Loose Ends' loadout still has an unfinished Infinity Ward co-op branch that asks for ghillie
+  suits no zone has (red placeholder bodies); patched to the forest uniform.
+- Asset pools: Just Like Old Times plus a body zone overflowed the 1350 `loaded_sound` pool. Each
+  pool is a free list (`{ head; entries[n] }`, a free entry points to the next), so the DLL links
+  650 more entries in front of it before the first co-op level loads (pool sizes rva `0x3bf930`,
+  pool pointers rva `0x3bfe00`, the asset alloc that raises "Exceeded limit" rva `0xeee30`).
+- Set pieces since the last write-up: Takedown's car (each ducks on his own key), The Only Easy
+  Day's SDVs, surfacing and stealth kill, Cliffhanger's climb (per-player icepicks and catch) and
+  snowmobiles, No Russian's elevator and ending (Makarov shoots both), Second Sun's crash, ISS and
+  falling helicopters, Endgame's knife fight (whoever strikes first plays it, the other is
+  stunned and watches), Endgame's boat (first aboard drives, the other lies at the bow across from
+  Price on a body with Price's boat animations and shoots where he looks; Price keeps his side).
+- Loose Ends, Shepherd's betrayal (v0.3.1-alpha): both players go through
+  the ending as Roach, held on his view with no bodies or names of their own (Ghost's drag while
+  fighting on his back, the LZ, the body toss, the fire). Shepherd's shot hits both; player 2's
+  screen then goes black until the bodies are thrown, and both go in the one throw (only Roach's
+  and Ghost's bodies are seen). COD-MOD left player 2 out of this scene.
+- v0.3.1-alpha also: every mission intro (the title on black) holds both players, not just player
+  1; UPnP finds the router on a PC with several network adapters (the search leaves from the
+  adapter of the internet route).
+- S.S.D.D.: both start inside the range's sandbag bay, where COD-MOD puts its two players (v0.3.0-alpha put
+  player 1 inside the bay's back wall, where he could not walk); each takes his own rifle and pistol off the
+  table (another lies there until both have one; holders near it keep full ammo so they cannot
+  pick it up as ammo) and his own frags. COD-MOD let only one player take the rifle.
+- Enemies: the engine already lets AI pick either player (QA `targets` on Loose Ends: 151 and 129
+  of 918 enemy samples on players 1 and 2). Level scripts that send enemies at `level.player`
+  (spawner favourite enemy "player", player seekers, attack triggers, 16 level scripts) now pick
+  the closest player still up; scenes that hide the player from enemies (`ignoreme`) and a
+  level's `attackeraccuracy` / `threatbias` for the player cover both, and `setthreatbiasgroup`
+  is mirrored to player 2. COD-MOD had no fix here (only `ignoreme` and health hacks). No
+  Russian: straying and grenades count for either player; a blown cover kills both.
 
 ## QA
 
@@ -152,6 +189,42 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later co
   - Team Player `rkintro`, `board`, `rideend`, `turret`: see the list above (both in Shepherd's
     scene; first to board is the gunner, the convoy waits, swap and swap back; ride end and
     crash for both; turret hand-over).
+- 2026-10-21, host and client, no script errors on either machine:
+  - S.S.D.D. `pickups`: rifle (player 2 takes it, another lies there, player 1 takes his, the
+    drill goes on), `frag` (both take frags from the box), `pit` (pistol the same way), both in
+    the sandbag bay on the floor: all PASS.
+  - Endgame `boat`: 14 PASS (boarding, driver, passenger across from Price, his body's gun
+    follows his view, Price keeps his side through the level's 4 position triggers, 30 s ride).
+  - `spawn` with weapon and threat checks on S.S.D.D., Team Player, Cliffhanger, No Russian,
+    Takedown, Wolverines!: 9/9 PASS each; Just Like Old Times loads and spawns (PASS). The other
+    levels were not rerun on this build.
+  - `look` on Loose Ends: both bodies in the forest uniform on both screens (screenshots).
+- Bots press real buttons (since v0.3.1-alpha): a scenario asks for a press with
+  `press( player, "activate", ms )` and that player's own machine runs the key binding
+  (`mw2coop_bind +activate`), so Use or Forward reaches the server in his input like a key press.
+  `+activate` and `+forward` are no console commands in this build, which is why queuing them
+  did nothing before. Runs on 2026-10-21, host and client, identical results on both:
+  - `buttons` on S.S.D.D. and Whiskey Hotel: each player walks forward on a Forward press, the
+    server sees his Use button and not the other player's: all PASS.
+  - S.S.D.D. `pickups` with real input: both take the rifle and the pistol off the tables with
+    one Use press each, both walk up to the frag box with Forward and get 4 frags: all PASS.
+  - Found with it: player 1's place in S.S.D.D.'s sandbag bay was inside the bay's back wall
+    (Forward moved him 0 units), and the level intro (`maps\_introscreen`) held player 1 only:
+    player 2 walked and took a pistol under the title. Fixed: both stand where COD-MOD puts its
+    two players (player 1 on the left place by the bags, player 2 on the level's start), and
+    every intro holds both players.
+  - 2026-10-22: `bay` on every range start (default, `timed_ads`, `bullet_penetration`, `frag`):
+    both inside the sandbags, not stuck; `introfreeze`: under the title a real Forward press moves
+    neither player and both walk afterwards on S.S.D.D., Whiskey Hotel, The Hornet's Nest and
+    Exodus (on Takedown, No Russian and The Only Easy Day both ride something under the title:
+    not checked); `pickups` (all three starts), `buttons`, `takedown`, `oilrig`, `dcemp`, `intro`:
+    all PASS.
+  - 2026-10-22, Loose Ends `betrayal` (start `ending`, god mode off): the ending runs to the
+    mission's end (113 s), both players at Roach's place and held all through, nobody down,
+    Shepherd's shot hits both (health down to 2): all PASS; screenshots of player 2 in the drag,
+    at the LZ and at the body toss.
+  - Older scenarios still drive players through script (positions, angles, notifies); real input
+    on those set pieces is checked by hand.
 - 2026-10-19: `intro` ended the session at the rifle hand-out ("no viewmodel set for player
   0"); fixed by setting player 2's first-person hands.
 - Earlier run (no QA script): both copies in S.S.D.D. in co-op for about 110 s, the client
@@ -160,22 +233,25 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (v0.2.0-alpha and later co
 
 ## How to play
 
-Not playable through yet (prototype). Testers: the v0.2.0-alpha install archive of mw2_coop
-has `.bat` launchers to host, continue and join; see the mw2_coop README.
+Alpha: see the mw2_coop README. Both players copy `winmm.dll` and the `mw2coop` folder from the
+[v0.3.1-alpha release](https://github.com/stxlvn/mw2_coop/releases) archive into the game folder; the host picks Campaign -> co-op, the partner joins from
+the list, by address or by Steam invite.
 
 ## Known issues
 
-- Vehicles in the other missions (Cliffhanger snowmobile, Endgame boat, the underwater start of
-  The Only Easy Day...) are not done.
-- A slow scripted move of player 1 can leave player 2 behind (no distance leash yet).
+- Set pieces not reworked yet are scripted for player 1 (scenes, some triggers); player 2 is kept
+  next to him, but some scenes show only to player 1.
+- Global screen effects (slow motion, field of view, vision sets) show on both screens.
+- A slow scripted move of player 1 can leave player 2 behind; on Wolverines! start point `yards`
+  the players ended 2255 units apart (not looked into yet).
 - Campaign records (missions unlocked in the menu) are not updated in co-op.
-- Only S.S.D.D. has level fixes; in-engine scenes elsewhere are scripted for player 1 only.
+- Loose Ends start point `forest_fight` logs two script errors from the level's own start code.
 - Joining through a Steam invite with two accounts is untested.
 
 ## Next steps
 
-- The other vehicle missions: a second snowmobile in Cliffhanger and an end trigger that
-  waits for both players; a distance leash; a hint for the seat swap.
-- Vehicle sections for two players: survey all missions' scripts.
-- Check whether MW3 (2011) `iw5sp.exe` carries the same co-op netcode; its write-up says the
-  singleplayer engine has none, which this MW2 finding questions.
+- Rerun the spawn and kit check on the levels not covered by this build.
+- Survey every remaining set piece for two players (gulag, contingency, the rest of estate,
+  boneyard, af_caves, the Washington levels).
+- Enemy scaling for two players; later, support the 32-bit build.
+- Check whether MW3 (2011) `iw5sp.exe` carries the same co-op netcode.

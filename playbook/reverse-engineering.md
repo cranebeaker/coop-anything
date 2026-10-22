@@ -79,6 +79,26 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   loop hook), not once; smooth towards the target; keep the puppet invincible; and read
   memory with `ReadProcessMemory` in chunks so a scan cannot crash the game. See
   [lessons.md](lessons.md) items 26 to 28.
+- **A fixed asset pool overflows when co-op loads more.** Loading an extra content pack (in
+  Modern Warfare 2 the Spec Ops zone that holds the co-op player bodies) on a heavy level
+  can hit an engine limit ("Exceeded limit of 1350 'loaded_sound' assets"). Find the message's
+  string, the function that raises it, and the per-type tables it indexes (sizes, pool
+  pointers). IW engine pools are free lists (`{ head; entries[n] }`, a free entry's first
+  bytes point to the next), so new entries can be linked in front of the list at runtime
+  without moving the ones in use; do it once, while no zone is loading. Trying other packs
+  first did not help: every one pushed the same pool over
+  ([games/modern-warfare-2](../games/modern-warfare-2/README.md)).
+- **Give QA bots real buttons through the key bindings.** In Modern Warfare 2 (64-bit),
+  `+activate`, `+forward` and `+gostand` are no console commands at all, so queuing them in the
+  console buffer did nothing. A key runs its binding by index instead: the names sit in one
+  table (`+attack`, `-attack`, ... `+activate`, `-activate`; find it from the strings), a small
+  function turns a name into its place in the table, and one switch over the index holds a
+  `kbutton` down or lets it go. Calling that switch from a DLL console command presses the
+  button exactly as a key does: it reaches the server in that player's own input. In lockstep
+  co-op both PCs run the test script, so only the machine of the player who presses may act on
+  it. With real input the bots found what script moves had hidden: a player placed inside a
+  wall could not walk, and the level intro froze only player 1
+  ([games/modern-warfare-2](../games/modern-warfare-2/README.md)).
 
 ## What to map for co-op
 
