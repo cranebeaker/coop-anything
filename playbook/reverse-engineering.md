@@ -79,6 +79,49 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   loop hook), not once; smooth towards the target; keep the puppet invincible; and read
   memory with `ReadProcessMemory` in chunks so a scan cannot crash the game. See
   [lessons.md](lessons.md) items 26 to 28.
+- **Find out who calls a function, live.** Static callers stop at virtual calls. Record
+  the stacks instead: for a few seconds put a 5-byte `jmp` at the function's entry (one
+  aligned 8-byte write), run a stub that saves the volatile registers and flags, records
+  the stack, runs the replaced entry instructions (whole ones, not RIP-relative) and jumps
+  back, then restore the bytes. Give the stub unwind info (`RtlAddFunctionTable`) and walk
+  the stack yourself with `RtlLookupFunctionEntry` and `RtlVirtualUnwind`:
+  `RtlCaptureStackBackTrace` stopped at such a stub in Shadow of War. Filter by the first
+  argument to see one object's callers. Reserve the stub pages within rel32 reach of the
+  image at start-up: minutes into the world the game's heap filled the 2 GB on either side
+  of the image and no page could be found. Shadow of War's AI decision path came out of
+  one 5-second run (`stacks` in [games/shadow-of-war](../games/shadow-of-war/NOTES.md), session ad).
+- **Stop one character's AI and keep its body.** Look for the one call where the AI tick
+  runs the character's decision tree, and filter that call for the puppet only; the rest
+  of the tick keeps running (in Shadow of War the puppet still animated and moved), and so
+  do other characters. Then move the puppet with the game's own AI move request (destination plus
+  gait), which plays its own walk and run animations. In Shadow of War that request alone
+  followed the player badly (its own navmesh route, 1.5 s late), so the puppet is pinned
+  to the player's position every frame while the requests make it walk or run.
+- **Find what sets a field, live.** When no instruction writes the field directly (it is
+  set through a sub-object or a helper), put a hardware write watch on it from inside the
+  game: on the thread that will write it, `SetThreadContext(GetCurrentThread())` with `Dr0`
+  = the address and `Dr7` = enable, write, length; a vectored exception handler catches the
+  `EXCEPTION_SINGLE_STEP`, records `Rip` and unwinds the stack from the exception's
+  context, then clears `Dr7`. In Shadow of War one spawn with the watch armed named the
+  code that switches a new character on (it waits for its behavior resource).
+- **A second player character from a cutscene actor.** If the game has a cutscene or
+  scripted version of the player character, spawn that and hand it the player's own
+  animation/behavior graph: in Shadow of War the cutscene `Talion` stood in a T-pose until
+  it got the player's behavior resource, then switched on and walked with the player's
+  animations. Putting the player's look on an AI body failed while the skeletons differed.
+- **Drive the stand-in's graph with the sender's graph inputs, not AI moves.** A player's
+  animation graph is fed every frame by named variables its update sets (stick magnitude
+  and angle, speed, turn delta, camera; in Shadow of War 37 floats through one setter).
+  Hook that setter on the sender (an entry hook whose handler gets the setter's own
+  arguments), send the values, and set them on the stand-in every frame. Then let its own
+  root motion move it and correct drift only rarely: teleporting it every frame held it in a
+  stretched pose, teleporting every few frames made it slide with its legs together, while
+  left to the inputs it walked with the sender's stride and covered the sender's path to
+  within a few percent, turns and stops included. Measure that unpinned path against the
+  sender's: if they match, the stride fits and the feet will not slide. Check that the
+  receive-only side really applies the values: in Shadow of War a receiver that recorded
+  nothing itself silently skipped them, and a test running sender and receiver in one
+  process hid it.
 
 ## What to map for co-op
 

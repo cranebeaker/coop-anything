@@ -58,7 +58,7 @@ Many games refuse to start a second copy. Two mechanisms are common:
 
 | Check | How it works | Symptom |
 |---|---|---|
-| Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a second or two, with a non-zero exit code |
+| Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a few seconds. Do not rely on the exit code: Middle-earth: Shadow of War returns 0 (after its DRM start-up, ~4 s) |
 | Window class or title | The game calls `FindWindow` for its own class or title and exits or activates the old window when it finds one | Same, or the first copy's window jumps to the front |
 | Unity player setting | `<Game>_Data/boot.config` has a `single-instance=` line, and the Unity player exits when a copy is already running. Remove the line in the test copies only; it is a text file, not the exe (Graveyard Keeper, Unity 2020.3) | The second copy closes at once |
 
@@ -88,6 +88,13 @@ Ways around it, best first:
    ```
 
    Gate it behind a config switch that only the test instances turn on, so players never run it.
+
+   If the import table is rebuilt at run time (SteamStub and other packers), hook `ntdll!NtCreateMutant`
+   instead: every `CreateMutexA/W` ends there. On Windows 11 the name arrives as `Local\<name>` relative to
+   the session's `BaseNamedObjects` directory, so compare the last name component and change only that.
+   A suffix per test copy rather than per process keeps the game refusing the same copy twice, which
+   would otherwise let two processes share one save folder. Example: Middle-earth: Shadow of War
+   (`games/shadow-of-war/NOTES.md`, sessions v and w).
 2. **Separate sessions or sandboxes.** Mutex and window namespaces are per Windows session and per sandbox. Run
    each copy under its own Windows user, in a Sandboxie-Plus box, or in a VM. Heavier, but needs no code.
    Nucleus Co-op's handler options cover this family of tricks ([tools.md](tools.md) section 3).
