@@ -1061,27 +1061,35 @@
   url: https://www.co-optimus.com/article/13884/fallout-new-vegas-co-op-mod-needs-beta-testers.html
   other_urls:
   - https://github.com/NVMP/ClientLauncher
+  - https://github.com/NVMP/ClientDistribution/releases
   - https://github.com/clayne/NVMP-SDK
+  - https://nuwiki.nv-mp.com/wiki/Getting_Started
   kind: mod
   status: playable
   coop_scope:
-    story: partial
+    players_visible: yes
+    story: no
     enemies: 'yes'
     world_state: partial
     items: unknown
-  players: unknown
-  networking: dedicated-server
+  players: 4
+  networking: direct-ip
   open_source: partial
-  last_activity: 2025-11
+  last_activity: 2026-10
   qa: community-reports
-  notes: Host-authoritative co-op where the host's inventory and quests are synchronised per its 2016 description,
-    but core client and server binaries are closed; launcher and a server SDK mirror are public. Quest and encounter
-    handling is client-side, so full story sync is not guaranteed.
+  notes: "Closed-netcode co-op (ENet, UDP 27015): players, NPC motion and combat. Client 9.4 released 2026-10-09; the
+    client and server binaries are closed, the launcher and a server SDK mirror are public. Quests are not synced: the
+    2016 announcement says each player keeps their own quest log, and the 9.4 binaries localise quest-flagged actors,
+    so quest state, objectives and dialogue results stay per-player. VATS is unavailable in multiplayer. A private
+    session needs no Discord account (only the official ATK server does). Host with the launcher and have friends
+    \"Connect via IP\", on LAN, over a VPN or with 27015 forwarded."
   sources:
   - https://www.co-optimus.com/article/13884/fallout-new-vegas-co-op-mod-needs-beta-testers.html
   - https://github.com/NVMP/ClientLauncher
+  - https://github.com/NVMP/ClientDistribution/releases
   - https://github.com/clayne/NVMP-SDK
-  checked: '2026-10-16'
+  - https://nuwiki.nv-mp.com/wiki/Getting_Started
+  checked: '2026-10-22'
 - game: 'Fallout: New Vegas'
   year: 2010
   engine: Gamebryo
@@ -1091,21 +1099,27 @@
   kind: framework
   status: prototype
   coop_scope:
+    players_visible: partial
     story: partial
     enemies: unknown
     world_state: partial
     items: unknown
   players: 2-4
-  networking: unknown
+  networking: direct-ip
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: Developer preview of a story layer (xNVSE plugin plus sync core) meant to run next to NV:MP; no player release
-    yet. Automated tests cover the sync core, host capture and guest apply of quest-script effects, and quest-stage sync
-    between two real game copies. MIT licensed.
+  notes: "Developer preview of a story layer (xNVSE plugin plus game-free sync core) meant to run next to NV:MP: the host
+    captures the effects of a quest script as one transaction and the clients apply it without re-running the script.
+    No player release yet, but the installer, launcher and player guide are in the tree; the host listens on UDP 27960
+    and the launcher caps the party at 4. The installer accepts the Russian/PCR Steam release (appid 22490, folder
+    \"Fallout New Vegas enplczru\") as well as the English one, both at exe 1.4.0.525. Enemy sync in the real game is
+    claimed by another contributor; the avatar, combat, loot and world layers are written but untested in game. MIT
+    licensed."
   sources:
   - https://github.com/cranebeaker/fnv-coop
-  checked: '2026-10-16'
+  - https://github.com/cranebeaker/fnv-coop/blob/main/docs/05-nvmp-intel.md
+  checked: '2026-10-22'
 - game: 'Vampire: The Masquerade - Bloodlines'
   year: 2004
   engine: Source (2004)
