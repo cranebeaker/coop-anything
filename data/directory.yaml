@@ -7067,11 +7067,11 @@
   other_urls:
   - https://discord.com/channels/1561411702082510879/1562166509659230338
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
     players_visible: 'yes'
     story: 'no'
-    enemies: unknown
+    enemies: 'no'
     world_state: partial
     items: partial
   players: '2'
@@ -7079,15 +7079,19 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: Two-player research prototype on Unreal's own listen-server netcode, driven by a UE4SS Lua mod. Automated
-    two-instance tests on one PC pass for joining, riding as a passenger, rejoining, map travel, shared world items,
-    a shared car trunk and car health, fuel and battery following the host. Inventories are per player; quests,
-    crafting and the host's saves are not synced. Only tested on localhost (host needs UDP 7777 reachable) with
-    Steam build 21896301. Earlier, a 2024 fan attempt was frozen. MIT.
+  notes: Two-player alpha on Unreal's own listen-server netcode, driven by a UE4SS Lua mod, with an installer that
+    sets up UE4SS, updates the mod from GitHub releases and collects logs (release v0.8.0). Automated two-instance
+    tests pass for joining and rejoining, riding as a passenger, map travel, shared world items, a shared car trunk,
+    car part health, fuel and battery following the host, item state (fuel, charge, durability), player 2's refuel
+    and charge, player 2's saved inventory, and down/revive/team death; one live session over the internet (Radmin
+    VPN) was played. In progress on the main branch, the host's generated zone content (abandoned cars, props, doors,
+    containers) replicated to player 2, door state shared both ways, lootable containers holding the host's items.
+    Not synced yet are quests and progress, hazards and weather, and which car parts are installed; player 2 cannot
+    drive. Host needs UDP 7777 reachable. Steam build 21896301. MIT.
   sources:
   - https://github.com/BroZYTnikkkk/pacific-drive-coop
-  - https://steamcommunity.com/app/1458140/discussions/0/604153001708376779
-  checked: '2026-10-20'
+  - https://github.com/BroZYTnikkkk/pacific-drive-coop/releases/tag/v0.8.0
+  checked: '2026-10-22'
   made_with_coop_anything: true
 - game: BattleTech
   year: 2018
