@@ -4302,6 +4302,38 @@
   - https://www.patreon.com/hbgda
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
   checked: 2026-10-19
+- game: Marvel's Spider-Man Remastered
+  year: 2022
+  engine: Insomniac proprietary
+  project: Spider-Man Remastered LAN co-op (prototype)
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/marvels-spider-man-remastered/mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: per-player
+  players: 2 (two copies on one PC)
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Dev preview for Steam build 23986256. A proxy winmm.dll turns on the LAN session code left in the retail exe
+    (room list, host and join, late join) and blocks the engine's remote hero, which crashes. It shows the partner as a
+    puppet Spider-Man with position and full skeleton pose sent over its own UDP channel. F7 hosts, F9 finds the host by
+    LAN broadcast, joins and warps next to them. The puppet wears the partner's suit, loaded through the game's own item
+    loader. Each player is still in their own single-player game. QA is scripts driving two copies of the game on one PC with screenshots of both. No two-PC
+    or human test yet. Write-up in games/marvels-spider-man-remastered.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/marvels-spider-man-remastered
+  checked: '2026-10-22'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo directory, web search, the Nexus page and the Patreon page (only hbgda''s closed beta found), 2026-10-19'
+  - 'Not checked: Reddit, GitHub and X directly, non-English communities'
 - game: Marvel's Spider-Man 2
   year: 2025
   engine: Insomniac proprietary
