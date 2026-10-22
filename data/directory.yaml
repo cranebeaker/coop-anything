@@ -6491,8 +6491,7 @@
   engine: MercurySteam ScrapEngine (Scrapland engine, Lua 5.1)
   project: Jericho Co-op
   url: https://github.com/dolbaras/jericho-coop
-  other_urls:
-  - https://github.com/MAK-PIVO/jericho-coop
+  other_urls: []
   kind: mod
   status: alpha
   coop_scope:
@@ -6511,12 +6510,11 @@
     lobbies (runs as Spacewar), in a dinput8.dll proxy (one engine call redirected in memory to fix a split screen
     crash; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes, powers,
     doors and saves; QTE and cutscene view are session settings. The whole campaign runs in automated tests over a LAN
-    between two PCs; a first human session over Steam (missions 1-8) was fixed up in 0.2.2. MIT. The MAK-PIVO fork's
+    between two PCs; a first human session over Steam (missions 1-8) was fixed up in 0.2.2. MIT. The MAK-PIVO fork's (no longer public)
     Steam, shared QTE, sync and boss/power work was merged back in 0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
-  - https://github.com/MAK-PIVO/jericho-coop
   - https://github.com/cranebeaker/coop-anything/issues/27
   checked: '2026-10-22'
 - game: Poppy Playtime

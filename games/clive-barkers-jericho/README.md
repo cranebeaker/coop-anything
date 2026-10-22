@@ -4,7 +4,7 @@
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
-| Projects | [Jericho Co-op](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op"); fork [MAK-PIVO/jericho-coop](https://github.com/MAK-PIVO/jericho-coop), merged back in 0.2.1 |
+| Projects | [Jericho Co-op](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op"); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
 | QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads); a first human session over Steam (missions 1-8) |
 | Last updated | 2026-10-22 |
 
@@ -26,8 +26,8 @@ controls and actions the host did not see; 0.2.2 fixes those. Expect rough edges
   [ModDB](https://www.moddb.com/forum/thread/clive-barkers-jericho-multiplayer),
   [Steam](https://steamcommunity.com/app/11420/discussions/0/846963710897727939/),
   [GameFAQs](https://gamefaqs.gamespot.com/boards/934444-clive-barkers-jericho/41226885).
-- [MAK-PIVO/jericho-coop](https://github.com/MAK-PIVO/jericho-coop) (MIT, last push
-  2026-10-21), a fork of a pre-0.2.0 build that later merged 0.2.0 back: Steam lobbies,
+- MAK-PIVO/jericho-coop (MIT, last push 2026-10-21; the repository is no longer public
+  since 2026-10-22, its work lives on in Jericho Co-op 0.2.1+), a fork of a pre-0.2.0 build that later merged 0.2.0 back: Steam lobbies,
   shared QTEs, snapshot interpolation, door/object and power sync, a control watchdog, a
   large-address-aware exe flag, boss hits and Rawlings' powers from clients, the melee
   slow-motion fix. These were adapted into 0.2.1 with credit (the LAA flag set by the
