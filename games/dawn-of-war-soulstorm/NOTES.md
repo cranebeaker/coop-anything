@@ -51,6 +51,23 @@ non-Steam copies.
 - The retail build logs `AppRegistry::GetValue - Failed to read valueName CDKEY` twice at startup.
   LAN does not ask for a key.
 
+### Two copies on one PC (measured 2026-10-23)
+
+- **A second instance is refused by the game itself.** Launched a second `Soulstorm.exe` from a
+  separate hard-linked install; it exited after ~200 ms with code 1, before any network setup.
+  Its log ends with `PLATFORM -- Duplicate instance of app`,
+  `APP -- The Application Failed to Initialize the Platform Window`,
+  `AppInitGlobal -- Failed load for step: 'Window'`, `Application closed without errors`.
+- **UDP 6112 is held exclusively, so a second client could not talk anyway.** With the first
+  instance running, a plain UDP bind to `0.0.0.0:6112` fails with `WSAEADDRINUSE (10048)`,
+  and with `SO_REUSEADDR` set it fails with `WSAEACCES (10013)` - the Windows error for "someone
+  else owns this port without sharing". The bind happens at the main menu
+  (`HostState - <local ip>:6112`, `Session : Now Host`), not only when hosting.
+- No port override: `W40k.ini` has network timeouts but no port key, and no `-port` / `netport` /
+  `port=` string exists in `Soulstorm.exe`, `Platform.dll`, `NetConfig.dll` or `GSLobby.dll`.
+  `Lobby -- hosting on port %d` is a format string, not a setting.
+- `PlatHook.dll` in the install root is Relic's low-level keyboard hook, not a network shim.
+
 ### No campaign co-op
 
 - No `coop`, `co-operative` or campaign-in-multiplayer identifier in `Soulstorm.exe`.
@@ -140,6 +157,11 @@ creation, and connected to `161.35.29.36:11168`.
   blocking and DNS faults. The relay's UDP port also did not answer with ICMP port-unreachable,
   which is what a closed port would do.
 - **The en dash cannot break LAN play**, only DowOnline's install detection.
+- **You cannot test this game with two clients on one PC.** The single-instance check stops the
+  second copy, and the exclusive UDP 6112 bind would stop a second client even if the check were
+  bypassed. Any two-client test needs two machines, or a VM with its own network stack (ordinary
+  processes on one Windows install cannot do it). Automated QA for this game would have to run the
+  guest side in a VM or on a second host.
 
 ## Guesses (explicitly unverified)
 

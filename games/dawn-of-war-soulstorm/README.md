@@ -148,12 +148,18 @@ player needs their own legitimate copy of the game.
   cannot be filed anywhere public.
 - The retail build logs a missing `CDKEY` registry value. LAN does not need it; whether any
   DowOnline path does is unknown.
+- **Two copies cannot run on one PC.** The game refuses a second instance (`PLATFORM -- Duplicate
+  instance of app`, exits in about 0.2 s), and it holds UDP 6112 exclusively, so a second client
+  could not open its LAN socket even if the check were bypassed. Test with two machines; on a
+  single PC only a virtual machine with its own network stack can act as the second player.
 
 ## Next steps
 
-- Run a real two-client LAN test (two machines, or the repo's `gameslot`/`gamepool` harness) and
-  raise the QA level. Assert: guest appears in the host's lobby, the match starts on both, AI slots
-  are present, and the game survives five minutes without a disconnect.
+- Run a real two-client LAN test **on two machines** and raise the QA level. The repo's
+  `gameslot`/`gamepool` harness cannot stand in for the second machine here: this game refuses a
+  second instance and binds UDP 6112 exclusively, so the guest has to be a VM or a second PC.
+  Assert: guest appears in the host's lobby, the match starts on both, AI slots are present, and
+  the game survives five minutes without a disconnect.
 - Capture what the `(version)` and `(crc)` checks actually hash, so the error can be turned into a
   clear message ("your build differs") instead of a silent refusal.
 - If campaign co-op is ever wanted, this is a from-zero job on the Essence Engine: the metamap
