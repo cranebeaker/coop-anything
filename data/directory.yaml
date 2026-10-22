@@ -2328,6 +2328,28 @@
   - https://store.steampowered.com/app/704450/Neverwinter_Nights_Enhanced_Edition/
   - https://www.co-optimus.com/game/212/pc/neverwinter-nights.html
   checked: '2026-10-16'
+- game: Night in the Woods
+  year: 2017
+  engine: Unity 5.6.2p4 (Mono)
+  project: Night in the Woods Co-op prototype
+  url: https://github.com/SamuelAustin2001/night-in-the-woods-coop
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'no'
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: unknown
+  players: 2 (shared Mae)
+  networking: direct-ip
+  open_source: 'no'
+  qa: none
+  notes: Experimental host/client prototype. One-off loopback checks are not a verified playable release; normal dialogue choices, scripted effects, persistent saves, and a full story run remain unverified.
+  sources:
+  - https://github.com/SamuelAustin2001/night-in-the-woods-coop
+  - https://store.steampowered.com/app/481510/Night_in_the_Woods/
+  checked: '2026-10-22'
 - game: 'Star Wars Jedi Knight: Jedi Academy'
   year: 2003
   engine: id Tech 3 (OpenJK)
