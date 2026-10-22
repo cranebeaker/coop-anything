@@ -7727,3 +7727,67 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: 'Warhammer 40,000: Dawn of War - Soulstorm'
+  year: 2008
+  engine: Relic Essence Engine (EE)
+  project: DowOnline
+  url: https://dowonline.ru/
+  other_urls:
+  - https://dowonline.ru/en/
+  - https://github.com/Drobor/dowonline-maps
+  - https://discord.gg/n72AvaTAfN
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: '2-8'
+  networking: hosted-relay
+  open_source: 'no'
+  last_activity: '2024-05'
+  qa: community-reports
+  notes: >-
+    LAN-over-internet relay plus a 2-8 player map pack and MMR, for skirmish only (no campaign).
+    It hooks Soulstorm.exe (x86), replaces the socket layer and points the game's own LAN lobby at a
+    relay (161.35.29.36:11168 on 2026-10-23). Client 3.3.0, closed source; only the maps repo is
+    public. Its public API was serving live matches and about 50 online accounts when checked. On a
+    non-default install root its auto-detection threw IndexOutOfRangeException and the path had to
+    be set by hand. The service is a single point of failure: if the operator moves or stops the
+    relay, internet play stops.
+  sources:
+  - https://dowonline.ru/
+  - https://dowonline.ru/en/
+  - https://dowonline.ru/api/onlinestate
+  - https://github.com/Drobor/dowonline-maps
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/dawn-of-war-soulstorm
+  checked: '2026-10-23'
+- game: 'Warhammer 40,000: Dawn of War - Soulstorm'
+  year: 2008
+  engine: Relic Essence Engine (EE)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: >-
+    No campaign or story co-op exists and no project is attempting it. The campaign is a
+    single-player conquest metamap and the executable has no co-op or campaign-in-multiplayer path.
+    What players call co-op in this game is skirmish against AI (comp-stomp) in the multiplayer
+    lobby, which is native and needs no mod on a LAN, so the gap is specifically the story campaign.
+    See the DowOnline entry for the internet and more-than-4-players case.
+  sources: []
+  checked: '2026-10-23'
+  searched:
+  - 'Repo data/directory.yaml and games/, plus public issue and PR search (nothing), 2026-10-23'
+  - 'GitHub repository and code search: dowonline, soulstorm coop, "dawn of war" multiplayer (only Drobor/dowonline-maps), 2026-10-23'
+  - 'ModDB dawn-of-war-soulstorm/mods, all 29 entries (single-player content or total conversions), 2026-10-23'
+  - 'Not checked: Nexus Mods, the DowOnline Discord (owner declined contact), Russian forums, archive.org'
