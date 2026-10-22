@@ -34,6 +34,10 @@ this hub.
    - Dedicated servers and tools may write logs or settings under `%USERPROFILE%\Documents`
      even when run from a test copy. Check for new files there after each run and move them
      into your workspace.
+   - If the bug is in a **mod's own rebuilt exe** and only part of the mod's source is
+     public, you can carry a small fix into the binary without its build system: use the
+     public source as a map, anchor on unique strings, and append a freestanding patch. See
+     [patching-a-closed-mod-exe.md](patching-a-closed-mod-exe.md).
 
 ## Tools
 

@@ -38,6 +38,12 @@ how a player would hit it, and confidence. Then **check every claim yourself** b
 fixing. On HX about one claim in six was wrong; one "host can't use computers" claim was
 refuted by a live test.
 
+Also **diff every copy of the protocol**. A mod's server side often exists twice (a standalone
+server and a copy compiled into the game, or a relay and a client with hand-copied packet ids), and
+they drift. OpenOL (Outlast) ships a relay copy that still parses the pre-channel packet format, so
+clients silently reconnect every 30 s, and its relay and client disagree on the enemy packet ids. A
+10-minute check with a logging proxy between client and server finds this faster than reading code.
+
 ## 4. Fix without touching the original package
 
 Rebuilding the original package is often impossible (missing source, native classes

@@ -4013,6 +4013,93 @@
   - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
   - https://steamcommunity.com/app/214490/discussions/0/598198356181958694/
   checked: 2026-10-16
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL (multiplayer beta, with OpenOL-Relay)
+  url: https://github.com/ShyKiss/OpenOL
+  other_urls:
+  - https://github.com/ShyKiss/OpenOL-Relay
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: partial
+  last_activity: 2026-08
+  qa: automated
+  notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
+    beta since 2.0.1, release 2.1.0 (2026-08-29). Source is public but no license is stated. Joining works through
+    the standalone OpenOL-Relay 2.1.0 (room PUBLIC); the relay source embedded in the OpenOL repo uses the old packet
+    format. Two-client tests show players, doors, player-spawned enemies (attacks, death, respawn) and story triggers
+    synced; checkpoint loads are not synced, triggers fire for everyone wherever they are, and map enemies are
+    duplicated (every client runs its own copy). Open upstream issues report that connect and Start Server do nothing.
+    A scripted suite (two real clients plus protocol tests, 67 pass, 4 known-bug expectations) and three small relay patches (out-of-context triggers, enemy packet ids, late-join snapshots) is in the own fork https://github.com/G3RKA/OpenOL (tools/outlast-coop); details in games/outlast.
+  sources:
+  - https://github.com/ShyKiss/OpenOL
+  - https://github.com/ShyKiss/OpenOL-Relay
+  - https://github.com/ShyKiss/OpenOL/issues/7
+  - https://github.com/ShyKiss/OpenOL/issues/8
+  checked: 2026-10-21
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL fork with a native enemy patch, play kit and tests (own development)
+  url: https://github.com/G3RKA/OpenOL
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: A fork of OpenOL with its own work in tools/outlast-coop (the upstream has no license, the folder is MIT). A native patch
+    of OpenOL 2.1.0's OLGame.exe keeps one real copy of every map enemy (the lower player id wins) instead of two,
+    the same rule is written in EnemyChannel.cpp (not compiled), plus host and join scripts, three relay patches as files and an
+    automated suite with real clients (67 pass, 4 known-bug expectations; menu path, New Game and rejoin 6 of 6). Tested on one PC
+    with two copies of the game; two PCs, the internet and three players are untested. Checkpoint loads are still not shared and
+    story triggers still fire for everyone wherever they are.
+  sources:
+  - https://github.com/G3RKA/OpenOL
+  - https://github.com/ShyKiss/OpenOL
+  checked: 2026-10-22
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: Outlast-Together
+  url: https://github.com/LucianLandIsBack/Outlast-Together
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2025-02
+  qa: none
+  notes: MIT-licensed school project with a networking DLL and a client folder, no releases. The README says there will be
+    no updates after the school release unless the author feels like it, and the last commits scrap the DLL hook.
+    What it synced was not checked.
+  sources:
+  - https://github.com/LucianLandIsBack/Outlast-Together
+  checked: 2026-10-21
 - game: 'Kingdom Come: Deliverance'
   year: 2018
   engine: CryEngine
