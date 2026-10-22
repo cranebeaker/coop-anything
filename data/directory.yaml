@@ -7575,3 +7575,188 @@
   - 'Repo DIRECTORY.md and games; public GitHub issue/PR and repository search for Godfather 2 / Godfather II co-op and multiplayer, 2026-10-20'
   - 'English web searches: Godfather II co-op campaign, co-op mod, online co-op, multiplayer mod; checked Nexus, ModDB, GameBanana, GameFAQs results and PCGamingWiki, 2026-10-20'
   - 'Not checked: game Discord, Steam guides in depth, Archive.org; attempted Russian, German, Italian and Spanish queries were rate-limited (HTTP 429)'
+- game: 'Spore: Galactic Adventures'
+  year: 2009
+  engine: Spore (proprietary EA/Maxis, RenderWare rendering)
+  project: Spore Multiplayer Mod
+  url: https://github.com/emerald194520350-alt/spore-multiplayer-mod
+  other_urls:
+  - https://github.com/Spore-Community/Spore-ModAPI
+  - https://github.com/Spore-Community/ModAPI-Launcher-Kit
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: dedicated-server
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: automated
+  notes: Cell stage only, the first of SPORE's five stages; after Cell the mod shows an end screen instead of the
+    landfall transition, so Creature, Tribal, Civilization and Space have no co-op at all. A native C++ client (Spore
+    ModAPI plus Detours, pinned to the executable by hashed RVA) talks to a separate C# TCP session server that brokers
+    state and broadcasts player positions, appearance, NPC snapshots and world actions. Supported setup is two windows on
+    one PC with two ModAPI Launcher Kit installs and a second profile at %AppData%\SporeCoop2; remote play between
+    computers is unfinished and world transfer between machines is not implemented. Latest release v1.0.1 (2026-09-27,
+    protocol 10), 21 commits in 10 days and no issues tracker. The licence is ambiguous - the LICENSE file is MIT, but
+    the core sources (native/Probe.cpp, server/SessionServer.cs and 18 other files) carry SPDX-License-Identifier
+    GPL-3.0-or-later headers and the rest carry none, so the project as published is MIT plus GPL-3.0-or-later code.
+    Release zip SHA-256 verified against the published
+    sum. Verified on the Steam October 2024 build (app 24720, exe 25 066 744 bytes, version 3.1.0.29) on 2026-10-21,
+    where the mod's own scripted suites pass (142 protocol assertions plus native source invariants) and two real game
+    clients were launched end to end and both completed a handshake with the session server, which logged Connected
+    host and Connected guest. Two launch steps the upstream README omits were needed, a steam_appid.txt file with the
+    app id 24720 in the game folder, without which the game exits with code 53, and a second copy of the ModAPI
+    Launcher Kit per window, because the kit overwrites its own mLibs\SporeModAPI.dll on every launch. Still not
+    verified are two players in one world, because the invite flow is in-game UI clicks with no scriptable trigger, and
+    the 154 native engine checks, which need a test binary that is not shipped in the release and cannot be built
+    without MSVC. Upstream itself still stops at the Cell stage; a fork with a Creature-stage transition patch is listed
+    separately below.
+  sources:
+  - https://github.com/emerald194520350-alt/spore-multiplayer-mod
+  - https://github.com/emerald194520350-alt/spore-multiplayer-mod/releases/tag/v1.0.1
+  - https://github.com/emerald194520350-alt/spore-multiplayer-mod/releases
+  - https://github.com/Spore-Community/Spore-ModAPI/releases
+  - https://github.com/Spore-Community/ModAPI-Launcher-Kit/releases
+  checked: '2026-10-22'
+  up_for_adoption: true
+  made_with_coop_anything: false
+- game: 'Spore: Galactic Adventures'
+  year: 2009
+  engine: Spore (proprietary EA/Maxis, RenderWare rendering)
+  project: Spore Multiplayer Mod, Co-Me fork (Creature-stage patch)
+  url: https://github.com/Co-Me/spore-multiplayer-mod
+  other_urls:
+  - https://github.com/emerald194520350-alt/spore-multiplayer-mod
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: dedicated-server
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: Fork of emerald194520350-alt/spore-multiplayer-mod with one commit on top of upstream v1.0.1 that lets a live
+    cooperative session continue past the Cell stage. Upstream intercepts the landfall and shows an end screen; the
+    patch reports the Cell stage completion to the session server, lets the native landfall and the land editor run,
+    and reports the entered stage with a new stageTransition message that the server validates, advances and
+    broadcasts to both windows. The protocol stays at 10 and the message is additive, so an unmodified upstream client
+    still connects. The Cell stage completion became a fact about the shared world and survives a server restart, and
+    the shared stage is persisted. Creature-stage gameplay synchronisation is NOT implemented - two players still do not
+    see each other's creature, a shared planet, shared herds or creature interactions, and the Creature simulator stays
+    local to each window. Verified on the Steam October 2024 build (app 24720, exe 25 066 744 bytes, version 3.1.0.29) on
+    2026-10-22 - the fork builds from a clean checkout with MSVC v143, its own suites pass (148 protocol assertions, 119
+    native assertions, the source invariants), a new end-to-end test drives two real native clients through the real
+    invitation handshake against the real session server and moves the shared world from cell to creature over TCP, and
+    the rebuilt DLL was loaded into two live game windows that both completed the handshake. NOT verified - the Cell
+    stage was never played through to its end in a running game, so the landfall, the land editor and the stage report
+    still need one interactive confirmation, and Creature-stage gameplay was not tested at all. The patch is released
+    under GPL-3.0-or-later; upstream's LICENSE file says MIT while its core sources carry GPL-3.0-or-later SPDX headers,
+    and that upstream inconsistency is left untouched.
+  sources:
+  - https://github.com/Co-Me/spore-multiplayer-mod
+  - https://github.com/Co-Me/spore-multiplayer-mod/commit/6b8f4362
+  - https://github.com/emerald194520350-alt/spore-multiplayer-mod
+  - https://github.com/Spore-Community/Spore-ModAPI
+  checked: '2026-10-22'
+  up_for_adoption: true
+  made_with_coop_anything: true
+- game: 'Spore: Galactic Adventures'
+  year: 2009
+  engine: Spore (proprietary EA/Maxis, RenderWare rendering)
+  project: CoopMeld Spore Coop
+  url: https://coopmeld.com/spore/
+  other_urls:
+  - https://veilroad.com/sporecoopmod
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: '2-4'
+  networking: hosted-relay
+  open_source: 'yes'
+  last_activity: unknown
+  qa: none
+  notes: The only Spore co-op project that aimed past the Cell stage, and the only one with online rooms. GPL sources
+    are published with the installer (installer, launcher and native mod). The live service is paused, the release
+    endpoint answers 503 Release unavailable and the lobby answers 426 Update SporeCoop in the launcher before playing.
+    The shipped build id is cell-preview.27, and the site lists Civilization and Space as coming later, so even a working
+    service would not have delivered the Space stage. The launcher identifies the game build by exe size and version
+    and accepts the October 2024 Steam build (25 066 744 bytes, 3.1.0.29), which matches this owner's install, and the
+    release policy is RSA signed with the exe hash in a games set. Playable stages per the site are Cell, Creature and
+    Tribe with up to four players.
+  sources:
+  - https://coopmeld.com/spore/
+  - https://veilroad.com/sporecoopmod/api/check
+  checked: '2026-10-21'
+  made_with_coop_anything: false
+- game: 'Spore: Galactic Adventures'
+  year: 2009
+  engine: Spore (proprietary EA/Maxis, RenderWare rendering)
+  project: SporeMP
+  url: https://github.com/raph559/SporeMP
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: dedicated-server
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: GPL-3.0 prototype with a roadmap for all five stages and a native dedicated server. Its byte level build guard
+    is pinned to the GOG executable (24 895 536 bytes), so it rejects the Steam build this owner has and would need
+    re-qualification first. The changelog reaches 0.1.14 (2026-09-27) and describes meeting across two prepared Creature
+    locations, travelling, saving and reconnecting, and says in so many words that multiplayer gameplay is still in
+    development. The main branch checkout is dated 2026-10-10.
+  sources:
+  - https://github.com/raph559/SporeMP
+  checked: '2026-10-21'
+  made_with_coop_anything: false
+- game: 'Spore: Galactic Adventures'
+  year: 2009
+  engine: Spore (proprietary EA/Maxis, RenderWare rendering)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: The Creature, Tribal, Civilization and Space stages of the Galactic Adventures expansion have no co-op
+    implementation in any project found. The best existing project covers the Cell stage only, the one project that
+    aimed further (CoopMeld Spore Coop) has a paused service and lists Civilization and Space as coming later, and the
+    third (SporeMP) is a prototype pinned to a different store build. The Space stage is also a different game from the
+    Cell stage the existing mod handles, 3D galaxy flight with planets and cities, so it would be new work rather than a
+    port.
+  sources: []
+  checked: '2026-10-21'
+  searched:
+  - 'GitHub repo and code search for spore, spore multiplayer, spore galactic adventures, spore coop (2026-10-21): five
+    projects found, see the project entries'
+  - 'Nexus Mods spore (2026-10-21): blocked by a Cloudflare challenge, could not read'
+  - 'ModDB spore multiplayer, Reddit, Steam forums app 24720, DavoOnline via the Wayback 2024-06-24 snapshot,
+    playground.ru, the Spore Discord (2026-10-21): no further implementation found'
+  - 'co-op directory of this repo (2026-10-21): no entry for Spore before this one'
