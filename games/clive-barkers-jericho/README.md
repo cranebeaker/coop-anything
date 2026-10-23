@@ -6,14 +6,14 @@
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
 | QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-10-23 (0.2.5) |
+| Last updated | 2026-10-24 (0.2.6) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.5 at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.6 at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
@@ -26,8 +26,10 @@ players 3-4 the squad members themselves), adds a display mode and refresh rate 
 Video settings, renames the mod Jericho Co-op+ (it does more than co-op) and fixes what a full
 code review and the release tests found. 0.2.5 completes that release candidate: the items
 0.2.4 left open (a split screen player waiting for a body, the last boss's rune, game folders
-with any name), a game start without a mouse and an installer record fix. A whole campaign
-played through by people is still to come.
+with any name), a game start without a mouse and an installer record fix. 0.2.6 fixes the
+game's exit, which stopped on a D3D warning box, and lets the installer find and update every
+earlier version, the first test build (no installer) included. A whole campaign played
+through by people is still to come.
 
 ## Existing work
 
@@ -200,6 +202,15 @@ restored on uninstall.
   so the mod's folder is passed to Lua as the lossless code page form, else the 8.3 short
   name, else a path relative to the working folder (the shortcut and Steam start the game in
   the game folder; some drives have 8.3 names turned off).
+- **A clean exit (0.2.6):** the engine's last `Release` of the D3D9 device shows a modal
+  "A D3D object has a non-zero reference count" box when anything still holds the device. The
+  proxy hooks the device's `Release` (vtable slot 2) and, once the count is down to the
+  engine's own last few references, frees its F11 recorder, capture and split screen surfaces
+  first.
+- **Updating any earlier version (0.2.6):** installs without an install record (0.1.0 was
+  a zip extracted into the game folder) are recognised by the proxy's own marker string and
+  their files; the installer then updates or removes them like a recorded install and never
+  keeps an older mod's file as the game's original.
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -209,6 +220,22 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.2.6 (2026-10-24):
+
+- The release regression as for 0.2.5 (whole campaign 33/33 levels over a LAN, split screen
+  with virtual gamepads, a real Steam session, nine story splits, player souls, player 2
+  waiting, no mouse), with the same results.
+- The exit through the game's own menu call on the installed package: ends in 1 s in the main
+  menu, after an F11 clip and in a split screen level (the 0.2.5 DLL stops on the box).
+- Every published version installed as players had it (0.1.0 extracted, 0.1.1+ by their own
+  installers), then updated to 0.2.6 and removed: one by one and all nine in a row, the game
+  folder equal to the clean game afterwards; each also removed directly by the new installer.
+- The update from 0.2.5 through its shortcut, from a local feed and from the real GitHub
+  release (checksum matched).
+- The player souls test showed a downed third player not revived within 12 s in some runs;
+  an A/B with the 0.2.5 DLL showed the same (Rawlings' AI on the host does not always come):
+  not a regression, open for the next version.
 
 Results for 0.2.5 (2026-10-23):
 

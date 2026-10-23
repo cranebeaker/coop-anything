@@ -313,6 +313,20 @@
   holding the list: its items join with spaces when written as a string, and an empty list
   becomes one empty string.
 
+## Session 2026-10-24: 0.2.6 (clean exit, any version updated)
+
+### Observations (checked)
+- The D3D9 warning on exit is the debug-style check in the engine's own final device
+  `Release`: a static system-memory surface in the proxy (F11 clip, capture) kept a reference.
+  Reading the count with `AddRef`+`Release` in a `Release` hook and freeing the proxy's
+  objects at 16 or fewer references lets the engine's last `Release` reach zero.
+- Installers up to 0.2.2 refuse while any `Jericho.exe` runs on the PC (0.2.3+ only for
+  their own folder): an old-version test beside a running game test installs nothing.
+- The published 0.2.4 installer stops over a 0.2.3 record with an empty `shortcut=` line;
+  0.2.5+ reads it.
+- In the souls test, Rawlings' AI on the host sometimes does not come for a downed puppet
+  within 12 s (1 of 3 with 0.2.5's DLL, 2 of 6 with 0.2.6's): the revive is not sent at all.
+
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download
   SHA-256 `98be0fa84ac73ca66dce2842a2e4512226f4c611b6500dc96415571fc5538fcc`
