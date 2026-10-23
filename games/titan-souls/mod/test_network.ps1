@@ -10,6 +10,11 @@ if (-not (Test-Path "$GameDir\TITAN.exe")) {
     exit 1
 }
 
+if (-not (Test-Path "bin\version.dll")) {
+    Write-Error "bin\version.dll not found! Run .\build.bat before running the test."
+    exit 1
+}
+
 Write-Host ">>> Titan Souls Network Test Runner"
 Write-Host "Copying version.dll and host/client configs to isolated run directories..."
 $hostDir = "$env:TEMP\TitanSouls_Host"
@@ -21,10 +26,8 @@ New-Item -ItemType Directory -Force -Path $clientDir | Out-Null
 Copy-Item "$GameDir\*" -Destination $hostDir -Recurse -Force
 Copy-Item "$GameDir\*" -Destination $clientDir -Recurse -Force
 
-if (Test-Path "bin\version.dll") {
-    Copy-Item "bin\version.dll" "$hostDir\version.dll" -Force
-    Copy-Item "bin\version.dll" "$clientDir\version.dll" -Force
-}
+Copy-Item "bin\version.dll" "$hostDir\version.dll" -Force
+Copy-Item "bin\version.dll" "$clientDir\version.dll" -Force
 
 # Configure Host
 @"

@@ -213,14 +213,15 @@ typedef struct _XINPUT_STATE {
 typedef DWORD (WINAPI *XInputGetState_t)(DWORD dwUserIndex, XINPUT_STATE* pState);
 static XInputGetState_t g_pfnXInputGetState = NULL;
 
+static FILE* g_logFile = NULL;
+
 static void LogMsg(const char* fmt, ...) {
-    FILE* f = fopen("coop_log.txt", "a");
-    if (f) {
+    if (g_logFile) {
         va_list args;
         va_start(args, fmt);
-        vfprintf(f, fmt, args);
+        vfprintf(g_logFile, fmt, args);
         va_end(args);
-        fclose(f);
+        fflush(g_logFile);
     }
 }
 
@@ -317,9 +318,9 @@ static void Net_PollIncoming(void) {
 
     char recvBuf[256];
     struct sockaddr_in senderAddr;
-    int senderLen = sizeof(senderAddr);
 
     while (1) {
+        int senderLen = sizeof(senderAddr);
         int bytes = recvfrom(g_netSocket, recvBuf, sizeof(recvBuf), 0,
                              (struct sockaddr*)&senderAddr, &senderLen);
         if (bytes <= 0) break; // Non-blocking: no more packets ready
@@ -335,6 +336,13 @@ static void Net_PollIncoming(void) {
         // 1. Handshake Packet (Client -> Host)
         if (hdr->pktType == NET_PKT_HANDSHAKE) {
             if (g_netRole == 1) { // Host receives handshake
+                // Ignore rogue handshakes if already connected to a different peer
+                BOOL isSamePeer = (senderAddr.sin_addr.s_addr == g_netRemoteAddr.sin_addr.s_addr &&
+                                   senderAddr.sin_port == g_netRemoteAddr.sin_port);
+                if (g_netState == NET_STATE_CONNECTED && !isSamePeer && g_hasRemoteSync) {
+                    continue; // Active session with another client, ignore
+                }
+
                 g_netRemoteAddr = senderAddr; // Lock in client address
                 g_netState = NET_STATE_CONNECTED;
                 LogMsg("[Net] Handshake received from %s:%d! Sending ACK...\n",
@@ -385,6 +393,16 @@ static void Net_PollIncoming(void) {
             LogMsg("[Net] Peer sent disconnect signal.\n");
             g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
             g_hasRemoteSync = FALSE;
+        }
+    }
+
+    // Connection timeout: drop session after 5 seconds without packets
+    if (g_netState == NET_STATE_CONNECTED && g_netLastRecvTick > 0) {
+        if (GetTickCount() - g_netLastRecvTick > 5000) {
+            LogMsg("[Net] Connection timed out (5s without packets). Dropping session.\n");
+            g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
+            g_hasRemoteSync = FALSE;
+            g_netLastRecvTick = 0;
         }
     }
 }
@@ -448,7 +466,9 @@ static void Net_BroadcastLocalPlayer(void) {
         pkt.input_y = g_p1_axis_y;
         pkt.btn_roll = (uint8_t)g_p1_btn_roll;
         pkt.btn_shoot = (uint8_t)g_p1_btn_shoot;
-        pkt.is_alive = 1;
+
+        int p1_state = *(int*)((uintptr_t)pP1 + 0x368);
+        pkt.is_alive = (p1_state != 3) ? 1 : 0;
 
         sendto(g_netSocket, (const char*)&pkt, sizeof(pkt), 0,
                (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
@@ -474,6 +494,11 @@ static void Net_BroadcastLocalPlayer(void) {
 static void Net_UpdatePuppet(void) {
     if (!g_netEnabled || !g_hasRemoteSync) return;
     if (!g_pPlayer2 || !IsReadable(g_pPlayer2, 0x418)) return;
+
+    // Reflect death state on remote puppet
+    if (!g_remoteSyncState.is_alive) {
+        *(int*)((uintptr_t)g_pPlayer2 + 0x368) = 3;
+    }
 
     // Apply received remote inputs
     g_p2_axis_x = g_remoteSyncState.input_x;
@@ -943,10 +968,10 @@ static void InitXInput(void) {
 }
 
 void DLLP_OnAttach(void) {
-    FILE* f = fopen("coop_log.txt", "w");
-    if (f) {
-        fprintf(f, "=== Titan Souls Co-op Mod Initializing ===\n");
-        fclose(f);
+    g_logFile = fopen("coop_log.txt", "w");
+    if (g_logFile) {
+        fprintf(g_logFile, "=== Titan Souls Co-op Mod Initializing ===\n");
+        fflush(g_logFile);
     }
 
     LoadConfig();
@@ -979,4 +1004,8 @@ void DLLP_OnDetach(void) {
     Net_Shutdown();
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
+    if (g_logFile) {
+        fclose(g_logFile);
+        g_logFile = NULL;
+    }
 }
