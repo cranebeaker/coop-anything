@@ -3166,6 +3166,36 @@
   - https://www.nexusmods.com/residentevil22019/mods/2938
   - https://www.dsogaming.com/?p=197583
   checked: 2026-10-16
+- game: Resident Evil 2 (2019 remake)
+  year: 2019
+  engine: RE Engine
+  project: (none found)
+  url: ''
+  other_urls:
+  - https://www.nexusmods.com/residentevil22019/mods/2938
+  - https://www.nexusmods.com/residentevil22019/mods/3024
+  kind: gap
+  status: none
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Online campaign co-op gap. Two LOCAL co-op mods exist (couch split-screen; see other
+    entries); neither has netcode. RE Engine precedents (RE4 remake mod, DD2gether REFramework Lua)
+    show the path. Steam relay recipe proven in this repo applies. Searched GitHub, Nexus,
+    ModDB, web search 2026-10-23.
+  sources:
+  - https://www.nexusmods.com/residentevil22019/mods/3024
+  - https://github.com/But-Frog/dd2-together-release
+  - https://www.nexusmods.com/residentevil42023/mods/6539
+  checked: 2026-10-23
 - game: Resident Evil Village
   year: 2021
   engine: RE Engine

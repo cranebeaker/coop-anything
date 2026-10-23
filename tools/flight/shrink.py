@@ -54,13 +54,59 @@ def signature(result):
 
 # ---------------------------------------------------------------- oracles
 
+def _msvcrt_split(s):
+    """Split a command string the way Windows C RunTime does argv, so quoting made by
+    subprocess.list2cmdline (evs. paths with spaces) round-trips. Stdlib shlex with
+    posix=False keeps the quotes, which broke paths like <repo with spaces>" style builds
+    (see games/resident-evil-2-2019-remake/NOTES.md)."""
+    args, i, n = [], 0, len(s)
+    while True:
+        while i < n and s[i] in " \t":
+            i += 1
+        if i >= n:
+            return args
+        cur, inq = [], False
+        while True:
+            if i >= n or (not inq and s[i] in " \t"):
+                args.append("".join(cur))
+                if i >= n:
+                    return args
+                i += 1
+                break
+            c = s[i]
+            if c == "\\":
+                bs = 0
+                while i < n and s[i] == "\\":
+                    bs += 1
+                    i += 1
+                if i < n and s[i] == '"':
+                    cur.append("\\" * (bs // 2))
+                    if bs % 2:
+                        cur.append('"')
+                        i += 1
+                    else:
+                        inq = not inq
+                        i += 1
+                else:
+                    cur.append("\\" * bs)
+            elif c == '"':
+                inq = not inq
+                i += 1
+            else:
+                cur.append(c)
+                i += 1
+
+
 class CommandOracle:
     """Runs an external replay program. cmd is a list of args (or a string) with the token {fixture} replaced by a temp file."""
 
     def __init__(self, cmd, tmpdir=None, timeout=60):
         if isinstance(cmd, str):
-            import shlex
-            cmd = shlex.split(cmd, posix=(os.name != "nt"))
+            if os.name == "nt":
+                cmd = _msvcrt_split(cmd)
+            else:
+                import shlex
+                cmd = shlex.split(cmd, posix=False)
         if not any("{fixture}" in c for c in cmd):
             raise OracleError("replay command must contain {fixture}")
         self.cmd = cmd

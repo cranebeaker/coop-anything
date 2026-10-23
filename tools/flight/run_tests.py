@@ -2220,7 +2220,11 @@ def cpp_phase(cross_dir):
     os.makedirs(build, exist_ok=True)
     cache = os.path.join(build, "CMakeCache.txt")
     if not os.path.exists(cache):
-        gens = [["-G", "Visual Studio 17 2022", "-A", "x64"], ["-DCMAKE_BUILD_TYPE=Release"]] if os.name == "nt" else [["-DCMAKE_BUILD_TYPE=Release"]]
+        gens = ([
+            ["-G", "Visual Studio 18 2026", "-A", "x64"],   # VS 2026, see games/resident-evil-2-2019-remake NOTES
+            ["-G", "Visual Studio 17 2022", "-A", "x64"],
+            ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],  # any C++17 compiler already on PATH
+        ] if os.name == "nt" else [["-DCMAKE_BUILD_TYPE=Release"]])
         for g in gens:
             r = subprocess.run([cmake, "-S", CPP_DIR, "-B", build] + g, capture_output=True, text=True, env=env, errors="replace")
             if r.returncode == 0:
@@ -2229,7 +2233,7 @@ def cpp_phase(cross_dir):
             os.makedirs(build, exist_ok=True)
         else:
             return False, "cmake configure failed:\n" + (r.stdout + r.stderr)[-1500:]
-    vs = "Visual Studio" in read_text(cache)
+    vs = any(ln.startswith('CMAKE_GENERATOR:INTERNAL=') and "Visual Studio" in ln for ln in read_text(cache).splitlines())
     cmd = [cmake, "--build", build, "--config", "Release", "--parallel", "1"]
     if vs:
         cmd += ["--", "/nologo", "/v:minimal", "/p:IgnoreWarnIntDirInTempDetected=true"]
