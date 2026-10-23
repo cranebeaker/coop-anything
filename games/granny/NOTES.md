@@ -2210,3 +2210,100 @@ python -I tools/fake-host.py --port 47778 --scene Menu --scene-at 10 --scene-unt
   announcement on connect is covered by the boot guard, but has not been observed live.
 - A two-instance pair run is still the missing confirmation. Do not start one without the
   owner's go-ahead (memory pressure, §23).
+
+## 25. Harness: the test install must be the working directory
+
+**Observation.** Launching `Granny.exe` from the copied test install with `Start-Process` and
+no `-WorkingDirectory` made the process quit at `Menu` every time, with the mod loaded and
+`SplashScreen -> Menu` in the log and nothing after it. The same build launched as
+
+```
+Start-Process -FilePath 'C:\Users\Public\granny-test\Granny.exe' `
+    -WorkingDirectory 'C:\Users\Public\granny-test'
+```
+
+plays normally.
+
+**Derived.** `Steamworks.SteamAPI.RestartAppIfNecessary` compares the process's working
+directory with the install directory Steam knows for app 962400 (still the owner's F:
+install). When they differ it hands the launch to Steam as
+`steam://run/962400//<args>`, the test process exits, and Steam starts the *install* copy,
+which has no MelonLoader. So every QA run needs the working directory set to the test copy.
+This is the reason earlier single-instance runs could look like "the mod does nothing".
+
+**Side effect worth knowing.** The relaunched copy is launched through Steam, so if a stale
+test process ever survives, two game processes can exist. Check for `Granny` in
+`Get-Process` before starting a run.
+
+## 26. Spectating through the death sequence (v0.5.0, 2026-10-23)
+
+**What changed.** `CatchSync` used to spectate only while `playerCaught`'s flags were set.
+Those flags drop about a second after the grab, while the death sequence keeps running:
+Granny carries the body to the bed and only then does `playerDead.startEndScene` fire, which
+was 30–60 s later in the QA runs. The spectator view ended before the player was even off
+screen. v0.5.0 latches the dead state and holds it.
+
+**Reading the script API without a decompiler.** `ReflectionOnlyLoadFrom` on the interop
+stubs in `MelonLoader\Il2CppAssemblies` returns zero usable types, so the members were read
+straight out of the metadata with `System.Reflection.Metadata` (`PEReader` +
+`MetadataReader` + an `ISignatureTypeProvider` that prints type names). The throwaway tool
+is `work/mdread` (`dotnet run --project work/mdread -- <assembly.dll> <needle>...`); it lists
+fields with decoded types, methods and properties for every type whose full name contains a
+needle, and never loads the assembly. That is how `playerDead` was found — it is not in the
+public modding docs for this build.
+
+`Il2Cpp.playerDead` (on the `GameController` object) has the durable death signal:
+
+```
+field Boolean endSceneRunning, endSceneRunning2, endSceneRunning3, endSceneRunning4
+field UnityEngine.UI.Image blackScreenTexture, gameOverTexture
+field UnityEngine.GameObject gameOverText, bloodscreenEnd
+method startEndScene, startEndScene2, startEndScene3, startEndScene4, gameOverNoGranny
+```
+
+**What the mod does now.**
+
+- Binds `playerCaught` on `Player` and `playerDead` on `GameController` (the latter through
+  `GetComponentInChildren` then `FindObjectsByType(..., Include)`), logged once:
+  `COOP death: bound playerDead on 'GameController' end=(False,False,False)`.
+- Dead = a catch flag, or `endSceneRunning || endSceneRunning2 || endSceneRunning3`. The
+  state is latched on the rising edge, so the one-second flag window is enough to enter it.
+- The latch is held while the end sequence runs and for `DeathHoldSec = 45f` of continuously
+  clear flags after that. A scene change (`Reset()` in `OnSceneWasLoaded`) clears it, so the
+  Menu is not spectated.
+- While dead the mod disables `blackScreenTexture.enabled` and `bloodscreenEnd` — they are
+  screen-space UI and drew over the spectator camera. `StopSpectating` restores the image.
+- The status line reports `catch=dead` when the end sequence, not a grab flag, started it.
+
+**Observations — single client + `tools/fake-host.py` (`--state-circle 3 --scene Scene
+--scene-at 15 --scene-until 300`, 200 s; log `26-10-23_14-16-8.log`).** The synthetic catch
+came from the mod's own `catchtest` option, which walks the player onto Granny:
+
+```
+[14:16:54.830] COOP death: hid the death overlay so the spectator view is visible
+[14:16:54.831] COOP catch: local player caught (granny)
+[14:16:54.833] COOP spectate: watching the other player
+[14:16:54.850] COOP spectate: using camera 'Camera'
+[14:16:55.824] COOP spectate: cam='PlayerEyes' at (-1.7,1.5,2.5) target=(-1.9,0.0,2.4) yaw=321.7 pitch=0.0
+...
+[14:17:41.402] COOP catch: local player is alive again
+```
+
+That is 46.6 s of continuous spectating, through the game's own camera swaps
+(`Camera -> PlayerEyes -> PlayerCamInBed`), with the camera at the remote player's eye
+height (`y = 1.5`, remote `y = 0`) and yaw following the fake host's 3 m circle to within
+a degree. The cycle then repeated three more times (releases at 14:18:29.718 and
+14:19:18.908, fresh catches 1.2 s later), including one cycle where
+`COOP player active -> False` at 14:19:28 while the spectator camera kept tracking — so the
+view survives the local player becoming inactive as well.
+
+**Unknown / not tested.**
+
+- Death → `Menu` was never observed: the QA runs were stopped while still in `Scene`, so
+  `Reset()` clearing the latch on the game-over screen has not been seen on a real death.
+- The remote side of the catch (`Catch` message, `rcatch`, hiding the remote avatar at the
+  body) is still only covered by unit-level code reading; it needs a real peer.
+- Re-entry after a catch (guest back to Menu, then Play again) is still unverified, as in §23.
+
+**Next.** Watch one full death in a real pair (needs the owner's go-ahead) and confirm the
+Menu transition stops spectating and restores the overlay.
