@@ -2235,7 +2235,7 @@ This is the reason earlier single-instance runs could look like "the mod does no
 test process ever survives, two game processes can exist. Check for `Granny` in
 `Get-Process` before starting a run.
 
-## 26. Spectating through the death sequence (v0.5.0–0.5.2, 2026-10-23)
+## 26. Spectating through the death sequence (v0.5.0–0.5.3, 2026-10-23)
 
 **What changed.** `CatchSync` used to spectate only while `playerCaught`'s flags were set.
 Those flags drop about a second after the grab, while the death sequence keeps running:
@@ -2336,6 +2336,30 @@ scripted host (`tools/fake-host.py --catch-at 30 --revive-at 55 --state-circle 3
 The status samples straddle it cleanly: `avVisible=True` at 14:49:20 with `rcatch=?`, then
 `avVisible=False ... rcatch=granny` for the 14:49:30–14:49:50 samples, and `avVisible=True`
 with `rcatch=alive` at 14:50:00.
+
+**Death → Menu: the scene change ends it (v0.5.2).** The death path that leaves the scene
+instead of reviving was exercised by having the scripted host request `Menu` while the local
+player was dead (`26-10-23_14-58-6.log`):
+
+```
+[14:59:22.064] COOP catch: local player caught (granny)
+[14:59:22.743] COOP catch: scene change ends the death, local player is alive again
+[14:59:22.744] COOP spectate: stopped
+[14:59:22.745] COOP scene -> 'Menu' (buildIndex=1)
+```
+
+The spectator teardown and the overlay restore run before the old scene unloads, and the
+alive edge goes out on the wire: `fake-host` logged `catch from guest: alive cause=1` 0.7 s
+after the `Menu` request. Before v0.5.2 `Reset()` only cleared local state, so the peer would
+have kept this player's avatar hidden until its own next scene change.
+
+The same run re-verified the revive path: catch 14:58:52.085, `player active -> True`
+14:59:18.414, `alive again` 14:59:20.415 (2.0 s), 28.3 s of spectating.
+
+Note on the harness: after the guest reached `Menu`, `--coop-autoplay` kept driving
+Play → difficulty → `Scene`, and scene follow pulled it back to the host's `Menu` every ~5 s.
+That flip-flop is the test flag fighting the scripted host, not a game or mod behaviour; a
+real guest sits in `Menu` and waits.
 
 **Unknown / not tested.**
 
