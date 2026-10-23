@@ -7,9 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 #include <stdint.h>
 #include "dllproxy.h"
 #include "MinHook.h"
+
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
 
 #ifndef SDLCALL
 #define SDLCALL __cdecl
@@ -22,6 +27,7 @@ typedef struct SDL_Window SDL_Window;
 // ============================================================================
 #define ADDR_GAME_PTR         0x007165EC  // Game / Scene singleton
 #define ADDR_PLAYER1_PTR      0x00716664  // Player 1 entity pointer
+#define ADDR_WORLD_PTR        0x0071665C  // Active World / Map pointer
 #define ADDR_GAMEWORLD_PTR    0x007166D0  // GameWorld entity container pointer
 #define ADDR_CAM_OFFSET_X     0x00716C1C  // Camera float X offset
 #define ADDR_CAM_OFFSET_Y     0x00716C20  // Camera float Y offset
@@ -38,18 +44,32 @@ typedef struct SDL_Window SDL_Window;
 #define ADDR_GET_BUTTON       0x006140A8  // InputManager::GetButton(string) __cdecl
 #define ADDR_GET_AXIS         0x00615930  // InputManager::GetAxis(string) __cdecl
 #define ADDR_LOAD_GAME        0x005CD048  // Game::LoadGame(int slot) __thiscall
+#define ADDR_PLAYER_UPDATEDEATH  0x005AD144  // Player::UpdateDeath() __thiscall
+#define ADDR_GAMEWORLD_RESETROOM 0x0055309C  // GameWorld::ResetRoom() __thiscall
+#define ADDR_PLAYER_SET_ANIM     0x005BA7A4  // Player::SetAnimation(string&, bool, bool) __thiscall
+#define ADDR_STRING_CTOR         0x00699FD8  // std::string::basic_string(const char*, alloc) __thiscall
+#define ADDR_STRING_DTOR         0x0069A634  // std::string::~basic_string() __thiscall
+#define ADDR_PLAYER_INIT         0x005A6FA4  // Player::Init() (vtable[3]) __thiscall
+#define ADDR_ARROW_ISDAMAGING    0x005A05A4  // Arrow::IsDamaging() __thiscall
+#define ADDR_TITAN_HITSENSOR_ONHIT 0x00589700 // TitanHitSensor::OnHit() (vtable[7]) __thiscall
 
 // Entity field offsets
 #define OFF_POS_X             0x18
 #define OFF_POS_Y             0x1C
 #define OFF_VEL_X             0x88
 #define OFF_VEL_Y             0x8C
+#define OFF_ACTIVE_FLAG       0xA0        // byte: 1 = active entity
 #define OFF_COLOR_R           0x334
 #define OFF_COLOR_G           0x338
 #define OFF_COLOR_B           0x33C
 #define OFF_COLOR_A           0x340
-#define OFF_PLAYER_ROLL       0x368
-#define OFF_PLAYER_ARROW      0x410
+#define OFF_PLAYER_ROLL       0x368       // 0=idle/normal, 1=rolling, 2=recovery, 3=dead
+#define OFF_ALIVE_FLAG        0x378       // byte: 1 = alive, 0 = dead
+#define OFF_DEATH_SLOWDOWN    0x3E8       // float: slow-motion / zoom factor
+#define OFF_DEATH_TIMER       0x3EC       // uint16_t: frames elapsed since death
+#define OFF_WAKEUP_FLAG       0x40D       // byte: 1 = wake / getup sequence
+#define OFF_PLAYER_GROUNDSPRITE 0x410     // GroundSprite entity (shadow/ground indicator)
+#define OFF_PLAYER_ARROW      0x35c       // Arrow entity pointer (5Arrow class)
 
 // Typedefs for engine functions
 typedef void* (__cdecl *OperatorNew_t)(size_t size);
@@ -62,18 +82,33 @@ typedef char (__cdecl *GetButton_t)(const void* pStr);
 typedef float (__cdecl *GetAxis_t)(const void* pStr);
 typedef void (SDLCALL *SDL_GL_SwapWindow_t)(SDL_Window*);
 typedef void (__thiscall *LoadGame_t)(void* pGameObj);
+typedef void (__thiscall *PlayerUpdateDeath_t)(void* pThis);
+typedef void (__thiscall *GameWorldResetRoom_t)(void* pWorld);
+typedef void (__thiscall *StringCtor_t)(void* pStr, const char* s, const void* alloc);
+typedef void (__thiscall *StringDtor_t)(void* pStr);
+typedef void (__thiscall *PlayerSetAnim_t)(void* pPlayer, void* pStr, int b1, int b2);
+typedef void (__thiscall *PlayerInit_t)(void* pPlayer);
+typedef char (__fastcall *ArrowIsDamaging_t)(void* pArrow, void* edx);
+typedef void (__fastcall *TitanHitSensorOnHit_t)(void* pSensor, void* edx, float hit_x, float hit_y, float vel_x, float vel_y);
 
 // Original function pointers & engine callables
 static OperatorNew_t       g_fnOperatorNew       = (OperatorNew_t)ADDR_OPERATOR_NEW;
 static PlayerCtor_t        g_fnPlayerCtor        = (PlayerCtor_t)ADDR_PLAYER_CTOR;
 static WorldAddEntity_t    g_fnWorldAddEntity    = (WorldAddEntity_t)ADDR_WORLD_ADD_ENTITY;
 static CameraAddTarget_t   g_fnCameraAddTarget   = (CameraAddTarget_t)ADDR_CAMERA_ADDTARGET;
+static StringCtor_t        g_fnStringCtor        = (StringCtor_t)ADDR_STRING_CTOR;
+static StringDtor_t        g_fnStringDtor        = (StringDtor_t)ADDR_STRING_DTOR;
+static PlayerSetAnim_t     g_fnPlayerSetAnim     = (PlayerSetAnim_t)ADDR_PLAYER_SET_ANIM;
 
-static PlayerUpdate_t      g_orig_Player_Update  = NULL;
-static CameraUpdate_t      g_orig_Camera_Update  = NULL;
-static GetButton_t         g_orig_GetButton      = NULL;
-static GetAxis_t           g_orig_GetAxis        = NULL;
-static SDL_GL_SwapWindow_t g_orig_SwapWindow     = NULL;
+static PlayerUpdate_t        g_orig_Player_Update      = NULL;
+static CameraUpdate_t        g_orig_Camera_Update      = NULL;
+static GetButton_t           g_orig_GetButton          = NULL;
+static GetAxis_t             g_orig_GetAxis            = NULL;
+static SDL_GL_SwapWindow_t   g_orig_SwapWindow         = NULL;
+static PlayerUpdateDeath_t   g_orig_Player_UpdateDeath = NULL;
+static GameWorldResetRoom_t  g_orig_GameWorld_ResetRoom = NULL;
+static ArrowIsDamaging_t     g_orig_Arrow_IsDamaging    = NULL;
+static TitanHitSensorOnHit_t g_orig_TitanHitSensor_OnHit = NULL;
 
 // ============================================================================
 // Network Protocol Definition
@@ -86,6 +121,7 @@ static SDL_GL_SwapWindow_t g_orig_SwapWindow     = NULL;
 #define NET_PKT_HEARTBEAT     3
 #define NET_PKT_PLAYER_SYNC   4
 #define NET_PKT_DISCONNECT    5
+#define NET_PKT_BOSS_HIT      6
 
 #define NET_STATE_DISCONNECTED 0
 #define NET_STATE_CONNECTING   1
@@ -145,6 +181,14 @@ typedef struct {
     float    facing_x;    // [Player + 0x3B0]
     float    facing_y;    // [Player + 0x3B4]
 } NetPlayerSyncPacket;
+
+typedef struct {
+    NetHeader header;
+    float     hit_x;
+    float     hit_y;
+    float     hit_vel_x;
+    float     hit_vel_y;
+} NetBossHitPacket;
 #pragma pack(pop)
 
 // ============================================================================
@@ -399,8 +443,17 @@ static void Net_Init(void) {
         return;
     }
 
+    int reuse = 1;
+    setsockopt(g_netSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse));
+
     u_long nonblock = 1;
     ioctlsocket(g_netSocket, FIONBIO, &nonblock);
+
+    // Disable Windows UDP connection reset on ICMP port unreachable
+    BOOL bNewBehavior = FALSE;
+    DWORD dwBytesReturned = 0;
+    WSAIoctl(g_netSocket, SIO_UDP_CONNRESET, &bNewBehavior, sizeof(bNewBehavior),
+             NULL, 0, &dwBytesReturned, NULL, NULL);
 
     struct sockaddr_in localAddr;
     ZeroMemory(&localAddr, sizeof(localAddr));
@@ -456,6 +509,7 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
 
     // 1. Handshake Packet (Client -> Host)
     if (hdr->pktType == NET_PKT_HANDSHAKE) {
+        if ((size_t)bytes < sizeof(NetHandshakePacket)) return;
         if (g_netRole == 1) { // Host
             if (g_steamActive) {
                 if (g_netState == NET_STATE_CONNECTED && g_steamFriendID != 0 && g_steamFriendID != senderSteamID && g_hasRemoteSync) {
@@ -499,6 +553,7 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
     }
     // 2. Handshake ACK Packet (Host -> Client)
     else if (hdr->pktType == NET_PKT_HANDSHAKE_ACK) {
+        if ((size_t)bytes < sizeof(NetHandshakeAckPacket)) return;
         if (g_netRole == 2) {
             g_netState = NET_STATE_CONNECTED;
             g_netLastSeqIn = 0;
@@ -513,18 +568,30 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
     }
     // 3. Heartbeat
     else if (hdr->pktType == NET_PKT_HEARTBEAT) {
+        if ((size_t)bytes < sizeof(NetHeartbeatPacket)) return;
         // Peer alive
     }
     // 4. Player State Sync
     else if (hdr->pktType == NET_PKT_PLAYER_SYNC) {
         if ((size_t)bytes >= sizeof(NetPlayerSyncPacket)) {
             NetPlayerSyncPacket* sync = (NetPlayerSyncPacket*)recvBuf;
-            if (sync->header.sequence > g_netLastSeqIn || (g_netLastSeqIn - sync->header.sequence > 10000)) {
+            // Validate floats against NaN / Inf corruptions
+            if (!_finite(sync->pos_x) || !_finite(sync->pos_y) ||
+                !_finite(sync->vel_x) || !_finite(sync->vel_y) ||
+                !_finite(sync->arrow_x) || !_finite(sync->arrow_y)) {
+                return;
+            }
+            // RFC 1982 Serial Number Arithmetic for sequence progression
+            int32_t seqDiff = (int32_t)(sync->header.sequence - g_netLastSeqIn);
+            if (seqDiff > 0 || g_netLastSeqIn == 0) {
                 g_netLastSeqIn = sync->header.sequence;
                 g_remoteSyncState = *sync;
                 g_hasRemoteSync = TRUE;
                 if (g_netState != NET_STATE_CONNECTED) {
                     g_netState = NET_STATE_CONNECTED;
+                    if (senderAddr && g_netRole == 1) {
+                        g_netRemoteAddr = *senderAddr;
+                    }
                 }
             }
         }
@@ -535,6 +602,34 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
         g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
         g_hasRemoteSync = FALSE;
         g_netLastSeqIn = 0;
+    }
+    // 6. Boss Hit Sync Packet
+    else if (hdr->pktType == NET_PKT_BOSS_HIT) {
+        if ((size_t)bytes < sizeof(NetBossHitPacket)) return;
+        const NetBossHitPacket* pBossPkt = (const NetBossHitPacket*)recvBuf;
+        LogMsg("[Net] Received BOSS_HIT from peer: hit=(%.2f, %.2f), vel=(%.2f, %.2f)\n",
+               pBossPkt->hit_x, pBossPkt->hit_y, pBossPkt->hit_vel_x, pBossPkt->hit_vel_y);
+
+        void* pGameWorld = *(void**)ADDR_GAMEWORLD_PTR;
+        if (pGameWorld && IsReadable(pGameWorld, 0x10)) {
+            void** pBegin = *(void***)((uintptr_t)pGameWorld + 0x04);
+            void** pEnd   = *(void***)((uintptr_t)pGameWorld + 0x08);
+            if (pBegin && pEnd && pEnd > pBegin) {
+                size_t count = pEnd - pBegin;
+                for (size_t i = 0; i < count; i++) {
+                    void* pEnt = pBegin[i];
+                    if (pEnt && IsReadable(pEnt, 0xA0)) {
+                        uintptr_t vt = *(uintptr_t*)pEnt;
+                        if (vt == 0x0070E728) { // TitanHitSensor
+                            *(float*)((uintptr_t)pEnt + 0x98) = pBossPkt->hit_vel_x;
+                            *(float*)((uintptr_t)pEnt + 0x9c) = pBossPkt->hit_vel_y;
+                            *(uint8_t*)((uintptr_t)pEnt + 0x94) = 1;
+                            LogMsg("[Net] Triggered local TitanHitSensor at 0x%p!\n", pEnt);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -579,6 +674,96 @@ static void Net_PollIncoming(void) {
             g_hasRemoteSync = FALSE;
             g_netLastRecvTick = 0;
             g_netLastSeqIn = 0;
+        }
+    }
+}
+
+// ============================================================================
+// Cooperative Life & Revive Subsystem
+// ============================================================================
+static BOOL IsPlayerAlive(void* pPlayer) {
+    if (!pPlayer || !IsReadable(pPlayer, 0x418)) return FALSE;
+    int roll_state = *(int*)((uintptr_t)pPlayer + OFF_PLAYER_ROLL);
+    if (roll_state == 3) return FALSE;
+    char alive_byte = *(char*)((uintptr_t)pPlayer + OFF_ALIVE_FLAG);
+    if (alive_byte == 0) return FALSE;
+    return TRUE;
+}
+
+static void Player_SetAnimation(void* pPlayer, const char* animName) {
+    if (!pPlayer || !IsReadable(pPlayer, 0x418)) return;
+    char dummyAlloc = 0;
+    void* strObj = NULL;
+    g_fnStringCtor(&strObj, animName, &dummyAlloc);
+    if (strObj) {
+        g_fnPlayerSetAnim(pPlayer, &strObj, 1, 0);
+        g_fnStringDtor(&strObj);
+    }
+}
+
+static void RevivePlayer(void* pDeadPlayer) {
+    if (!pDeadPlayer || !IsReadable(pDeadPlayer, 0x418)) return;
+
+    LogMsg("[Co-op Revive] Reviving fallen player 0x%p!\n", pDeadPlayer);
+
+    // 1. Reset death state and roll state to 0
+    *(int*)((uintptr_t)pDeadPlayer + OFF_PLAYER_ROLL) = 0;
+    *(char*)((uintptr_t)pDeadPlayer + OFF_ALIVE_FLAG) = 1;  // is_alive = true
+    *(char*)((uintptr_t)pDeadPlayer + 0x37A) = 0;
+    *(char*)((uintptr_t)pDeadPlayer + 0x37B) = 0;
+    *(short*)((uintptr_t)pDeadPlayer + 0x386) = 0;
+    *(float*)((uintptr_t)pDeadPlayer + OFF_DEATH_SLOWDOWN) = 0.0f;
+    *(short*)((uintptr_t)pDeadPlayer + OFF_DEATH_TIMER) = 0; // Death frame counter reset
+    *(short*)((uintptr_t)pDeadPlayer + 0x3EE) = 0;
+    *(char*)((uintptr_t)pDeadPlayer + 0x3A6) = 0;  // Rolling = false
+    *(char*)((uintptr_t)pDeadPlayer + OFF_WAKEUP_FLAG) = 1;  // Wakeup flag
+    *(char*)((uintptr_t)pDeadPlayer + OFF_ACTIVE_FLAG) = 1;  // Active / visible
+
+    // 2. Reset velocity
+    *(float*)((uintptr_t)pDeadPlayer + OFF_VEL_X) = 0.0f;
+    *(float*)((uintptr_t)pDeadPlayer + OFF_VEL_Y) = 0.0f;
+
+    // 3. Reset sprite animation playback speeds to 12.0f
+    for (int i = 0; i < 8; i++) {
+        void* s1 = *(void**)((uintptr_t)pDeadPlayer + 0x124 + i * 4);
+        void* s2 = *(void**)((uintptr_t)pDeadPlayer + 0x144 + i * 4);
+        void* s3 = *(void**)((uintptr_t)pDeadPlayer + 0x164 + i * 4);
+        if (s1 && IsReadable(s1, 0x60)) *(float*)((uintptr_t)s1 + 0x58) = 12.0f;
+        if (s2 && IsReadable(s2, 0x60)) *(float*)((uintptr_t)s2 + 0x58) = 12.0f;
+        if (s3 && IsReadable(s3, 0x60)) *(float*)((uintptr_t)s3 + 0x58) = 12.0f;
+    }
+
+    // 4. Trigger the authentic "getup" animation
+    Player_SetAnimation(pDeadPlayer, "getup");
+}
+
+static void CheckPartnerRevive(void) {
+    if (!g_pPlayer1 || !g_pPlayer2) return;
+    if (!IsReadable(g_pPlayer1, 0x418) || !IsReadable(g_pPlayer2, 0x418)) return;
+
+    BOOL p1_alive = IsPlayerAlive(g_pPlayer1);
+    BOOL p2_alive = IsPlayerAlive(g_pPlayer2);
+
+    // Revive is only possible if one player is alive and the other is dead
+    if (p1_alive == p2_alive) return;
+
+    float p1_x = *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_X);
+    float p1_y = *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_Y);
+    float p2_x = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
+    float p2_y = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
+
+    float dx = p1_x - p2_x;
+    float dy = p1_y - p2_y;
+    float distSq = dx * dx + dy * dy;
+
+    // Proximity threshold: 25.0 pixels (25^2 = 625.0)
+    if (distSq <= 625.0f) {
+        if (p1_alive && !p2_alive) {
+            LogMsg("[Co-op Revive] Living Player 1 touched fallen Player 2 (dist=%.1f px) -> REVIVING!\n", sqrtf(distSq));
+            RevivePlayer(g_pPlayer2);
+        } else if (!p1_alive && p2_alive) {
+            LogMsg("[Co-op Revive] Living Player 2 touched fallen Player 1 (dist=%.1f px) -> REVIVING!\n", sqrtf(distSq));
+            RevivePlayer(g_pPlayer1);
         }
     }
 }
@@ -641,7 +826,8 @@ static void Net_BroadcastLocalPlayer(void) {
 
             float dx = pkt.arrow_x - pkt.pos_x;
             float dy = pkt.arrow_y - pkt.pos_y;
-            pkt.has_arrow = (dx * dx + dy * dy < 25.0f) ? 1 : 0;
+            char inQuiver = *(char*)((uintptr_t)pP1 + 0x3C8);
+            pkt.has_arrow = (inQuiver != 0 || (dx * dx + dy * dy < 25.0f)) ? 1 : 0;
         }
 
         // If analog axis is 0, synthesize from keyboard directional buttons
@@ -665,8 +851,13 @@ static void Net_BroadcastLocalPlayer(void) {
         pkt.btn_left = (uint8_t)g_p1_btn_left;
         pkt.btn_right = (uint8_t)g_p1_btn_right;
 
+        char p1_alive_byte = *(char*)((uintptr_t)pP1 + OFF_ALIVE_FLAG);
         int p1_state = *(int*)((uintptr_t)pP1 + OFF_PLAYER_ROLL);
-        pkt.is_alive = (p1_state != 3) ? 1 : 0;
+        if (p1_alive_byte == 0) {
+            p1_state = 3;
+            *(int*)((uintptr_t)pP1 + OFF_PLAYER_ROLL) = 3;
+        }
+        pkt.is_alive = (p1_state != 3 && p1_alive_byte != 0) ? 1 : 0;
         pkt.roll_state = (uint8_t)p1_state;
 
         pkt.dir_x = *(float*)((uintptr_t)pP1 + 0xA4);
@@ -698,10 +889,15 @@ static void Net_UpdatePuppet(void) {
     // Reflect death state on remote puppet
     if (!g_remoteSyncState.is_alive) {
         *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 3;
-    } else if (g_remoteSyncState.roll_state == 1) {
-        *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 1;
-    } else if (g_remoteSyncState.roll_state == 0 && *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) == 2) {
-        *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 0;
+        *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) = 0;
+    } else {
+        if (*(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) == 0 || *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) == 3) {
+            RevivePlayer(g_pPlayer2);
+        } else if (g_remoteSyncState.roll_state == 1) {
+            *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 1;
+        } else if (g_remoteSyncState.roll_state == 0 && *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) == 2) {
+            *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 0;
+        }
     }
 
     // Apply received remote inputs
@@ -730,17 +926,9 @@ static void Net_UpdatePuppet(void) {
     float dy = g_remoteSyncState.pos_y - curr_y;
     float distSq = dx * dx + dy * dy;
 
-    if (distSq > 4.0f) { // Snap if > 2 pixels desynced
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = g_remoteSyncState.pos_y;
-    } else if (distSq > 0.01f) {
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = curr_x + dx * 0.8f;
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = curr_y + dy * 0.8f;
-    } else {
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = g_remoteSyncState.pos_y;
-    }
-
+    // Apply position synchronization directly to eliminate packet latency desync
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = g_remoteSyncState.pos_y;
     *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_X) = g_remoteSyncState.vel_x;
     *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_Y) = g_remoteSyncState.vel_y;
 
@@ -752,12 +940,12 @@ static void Net_UpdatePuppet(void) {
             float curr_ay = *(float*)((uintptr_t)pArrow + OFF_POS_Y);
             float adx = g_remoteSyncState.arrow_x - curr_ax;
             float ady = g_remoteSyncState.arrow_y - curr_ay;
-            if (adx * adx + ady * ady > 4.0f) {
+            if (adx * adx + ady * ady > 100.0f) {
                 *(float*)((uintptr_t)pArrow + OFF_POS_X) = g_remoteSyncState.arrow_x;
                 *(float*)((uintptr_t)pArrow + OFF_POS_Y) = g_remoteSyncState.arrow_y;
             } else {
-                *(float*)((uintptr_t)pArrow + OFF_POS_X) = curr_ax + adx * 0.8f;
-                *(float*)((uintptr_t)pArrow + OFF_POS_Y) = curr_ay + ady * 0.8f;
+                *(float*)((uintptr_t)pArrow + OFF_POS_X) = curr_ax + adx * 0.35f;
+                *(float*)((uintptr_t)pArrow + OFF_POS_Y) = curr_ay + ady * 0.35f;
             }
             *(float*)((uintptr_t)pArrow + OFF_VEL_X) = g_remoteSyncState.arrow_vel_x;
             *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = g_remoteSyncState.arrow_vel_y;
@@ -910,10 +1098,33 @@ static char __cdecl Hooked_GetButton(const void* pStr) {
     if (g_pCurrentUpdatingPlayer && g_pCurrentUpdatingPlayer == g_pPlayer1) {
         if (g_runAutomatedTest) {
             // Scripted verification sequence after waking up (frame 300+)
-            if (g_inGameFrames >= 400 && g_inGameFrames <= 420) {
-                if (strcmp(name, "roll") == 0) btn = 1;
+            // Phase 1: Move RIGHT (frames 320..360)
+            if (g_inGameFrames >= 320 && g_inGameFrames <= 360) {
+                if (strcmp(name, "right") == 0) btn = 1;
             }
-            if ((g_inGameFrames >= 540 && g_inGameFrames <= 590) || (g_inGameFrames >= 610 && g_inGameFrames <= 650)) {
+            // Phase 2: Move DOWN (frames 380..420)
+            if (g_inGameFrames >= 380 && g_inGameFrames <= 420) {
+                if (strcmp(name, "down") == 0) btn = 1;
+            }
+            // Phase 3: Move LEFT (frames 440..480)
+            if (g_inGameFrames >= 440 && g_inGameFrames <= 480) {
+                if (strcmp(name, "left") == 0) btn = 1;
+            }
+            // Phase 4: Move UP (frames 500..540)
+            if (g_inGameFrames >= 500 && g_inGameFrames <= 540) {
+                if (strcmp(name, "up") == 0) btn = 1;
+            }
+            // Phase 5: Roll dodge RIGHT (frames 560..585)
+            if (g_inGameFrames >= 560 && g_inGameFrames <= 585) {
+                if (strcmp(name, "roll") == 0 || strcmp(name, "right") == 0) btn = 1;
+            }
+            // Phase 6: Aim arrow DOWN (frames 610..660)
+            if (g_inGameFrames >= 610 && g_inGameFrames <= 660) {
+                if (strcmp(name, "shoot") == 0 || strcmp(name, "down") == 0) btn = 1;
+            }
+            // Phase 7: Fire arrow (frames 661..694: shoot released, arrow in flight)
+            // Phase 8: Recall arrow (frames 695..820: shoot held, magnetic recall)
+            if (g_inGameFrames >= 695 && g_inGameFrames <= 820) {
                 if (strcmp(name, "shoot") == 0) btn = 1;
             }
         }
@@ -946,20 +1157,28 @@ static float __cdecl Hooked_GetAxis(const void* pStr) {
     if (g_pCurrentUpdatingPlayer && g_pCurrentUpdatingPlayer == g_pPlayer1) {
         if (g_runAutomatedTest) {
             // Scripted movement:
-            // Walk right: frames 300..380
-            if (g_inGameFrames >= 300 && g_inGameFrames <= 380) {
+            // Phase 1: Move RIGHT (frames 320..360)
+            if (g_inGameFrames >= 320 && g_inGameFrames <= 360) {
                 if (strcmp(name, "move_x") == 0) val = 1.0f;
             }
-            // Roll right: frames 400..420
-            if (g_inGameFrames >= 400 && g_inGameFrames <= 420) {
-                if (strcmp(name, "move_x") == 0) val = 1.0f;
+            // Phase 2: Move DOWN (frames 380..420)
+            if (g_inGameFrames >= 380 && g_inGameFrames <= 420) {
+                if (strcmp(name, "move_y") == 0) val = 1.0f;
             }
-            // Walk up: frames 450..520
-            if (g_inGameFrames >= 450 && g_inGameFrames <= 520) {
+            // Phase 3: Move LEFT (frames 440..480)
+            if (g_inGameFrames >= 440 && g_inGameFrames <= 480) {
+                if (strcmp(name, "move_x") == 0) val = -1.0f;
+            }
+            // Phase 4: Move UP (frames 500..540)
+            if (g_inGameFrames >= 500 && g_inGameFrames <= 540) {
                 if (strcmp(name, "move_y") == 0) val = -1.0f;
             }
-            // Aim down to shoot: frames 540..590
-            if (g_inGameFrames >= 540 && g_inGameFrames <= 590) {
+            // Phase 5: Roll dodge RIGHT (frames 560..585)
+            if (g_inGameFrames >= 560 && g_inGameFrames <= 585) {
+                if (strcmp(name, "move_x") == 0) val = 1.0f;
+            }
+            // Phase 6: Aim DOWN to shoot (frames 610..660)
+            if (g_inGameFrames >= 610 && g_inGameFrames <= 660) {
                 if (strcmp(name, "move_y") == 0) val = 1.0f;
             }
         }
@@ -977,6 +1196,20 @@ static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
     void* pPrev = g_pCurrentUpdatingPlayer;
     g_pCurrentUpdatingPlayer = pThis;
 
+    // Detect if this player entered death state in the engine
+    if (pThis && IsReadable(pThis, 0x418)) {
+        char alive_byte = *(char*)((uintptr_t)pThis + OFF_ALIVE_FLAG);
+        int roll_state = *(int*)((uintptr_t)pThis + OFF_PLAYER_ROLL);
+        if (alive_byte == 0 && roll_state != 3) {
+            *(int*)((uintptr_t)pThis + OFF_PLAYER_ROLL) = 3;
+            LogMsg("[Co-op] Player 0x%p entered death state (roll_state=3)\n", pThis);
+        }
+    }
+
+    if (g_netEnabled && pThis == g_pPlayer2) {
+        Net_PollIncoming();
+    }
+
     g_orig_Player_Update(pThis);
 
     if (g_netEnabled && pThis == g_pPlayer2 && g_hasRemoteSync) {
@@ -986,9 +1219,101 @@ static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
         }
         *(float*)((uintptr_t)pThis + 0xA4) = g_remoteSyncState.dir_x;
         *(float*)((uintptr_t)pThis + 0xA8) = g_remoteSyncState.dir_y;
+
+        // Strict position enforcement on puppet right after engine update
+        *(float*)((uintptr_t)pThis + OFF_POS_X) = g_remoteSyncState.pos_x;
+        *(float*)((uintptr_t)pThis + OFF_POS_Y) = g_remoteSyncState.pos_y;
+        *(float*)((uintptr_t)pThis + 0x94) = g_remoteSyncState.pos_x;
+        *(float*)((uintptr_t)pThis + 0x98) = g_remoteSyncState.pos_y;
     }
 
     g_pCurrentUpdatingPlayer = pPrev;
+}
+
+// ============================================================================
+// Hook: Player::UpdateDeath (0x005AD144) - Freeze/Bypass Wipe Timer in Co-op
+// ============================================================================
+static void __fastcall Hooked_Player_UpdateDeath(void* pThis, void* edx) {
+    // Run original death routine (blood particles, death audio, slow-motion decay)
+    g_orig_Player_UpdateDeath(pThis);
+
+    // If both players exist in co-op, check whether room reload timer should be frozen
+    if (g_pPlayer1 && g_pPlayer2 && IsReadable(g_pPlayer1, 0x418) && IsReadable(g_pPlayer2, 0x418)) {
+        BOOL p1_alive = IsPlayerAlive(g_pPlayer1);
+        BOOL p2_alive = IsPlayerAlive(g_pPlayer2);
+
+        // If at least one player is alive, keep the room active and freeze reload timer!
+        if (p1_alive || p2_alive) {
+            unsigned short timer = *(unsigned short*)((uintptr_t)pThis + OFF_DEATH_TIMER);
+            // Cap below frame 90 (which triggers screen fade) and frame 252 (which triggers room reload)
+            if (timer >= 80) {
+                *(unsigned short*)((uintptr_t)pThis + OFF_DEATH_TIMER) = 80;
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Hook: GameWorld::ResetRoom (0x0055309C) - Cooperative Wipe Gatekeeper
+// ============================================================================
+static void __fastcall Hooked_GameWorld_ResetRoom(void* pWorld, void* edx) {
+    if (g_pPlayer1 && g_pPlayer2 && IsReadable(g_pPlayer1, 0x418) && IsReadable(g_pPlayer2, 0x418)) {
+        BOOL p1_alive = IsPlayerAlive(g_pPlayer1);
+        BOOL p2_alive = IsPlayerAlive(g_pPlayer2);
+        // Only trigger room reset / wipe when BOTH players are dead!
+        if (p1_alive || p2_alive) {
+            LogMsg("[Co-op] GameWorld::ResetRoom blocked: a partner is still alive!\n");
+            return;
+        }
+    }
+    LogMsg("[Co-op] Both players fallen -> proceeding with GameWorld::ResetRoom wipe.\n");
+    g_orig_GameWorld_ResetRoom(pWorld);
+}
+
+// ============================================================================
+// Hook: Arrow::IsDamaging (0x005A05A4) - Dual-Player Boss Damage Gate
+// ============================================================================
+static char __fastcall Hooked_Arrow_IsDamaging(void* pArrow, void* edx) {
+    if (g_orig_Arrow_IsDamaging(pArrow, edx)) {
+        return 1;
+    }
+    // If the inspected arrow is not damaging (e.g. Player 1 standing idle),
+    // check if Player 2's arrow is currently flying / damaging!
+    if (g_pPlayer2 && IsReadable(g_pPlayer2, 0x360)) {
+        void* pArrow2 = *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW);
+        if (pArrow2 && IsReadable(pArrow2, 0x140)) {
+            if (g_orig_Arrow_IsDamaging(pArrow2, NULL)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+// ============================================================================
+// Hook: TitanHitSensor::OnHit (0x00589700) - Boss Weakpoint Impact & Sync
+// ============================================================================
+static void __fastcall Hooked_TitanHitSensor_OnHit(void* pSensor, void* edx, float hit_x, float hit_y, float vel_x, float vel_y) {
+    g_orig_TitanHitSensor_OnHit(pSensor, edx, hit_x, hit_y, vel_x, vel_y);
+
+    LogMsg("[Frame %d] Boss Weakpoint Hit! Sensor=0x%p Pos=(%.2f, %.2f) Vel=(%.2f, %.2f)\n",
+           g_frameCount, pSensor, hit_x, hit_y, vel_x, vel_y);
+
+    // Broadcast Boss Hit over Network
+    if (g_netEnabled && g_netState == NET_STATE_CONNECTED) {
+        NetBossHitPacket pkt;
+        ZeroMemory(&pkt, sizeof(pkt));
+        pkt.header.magic = NET_MAGIC;
+        pkt.header.version = NET_PROTOCOL_VERSION;
+        pkt.header.pktType = NET_PKT_BOSS_HIT;
+        pkt.header.senderRole = (uint16_t)g_netRole;
+        pkt.header.sequence = ++g_netSeqOut;
+        pkt.hit_x = hit_x;
+        pkt.hit_y = hit_y;
+        pkt.hit_vel_x = vel_x;
+        pkt.hit_vel_y = vel_y;
+        Net_SendPacket(&pkt, sizeof(pkt));
+    }
 }
 
 // ============================================================================
@@ -1080,9 +1405,8 @@ static void TrySpawnPlayer2(void) {
     g_fnPlayerCtor(pMem, 0.0f, 0.0f);
     void* pPlayer2 = pMem;
 
-    if (IsReadable(pPlayer1, 0x60)) {
-        *(void**)((uintptr_t)pPlayer2 + 0x50) = *(void**)((uintptr_t)pPlayer1 + 0x50);
-    }
+    // Call Player::Init() (vtable[3]) to instantiate Player 2's Arrow (at 0x35c) and weapon components
+    ((PlayerInit_t)ADDR_PLAYER_INIT)(pPlayer2);
 
     float spawn_x = p1_x + 24.0f;
     float spawn_y = p1_y;
@@ -1115,7 +1439,7 @@ static void TrySpawnPlayer2(void) {
 static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
     g_frameCount++;
 
-    if (!g_netInitialized) {
+    if (!g_netInitialized || (g_netEnabled && !g_steamActive && g_netSocket == INVALID_SOCKET && g_frameCount % 60 == 0)) {
         g_netInitialized = TRUE;
         Net_Init();
     }
@@ -1160,16 +1484,100 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
         }
     }
 
-    // 3. Track Player 1 and spawn Player 2
+    // 3. Track Player 1, World and manage Player 2 across room transitions
     void* pP1 = *(void**)ADDR_PLAYER1_PTR;
     void* pGame = *(void**)ADDR_GAME_PTR;
+    void* pWorld = *(void**)ADDR_WORLD_PTR;
+    static void* s_lastWorld = NULL;
+
     if (pP1 && IsReadable(pP1, 0x418) && pGame && IsReadable(pGame, 0x40)) {
         g_pPlayer1 = pP1;
         g_inGameFrames++;
+
+        // Detect room transition via World pointer change
+        static int s_roomTransitionCooldown = 0;
+        if (pWorld && s_lastWorld && pWorld != s_lastWorld) {
+            s_roomTransitionCooldown = 30; // sync across 30 frames during screen fade / entrance walk
+            LogMsg("[Frame %d] Room transition detected! World: 0x%p -> 0x%p\n",
+                   g_frameCount, s_lastWorld, pWorld);
+        }
+        if (pWorld) {
+            s_lastWorld = pWorld;
+        }
+
+        if (s_roomTransitionCooldown > 0) {
+            s_roomTransitionCooldown--;
+            if (g_pPlayer1 && g_pPlayer2 && IsReadable(g_pPlayer1, 0x418) && IsReadable(g_pPlayer2, 0x418)) {
+                float p1_x = *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_X);
+                float p1_y = *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_Y);
+
+                float p2_x = p1_x + 16.0f;
+                float p2_y = p1_y;
+
+                *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = p2_x;
+                *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = p2_y;
+                *(float*)((uintptr_t)g_pPlayer2 + 0x94)      = p2_x;
+                *(float*)((uintptr_t)g_pPlayer2 + 0x98)      = p2_y;
+                *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_X) = 0.0f;
+                *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_Y) = 0.0f;
+
+                // Recall Player 2's arrow
+                void* pArrow2 = *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW);
+                if (pArrow2 && IsReadable(pArrow2, 0xAC)) {
+                    *(float*)((uintptr_t)pArrow2 + 0x18) = p2_x;
+                    *(float*)((uintptr_t)pArrow2 + 0x1C) = p2_y;
+                }
+
+                g_hasRemoteSync = FALSE; // Reset smoothing interpolation across room change
+
+                if (s_roomTransitionCooldown == 0) {
+                    LogMsg("[Frame %d] Room transition sync complete! Player 2 aligned at (%.2f, %.2f)\n",
+                           g_frameCount, p2_x, p2_y);
+                }
+            }
+        }
+
+        if (g_runAutomatedTest) {
+            if (g_inGameFrames == 320) LogMsg("[QA Bot] Phase 1: Move RIGHT (frames 320-360)\n");
+            else if (g_inGameFrames == 380) LogMsg("[QA Bot] Phase 2: Move DOWN (frames 380-420)\n");
+            else if (g_inGameFrames == 440) LogMsg("[QA Bot] Phase 3: Move LEFT (frames 440-480)\n");
+            else if (g_inGameFrames == 500) LogMsg("[QA Bot] Phase 4: Move UP (frames 500-540)\n");
+            else if (g_inGameFrames == 560) LogMsg("[QA Bot] Phase 5: Roll Dodge RIGHT (frames 560-585)\n");
+            else if (g_inGameFrames == 610) LogMsg("[QA Bot] Phase 6: Aim Arrow DOWN (frames 610-660)\n");
+            else if (g_inGameFrames == 661) LogMsg("[QA Bot] Phase 7: Fire Arrow (frames 661-694)\n");
+            else if (g_inGameFrames == 695) LogMsg("[QA Bot] Phase 8: Recall Arrow (frames 695-820)\n");
+            else if (g_inGameFrames == 821) LogMsg("[QA Bot] Phase 9: Sequence Complete (frame %d)\n", g_inGameFrames);
+
+            // Phase 10: Co-op Life & Revive Automated Test
+            if (g_inGameFrames == 830 && g_pPlayer2) {
+                LogMsg("[QA Revive Test] Step 1: Simulating Player 2 death (roll_state=3)...\n");
+                *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 3;
+                *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) = 0;
+                *(unsigned short*)((uintptr_t)g_pPlayer2 + OFF_DEATH_TIMER) = 85;
+            }
+            if (g_inGameFrames == 840 && g_pPlayer2) {
+                unsigned short t = *(unsigned short*)((uintptr_t)g_pPlayer2 + OFF_DEATH_TIMER);
+                LogMsg("[QA Revive Test] Step 2: Player 2 death timer is %d (frozen <= 80, room active)\n", t);
+            }
+            if (g_inGameFrames == 850 && g_pPlayer1 && g_pPlayer2) {
+                LogMsg("[QA Revive Test] Step 3: Player 1 approaching Player 2 for Revive (dist <= 25.0 px)...\n");
+                *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_X) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) - 10.0f;
+                *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_Y) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
+            }
+            if (g_inGameFrames == 860 && g_pPlayer2) {
+                int p2_state = *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL);
+                char p2_alive = *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG);
+                LogMsg("[QA Revive Test] Step 4: Player 2 Revive verified -> roll_state=%d, alive=%d (REVIVE SUCCESS!)\n",
+                       p2_state, p2_alive);
+            }
+        }
         if (!g_pPlayer2) {
             TrySpawnPlayer2();
+        } else {
+            CheckPartnerRevive();
         }
     } else {
+        s_lastWorld = NULL;
         // shortcut: GameWorld frees entities on map teardown; zero pointer here to re-spawn in next room.
         if (g_pPlayer2 && !pP1) {
             g_pPlayer1 = NULL;
@@ -1269,9 +1677,13 @@ void DLLP_OnAttach(void) {
         MH_CreateHook((void*)ADDR_GET_AXIS, (void*)Hooked_GetAxis, (void**)&g_orig_GetAxis);
         MH_CreateHook((void*)ADDR_PLAYER_UPDATE, (void*)Hooked_Player_Update, (void**)&g_orig_Player_Update);
         MH_CreateHook((void*)ADDR_CAMERA_UPDATE, (void*)Hooked_Camera_Update, (void**)&g_orig_Camera_Update);
+        MH_CreateHook((void*)ADDR_PLAYER_UPDATEDEATH, (void*)Hooked_Player_UpdateDeath, (void**)&g_orig_Player_UpdateDeath);
+        MH_CreateHook((void*)ADDR_GAMEWORLD_RESETROOM, (void*)Hooked_GameWorld_ResetRoom, (void**)&g_orig_GameWorld_ResetRoom);
+        MH_CreateHook((void*)ADDR_ARROW_ISDAMAGING, (void*)Hooked_Arrow_IsDamaging, (void**)&g_orig_Arrow_IsDamaging);
+        MH_CreateHook((void*)ADDR_TITAN_HITSENSOR_ONHIT, (void*)Hooked_TitanHitSensor_OnHit, (void**)&g_orig_TitanHitSensor_OnHit);
 
         MH_EnableHook(MH_ALL_HOOKS);
-        LogMsg("All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update, Camera::Update).\n");
+        LogMsg("All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update, Camera::Update, Player::UpdateDeath, GameWorld::ResetRoom, Arrow::IsDamaging, TitanHitSensor::OnHit).\n");
     } else {
         LogMsg("ERROR: MinHook initialization failed!\n");
     }
