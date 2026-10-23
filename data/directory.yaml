@@ -1361,10 +1361,12 @@
   year: 2002
   engine: LS3D
   project: Lost Heaven Multiplayer / Mafia Multiplayer (MMP)
-  url: https://www.gamepressure.com/download/mafia-the-city-of-lost-heaven-lost-heaven-multiplayer-mod/z2e436
-  other_urls: []
+  url: https://github.com/LHMPTeam/lhmp-old
+  other_urls:
+  - https://www.gamepressure.com/download/mafia-the-city-of-lost-heaven-lost-heaven-multiplayer-mod/z2e436
+  - https://github.com/Romop5/lhmp-old
   kind: mod
-  status: partial
+  status: abandoned
   coop_scope:
     story: 'no'
     enemies: unknown
@@ -1372,15 +1374,81 @@
     items: unknown
   players: unknown
   networking: dedicated-server
-  open_source: unknown
-  last_activity: 2015-10
+  open_source: 'yes'
+  last_activity: 2018-11
   qa: none
-  notes: Free-roam online multiplayer with Squirrel-scripted game modes, listed version updated 2015-10-06. This
-    is not a shared story campaign. A separate MMP community dates from 2008.
+  notes: Free-roam online multiplayer with Squirrel-scripted game modes (SA-MP style), developed 2013-2015;
+    the GamePressure build is dated 2015-10-06. Source is Apache-2.0 in an archived repo whose README says the
+    project is abandoned (last commit 2018-11, a README update). This is not a shared story campaign. Its fixed
+    hook addresses do not match the Steam Game.exe (app 40990, build 2300614), see games/mafia/NOTES.md. A separate
+    MMP community dates from 2008.
   sources:
+  - https://github.com/LHMPTeam/lhmp-old
   - https://www.gamepressure.com/download/mafia-the-city-of-lost-heaven-lost-heaven-multiplayer-mod/z2e436
   - https://steamcommunity.com/groups/mafiamp
-  checked: '2026-10-16'
+  checked: '2026-10-24'
+- game: 'Mafia: The City of Lost Heaven'
+  year: 2002
+  engine: LS3D
+  project: Mafia Online (MafiaHub)
+  url: https://github.com/MafiaHub/MafiaOnline
+  other_urls:
+  - https://github.com/MafiaHub/MafiaOnlineDocs
+  - https://github.com/MafiaHub/Framework
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: unknown
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: partial
+  last_activity: 2026-09
+  qa: none
+  notes: Development build on the MafiaHub Framework with no releases, so players build it from source. Supports only
+    the Steam Game.exe (SHA-256 303eb95e...f298). Server-owned player and car replicas, server-chosen mission
+    loading, chat and doors (per its sample Free Ride guide). Mission actors are suppressed, so this is free roam
+    and game modes, not the campaign. The authors ship a two-client Wine smoke test (not run by us). The MafiaHub
+    OSS license allows derivatives only as contributions to the original work, and personal use needs written
+    permission.
+  sources:
+  - https://github.com/MafiaHub/MafiaOnline
+  - https://github.com/MafiaHub/MafiaOnline/blob/main/LICENSE.txt
+  checked: '2026-10-24'
+- game: 'Mafia: The City of Lost Heaven'
+  year: 2002
+  engine: LS3D
+  project: 'Mafia: Oakwood (MafiaHub)'
+  url: https://zaklaus.itch.io/mafia-oakwood
+  other_urls:
+  - https://github.com/MafiaHub/rc1-oakwood
+  - https://github.com/MafiaHub/oakwood-bundle
+  - https://github.com/MafiaHub/mafiadm
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: partial
+  last_activity: 2024-12
+  qa: none
+  notes: Multiplayer mod (2018-2020) with a scriptable server; its README claims sync of players, vehicles and
+    combat. itch.io status is Canceled. The client README requires English Mafia 1.2, Steam or GOG. Source is
+    published, but under a custom license that forbids derivative works and redistribution without permission.
+    Last commits are 2020-08 (client source), 2022-12 (server bundle) and 2024-12 (official game mode repo).
+  sources:
+  - https://zaklaus.itch.io/mafia-oakwood
+  - https://github.com/MafiaHub/rc1-oakwood
+  - https://github.com/MafiaHub/rc1-oakwood/blob/master/LICENSE
+  checked: '2026-10-24'
 - game: Mafia II
   year: 2010
   engine: Illusion Engine
