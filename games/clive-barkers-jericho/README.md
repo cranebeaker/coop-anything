@@ -5,19 +5,22 @@
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
 | Projects | [Jericho Co-op](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op"); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
-| QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-10-22 |
+| QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
+| Last updated | 2026-10-23 |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Test builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.2 at the time of writing),
-in English, Russian, German, French, Spanish and Italian. Every level, power, story part and
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.3 at the time of writing),
+in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
+installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
 1-8) found enemies that ignored joining players, walls only they met, scripts that took their
-controls and actions the host did not see; 0.2.2 fixes those. Expect rough edges.
+controls and actions the host did not see; 0.2.2 fixes those. 0.2.3 gives each fire team its
+own player to follow, syncs every breakable and movable object and keeps a downed player on
+their side of a story split. Expect rough edges.
 
 ## Existing work
 
@@ -140,6 +143,22 @@ restored on uninstall.
   blockers that levels switch off at the end of a talk follow the host.
 - **Enemies (0.2.2):** the engine gives enemies targets only among AI-driven squad members;
   the host now offers them the nearest human too. Enemy generators run on the host only.
+- **Squad orders per player (0.2.3):** the engine's area manager and the squad's "follow me"
+  follow only local user 0. Each fire team (Alpha, Omega) now has a leader: in Act 1 Ross's
+  player leads everyone, after that the first player whose character is in a team leads it,
+  and a team without one goes to a player who leads nothing yet; AI members follow their
+  leader with the game's own chase behaviour, and "hold" pins them. In a story split the AI
+  follows the player it is with.
+- **Objects (0.2.3):** every prop the map places (whatever its name) breaks for everyone;
+  one pushed, knocked over or thrown comes to rest where its mover's machine says, through
+  the host. A player joining later gets both.
+- **Story split sides (0.2.3):** while a story split is in progress the host tells everyone
+  which characters are on which side; a downed player moves only into a free body on their
+  own side, else waits for Rawlings' revive.
+- **Updates (0.2.3):** the installer's shortcut runs a small PowerShell launcher: it reads
+  the latest release from the GitHub API, downloads its zip only from the project's release
+  URLs, checks it against the asset's SHA-256 digest, runs the new installer unattended and
+  starts the game (through Steam when the copy is a Steam install); offline it just starts.
 - **Languages (0.2.2):** the mod's texts and SMOD's menu entries in the game's six
   languages, converted to the game's code page (cp1252, or cp1251 for the Russian release);
   the game's own aspect ratio option extended rather than a new one added.
@@ -160,6 +179,20 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.2.3 (2026-10-23, final code):
+
+- Whole campaign by two players over a LAN between two PCs: 34 level loads to the ending,
+  no crash; nine combinations of graphics options with no engine error or missing texture.
+- All nine story splits played with the second PC hosting the character who goes on (the
+  story line driven step by step) and this PC's game joined as the one left behind: each
+  split's waves, sides and notices started and ended on both, a fallen player never moved to
+  the other side. The test found one split that set its sides only from a trigger players can
+  bypass.
+- Both branches of the Lost Patrol by playthrough bots, the merge and its scene skip included.
+- Breaking and moving objects both ways; squad leaders with a host and a joining player.
+- The update path: the installer's shortcut from 0.2.2 to the published 0.2.3 (checksum
+  matched), a bad checksum (the game starts on the old version), offline (3 s).
 
 Results for 0.2.2 (2026-10-22, final code):
 
@@ -204,4 +237,7 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 
 - Fix what human playthroughs report (real gamepads, Steam between real accounts); open items
   are tracked in the mod repo's issues.
+- 0.2.4: who the players are in the story (player 1 Ross's soul, player 2 Jones's astral
+  projection, both switching bodies freely; players 3-4 keep their character), from the
+  game's own lore on Jones's gift (`docs/story/player-souls.md` in the mod repo).
 - A full co-op playthrough by people, written up, would move this to `verified-playthrough`.

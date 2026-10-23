@@ -245,6 +245,24 @@
 - The engine refuses to start without a mouse (`Input\PcMouse.cpp` line 176), even for
   gamepad play: a test PC without monitor and keyboard works, without a mouse it does not.
 
+## Session 2026-10-23: 0.2.3 (squad leaders, objects, splits, updates)
+
+### Observations (checked)
+- The engine's `AreaManager` and the squad's "follow me" use only local user 0; its areas are
+  too coarse to tell which player a squad member is near (large shared areas). The squad's
+  own chase behaviour (`CHASE_WITHOUT_ACTION_CHAR`) follows any named entity, which is what
+  a non-host leader needs.
+- Breakable props are named by the level, not by a prefix: the map's own list
+  (`MapPhysicObjects`) plus `DM_Physic_`/`OB_` names covers them; `BoE_` parts belong to
+  character scripts and must be left alone.
+- A legionary's `OnDamage` (`chars/legionary.lua`) gives the damage back when its last hit was
+  on the shield. Setting `Life = 0` from a script on one whose last hit was the shield did not
+  stay (life read back unchanged), so a test that "kills the wave" has to bypass that
+  callback; a player shooting past the shield is unaffected.
+- Windows PowerShell 5.1 started from a PowerShell 7 session inherits its `PSModulePath` and
+  then cannot load its own modules (`Get-FileHash` not found). A launcher run from a shortcut
+  should clean that variable or avoid script-module cmdlets (.NET `SHA256`, `ZipFile`).
+
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download
   SHA-256 `98be0fa84ac73ca66dce2842a2e4512226f4c611b6500dc96415571fc5538fcc`

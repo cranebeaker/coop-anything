@@ -6506,17 +6506,20 @@
   last_activity: 2026-10
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Test builds with an installer window (0.2.2), in six languages. LAN/direct IP over ENet or Steam
+    split screen. Test builds (0.2.3) with an installer window and a shortcut that installs newer releases from
+    GitHub before each start, in six languages. LAN/direct IP over ENet or Steam
     lobbies (runs as Spacewar), in a dinput8.dll proxy (one engine call redirected in memory to fix a split screen
     crash; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes, powers,
-    doors and saves; QTE and cutscene view are session settings. The whole campaign runs in automated tests over a LAN
-    between two PCs; a first human session over Steam (missions 1-8) was fixed up in 0.2.2. MIT. The MAK-PIVO fork's (no longer public)
+    doors, breakable and movable objects and saves; each fire team follows its own player; QTE and cutscene view are
+    session settings. The whole campaign runs in automated tests over a LAN
+    between two PCs, every story split with a real host and client; a first human session over Steam (missions 1-8)
+    was fixed up in 0.2.2. MIT. The MAK-PIVO fork's (no longer public)
     Steam, shared QTE, sync and boss/power work was merged back in 0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-10-22'
+  checked: '2026-10-23'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
