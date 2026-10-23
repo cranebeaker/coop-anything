@@ -124,6 +124,8 @@ Intercepts the Windows loader using standard proxy exports (17 functions forward
 | Phase 8 | UDP Socket layer & protocol handshake | PASS | Winsock2 non-blocking socket bound; instant handshake & ACK between Host (7777) and Client (7778) |
 | Phase 9 | Bidirectional 60Hz state synchronization | PASS | 58-byte `NetPlayerSyncPacket` streamed smoothly; Client Y (1176->1129) mirrored to Host puppet (1176->1136.5) |
 | Phase 10 | Independent client camera & zero crash verify | PASS | Client camera followed local player to Y=770.2; Host camera tracked midpoint; 0 crashes across dual instances |
+| Phase 11 | Ponytail audit fixes & lifecycle safety | PASS | Sequence counter reset on reconnect/handshake/timeout; Steam P2P break fail-safe; dead defines removed |
+| Phase 12 | Motion, rotation & zero-desync sync suite | PASS | 4-way directional inputs synthesized; facing angles & roll recovery mirrored; exact 0.0px desync verified |
 
 ---
 

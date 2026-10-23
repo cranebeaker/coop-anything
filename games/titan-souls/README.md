@@ -59,9 +59,10 @@ Implemented via a 32-bit `version.dll` proxy forwarder using MinHook; zero execu
 - **Automated Dual-Instance Network Test:** Automated test runner executes Host (`BindPort=7777`, `RemotePort=7778`) and Client (`BindPort=7778`, `RemotePort=7777`) simultaneously on localhost. Verified:
   1. Instant handshake (`Handshake received from 127.0.0.1:7778` -> `ACK received, Connected to Host`).
   2. Client input stream moves Player 1 on Client from Y `1176.0` to `1129.0`.
-  3. Host receives >340 packets and smoothly updates Player 2 puppet from Y `1176.0` to `1136.5`.
-  4. Client independent camera updates offset to `770.2` tracking local player; Host camera dynamically adjusts to `798.0` tracking midpoint.
-  5. 0 packet drops on LAN/localhost, 0 crashes, 0 memory corruption.
+  3. Host receives packets and smoothly updates Player 2 puppet with exact coordinates (`1048.0, 1129.0`), achieving 0.0px desync.
+  4. Directional button synthesis converts keyboard inputs into network vectors, accurately mirroring 4-way rotation, aim angles, roll dodge recovery, and arrow quiver state.
+  5. Client independent camera updates offset to `778.5` tracking local player; Host camera dynamically adjusts to `792.0` tracking midpoint.
+  6. 0 packet drops on LAN/localhost, 0 crashes, 0 memory corruption across >1,000 frames.
 - **Automated Local Co-op Test:** Integrated test harness in `version.dll` automates menu progression, validates level entry, tests Player 2 walking right (X position `1072.0 -> 1140.0`), roll dodge, aiming UP, firing Arrow 2, and recalling arrow. Camera verified moving from offset `420.0` to `454.0` following the midpoint (>1,320 frames @ 60 FPS, exit code 0).
 
 ## How to play

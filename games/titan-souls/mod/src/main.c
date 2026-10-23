@@ -22,8 +22,6 @@ typedef struct SDL_Window SDL_Window;
 // ============================================================================
 #define ADDR_GAME_PTR         0x007165EC  // Game / Scene singleton
 #define ADDR_PLAYER1_PTR      0x00716664  // Player 1 entity pointer
-#define ADDR_CAMERA_PTR       0x00716660  // Camera entity pointer
-#define ADDR_WORLD_PTR        0x0071665C  // World map pointer
 #define ADDR_GAMEWORLD_PTR    0x007166D0  // GameWorld entity container pointer
 #define ADDR_CAM_OFFSET_X     0x00716C1C  // Camera float X offset
 #define ADDR_CAM_OFFSET_Y     0x00716C20  // Camera float Y offset
@@ -119,7 +117,7 @@ typedef struct {
 
 typedef struct {
     NetHeader header;
-    // Player 1 transform & velocity
+    // Player transform & velocity
     float    pos_x;
     float    pos_y;
     float    vel_x;
@@ -137,7 +135,15 @@ typedef struct {
     uint8_t  btn_roll;
     uint8_t  btn_shoot;
     uint8_t  is_alive;
-    uint8_t  pad;
+    uint8_t  btn_up;
+    uint8_t  btn_down;
+    uint8_t  btn_left;
+    uint8_t  btn_right;
+    uint8_t  roll_state;  // [Player + OFF_PLAYER_ROLL]
+    float    dir_x;       // [Character + 0xA4]
+    float    dir_y;       // [Character + 0xA8]
+    float    facing_x;    // [Player + 0x3B0]
+    float    facing_y;    // [Player + 0x3B4]
 } NetPlayerSyncPacket;
 #pragma pack(pop)
 
@@ -221,12 +227,20 @@ static float g_p1_axis_x = 0.0f;
 static float g_p1_axis_y = 0.0f;
 static char  g_p1_btn_shoot = 0;
 static char  g_p1_btn_roll = 0;
+static char  g_p1_btn_up = 0;
+static char  g_p1_btn_down = 0;
+static char  g_p1_btn_left = 0;
+static char  g_p1_btn_right = 0;
 
 // Player 2 Local / Remote Inputs
 static float g_p2_axis_x = 0.0f;
 static float g_p2_axis_y = 0.0f;
 static char  g_p2_btn_shoot = 0;
 static char  g_p2_btn_roll = 0;
+static char  g_p2_btn_up = 0;
+static char  g_p2_btn_down = 0;
+static char  g_p2_btn_left = 0;
+static char  g_p2_btn_right = 0;
 
 // XInput dynamic binding
 typedef struct _XINPUT_GAMEPAD {
@@ -449,6 +463,7 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
                 }
                 g_steamFriendID = senderSteamID;
                 g_netState = NET_STATE_CONNECTED;
+                g_netLastSeqIn = 0;
                 LogMsg("[Net/Steam] Handshake from SteamID %llu! Sending ACK...\n", senderSteamID);
 
                 NetHandshakeAckPacket ack;
@@ -467,6 +482,7 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
                 }
                 g_netRemoteAddr = *senderAddr;
                 g_netState = NET_STATE_CONNECTED;
+                g_netLastSeqIn = 0;
                 LogMsg("[Net/UDP] Handshake from %s:%d! Sending ACK...\n",
                        inet_ntoa(senderAddr->sin_addr), ntohs(senderAddr->sin_port));
 
@@ -485,6 +501,7 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
     else if (hdr->pktType == NET_PKT_HANDSHAKE_ACK) {
         if (g_netRole == 2) {
             g_netState = NET_STATE_CONNECTED;
+            g_netLastSeqIn = 0;
             if (g_steamActive) {
                 g_steamFriendID = senderSteamID;
                 LogMsg("[Net/Steam] Handshake ACK received! Connected to Host SteamID %llu!\n", senderSteamID);
@@ -517,6 +534,7 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
         LogMsg("[Net] Peer sent disconnect signal.\n");
         g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
         g_hasRemoteSync = FALSE;
+        g_netLastSeqIn = 0;
     }
 }
 
@@ -535,6 +553,8 @@ static void Net_PollIncoming(void) {
             if (g_pfnReadP2P(g_pSteamNetworking, recvBuf, sizeof(recvBuf), &readSize, &senderId, 0)) {
                 if (g_pfnAcceptP2P) g_pfnAcceptP2P(g_pSteamNetworking, senderId);
                 ProcessIncomingPacket(recvBuf, (int)readSize, senderId, NULL);
+            } else {
+                break;
             }
         }
     }
@@ -558,6 +578,7 @@ static void Net_PollIncoming(void) {
             g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
             g_hasRemoteSync = FALSE;
             g_netLastRecvTick = 0;
+            g_netLastSeqIn = 0;
         }
     }
 }
@@ -570,6 +591,13 @@ static void Net_BroadcastLocalPlayer(void) {
 
     // Client connection handshake retry loop (every 500ms)
     if (g_netRole == 2 && g_netState != NET_STATE_CONNECTED) {
+        if (g_steamActive && g_steamFriendID == 0) {
+            static DWORD s_lastWarn = 0;
+            if (now - s_lastWarn >= 3000) {
+                s_lastWarn = now;
+                LogMsg("[Net/Steam] WARNING: Role=2 (Client) but FriendSteamID is 0! Set FriendSteamID in coop_config.ini or pass +connect <SteamID>\n");
+            }
+        }
         if (now - g_netLastSendTick >= 500) {
             g_netLastSendTick = now;
             NetHandshakePacket pkt;
@@ -616,13 +644,35 @@ static void Net_BroadcastLocalPlayer(void) {
             pkt.has_arrow = (dx * dx + dy * dy < 25.0f) ? 1 : 0;
         }
 
-        pkt.input_x = g_p1_axis_x;
-        pkt.input_y = g_p1_axis_y;
+        // If analog axis is 0, synthesize from keyboard directional buttons
+        float in_x = g_p1_axis_x;
+        float in_y = g_p1_axis_y;
+        if (in_x == 0.0f) {
+            if (g_p1_btn_left) in_x -= 1.0f;
+            if (g_p1_btn_right) in_x += 1.0f;
+        }
+        if (in_y == 0.0f) {
+            if (g_p1_btn_up) in_y -= 1.0f;
+            if (g_p1_btn_down) in_y += 1.0f;
+        }
+
+        pkt.input_x = in_x;
+        pkt.input_y = in_y;
         pkt.btn_roll = (uint8_t)g_p1_btn_roll;
         pkt.btn_shoot = (uint8_t)g_p1_btn_shoot;
+        pkt.btn_up = (uint8_t)g_p1_btn_up;
+        pkt.btn_down = (uint8_t)g_p1_btn_down;
+        pkt.btn_left = (uint8_t)g_p1_btn_left;
+        pkt.btn_right = (uint8_t)g_p1_btn_right;
 
-        int p1_state = *(int*)((uintptr_t)pP1 + 0x368);
+        int p1_state = *(int*)((uintptr_t)pP1 + OFF_PLAYER_ROLL);
         pkt.is_alive = (p1_state != 3) ? 1 : 0;
+        pkt.roll_state = (uint8_t)p1_state;
+
+        pkt.dir_x = *(float*)((uintptr_t)pP1 + 0xA4);
+        pkt.dir_y = *(float*)((uintptr_t)pP1 + 0xA8);
+        pkt.facing_x = *(float*)((uintptr_t)pP1 + 0x3B0);
+        pkt.facing_y = *(float*)((uintptr_t)pP1 + 0x3B4);
 
         Net_SendPacket(&pkt, sizeof(pkt));
     }
@@ -647,7 +697,11 @@ static void Net_UpdatePuppet(void) {
 
     // Reflect death state on remote puppet
     if (!g_remoteSyncState.is_alive) {
-        *(int*)((uintptr_t)g_pPlayer2 + 0x368) = 3;
+        *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 3;
+    } else if (g_remoteSyncState.roll_state == 1) {
+        *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 1;
+    } else if (g_remoteSyncState.roll_state == 0 && *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) == 2) {
+        *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 0;
     }
 
     // Apply received remote inputs
@@ -655,6 +709,18 @@ static void Net_UpdatePuppet(void) {
     g_p2_axis_y = g_remoteSyncState.input_y;
     g_p2_btn_roll = (char)g_remoteSyncState.btn_roll;
     g_p2_btn_shoot = (char)g_remoteSyncState.btn_shoot;
+    g_p2_btn_up = (char)g_remoteSyncState.btn_up;
+    g_p2_btn_down = (char)g_remoteSyncState.btn_down;
+    g_p2_btn_left = (char)g_remoteSyncState.btn_left;
+    g_p2_btn_right = (char)g_remoteSyncState.btn_right;
+
+    // Apply facing and movement direction
+    *(float*)((uintptr_t)g_pPlayer2 + 0xA4) = g_remoteSyncState.dir_x;
+    *(float*)((uintptr_t)g_pPlayer2 + 0xA8) = g_remoteSyncState.dir_y;
+    if (g_remoteSyncState.facing_x != 0.0f || g_remoteSyncState.facing_y != 0.0f) {
+        *(float*)((uintptr_t)g_pPlayer2 + 0x3B0) = g_remoteSyncState.facing_x;
+        *(float*)((uintptr_t)g_pPlayer2 + 0x3B4) = g_remoteSyncState.facing_y;
+    }
 
     // Apply position convergence / smoothing
     float curr_x = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
@@ -664,13 +730,15 @@ static void Net_UpdatePuppet(void) {
     float dy = g_remoteSyncState.pos_y - curr_y;
     float distSq = dx * dx + dy * dy;
 
-    if (distSq > 40000.0f) { // Snap if > 200px apart (initial spawn / room transition)
+    if (distSq > 4.0f) { // Snap if > 2 pixels desynced
         *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
         *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = g_remoteSyncState.pos_y;
+    } else if (distSq > 0.01f) {
+        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = curr_x + dx * 0.8f;
+        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = curr_y + dy * 0.8f;
     } else {
-        // Smooth linear interpolation (0.4f convergence per frame)
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = curr_x + dx * 0.4f;
-        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = curr_y + dy * 0.4f;
+        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
+        *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = g_remoteSyncState.pos_y;
     }
 
     *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_X) = g_remoteSyncState.vel_x;
@@ -684,16 +752,21 @@ static void Net_UpdatePuppet(void) {
             float curr_ay = *(float*)((uintptr_t)pArrow + OFF_POS_Y);
             float adx = g_remoteSyncState.arrow_x - curr_ax;
             float ady = g_remoteSyncState.arrow_y - curr_ay;
-            if (adx * adx + ady * ady > 40000.0f) {
+            if (adx * adx + ady * ady > 4.0f) {
                 *(float*)((uintptr_t)pArrow + OFF_POS_X) = g_remoteSyncState.arrow_x;
                 *(float*)((uintptr_t)pArrow + OFF_POS_Y) = g_remoteSyncState.arrow_y;
             } else {
-                *(float*)((uintptr_t)pArrow + OFF_POS_X) = curr_ax + adx * 0.5f;
-                *(float*)((uintptr_t)pArrow + OFF_POS_Y) = curr_ay + ady * 0.5f;
+                *(float*)((uintptr_t)pArrow + OFF_POS_X) = curr_ax + adx * 0.8f;
+                *(float*)((uintptr_t)pArrow + OFF_POS_Y) = curr_ay + ady * 0.8f;
             }
             *(float*)((uintptr_t)pArrow + OFF_VEL_X) = g_remoteSyncState.arrow_vel_x;
             *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = g_remoteSyncState.arrow_vel_y;
             *(float*)((uintptr_t)pArrow + 0x24) = g_remoteSyncState.arrow_angle;
+        } else {
+            *(float*)((uintptr_t)pArrow + OFF_POS_X) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
+            *(float*)((uintptr_t)pArrow + OFF_POS_Y) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
+            *(float*)((uintptr_t)pArrow + OFF_VEL_X) = 0.0f;
+            *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = 0.0f;
         }
     }
 }
@@ -809,10 +882,10 @@ static char __cdecl Hooked_GetButton(const void* pStr) {
     if (g_pCurrentUpdatingPlayer && g_pCurrentUpdatingPlayer == g_pPlayer2) {
         if (strcmp(name, "shoot") == 0) return g_p2_btn_shoot;
         if (strcmp(name, "roll") == 0)  return g_p2_btn_roll;
-        if (strcmp(name, "up") == 0)    return (g_p2_axis_y < -0.5f);
-        if (strcmp(name, "down") == 0)  return (g_p2_axis_y > 0.5f);
-        if (strcmp(name, "left") == 0)  return (g_p2_axis_x < -0.5f);
-        if (strcmp(name, "right") == 0) return (g_p2_axis_x > 0.5f);
+        if (strcmp(name, "up") == 0)    return (g_p2_btn_up || g_p2_axis_y < -0.3f);
+        if (strcmp(name, "down") == 0)  return (g_p2_btn_down || g_p2_axis_y > 0.3f);
+        if (strcmp(name, "left") == 0)  return (g_p2_btn_left || g_p2_axis_x < -0.3f);
+        if (strcmp(name, "right") == 0) return (g_p2_btn_right || g_p2_axis_x > 0.3f);
         return 0;
     }
 
@@ -835,17 +908,21 @@ static char __cdecl Hooked_GetButton(const void* pStr) {
     // Capture Local Player 1 input
     char btn = g_orig_GetButton(pStr);
     if (g_pCurrentUpdatingPlayer && g_pCurrentUpdatingPlayer == g_pPlayer1) {
-        if (g_runAutomatedTest && g_netRole == 2) {
-            // Scripted Client verification sequence
-            if (g_inGameFrames >= 100 && g_inGameFrames <= 115) {
+        if (g_runAutomatedTest) {
+            // Scripted verification sequence after waking up (frame 300+)
+            if (g_inGameFrames >= 400 && g_inGameFrames <= 420) {
                 if (strcmp(name, "roll") == 0) btn = 1;
             }
-            if ((g_inGameFrames >= 130 && g_inGameFrames <= 180) || (g_inGameFrames >= 200 && g_inGameFrames <= 240)) {
+            if ((g_inGameFrames >= 540 && g_inGameFrames <= 590) || (g_inGameFrames >= 610 && g_inGameFrames <= 650)) {
                 if (strcmp(name, "shoot") == 0) btn = 1;
             }
         }
         if (strcmp(name, "roll") == 0)  g_p1_btn_roll = btn;
         if (strcmp(name, "shoot") == 0) g_p1_btn_shoot = btn;
+        if (strcmp(name, "up") == 0)    g_p1_btn_up = btn;
+        if (strcmp(name, "down") == 0)  g_p1_btn_down = btn;
+        if (strcmp(name, "left") == 0)  g_p1_btn_left = btn;
+        if (strcmp(name, "right") == 0) g_p1_btn_right = btn;
     }
 
     return btn;
@@ -867,13 +944,23 @@ static float __cdecl Hooked_GetAxis(const void* pStr) {
     // Capture Local Player 1 axes
     float val = g_orig_GetAxis(pStr);
     if (g_pCurrentUpdatingPlayer && g_pCurrentUpdatingPlayer == g_pPlayer1) {
-        if (g_runAutomatedTest && g_netRole == 2) {
-            // Scripted Client movement: walk right
-            if (g_inGameFrames >= 30 && g_inGameFrames <= 90) {
+        if (g_runAutomatedTest) {
+            // Scripted movement:
+            // Walk right: frames 300..380
+            if (g_inGameFrames >= 300 && g_inGameFrames <= 380) {
                 if (strcmp(name, "move_x") == 0) val = 1.0f;
             }
-            if (g_inGameFrames >= 130 && g_inGameFrames <= 180) {
-                if (strcmp(name, "move_y") == 0) val = -1.0f; // Aim UP
+            // Roll right: frames 400..420
+            if (g_inGameFrames >= 400 && g_inGameFrames <= 420) {
+                if (strcmp(name, "move_x") == 0) val = 1.0f;
+            }
+            // Walk up: frames 450..520
+            if (g_inGameFrames >= 450 && g_inGameFrames <= 520) {
+                if (strcmp(name, "move_y") == 0) val = -1.0f;
+            }
+            // Aim down to shoot: frames 540..590
+            if (g_inGameFrames >= 540 && g_inGameFrames <= 590) {
+                if (strcmp(name, "move_y") == 0) val = 1.0f;
             }
         }
         if (strcmp(name, "move_x") == 0) g_p1_axis_x = val;
@@ -891,6 +978,15 @@ static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
     g_pCurrentUpdatingPlayer = pThis;
 
     g_orig_Player_Update(pThis);
+
+    if (g_netEnabled && pThis == g_pPlayer2 && g_hasRemoteSync) {
+        if (g_remoteSyncState.facing_x != 0.0f || g_remoteSyncState.facing_y != 0.0f) {
+            *(float*)((uintptr_t)pThis + 0x3B0) = g_remoteSyncState.facing_x;
+            *(float*)((uintptr_t)pThis + 0x3B4) = g_remoteSyncState.facing_y;
+        }
+        *(float*)((uintptr_t)pThis + 0xA4) = g_remoteSyncState.dir_x;
+        *(float*)((uintptr_t)pThis + 0xA8) = g_remoteSyncState.dir_y;
+    }
 
     g_pCurrentUpdatingPlayer = pPrev;
 }
@@ -1078,6 +1174,7 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
         if (g_pPlayer2 && !pP1) {
             g_pPlayer1 = NULL;
             g_pPlayer2 = NULL;
+            g_hasRemoteSync = FALSE;
             g_inGameFrames = 0;
             LogMsg("[Frame %d] Map unloaded, resetting Player 2 reference.\n", g_frameCount);
         }
