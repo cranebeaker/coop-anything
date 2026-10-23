@@ -13,8 +13,9 @@
 Two players can host and join and see each other move. Granny is simulated on the host
 and pinned on the guest, and doors open and close for both. Item flags cross the wire but
 the game reverts them a few seconds later, so items are not usable yet. The catch
-sequence, the van, the day cycle and scene changes are not synced, and nobody has played
-a full round in co-op. Every run so far was two game processes on one PC talking over
+sequence, the van and the day cycle are not synced. A guest follows the host between
+scenes, including through the game's own boot, and nobody has played a full round in
+co-op. Every run so far was two game processes on one PC talking over
 loopback or through a local chaos relay; no run has crossed a real network.
 
 ## Existing work
@@ -56,6 +57,7 @@ file there is the same one as `games/granny/NOTES.md`.
 | Granny sync | host publishes transform + AI flags at 20 Hz; guest disables `NavMeshAgent` and pins the transform with a 2.5 m snap | joint tracking to 0.1 m, §12 |
 | Doors | 48 doors, `State` / `Snapshot` / `Request` / `SnapshotRequest`, host validates (locked stays locked), 10 s snapshot repair | 0 mismatches in 13 paired samples with one flipper, §23; guest→host request path, §16 |
 | Items | `have` flags, change events plus a 10 s snapshot | wire path verified, gameplay blocked by the game's own revert, §15, §23 |
+| Scene follow | the host owns the scene; the guest loads what it announces, outside the socket callback, with retries | one client + scripted host: Menu → Scene, Scene → Menu, and a boot-time request held until SplashScreen ends, §24 |
 | Late join | a guest that loads after the host is repaired from snapshots, not an event log | §16 |
 | Failure paths | kill client and rejoin; kill host; restart host under a live guest | §17–§19 |
 | Impaired link | survives the `bad_wifi` chaos profile and a full 8 s two-way outage | §20, §22 |
@@ -70,7 +72,13 @@ powershell -ExecutionPolicy Bypass -File tools/run-pair.ps1 -Seconds 300 -DoorTe
 powershell -ExecutionPolicy Bypass -File tools/run-pair.ps1 -Seconds 240 -DoorTest -Relay `
     -RelayProfile bad_wifi -RelaySeed 1042 -ChaosRoot <coop-anything checkout>
 python -I tools/analyze-soak.py <run file>
+python -I tools/fake-host.py --port 47778 --scene Menu --scene-at 10 --scene-until 20 `
+    --scene Scene --scene-at 25 --scene-until 40 --seconds 60
 ```
+
+`tools/fake-host.py` plays the host side of protocol v1 (a `Welcome` plus scheduled
+`Scene` messages and an idle heartbeat), so a join-side feature can be tested with one
+game instance (~2.7 GB) rather than a pair (~5.4 GB).
 
 The harness starts two isolated copies of the game with MelonLoader, refuses to run if a
 `Granny.exe` is already up, tracks only the processes it started, and stops them at the
@@ -82,6 +90,9 @@ mismatches in 13 paired status samples**; the run was cut short at 220 s of a pl
 420 s by memory pressure on the test machine (about 2.7 GB private bytes per instance).
 Earlier runs that same day covered late join, client→host door requests, client kill and
 rejoin, host kill, host restart, `bad_wifi`, and an 8 s outage (recovered in 10.07 s).
+Scene follow was checked separately with one real client and the scripted host: both
+directions worked, and a request that arrived during `SplashScreen` was held until the
+guest reached the menu, so the boot was not skipped (§24).
 
 Not covered: a real network, three or more players, a full playthrough, re-entry after a
 catch.
@@ -94,7 +105,7 @@ There is no release yet; build from source:
 2. Install MelonLoader **0.7.3** into that copy and run the game once so it generates
    `Il2CppAssemblies`.
 3. `set GRANNY_TEST=<that folder>` then `dotnet build -c Release` in the mod repo; copy
-   `bin/GrannyCoop.dll` into `<game dir>/Mods/`.
+   `bin/Release/GrannyCoop.dll` into `<game dir>/Mods/`.
 4. Host: `Granny.exe --coop-host --coop-name=Host`. Guest:
    `Granny.exe --coop-join=<host ip> --coop-name=Guest`.
 5. UDP **47777** must reach the host. Two machines on one LAN, or on a virtual LAN
@@ -106,7 +117,10 @@ There is no release yet; build from source:
   own, on both ends. Item models in the hand do not follow the flag at all.
 - **The catch is not synced.** No jail, no death screen, no scene change is sent. What
   happens when the caught player is let back in is untested.
-- **No scene follow.** A guest announces the scene it loads; it does not follow the host.
+- **Scene follow skips the difficulty panel.** A guest that follows the host into `Scene`
+  loads the scene directly instead of using Play → difficulty → Continue. The world builds
+  and the player becomes active, but the path has only been checked against a scripted
+  host, not a real pair, and whether the skipped choice matters later is unknown.
 - **Door visuals after a remote apply are unverified.** The state is read back from the
   game's component; animation, collider and sound were not checked on screen.
 - **One machine only.** No run has crossed a real network.
@@ -117,7 +131,8 @@ There is no release yet; build from source:
 1. Find out what re-applies the item flags (decompile `CheckInventory` and whatever the
    timer calls) and make the mod own that decision.
 2. Sync the catch: the jail/scene transition and the respawn, then re-entry.
-3. Follow the host into a new scene.
+3. Confirm scene follow in a real pair and decide whether the guest should also see the
+   Play/difficulty step before entering `Scene`.
 4. Run a pair across a real network with the chaos relay in front, then a 30 min soak.
 5. A third player; the protocol has no hard limit but none has been tested.
 

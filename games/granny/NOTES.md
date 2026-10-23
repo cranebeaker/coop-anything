@@ -2146,3 +2146,67 @@ Same arguments as the failed re-entry run: `-Seconds 420 -ClientDelay 38 -DoorTe
 - Still open: the ~7–8 s self-revert of the item have-flag (now observed without
   `CheckInventory`), `IgnorePollFor=2.5` delaying a genuine local flip, and the seq
   watermark (implement only if a soak shows an inversion that spans a changed value).
+
+## 24. Guest scene follow (v0.4.8, 2026-10-23)
+
+**What changed.** The host was already the authority for the scene (`MsgType.Scene`, sent on
+every load and every guest connect), but a guest that received it only logged "v1 does not
+follow". v0.4.8 makes the guest follow:
+
+- On `Scene`, a **Join** that is connected and is not already in that scene sets
+  `_pendingScene`. The deadline is set only when the requested name changes, so a host that
+  re-announces at 10 Hz cannot starve the load.
+- `TickSceneFollow()` runs from `OnUpdate`. It loads with `SceneManager.LoadScene(name)`
+  outside the socket callback (a load inside the callback would run the whole
+  `OnSceneWasLoaded` chain on the socket stack), retries up to 3 times 4 s apart, verifies
+  success in `OnSceneWasLoaded`, and is cleared on disconnect.
+- **Boot guard.** A real host announces its scene the moment a guest connects, which is
+  while the guest is still in `SplashScreen`. Following then would skip the game's own boot
+  and menu initialisation, so the request is held while `_scene` is empty or
+  `SplashScreen`; it fires on the transition out of SplashScreen.
+
+**A broken interop method, found the hard way.** The first version pre-checked the name
+with `Application.CanStreamedLevelBeLoaded(scene)`. On this IL2CPP build
+(Unity 6000.0.58f2) every call throws
+`MissingMethodException: Method not found: '!0 ByRef Il2CppSystem.ReadOnlySpan'1.GetPinnableReference()'`
+— the interop wrapper for that overload is broken, not the game. The check was removed;
+`SceneManager.LoadScene(string)` works fine and the `try/catch` around it is the real guard.
+Do not re-add that pre-check.
+
+**Single-instance QA path.** A pair of game clients needs ~5.4 GB of private bytes and the
+owner asked not to launch one without a go-ahead, so scene follow was tested with one real
+client against a scripted host: [`tools/fake-host.py`](../tools/fake-host.py) speaks
+protocol v1 (answers `Hello` with `Welcome`, `version=1 playerId=1`), sends `Scene` inside
+scheduled windows, and keeps the 5 s peer timeout away with an idle `State` every 1 s. It is
+Python 3, standard library only, binds `127.0.0.1`, and prints every event with a relative
+timestamp:
+
+```
+python -I tools/fake-host.py --port 47778 --scene Menu --scene-at 10 --scene-until 20 \
+    --scene Scene --scene-at 25 --scene-until 40 --seconds 60
+```
+
+**Runs (one client, `Host=Loopback`, port 47778).**
+
+- *Follow Menu → Scene.* After Welcome and a `Scene` window in `Menu`, the guest logged
+  `scene follow: loading 'Scene' (try 1/3)` ~0.5 s after the announcement, reached the scene
+  in ~3 s, then built the world as a Join: `Player` root present, Granny bound
+  (`1 NavMeshAgent(s) found, 0 disabled`, slave), 48 doors and 50 items prepared. Follow
+  counter incremented once.
+- *Follow Scene → Menu.* The reverse window brought the guest back to `Menu` the same way.
+- *Boot guard.* With the first `Scene` window starting while the guest was still in
+  `SplashScreen`: request accepted at 12:54:48.426 ("host entered 'Scene', loading it"),
+  **no load happened**, the guest reached `Menu` at 12:55:03.935, and the queued load ran
+  7 ms later, completing at 12:55:07.938. The whole boot was preserved.
+
+**Observations / open questions.**
+
+- Loading `Scene` directly from `Menu` skips the Play → difficulty → Continue path. The
+  world still builds and the local player became active ~20 s later, but a real pair has not
+  been run this way: whether skipping the difficulty selection changes anything the game
+  later reads is **unknown**. A real host normally reaches `Scene` through Play, and the
+  guest then mirrors that load; this is the path to test in the next pair run.
+- Both runs used the scripted host, not a real host process. A real host's `Scene`
+  announcement on connect is covered by the boot guard, but has not been observed live.
+- A two-instance pair run is still the missing confirmation. Do not start one without the
+  owner's go-ahead (memory pressure, §23).
