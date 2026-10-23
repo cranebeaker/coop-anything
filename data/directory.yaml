@@ -7727,3 +7727,71 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: Hydroneer
+  year: 2020
+  engine: Unreal Engine 4 (4.26)
+  project: Official split-screen / Remote Play co-op
+  url: https://techraptor.net/gaming/guides/hydroneer-multiplayer-guide
+  other_urls:
+  - https://techraptor.net/gaming/news/hydroneer-20-multiplayer-update-is-out-now
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'no'
+    world_state: 'yes'
+    items: shared
+  players: 2 to 4 local (sources disagree)
+  networking: steam-relay
+  open_source: 'no'
+  last_activity: unknown
+  qa: community-reports
+  notes: Added in the 2.0 update (it existed by 2022-08-03 per the Steam thread; exact release date not checked). It is split screen in one game; online play streams that screen through Steam Remote Play Together, so the remote
+    player needs no copy of the game but sees half of the host's screen and needs a gamepad. The developers say true multiplayer was not viable because
+    of the physics load. Everything is shared because it is one game; Hydroneer has no enemies. Host/join attempt in the next entry and games/hydroneer.
+  sources:
+  - https://techraptor.net/gaming/guides/hydroneer-multiplayer-guide
+  - https://techraptor.net/gaming/news/hydroneer-20-multiplayer-update-is-out-now
+  - https://steamcommunity.com/app/1106840/discussions/0/3458220484817654192/
+  - https://steamcommunity.com/app/1106840/discussions/0/6756004301608937453
+  checked: '2026-10-22'
+- game: Hydroneer
+  year: 2020
+  engine: Unreal Engine 4 (4.26)
+  project: CoopNet (host/join co-op with late join, UE4SS Lua + Steam relay)
+  url: https://github.com/Zane11332/hydroneer-coopnet
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/hydroneer
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Test build 0.3 (MIT). Each player runs their own copy on their own screen, the host's world decides; connection through Steam (Spacewar
+    app 480, lobby via the friends list). The host plays any world, new or saved; the friend joins at any time and receives the host's save
+    (about 21 MB through Steam, SHA-256 checked). A UE4SS Lua mod (needs the experimental build v3.0.1-1181) replays the friend's input on a hidden
+    second local player on the host and sends back players, items and their state (water, dirt), terrain edits (the Voxel plugin calls themselves),
+    tool animations and action sounds. Windows and Linux (Proton). Not synced - money, shops, machines, building, vehicles, quests. QA - bots in two
+    real copies on one PC (late join - 572/572 items, ground equal at a hole dug before the save; Steam build 23218978) plus five Windows/Linux
+    sessions over Steam; late join and the 0.2 animations and sounds not yet confirmed between two PCs (see games/hydroneer).
+  sources:
+  - https://github.com/Zane11332/hydroneer-coopnet
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/hydroneer
+  - https://store.steampowered.com/app/1106840/
+  - https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/experimental-latest
+  checked: '2026-10-22'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, and public GitHub issues and PRs for Hydroneer (nothing), 2026-10-22'
+  - 'GitHub repository search via the API: hydroneer, hydroneer multiplayer, hydroneer coop, hydroneer mod (no host/join project), 2026-10-22'
+  - 'Web search: Hydroneer multiplayer mod host join, Hydroneer modding UE4SS (no host/join mod; developers call it unlikely), 2026-10-22'
+  - 'Not checked: Nexus Mods, the Hydroneer modding Discord, Reddit, Steam Workshop in depth, forks and branches of the GitHub hits'

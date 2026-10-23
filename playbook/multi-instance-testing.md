@@ -169,6 +169,10 @@ The owner may be playing the game on the same PC while your tests run. A kill by
 - Work in copies. The install is read only; the owner's settings and save folders are on a protected list.
 - Hash the owner's save folder and settings files before and after a test run. A changed hash is a bug in the
   harness, not in the game.
+- Refuse to start a run while the owner's own copy of the game is running. It writes to the same save folder the
+  guard watches, and a guard that restores changed files would overwrite the owner's newest progress. In
+  Hydroneer the owner's game autosaved 9 s after the snapshot; the guard only left the files alone because it had
+  no older copy of them.
 - A test that loads a save loads a copy of it into the instance's own save folder.
 - Do not run your copy against online services or anti-cheat. Copies are for your own LAN or loopback tests.
 
