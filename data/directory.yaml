@@ -4530,6 +4530,114 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: ProjectSync
+  url: ''
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: yes
+    world_state: unknown
+    items: partial
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: No public download as of 2026-10-23. Online co-op for No Return first, then the story campaign. A demo showed two
+    players in the safe house with movement, animations, weapons, backpack, flashlights, melee, enemy AI and damage
+    synced. Promised free and open source; no repository found yet.
+  sources:
+  - https://www.gamingbible.com/news/the-last-of-us-projectsync-co-op-mod-128815-20261018
+  - https://www.reddit.com/r/thelastofus/comments/1x8w74m/coop_for_no_return_in_the_last_of_us_part_ii/
+  checked: 2026-10-23
+  searched:
+  - GitHub repository and code search via API, web search for ProjectSync and leiden_core, 2026-10-23
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: TLOU2 Co-op (Awperati)
+  url: https://github.com/Awperati/tlou2-coop
+  other_urls:
+  - https://github.com/Awperati/tlou2-coop/releases/tag/v0.1.0
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: lan
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: Two-PC story co-op where player 2 takes the chapter companion. v0.1.0 (2026-10-17) has a tested network layer,
+    teleport, roster, overlay and loader, but the README says the game link is not mapped, so characters cannot be moved
+    in game yet. Targets the 2025-04-03 launch build (PE timestamp 67ED75F7). Public source has no license file. The
+    optional internet relay was not tested here.
+  sources:
+  - https://github.com/Awperati/tlou2-coop
+  - https://github.com/Awperati/tlou2-coop/releases/tag/v0.1.0
+  checked: 2026-10-23
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: TLOU2 Multiplayer Mod (Speclizer)
+  url: ''
+  other_urls:
+  - https://x.com/Speclizer_
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2-8'
+  networking: unknown
+  open_source: no
+  last_activity: 2026-09
+  qa: none
+  notes: PvP and experimental co-op work shown from January to September 2026; reached 4v4, five maps, loadouts and
+    leaderboards. Cancelled on 2026-09-14 after a letter from Sony Interactive Entertainment requesting it not be
+    released. Never released; do not revive.
+  sources:
+  - https://www.pcgamer.com/games/action/that-last-of-us-2-multiplayer-mod-everyone-was-looking-forward-to-has-been-killed-by-sony/
+  - https://www.pcgamer.com/games/action/the-last-of-us-multiplayer-mod-has-hit-a-big-milestone-as-it-prepares-for-launch-in-september
+  checked: 2026-10-23
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: TLOU2 Co-op Hook (foufouadi)
+  url: https://github.com/foufouadi/TLOU2_Co-op
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: partial
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: '2'
+  networking: lan
+  open_source: partial
+  last_activity: 2026-08
+  qa: none
+  notes: One-commit experiment. Injects a DLL, syncs position between two instances over local UDP and spawns a visual
+    clone of Ellie on F10, but there is no independently controlled second player and no NPC state sync. Not
+    functional. Public source has no license file.
+  sources:
+  - https://github.com/foufouadi/TLOU2_Co-op
+  checked: 2026-10-23
 - game: Assassin's Creed Origins, Odyssey and Valhalla
   year: 2017
   engine: AnvilNext
