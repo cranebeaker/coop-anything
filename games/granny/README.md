@@ -11,9 +11,10 @@
 ## Where things stand
 
 Two players can host and join and see each other move. Granny is simulated on the host
-and pinned on the guest, and doors open and close for both. Item flags cross the wire but
-the game reverts them a few seconds later, so items are not usable yet. The catch
-sequence, the van and the day cycle are not synced. A guest follows the host between
+and pinned on the guest, and doors open and close for both. Item flags cross the wire in
+both directions and the receiving client puts the item in the hand and removes it from the
+world, so a pickup shows on both ends. The catch sequence, the van and the day cycle are
+not synced. A guest follows the host between
 scenes, including through the game's own boot, and nobody has played a full round in
 co-op. Every run so far was two game processes on one PC talking over
 loopback or through a local chaos relay; no run has crossed a real network.
@@ -56,7 +57,7 @@ file there is the same one as `games/granny/NOTES.md`.
 | Player sync | 20 Hz transform stream, remote avatar with name label | two-instance runs, §11–§12 |
 | Granny sync | host publishes transform + AI flags at 20 Hz; guest disables `NavMeshAgent` and pins the transform with a 2.5 m snap | joint tracking to 0.1 m, §12 |
 | Doors | 48 doors, `State` / `Snapshot` / `Request` / `SnapshotRequest`, host validates (locked stays locked), 10 s snapshot repair | 0 mismatches in 13 paired samples with one flipper, §23; guest→host request path, §16 |
-| Items | `have` flags, change events plus a 10 s snapshot | wire path verified, gameplay blocked by the game's own revert, §15, §23 |
+| Items | `have` flags, change events plus a 10 s snapshot, both directions; the receiver mirrors the hand (activate slot, clone the world model, hide the world object) | host→guest and guest→host apply in v0.6.0 two-instance runs; human pickup untested, §27 |
 | Scene follow | the host owns the scene; the guest loads what it announces, outside the socket callback, with retries | one client + scripted host: Menu → Scene, Scene → Menu, and a boot-time request held until SplashScreen ends, §24 |
 | Late join | a guest that loads after the host is repaired from snapshots, not an event log | §16 |
 | Failure paths | kill client and rejoin; kill host; restart host under a live guest | §17–§19 |
@@ -99,13 +100,14 @@ catch.
 
 ## How to play
 
-There is no release yet; build from source:
+There is a release: [granny-coop v0.6.0](https://github.com/dustopx0-code/granny-coop/releases/tag/v0.6.0)
+(`GrannyCoop.dll` plus a RU/EN install guide). To build from source:
 
 1. Copy your Granny install to a separate folder (do not mod the only install).
 2. Install MelonLoader **0.7.3** into that copy and run the game once so it generates
    `Il2CppAssemblies`.
 3. `set GRANNY_TEST=<that folder>` then `dotnet build -c Release` in the mod repo; copy
-   `bin/Release/GrannyCoop.dll` into `<game dir>/Mods/`.
+   `bin/Release/GrannyCoop.dll` into `<game dir>/Mods/` (or unzip the release into it).
 4. Host: `Granny.exe --coop-host --coop-name=Host`. Guest:
    `Granny.exe --coop-join=<host ip> --coop-name=Guest`.
 5. UDP **47777** must reach the host. Two machines on one LAN, or on a virtual LAN
@@ -113,8 +115,12 @@ There is no release yet; build from source:
 
 ## Known issues
 
-- **Items revert.** About 7–8 s after a write the game sets the `have` flag back on its
-  own, on both ends. Item models in the hand do not follow the flag at all.
+- **The item flag revert was our own `CheckInventory` call.** A probe found the write
+  holds for at least 60 s and the game's `Update` leaves it alone; only an explicit
+  `CheckInventory()` (which re-derives flags from world objects) reverts it, and the only
+  caller was the QA refresh. v0.6.0 stopped calling it and mirrors the objects itself.
+  What is still untested is a **human** pickup: whether `PickUp`/`PickUpNew` write the
+  same `have` flags, and whether the hand replica matches the game's own hand prefab (§27).
 - **The catch is not synced.** No jail, no death screen, no scene change is sent. What
   happens when the caught player is let back in is untested.
 - **Scene follow skips the difficulty panel.** A guest that follows the host into `Scene`
@@ -128,8 +134,9 @@ There is no release yet; build from source:
 
 ## Next steps
 
-1. Find out what re-applies the item flags (decompile `CheckInventory` and whatever the
-   timer calls) and make the mod own that decision.
+1. Map the pickup components (`PickUp`, `PickUpNew`, the bed/coffin buttons) to the
+   inventory flags, then exercise a human pickup on both ends and replace the replica with
+   the game's own hand prefab if it differs.
 2. Sync the catch: the jail/scene transition and the respawn, then re-entry.
 3. Confirm scene follow in a real pair and decide whether the guest should also see the
    Play/difficulty step before entering `Scene`.

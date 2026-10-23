@@ -7751,11 +7751,15 @@
     IL2CPP). Players see each other and share a host-authoritative Granny; the guest turns
     her NavMeshAgent off and pins her transform. All 48 doors sync both ways, keyed by a
     hash of the transform path, repaired by a 10 s snapshot, locked doors enforced by the
-    host. Inventory have-flags cross the wire but the game reverts them ~7-8 s after a
-    write, so items are not playable yet. Scripted two-instance QA: 0 door mismatches in
-    13 paired samples with one flipper, and the pair survives the bad_wifi chaos profile
-    and an 8 s outage. The catch, the van, the day cycle and scene changes are not synced;
-    every run was two processes on one PC, no real network yet. MIT licensed. No
+    host. Inventory have-flags cross the wire in both directions and the receiving client
+    mirrors the hand (it clones the world model into the slot and hides the world object);
+    the old "items revert after 7-8 s" was the mod's own CheckInventory refresh, corrected
+    in v0.6.0. A human pickup is still untested. Scripted two-instance QA: 0 door
+    mismatches in 13 paired samples with one flipper, and the pair survives the bad_wifi
+    chaos profile and an 8 s outage. Scene follow and the post-death spectator view work;
+    the catch itself, the van and the day cycle are not synced. Every run was two processes
+    on one PC, no real network yet. v0.6.0 is released with a RU/EN install guide. MIT
+    licensed. No
     other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
     different commercial game by another developer.
   sources:
