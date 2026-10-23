@@ -4,23 +4,28 @@
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
-| Projects | [Jericho Co-op](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op"); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
+| Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
 | QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-10-23 |
+| Last updated | 2026-10-23 (0.2.4) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
-share one PC in split screen. Test builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.3 at the time of writing),
+share one PC in split screen. Builds are released with an installer
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.4 at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
 1-8) found enemies that ignored joining players, walls only they met, scripts that took their
 controls and actions the host did not see; 0.2.2 fixes those. 0.2.3 gives each fire team its
 own player to follow, syncs every breakable and movable object and keeps a downed player on
-their side of a story split. Expect rough edges.
+their side of a story split. 0.2.4, called a release candidate, gives the players their
+place in the story (the host is Ross's soul, the second player Jones's astral projection,
+players 3-4 the squad members themselves), adds a display mode and refresh rate to the game's
+Video settings, renames the mod Jericho Co-op+ (it does more than co-op) and fixes what a full
+code review and the release tests found. A whole campaign played through by people is still
+to come.
 
 ## Existing work
 
@@ -170,6 +175,21 @@ restored on uninstall.
   aware (original kept and restored).
 - **Bug reports:** F11 saves the last 30 seconds as a Motion-JPEG AVI (frames scaled on the
   GPU, JPEG through Windows' WIC on a worker thread, kept in memory).
+- **Player souls (0.2.4):** the host is Ross's soul and the second player Jones's astral
+  projection (the game's own lore: Jones projects into others and uses their abilities); both
+  switch bodies freely as in the original, the projection is cut while Jones is held (lost,
+  possessed, caged). Players 3-4 keep their character; the other bodies are greyed out in
+  their squad menu. The menu's fields are write-only from Lua (reading one is an engine error
+  that returns nil), so the mod repeats the game's own test for a selectable body.
+- **Display settings (0.2.4):** display mode (full screen, window, borderless window) and the
+  refresh rate as rows of the game's own Video settings, applied on its Accept and dropped on
+  Cancel; a borderless window is a frameless window over the monitor, set through hooks on
+  window creation and the D3D9 present parameters.
+- **One engine fix (0.2.4):** the last boss's fire spirit (Ababanili, steering at
+  `0x4fc9b0`) takes a new prey with no check; with every player near it down or bound by the
+  rune (which the single-player game never reaches) it read NULL and the game crashed. A
+  vectored exception handler resumes that one read on the function's own "no target" path,
+  only when the bytes there match the retail exe. The exe file is not changed.
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -179,6 +199,23 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.2.4 (2026-10-23, final code):
+
+- Whole campaign by two players over a LAN between two PCs: 33/33 levels from Alk_Desert to
+  the ending, no crash; split screen with virtual gamepads; a real Steam session between two
+  accounts.
+- All nine story splits with a real host and client. One crashed the host at the last boss
+  (the engine read above); after the fix, the same split and a forced test of that read
+  (every Ababanili losing its prey each frame for two minutes) ran without a crash.
+- Player souls on two PCs: the roles, a third player's other bodies greyed out and the aim
+  switch refused, the second player moving freely, the projection cut and freed, a downed
+  third player waiting and revived.
+- Display settings: in full screen on the second PC a 60 Hz rate and Auto back to the
+  monitor's 75 Hz; in the main and pause menus the restart notice for a mode change, and
+  Cancel applying nothing.
+- A clean install from the release zip, and the update from the published 0.2.3 through its
+  shortcut (checksum matched, shortcut renamed).
 
 Results for 0.2.3 (2026-10-23, final code):
 
@@ -230,6 +267,11 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
   Join Game auto-launch (game not running) are not tested yet.
 - Split screen draws the two views on alternate frames, so each runs at half the frame rate.
+- Code review, not yet tested: while a split screen player 2 waits for a body, their gamepad
+  may also act on player 1's character.
+- The mod's DLL reads the game folder through the ANSI API, so a folder name with characters
+  outside Windows' language code page (for example Chinese on a European Windows) stops it
+  from loading.
 - The "own eyes" cutscene view is experimental: the sets were built for one camera, and it
   falls back to the original camera where a character cannot see the scene.
 
@@ -237,7 +279,4 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 
 - Fix what human playthroughs report (real gamepads, Steam between real accounts); open items
   are tracked in the mod repo's issues.
-- 0.2.4: who the players are in the story (player 1 Ross's soul, player 2 Jones's astral
-  projection, both switching bodies freely; players 3-4 keep their character), from the
-  game's own lore on Jones's gift (`docs/story/player-souls.md` in the mod repo).
 - A full co-op playthrough by people, written up, would move this to `verified-playthrough`.

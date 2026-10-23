@@ -263,6 +263,27 @@
   then cannot load its own modules (`Get-FileHash` not found). A launcher run from a shortcut
   should clean that variable or avoid script-module cmdlets (.NET `SHA256`, `ZipFile`).
 
+## Session 2026-10-23: 0.2.4 (player souls, display settings, release candidate)
+
+### Observations (checked)
+- Many engine menu fields (for example a squad menu entry's `<id>OnSelect`) can be written
+  from Lua but not read: a read logs "BaseType ... can't read" in game.log and returns nil. A
+  wrapper that read the field to decide whether to grey an entry never greyed anything, and a
+  mock test that allowed reads passed anyway; the mock now errors on reads. Recompute the
+  condition instead (the game's own test is `Team.IsPlayerAvaliable(name)`).
+- The last boss's fire spirit (EvilAbabanili) steers in `0x4fc9b0`: object +0x68 is its
+  owner, +0x64 its prey; when the prey is gone it takes a new one and reads it unchecked
+  (`mov eax,[edx]` at `0x4fcd47`). With every player near it down or bound by the rune, EDX is
+  0 and the game crashes (a co-op story split test; the single-player game never gets there).
+  The function's own "no target" path at `0x4fcd2a` has the same stack and an empty x87
+  stack, so a vectored handler can resume there for that one read.
+- D3D9 `Reset` with `FullScreen_RefreshRateInHz = 0` keeps the rate in use rather than the
+  monitor's default; going back to "Auto" while the game runs needs the rate the device got
+  at `CreateDevice`.
+- The game's message hints (`Scorer.SetMsgText`) are not drawn in menus; the menus' own
+  message box is `Menu.AcceptMenuMultiline(text, nextFunc)`. Saving the configuration rebuilds
+  the main menu from a callback after the save, so a box shown at once is replaced.
+
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download
   SHA-256 `98be0fa84ac73ca66dce2842a2e4512226f4c611b6500dc96415571fc5538fcc`
