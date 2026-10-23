@@ -3445,29 +3445,32 @@
 - game: Mass Effect Legendary Edition
   year: 2021
   engine: Unreal Engine 3
-  project: (none found)
-  url: ''
-  other_urls: []
-  kind: gap
-  status: none
+  project: ME3SquadCoop
+  url: https://github.com/MatrimAl/ME3SquadCoop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/issues/135
+  kind: mod
+  status: prototype
   coop_scope:
+    players_visible: partial
     story: unknown
     enemies: unknown
     world_state: unknown
     items: unknown
   players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
   qa: none
-  notes: No campaign co-op released; Nexus forum threads only request it, and an ME3 proof-of-concept co-op mission
-    mod was abandoned by its author. Reddit could not be searched with my tool.
+  notes: MIT source research for LE3 campaign co-op, targeting host Shepard and one guest Ashley. Bounded
+    research ownership and local ordinary host startup observed; stable late ordinary join still failed.
+    No gameplay release; QA is conservative. Research and failure notes are in games/mass-effect-legendary-edition.
   sources:
-  - https://forums.nexusmods.com/topic/13533345-mass-effect-together/
-  - https://www.nexusmods.com/masseffect3/mods/723
-  checked: 2026-10-16
-  searched:
-  - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+  - https://github.com/MatrimAl/ME3SquadCoop
+  - https://github.com/MatrimAl/ME3SquadCoop/blob/10a575fa0f6e3cf668f8f4e1b2a905e14733e691/docs/PROGRESS.md
+  - https://github.com/MatrimAl/ME3SquadCoop/blob/10a575fa0f6e3cf668f8f4e1b2a905e14733e691/docs/VALIDATION.md
+  checked: '2026-10-23'
+  made_with_coop_anything: true
 - game: DOOM Eternal
   year: 2020
   engine: id Tech 7
