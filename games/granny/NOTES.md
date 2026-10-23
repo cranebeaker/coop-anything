@@ -2235,7 +2235,7 @@ This is the reason earlier single-instance runs could look like "the mod does no
 test process ever survives, two game processes can exist. Check for `Granny` in
 `Get-Process` before starting a run.
 
-## 26. Spectating through the death sequence (v0.5.0, 2026-10-23)
+## 26. Spectating through the death sequence (v0.5.0–0.5.1, 2026-10-23)
 
 **What changed.** `CatchSync` used to spectate only while `playerCaught`'s flags were set.
 Those flags drop about a second after the grab, while the death sequence keeps running:
@@ -2269,8 +2269,8 @@ method startEndScene, startEndScene2, startEndScene3, startEndScene4, gameOverNo
 - Dead = a catch flag, or `endSceneRunning || endSceneRunning2 || endSceneRunning3`. The
   state is latched on the rising edge, so the one-second flag window is enough to enter it.
 - The latch is held while the end sequence runs and for `DeathHoldSec = 45f` of continuously
-  clear flags after that. A scene change (`Reset()` in `OnSceneWasLoaded`) clears it, so the
-  Menu is not spectated.
+  clear flags after that, unless the game revives the player first (`v0.5.1`, see below).
+  A scene change (`Reset()` in `OnSceneWasLoaded`) clears it, so the Menu is not spectated.
 - While dead the mod disables `blackScreenTexture.enabled` and `bloodscreenEnd` — they are
   screen-space UI and drew over the spectator camera. `StopSpectating` restores the image.
 - The status line reports `catch=dead` when the end sequence, not a grab flag, started it.
@@ -2296,6 +2296,28 @@ a degree. The cycle then repeated three more times (releases at 14:18:29.718 and
 14:19:18.908, fresh catches 1.2 s later), including one cycle where
 `COOP player active -> False` at 14:19:28 while the spectator camera kept tracking — so the
 view survives the local player becoming inactive as well.
+
+**Follow-up: the game revives in place (v0.5.1).** A later run
+(`26-10-23_14-31-1.log`) showed that the sequence is not always a trip to the game-over
+screen: 26 s after the grab the game activated the Player root again and play continued.
+The 45 s hold therefore kept the client spectating for another ~19 s after the player was
+playable again. v0.5.1 releases on the revive itself: if the Player root went inactive while
+the latch was up and is active again, and the game's death flags stay clear for
+`ReviveGraceSec = 2f`, the latch drops. The 45 s hold stays as the fallback for a death
+whose end scene has not started yet. The check is `GameObject.activeSelf` on the same
+`Player` root the mod already uses (`NotePlayerActive`).
+
+Re-run, same harness (`26-10-23_14-41-12.log`):
+
+```
+[14:41:59.643] COOP catch: local player caught (granny)
+[14:42:07.549] COOP player active -> False
+[14:42:25.912] COOP player active -> True
+[14:42:27.947] COOP catch: local player is alive again
+```
+
+The view covered the grab and the whole carry (28.3 s, through `Camera -> PlayerEyes ->
+PlayerCamInBed -> Camera`) and stopped 2.0 s after the game revived the player.
 
 **Unknown / not tested.**
 
