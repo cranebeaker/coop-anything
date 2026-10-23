@@ -6506,9 +6506,9 @@
   last_activity: 2026-10
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Release candidate 0.2.4 (called Jericho Co-op before); the host is Ross's soul and the second
+    split screen. Release candidate 0.2.5 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
     player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
-    display mode and refresh rate in the game's Video settings. Installer window and a shortcut that installs newer
+    display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
     releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
     Spacewar), in a dinput8.dll proxy (two engine faults handled in memory, a split screen crash and a NULL read at
     the last boss; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes,

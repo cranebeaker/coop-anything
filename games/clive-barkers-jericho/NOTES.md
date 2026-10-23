@@ -284,6 +284,27 @@
   message box is `Menu.AcceptMenuMultiline(text, nextFunc)`. Saving the configuration rebuilds
   the main menu from a callback after the save, so a box shown at once is replaced.
 
+## Session 2026-10-23: 0.2.5 (the release candidate completed)
+
+### Observations (checked)
+- "Mouse not found" (PcMouse.cpp) comes from the game's own check inside SecuROM-obfuscated
+  code: it fires when DirectInput `CreateDevice(GUID_SysMouse)` fails, not on
+  `GetSystemMetrics(SM_MOUSEPRESENT)` or device enumeration (a diagnostic DLL failed each
+  of the three in turn; only `CreateDevice` reproduced it). A stub `IDirectInputDevice8A`
+  (32 methods, `GetCapabilities` filled as a 3-axis 3-button mouse, `GetDeviceState`
+  zeroed) is enough for the game to start and play on a gamepad.
+- Lua's `dofile` opens paths through the ANSI code page. `GetShortPathNameW` gives a usable
+  path only where the volume keeps 8.3 names (the test PC's D: does not); a path relative to
+  the working folder works on every volume when the game was started in its own folder.
+- The last boss's rune (`EvilFirstBorn` scheduled every 0.1 s) sets
+  `Team.UnavaliablePlayers`, but so do the tutorials (`wwii_biggates`, pillboxes) while the
+  locked character's AI keeps working; only the rune's schedule says a body is really held.
+- The agony animation turns a downed character's AI off (`bAI_bEnable=0` event) and the
+  revive turns it back on, for an AI squad member as for a body a player left.
+- `@(f)` around a PowerShell function that returns `, @($list)` gives a one-element array
+  holding the list: its items join with spaces when written as a string, and an empty list
+  becomes one empty string.
+
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download
   SHA-256 `98be0fa84ac73ca66dce2842a2e4512226f4c611b6500dc96415571fc5538fcc`

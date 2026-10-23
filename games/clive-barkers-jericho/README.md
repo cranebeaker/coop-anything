@@ -6,14 +6,14 @@
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
 | QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-10-23 (0.2.4) |
+| Last updated | 2026-10-23 (0.2.5) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.4 at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.5 at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
@@ -24,8 +24,10 @@ their side of a story split. 0.2.4, called a release candidate, gives the player
 place in the story (the host is Ross's soul, the second player Jones's astral projection,
 players 3-4 the squad members themselves), adds a display mode and refresh rate to the game's
 Video settings, renames the mod Jericho Co-op+ (it does more than co-op) and fixes what a full
-code review and the release tests found. A whole campaign played through by people is still
-to come.
+code review and the release tests found. 0.2.5 completes that release candidate: the items
+0.2.4 left open (a split screen player waiting for a body, the last boss's rune, game folders
+with any name), a game start without a mouse and an installer record fix. A whole campaign
+played through by people is still to come.
 
 ## Existing work
 
@@ -190,6 +192,14 @@ restored on uninstall.
   rune (which the single-player game never reaches) it read NULL and the game crashed. A
   vectored exception handler resumes that one read on the function's own "no target" path,
   only when the bytes there match the retail exe. The exe file is not changed.
+- **No mouse needed (0.2.5):** the game itself stops with "Mouse not found" when DirectInput
+  cannot create the system mouse (`CreateDevice(GUID_SysMouse)` fails on a PC with gamepads
+  only). The proxy's DirectInput hook then returns a device of its own that reports a mouse
+  that never moves, so a TV split screen setup starts.
+- **Game folders with any name (0.2.5):** the engine opens files through the ANSI code page,
+  so the mod's folder is passed to Lua as the lossless code page form, else the 8.3 short
+  name, else a path relative to the working folder (the shortcut and Steam start the game in
+  the game folder; some drives have 8.3 names turned off).
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -199,6 +209,23 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.2.5 (2026-10-23):
+
+- Whole campaign by two players over a LAN between two PCs: 33/33 levels to the ending, no
+  crash; split screen with virtual gamepads; a real Steam session; all nine story splits and
+  the player souls test as for 0.2.4.
+- Each fix checked in the game: player 2's gamepad not moving player 1 while player 2 waits
+  for a body (before and after); player 2 moving on once Rawlings is held by the last boss's
+  rune while a tutorial's switch lock changes nothing; a body left after a wait acting on its
+  own again once revived; split screen starting when a body frees up; a start with
+  DirectInput's mouse failing (the pad still plays); a game folder with a Greek letter on both
+  PCs (short name on one, relative path on the other, whose drive has no 8.3 names); Auto
+  refresh back to 75 Hz and a borderless window kept until restart.
+- A clean install, removal (exe back to the retail hash), and the update from the published
+  0.2.4 through its shortcut, from the real GitHub release. That test found the install
+  record's shortcuts written as one joined line since 0.2.3 (removal left them, the next
+  update could stop with an error); fixed and read back from old records.
 
 Results for 0.2.4 (2026-10-23, final code):
 
@@ -263,15 +290,9 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 - One human session so far (missions 1-8 over Steam); the full campaign has been run by
   scripts, not finished by people. A report from that session (a cutscene taking a client's
   controls while the host walked) could not be reproduced.
-- The game needs a mouse plugged in to start, even for gamepad play (its own check).
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
   Join Game auto-launch (game not running) are not tested yet.
 - Split screen draws the two views on alternate frames, so each runs at half the frame rate.
-- Code review, not yet tested: while a split screen player 2 waits for a body, their gamepad
-  may also act on player 1's character.
-- The mod's DLL reads the game folder through the ANSI API, so a folder name with characters
-  outside Windows' language code page (for example Chinese on a European Windows) stops it
-  from loading.
 - The "own eyes" cutscene view is experimental: the sets were built for one camera, and it
   falls back to the original camera where a character cannot see the scene.
 
