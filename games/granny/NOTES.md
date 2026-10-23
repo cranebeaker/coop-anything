@@ -2415,3 +2415,17 @@ a pair: both ends logged `initialised v0.6.0` and the guest→host apply fired a
   mapped — the main reason the item path is still "network-verified, gameplay-unverified".
 - The hand model is a clone of the world model and may differ from the game's own hand
   prefab; no pickup animation or sound plays.
+
+## §28 The pickup scan found no action method to call (v0.6.0, 2026-10-23)
+
+`--coop-itemprobe` scanned every type in the game assembly for methods with "pickup" in the
+name (declared-only, all visibilities). 37 hits, **all property accessors**: `get_/set_pickupButton`
+on the bed/coffin/car buttons, `PickUp.get_/set_pickUp(Boolean)`, `get_/set_readyPickUp`,
+`get_/set_pickUpGascan(AudioClip)`, `PickUpNew.get_/set_pickUpButton`, and
+`InventoryController.get_/set_textPickUpOn`. No action method carries a "pickup" name, so a
+bot has nothing to invoke; the interaction lives in the player's input path and the
+component's `Update`/trigger. A human pickup therefore cannot be tested by the bot harness
+(input injection or a person is needed). The item poll already reads any flag the game
+writes, so a flag-writing pickup syncs unchanged; a hand-only pickup would not. Still
+**unknown**. Next: patch `PickUp.Update`/`PickUpNew.Update` and log the flags around one
+manual pickup.

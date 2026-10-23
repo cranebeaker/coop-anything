@@ -134,9 +134,10 @@ There is a release: [granny-coop v0.6.0](https://github.com/dustopx0-code/granny
 
 ## Next steps
 
-1. Map the pickup components (`PickUp`, `PickUpNew`, the bed/coffin buttons) to the
-   inventory flags, then exercise a human pickup on both ends and replace the replica with
-   the game's own hand prefab if it differs.
+1. Catch the human pickup path. The assembly has no "pickup" action method to call — all 37
+   name hits are property accessors (§28) — so patch `PickUp.Update`/`PickUpNew.Update`,
+   watch the flags around one real pickup, and replace the hand replica with the game's own
+   prefab if it differs.
 2. Sync the catch: the jail/scene transition and the respawn, then re-entry.
 3. Confirm scene follow in a real pair and decide whether the guest should also see the
    Play/difficulty step before entering `Scene`.
