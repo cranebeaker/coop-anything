@@ -342,3 +342,120 @@ Pitfalls:
 - While a third test copy was running, the second one quit at start in both tries ("AutomataMP shutting down" right
   after hooking DX12); with two copies it started. Cause not checked.
 - Graph names in logs are Shift-JIS: read logs as cp932, and a Windows console in cp1251 can't print them.
+
+## 2026-10-21: the Bunker's ring
+
+Observed (build 7020666, "Test" save, phase `16_AB_bunker_Order`, two test copies in one session):
+- The Bunker is a ring around the x axis (center y 188.55, z -0.68). While the hero walks in a corridor, the ring's
+  controller (`+0x83bb60`) turns the whole ring under the hero and the hero stays at the bottom. Every room, NPC and the
+  hangar's flight units turn with it. Teleporting the hero does not turn the ring.
+- The ring object is the behavior of the entity with model `0xf1200` (class `Bunker`). Its matrix rows are
+  (0, cos a, -sin a), (0, sin a, cos a), (1, 0, 0); the euler angle a is also at `+0x94`.
+- In the client's game the hero is the host's puppet, so the puppet turned the client's ring. The same world
+  coordinates were different places of the Bunker in the two games: in the client's game the Commander rode around
+  the ring while in the host's she stood still.
+- Moving the puppet more than 5 m by writing its position only: the physics did not take it, the puppet ran toward
+  the target for about 10 s and ended 2-5 m below the floor. The game's `Pl0000.setPosRotResetHap` moves it at once.
+- The controller stops while `[ctrl+0xe8]` is set. In the owner's fork the client's controller only remembers the
+  hero's position, the client sets its ring to the host's angle (sent over the network), and positions go over the
+  network in the ring's frame. `coop_smoke.py --scenario commander`: ring angles equal, the host's puppet 0.04 m from
+  the host (PASS).
+
+Derived:
+- Any shared position in the Bunker has to be relative to the ring, and only one game may drive the ring.
+
+Pitfalls:
+- A "2B clone" seen on screenshots of the client was a YoRHa android with a quest marker, not a second puppet.
+
+## 2026-10-22: flying from the Bunker together
+
+Observed (phase `20_AB_buker_Aerial_battle`, two test copies; the host flew off from the hangar, the client followed):
+- Each game flies two flight units (`BehaviorFlightUnit`, model `0x10010`): the hero's, which the player steers, and
+  the story buddy's, which the game's AI flies in formation. The client's game gives the hero's unit to its own hero.
+- Both games fly in the same coordinates (near the origin), so the other player's position can be used as it is.
+- With the other player's puppet put in the buddy's place, the flight never turned into the battle seen from above.
+  Alone, each block of the flight starts with the camera 20 m away and moves it to about 46 m after about 12 s; in the
+  session it stayed at 13-16 m, and the buddy's unit stayed a mech and fired down. Without taking over the buddy the
+  flight was as alone.
+- The AI pulls the buddy's unit back to its formation spot by about 0.3 m per frame: smoothing the unit toward the
+  other player left it 2 m off. Setting its position every frame keeps it 0.01 m (median) off.
+- A player who does not steer is shot down; the game then repeats the block from a checkpoint about every 50 s
+  (alone too).
+
+Derived:
+- The flight script waits for the buddy's AI. In a flight the buddy stays the game's, and only its unit follows the
+  other player (owner's fork, `coop_smoke.py --scenario hangar` asserts both the unit position and the camera going
+  past 35 m, PASS).
+
+Unknown:
+- How to carry the other unit's rotation and banking, the mech transform and the shots over (not synced yet).
+
+## 2026-10-22: the next block can have the same phase name
+
+Observed:
+- During the flight from the Bunker the game asks for the next story block (`+0x81a440`) again and again, and every
+  block it loads is called `20_AB_buker_Aerial_battle`.
+- The owner's fork held the client's request until the host's phase name changed (2026-10-20). Here it never changed:
+  the client's game waited in the dark for 1.5 min.
+
+Derived:
+- "The host loaded the next block" is a counter, not a name change. The host now sends how many blocks it has loaded,
+  and the client's held request goes through when that number grows, also when the host's load came a few seconds
+  before the client's request. `--scenario hangar` asserts that no request stays held.
+
+## 2026-10-22: talking to an NPC; the client's story talks
+
+Observed (build 7020666, offsets from the exe base):
+- In the client's game the client's 9S could hold B next to the Commander and have the whole conversation; the client's
+  story step went 130 -> 140 while the host stayed at 130 (the action graphs then differ).
+- The player's interaction code calls `+0x7cfbb0` every frame with the target (and `+0x7cfdb0`, a variant with a
+  hold-to-fill meter); when the button is pressed it calls virtual slot 125 (`[vtable+0x3e8]`) of the target's
+  behavior. The `BehaviorAppBase` one (`+0x41e860`, signature `40 53 48 83 ec 40 48 c7 44 24 20 fe ff ff ff 48 8b d9
+  ba fb 0e cb 28`) posts the signal `ON_TALK` (hash `0x28cb0efb`) to the object; `NPC` (`+0x6ff040`) checks one state
+  and jumps to it. Exec breakpoints: slot 125 runs once per press, the poll runs every frame.
+- The talk-disable flag that the script functions `BehaviorAppBase.setTalkDisable` / `setTalkEnable` write is
+  `[behavior+0xbcc]`; the poll reads it.
+- The story scripts are mruby code with a class `EntityPuid` (methods `talk?`, `signal?`, `startTalk`, `endTalk`,
+  `setTalkMark`, ... registered at `+0x2fec90`). `talk?` (`+0x337640`) checks for `ON_TALK` and marks it handled.
+  `startTalk` (`+0x336b30`) sets the conversation partner in `hap::TalkMan` (a static object at `+0xfbf630`: `[+0x668]`
+  talking, `[+0x66c]` partner handle). In the runs watched, exec breakpoints on `talk?` and `signal?` did not fire for
+  the Commander's talk; a write watch on `TalkMan` caught `startTalk` called from a script fiber resumed from a
+  `hap::SceneStateObj`.
+- `hap::TalkMan` keeps the handles of NPCs with a talk mark at `[+0x688]` (array), `[+0x690]` (count). It was empty in
+  the Bunker at step 130 and in the open world on the finished save.
+- `[behavior+0x66c]` is the id of the entity layout that placed the object (`0x6aae9bcb` for the Commander). The
+  objective "Speak with the Commander" is a `hap::HapGoalLocationAction` of `M1010_S0030_GM`, and its `[+0xc0]` holds
+  that same id; an objective that marks a place holds `0xffffffff`.
+- In the owner's fork, in the client's game, slot 125 is skipped when a started, not finished goal action of a
+  non-personal graph points at the target's layout id; the screen shows a hint that the host does it. New scenario
+  `coop_smoke.py --scenario client_talk`: the client holds B at the Commander, nothing starts, its step stays 130; then
+  the host talks and the client's step follows to 140 (PASS).
+
+Derived:
+- "Story NPC" can be told from the objective that points at it, without a list of NPCs. Merchants and chatter have no
+  objective pointing at them and stay usable.
+
+Unknown:
+- A side quest's giver before the quest is taken: no objective points at it yet. Not seen, no save with an open
+  quest giver in the test copies.
+- Where the dialog choice is made (a talk that the gate lets through can still have choices).
+
+## 2026-10-22: phase changes outside the request
+
+Observed:
+- Chapter Select starts the story through `+0x9c5a00` (called from `+0x95cf46`), not through `+0x81a440` or
+  `+0x9c5d20` (exec breakpoints on all three during a Chapter Select from the title screen).
+- The script function `SaveState.loadFromMemory` is a jump to `+0x9c5d20` (`+0x38e9a0`), the function the main loop
+  applies the next story block with (`bool()`, it checks for the `TY` block at `[+0x1421f08]`). A story script can
+  change the phase with it without the request.
+- The other code that writes the main loop's state (`[+0x11ea89c]`) only resets it to 0 or is the main loop itself.
+- Setting the hero's health (`[behavior+0x858]`, what `getHp` returns) to 0 does not start the death sequence in the
+  Bunker or in the open world either: the bar stays full. Death needs damage.
+
+Derived:
+- Besides `+0x81a440`, a story script's `SaveState.loadFromMemory` is the one known way to change the phase in the
+  world. The owner's fork now logs its calls (swapped in the script function table, the code stays as it is).
+
+Unknown:
+- Which scripts call `SaveState.loadFromMemory`, and whether `+0x691314` really is the hero's death (needs a death in
+  a fight).
