@@ -200,6 +200,30 @@
   - https://www.svencoop.com/description.php
   - https://www.pcgamesn.com/sven-co-op-brings-communal-half-life-to-steam-its-out-now-and-its-completely-free
   checked: '2026-10-16'
+- game: Half-Life
+  year: 1998
+  engine: GoldSrc
+  project: hl-coop (HLSDK co-op mod)
+  url: https://github.com/ValveSoftware/halflife
+  kind: mod
+  status: alpha
+  coop_scope:
+    story: 'yes'
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: From-scratch HLSDK co-op mod (learning project) that plays the single-player campaign with two
+    players over LAN. Forces multiplayer rules on SP maps, re-enables level changes, monsters and a
+    shared item economy (pickups auto-duplicate to the other player). An in-DLL bot drives two real
+    clients and asserts the shared state. Mod code not yet published to its own repo; see games/half-life/README.md.
+  sources:
+  - https://github.com/ValveSoftware/halflife
+  checked: '2026-10-23'
 - game: Half-Life 2
   year: 2004
   engine: Source
