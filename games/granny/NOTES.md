@@ -2505,9 +2505,9 @@ hands.
 v0.7.0 puts an owner byte on the wire (`OwnerNone/Host/Guest`, protocol v2) in both
 `Item/State` and `Item/Snapshot`, and `ItemSync.Apply()` branches on it:
 
-- owner is this side (or none) вЂ” the picker's client: write the flag, drive the game's real
+- owner is this side (or none) — the picker's client: write the flag, drive the game's real
   hand slot, hide the world object (`ApplyVisual`);
-- owner is the peer вЂ” the other client: write the flag so the world agrees, hide its copy
+- owner is the peer — the other client: write the flag so the world agrees, hide its copy
   of the world object, and hand it to `RemoteAvatar.SetHeldItem()`, which clones the model
   into the peer avatar's hand with colliders and `MonoBehaviour`s disabled.
 
@@ -2534,7 +2534,7 @@ drawn in the peer's hand; the host side logged `apply ... owner=guest` and
 The peer's state used to carry the `CharacterController` **transform** position, which sits
 at the capsule's centre (about 1.2 m above the floor), and the avatar capsule (1.5 m) was
 centred on that point. The result was half a capsule under the floor and a ~0.95 m stub
-visible above it вЂ” the "too short" report. Two changes:
+visible above it — the "too short" report. Two changes:
 
 - Protocol v2 sends the character's **feet** position (`transform.position - up * height/2`,
   from the live controller) plus `FlagPlayerCrouch` (1<<2).
@@ -2556,3 +2556,72 @@ matching the game's own `FirstPersonController_Egen.playerCrouch`.
   cycle. If the game's pickup path writes the same flag, the owner byte is already right;
   if it only spawns a hand object, nothing changes.
 - Crouch is only reflected by height; the peer avatar has no crouch pose or animation.
+
+## 30. v0.8.0: item placement is replicated from the host
+
+**Report.** "Предметы все еще не синхронизированы и ещё у игроков разные сиды спавна
+предметов" — item flags were mirrored, but the objects themselves still lay in different
+places on the two machines, because `ItemSync` sent only the 50 `have<Item>` flags and an
+owner byte. No position ever crossed the wire.
+
+**Why the seed cannot be replayed.** Each instance rolls its layout itself on scene start:
+`startNewDay` picks the day, `RandomKeyPlace` / `RandomKofotPlace` place keys and the
+crowbar. The RNG state, its seeding and the exact call order are not observable from
+metadata (no symbol or signature exposes the seed; the call sites are inside il2cpp
+methods). The host's layout is already rolled by the time a guest joins, so a later join
+cannot reproduce the roll even if the seed were known. The only workable model is
+**host-authoritative placement**: the host publishes where each item is, and every other
+end moves its own copy there.
+
+**Wire format.** Two new item kinds, no protocol bump needed: an old peer ignores unknown
+item kinds, but in practice both ends must run v0.8.0 because placement is what fixes the
+reported bug.
+
+| kind | direction | payload |
+|---|---|---|
+| 3 Placement | host → guest (also guest → host for a local drop) | count byte, then per item: hash (u32), position (3x f32), rotation (4x f32, `w >= 0`), active byte (`2` = no placement) |
+| 4 PlacementRequest | guest → host | none |
+
+20 items per chunk: `2 + 20*33 = 662` bytes, inside the 1024-byte datagram limit. The host
+sends the whole table at prepare, on every `PlacementRequest`, and every 15 s afterwards. A
+guest asks once on join and once more after its first table if the host was still in the
+menu; it re-asks every 5 s until one arrives. A local drop sends that one item 0.4 s later,
+after the game has moved it.
+
+**Applying it.** `ApplyPlacement` writes `transform.position`, `transform.rotation` and
+`SetActive` on the item's world object (all 50 world objects are root-level, so nothing is
+lost to a parent transform), stores the values on the entry, and skips any item that is in
+a hand — the have-flag path owns those. A per-item hash (FNV-1a over the item name) is
+stable across ends; the live fingerprint `ipos=n:XXXXXXXX` hashes item hash + positions
+quantised to cm + `activeSelf`, so the two status lines can be compared directly. The dump
+uses `activeSelf`, not `activeInHierarchy`: IL2CPP reports the latter as false for these
+objects even when `activeSelf` is true.
+
+**Evidence, 2026-10-23.** Two installs on one PC, `run-pair.ps1 -Seconds 100 -Port 47790
+-PlaceTest` (log `%TEMP%\gc080-placetest.log`):
+
+- Both ends `prepared 50 items … objOk=49 trOk=50 dupes=0` and the **same starting
+  layout** (`world at start n=50 fp=50:D6465449`, identical first 12 dumps). Two fresh
+  installs on one PC share `AppData\LocalLow\DVloper\Granny` and roll the same layout, so
+  the reported divergence is not reproduced locally.
+- Host `placement out n=50 chunks=3 fp=50:D6465449` at prepare, again on each request, and
+  on the 15 s cadence (20:50:33.598, 20:50:51.889, 20:51:07.517).
+- Guest applied the table (`iPlaced` climbing 150 → 250) and its `ipos` equalled the
+  host's `50:D6465449` at every sample.
+- **Forced divergence (`-PlaceTest`, QA only, guest):** at 20:50:33.633 the guest moved
+  `tb1` from `(5.64, -2.76, 1.61)` to `(8.14, -2.76, 4.11)` and re-requested the table
+  (`COOP itemtest: nudged tb1 … and asked for the host layout`). 12 ms later the host's
+  reply pulled it back: `COOP items: place tb1 -> (5.64, -2.76, 1.61) active=y`, and
+  `ipos=50:D6465449` matched the host again at 20:50:40 and stayed there. This is the
+  correction path running against a genuine difference, not just an identical-roll pair.
+
+**What this does not prove.** No run has crossed two PCs with genuinely different saves or
+days, so the real-world divergence is still reported rather than reproduced. Items that
+are currently held have no world placement to replicate; the table after a drop restores
+them. An item spawned by the game after prepare (new day) is picked up by the next
+`CaptureAll` at the 15 s cadence.
+
+**Limit.** The host remains the only writer of placement; a guest can move its own copy
+(physics, QA nudge) and the next table undoes it, which is intended, but a guest that
+drops an item sends only that one record — a simultaneous host table can briefly win
+before the host's next capture reads the dropped position. Not observed in a run yet.
