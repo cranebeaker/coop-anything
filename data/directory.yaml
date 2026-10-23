@@ -7353,14 +7353,14 @@
   qa: automated
   notes: Native dinput8.dll bridge plus Lua injected through settings.lua. The host runs the world; clients mirror
     enemies, replay shots including delayed Doganboy grenades, share pickups, doors and checkpoints, follow level loads, and revive at a partner when
-    they go down. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP. Co-op saves and reconnect after a crash.
-    Text chat, pings, proximity voice, difficulty presets, controls presets, a launcher, couch (split-screen) co-op. Installer and a v0.1.0-alpha
-    pre-release; master is ahead of it. Automated checkpoint sweep of all 96 checkpoints with two real clients and a
-    host/client state diff (before the N-player change), plus 3- and 8-player suites; feature suites for the newer parts.
+    they go down. Cutscenes start together with a skip vote. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP, chosen in
+    a launcher. Co-op saves and reconnect after a crash. Text chat, pings, proximity voice, difficulty and controls presets, character and emote wheels,
+    couch (split-screen) co-op. Public alpha v0.2.0-alpha with an installer; before it, an automated ladder of 31 gates including all 96
+    checkpoints with two real clients and a host/client state diff.
   sources:
   - https://github.com/TommoDotCommo/mdk2-coop
   - https://store.steampowered.com/app/213350/
-  checked: '2026-10-22'
+  checked: '2026-10-23'
   made_with_coop_anything: true
 - game: Resident Evil 2 (2019 remake)
   year: 2019
