@@ -3990,11 +3990,13 @@
   checked: 2026-10-16
 - game: 'Alien: Isolation'
   year: 2014
-  engine: Creative Assembly proprietary
+  engine: Cathode (Creative Assembly proprietary)
   project: Alien Isolation co-op (Dropper7894)
-  url: https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
+  url: https://www.reddit.com/r/alienisolation/comments/1uhr3gr/a_small_mod_im_working_on/
   other_urls:
+  - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
   - https://www.dsogaming.com/?p=195518
+  - https://shazoo.ru/2026/06/30/186490/modder-sozdaet-kooperativnyi-rezim-dlia-alien-isolation
   kind: mod
   status: prototype
   coop_scope:
@@ -4002,17 +4004,62 @@
     enemies: unknown
     world_state: unknown
     items: unknown
-  players: unknown
+  players: '2'
   networking: unknown
-  open_source: unknown
-  last_activity: unknown
+  open_source: 'no'
+  last_activity: 2026-06
   qa: none
-  notes: Announced with a first gameplay video, aimed at Survivor Mode, and it is unknown whether it will cover
-    the campaign; no ETA given. An Echo Protocol project is mentioned in Steam threads but I could not confirm it.
+  notes: Reddit user Dropper7894 posted a short demo video on 2026-06-30 after a few weeks of work, aimed at
+    turning Survivor Mode into 2-player co-op; the author calls it far from a full co-op mode. Campaign support
+    unknown, no ETA, no public build, source, GitHub account or Nexus/ModDB page found. Updates and questions go
+    to the author's Discord (invite discord.gg/UhHCPMdMh, quoted by Bloody Disgusting; not joined). Reddit blocks
+    automated fetches, so the post and author replies were read only through press quotes. A separate 2025
+    r/Modding post titled "Alien Isolation Echo Protocol, a multiplayer coop" exists only as a mirror URL slug
+    and a Steam thread link; no author, build or later activity found. The 2015 Steam "co-op mod" thread is
+    about a Garry's Mod gamemode, not this game.
   sources:
   - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
+  - https://shazoo.ru/2026/06/30/186490/modder-sozdaet-kooperativnyi-rezim-dlia-alien-isolation
   - https://steamcommunity.com/app/214490/discussions/0/598198356181958694/
-  checked: 2026-10-16
+  checked: '2026-10-23'
+  searched:
+  - 'WebSearch (extended/standard): alien isolation co-op mod, multiplayer mod Dropper7894, "Echo Protocol" alien isolation, Echo Protocol r/Modding, Russian "Alien Isolation кооператив мод мультиплеер", nexusmods alienisolation multiplayer/coop, youtube survivor mode two players, Nucleus Co-op handler (none), 2026-10-23'
+  - 'GitHub: user Dropper7894 (404); repo search alien isolation multiplayer/coop/co-op/online/survivor mode, cathode multiplayer (no hits); code search "Alien Isolation" coop, CathodeLib network (only file-format code); OpenCAGE forks and branches (no multiplayer branch), 2026-10-23'
+  - 'Not checked: Reddit directly (fetch blocked), the Discord, ModDB files tabs, archive.org, Steam guides'
+- game: 'Alien: Isolation'
+  year: 2014
+  engine: Cathode (Creative Assembly proprietary)
+  project: AI co-op (Joshiloveyou, build from zero)
+  url: https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation/games/alien-isolation
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/issues/85
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: false
+    enemies: false
+    world_state: false
+    items: false
+  players: '2'
+  networking: direct-ip
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: automated
+  notes: Claimed in issue 85 on 2026-10-20 for Steam build 4940658 (AI.exe 32-bit, SHA-256 DDE66521...9A90).
+    Presence co-op only per the author's README (2026-10-23) - each player runs their own instance and sees the
+    other as an avatar; position and yaw over UDP at 20 Hz with interpolation. Alien, doors, items and story
+    are per-instance; both must load the same save; avatar draws through walls; no join UI. Loads coopnet.dll
+    through a mock steam_api.dll plus a two-jump exe gate patch so a second instance boots. QA is the author's
+    two-instance harness, not re-run here. Current work is NPC entity research (CMD_PlayAnimation, property
+    setter). Only notes are on the branch; the code is not published. Builds on OpenCAGE (MIT) and
+    OpenCAGE/CinematicTools (MinHook DLL injection precedent). Bug reports on the claim issue.
+  sources:
+  - https://github.com/Joshiloveyou/coop-anything/blob/game/alien-isolation/games/alien-isolation/README.md
+  - https://github.com/Joshiloveyou/coop-anything/blob/game/alien-isolation/games/alien-isolation/NOTES.md
+  - https://github.com/cranebeaker/coop-anything/issues/85
+  checked: '2026-10-23'
+  made_with_coop_anything: true
 - game: 'Kingdom Come: Deliverance'
   year: 2018
   engine: CryEngine
