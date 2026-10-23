@@ -2418,14 +2418,141 @@ a pair: both ends logged `initialised v0.6.0` and the guest→host apply fired a
 
 ## §28 The pickup scan found no action method to call (v0.6.0, 2026-10-23)
 
-`--coop-itemprobe` scanned every type in the game assembly for methods with "pickup" in the
-name (declared-only, all visibilities). 37 hits, **all property accessors**: `get_/set_pickupButton`
-on the bed/coffin/car buttons, `PickUp.get_/set_pickUp(Boolean)`, `get_/set_readyPickUp`,
-`get_/set_pickUpGascan(AudioClip)`, `PickUpNew.get_/set_pickUpButton`, and
-`InventoryController.get_/set_textPickUpOn`. No action method carries a "pickup" name, so a
-bot has nothing to invoke; the interaction lives in the player's input path and the
-component's `Update`/trigger. A human pickup therefore cannot be tested by the bot harness
-(input injection or a person is needed). The item poll already reads any flag the game
-writes, so a flag-writing pickup syncs unchanged; a hand-only pickup would not. Still
-**unknown**. Next: patch `PickUp.Update`/`PickUpNew.Update` and log the flags around one
-manual pickup.
+§27 left one question open: a **human** pickup — does `PickUp`/`PickUpNew` write the same
+`have` flags? A bot test would settle it, so `--coop-itemprobe` scanned every type in the
+game assembly for methods with "pickup" in the name (declared-only, every visibility,
+case-insensitive). 37 hits, and **all 37 are property accessors**: `get_/set_pickupButton`
+on `bedButton`, `bedButton2/3`, `coffinButton`, `coffinButtonBackyard`, `insideCarButton`;
+`PickUp.get_pickUp/set_pickUp(Boolean)`, `get_readyPickUp/set_readyPickUp(Boolean)`,
+`get_/set_pickUpGascan(AudioClip)`; `PickUpNew.get_/set_pickUpButton(GameObject)`,
+`get_/set_pickUp(Boolean)`; `InventoryController.get_/set_textPickUpOn(Boolean)`. No method
+that performs the pickup carries a "pickup" name — the interaction is probably done in the
+player's input/raycast path and then inside the component's own `Update` or trigger, none of
+which the name filter reaches.
+
+What this means:
+
+- There is nothing for a bot to invoke directly. A human-pickup test needs real input (a
+  person, or an input injector), so it stays out of the bot harness.
+- The mod's item poll already reads whatever flag the game writes, 0.2 s apart, so if a
+  human pickup writes the flag the sync works with no code change.
+- If a human pickup instead only spawns an object in the hand, the poll sees nothing and
+  the item would not sync. Which of those happens is still **unknown**; README and
+  INSTALL keep saying "human pickup untested".
+
+Way in for the next agent: patch `PickUp.Update` (and `PickUpNew.Update`) instead of
+call-matching, log `InventoryController` flags around one manual pickup of a known item,
+and record whether a flag flipped and whether the world object disappeared.
+
+## §29 Three player-reported bugs: pause, item ownership, avatar height (v0.7.0, 2026-10-23)
+
+First feedback from an actual pair of players, all three reproduced or explained in code
+and covered by a run:
+
+1. *"If the host pauses, the other player can still walk but Granny does not."*
+2. *"Items desync: when one player picks an item up, the other should see it in that
+   player's hands."*
+3. *"The characters are too short; make standing taller and keep the crouch height you
+   have now."*
+
+### Pause
+
+The game sets `Time.timeScale = 0` (and pauses the `AudioListener`) when the pause/settings
+menu opens. Granny is simulated **only on the host** (§12), and every per-frame update on
+the host is `deltaTime`-driven, so a paused host froze her for both players while the guest
+— whose own world was still running — kept walking. That matches the report exactly.
+
+v0.7.0 policy in `KeepWorldRunning()`: while the mod is **connected** and the scene is
+`"Scene"`, if `Time.timeScale` is 0 it is set back to 1 and audio is unpaused, once per
+frame. The menu still opens and the game still blocks its own input; what no longer happens
+is the world stopping. Two states are deliberately left alone: the death sequence
+(`_catch.LocalCaught`, `_catch.EndSequence`) and the spectator view (`Spectating`), because
+the game's own catch fade/end sequence needs its frozen frame. Edge logging: `Time.timeScale
+0 -> 1, world kept running (force #N)` on the way in, `timeScale back at 1, the pause did
+not hold` on the way out, at most one force line per 5 s.
+
+**How it was tested.** A mod cannot reliably press the game's own settings button (the
+canvas is il2cpp-owned, the button has no stable name), so `--coop-pausetest` reproduces
+exactly what the menu does to the world: at 60 s and again at 65 s it performs
+`Time.timeScale = 0` and `AudioListener.pause = true` once, as the menu does on open. Run:
+two instances, `-PauseTest`, 150 s, port 47780, host log
+`C:\Users\Public\granny-test\MelonLoader\Logs\26-10-23_17-28-49.log`:
+
+```
+[17:29:56.595] COOP pause: Time.timeScale 0 -> 1, world kept running (force #1, death=False)
+[17:29:56.604] COOP pause: timeScale back at 1, the pause did not hold
+[17:30:01.592] COOP pausetest: second tab simulated menu pause (Time.timeScale=0, audioPaused=true, granny=(-15.50, 13.18, -8.35))
+[17:30:01.600] COOP pause: Time.timeScale 0 -> 1, world kept running (force #2, death=False)
+[17:30:11.590] COOP pausetest: 15 s after the pause timeScale=1.00 audioPaused=False restores=2 granny=(-13.71, 13.18, -5.58)
+```
+
+Granny moved 3.0 m during the pause window, and the guest's paired status samples
+(`gRemote=-15.5,13.2,-8.3` at 17:30:10, `-9.1,13.2,5.2` at 17:30:20) equal the host's
+`granny=` at the same timestamps, i.e. the guest's copy kept advancing too.
+
+**Honest limit:** this proves the mod restores the two values the menu sets. It does not
+open the real menu, so whether the menu also pauses something else (cursor lock, input
+focus) is untouched by design and unverified. `README.md` says so in Known issues.
+
+### Item ownership
+
+Before v0.7.0 the receiving client did the full mirror itself: it wrote the `have` flag,
+activated its **own** hand slot, cloned the world model into it and hid the world object.
+So when the guest picked the hammer up, the host saw the hammer in the host's hand — and
+the guest, having done the same locally, had it in its own hand as well. One pickup, two
+hands.
+
+v0.7.0 puts an owner byte on the wire (`OwnerNone/Host/Guest`, protocol v2) in both
+`Item/State` and `Item/Snapshot`, and `ItemSync.Apply()` branches on it:
+
+- owner is this side (or none) вЂ” the picker's client: write the flag, drive the game's real
+  hand slot, hide the world object (`ApplyVisual`);
+- owner is the peer вЂ” the other client: write the flag so the world agrees, hide its copy
+  of the world object, and hand it to `RemoteAvatar.SetHeldItem()`, which clones the model
+  into the peer avatar's hand with colliders and `MonoBehaviour`s disabled.
+
+The clone is made from the **active** world object before it is hidden; cloning an already
+inactive source produces an inactive clone that never renders (comment in `Apply`).
+`RemoteAvatar.ClearHeldItem(GameObject source)` only clears when the source matches, so a
+late message about an old item cannot delete the newer one.
+
+Run: two instances, `-ItemTest`, 150 s. Guest log:
+
+```
+COOP items: local Hammare -> have owner=guest
+COOP avatar: peer holds Hammare            (host side)
+COOP items: apply Hammare=have owner=host  obj=HammerHand(active=n inHierarchy=n ...)
+```
+
+i.e. on the side that did *not* pick it up, the hand slot stayed inactive and the item was
+drawn in the peer's hand; the host side logged `apply ... owner=guest` and
+`peer no longer holds Hammare` on release, with the world object back
+(`tr=Hammer(active=y ...)`).
+
+### Avatar height
+
+The peer's state used to carry the `CharacterController` **transform** position, which sits
+at the capsule's centre (about 1.2 m above the floor), and the avatar capsule (1.5 m) was
+centred on that point. The result was half a capsule under the floor and a ~0.95 m stub
+visible above it вЂ” the "too short" report. Two changes:
+
+- Protocol v2 sends the character's **feet** position (`transform.position - up * height/2`,
+  from the live controller) plus `FlagPlayerCrouch` (1<<2).
+- The avatar is built from the feet up: root at feet + up * h/2, body scale y = h/2 (the
+  capsule primitive is 2 units tall), nose at 0.82 h, hand anchor at 0.60 h.
+  `StandHeight = 1.85`, `CrouchHeight = 0.95` (the height the stub used to have, which is
+  what the report asked to keep), lerped over ~0.2 s so a crouch reads as a crouch.
+
+Run evidence, both ends: `COOP avatar created at feet (13.75, 20.82, -7.14), height 1.85`,
+and `COOP crouch=True (cc.height 1.16, stand 2.45, fpc=yes)` / `False (cc.height 2.45 ...)`
+matching the game's own `FirstPersonController_Egen.playerCrouch`.
+
+### Unknowns
+
+- The real settings menu was not opened; see the limit above.
+- The avatar is still a capsule with a nose, not a character model: 1.85 m is now correct
+  relative to the world, but it will not look like the player.
+- A **human** pickup remains untested (§27, §28): the tests write the flag from the QA
+  cycle. If the game's pickup path writes the same flag, the owner byte is already right;
+  if it only spawns a hand object, nothing changes.
+- Crouch is only reflected by height; the peer avatar has no crouch pose or animation.

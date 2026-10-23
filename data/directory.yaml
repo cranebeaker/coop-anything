@@ -7731,7 +7731,7 @@
   year: 2018
   engine: Unity 6000.0.58f2 (IL2CPP)
   project: granny-coop
-  url: https://github.com/dustopx0-code/granny-coop
+  url: https://github.com/roosterdevv/granny-coop
   other_urls: []
   kind: mod
   status: prototype
@@ -7751,19 +7751,25 @@
     IL2CPP). Players see each other and share a host-authoritative Granny; the guest turns
     her NavMeshAgent off and pins her transform. All 48 doors sync both ways, keyed by a
     hash of the transform path, repaired by a 10 s snapshot, locked doors enforced by the
-    host. Inventory have-flags cross the wire in both directions and the receiving client
-    mirrors the hand (it clones the world model into the slot and hides the world object);
-    the old "items revert after 7-8 s" was the mod's own CheckInventory refresh, corrected
-    in v0.6.0. A human pickup is still untested. Scripted two-instance QA: 0 door
-    mismatches in 13 paired samples with one flipper, and the pair survives the bad_wifi
-    chaos profile and an 8 s outage. Scene follow and the post-death spectator view work;
+    host. Inventory have-flags cross the wire in both directions with an owner byte: the
+    picker drives the game's real hand slot and the peer sees a clone in the peer avatar's
+    hand, so one pickup shows in one hand (v0.7.0). The old "items revert after 7-8 s" was
+    the mod's own CheckInventory refresh, corrected in v0.6.0. Avatars are built from the
+    peer's real feet at 1.85 m (0.95 m crouched) with a crouch flag on the wire. The host's
+    settings menu no longer stops the world: Time.timeScale is restored to 1 each frame
+    while connected, except during the death sequence and spectator view. A human pickup is
+    still untested, and the pause was tested against a simulated menu pause, not the real
+    button. Scripted two-instance QA: 0 door mismatches in 13 paired samples with one
+    flipper, the pair survives the bad_wifi chaos profile and an 8 s outage, item ownership
+    and avatar height in a 150 s -ItemTest, and two simulated pauses each restored on the
+    next frame in a 150 s -PauseTest. Scene follow and the post-death spectator view work;
     the catch itself, the van and the day cycle are not synced. Every run was two processes
-    on one PC, no real network yet. v0.6.0 is released with a RU/EN install guide. MIT
-    licensed. No
+    on one PC, no real network yet. v0.7.0 (protocol v2) is released with a RU/EN install
+    guide; both players need the same version. MIT licensed. No
     other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
     different commercial game by another developer.
   sources:
-  - https://github.com/dustopx0-code/granny-coop
+  - https://github.com/roosterdevv/granny-coop
   - https://store.steampowered.com/app/962400/
   checked: '2026-10-23'
   made_with_coop_anything: true
