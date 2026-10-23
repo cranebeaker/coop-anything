@@ -136,6 +136,7 @@ Which engine has co-op work you can reuse: [playbook/engine-families.md](playboo
 | S.T.A.L.K.E.R. Shadow of Chernobyl | Fix patch for Shadow of COOP (true ending unlocked) | [stalker-soc-coop-fixes](https://github.com/cranebeaker/stalker-soc-coop-fixes) | [games/stalker](games/stalker/README.md) |
 | Fallout: New Vegas | Story co-op: shared quests, dialogue results, karma and reputation | [fnv-coop](https://github.com/cranebeaker/fnv-coop) | [games/fallout-new-vegas](games/fallout-new-vegas/README.md) |
 | Zelda: Ocarina of Time | Fixes for a fully synced Ship of Harkinian co-op fork | [ocarina-coop](https://github.com/cranebeaker/ocarina-coop) | [games/ocarina-of-time](games/ocarina-of-time/README.md) |
+| Mass Effect 3 in Legendary Edition | Campaign co-op research: squad ownership and local host startup; no gameplay release | [ME3SquadCoop source](https://github.com/MatrimAl/ME3SquadCoop) | [research write-up](games/mass-effect-legendary-edition/README.md) |
 
 Plus a [directory of 230+ co-op mods and gaps](DIRECTORY.md) for other games (browse and search it at
 [coopanything.app](https://coopanything.app)), each with
