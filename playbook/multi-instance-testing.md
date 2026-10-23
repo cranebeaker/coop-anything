@@ -52,6 +52,15 @@ and a folder of hard links appears in about a second.
 
 `gamepool provision` does all of this from the config (`link`, `config_files`, `protected_paths`).
 
+**Unity games with no "portable" switch** keep saves in `Application.persistentDataPath`
+(`%USERPROFILE%\AppData\LocalLow\<company>\<product>`), often a Steam Auto-Cloud folder. Unity resolves it with
+`SHGetKnownFolderPath(FOLDERID_LocalAppDataLow)`, imported by `UnityPlayer.dll` (and by `GameAssembly.dll` in IL2CPP
+builds). A test-only loader plugin that patches that import in the game's own modules, early (MelonLoader
+`OnPreInitialization`), and answers LocalLow with `<instance>\LocalLow` gives every copy private saves, prefs and
+analytics files; add `-logFile <instance>\Player.log` for the log. Verified on Slime Rancher 2 (Unity 6000.0, IL2CPP),
+owner folder hashed unchanged across runs: [games/slime-rancher-2/qa/SaveIsolation](../games/slime-rancher-2/qa/SaveIsolation).
+A `steam_appid.txt` in the copy stops the Steam relaunch of the store install.
+
 ## 2. Single-instance checks: named mutex and FindWindow
 
 Many games refuse to start a second copy. Two mechanisms are common:

@@ -94,6 +94,61 @@
   sources:
   - https://github.com/roman-dzieciol/ue-deus-ex-coop
   checked: '2026-10-16'
+- game: Slime Rancher 2
+  year: 2022
+  engine: Unity
+  project: Ranching Together (SR2MP)
+  url: https://github.com/pyeight/SlimeRancher2Multiplayer
+  other_urls:
+  - https://www.nexusmods.com/slimerancher2/mods/118
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: unknown
+    world_state: yes
+    items: partial
+  players: unknown
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-09
+  qa: automated
+  notes: MelonLoader 0.7.3 + Starlight mod; 0.3.9 needs game 1.3.0 exactly and Starlight 4.0.4 (README says 4.0.3).
+    README table syncs slimes, plots, gadgets, drones, money, weather, NPC talk; player inventory not synced; Gray
+    Labyrinth and Sanctuary partial. UDP 1919 with UPnP auto-host, no Steam relay. Automated 2-client test (money,
+    player presence) passed on Steam 1.3.0; see games/slime-rancher-2. GPL-3.0.
+  sources:
+  - https://github.com/pyeight/SlimeRancher2Multiplayer/blob/master/README.md
+  - https://github.com/pyeight/SlimeRancher2Multiplayer/releases/tag/Beta_0.3.9
+  - https://github.com/pyeight/SlimeRancher2Multiplayer/blob/master/SR2MP/BuildInfoConstants.cs
+  checked: 2026-10-23
+  made_with_coop_anything: false
+- game: Slime Rancher 2
+  year: 2022
+  engine: Unity
+  project: SR2MP (Saty)
+  url: https://satypardus.itch.io/multiplayer-mod-slime-rancher-2
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: yes
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 16
+  networking: direct-ip
+  open_source: no
+  last_activity: 2024-02
+  qa: none
+  notes: Discontinued by the author (IL2CPP); works only on Slime Rancher 2 v0.4.0 with MelonLoader 0.6.1 per the itch
+    page. Superseded by Ranching Together.
+  sources:
+  - https://satypardus.itch.io/multiplayer-mod-slime-rancher-2
+  - https://satypardus.itch.io/multiplayer-mod-slime-rancher-2/devlog
+  checked: 2026-10-23
 - game: System Shock 2
   year: 1999
   engine: Dark Engine (Thief engine fork)
