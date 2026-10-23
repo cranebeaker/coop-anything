@@ -26,8 +26,11 @@ this hub.
      binary built from the same code without the wrapper: a shipped dedicated server often holds
      the simulation, the script bindings and even single-player code. World in Conflict's
      `wic_ds.exe` was unwrapped while `wic.exe` was not
-     ([games/world-in-conflict](../games/world-in-conflict/README.md)). Observe the client only
-     at runtime (logs, sockets, an injected DLL).
+     ([games/world-in-conflict](../games/world-in-conflict/README.md)). SecuROM exes such as
+     The Godfather II's resist static analysis the same way
+     ([notes](../games/the-godfather-ii/NOTES.md)). If no unwrapped sibling exists, observe the
+     client only at runtime (logs, sockets, an injected DLL); never disable or remove the
+     protection as part of analysis.
    - Dedicated servers and tools may write logs or settings under `%USERPROFILE%\Documents`
      even when run from a test copy. Check for new files there after each run and move them
      into your workspace.

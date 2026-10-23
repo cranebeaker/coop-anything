@@ -159,8 +159,15 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   allocates 160) and fill or read it only through `SetSteamID64` / `GetSteamID64`.
   The session request/failed callbacks start with that identity.
 - **SteamNetworkingMessage_t** (32-bit, MSVC build of the DLL): `data` at offset 0,
-  `size` at 4, and the sender identity at **16**. KeeperFX falls back to 12 if the
-  identity at 16 doesn't decode. Always call `SteamNetworkingMessage_t_Release`.
+  `size` at 4, and the sender identity at **12** in the real 32-bit `steam_api.dll`
+  (Steamworks.NET Standalone 2025.164.1; confirmed between two real accounts in
+  Clive Barker's Jericho, 2026-10-21). 16, which the 8-byte packing of the headers
+  suggests, reads sender 0: every message is then dropped as unknown and nothing
+  says why, while the session request (whose identity sits at 0) still looks fine.
+  Read 16 and 12 and keep whichever decodes to a non-zero id (KeeperFX does the
+  same), and log which one won. A mock that writes the identity at 16 passes either
+  way, so only a two-account test catches this. Always call
+  `SteamNetworkingMessage_t_Release`.
 - **SteamNetworkingMessage_t on 64-bit** (`steam_api64.dll`): `data` at 0 (an
   8-byte pointer), `size` at **8**, sender identity at 16. Reading `size` at 4 on
   x64 gives garbage. `FriendGameInfo_t` and the callback structs above keep the
@@ -196,6 +203,11 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   - after LobbyCreated, the host calls `SetLobbyData` and
     `SetRichPresence("connect", "+connect_lobby <id>")`, then opens
     `ActivateGameOverlayInviteDialog(lobby)`;
+  - the overlay may not open in an old D3D9 game (it didn't in Clive Barker's
+    Jericho, with the overlay loaded): list the friends online in your own menu
+    (`GetFriendCount(4)`, `GetFriendByIndex`, `GetFriendPersonaState` != 0) and send
+    `ISteamMatchmaking::InviteUserToLobby(lobby, friend)` for the one picked. The
+    friend gets a normal Steam invite;
   - a friend accepting while the game is running gives callback 333;
   - Join Game from the friends list gives 337 with the connect string;
   - when the game isn't running, Steam launches it with `+connect_lobby <id>`
@@ -371,10 +383,16 @@ and emulator netplay do), relay streams instead of packets:
 
   `ActivateGameOverlayInviteDialog` returns void, so there's no success value,
   and nobody saw the overlay on screen.
-- A real two-account join through the relay isn't tested yet. To confirm with a
-  friend:
-  - that the message offset 16 is right;
-  - invite and Join Game auto-launch;
-  - relay latency.
+- Real two-account play (Clive Barker's Jericho co-op, 2026-10-21, two PCs on one LAN,
+  two Steam accounts that are friends):
+  - the message sender is at offset **12**, not 16 (above): with 16 nobody could join;
+  - with that fixed, a friend joins from the in-game friends' games list and the
+    session plays (lobby, level load, world sync), round trip 6-19 ms;
+  - the overlay invite dialog did not open in that D3D9 game: invites go through
+    `InviteUserToLobby` from the game's own list (above);
+  - a scripted two-account test (host on one PC reads its lobby id from its log, the
+    other PC's game joins it by id) now runs with every regression there.
+  Still open: Join Game auto-launch when the game is not running, and two PCs on
+  different networks (relay rather than LAN).
 - HXCoop: all tests pass over the mock with real game clients relayed through it.
-  Real two-account play is the same open item.
+  Real two-account play: check the sender offset first.

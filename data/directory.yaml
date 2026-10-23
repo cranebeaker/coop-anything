@@ -6751,12 +6751,13 @@
   engine: MercurySteam ScrapEngine (Scrapland engine, Lua 5.1)
   project: Jericho Co-op
   url: https://github.com/dolbaras/jericho-coop
-  other_urls: []
+  other_urls:
+  - https://github.com/MAK-PIVO/jericho-coop
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
     players_visible: yes
-    story: partial
+    story: yes
     enemies: yes
     world_state: partial
     items: unknown
@@ -6765,15 +6766,18 @@
   open_source: yes
   last_activity: 2026-10
   qa: automated
-  notes: Each player controls one squad member, AI keeps the rest. ENet transport in a dinput8.dll proxy (exe
-    untouched), host-authoritative enemies, story triggers, scenes and level changes; first-person cutscenes from
-    each player's own character. Tested with two real game instances and a headless bot; no full playthrough. MIT.
-    Write-up in games/clive-barkers-jericho.
+  notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
+    split screen. Test builds with an installer (0.2.1). LAN/direct IP over ENet or Steam lobbies (runs as Spacewar),
+    in a dinput8.dll proxy (the exe's code is not patched); host-authoritative enemies, story, scenes, powers, doors and saves; QTE
+    and cutscene view are session settings. The whole campaign runs in automated tests over a LAN between two PCs;
+    human playthroughs just started. MIT. The MAK-PIVO fork's Steam, shared QTE, sync and boss/power work was merged
+    back in 0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
+  - https://github.com/dolbaras/jericho-coop/releases
+  - https://github.com/MAK-PIVO/jericho-coop
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-10-18'
-
+  checked: '2026-10-22'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -7849,3 +7853,174 @@
   - https://github.com/cranebeaker/coop-anything/issues/42
   checked: '2026-10-21'
   made_with_coop_anything: true
+- game: World of Goo
+  year: 2008
+  engine: 2D Boy in-house ("Boy" framework, SDL2 + OpenGL)
+  project: World of Goo co-op
+  url: https://github.com/dobrodeetel/world-of-goo-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/world-of-goo
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: ''
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: community-reports
+  notes: Local two-player split screen on one PC for the Steam 1.5 build (20824155); player 1 mouse, player 2 gamepad. The PC exe still holds the Wii version's multi-cursor code (four mice, four cursors, per-player held balls); an SDL2.dll proxy feeds the second mouse from a pad and renders levels twice with a camera per half, one shared simulation. Settings in wogcoop.ini, reloaded live. Tested by the owner on chapter 1 (mouse + DualSense) plus scripted bot checks; other chapters, the time bug with two players and menus are unchecked. MIT.
+  sources:
+  - https://github.com/dobrodeetel/world-of-goo-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/world-of-goo
+  - https://www.co-optimus.com/game/514/wiiware/world-of-goo.html
+  checked: '2026-10-21'
+  made_with_coop_anything: true
+- game: The Godfather II
+  year: 2009
+  engine: Visceral Engine
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No PC story-campaign co-op project surfaced; the restored match multiplayer and the SE script extender are not campaign co-op. Research on branch game/the-godfather-ii (claim issue #78) has the game booting in a disposable copy from an unverified third-party executable and an own-code ASI plugin reading the player transform. No playable co-op yet.
+  sources:
+  - https://www.pcgamingwiki.com/wiki/The_Godfather_II
+  - https://www.nexusmods.com/thegodfather2/mods/95
+  - https://www.nexusmods.com/thegodfather2/mods/40
+  - https://www.ign.com/articles/2009/03/18/the-godfather-ii-gets-multiplayer-mode
+  checked: '2026-10-20'
+  searched:
+  - 'Repo DIRECTORY.md and games; public GitHub issue/PR and repository search for Godfather 2 / Godfather II co-op and multiplayer, 2026-10-20'
+  - 'English web searches: Godfather II co-op campaign, co-op mod, online co-op, multiplayer mod; checked Nexus, ModDB, GameBanana, GameFAQs results and PCGamingWiki, 2026-10-20'
+  - 'Not checked: game Discord, Steam guides in depth, Archive.org; attempted Russian, German, Italian and Spanish queries were rate-limited (HTTP 429)'
+- game: Autonauts
+  year: 2019
+  engine: Unity
+  project: AutonautsCoop
+  url: https://github.com/Shocklinks/autonauts-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: 2-8
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 5 plugin, host-authoritative mirror (joiner sims frozen, input replayed on the host). Steam
+    lobbies/invites plus direct IP (TCP 27015). Joiners build with undo, teach and program bots, and use building menus,
+    bot server, groups, catapult, spaceport and planning; characters are stored with the host's save while away.
+    Two-instance automated suite 101/101 (TCP) and 84/84 (Steam framing over UDP) plus a big-base stress test; the real
+    Steam lobby path between two PCs is untested. MIT. Write-up in games/autonauts.
+  sources:
+  - https://github.com/Shocklinks/autonauts-coop
+  checked: '2026-10-21'
+- game: 'The Lord of the Rings: The Two Towers'
+  year: 2002
+  engine: Stormfront Fusion (Xbox), static recompilation to PC (The Two Towers Recompiled, xboxrecomp)
+  project: Two Towers couch co-op (on The Two Towers Recompiled)
+  url: https://github.com/Volverine-Dude/TooTawersRecomp-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/lotr-two-towers
+  - https://github.com/Gumpolas/TooTawersRecomp
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Local couch co-op (two controllers on one PC, one shared camera, no networking), built on The Two Towers
+    Recompiled by Gumpolas. Player 2 has their own hero, controller, weapons, ammo, experience and upgrades; both play
+    the story levels, with post-level stats and shops for both. Source only (MIT, a fork of the port), built from the
+    player's own US retail game; tested with a 14-scenario bot suite (73 checks, all passing) on the port's 1.9.4.
+  sources:
+  - https://github.com/Volverine-Dude/TooTawersRecomp-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/lotr-two-towers
+  - https://github.com/Gumpolas/TooTawersRecomp
+  checked: '2026-10-21'
+  made_with_coop_anything: true
+- game: Little Inferno
+  year: 2012
+  engine: Tomorrow Corporation in-house (C++, Direct3D 11, Box2D)
+  project: Little Inferno co-op
+  url: https://github.com/dobrodeetel/little-inferno-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/little-inferno
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: ''
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: community-reports
+  notes: Local two-player co-op on one PC for the Steam build 10124709 (2.0.3); player 1 mouse, player 2 gamepad (DualSense, DualShock 4, XInput), one fireplace, shared coins and save, like the Switch edition. The engine already keeps a second pointer (touch leftover); a winmm.dll proxy feeds it from the pad after each input poll and draws its cursor with D3D11. Menus outside the fireplace are player 1 only. Checked through the tutorial and first letters by scripted screenshots and an owner playtest; later catalogs, the ending and Ho Ho Holiday are unchecked. MIT.
+  sources:
+  - https://github.com/dobrodeetel/little-inferno-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/little-inferno
+  - https://tomorrowcorporation.com/posts/grab-a-friend-switch-editions-will-have-local-multiplayer
+  checked: '2026-10-22'
+  made_with_coop_anything: true
+- game: The Witness
+  year: 2016
+  engine: In-house engine (Thekla); family not confirmed from the binary
+  project: witness-coop
+  url: https://github.com/TommoDotCommo/witness-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    world_state: partial
+  players: 2 (two copies on one PC)
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Dev preview, not playable with friends yet (no installer or release; localhost only). A proxy AnselSDK64.dll loaded by the game hooks Direct3D 11 Present
+    and draws the other player as a puppet; two game copies exchange camera pose over UDP. Solving a panel in one game marks it solved in the other and opens
+    the gated door by calling the game's own door function (events are numbered, acknowledged and resent). Tested on two tutorial door puzzles and one panel power-on chain, Steam build 11370412.
+    Panel power-on progression and one cable lit by a tutorial maze use their own reliable events; a fresh or reloaded game resyncs from its peer. Power-off switching, other cables, plates, lasers and bridges remain unsynced. QA is an in-process bot (no focus, no desktop input) with a state diff over all panels and doors
+    and baseline, loss, mutant, peer-restart, late-join, save-reload, second-door, power-on and cable scenarios. Coverage remains narrow, three tutorial puzzles (see games/the-witness). No other co-op work
+    was found; the MIT-licensed witness-randomizer and witness-trainer, which read and write the running game, were the starting point.
+  sources:
+  - https://github.com/TommoDotCommo/witness-coop
+  - https://github.com/jbzdarkid/witness-randomizer
+  - https://github.com/jbzdarkid/witness-trainer
+  - https://store.steampowered.com/app/210970/
+  - https://en.wikipedia.org/wiki/The_Witness_(2016_video_game)
+  checked: '2026-10-22'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, playbook, and public GitHub issues and PRs for The Witness (nothing), 2026-10-22'
+  - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
+  - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
+  - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
