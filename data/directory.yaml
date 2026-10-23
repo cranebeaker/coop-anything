@@ -7751,22 +7751,30 @@
     IL2CPP). Players see each other and share a host-authoritative Granny; the guest turns
     her NavMeshAgent off and pins her transform. All 48 doors sync both ways, keyed by a
     hash of the transform path, repaired by a 10 s snapshot, locked doors enforced by the
-    host. Inventory have-flags cross the wire in both directions with an owner byte: the
-    picker drives the game's real hand slot and the peer sees a clone in the peer avatar's
-    hand, so one pickup shows in one hand (v0.7.0). The old "items revert after 7-8 s" was
-    the mod's own CheckInventory refresh, corrected in v0.6.0. Avatars are built from the
-    peer's real feet at 1.85 m (0.95 m crouched) with a crouch flag on the wire. The host's
-    settings menu no longer stops the world: Time.timeScale is restored to 1 each frame
-    while connected, except during the death sequence and spectator view. A human pickup is
-    still untested, and the pause was tested against a simulated menu pause, not the real
-    button. Scripted two-instance QA: 0 door mismatches in 13 paired samples with one
-    flipper, the pair survives the bad_wifi chaos profile and an 8 s outage, item ownership
-    and avatar height in a 150 s -ItemTest, and two simulated pauses each restored on the
-    next frame in a 150 s -PauseTest. Scene follow and the post-death spectator view work;
-    the catch itself, the van and the day cycle are not synced. Every run was two processes
-    on one PC, no real network yet. v0.7.0 (protocol v2) is released with a RU/EN install
-    guide; both players need the same version. MIT licensed. No
-    other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
+    host. Inventory have-flags cross the wire in both directions with an owner
+    byte: the picker drives the game's real hand slot and the peer sees a clone in the peer
+    avatar's hand, so one pickup shows in one hand (v0.7.0). The old "items revert after
+    7-8 s" was the mod's own CheckInventory refresh, corrected in v0.6.0. Item placement is
+    host-authoritative from v0.8.0: each peer rolls its own random layout on scene load, so
+    the host sends a placement table (item hash, position, rotation, active state) in chunks
+    of 20 at prepare, on request and every 15 s, and each end moves its own copy there; held
+    items are skipped and a drop sends its own placement 0.4 s later. Both status lines
+    print a live `ipos=n:XXXXXXXX` fingerprint. Avatars are built from the peer's real feet
+    at 1.85 m (0.95 m crouched) with a crouch flag on the wire. The host's settings menu no
+    longer stops the world: Time.timeScale is restored to 1 each frame while connected,
+    except during the death sequence and spectator view. A human pickup is still untested,
+    and the pause was tested against a simulated menu pause, not the real button. Scripted
+    two-instance QA: 0 door mismatches in 13 paired samples with one flipper, the pair
+    survives the bad_wifi chaos profile and an 8 s outage, item ownership and avatar height
+    in a 150 s -ItemTest, two simulated pauses each restored on the next frame in a 150 s
+    -PauseTest, and in a 100 s -PlaceTest the host table (n=50, 3 chunks) was applied by the
+    guest with `ipos` matching on every sample and a forced 2.5 m nudge of one item undone by
+    the host's reply in 12 ms. Placement was not run across two PCs with different saves:
+    two installs on one PC roll the same layout, hence the forced deviation. Scene follow and
+    the post-death spectator view work; the catch itself, the van and the day cycle are not
+    synced. Every run was two processes on one PC, no real network yet. v0.8.0 (protocol v2)
+    is released with a RU/EN install guide; both players need the same version. MIT licensed.
+    No other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
     different commercial game by another developer.
   sources:
   - https://github.com/roosterdevv/granny-coop

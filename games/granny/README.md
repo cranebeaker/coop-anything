@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unity **6000.0.58f2**, **IL2CPP** (global-metadata v31), D3D12 |
 | Versions tested | Steam **buildid 21006637** (v1.3.4), Windows 11, Steam app **962400** |
-| Projects | [granny-coop](https://github.com/roosterdevv/granny-coop) — MelonLoader mod, MIT, protocol v2, report below (README also in [Russian](https://github.com/roosterdevv/granny-coop/blob/main/README.ru.md)) |
+| Projects | [granny-coop](https://github.com/roosterdevv/granny-coop) — MelonLoader mod, MIT, protocol v2, release **v0.8.0**, report below (README also in [Russian](https://github.com/roosterdevv/granny-coop/blob/main/README.ru.md)) |
 | QA level | `automated` — scripted two-instance runs against real game clients |
 | Last updated | 2026-10-23 |
 
@@ -14,7 +14,11 @@ Two players can host and join and see each other move. Granny is simulated on th
 and pinned on the guest, and doors open and close for both. Item flags cross the wire in
 both directions together with an owner byte: the picker drives the game's real hand slot and
 the other player sees a copy in the picker's avatar hand, so one pickup shows in one hand
-(v0.7.0). Avatars stand at 1.85 m (0.95 m crouched) on the peer's real feet. The host's
+(v0.7.0). Item **placement** is host-authoritative from v0.8.0: each peer rolls its own
+random layout when the scene loads, so the host sends its placement table (position,
+rotation, active state) and every end moves its own copy of each object there; both status
+lines print a live `ipos=n:XXXXXXXX` fingerprint built from that table. Avatars stand at
+1.85 m (0.95 m crouched) on the peer's real feet. The host's
 settings menu no longer stops the world: the menu opens, but `Time.timeScale` is put back to
 1 and Granny keeps walking for both. The catch sequence, the van and the day cycle are
 not synced. A guest follows the host between
@@ -61,6 +65,7 @@ file there is the same one as `games/granny/NOTES.md`.
 | Granny sync | host publishes transform + AI flags at 20 Hz; guest disables `NavMeshAgent` and pins the transform with a 2.5 m snap | joint tracking to 0.1 m, §12 |
 | Doors | 48 doors, `State` / `Snapshot` / `Request` / `SnapshotRequest`, host validates (locked stays locked), 10 s snapshot repair | 0 mismatches in 13 paired samples with one flipper, §23; guest→host request path, §16 |
 | Items | `have` flags, change events plus a 10 s snapshot, both directions, owner byte (none/host/guest); the picker drives its real hand slot, the peer gets a clone in the peer avatar's hand | `-ItemTest` v0.7.0: guest's own hand stayed empty while the host drew `peer holds Hammare`, host applied `owner=guest`, §29; human pickup untested, §27 |
+| Item placement | host-authoritative table (FNV-1a item hash, position, rotation, active) in `Placement` chunks of 20 at prepare, on request and every 15 s; guests apply to their own copy, skipped while held, a drop sends its own placement 0.4 s later | `-PlaceTest` v0.8.0: host `placement out n=50 chunks=3 fp=50:D6465449`, guest `iPlaced` 150→250, `ipos` matched on every sample; a forced 2.5 m nudge of `tb1` was restored by the host's reply in 12 ms, §30 |
 | Avatar height | feet position + crouch flag on the wire; avatar built from the feet at 1.85 m / 0.95 m crouch, lerped ~0.2 s | `-ItemTest` v0.7.0: `avatar created at feet (…), height 1.85`, crouch `cc.height 1.16` vs `2.45`, §29 |
 | Pause | while connected in `Scene`, restore `Time.timeScale = 1` and clear `AudioListener.pause` every frame; skipped during the death sequence and spectator view | `-PauseTest` v0.7.0: two simulated menu pauses, each restored on the next frame, Granny moved 3 m through the window, §29 |
 | Scene follow | the host owns the scene; the guest loads what it announces, outside the socket callback, with retries | one client + scripted host: Menu → Scene, Scene → Menu, and a boot-time request held until SplashScreen ends, §24 |
@@ -68,13 +73,14 @@ file there is the same one as `games/granny/NOTES.md`.
 | Failure paths | kill client and rejoin; kill host; restart host under a live guest | §17–§19 |
 | Impaired link | survives the `bad_wifi` chaos profile and a full 8 s two-way outage | §20, §22 |
 
-Protocol: UDP, magic `GCP1`, 9 message types, 20 Hz state, 5 s peer timeout; **v2** (adds the item owner byte and the feet/crouch state), v1 peers are rejected. The sequence
+Protocol: UDP, magic `GCP1`, 10 message types, 20 Hz state, 5 s peer timeout; **v2** (adds the item owner byte and the feet/crouch state, and carries the placement table), v1 peers are rejected. The sequence
 number is written but not used for ordering — the design relies on idempotent snapshots.
 
 ## QA
 
 ```
 powershell -ExecutionPolicy Bypass -File tools/run-pair.ps1 -Seconds 300 -DoorTest
+powershell -ExecutionPolicy Bypass -File tools/run-pair.ps1 -Seconds 100 -Port 47790 -PlaceTest
 powershell -ExecutionPolicy Bypass -File tools/run-pair.ps1 -Seconds 240 -DoorTest -Relay `
     -RelayProfile bad_wifi -RelaySeed 1042 -ChaosRoot <coop-anything checkout>
 python -I tools/analyze-soak.py <run file>
@@ -91,7 +97,15 @@ The harness starts two isolated copies of the game with MelonLoader, refuses to 
 end. It can kill/relaunch either side on a timer and can put the co-op-anything chaos
 relay between the two copies.
 
-Last suite results, 2026-10-23 (v0.7.0): `-ItemTest` 150 s — guest picked up the hammer,
+Last suite results, 2026-10-23 (v0.8.0): `-PlaceTest` 100 s — host sent
+`placement out n=50 chunks=3 fp=50:D6465449` at prepare, on request and on the 15 s timer;
+the guest applied it (`iPlaced` 150 → 250) and `ipos` was `50:D6465449` on **every** paired
+sample. The placement-test nudge moved `tb1` from (5.64, -2.76, 1.61) to
+(8.14, -2.76, 4.11) on the guest; the host's table came back and put it at
+`(5.64, -2.76, 1.61)` **12 ms later**, with `ipos` matching again. Same run: 48 doors with
+no mismatches, Granny pinned to the host, item ownership, avatar 1.85 m / crouch.
+
+Earlier the same day (v0.7.0): `-ItemTest` 150 s — guest picked up the hammer,
 its own hand stayed empty while it drew the item in the host's hand, host applied
 `owner=guest`, avatars created at the feet at 1.85 m, crouch detected; `-PauseTest` 150 s —
 two simulated menu pauses each restored on the next frame (`Time.timeScale 0 -> 1`, after
@@ -104,11 +118,13 @@ and scene follow in both directions with the boot request held until `SplashScre
 (§24).
 
 Not covered: a real network, three or more players, a full playthrough, re-entry after a
-catch.
+catch, and **placement across two PCs with genuinely different saves** — two installs on one
+PC share `AppData\LocalLow\DVloper\Granny` and roll the same layout, so the correction path
+was exercised with a forced deviation (`--coop-placetest`), not a natural one.
 
 ## How to play
 
-There is a release: [granny-coop v0.7.0](https://github.com/roosterdevv/granny-coop/releases/tag/v0.7.0)
+There is a release: [granny-coop v0.8.0](https://github.com/roosterdevv/granny-coop/releases/tag/v0.8.0)
 (`GrannyCoop.dll` plus a RU/EN install guide). To build from source:
 
 1. Copy your Granny install to a separate folder (do not mod the only install).
@@ -131,6 +147,16 @@ There is a release: [granny-coop v0.7.0](https://github.com/roosterdevv/granny-c
 - **The peer item is a replica.** The picker uses the game's real hand slot; the other
   player sees a clone with colliders and scripts off. It may not match the game's own hand
   prefab visually.
+- **Item placement was not tested against a real second save.** Each peer rolls its own
+  layout on scene load and the host's table overwrites the guest's. Two installs on one PC
+  share the game's `AppData` folder and therefore roll the *same* layout, so the local pair
+  cannot produce a natural mismatch; the correction was proved by moving one item on the
+  guest (`-PlaceTest`) and watching the host's table put it back. A run on two PCs with
+  different progress is still owed.
+- **Items the game spawns after prepare** (a new day) are only picked up by the next
+  placement table, so they can sit in the wrong place for up to 15 s.
+- **Two players dropping different items at the same moment** overwrite each other's
+  single-item placement message; the 15 s table repairs it, and a held item is never moved.
 - **The peer avatar is a capsule.** Height (1.85 m / 0.95 m crouch) is now right, but it is
   not a character model and has no crouch pose.
 - **The item flag revert was our own `CheckInventory` call.** A probe found the write
@@ -161,7 +187,9 @@ There is a release: [granny-coop v0.7.0](https://github.com/roosterdevv/granny-c
 3. Confirm scene follow in a real pair and decide whether the guest should also see the
    Play/difficulty step before entering `Scene`.
 4. Run a pair across a real network with the chaos relay in front, then a 30 min soak.
-5. A third player; the protocol has no hard limit but none has been tested.
+5. Run a pair on two PCs with different saves and confirm `ipos` converges without the
+   QA nudge; then shorten the placement interval or send items on spawn.
+6. A third player; the protocol has no hard limit but none has been tested.
 
 ## License
 
