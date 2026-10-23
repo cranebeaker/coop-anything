@@ -2235,7 +2235,7 @@ This is the reason earlier single-instance runs could look like "the mod does no
 test process ever survives, two game processes can exist. Check for `Granny` in
 `Get-Process` before starting a run.
 
-## 26. Spectating through the death sequence (v0.5.0–0.5.1, 2026-10-23)
+## 26. Spectating through the death sequence (v0.5.0–0.5.2, 2026-10-23)
 
 **What changed.** `CatchSync` used to spectate only while `playerCaught`'s flags were set.
 Those flags drop about a second after the grab, while the death sequence keeps running:
@@ -2319,12 +2319,32 @@ Re-run, same harness (`26-10-23_14-41-12.log`):
 The view covered the grab and the whole carry (28.3 s, through `Camera -> PlayerEyes ->
 PlayerCamInBed -> Camera`) and stopped 2.0 s after the game revived the player.
 
+**The survivor side of the same edge (v0.5.2).** The other half of a catch is the peer's
+view: a `Catch` message saying the other player is dead hides that player's standing avatar
+(`RemoteAvatar.RemoteDead`), because the body is with Granny or in the bed and the capsule
+would otherwise stand in the room as a ghost; the alive edge shows it again. Checked with the
+scripted host (`tools/fake-host.py --catch-at 30 --revive-at 55 --state-circle 3`,
+`26-10-23_14-48-52.log`):
+
+```
+[14:49:28.780] COOP catch: remote player caught (granny)
+[14:49:28.781] COOP avatar: hidden, the peer is dead
+[14:49:53.814] COOP catch: remote player is alive again
+[14:49:53.815] COOP avatar: shown again, the peer is alive
+```
+
+The status samples straddle it cleanly: `avVisible=True` at 14:49:20 with `rcatch=?`, then
+`avVisible=False ... rcatch=granny` for the 14:49:30–14:49:50 samples, and `avVisible=True`
+with `rcatch=alive` at 14:50:00.
+
 **Unknown / not tested.**
 
 - Death → `Menu` was never observed: the QA runs were stopped while still in `Scene`, so
   `Reset()` clearing the latch on the game-over screen has not been seen on a real death.
-- The remote side of the catch (`Catch` message, `rcatch`, hiding the remote avatar at the
-  body) is still only covered by unit-level code reading; it needs a real peer.
+- The two halves of a catch have only been checked separately, each against the scripted host
+  (one client spectating, one client hiding its peer's avatar). Nobody has watched a real pair
+  where one player is dead: whether the dead peer's position stream (frozen at the grab) and
+  the hidden avatar behave together is unverified.
 - Re-entry after a catch (guest back to Menu, then Play again) is still unverified, as in §23.
 
 **Next.** Watch one full death in a real pair (needs the owner's go-ahead) and confirm the
