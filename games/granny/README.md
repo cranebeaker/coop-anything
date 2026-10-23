@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unity **6000.0.58f2**, **IL2CPP** (global-metadata v31), D3D12 |
 | Versions tested | Steam **buildid 21006637** (v1.3.4), Windows 11, Steam app **962400** |
-| Projects | [granny-coop](https://github.com/dustopx0-code/granny-coop) — MelonLoader mod, protocol v1, report below |
+| Projects | [granny-coop](https://github.com/dustopx0-code/granny-coop) — MelonLoader mod, MIT, protocol v1, report below (README also in [Russian](https://github.com/dustopx0-code/granny-coop/blob/main/README.ru.md)) |
 | QA level | `automated` — scripted two-instance runs against real game clients |
 | Last updated | 2026-10-23 |
 
@@ -123,6 +123,6 @@ There is no release yet; build from source:
 
 ## License
 
-The mod repository has no license yet — the source is public to read but not licensed
-for reuse. The chaos relay it tests against is MIT, from
+The mod is MIT-licensed ([`LICENSE`](https://github.com/dustopx0-code/granny-coop/blob/main/LICENSE)).
+The chaos relay it tests against is MIT too, from
 [coop-anything](https://github.com/cranebeaker/coop-anything).

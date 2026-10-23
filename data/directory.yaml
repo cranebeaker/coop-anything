@@ -7755,7 +7755,7 @@
     write, so items are not playable yet. Scripted two-instance QA: 0 door mismatches in
     13 paired samples with one flipper, and the pair survives the bad_wifi chaos profile
     and an 8 s outage. The catch, the van, the day cycle and scene changes are not synced;
-    every run was two processes on one PC, no real network yet. No license file yet. No
+    every run was two processes on one PC, no real network yet. MIT licensed. No
     other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
     different commercial game by another developer.
   sources:
