@@ -301,6 +301,14 @@
   locked character's AI keeps working; only the rune's schedule says a body is really held.
 - The agony animation turns a downed character's AI off (`bAI_bEnable=0` event) and the
   revive turns it back on, for an AI squad member as for a body a player left.
+- The game's "Press [ENTER] or START" screen (`MainMenu.PressStartMsg`, called from
+  `MainMenu.Init2` on PC) is a one-item `Menu.VerticalMenu` with its item moved to Y 380 of
+  480, low on the screen; SMOD skips it.
+- Starting the main menu loads the configuration's `PhysicalAspectRatio` back for a moment, so
+  anything laid out right then from `Game.Get("PhysicalAspectRatio")` uses the monitor's ratio,
+  not the window's. Lay out by the ratio the mod enforces instead.
+- `PrintWindow(PW_RENDERFULLCONTENT)` of the D3D9 window sometimes returns an empty frame: retry
+  a few times. Never fall back to copying the screen: other windows on top end up in it.
 - `@(f)` around a PowerShell function that returns `, @($list)` gives a one-element array
   holding the list: its items join with spaces when written as a string, and an empty list
   becomes one empty string.

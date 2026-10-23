@@ -226,6 +226,10 @@ Results for 0.2.5 (2026-10-23):
   0.2.4 through its shortcut, from the real GitHub release. That test found the install
   record's shortcuts written as one joined line since 0.2.3 (removal left them, the next
   update could stop with an error); fixed and read back from old records.
+- Re-published the same day: the main menu's co-op label covered the game's "Press [ENTER] or
+  START" line, and in a 4:3 window on a 16:9 monitor it was laid out for 16:9. Checked at
+  16:10 and 4:3, with and without SMOD, in background test runs (no keys, window captures);
+  the update from 0.2.4 again, from the real GitHub release.
 
 Results for 0.2.4 (2026-10-23, final code):
 
