@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "name": "loot_race",
+  "title": "Loot race: both players grab the same item",
+  "description": "Both players stand at the same world item and activate it at the same moment. Exactly one copy must exist in total: the item must not be duplicated and must not vanish. `base` on the world object says which item type picking it up gives, so the jump planner knows the player inventories change.",
+  "players": 2,
+  "tags": ["loot", "race", "2p"],
+  "start": {"save": "autosave"},
+  "objects": {
+    "teddyRef": {"id": "VMS13TeddyBearRef", "kind": "thing", "base": "VMS13TeddyBear"},
+    "teddy": {"id": "VMS13TeddyBear", "kind": "item"}
+  },
+  "refs": {"item": "$teddyRef", "item_base": "$teddy"},
+  "setup": [
+    {"id": "enable_teddy", "op": "enable", "ref": "$teddyRef"},
+    {"id": "players_to_item", "op": "move", "who": "player", "to": "$teddyRef", "on": "all"},
+    {"id": "settle", "op": "wait", "seconds": 3}
+  ],
+  "steps": [
+    {"id": "nobody_has_it", "op": "check", "kind": "item_count", "who": "player", "item": "$teddy", "value": 0, "agg": "sum"},
+    {"id": "both_grab", "op": "activate", "ref": "$teddyRef", "on": "all", "parallel": true},
+    {"id": "exactly_one_copy", "op": "check", "kind": "item_count", "who": "player", "item": "$teddy", "value": 1, "agg": "sum", "timeout": 10},
+    {"id": "no_player_has_two", "op": "check", "kind": "item_count", "who": "player", "item": "$teddy", "value": 1, "cmp": "<=", "agg": "max"}
+  ]
+}

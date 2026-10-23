@@ -1,0 +1,25 @@
+{
+  "_notes": "A field list for the fake copies in demo.py. Keys starting with _ are ignored. See README.md for every key.",
+  "name": "demo",
+  "eval_allow": ["health"],
+  "read_methods": [],
+  "fields": [
+    {"label": "role",       "source": "state", "section": "session", "path": "session.role"},
+    {"label": "menu",       "source": "state", "section": "menu",    "path": "menu.kind"},
+    {"label": "health",     "source": "eval",  "expr": "health", "format": "{:g}"},
+    {"label": "position",   "source": "state", "section": "player",  "path": "player.pos", "format": "{0:.0f} {1:.0f} {2:.0f}"},
+    {"label": "cell",       "source": "state", "section": "player",  "path": "player.cell", "format": "{:08X}"},
+    {"label": "lastSeq",    "source": "state", "section": "sync",    "path": "sync.lastSeq"},
+    {"label": "acks",       "source": "state", "section": "sync",    "path": "sync.peers", "template": "slot {slot}: acked {acked}", "empty": "no clients"},
+    {"label": "digest",     "source": "state", "section": "sync",    "path": "sync.digests", "format": "ok {ok}  mismatch {mismatch}  repairs {repairs}"},
+    {"label": "mismatches", "source": "state", "section": "sync",    "path": "sync.digests.mismatch"},
+    {"label": "desync",     "source": "events", "types": ["sync.desync"], "last": 3, "template": "{key}: host {host} client {client}"},
+    {"label": "boxes",      "source": "events", "types": ["ui.messagebox"], "last": 3, "template": "#{seq} {text}"}
+  ],
+  "problems": [
+    {"field": "menu",       "op": "!=", "value": "none", "say": "{copy}: the {value} menu is open, it eats all input"},
+    {"field": "health",     "op": "<",  "value": 25,     "say": "{copy}: health is low ({value})"},
+    {"field": "mismatches", "op": ">",  "value": 0,      "say": "{copy}: {value} digest mismatch(es)"},
+    {"differs": "lastSeq",  "say": "lastSeq differs between copies: {values}"}
+  ]
+}

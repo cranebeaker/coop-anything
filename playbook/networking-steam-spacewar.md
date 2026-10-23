@@ -159,8 +159,15 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   allocates 160) and fill or read it only through `SetSteamID64` / `GetSteamID64`.
   The session request/failed callbacks start with that identity.
 - **SteamNetworkingMessage_t** (32-bit, MSVC build of the DLL): `data` at offset 0,
-  `size` at 4, and the sender identity at **16**. KeeperFX falls back to 12 if the
-  identity at 16 doesn't decode. Always call `SteamNetworkingMessage_t_Release`.
+  `size` at 4, and the sender identity at **12** in the real 32-bit `steam_api.dll`
+  (Steamworks.NET Standalone 2025.164.1; confirmed between two real accounts in
+  Clive Barker's Jericho, 2026-10-21). 16, which the 8-byte packing of the headers
+  suggests, reads sender 0: every message is then dropped as unknown and nothing
+  says why, while the session request (whose identity sits at 0) still looks fine.
+  Read 16 and 12 and keep whichever decodes to a non-zero id (KeeperFX does the
+  same), and log which one won. A mock that writes the identity at 16 passes either
+  way, so only a two-account test catches this. Always call
+  `SteamNetworkingMessage_t_Release`.
 - **SteamNetworkingMessage_t on 64-bit** (`steam_api64.dll`): `data` at 0 (an
   8-byte pointer), `size` at **8**, sender identity at 16. Reading `size` at 4 on
   x64 gives garbage. `FriendGameInfo_t` and the callback structs above keep the
@@ -196,6 +203,11 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   - after LobbyCreated, the host calls `SetLobbyData` and
     `SetRichPresence("connect", "+connect_lobby <id>")`, then opens
     `ActivateGameOverlayInviteDialog(lobby)`;
+  - the overlay may not open in an old D3D9 game (it didn't in Clive Barker's
+    Jericho, with the overlay loaded): list the friends online in your own menu
+    (`GetFriendCount(4)`, `GetFriendByIndex`, `GetFriendPersonaState` != 0) and send
+    `ISteamMatchmaking::InviteUserToLobby(lobby, friend)` for the one picked. The
+    friend gets a normal Steam invite;
   - a friend accepting while the game is running gives callback 333;
   - Join Game from the friends list gives 337 with the connect string;
   - when the game isn't running, Steam launches it with `+connect_lobby <id>`
@@ -221,6 +233,50 @@ Swap it in for the real `steam_api.dll` in the two test installs and run the
 normal two-instance tests. **Copy the mock and extend it with whatever extra
 exports your game uses** (HXCoop added the friend-list calls it uses to find a
 hosting friend).
+
+### Unity Mono games: mock Steamworks.NET, not the DLL
+
+When the game or the mod talks to Steam through Steamworks.NET (the managed C#
+wrapper), you don't need a native mock. A test-only BepInEx plugin can patch the
+wrapper with Harmony and leave `steam_api64.dll` alone. Graveyard Keeper's
+co-op mod (Back From The Grave) was tested this way: about 1,100 lines of C# for
+the mock and 300 for its transport.
+
+- **Find the calls:** grep the mod for `Steam(User|Friends|Matchmaking|Networking|Utils)\.`
+  and give each one a Harmony prefix that returns fake data and skips the
+  original. Fail loudly if a method isn't found.
+- **Callbacks:** a `Callback<T>` registers with Steam's native dispatcher. Prefix
+  `Callback<T>.Register` and `Unregister` for each callback type the mod uses,
+  keep the instance and its delegate (field `m_Func`) in your own table, and invoke
+  it yourself from the plugin's `Update` on the main thread. For `CallResult<T>.Set`,
+  take over only the call handles your mock issued (start them at a high fixed
+  value) and pass real handles on to Steam.
+- **Load order:** the patches must be in place before the mod registers its
+  callbacks, so the plugin must load first. A GUID that sorts first (`aaa.coopqa`)
+  was enough there. Make it do nothing unless a command-line flag (`-coopqa`) is set.
+- **Keep real Steam for the rest:** the Steam client stays signed in, and the game
+  still checks DLC and achievements against it. Only the calls the mod uses for
+  multiplayer are faked.
+- **Ids and transport:** fake individual SteamIDs from a reserved account range
+  (900000000 + player number) and lobby ids as chat-type ids. Lobby data and P2P
+  packets go between the copies over localhost TCP, one port per player.
+- **Copy the Steam rules the mod relies on:** unreliable sends over 1200 bytes and
+  any send over 1 MB fail; the first packet from a stranger raises
+  `P2PSessionRequest_t` and is held until `AcceptP2PSessionWithUser`; create fires
+  `LobbyCreated_t` then `LobbyEnter_t`; a join fires `LobbyDataUpdate_t` then
+  `LobbyEnter_t` on the joiner and `LobbyChatUpdate_t` on the members; every data
+  change fires `LobbyDataUpdate_t` on every member; when the owner leaves, the
+  next member becomes the owner. Add switches for extra latency and unreliable
+  packet loss.
+- **A setup error must fail the run.** `AccessTools.Method` without parameter
+  types throws on an overloaded method. The plugin then stopped without starting
+  the bot, and the test only timed out. Print `RESULT: FAIL` for setup errors, and
+  have the launcher fail a copy that writes no status file.
+- **A mock picks one order of events.** Ours always delivered lobby data before the
+  first P2P packet. That made a race in the mod fail on every join: the joiner's
+  late compatibility hello locked the mod's transport to the wrong channel. The
+  other order would have hidden it. Where real Steam doesn't promise an order, add
+  a switch for each order (we haven't added one yet).
 
 ## Reusing it for Deus Ex (Unreal Engine 1) co-op
 
@@ -327,10 +383,16 @@ and emulator netplay do), relay streams instead of packets:
 
   `ActivateGameOverlayInviteDialog` returns void, so there's no success value,
   and nobody saw the overlay on screen.
-- A real two-account join through the relay isn't tested yet. To confirm with a
-  friend:
-  - that the message offset 16 is right;
-  - invite and Join Game auto-launch;
-  - relay latency.
+- Real two-account play (Clive Barker's Jericho co-op, 2026-10-21, two PCs on one LAN,
+  two Steam accounts that are friends):
+  - the message sender is at offset **12**, not 16 (above): with 16 nobody could join;
+  - with that fixed, a friend joins from the in-game friends' games list and the
+    session plays (lobby, level load, world sync), round trip 6-19 ms;
+  - the overlay invite dialog did not open in that D3D9 game: invites go through
+    `InviteUserToLobby` from the game's own list (above);
+  - a scripted two-account test (host on one PC reads its lobby id from its log, the
+    other PC's game joins it by id) now runs with every regression there.
+  Still open: Join Game auto-launch when the game is not running, and two PCs on
+  different networks (relay rather than LAN).
 - HXCoop: all tests pass over the mock with real game clients relayed through it.
-  Real two-account play is the same open item.
+  Real two-account play: check the sender offset first.

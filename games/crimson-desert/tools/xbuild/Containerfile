@@ -1,0 +1,17 @@
+# Windows x64 MSVC-ABI cross toolchain: clang-cl + lld-link + Windows SDK/CRT via xwin.
+FROM docker.io/library/ubuntu:24.04
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      clang-19 clang-tools-19 lld-19 llvm-19 cmake ninja-build git ca-certificates python3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/clang-cl-19 /usr/local/bin/clang-cl \
+    && ln -s /usr/bin/lld-link-19 /usr/local/bin/lld-link \
+    && ln -s /usr/bin/llvm-rc-19 /usr/local/bin/llvm-rc \
+    && ln -s /usr/bin/llvm-mt-19 /usr/local/bin/llvm-mt \
+    && ln -s /usr/bin/llvm-lib-19 /usr/local/bin/llvm-lib
+# xwin 0.6.5, pinned by SHA-256 (verified against the release's .sha256 file).
+COPY dl/xwin-0.6.5-x86_64-unknown-linux-musl.tar.gz /tmp/xwin.tgz
+RUN echo "9fd53950b064d067f42428a69453b927656cae68dbd7f8d3f86dcb81c80dd22d  /tmp/xwin.tgz" | sha256sum -c - \
+    && tar -xzf /tmp/xwin.tgz -C /tmp && mv /tmp/xwin-*/xwin /usr/local/bin/ && rm -rf /tmp/xwin*
+# Accepting the Microsoft SDK/CRT license was approved by the owner (2026-10-19).
+RUN xwin --accept-license splat --output /xwin && rm -rf .xwin-cache
+COPY clang-cl-msvc.cmake /opt/clang-cl-msvc.cmake

@@ -126,6 +126,15 @@ Linux and Steam Deck notes:
 - UE4SS is Windows only per its README, but Windows UE games run under Proton, with the proxy DLL override applied the same way.
 - Goldberg lists Linux support (`libsteam_api.so`).
 
+### 3.1 This repo's own tools for several copies and sync tests
+
+`tools/gameslot` (a lease lock so only one test lane runs game copies at a time) and
+`tools/gamepool` (isolated hardlinked installs, a warm pool of reused copies, low-cost
+minimized launches, crash log reading) do the bookkeeping above for any Windows game from a
+per-game config. The rest of the sync test tools (chaos box, flight recorder, fuzzer,
+ownership library, fake world, scenarios, bots, animation checker) are listed in
+[tools/README.md](../tools/README.md). How to run copies: [multi-instance-testing.md](multi-instance-testing.md).
+
 ## 4. Agent workflow helpers
 
 | Tool | What it does | Link | Install | Agent interface | License / cost | Pitfalls |

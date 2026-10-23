@@ -62,13 +62,19 @@ def errors_for(i, e):
     return errs
 
 
+def yesno(v):
+    # unquoted yes/no in YAML parse as booleans
+    return ("yes" if v else "no") if isinstance(v, bool) else v
+
+
 def cell(v):
+    v = yesno(v)
     return str(v if v not in (None, "") else "?").replace("|", "/").replace("\n", " ")
 
 
 def scope(e):
     s = e.get("coop_scope") or {}
-    parts = [f"{k.replace('_', ' ')}: {s[k]}" for k in SCOPE_KEYS if k in s]
+    parts = [f"{k.replace('_', ' ')}: {yesno(s[k])}" for k in SCOPE_KEYS if k in s]
     return ", ".join(parts) or "?"
 
 

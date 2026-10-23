@@ -29,6 +29,7 @@ renders `DIRECTORY.md` from it, so edit the YAML, never the table.
     - https://example.org/source
   checked: 2026-10-16                 # date the entry was last verified
   up_for_adoption: false              # optional; true = the author stopped and wants someone to take over
+  made_with_coop_anything: false      # optional; true = built or revived with Co-op Anything (the site tags it)
 ```
 
 ## QA levels (the flag that matters most)

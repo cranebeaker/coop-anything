@@ -1,1 +1,4 @@
 /local/
+__pycache__/
+build/
+coop-bots-out/
