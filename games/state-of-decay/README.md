@@ -6,13 +6,13 @@
 | Versions identified | Steam app 241540, buildid 305948, original DX9 release with Breakdown and Lifeline. Isolated test copies launched repeatedly for RE; Steam install never modified. Not Year-One Survival Edition. |
 | Projects | none shipped; in-progress investigation of the build's dormant CryEngine netcode (this repo) |
 | QA level | none |
-| Last updated | 2026-10-21 |
+| Last updated | 2026-10-23 |
 
 ## Where things stand
 
 Friends cannot play this copy together yet. The game shipped single-player. Undead Labs cancelled the co-op they had planned, and no later mod was found that adds it.
 
-Investigation is underway on the dormant CryEngine netcode in this build. On isolated test copies (never the Steam install), a second process connects over UDP and the host spawns `CoopPeer2`; with `host_boot_coop` the host also renders gameplay. It is still not playable: the joiner stays on the title stack (`Unable to bind`), and client-owned channel 2 does not walk or send aspects. Those join/spawn results depend on runtime helpers under gitignored `local/` (NULL-join patches, UDP helpers, session scripts) and are not reproducible from this write-up alone. Detail is in [NOTES.md](NOTES.md).
+Investigation is underway on the dormant CryEngine netcode in this build. On isolated test copies (never the Steam install), a second process connects over UDP and the host spawns a second player character for it; with `host_boot_coop` the host also renders gameplay. As of 2026-10-21 the joining copy can **walk its own character**: with two runtime changes on the joining copy (a UI-gate bypass inside `CPlayerInput::OnAction` and loading a character model onto its player, which it never gets), forward/back/strafe input — including a real keyboard key sent to the client window — moves the player there, and the host's copy follows through the engine's own client→host input replication. As of the same evening the joining copy also **shows the game**: its window was drawing the renderer's load-time Flash movie (the title art); stopping that playback, skipping the front-end update and popping the title menu gives a third-person view of its own player, with mouse look working. Loading a character model on each machine's copy of the other player makes both players visible to each other. Later fixes (NOTES Phases 3r–3s) gave survivors their models on the joining copy, fixed its turning and strafing (its character had been spawned under the game's AI control), and brought up its minimap and health/stamina HUD. As of 2026-10-23 the two players can **fight zombies together** (NOTES Phase 4a): both machines see the same zombies (clothed bodies on the joining copy), zombies target and damage either player, the joining player's melee hits and kills register on the host, each player keeps their own kill count, the joining player has a melee weapon (starter hammer, cycled from community storage with the middle mouse button) and the host player's own weapon works as in single-player. Zombies stay alive, chase and spawn around the joining player even when the host's player is several hundred metres away. Host-to-client data (banners, minimap icons, zombie models, weapon and pause state) goes over the game's own network (script RMIs and chat messages). It is still not playable with a friend as a product: missions, community and other single-player state run only on the host, the joining player has no survivor record of her own, a long stress test still hung the host once (likely cause removed, see Known issues), and everything is applied at runtime by helpers under gitignored `local/`, so it is not reproducible from this write-up alone. Detail is in [NOTES.md](NOTES.md) (Phases 3p–4a).
 
 State of Decay 2 is a different game and already has official co-op. It is not this install.
 
@@ -51,7 +51,7 @@ Saves for `sys_user_folder = USER` go to `%USERPROFILE%\Saved Games\USER` (junct
 
 ## What we changed
 
-No shippable co-op build yet. On the test copies only: loose probe lines in `main.lua` and `singleplayer.lua`; `singleplayer.lua` names a channel > 1 actor `CoopPeer<channel>` instead of `Dude`; cfg files that load `class3`; runtime NULL-check patches written into the joining copy's memory (exe file unchanged); and session/RE helpers (UDP relay, `host_boot_coop` / `session_join_leave`, CPI bridges, etc.). **All of that lives under gitignored `local/`**, not in this repo — the spawn/join results above cannot be reproduced from the published files alone.
+No shippable co-op build yet. On the test copies only: loose probe lines in `main.lua` and `singleplayer.lua`; `singleplayer.lua` names a channel > 1 actor `CoopPeer<channel>` instead of `Dude`; cfg files that load `class3`; runtime NULL-check patches written into the joining copy's memory (exe file unchanged); and session/RE helpers (UDP relay, `host_boot_coop` / `session_join_leave`, CPI bridges, etc.). Since then `coop_setup.py` also installs the combat and zombie layer: input and state-machine replication both ways, the joining player's hits and kill counts, zombie targeting, focus, cull and population for her, weapon relay, shared pause, and crash guards; extra RMIs live in the loose `singleplayer.lua`. **All of that lives under gitignored `local/`**, not in this repo — the spawn/join results above cannot be reproduced from the published files alone.
 
 ## QA
 
@@ -63,8 +63,14 @@ There is no co-op build to install.
 
 ## Known issues
 
-A second player cannot actually play yet. With `host_boot_coop` the host renders and listens; console `map class3 server` alone still blacks out. The joiner needs runtime NULL patches to survive connect, then sits at menu depth 1 with `Unable to bind object to network`. Channel 2 is client-owned: host remote-CPI pose pokes do not replicate to the joiner; client OnAction floats do not move the entity. `fe_dismiss` on join-only clients often Crash Dumps.
+There is no installable build: a session is the two test copies booted by `local/restart_session.sh` and patched at runtime by `local/coop_setup.py` (with `local/hud_relay.py` running next to the host). `Unable to bind object to network` on the joining copy is expected for a client and harmless.
+
+- Missions, community, journal data and use prompts are single-player state on the host; the joining player has no survivor record.
+- New zombies spawn around the joining player only while she is within 300 m of the host's camera (the host streams the level around its own camera only; spawning 550 m out killed the host once). Zombies already near her are kept at any distance.
+- A 30-minute stress test (constant teleports and spawns) hung the host once in the game's own lookup of the radar HUD element: the UI element map had a node linked to itself. The likely cause, the kill-count banner running UI script from inside native hooks, is now off (the count is still kept, just not shown). Not yet re-verified by a full soak.
+- Windows sleep (Modern Standby) during a session throttles both games and crashes both renderers on wake. Keep the PC awake while testing.
+- Spawn density follows the map: some areas (near the home base, open fields) have no zombies for either player.
 
 ## Next steps
 
-Make client-owned ch=2 walk (OnAction → physics) without a crashing leave-title path, or install a client-safe `AG+0x28` game-nub bind table so outbound aspects can flow. Do not launch the Steam install. See [NOTES.md](NOTES.md) for addresses and failed attempts.
+Re-run the 30-minute soak (`local/zm_soak.py`) without the kill banners to confirm the host hang is gone, then give the joining player a survivor record of her own (journal, prompts, community), and move the remaining runtime patches toward something installable. Do not launch the Steam install. See [NOTES.md](NOTES.md) (Phase 4a) for addresses and failed attempts.

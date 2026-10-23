@@ -17,7 +17,7 @@ Private install path, exe hash and Steam build id live in `local/identity.md` (g
 | Exe version resource | FileDescription "ULLaunch Application", FileVersion 14.6.23.5340, ProductVersion 1.0.0.1, Copyright (C) 2010 | exe VersionInfo |
 | Engine | CryEngine 3 | ModDB game page "CryENGINE 3"; Wikipedia "Engine: CryEngine 3"; install layout `Engine/` + `Game/*.pak`; exe strings `CryEngine`, `CryAction`, `CryNetwork`, `CrySystem`, Lua 5.1.1, PDB-style path `c:\ul\class3\main\code\cryengine\...` |
 | DLC installed | Breakdown (depot/app 259040, `Game\sandbox\BreakdownC.pak`) and Lifeline (depot/app 259041, `Game\beltway\BeltwayC.pak` and `BeltwayU.pak`) | appmanifest InstalledDepots; dir listing |
-| OS | Windows 10 | this PC |
+| OS | Windows 10 | test machine |
 
 ### Answers to the triage questions
 
@@ -51,7 +51,7 @@ Private install path, exe hash and Steam build id live in `local/identity.md` (g
 - Text of `singleplayer.lua`, the multiplayer entity scripts, and `multiplayer.cfg`.
 - Whether CryNetwork is initialized in a normal single-player launch.
 - Whether any leaderboard or Xbox service is still live. Not tested.
-- Saves location on this PC. Not searched, and the game has not been launched (`LastPlayed` 0).
+- Saves location. Not searched in this phase (no launch yet); Phase 3b found where the first launch of the test copy writes its profile.
 
 ## Phase 1 — Research (2026-10-19)
 
@@ -78,7 +78,6 @@ Searches that ran:
 
 Build co-op from zero. Nothing found is playable shared-world co-op for build 305948.
 
-Owner agreed on 2026-10-19 to the test copy, installing PyYAML, and opening the claim issue.
 
 - Test copy: `local/test-install` (gitignored). 25 files, 2390985941 bytes, same as the Steam install. `StateOfDecay.exe` SHA-256 matches. Steam install not modified.
 - `python -m pip install pyyaml` installed PyYAML 6.0.3. `python tools/build_directory.py` wrote `DIRECTORY.md` (256 entries). The gap row is in the Open gaps table.
@@ -92,7 +91,7 @@ That method is Xbox `XMemDecompress` (LZX), the mapping in QuickBMS `zip2.bms`. 
 
 ## Phase 3 — Scripts (2026-10-19)
 
-Read from the test copy only. The Steam install was not modified and the game was not launched.
+Read from the test copy only, before its first launch (test copies were launched from Phase 3b on, as the README says). The Steam install was not modified.
 
 ### Observations
 
@@ -105,7 +104,7 @@ Read from the test copy only. The Steam install was not modified and the game wa
 - `scripts/entities/actor/player.lua` is the `Player` class, animation graphs `UL_FullBody.xml` and `UL_UpperBody.xml`. It has `Server:OnInit`, `Server:OnInitClient`, `Client:Revive`, `Client:MoveTo`, `OnSave` / `OnLoad`. `scripts/main.lua` only reloads `common.lua`, `physics.lua`, and `Debug.lua`.
 - `scripts/entities/ul/` is the game's own entities (searchable containers, homesite, infestationsite, facility socket, stockpile, zombie spawn editors). `UL_Searchable` has `NotSearched` and `Searched` states and separate `Server:OnInit` / `Client:OnInit`.
 - `scripts/entities/multiplayer/*.lua` (flag, spawn point, spectator point, and the rest) are Crytek 2004 entity scripts. `SpawnPoint.Server:OnInit` assigns a team.
-- The exe contains the strings `sv_port`, `sv_maxplayers`, `%USER%/SaveGames`, `%USER%/Profiles/`, and `%USER%/game.cfg`. It does not contain a literal Documents path. Where `%USER%` points on this PC was not checked, because the game was not launched.
+- The exe contains the strings `sv_port`, `sv_maxplayers`, `%USER%/SaveGames`, `%USER%/Profiles/`, and `%USER%/game.cfg`. It does not contain a literal Documents path. Where `%USER%` points was not checked in this phase, before the first test launch (Phase 3b answers it).
 
 ### Derived
 
@@ -166,7 +165,7 @@ Steam install not modified. Both processes were test copies. The host was `local
 
 ### Unknowns
 
-- Why the listen server marks the second process unreachable after the level has already streamed. A UDP exchange on the Ethernet address completed 300 packets; closing one socket produced Windows error 10054. During a game join the second process kept its UDP socket open, and the host resent to that same port, then logged `32769` from it and disconnected with cause 12. `sys_SleepIfInactive 0` stretched the resend from about 7 seconds to about 18 seconds and still ended in `32769`. Silencing the client log did not change it. `Scripts/Network/Scheduler.xml` and `EntityScheduler.xml` are in `gamedata.pak` and include a `Default` policy; the scheduling lines are a per-class warning, not a missing file. `map class3 dedicated` binds the port but does not finish the level: a loose `LevelInfo.xml` gets past the first missing file, then `LevelData.xml` and `LevelDataAction.xml` fail to open and `OnLevelLoadEnd` never comes. Private route notes are in `local/vpn-route.md`.
+- Why the listen server marks the second process unreachable after the level has already streamed. A UDP exchange on the LAN address completed 300 packets; closing one socket produced Windows error 10054. During a game join the second process kept its UDP socket open, and the host resent to that same port, then logged `32769` from it and disconnected with cause 12. `sys_SleepIfInactive 0` stretched the resend from about 7 seconds to about 18 seconds and still ended in `32769`. Silencing the client log did not change it. `Scripts/Network/Scheduler.xml` and `EntityScheduler.xml` are in `gamedata.pak` and include a `Default` policy; the scheduling lines are a per-class warning, not a missing file. `map class3 dedicated` binds the port but does not finish the level: a loose `LevelInfo.xml` gets past the first missing file, then `LevelData.xml` and `LevelDataAction.xml` fail to open and `OnLevelLoadEnd` never comes.
 - Whether `OnClientConnect` will run for that peer if the disconnect is avoided.
 - Whether `ULBarricade` and the other UL classes can replicate once a second channel exists. They currently have no network scheduling parameters.
 
@@ -225,7 +224,7 @@ Test copy only. No exe file changed. Automation scripts in `local/`.
 
 ### Observations
 
-- SendInput / PostMessage still cannot drive the menu (DirectInput). Mouse movement on screen earlier was the owner, not the agent.
+- SendInput / PostMessage still cannot drive the menu (DirectInput).
 - Flash `SelectSoD` only highlights the DLC tile. Confirm/Play is MouseRemap `"A"` → action code **6** stored at `0x01970f80` (idle value `0x19` = 25). Writing that global alone is not consumed on the DLC-select screen; real key path calls `0x01615CB0(action)` which dispatches to the current menu state's input handler at entry `+0x8`.
 - DLC-select input handler: `0x01619B10`. Action 6 / 10 jumps to Play body `0x01619C5A` (start sound + `MenuStackPush` state `0x11`).
 - `CreateRemoteThread` calling `0x01619B10(6)` advances DLC-select → main menu (`Start a New Game` highlighted). Depth 1→2.
@@ -246,7 +245,6 @@ Test copy only. No exe file changed. Automation scripts in `local/`.
 - Whether `singleplayer.cfg` vs `multiplayer.cfg` blocks hosting even if a socket is opened.
 
 
-
 ## Phase 3g — Rendered listen host via `map %s server` (2026-10-20)
 
 Test copies only. Runtime patch; exe file not modified on disk.
@@ -257,9 +255,9 @@ Test copies only. Runtime patch; exe file not modified on disk.
 - Menu New Game does **not** use the CryAction `map %s` site at `0x006E4357`. Stack dump of `IConsole::ExecuteString` during New Game showed return address `0x0144D7E2`.
 - The real formatter is at `0x0144D7AF`: `snprintf(buf, 0x100, "map %s", level)` then `ExecuteString(buf)`. Level name comes from `0x01E80CE0` (Class3).
 - Runtime patch: replace the `push "map %s"` immediate with a remote string `map %s server`. Script: `local/force_map_server.py <pid>` (before `boot_to_gameplay.py`).
-- Result after `boot_to_gameplay.py`: log shows `Executing console command 'map Class3 server'`, loads **`multiplayer.cfg`**, `OnClientConnect channel=1`, UDP listen on `192.168.88.37:64087` (from `sv_bind` / `sv_port` in host `user.cfg`).
+- Result after `boot_to_gameplay.py`: log shows `Executing console command 'map Class3 server'`, loads **`multiplayer.cfg`**, `OnClientConnect channel=1`, UDP listen on the host address, port `64087` (from `sv_bind` / `sv_port` in host `user.cfg`).
 - Host screenshot: full rendered campaign (Marcus/Ed, HUD, minimap, objective, ~117 FPS) — **not** the black `map` path. So front-end New Game + `server` flag gives both render and listen.
-- Client (`local/client-install`, `connect 192.168.88.37 64087`, `patch_client.py`): host logs `OnClientConnect channel=2`, `AllocateObject ... (CoopPeer2)`, `spawned channel=2 ... name=CoopPeer2`, `PlayerJoined`. Both processes stayed up.
+- Client (`local/client-install`, `connect <host address> 64087`, `patch_client.py`): host logs `OnClientConnect channel=2`, `AllocateObject ... (CoopPeer2)`, `spawned channel=2 ... name=CoopPeer2`, `PlayerJoined`. Both processes stayed up.
 - Client window remained on the DLC title menu (`[SPC] Play State of Decay`) after join — same as earlier black-host joins. Peer exists on the host; client has not taken over CoopPeer2 / left the front-end yet.
 
 ### Derived
@@ -286,25 +284,25 @@ Test copies only. Runtime patch; exe file not modified on disk.
 - Client must be started **after** the host UDP listen is up. `connect` in client `user.cfg` during early boot often fails silently (no client UDP socket).
 - Writing `menu depth` to 0 on the client crashes the process. Need a real FrontEnd unload / possess path for CoopPeer2.
 
-## Phase 3h — This PC handoff; second join crash; channel 2 again (2026-10-20)
+## Phase 3h — New test machine; second join crash; channel 2 again (2026-10-20)
 
-Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam install `D:\SteamLibrary\steamapps\common\State of Decay` not modified. Exe SHA matches prior build.
+Test copies under the gitignored `local/` folder; the Steam install was not modified. Exe SHA matches prior build.
 
 ### Observations
 
-- AmneziaVPN was stealing `192.168.88.0/24` until excluded. After exclude, `Find-NetRoute` for `192.168.88.25` selects Ethernet 4. Same-PC tests then used `sv_bind 127.0.0.1` / `connect 127.0.0.1 64087` to avoid LAN/VPN entirely.
+- A local network route on the test machine hid the LAN address at first. Same-machine tests then used loopback (`sv_bind 127.0.0.1` / `connect 127.0.0.1 64087`).
 - `%USERPROFILE%\Saved Games\USER` and `USER2` junctioned to host/client profile folders.
-- Probe Lua paths updated off `D:/react-projects/...` to this project tree.
+- Probe Lua paths now point into this project tree.
 - First join with only the old NULL guard (`0x01613F9C`) still dumped after `OnLevelLoadEnd`. Dump `…21-33-14.dmp`: AV at `0x013E7410`, `mov edx,[edi]` with `edi==0` (vtable+0x184 call). Second runtime patch in `local/patch_client.py` skips that call and sets `eax=0`.
 - With both patches + host `host_boot_coop` + client `connect` in `user.cfg` after UDP listen: host logs `OnClientConnect channel=2`, `AllocateObject … (CoopPeer2)`, spawn at Dude+2 m. Both processes stay up. Client log shows `PrepareLevel` / `OnLevelLoadEnd`, `Unable to bind … Dude/CoopPeer2`, then `PlayerRenamed … Dude(1)`.
 - Joined client has a live `CActionGame*` (`0x019F1004` non-NULL) and menu depth 1 / FE flag `0x01EE8807=1`. Calling `0x016171F0` alone did not clear the flag. Wrapper `0x01449810` (unload + follow-up) raised menu depth 1→2 and left the flag set. Do not treat that wrapper as the dismiss path.
 - `deferred_connect.py` first cut used `add esp,0x14` after thiscall `ExecuteString` and crashed main thread at `eip=0` (`…21-40-43.dmp`). Stack cleanup fixed to `add esp,8` only; prefer `user.cfg` connect after listen for the known-good path.
-- Use `C:\Users\user\AppData\Local\Python\bin\python.exe` on this PC (WindowsApps `python` stub is broken).
+- Use a real Python 3 install (the Windows Store `python` stub does not work).
 
 ### Derived
 
 - This build needs **two** client NULL guards for a stable join, not one.
-- Channel 2 + CoopPeer2 on a rendered listen host reproduces on this PC over loopback.
+- Channel 2 + CoopPeer2 on a rendered listen host reproduces over loopback on the test copies.
 - Client already has an ActionGame after join; the remaining wall is dismissing Class3FrontEnd / possessing CoopPeer2, not creating the game object.
 
 ### Unknowns
@@ -312,7 +310,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 - Correct FrontEnd unload / possess entry that clears FE and gives control of CoopPeer2 without pushing another menu state.
 - Whether PrintWindow black captures are D3D-only (likely) or the host really went black after long join.
 
-## Phase 3i — FrontEnd dismiss mapping (2026-10-20, this PC)
+## Phase 3i — FrontEnd dismiss mapping (2026-10-20)
 
 ### Observations
 
@@ -329,7 +327,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 ### Derived
 
 - Leaving the title is at least two steps: (1) FE object/flag dismiss at `0x01617130`, (2) something else that tears down the Flash/title presentation and binds the local view to CoopPeer2 / Dude(1). Step 2 is not MenuStackPop and not depth poke.
-- Stable join recipe on this PC: `sv_bind`/`connect` **`192.168.88.25`** (not `127.0.0.1` — Docker Desktop hosts maps `host.docker.internal`→`192.168.88.16`, and a loopback connect logged `host.docker.internal:64087` then failed) + dual client NULL patches + `connect` after UDP; then dismiss-only (`0x01617130`) for FE flag experiments. Confirmed again: channel 2 + fe 1→0, depth left at 1, both processes up (host 5016 / client 1184 this run).
+- Stable join recipe: `sv_bind`/`connect` on the host address (on the test machine loopback first resolved to another local host name and failed) + dual client NULL patches + `connect` after UDP; then dismiss-only (`0x01617130`) for FE flag experiments. Confirmed again: channel 2 + fe 1→0, depth left at 1, both processes up.
 
 ### Unknowns
 
@@ -360,7 +358,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 - Exact reason pop-with-noreopen still left depth 1 / fe 1 on the clean join test.
 - How to hide Class3FrontEnd Flash while depth remains 1 (or how host zeroes depth without AV).
 
-## Phase 3k — Depth clears; Flash carousel remains (2026-10-20, this PC)
+## Phase 3k — Depth clears; Flash carousel remains (2026-10-20)
 
 ### Observations
 
@@ -400,7 +398,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 - Whether `0x01EE8898=0xFC0` is a sentinel/state code or a corrupted handle from a client-only path.
 - Correct possess/view bind once the world is visible.
 
-## Phase 3l — World view after destroying FE movie (2026-10-21, this PC)
+## Phase 3l — World view after destroying FE movie (2026-10-21)
 
 ### Observations
 
@@ -425,7 +423,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 
 - Host `6696` / client `18048` after full leave recipe: both render world when windows are tiled apart. Client still unbound for input.
 
-## Phase 3m — Join crash fix + local actor id (2026-10-21, this PC)
+## Phase 3m — Join crash fix + local actor id (2026-10-21)
 
 ### Observations
 
@@ -455,7 +453,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 - Host entity-slot-like records exist for Dude (`vt 0x183D1B8`, eid at +8). Client had no matching records for `0xFE5F` / `0x1FF5D` in the same shape; raw `0xFE5F` heap hits look like non-object data.
 - **Unsafe on joined client (crash):** `g_gameRules:GetPlayerByChannelId(2)` via `#System.Log`, and earlier `g_detachCamera` / `r_DisplayInfo`. Prefer pure RPM for possess dig. Orchestrator: `local/session_join_leave.py` (host boot + patch + connect + dismiss/destroy leave).
 
-## Phase 3n — CGameObject layout + bind map root (2026-10-21, this PC)
+## Phase 3n — CGameObject layout + bind map root (2026-10-21)
 
 ### Observations
 
@@ -482,7 +480,7 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 
 - IGameObject method at `0x78EF20` (secondary vt ~slot 17) special-cases `ebx==8` as BecomeLocalPlayer. Naive main-thread call `SendEvent(igo, 0, 8, 0, 0)` **crashed** the client (dump after call). Need correct `SGameObjectEvent` / arg layout before retrying.
 
-## Phase 3o — BecomeLocalPlayer args + CPlayerInput (2026-10-21, this PC)
+## Phase 3o — BecomeLocalPlayer args + CPlayerInput (2026-10-21)
 
 ### Observations
 
@@ -668,3 +666,631 @@ Test copies under `D:\projects\coop-anything\coop-anything\local\`. Steam instal
 - Client-safe game-nub: alloc + minimal list + insert local ch=2 key/value, then `BindToNetwork` — **without** running full `0x72FB00` ctor (that crashed once). A bare `VirtualAlloc` shell (`vt=0x17CDB50`, empty sentinel at `gn+8`) can be installed at `AG+0x28` without an immediate crash; Bind was not completed because the client main thread was parked in ntdll (`EIP>=0x70000000`) and hijacking that state killed the process — only inject when `EIP` is in the game image.
 - Keep avoiding `fe_dismiss` on join-only clients.
 
+
+## Phase 3p — Joining player walks, input replicates client→host (2026-10-21, Claude Code)
+
+New tooling in `local/sodlib.py` (gitignored, described here so it can be rebuilt):
+
+- **Safe main-thread calls.** Every older injector (`inject_onaction.py`, `fe_dismiss.py`, `console_exec.py`, …) hijacked the main thread at an arbitrary EIP and jumped back without saving registers or flags. That alone explains many of the "Crash Dump Error!" dialogs blamed on the called functions. `sodlib` instead patches the exe's `PeekMessageW` IAT slot (`0x0178B7F4`) with a stub that runs one queued call per pass on the main thread (thread id check), saves `pushfd/pushad` + `fnsave`, and restores `esp` after the call (works for cdecl/stdcall/thiscall). A vectored exception handler turns an access violation inside a queued call into a reported fault; the game keeps running.
+- Counting / argument-logging detours (`hook_count`, `hook_log`), hardware write watch on the main thread (`watch_writes`, DR0 + VEH), exit trap (`trap_exits`: parks `ExitProcess`/`NtTerminateProcess` in a spin loop so a silent self-exit can be inspected), and `lua()` (below).
+
+### Observations
+
+- `"Unable to bind object to network (CoopPeer2)"` on the client comes from `CGameObject::BindToNetwork` (`0x7907C0`): if `GO+0x50` (channel id) is set it asks for the game **server** nub (`AG+0x28`) and warns when there is none. A client never has one, and it only binds when `gEnv->bServer` (`gEnv+0x12C`). Benign on a client; the earlier hunt for a client game nub was a dead end.
+- Authority is already delegated correctly. `CGameContext::SynchObject` (`0x76E790`) on the host serializes only objects the host owns (host Dude, 4 survivors, rules); the client serializes only its ch=2 player, input aspect `0x4000`, ~10 Hz (change polling). Built-in `test_delegate <entityName> <channel>` exists (`0x668890`). The ch=2 entity is named `Dude(1)` on both sides (log: `CoopPeer2$o renamed to Dude(1)`), so `test_delegate CoopPeer2 2` finds nothing.
+- `CPlayer::NetSerialize` = `0x1574A30`; input aspect branch calls `CPlayerInput::GetState` (vt[6] `0x164D580`) when writing and `SetState` (vt[5]) when reading. Host `CNetPlayerInput::SetState` = `0x169E740`. `GetState` serializes the *physics velocity* of the player when `[0x1E75B74]+0x260 != 0` (it is 1), so nothing changes upstream unless the client player actually moves locally.
+- UL world state `[0x1E81F20]`: host **2** (playing), client **3** (front-end idle). Switch at `0x145ED60` (jump table `0x145EE48`): 2 → `0x1449720` then UL world tick `0x145E040` (community sim, UI, all state machines); 3 → `0x145B080`; 4/5 → loading→playing transition `0x145B100` (calls FE teardown `0x16171F0`, sets state 2). `0x1449AD0(teleport, fade)` enters loading (state 4/5). `NSRTSWorld::OnStartGame` = `0x145F730`.
+- Calling `0x1449AD0(0,0)` on the joined client takes it 3→4→2 within ~1 s: depth 0, fe 0, UI flags 0, no exit. The world tick then runs on the client, but ~1 min later the client crashed (AV `0x161226E`, UI queue arrays `0x1EE7F5C/60`) — `OnStartGame` never initialised that state. **Not used** in the working recipe below.
+- UI gate `0x146EF10` (`[0x1EA7FFC]` bit `0x800` = "a menu is open") has only two callers: `CPlayerInput::OnAction` (`0x164FA82`) and `0x16B4B05`. Clearing bit `0x800` by hand makes the client push the pause menu (depth 1→2); a few seconds later a Flash menu event reached `FrontEndEventListener` (`0x16189A0`) and the client called `ExitProcess` (caught by the exit trap; stack through `NSUIMFrontend::MenuStackPush`). Patching the gate globally had the same effect. Patch only the OnAction call site.
+- `CPlayerInput::PreUpdate` (vt[1] `0x164E900`) copies `+0x2C..` → `+0x44..` unconditionally; with the OnAction call-site bypass the client's `+0x48`/`+0x94` follow the injected action.
+- Root cause of "client player does not walk": **the client's player entity has no character model.** `IEntity` vt+0x144 (`0xBC66F0`, `GetCharacter(slot)`) returns null for `Dude(1)` on both machines and for the remote `Dude` on the client; only the host's own `Dude` has `characters/male/human/story_characters/marcus_campbell.cdf`. Locomotion is animation-driven (`CAnimatedCharacter::UpdatePhysicalEntityMovement` `0x885E50`), so no character → no movement.
+- Console Lua (`#...`) does nothing in this build even with `con_restricted 0` (server-controlled on the client; set it on the host). Lua runs fine through `gEnv+0x20` (IScriptSystem) vt[6] `ExecuteBuffer(buf, len, desc, env)`.
+- After `e:LoadCharacter(0, "<that .cdf>")` on the client's `Dude(1)` via `ExecuteBuffer`, holding `OnAction(moveforward)` walked the client player **16.45 m in 4 s (4.0 m/s)** and the host's copy of `Dude(1)` followed **14.95 m**, with host `CNetPlayerInput::SetState` firing ~10/s. Run `walk_test.py`, 2026-10-21 22:0x, session host/client pids in `local/last_pids.txt`.
+
+Other client-side state set during that run (not yet known which are required, see Unknowns):
+
+- `CAnimatedCharacter` pre-physics gate `0x875A30` asks the entity render proxy whether the character is visible (vt+0x64); forced true for the local player's AC only.
+- `CAnimatedCharacter` request check at `0x8814C3` drops requests whose renderer-frame stamp (`AC+0x144`) is older than `GetFrameID(1)` (`AC+0x134`); in world-state 2 the client was always one frame behind. Patched to accept one frame old. (In state 3 the stamps matched.)
+- `CGameObject::ShouldUpdateAI` (`0x78D8F0`) reads AI activation mode in bits 4–6 of `GO+0x60`; both players were mode 2 (visible-or-in-range). Set the client player to mode 1 (always) so `CGameObject::Update` (`0x7919D0`) stops skipping extensions flagged disable-with-AI (the AC's `Update`, `0x825820`).
+
+### Derived
+
+- The local-player setup the single-player "Play" flow does on the host (survivor model via UL's character switch, AI activation, being on screen) never happens for a joined client. The network path for client-owned input already works once the client player physically moves.
+- `BitBlt`/`PrintWindow` captures of the client still show the title art; capture is of the screen region and is not evidence either way.
+
+### Verified on a fresh session (2026-10-21, `local/restart_session.sh` then `local/client_enable_move.py`)
+
+Only two client-side changes are needed; the AI-activation, AC visibility-gate and AC frame-stamp tweaks above are **not** required while the client stays in world state 3:
+
+1. Bypass the UI gate call inside `CPlayerInput::OnAction` (`0x164FA82`: `call 0x146EF10` → `xor eax,eax` + 3 nops).
+2. Load a character on the client's `Dude(1)` through `ExecuteBuffer`: `System.GetEntityByName("Dude(1)"):LoadCharacter(0, "<.cdf>")`.
+
+Results (same session):
+
+| Test | Client player | Host copy of `Dude(1)` |
+|---|---|---|
+| `OnAction(moveforward)` held 4 s (`walk_test.py`) | 16.25 m at 4.0 m/s | 13.27 m at the last sample, host `CNetPlayerInput::SetState` 40 calls |
+| `moveback` / `moveright` / `moveleft` / `moveforward`, 1.5 s each | −Y 5.84, +X 5.82, −X 5.82, +Y 5.80 m | gap to client 2.5 s after release: 0.00 / 0.00 / 0.00 / 0.01 m |
+| Real input path: client window focused, `SendInput` scancode W (0x11) held 1.5 s (`key_test.py`) | 9 `OnAction` calls, moved (0, +5.72, +2.90) | moved (0, +5.72, +2.90) |
+
+The hard-coded action-name addresses in the old `inject_onaction.py` were wrong: `0x01909ADC` is `"moveright"` and `0x01909AF4` is `"freezetime"`. `move_test.action_id()` now writes the name into the process and looks it up in the name table (`gEnv+0x58` vt+4); ActionId = returned entry + 0xC. One test pressed and released `freezetime` by mistake before this was found; no effect was seen.
+
+### Unknowns
+
+- Turning (`rotateyaw`/`rotatepitch` / mouse), sprint, crouch, interaction, and whether the host's copy animates visibly (it has no model; only its position was checked).
+- The client window still shows the title art, so a person on the client cannot see the world they are walking in. World rendering on the client is the next wall.
+- Which model the joining player should get and how UL assigns survivors (`0x1543360`: `SwitchChar_Away`, `FROM_PLAYER`). `marcus_campbell.cdf` was used because the host's `Dude` had it.
+- Which survivor model the joining player should get, and how UL assigns it (`0x1543360`: `SwitchChar_Away`, `FROM_PLAYER`).
+
+### Mistakes this session (so the next agent does not repeat them)
+
+- Called physics-entity vtable slots 0 and 2 blind, assuming CryPhysics order (`GetType/AddRef/Release`). Slot 0 behaved like a deleting destructor; the host showed "CryEngine Error" and had to be restarted. Disassemble a slot before calling it.
+- `last_pids.txt` is written with CRLF; strip `\r` before passing pids to `taskkill`.
+
+## Phase 3q — Joining copy sees the world; joining player visible on the host (2026-10-21, Claude Code)
+
+### Observations
+
+- `BitBlt` and `PrintWindow(PW_RENDERFULLCONTENT)` captures of these D3D9 windows are unreliable (stale or black frames). `local/capture.py` now brings the window to the foreground, grabs that screen area, and restores the previous foreground window. All screenshots below use it.
+- The client's system view camera (`gEnv+0x88` → `+0x3DEC`, Matrix34) was already ~4 m behind its own player, same as the host's. The 3D world was being rendered (`I3DEngine::RenderWorld` `0x4CB320` ran every frame on the client).
+- What the client showed instead was the renderer's **load-time Flash playback**: the render thread (`gRenDev` `[0x1E05888]` → `+0xBE0`) had video mode `+0x54 = 2` and a load-time callback `+0x8` that renders a second `Libs/UI/Class3_FrontEnd.gfx` player (`0x2F402000` that session) instead of game frames. The host has mode 0, callback 0. Render-thread commands `0x59`/`0x5A` start/stop it (dispatch `0x1227050`, jump table `0x1228878`, index = cmd−1).
+- `CD3D9Renderer::StopLoadtimeFlashPlayback` = `0x12FAFE0` (thiscall on `gRenDev`, no args; queues `0x5A` via `0x12239B0` and waits for mode 0). Calling it on the client makes the game frame appear: third-person view of the client's own player.
+- Hiding the `Class3FrontEnd` FlashUI element (`vt+0x64 SetVisible(0)`, `vt+0x68 IsVisible` = `+0x4C`) does not remove that picture; it is not drawn by that element.
+- `gfx_draw 0` on either machine blanks the whole frame in this game (not just Flash). `gfx_draw` is server-controlled on the client; the "Server controlled CVar" check is `0x76B850` (return 1 to allow).
+- The client paused itself after an experiment: `NSUIMFrontend::MenuStackPush` (`0x16141E0`) on the first menu sets UI bit 11 (`0x800`) and calls `IGameFramework::PauseGame(true, …)` (`gEnv+4` vt+0x38 → vt+0x3C). `MenuStackPop` (`0x1614300`) at depth 0 clears the bit and unpauses. Menu stack ids at `0x1EE8168`, table `0x19732A0` (stride 0x14; id 1 = title menu, exit handler `0x1617130`).
+- The re-push came from the front-end update `0x16189B0` (deferred reopen: flag `0x1EE8186`, timer `0x1EE8188`), called from the world-state-3 handler (`0x145B080` → `call 0x1618C00` at `0x145B0EC`). With that call NOPed on the client, popping the menu stays popped (depth 0, UI flags 0, not paused) through focus changes.
+- `e:LoadCharacter(0, ".../maya_torres.cdf")` on the host's copy of `Dude(1)` makes the joining player visible on the host. The client's copy of the host's `Dude` also had no model; loading `marcus_campbell.cdf` there makes the host player visible on the client. Story-character `.cdf` paths found in memory include `maya_torres`, `marcus_campbell`, `ed_jones`, `lilly_ritter`, `alan_gunderson`, and others.
+- Mouse look works on the client after the fix: `SendInput` relative mouse moves with the client window focused rotated the camera (sky and hillside visible).
+
+### Verified on a fresh session (2026-10-21 22:34, `restart_session.sh` → `coop_setup.py` → `walk_test.py 3` → `show_peer.py` → `capture.py`)
+
+- `coop_setup.py` result: client `depth 0, ui 0x0, video_mode 0, peer_model True, host_model True`; host `peer_model True`.
+- Walk: client 11.28 m, host copy 11.28 m in 3 s.
+- Host screenshot: Marcus (host player), Maya (joining player, placed 4.5 m in front of the host camera from the client side with `SetWorldPos`) and Ed, all visible.
+- Client screenshot: third-person game view from Maya by the boat shed, with Marcus (host player) beside her; FPS counter, no title art.
+- ~2 min later both processes responding, client exit trap not hit, still walking (1.50 m / 1.33 m in 1 s).
+
+### Unknowns / next
+
+- The 17 NPC actors on the client (`ULNPC*`, community survivors such as Ed) have no character model either, so the joining player sees no survivors. Same fix (load their models) or find what UL's survivor setup does on the host.
+- The client has no HUD (front-end update skipped; UL world tick not running), and the single-player systems (missions, community, inventory) are host-only.
+- Whether a real mouse/keyboard player on the client can do everything: sprint, crouch, attack, interact were not tested.
+
+## Phase 3r — Control feel, survivors and HUD on the joining copy (2026-10-21 late, Claude Code)
+
+Owner report after Phase 3q: turning was "tanky" (character followed the camera late, in steps), strafing played the walk-forward animation, and the joining player played random animations on the host.
+
+### Observations
+
+- `turn_probe.py` (mouse-x via `SendInput`, sample camera yaw from `gEnv+0x88`+`0x3DEC` and entity yaw from the entity world matrix at `ent+0x4C`): host player follows the camera and settles at 0° offset; client player did **not rotate at all** while idle (0 changes, 102° off after settling).
+- Host entity rotation is applied by `CAnimatedCharacter::UpdatePhysicalEntityMovement` (`0x885E50`) → entity `0xBC72F0`, from the movement request built by `CPlayerInput::PreUpdate`. Host and client call `CPlayerMovementController::RequestMovement` (mc vt[1] `0x1689680`, mc = `pl+0x9CC`) from **different** sites: host `0x164F36C`, client `0x164F5BF`.
+- The split is `CPlayer` vt+0x384 (`0x14618F0`), true when `pl+0x1114` is set. `pl+0x1114` is UL's "StateMachine On" flag: `0x1463510` turns it on (script property `StateMachine`=`On`), `0x1463550` turns it off. `Dude(1)` is spawned with it **on** on both machines; the host's own `Dude` has it off. So the joining player's input went down the AI path, and the host played state-machine animations on its copy.
+- Calling `0x1463550` (thiscall on the CPlayer) on `Dude(1)` on both machines: client player now rotates smoothly (102 changes, max step 0.1°; idle offset still settles about 45° short of the camera, host settles at 0°); right/left input turns the character into the run direction with the camera swinging behind, same as the host; host shows the joining player in a normal running pose.
+- Ticking the client player's own StateMachine2 (`0x1635440`, `0x1468FE0`, `0x1636870` from a native per-frame hook) made her play combat-like animations (a knee kick while strafing) and was dropped.
+- Survivors: every host actor has a model; on the client none did (17 `ULNPC*` + zombie). Names match across machines, so `sync_models.py` mirrors the host's model path (`ICharacterInstance` → `+0xB8`) onto the same-named client actor via `LoadCharacter`. After that Ed and Marcus are visible from the client and positions of nearby survivors match the host. Distant survivors on the client slowly sink in Z (terrain far away not loaded there?).
+- HUD: `0x14705D0(bool)` shows/hides `Class3HUDRadar` + `Class3HUDStats` (loads the movies). The UL per-frame HUD update is `0x1482DF0(float dt)` (called from the world tick at `0x145E2DA`); 120 fault-protected calls on the client were clean. `client_tick.py` now patches `0x145B0EC` (former front-end update call in the world-state-3 handler) to call `0x1482DF0(dt)` each frame. Result: minimap with player arrow on the client. The health/stamina ring and the mission box do not appear; invoking `SetCharacterUiVisible(true)` on `Class3HUDStats` (SUIArguments ctor `0x5CD0A0`, add-bool `0x67A820`, Invoke vt+0xF4) did not show them either. Derived: those come from UL's single-player world (survivor records, missions), which only exists on the host.
+- Map updater `0x141E1C0` already ran on the client; the client minimap texture shows a striped "no data" fill instead of terrain.
+
+### Boot regression (unresolved, 23:00–23:20)
+
+- From 23:00 every `session_join_leave.py` / `host_boot_coop.py` run failed: after "Start New Game" (idx 2, same as before) the host process **exits cleanly** about 20 s later (exit trap hit `ExitProcess`, shallow stack in teardown code `0x13E3510` `Singleplayer.SaveRunningID`; log stops after "Allocate render buffer for particles" + `[Error] Runaway thread`; no dump).
+- Not the cause (checked): network/bind (`map class3 server` from the console on a fresh host loads in 5 s and binds UDP 64087), host address (unchanged), carousel selection (fresh host shows "Play State of Decay"), window focus, saves (none on disk), profile files (unchanged), disk space, Steam (running).
+- The same scripts booted fine at 22:34.
+- Because of this, the Phase 3r changes were verified on the live 22:34 session one by one, **not** together on a fresh boot. `coop_setup.py` now applies all of them (not yet run end-to-end).
+
+## Phase 3s — Client HUD renders; boot made reliable; combined re-test (2026-10-22, Claude Code)
+
+### Observations
+
+- Phase 3r's `coop_setup.py` never installed the HUD tick: a scripted edit had not applied, so `0x145B0EC` was left as NOPs. Fixed; it now installs `client_tick.py`.
+- `CPlayer`-side gate for `SetHealth`/`SetStamina` in the HUD update `0x1482DF0`: UI-state bit 10 (`0x400`, "gameplay HUD active") in `[0x1EA7FFC]`. Host has it, client did not (set by `0x14742A0`). The client tick now ORs it in each frame.
+- Even then **no Flash movie rendered on the client** (host renders all HUD movies each frame on the render thread via `0x1228A10`). Cause: `CFlashUI` stayed in load-time mode (`FlashUI+0x91 = 1`; host 0) because Phase 3q stopped only the renderer's playback. `CFlashUI`'s own stop is `0x654560` (thiscall on the FlashUI interface: renderer vt+0x46C, release load-time elements, `gEnv+0x40` vt+0x64(0), clear `+0x91`). After calling it the client renders `Class3HUDRadar`, `Class3HUDStats`, `Class3HUDNotifications`, `Class3HUDCenterPrompts` every frame, and the health/stamina arcs show around the minimap.
+- Mission banner ("Go to the Ranger Station"): `Class3HUDBanners` `MissionBannerStart/Update` (`0x1481890` / `0x1481FA0`), called from `0x15020E0` with localized ids from the mission objective spec (`+0x34`, `+0x38`, resolved by `0x14F1C50`); event-driven only. Missions exist only on the host. Not mirrored: reading host memory works only on one PC, so this needs a network message (same for `sync_models.py`, which today reads the host process).
+- Client minimap shows a striped fill instead of terrain. Texture names are in a table at `0x197095C` (`Textures/Gui/Map/map.dds`, `map_large_danforth.dds`, getter `0x1416E70`, no direct callers). Guess, not verified: the stripes are fog of war, whose exploration state is host-side.
+- **Boot regression explained and fixed.** Twice now the first boot after a PC start worked and the next ones quit ~20 s after New Game ("[Error] Runaway thread" in the log right after step 1). Step 1 of `boot_to_gameplay.py` ran the DLC input handler on a `CreateRemoteThread` thread and step 2 hijacked the main thread's EIP. `host_boot_safe.py` runs both steps through the sodlib mailbox on the main thread; `session_join_leave.py` now uses it and connects the client with `Proc.console("connect …")` instead of `deferred_connect.py`. Three boots in a row then succeeded (including the "second boot" case that had failed).
+- Your Steam copy running blocks test copies from starting (seen 2026-10-22 08:58: test host never got a main thread). Close it before testing.
+
+### Combined re-test, fresh boot (2026-10-22 ~09:35, `restart_session.sh` → `coop_setup.py`)
+
+| Check | Result |
+|---|---|
+| `coop_setup.py` | client `sm_off True, depth 0, ui 0x400, video_mode 0, peer_model True, host_model True`; host `peer_model True, sm_off True`; 17 survivor/zombie models loaded on client |
+| `walk_test.py 3` | client 11.35 m, host copy 11.68 m |
+| `turn_probe.py client` | entity yaw changes 89/275 samples, max step 0.2° (smooth); idle offset to camera −102° (host idle offset −90° in the same kind of run, so not client-specific) |
+| Client HUD | Radar/Stats/Notifications/CenterPrompts rendered 85/s; `SetHealth` path 85/s; screenshot shows minimap + health/stamina arcs |
+| Screenshots | client: Maya with Ed and Marcus visible; host: Maya beside Ed in front of Marcus |
+| Second consecutive boot | setup identical; walk client 7.35 m / host 7.07 m |
+
+### Still open
+
+- Mission banner, item slot and minimap terrain on the client (host-side game state; needs networking).
+- `sync_models.py` and any mirroring must become network messages before two PCs can play.
+
+## Phase 3t — Held items visible; movement/animation sync (2026-10-22, Claude Code)
+
+Owner report: movement animations felt out of sync with WASD/camera on both machines, the joining player played random animations on the host, and held items (Marcus's weapon, the journal on Tab) were invisible.
+
+### Observations
+
+- **Held items.** Single-player host (`host_boot_safe.py --sp`): Tab puts the journal in Marcus's right hand (`right_item_attachment` holds a `CEntityAttachment`, vt `0x1811FD8`, bound to the journal entity; flags `+0xC4 = 0`). Listen-server host: the same attachment holds a static `notebook.cgf` (`CCGFAttachment`, vt `0x18072E0`) with flags `0x50000` = hidden in main pass, shadow only. The item code (`0x1554560` → `HideAttachment(1)` + `HideInShadow(0)`) does that when the owner is first-person.
+- `CPlayer` vt+0x128 `IsThirdPerson` (`0x1564400`): non-client actors → 1; the local player → byte `pl+0xC85`. Single-player: 1. Multiplayer: 0 for the host's own player **and** the client's own player (`gEnv+0x12D` `bMultiplayer` = 1 in both; `gEnv+0x12C` = `bServer`).
+- `CPlayer::SetThirdPerson(bool)` = `0x15717F0` (thiscall; notifies listeners at `pl+0xA88`). Calling it with 1 on both local players before items are drawn makes the host's journal bind as an entity attachment with flags 0 — visible, same as single-player. Clearing the flags by hand also showed it.
+- Side effect, wanted: idle turning now matches single-player (the body no longer chases the camera while standing; 0 yaw changes in `turn_probe.py`, both machines and SP).
+- `CItem::AttachToBack` (`0x154F030`) returns early when `bMultiplayer`; patching that out alone did not help (journal is a hand item).
+- **Remote copies snapping.** `move_probe.py` / `follow_probe.py`: the host's copy of the joining player periodically flipped up to ~170° for 3–4 frames during strafes (client body smooth). Source: `CNetPlayerInput` position interpolation (`0x169E9C0`, `+0x58` interpolated point, `+0x94` net target, flags `+0x90/+0x91`); each update can put the target beside the copy and SoD turns the body to its movement → `CAnimatedCharacter::UpdatePhysicalEntityMovement` → `CEntity::SetRotation` (`0xBC72F0`, quat at `entity+0x30`). `turn_clamp.py` hooks `SetRotation` and limits yaw change to N° per call for remote copies only.
+- **Host's own player snapping to the camera** (exact 90° steps) in a long session: `CPlayer::ProcessEvent` XFORM (`0x156C730`) copies an entity rotation set with flags `0x4` into the player's quats; those came from UL camera "behavior begin" (`0x1526CD0` → `0x165D610`, aligns the client actor to the camera when spec `+0x2D` is set) because the camera behavior kept switching 1→9→11→24 via the secondary-spec flag `0x1EE1269` (set by `CamOverride` `0x1527210`, cleared by `0x1527320`, both reached from state-machine code). Single-player: behavior stays 1. On two later fresh sessions the switching did not happen at all (with or without the host ticking `Dude(1)`'s state machine), so it was probably left over from that session's many journal/menu tests. Not changed.
+- Client's own Tab opens an empty journal ("STRANGER") and plays no journal pose; the remote copy does not show the other player's journal pose either. UL actions and inventory are host-side and not networked.
+- One join crashed the client (AV `0x13BE164`, dump `client-install/USER/..._10-27-22.dmp`); the retry joined normally.
+
+### Verified on a fresh session (2026-10-22 ~10:30, `restart_session.sh` → `coop_setup.py`)
+
+`coop_setup.py` now also: `SetThirdPerson(1)` on both local players, `SetActorModel` (Lua) instead of bare `LoadCharacter` for every model (inits animation events, IK, item attachments), and `turn_clamp` 10°/call on remote copies (host: its `Dude(1)`; client: host player + all survivors/zombies).
+
+| Check | Result | Single-player reference |
+|---|---|---|
+| Host own player, strafe, max yaw step | 5.7° | 3.3–8.5° |
+| Client own player, strafe | 5.6° | — |
+| Host player seen on client | 11.9° | — |
+| Client player seen on host | 20.0° (2 clamped frames between samples; was 135–171°) | — |
+| Host copy vs client body, strafe | median 3.9° | — |
+| Walk 2 s | client 6.91 m, host copy 6.55 m | 7.4 m |
+| Host Tab → hand attachment | `CEntityAttachment`, flags 0 (journal visible) | same |
+
+### Still open
+
+- Inventory/journal/UL actions for the joining player, and their poses on the other machine (needs networking of UL state).
+- Not checked: whether the host player's weapon is drawn on the client when equipped.
+
+## Phase 3u — Client HUD over the game's own network (2026-10-22, Claude Code)
+
+First use of real game network messages instead of reading the other process's memory directly. The loose
+`Game/scripts/gamerules/singleplayer.lua` (same file on host and client) now declares script RMIs on the
+game rules: `Net.Expose{Class=SinglePlayer, ClientMethods={ClCoopBanner={RELIABLE_ORDERED, NO_ATTACH,
+STRING, STRING, STRING, BOOL}, ClCoopMapIcons={RELIABLE_ORDERED, NO_ATTACH, STRING}}}`. The host calls
+them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_relay.py`, which runs on the host PC).
+
+### Mission banner
+- `MissionBannerStart` `0x1481890` / `MissionBannerUpdate` `0x1481FA0` (cdecl, three localized strings) are only
+  wrappers around `Class3HUDBanners.Invoke("MissionBannerStart"|"MissionBannerUpdate", a, b, c)`. The text comes from
+  the objective's banner method `0x15020E0` (`this` = objective, spec `+4`, keys `+0x34`/`+0x38`, localizer
+  `0x14F1C50`). Active objective getter: `CContentManager::GetActiveObjective` `0x13BDBF0`.
+- Client: `Class3HUDBanners` is loaded but hidden (element `+0x4C` = 0; host 1). Lua has the CryEngine
+  `UIAction` bind, so the RMI handler does `UIAction.ShowElement("Class3HUDBanners", 0)` +
+  `UIAction.CallFunction("Class3HUDBanners", 0, "MissionBannerStart", a, b, c)` with no native code.
+- Host: `hud_relay.install()` detours both functions and copies the strings into a buffer plus a sequence number;
+  `host_boot_safe.py` installs it before New Game. The relay loop sends each new banner and resends the last one
+  when a peer joins.
+- Verified: a banner fired on the host ("Talk to Ed" / "Ranger Station") appeared on the client through the RMI.
+  The story's own first banner did not fire within this session (it comes after the intro), so it hasn't been seen
+  travelling through the relay yet.
+
+### Minimap icons and "terrain"
+- The renderer draws `ULHUD_Map_IconData` from 500 × 0x14-byte records at `0x1E78A90`
+  (x, y, scale, packed type, color; empty record = 12 zero bytes + `0x00FFFFFF`, 0). Only host code fills them;
+  the client had just its own arrow (slot 0).
+- "No minimap terrain" was not missing data. The client stood at the level's first spawn point (1345, 3442), an
+  empty area, while the host's intro had moved Marcus to the ranger station (~3083, 3346). Fixed in the rules
+  script: peers now spawn 2 m beside the host's `Dude` instead of the first spawn point.
+- Lua → native bridge: `IConsole::RegisterString` is vtable `+0x08` (name, value, flags, help, cb); the value
+  `char*` is at cvar `+0x18`. Clients must use `VF_NOT_NET_SYNCED` (`0x80`); otherwise `SetCVar` logs
+  "Server controlled CVar" and does nothing.
+- `hud_relay.install_client()` (called by `coop_setup.py`) registers `coop_map_icons` and detours the HUD update
+  `0x1482DF0` to hex-decode the cvar into slots 1.. every frame, emptying slots left over from the last frame.
+  The relay sends the host's active records whenever they change, and every 5 s regardless.
+- Verified: the client minimap shows the host's icons (?, flag, home, survivors) and follows them as they change;
+  clearing the cvar removes them; the periodic resend restores them.
+
+### Item slot — not fixed, and not a HUD problem
+- The slot is `class3_stats` `ConsumableSet(count, icon)` (HUD ActionScript is extractable:
+  `libs/ui/flashassets/scripts/class3hud/*.as` in `gamedata.pak`, LZX via `lzx/PakRead.exe --blob`).
+  It is driven by widget `0x1977A80` (`+8` item, `+0x1C` count; refresh `0x163D900`), which reads UL's
+  character table `[0x1EA83B8]` (100 × 0x178 records, active player = bit 0 of `+0x15C`).
+- On the client that table is entirely empty (UL community simulation runs only on the host), and the joining
+  player is not a community member even on the host. The engine inventory replicates fine (both sides list
+  `Prop_Meds`, `Prop_Pistol`, ...), but UL's backpack does not exist for the peer. A real fix means making the
+  peer a UL character on the host and networking its backpack.
+
+### Also seen, not fixed
+- Inside the ranger station the client renders a large translucent green wedge (some area volume) that the host
+  does not show. It is not from the icon mirror; the cause is unknown.
+- Host-only HUD still missing on the client: the radar's "Home Status" panel (`SetBaseStatus`) and the
+  building-interior minimap.
+
+## Phase 3v — Joining player's actions (2026-10-22, owner report: "client can only walk")
+
+- Inputs arrive: `act_probe.py client lmb|<scancode>` logs `CPlayerInput::OnAction` (`0x164F890`). A left click gives
+  `attack1`, `ul_melee_attack`, `ul_shoot`; Space gives `jump`/`jump_hold`. They are the same on the host.
+- UL actions run in the per-actor UL state machine. Manager `0x1636A40` (host world tick) walks the pool `0x1F35518`
+  (0x92C-byte records, actor at `+8`) plus an extra list `0x1F354CC` (count `0x1F354C4`). Per record:
+  `0x1635440(rec, actor)`, `actor->0x1468FE0()`, `0x1636870(rec)`. The local joining player is in the extra list on
+  the client (the host also ticks its own copy of `Dude(1)` through its extra list). A client never runs the
+  manager.
+- `player_sm.py` (now in `coop_setup.py`) detours `CPlayer::Update` (`0x1575E80`) and runs the three passes for the
+  client's own player only. Result on the client: left click plays the unarmed combo (punch, kick); Space while
+  moving dodges and uses stamina; plain strafing stays a normal run (the "knee kick while strafing" from Phase 3r
+  did not come back now that StateMachine Off, SetActorModel and third person are in place).
+- Not networked: the host's copy of the joining player stays idle during her attacks, and hits are client-side only,
+  so they don't damage host-simulated zombies. Next step: forward the UL action to the host (client → server RMI) and
+  feed it into the host's state machine for `Dude(1)`.
+
+## Phase 3w — Owner's four reports: journal mouse, actions on the host, prompts, journal data (2026-10-22 afternoon)
+
+### Boot fix: title carousel
+- Three joins in a row failed: the client got game-rules class "TeamRandomSoundVolume" and disconnected. The host had
+  loaded **C3_beltway** (a DLC level) because the title carousel remembered a DLC. Selection = `0x1416C60()` (decoded
+  from `[0x197094C]`), setter `0x1416CB0(value)`: 0 = State of Decay, 1/2 = DLCs. `host_boot_safe.py` now sets 0
+  before pressing Play. (A game-rules `Net.Expose` ServerMethods entry was blamed first and removed; it was not the
+  cause, and it hasn't been retried.)
+
+### 3) Mouse "locked" in the journal — fixed
+- The client's OnAction UI-gate bypass (`0x164FA82`) made the player camera eat mouse input while the journal was open.
+  Gate `0x146EF10`: blocks on `[0x1EA7FFC] & 0xD`, `& 0xC01A00`, byte `0x1EA70D9` (set while the journal is open, on
+  both machines) or byte `0x1EA710A`. Once the title menu is popped the client's gate inputs are clear, so
+  `coop_setup.py` restores the original call. Verified: walking still works (6.3 m in 4 s), journal mouse moves the
+  cursor and a click switches pages, camera stays put (2.3° during open/close).
+
+### 1) Joining player's actions on the host — transport works, animation does not yet
+- Client → host transport: chat message `"coop:<hex>"` via `g_gameRules.game:SendChatMessage(2, g_localActorId,
+  NULL_ENTITY, ...)` (native RMI `SvRequestChatMessage`). Host hook on `CGameRules::SendChatMessage` (`0x15D10D0`,
+  thiscall, `ret 0x10`) decodes and swallows them (`peer_input.py`).
+- Payload: the bytes UL pass 1 reads from `IPlayerInput` (`+0xD8..+0x117`: sticks `+0xD8..+0xE4`, buttons
+  `+0xF5..+0x117`). They are one-frame flags, so the client sends them *before* pass 1 (`player_sm.py`).
+- Host: pass 1 for the joining player runs with `actor+0xF34` pointed at a stand-in buffer. Verified: host input block
+  `+0x1250` shows the same button bits as the client (`0x1200000` press, `0x2400000` hold).
+- But the host's state machine for that player sits in state `0xC1` (client idles in `0x9C`) and ignores attacks.
+  Writing `0x009C009C` to record `+0xC` makes it follow (`0x9C → 0xA1 → 0xA7`, same as the client), but the host then
+  starts different animations (`ISkeletonAnim` vt+0x28 `StartAnimationById` from `0x820C20`, ids `0x85`/`0x95`)
+  while the client starts `0x11A` by name (vt+0x24 via `0x820BC0`). On screen the host's copy does not punch. Open.
+- Damage to host zombies from the client's local attack: untested (no zombies near the start; `zm_spawn N` spawned
+  none in view).
+
+### 2) and 4) Journal data and interaction prompts — same root cause, not fixed
+- Host prompt: `Class3HUDCenterPrompts.ShowUseButton` every frame via `0x1478720`, which checks UL item/character
+  handles (`0x14A5A20`, `0x14A5AE0`) and the backpack (`0x14B0420`).
+- The journal character page, the item slot and the prompts all read UL's character table `[0x1EA83B8]`
+  (100 × 0x178), which is empty on a client. The records hold heap pointers (`+0xE0`, `+0xE4`, e.g. into a definitions
+  array), so copying the table to the client needs pointer translation, plus the item/backpack pools behind it.
+- Design question for the owner: SoD has no "player 2"; the natural co-op model is that the joining player takes over
+  a community survivor (switching survivors is how SoD works). Then the host's data for that survivor is what the
+  client's journal, item slot and prompts should show, and interactions (greet, loot) must run on the host.
+
+### Toward "player 2 = a community survivor" (owner's choice, 2026-10-22)
+- Character definitions: `[0x1EE25E4]`, 146 × 0x34, `+8` = model path (0 = Marcus, 142 = Ed Jones, 145 = Maya Torres).
+- Character records `[0x1EA83B8]` (100 × 0x178): `+0xF0` word = definition index, `+0x15C` flags (bit 0 = known,
+  `0x8` = community member, `0x20000` seen on Ed = following, `0xF` on the player's record), `+0xE0` → link object for
+  the survivor's NPC body (vt `0x17D36A8`, `+8` entity id, `+0xC` entity), `+0xE4` → per-character data.
+- NPC body entity `ULNPCnn` belongs to record `nn`. The current player's record is `[0x1EE2638]` (record 0, Marcus);
+  its NPC body `ULNPC00` is parked at (0,0,0). Community at the start: records 1 (Ed, following), 14, 15, 16.
+- `fm_nextMember`/`fm_prevMember` (`0x16555A0`/`0x16555E0`) only re-skin the current record to another definition
+  (`0x15472D0`); the real survivor switch is elsewhere (`SwitchChar_*` strings).
+- UL's notion of "the player" is that global record plus the engine's single client actor
+  (`GetIGameFramework()->GetClientActor()`, vt+0x114), used by the HUD, journal, backpack (`0x14AF5E0`) and prompts.
+  `IConsole::AddCommand` is vt+0x7C.
+- Plan: (1) host binds a community record to `Dude(1)` (model from the definition, park its `ULNPCnn` body);
+  (2) mirror the community records (with `+0xE0`/`+0xE4` pointer translation) and the backpack/item pools to the
+  client, and point the client's `[0x1EE2638]` at player 2's record, so the client's own journal, item slot and
+  prompt code show that survivor; (3) send player 2's interactions (greet, loot, use item) to the host to run there.
+
+## Phase 3x - Joining player's attacks animate on the host (2026-10-22 evening)
+
+Fixed and verified on two fresh boots (`restart_session.sh` -> `coop_setup.py`): a left click on the client plays the
+push kick on the host's copy of the joining player (same animation id 0x11A as on the client; a second click gives
+the combo, PushKick -> PushKick_Left, 0x11A/0x112); Space while moving plays the jump/land states there too.
+
+### Why it didn't animate
+- State names: state-machine type table at record `+4` (0x68-byte entries: "Player", "Civilian", "Zombie", ...);
+  `+0x58` offsets, `+0x5C` string pool, `+0x40` count. 0x17 `GraphDriven.Observer` (normal idle), 0x9C
+  `MachineDriven.Combat.Idle.Unarmed.Normal`, 0xA1 `...Utility.Logic.Evaluate`, 0xA7 `...Stand.PushKick`,
+  0xA8 `...PushKick_Left`, 0xC1 `MachineDriven.Dodge.Roll.Normal`.
+- The host's copy sat in `Dodge.Roll.Normal`, reached from garbage input before forwarding existed. MachineDriven
+  states end when their animation finishes, and the animation graph only follows the UL state machine while the
+  graph input "StateMachine" = "On" (set by `0x1463510`, the same function as the script property; actor
+  `+0x1114`). The state machine sets it itself when it enters MachineDriven states from `GraphDriven.Observer`
+  (wrapper SetInput-by-name, `CAnimationGraphStates` vt27 `0x88BB90`; seen: "StateMachine", "AimTurn", "TurnDir",
+  "CarryWeapon"). Stuck in a MachineDriven state with it off, the copy never animated and never left.
+- Fix: `peer_input.install` resets the copy to `GraphDriven.Observer` (`peer_input.py --reset` does it by hand).
+- Input edges: the client's "pressed" flags last one frame and several chat messages can arrive in one host frame,
+  so the host queues them (16 entries) and applies one per pass-1 tick.
+- Not needed in the end: forcing graph input 0x1D (0 for each machine's local player, 1 for the other player) to 0.
+
+### Stamina side effect - fixed
+- The joining player's moves drained the host survivor's stamina: `CPlayer` stamina setter (vt+0x78) stores
+  `actor+0x1678` and, if vt+0x130 ("is a player", true for both players), pushes it into the *current player's* UL
+  record via `0x1535490` (call at `0x146209B`). `peer_input` retargets that call so only the host's own player
+  pushes. Verified: the host survivor's stamina stays at 115 through the joining player's attacks; hers is on her
+  actor.
+
+### Tools
+- `ag_probe.py` (AnimationGraph SetInput on both machines), `act_probe.py` (actions + `lmb`/`rmb`), `tab_probe.py`,
+  `journal_shot.py`. CryEngine bits: `CAnimationGraphState` vt `0x17DADE0` (SetInput overloads vt1..vt3);
+  `ISkeletonAnim` = character vt+0x10, StartAnimation by name vt+0x24 / by id vt+0x28 (`0xAEFF10`).
+
+### Still open
+- Damage to host-simulated zombies from the joining player's hits (no zombies near the start to test).
+- Health may have the same "current player record" coupling as stamina (not tested).
+- Items 2 and 4 (journal data, interaction prompts): see Phase 3w plan.
+
+### Both directions (2026-10-22 late)
+- Owner: the host saw the client's attacks but not the other way round. The client runs no state machine for its
+  copy of the host's player and never received the host's input.
+- `player_sm.py host|client`: on both machines the local player's input bytes go out as chat (client tag `coop:`,
+  host tag `cooh:`; the host's catcher only takes `coop:`, so its own messages go out to clients as normal
+  `ClChatMessage`). On the client it also ticks its copy of the host's player (record in the main pool, so
+  `record_for` now searches the pool too).
+- `peer_input.py host|client`: the client catches `cooh:` in the `ClChatMessage` handler (game-rules vt83
+  `0x15C2A30`, args type/source/target/msg/?, `ret 0x14`) and feeds the same queue and pass-1 swap into its copy of
+  the host's player, reset to `GraphDriven.Observer` at install. The stamina patch stays host-only.
+- Verified on a fresh boot: client attack -> host copy PushKick, 0x11A. Host attack -> the client's copy of
+  Marcus goes Observer -> Evaluate -> PushKick and starts the same animations as the host's own Marcus
+  (0x10D, 0x105 for a two-hit combo).
+- Test-harness note: `SendInput` mouse clicks go to the window under the cursor; move the cursor onto the target
+  game window first (keyboard input follows focus).
+
+## Phase 3y - Zombie damage and health (2026-10-22 late evening)
+
+### Health: the joining player's damage hurt the host survivor - fixed
+- Test: on the host, `Dude(1).actor:SetHealth(55)` also set Marcus to 55 (UL player record `+0xA4`). Same coupling
+  as stamina: the CPlayer health setter (`0x1461E40`) pushes into the *current player record* through `0x1544950`
+  (call at `0x1461F09`), gated only by "is a player". `peer_input` now patches both pushes (`RECORD_PUSHES`) so only
+  the host's own player pushes. Verified: Maya 55 -> Marcus stays 85 (record 85); Marcus 70 -> record 70; Maya's
+  health still replicates to the client.
+
+### Zombies in a co-op session
+- No zombies spawn in the home safe zone. `zm_spawn N` (spawn around the player) works only away from home and
+  only while the zombie pool (~6 entities) has free slots. Corpses aren't recycled; `zm_killAll 1` clears them.
+  `zm_spawnPathZombies N` reliably spawns "FreshGrunt"s about 70 m away that walk in. Class `Grunt` spawned from Lua
+  has no model or hit volume (useless as a target).
+- Entity ids replicate with the same index but a different salt (high 16 bits); pooled zombies get renamed and the
+  name isn't replicated. Match zombies across machines by `id & 0xFFFF`.
+- The zombie manager keeps zombies active only around the host's player: walking the host away pools them
+  (hidden on the host) while the client still shows them standing (hidden state isn't replicated).
+- `IsHidden` also flickers with visibility culling, so it isn't an "inactive" test; use the zombie's UL state
+  (`zstate.py`: records whose type name is Zombie / Freak_*, `0xFFFF` = no active state).
+- Teleporting a zombie with `SetWorldPos` resets its state machine; move the players to zombies instead.
+- Teleporting the joining player into an area the client hasn't streamed drops her through the ground (z = -14876);
+  `zombie_site.py` re-places her until the client's terrain height matches.
+
+### Melee results
+- Host player: hits register (zombies knocked down and killed). Ed (NPC) also kills zombies.
+- Zombies never target the joining player; they attack only the host's player (Marcus was downed repeatedly while
+  Maya stood next to them untouched).
+- The joining player's hits do not register. On the host her copy plays the same push kick (state PushKick,
+  input forwarded) straight through a zombie that is busy striking Marcus, and the zombie shows no hit reaction
+  (its state keeps cycling `Combat.Fast.Strike.TargetDown.*`). Her combat hit list (`blackboard +0x1C20`) is only
+  cleared each frame (`0x1649BB5`), never filled. `0x164A120` adds hits to a *victim's* list from the got-hit
+  handlers `0x1466160` / `0x1467720`. So no hit event is generated for her attacks at all.
+- Both symptoms (not a target, hits not generated) point to her not being a UL combatant: she has no UL character
+  record (the same gap as the journal and interaction prompts). Next: find where combat collision decides which
+  actors' attack volumes are live (`CombatCollisionMode` action, parser `0x170D4D0`; runtime still to find), or
+  give her a UL character record (Phase 3w plan).
+- Tools: `health_probe.py`, `zombie_site.py`, `zombie_duel.py`/`zombie_duel2.py` (by id), `zstate.py`, `zhit*.py`,
+  `dump_exc.py` (minidump exception + stack).
+
+### Crashes seen
+- 16:02 host crash on a worker thread (`0x1128072`, stack through `0x6544DF`/`0x654622` FlashUI) during zombie
+  console experiments (`zm_density 1` debug display was on). Game time froze while rendering continued.
+- 16:11 host crash during `coop_setup` in the host's own state-machine actions for the joining player (null + 0xE8
+  write at `0x1706C5F`), before `peer_input` was installed: her copy was running on garbage input. `coop_setup.py`
+  now installs `peer_input` on the host first.
+
+### Melee hit generation (2026-10-22, continued)
+- `0x1640430` is the UL combat-collision physics callback (dispatched from the physics event queue
+  `0x160A8E0`/`0x160A9D0`). Event `+0xC` = volume object (owner actor at `+0x44`), `+8` = the other physical entity,
+  `+0x18` = active/strength (callback returns early when <= 0). It resolves the victim actor (`0x1462330`) and calls
+  the got-hit handler `0x1466160`, which adds the hit to the victim's list (`0x164A120`).
+- `combat_events.py` logs these per owner. With three zombies striking a downed Marcus and Maya swinging within ~1 m
+  (host copy in PushKick), only the zombies' volumes report a real "other" (Marcus's physics entity); Maya's
+  volumes only ever report the static-world sentinel `0x1A3E398`. Her always-on body volumes sit at her body
+  position (head/feet); no attack-window volume of hers ever touches a zombie.
+- Current explanation: the joining player isn't a UL combatant (no UL character record, no faction), so zombies
+  neither target her nor register her attacks. The fix is the "player 2 = community survivor" work (Phase 3w), not
+  a hook in the hit path.
+
+### Melee, continued (2026-10-22 night) - player hit path still not found
+- The physics "combat collision" volumes (`0x1640430` callback) are body capsules; neither player's swing creates
+  new volumes, and Marcus's volumes also report only the static sentinel while he lands punches, so they are not
+  the player melee path.
+- `0x1707730(ctx, params)` is a state-machine "apply hit to blackboard target" action: target = `[bb + 0x48 +
+  slot*4]`, queued on the attacker (`0x1468C40`: actor `+0x1324` count, `+0x12B4`/`+0x132C` 0x74-byte entries) and
+  delivered in pass 2 (`0x1469EF6`) to the victim's got-hit handler. Captured live: every call came from zombies
+  (slot 1 = the host player's entity `0x7777`), i.e. this is the zombies' attack, not the players'.
+- Blackboard slot 2 of the host player gets the id of the zombie engaging him (e.g. `0xFE4D`); the joining player's
+  slots stay 0 on both machines (no zombie engages her). Forcing that id into her host slot 2 did not make her swings
+  land.
+- `0x140B430` (grid query that delivers hits) is only called from the zombie manager (`0x13B0860` <- `0x13BB3A0`),
+  so it is the zombies' melee as well.
+- Testing obstacles: each fresh boot gives one short round of zombies (zm_spawn near the players after
+  `zombie_site.py`); corpses are not recycled, `zm_playerInvisible 1` and `zm_killAll` leave zombies in state
+  `0xFFFF`; Ed must be moved away and hidden or he kills them; zombies keep downing the host player. One host crash
+  (19:33, empty dump) happened during these tests.
+- Next: capture a clean host-player punch on a free-standing zombie (fresh boot, zombie approaching, punch before it
+  grabs) with stacks on the zombie's got-hit entry (`0x1466160` with this = zombie actor) to find the player melee
+  query, then see why it doesn't run or find targets for the joining player.
+
+## Phase 3z - co-op fixes: client melee, zombie models, remote-player effects, shared pause (2026-10-23)
+
+### Joining player's hits damage zombies (peer_melee.py, host)
+- Player melee hits come from the UL action CombatDamage (action type 0x1d, `0x1707730(ctx{bb, rec}, params)`):
+  target = blackboard slot 1, hit queued on the attacker (`[[ctx+4]+8]`), delivered in pass 2. Its condition tree
+  (composite type 17, evaluated into flags `0x1F36D60`) needs a target in slot 1 (type 40), a time window on
+  blackboard `+0x1340` (= seconds in state; push kick 0.433-0.5) and more. Slot 1 is copied from slots 2/3/4,
+  which the player's perception queries fill - never for the joining player on the host, so the action never fired.
+- Action handler table `0x1F378A8` (0x24 bytes/type: +0 begin, +4 end, +8 fire, +0xC update, +0x20 name).
+  Dispatcher `0x17068A5`: ecx = entry (+0 condition id, +2 type); after pushad `[esp]` = params, `[esp+0x5C]` = bb,
+  `[esp+0x60]` = record.
+- Fix: a dispatcher hook remembers the params of her current state's CombatDamage entry; a tick after her pass 1
+  (peer_input `data+0x14`) fires CombatDamage once per attack state at 0.43 s on the nearest live zombie within
+  1.6 m. A kneeling/downed target ("...Down...") gets the unarmed DownKill params (found by tag string).
+  Damage/kills need a UL character: the hit is credited to the host's player (fake record, bb `+0xC` owner id
+  swapped during the call). Verified: reactions, knee-downs, and kills (hp 0 on host and client).
+- Without the credit swap her hits staggered zombies but never killed (hp stayed 100).
+
+### Zombies invisible on the client
+- Host zombies are `characters/male|female/zombie/skeleton/skeleton.chr` + attachments built by the zombie manager
+  (not run on clients); client zombies had no character at all. hud_relay.py now sends `index=model;...`
+  (RMI `ClCoopZombieModels`, both singleplayer.lua copies), skeleton mapped to `zombie/skin/skin.cdf` (naked but
+  visible; clothing attachments not replicated). hud_relay.py must run on the host.
+
+### Host's downed/low-health tint on the client
+- The client ticks a copy of the host player's state machine (player_sm); its PlayerDowned/Vulnerable/Camera/
+  ScreenShake/TimeScale/MusicCue/ForceFeedback actions applied to the client's own screen (tint + "press SPC to
+  get up"). remote_fx.py wraps those handlers to do nothing for the remote player's record (both machines).
+  Verified: host tinted with tip, client normal.
+- Also: two more health setters push into the current player record (`0x1461F55`, `0x1461FA0`); RECORD_PUSHES now
+  patches all three on both sides (client allows only its own player).
+
+### Shared pause (pause_sync.py)
+- MenuStackPush/Pop call IGameFramework::PauseGame (`0x1614261`/`0x1614388`). Stubs record local wish, send it as
+  chat `pauc:`/`pauh:` (caught by peer_input's chat hook, handler `data+0x18`) and apply PauseGame(local && remote).
+  Verified with game time: one menu -> both worlds run; both menus -> both stop; either closes -> both run.
+
+### Crash guard
+- Client crashes 20:02/20:15/20:29 at `0x171676C` (null from game->vt+0x38->vt+0x114 in a UL action during player_sm
+  ticks): crash_guards.py takes the not-equal branch on null. Calling the slot setter `0x1648C90` through the
+  mailbox killed the host twice (no dump) - don't.
+
+### Testing notes
+- Ed kills spawned zombies: maya_hit_test.park_ed (move + Hide + Activate(0)). `zm_spawn` after zombie_site may
+  need repeating; Lua-spawned Grunts have no model/hit volume.
+- New tools: peer_melee.py, pause_sync.py, remote_fx.py, crash_guards.py, hit_action.py, hit_cond*.py,
+  cond_tree.py, bb_sets.py, disp_probe.py, path_hit.py, maya_hit_test.py, punt_params.py, pause_test.py.
+
+## Phase 4a - zombies vs. both players (2026-10-23)
+
+### Zombies target the joining player (zombie_targets.py, host)
+- UL entity queries: 0x200 slots x 0x108 at 0x1EC00B8 (owner +0x24, flags +0x2C, shape +0x90, origin matrix
+  translation +0x44/+0x54/+0x64, candidates +0xDC (8), count +0x104, valid masks +0xFC/+0x100, pick +0x28).
+  Category lists: bit 1 players 0x1EC0060 (capacity 1: host player only), bit 2 NPCs 0x1EC0080 (cap 64), bit 4
+  zombie-manager grid (zombies only). List struct: ids +0, positions +4, actors +0xC, valid +0x14, inputs +0x18,
+  capacity +0x1C; rebuilt each frame by 0x1525610. Zombie target queries use bits 1|2; picker 0x1525A00 takes
+  the lowest valid candidate (players before NPCs); bit 0x80 = line-of-sight post-filter (0x15235B0).
+- Fix: she is kept in the NPC list inputs, and the picker swaps her ahead of the host's player when she is
+  closer to the querying zombie. Verified: zombies near her pick her (slot 1 = her id).
+- Zombie strikes on her never passed the zombies' CombatDamage conditions (a "Hero" contact event in the zombie's
+  blackboard list +0x1538 - 0xB0-byte events, name +0xA0, arc +0xA8 - plus counter/grab conditions). A pass-3 hook
+  (0x1636870) for zombies targeting her adds the "Hero" contact and, once per ".Strike." state (>= 0.35 s, within
+  1.8 m), runs the zombie's CombatDamage on her with the zombies' strike params ("Zombie, DamageLight"/torso).
+  Verified: her health 100 -> 57 in 20 s on host and client, host copy plays hit reactions, Marcus unaffected.
+- Open: the zombie manager only keeps zombies live around the host's player (moving Marcus 40 m away despawned
+  the zombies near her).
+
+### Kill counts (kill_counts.py)
+- Kills only update globals for "the player": zombie manager kill handler 0x13A6300(this, slot, counted) adds 1 to
+  Zombies.Killed (0x12000020; AddVar 0x13F6970(id, delta), GetVar 0x13F47B0). No per-attacker counts exist.
+- Host: a counted kill of the zombie she last hit (peer_melee records target/tick; slot position 0x1E54D00 within
+  2 m, within 300 ticks) is taken off the host's Zombies.Killed and sent as chat "kilh:NNNN"; the client handler
+  (peer_input chat hook, data+0x1C) sets the client's own Zombies.Killed. Verified: her kill -> client 1, host
+  unchanged.
+
+### Weapons
+- CryEngine ItemSystem.GiveItem/SelectItemByName gives a Hammer item, but UL combat states stay "Unarmed": the
+  SelectMeleeWeapon action (0x1703980) reads the melee weapon of a UL character: actor vt+0x130 (player) ->
+  current player character 0x14B0420, else the character by entity id 0x14AF690; weapon item 0x14A52C0, type 5 =
+  melee. On the host her copy therefore uses the host survivor's weapon; on the client she has no UL character.
+  Normal weapon use for her needs her own UL character (community survivor), not done.
+
+### Crash guard 2
+- 0x170AD70: collision-volume action passed null+0xE8 when the actor isn't in its per-actor table (host crashes
+  10-22 16:11, 10-23 09:15 after forcing Marcus's state): crash_guards.collision_guard skips the call.
+
+### Weapons for both players (weapon_relay.py) - 2026-10-23 afternoon
+- UL combat picks weapon moves from blackboard +0x1454 = melee weapon name hash (0x59EBF0, thiscall ret 4; e.g.
+  Hammer 0xB964FFCF), set in pass 1 from a UL character (+0x1450 = ranged). Conditions 0x16FE3C0 compare it with
+  every melee name. UL's select-item actions (0x7A/0x7B/0x7C) re-select the UL character's item (Fists for her).
+- Fix: her weapon = the melee item she holds (engine inventory; `weapon_relay.py give Hammer`): client Lua timer
+  -> cvar coop_my_weapon (client post-pass-1 override via player_sm) and chat "wpnc:<class>" (host: peer_melee
+  override). Host player's hash -> chat "wpnh:<hex>" -> client's copy of him. Select actions are no-ops for her
+  (host) and for both players on the client. Verified: BluntLight swings on both machines, hammer hits with
+  "BluntLight, Mid, DownHead, RandomKill" params, 2 kills counted for her.
+- Zombie activation: Zombies.ActivationDist/DeactivationDist (0x12000001/0x12000010, SetVar 0x13F4A10) raised to
+  60/120 did not keep zombies alive near her with the host's player 40 m away; deactivation comes from behavior
+  exits (0x13AF520 <- 0x138C921). Still open.
+- coop_setup.py now starts hud_relay.py itself.
+
+### Zombies around both players, kill banners, clothed zombies (2026-10-23 late afternoon)
+- zm_focus.py: the zombie manager update (0x13BB3A0) keeps zombies live around one focus (client actor position:
+  edi/ebx/[esp+0x214] at 0x13BB784). Focus = midpoint of the two players while they are within 60 m. Verified:
+  host player 40 m away, 6-7 zombies stay live around her and keep attacking. At 80 m apart (midpoint) nothing
+  stays live; alternating the focus actor per frame deactivates everything.
+- kill_counts.py now shows each player's count on their own HUD after each kill ("Zombies killed: N", the
+  mission-banner element). The game itself shows kill counts nowhere (journal People/Skills pages have none).
+- hud_relay.py sends clothed zombie bodies (zombie/body/*.cdf, picked by entity index per gender); the host's
+  exact outfit per zombie isn't read yet.
+- coop_setup gives the joining player a starter melee weapon (weapon_relay.STARTER = Hammer) and starts
+  hud_relay.py; sodlib Proc.call is serialized across processes (named mutex coop_mailbox_<pid>).
+- The host's downed tint + "press SPC" tip seen with Marcus standing was Marcus's own state machine stuck in
+  Stunned.Down after test teleports (Space gets him up) - not a co-op leak.
+
+### Zombie focus list, normal weapon equip (2026-10-23 evening)
+- The zombie manager keeps a list of focus points (count 0x1E54534, max 20; positions 0x1E6FF90, forwards
+  0x1E70080, flags 0x1E51F64/0x1E51F50/0x1E51F28): entry 0 = client actor, then friendly NPCs near the camera.
+  zm_focus.py (replaces the midpoint version) appends the joining player at the end of that list (hook on the
+  call 0x13BBBAA -> 0x14C72A0). Verified on a fresh boot: players 100 m apart, zombies around her stay live, 4 of 5
+  target her, she takes damage and kills with her hammer (counted for her). zm_spawn still spawns only around the
+  host's player; natural spawns didn't occur in a minute around either player at fresh sites.
+- Host player's weapon through normal UI: journal People page -> click the backpack weapon -> Equip (Q) sets the
+  UL character's melee slot (character +0xE0 equipment: +4 container (+4 count, +0x10 item handles), +0xD selected
+  melee slot; item handle 0x5xxxxxxx = melee def index, defs at [0x1EA8310] 0x70 each). Verified: Wooden Branch
+  -> BluntLight swings, hit params "BluntLight, High, RandomKill", kill counted; client copy gets the hash.
+- weapon_relay host message is now "wpnh:<hash><0|1 downed>"; the client resets its copy of the host's player to
+  idle when he is up but the copy still lies down (it missed the get-up input).
+
+### Weapon cycling for the joining player, kill attribution, zombie range (2026-10-23 night)
+- Community storage records (key 0x5F019A59, type 0x88, item handle, count, -1, durability) hold the community's
+  items; melee defs: [0x1EA8310] + 0x70*i (+0 name hash, +0x54 item class, class +8 = class name).
+- weapon_relay: her middle mouse button (client native GetAsyncKeyState while the game window is focused) sends
+  chat "wpnc:next"; the host counts it, hud_relay.py calls weapon_relay.cycle(): next melee class from community
+  storage (non-destructive, plus the starter Hammer), ItemSystem.GiveItem on the host and RMI ClCoopSelectItem to
+  her machine, which selects it; the existing relay then puts the weapon in both state machines. Verified: Hammer
+  <-> 2x4_Bracket on both machines, BluntLight swings with the held weapon.
+- (R is the radio key - it opened Radio Assistance on the client during key probing.)
+- kill_counts KILL_DIST 6 m (blunt hits knock zombies back several metres before the kill registers).
+- Zombie movement range: zombies walk to her with the host's player 20/45/70 m away (approach partly at 70 m);
+  at ~100 m they stay live and attack if adjacent but don't move - movement/animation LOD follows the host's
+  camera. Still open beyond ~70 m.
+- Per-zombie outfits: host zombie characters have no attachments (attachment manager at character +0x710 is
+  empty) - parts are merged natively at activation; the user accepted per-zombie bodies (no exact match).
+
+### Zombies around her at any distance: cull and population (2026-10-23, after the night session)
+- The ~100 m "zombies don't move" result above came from long test sessions (many teleports, earlier stubs). On
+  fresh boots zombies chase her with the host's player 100-600 m away (`local/zm_freeze_test.py`).
+- Cull: zombie slots farther than 175 m (squared 30625 at 0x18C7998) from the camera are freed at 0x13AD9C6 (slot
+  position at [esp+0x34]). `zm_focus.install_cull` compares the nearer of camera and her instead. Before: the
+  host's player 250 m away deleted every zombie around her (52 slots -> 9). After: they stay (and chase her).
+- Spawning: the population pass 0x13B8C10 (thiscall, float dt, ret 4, called at 0x13BBF73) fills 200 m map cells
+  within 150 m of the camera (system view camera [gEnv] vt+0x18C and 3D engine camera 0x195E090, translation at
+  +0xC/+0x1C/+0x2C; sweep every ~12 s via timer manager +0x1C). The spawn routine 0x13B3A70 centres its box on the
+  client actor (0x13B3BD3: camera only when there is none). `zm_focus.install_population` runs the pass a second
+  time with both cameras moved to her, the sweep timer restored and the actor check skipped, when she is 80-300 m
+  from the camera. A/B at 300 m apart (`local/zm_pop_ab.py`): her pass off -> 0 zombies around her in 40 s; on ->
+  9-12 within 150 m. Beyond 300 m it is off: at 550 m the host died silently right after her pass spawned there
+  (the level only streams around the host's camera).
+- Spawn density is per area: x ~2500-2850 (home safe zone) and ~3700, y ~3230-3350 have none; ~3150,3350 fills
+  within seconds. zm_spawn is a cvar consumed by the update (0x13BD34D); it fails in empty areas.
+- Debugging traps: a 5-byte hook inside the spawn routine (0x13B4921) killed the host because 0x13B4923 is also a
+  branch target - use `Proc.count_exec` (hardware execute breakpoints, nothing patched) inside functions.
+  `Proc.hook_stack(..., this=)` filters by ecx. A "CryEngine Error: Invalid parameter detected in CRT function"
+  dialog (radar HUD frame on the stack) froze one long session; not seen on fresh boots.
+- The host log fills with "Entity 130907 is not part of the community" (her entity id, every frame); harmless
+  so far, not fixed.
+- Final check (fresh boot + coop_setup only, then a ~1 h session on the same boot): kill_verify her kills +2 /
+  client Zombies.Killed +2 / host +0; both machines list the same zombies near her (client also keeps some
+  stale records); client screenshot shows her knocked down by a zombie, health 1 on both machines; the host's
+  player swings his own Branch (BluntLight) and takes hits, 3 kills counted for him (host Zombies.Killed
+  12 -> 15, hers unchanged). Chasing her with him far away: reliable 100-150 m in the long session; at 300 m it
+  worked on fresh boots (also 400/600 m) but chasers stood still (0.0 m) late in the long session. Silent host
+  deaths (no dump, exit trap not hit, no Windows error record) still happen occasionally; cause unknown.
+- Both games crashed at 18:03:48 in the same render-thread instruction (0x11F9775, shader/render-target code) the
+  moment Windows left Modern Standby (System log Kernel-Power 507, "Input Mouse"). Earlier freezes/deaths line up
+  with standby periods too (15:10-15:18, 16:21-16:32, 17:44-18:03): unattended tests let the PC sleep, which
+  throttles the games and then kills the renderers on wake. Long tests now keep the PC awake
+  (zm_soak.keep_awake: SetThreadExecutionState CONTINUOUS|SYSTEM|DISPLAY while the script runs).
+- coop_setup sets es_MaxPhysDist / es_MaxPhysDistInvisible to 2000 on the host (default 300 / 500), so entities
+  around her keep physics (and walk) when she is far from his camera.
+- Host hang during a 30-minute soak (PC kept awake): the main thread spun in the game's own lookup of
+  `Class3HUDRadar` (UL HUD update 0x1652BFF -> 0x1475100 GetUIElement -> hash-map find 0x1127100): the bucket
+  node for that name pointed to itself. An earlier long session stopped on "Invalid parameter detected in CRT
+  function" in the same lookup. The only co-op code that touched the UI from outside the game's own flow was the
+  kill-count banner (UIAction.ShowElement/CallFunction run from inside the native kill hook on the host and the
+  chat hook on the client). kill_counts.SHOW_BANNERS is now False: counts are still kept and synced, not shown.
+  Re-verification soak pending.
