@@ -7727,3 +7727,29 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: Titan Souls
+  year: 2015
+  engine: In-house C++ (Acid Nerve, SDL2 + OpenGL)
+  project: Titan Souls Co-op
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls
+  kind: mod
+  status: playable
+  coop_scope:
+    enemies: 'yes'
+    items: shared
+    players_visible: 'yes'
+    story: 'yes'
+    world_state: 'yes'
+  players: '2'
+  networking: ''
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: Local 2-player co-op mod via 32-bit version.dll proxy forwarder and MinHook. Spawns Player 2 in GameWorld container with independent Arrow, dual XInput/keyboard input, dynamic midpoint camera, and boss weakpoint synchronization. Settings in coop_config.ini.
+  sources:
+  - https://store.steampowered.com/app/297130/Titan_Souls/
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls
+  checked: '2026-10-23'
+  made_with_coop_anything: true
