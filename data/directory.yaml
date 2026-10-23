@@ -2029,9 +2029,9 @@
   - https://github.com/cranebeaker/coop-anything/issues/79
   - https://github.com/Whocares66-Dev/DAOLib
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
-    players_visible: partial
+    players_visible: yes
     story: no
     enemies: partial
     world_state: no
@@ -2045,18 +2045,22 @@
     Work in progress on DAOLib, a GPLv3 SKSE-style native plugin framework with
     an address library for the GOG/EA/Steam builds of 1.05.13263.0. Verified in
     the game: a guest joins over the network by save transfer, two players
-    control two different party members in the same world with each game
-    mirroring the other's creature, and a host-resolved hostile's health and
-    death state reach the guest. No real combat arbitration (guest attacks are
-    not relayed), no effect, quest or area-transition sync, LAN only, and the
-    ini file is the only interface. Automated two-client tests and a 0.6.0
-    install package are in the project repo.
+    control two different party members in the same world mirroring each
+    other, the guest's attack orders are validated and resolved in the host's
+    game, a fallen player's party is revived after the fight, the guest rejoins
+    when the host loads another save, and a plugin-owned SWF HUD screen shows
+    the session event log (filters, creature names). Missing: animation, effect
+    and loot sync, area transitions, a host/join menu and an internet
+    transport; LAN only. Automated two-client tests (sync, join, two avatars,
+    combat, arbitration, death, rejoin, UI) and a 0.7.4 install package with an
+    install script are in the project repo.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md
+  - https://github.com/vmosenkov/dao-coop/blob/main/docs/UI.md
   - https://github.com/cranebeaker/coop-anything/issues/79
   - https://github.com/Whocares66-Dev/DAOLib
-  checked: '2026-10-20'
+  checked: '2026-10-23'
 - game: Psychonauts
   year: 2005
   engine: Despair Engine / Gamebryo
