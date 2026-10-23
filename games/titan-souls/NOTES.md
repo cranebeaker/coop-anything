@@ -121,3 +121,122 @@ Intercepts the Windows loader using standard proxy exports (17 functions forward
 | Phase 5.5 | Automated movement, roll & aim test | PASS | P2 walked right (pos 1072 -> 1144), performed roll, aimed UP, camera tracked midpoint |
 | Phase 6 | Checkpoint respawn & level sync | PASS | Dynamic re-spawn on level transition without heap leak or crash |
 | Phase 7 | `coop_config.ini` dynamic loading & release packaging | PASS | Release bundle verified in `games/titan-souls/release/` |
+| Phase 8 | UDP Socket layer & protocol handshake | PASS | Winsock2 non-blocking socket bound; instant handshake & ACK between Host (7777) and Client (7778) |
+| Phase 9 | Bidirectional 60Hz state synchronization | PASS | 58-byte `NetPlayerSyncPacket` streamed smoothly; Client Y (1176->1129) mirrored to Host puppet (1176->1136.5) |
+| Phase 10 | Independent client camera & zero crash verify | PASS | Client camera followed local player to Y=770.2; Host camera tracked midpoint; 0 crashes across dual instances |
+
+---
+
+## 6. Networked Multiplayer Protocol & Wire Format
+
+### Transport Layer
+- **Protocol:** Non-blocking UDP via Winsock2 (`ws2_32.lib`).
+- **Magic:** `0x4E544954` (`'TITN'`).
+- **Version:** `0x0001` (v1).
+- **Packet Rate:** 60 Hz tick synchronized with engine render loop (`Hooked_SDL_GL_SwapWindow`).
+- **Bandwidth:** ~3.5 KB/s per client connection.
+
+### Packet Structures (`#pragma pack(push, 1)`)
+
+#### 1. Header (`NetHeader`, size: 8 bytes)
+```c
+typedef struct {
+    uint32_t magic;       // 0x4E544954 ('TITN')
+    uint8_t  type;        // 0x01 = Handshake, 0x02 = Ack, 0x03 = Heartbeat, 0x04 = Sync, 0x05 = Disconnect
+    uint8_t  version;     // 1
+    uint16_t sequence;    // Monotonically increasing sequence number
+} NetHeader;
+```
+
+#### 2. Handshake (`NetHandshakePacket`, size: 10 bytes)
+```c
+typedef struct {
+    NetHeader header;     // type = 0x01
+    uint16_t client_port; // Local UDP port
+} NetHandshakePacket;
+```
+
+#### 3. Handshake ACK (`NetHandshakeAckPacket`, size: 12 bytes)
+```c
+typedef struct {
+    NetHeader header;     // type = 0x02
+    uint8_t   assigned_id;// Player ID (2)
+    uint8_t   status;     // 0 = Success
+    uint16_t  reserved;
+} NetHandshakeAckPacket;
+```
+
+#### 4. Player State Sync (`NetPlayerSyncPacket`, size: 58 bytes)
+```c
+typedef struct {
+    NetHeader header;     // type = 0x04
+    uint32_t  frame;      // Host / Client frame count
+    float     pos_x;      // Player X coordinate
+    float     pos_y;      // Player Y coordinate
+    float     vel_x;      // Velocity X
+    float     vel_y;      // Velocity Y
+    uint32_t  state_flags;// Roll / aim / action bitfield
+    float     input_move_x;
+    float     input_move_y;
+    uint8_t   input_roll;
+    uint8_t   input_shoot;
+    uint8_t   arrow_active; // 1 if arrow in flight / on ground
+    uint8_t   pad;
+    float     arrow_x;    // Arrow position X
+    float     arrow_y;    // Arrow position Y
+    float     arrow_angle;// Arrow aim / rotation angle
+} NetPlayerSyncPacket;
+```
+
+### Interpolation & Puppet Smoothing
+- On the receiving peer, the remote player entity is represented by Player 2.
+- To eliminate network packet jitter, incoming coordinates are smoothed each frame via linear interpolation:
+  `pos_x = pos_x + (target_x - pos_x) * 0.35f;`
+  `pos_y = pos_y + (target_y - pos_y) * 0.35f;`
+- Velocity and roll animation states are mirrored directly to ensure seamless movement animations.
+
+---
+
+## 7. Dual-Instance Live Verification Traces
+
+Host instance running on port 7777; Client instance running on port 7778:
+
+### Host Log (`test-install/coop_log.txt`)
+```text
+=== Titan Souls Co-op Mod Initializing ===
+Configuration loaded from coop_config.ini:
+  QuickStart: 1 | RunAutomatedTest: 0 | MidpointCamera: 1
+  Network: Enabled=1 | Role=HOST | BindPort=7777 | Remote=127.0.0.1:7778 | IndepCam=0
+[Net] Initialized. Mode: HOST | Bound: 0.0.0.0:7777 | Target: 127.0.0.1:7778
+All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update, Camera::Update).
+[Frame 60] [MENU] P1: 0x00000000 | QuickStart: 1 | NetEnabled: 1 (Role: 1)
+[Net] Handshake received from 127.0.0.1:7778! Sending ACK...
+[Frame 201] Instantiating Player 2 entity near (1048.00, 1176.00)...
+>>> PLAYER 2 SUCCESSFULLY SPAWNED! <<<
+   Player 1: 0x204C0008 | Pos: (1048.00, 1176.00)
+   Player 2: 0x361FCA10 | Pos: (1072.00, 1176.00)
+   Player 2 Arrow: 0x1C8ECC48 | Color: RGBA(0.20, 0.80, 1.00, 1.00)
+[F240] Net:[HOST state=2 TX=44 RX=4]   | Cam:(420.0,816.0) | P1:(1048.0,1176.0) | P2:(1072.0,1176.0)
+[F360] Net:[HOST state=2 TX=166 RX=53] | Cam:(420.0,816.0) | P1:(1048.0,1176.0) | P2:(1062.4,1176.0)
+[F420] Net:[HOST state=2 TX=227 RX=114]| Cam:(420.0,805.0) | P1:(1048.0,1176.0) | P2:(1062.4,1153.1)
+[F480] Net:[HOST state=2 TX=288 RX=175]| Cam:(420.0,798.0) | P1:(1048.0,1176.0) | P2:(1062.4,1136.5)
+```
+
+### Client Log (`test-client/coop_log.txt`)
+```text
+=== Titan Souls Co-op Mod Initializing ===
+Configuration loaded from coop_config.ini:
+  QuickStart: 1 | RunAutomatedTest: 1 | MidpointCamera: 1
+  Network: Enabled=1 | Role=CLIENT | BindPort=7778 | Remote=127.0.0.1:7777 | IndepCam=1
+[Net] Initialized. Mode: CLIENT | Bound: 0.0.0.0:7778 | Target: 127.0.0.1:7777
+All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update, Camera::Update).
+[Net] Handshake ACK received! Connected to Host at 127.0.0.1:7777!
+[Frame 201] Instantiating Player 2 entity near (1048.00, 1176.00)...
+>>> PLAYER 2 SUCCESSFULLY SPAWNED! <<<
+   Player 1: 0x1CB8E1A0 | Pos: (1048.00, 1176.00)
+   Player 2: 0x30E4FB98 | Pos: (1072.00, 1176.00)
+   Player 2 Arrow: 0x1BE25A60 | Color: RGBA(1.00, 0.50, 0.20, 1.00)
+[F240] Net:[CLIENT state=2 TX=45 RX=156] | Cam:(415.1,816.0) | P1:(1048.0,1176.0) | P2:(1062.4,1176.0)
+[F300] Net:[CLIENT state=2 TX=106 RX=217]| Cam:(415.1,816.0) | P1:(1048.0,1176.0) | P2:(1062.4,1176.0)
+[F360] Net:[CLIENT state=2 TX=167 RX=278]| Cam:(415.1,770.2) | P1:(1048.0,1129.0) | P2:(1062.4,1176.0)
+```

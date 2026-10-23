@@ -1,0 +1,8 @@
+bin/
+obj/
+*.obj
+*.dll
+*.lib
+*.exp
+*.log
+coop_log.txt

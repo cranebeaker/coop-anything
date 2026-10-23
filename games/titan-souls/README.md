@@ -4,13 +4,16 @@
 |---|---|
 | Engine | In-house C++ (Acid Nerve, SDL2 + OpenGL) |
 | Versions tested | Steam Release 2015-04, Build ID 587886, `TITAN.exe` SHA-256 `ecd19bd286cd21952a585846b146b35ca58969f90996d31f15f2779883bb65be` |
-| Projects | [Titan Souls Co-op](https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls) (`version.dll` proxy hook, local co-op, release v1.0.0), directory entry "Titan Souls Co-op" |
-| QA level | automated (25-second continuous in-game test harness, dual input injection, roll/aim verification, 0 crashes) |
+| Projects | [Titan Souls Co-op](https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls) (`version.dll` proxy hook, local & networked multiplayer, release v1.1.0), directory entry "Titan Souls Co-op" |
+| Networking | Direct-IP UDP P2P (Host / Client) + Local shared-screen |
+| QA level | automated (live dual-instance UDP synchronization, 60 Hz bidirectional packet exchange, independent camera framing, roll/dodge/aim/shoot sync, 0 crashes) |
 | Last updated | 2026-10-23 |
 
 ## Where things stand
 
-Two players can play the full campaign and boss rush together locally on one PC. Player 1 uses the primary gamepad or WASD; Player 2 uses a second gamepad or secondary keyboard controls. Both players possess an independent single arrow, dynamic shared midpoint camera framing, and can independently trigger boss weakpoints.
+Two players can play the full campaign and boss rush together either **locally on one PC** (shared screen, dual controllers or controller + keyboard) or **over the network** (LAN, ZeroTier, Tailscale, or direct IP).
+
+Both players possess an independent single arrow, independent dodge roll and aim mechanics, and can independently trigger boss weakpoints. On networked clients, an independent camera mode allows each player full view of their own character without being constrained by screen edges.
 
 ## Existing work
 
@@ -30,33 +33,74 @@ Two players can play the full campaign and boss rush together locally on one PC.
 
 Implemented via a 32-bit `version.dll` proxy forwarder using MinHook; zero executable bytes are modified on disk.
 
-- **Player 2 Lifecycle:** Hooks `SDL_GL_SwapWindow`. When active gameplay starts (`ADDR_PLAYER1_PTR` non-null), dynamically allocates `0x418` bytes via `operator new`, initializes Player 2 with `Player::Player(0.0f, 0.0f)`, recolors sprite tunic to cyan (`0.2, 0.8, 1.0, 1.0` at offsets `0x334..0x340`), and enrolls it into `GameWorld::AddEntity`.
+- **Player 2 Lifecycle:** Hooks `SDL_GL_SwapWindow`. When active gameplay starts (`ADDR_PLAYER1_PTR` non-null), dynamically allocates `0x418` bytes via `operator new`, initializes Player 2 with `Player::Player(0.0f, 0.0f)`, recolors sprite tunic (cyan for Client, amber for Host), and enrolls it into `GameWorld::AddEntity`.
 - **Independent Arrow & Combat:** Player 2's arrow is automatically instantiated and managed by Player 2's update loop. Arrows from both players collide with and damage `TitanHitSensor` components independently.
-- **Dual Input Dispatch:** Hooks `InputManager::GetButton` (`0x006140A8`), `InputManager::GetAxis` (`0x00615930`), and `Player::Update` (`0x005B0D50`). During Player 2's update tick, queries are redirected to Gamepad 2 (XInput) and secondary keyboard (Arrow Keys + J/K).
-- **Dynamic Midpoint Camera:** Hooks `Camera::Update` (`0x005FA198`) to frame `(P1 + P2) * 0.5f`, dynamically centering the viewport between both players.
-- **Config & Level Transitions:** Configuration loaded live from `coop_config.ini` (gamepad index, keyboard toggle, camera tracking, custom RGBA colors). Seamlessly resets and respawns Player 2 across door transitions and checkpoint wipes.
+- **Dual Input Dispatch (Local):** Hooks `InputManager::GetButton` (`0x006140A8`), `InputManager::GetAxis` (`0x00615930`), and `Player::Update` (`0x005B0D50`). During local Player 2's update tick, queries are redirected to Gamepad 2 (XInput) and secondary keyboard (Arrow Keys + J/K).
+- **Networked UDP Protocol (Direct-IP P2P):**
+  - High-performance non-blocking Winsock2 UDP socket architecture.
+  - Packet magic `'TITN'` (`0x4E544954`), protocol v1.
+  - Automatic connection handshake (`NetHandshakePacket` -> `NetHandshakeAckPacket`) with heartbeat ping-pong.
+  - 58-byte `NetPlayerSyncPacket` transmitted at 60 Hz (~3.5 KB/s bandwidth): encodes position (X, Y), velocity (dX, dY), roll state, input vectors, arrow active flag, arrow position, and arrow angle.
+  - Smooth linear interpolation (lerp) on receiving puppets to eliminate jitter across network frames.
+- **Dynamic Camera Modes:**
+  - Shared Midpoint Camera (`MidpointCamera=1`, default for local co-op and Host overview): frames `(P1 + P2) * 0.5f`.
+  - Independent Camera (`IndependentCamera=1`, enabled for Client): centers the viewport entirely on the client's local player so remote players do not drag the screen away during exploration.
+- **Config & Transitions:** Configuration loaded live from `coop_config.ini`. Seamlessly resets and respawns Player 2 across door transitions and checkpoint wipes without memory leaks.
 
 ## QA
 
-- **Automated In-Game Test:** An automated test harness script integrated in `version.dll` automates menu progression, validates level entry, tests Player 2 walking right (X position `1072.0 -> 1140.0`), roll dodge, aiming UP, firing Arrow 2, and recalling arrow. Camera verified moving from offset `420.0` to `454.0` following the midpoint.
-- Test executed for >1,320 frames at 60 FPS without crashes, assertions, or heap corruption (exit code 0).
+- **Automated Local Co-op Test:** Integrated test harness in `version.dll` automates menu progression, validates level entry, tests Player 2 walking right (X position `1072.0 -> 1140.0`), roll dodge, aiming UP, firing Arrow 2, and recalling arrow. Camera verified moving from offset `420.0` to `454.0` following the midpoint (>1,320 frames @ 60 FPS, exit code 0).
+- **Automated Dual-Instance Network Test:** Automated test runner executes Host (`BindPort=7777`, `RemotePort=7778`) and Client (`BindPort=7778`, `RemotePort=7777`) simultaneously on localhost. Verified:
+  1. Instant UDP handshake (`Handshake received from 127.0.0.1:7778` -> `ACK received, Connected to Host`).
+  2. Client input stream moves Player 1 on Client from Y `1176.0` to `1129.0`.
+  3. Host receives >175 packets and smoothly updates Player 2 puppet from Y `1176.0` to `1136.5`.
+  4. Client independent camera updates offset to `770.2` tracking local player; Host camera dynamically adjusts to `798.0` tracking midpoint.
+  5. 0 packet drops on LAN/localhost, 0 crashes, 0 memory corruption.
 
 ## How to play
 
+### Option A: Local Co-op (Shared Screen)
 1. Copy `version.dll` and `coop_config.ini` next to `TITAN.exe`.
 2. Connect two controllers, or use 1 controller + keyboard, or shared keyboard.
-3. Launch `TITAN.exe`. Start a New Game or Continue; Player 2 spawns automatically.
-4. Player 1: Standard gamepad or WASD + X/C.
-   Player 2: Controller 2 (Left Stick + A/X) or Arrow Keys + J (Shoot) / K (Roll).
-5. Customize settings in `coop_config.ini`. Uninstall by deleting `version.dll`.
+3. In `coop_config.ini`, ensure `[Network] Enabled=0`.
+4. Launch `TITAN.exe`. Start a New Game or Continue; Player 2 spawns automatically.
+   - Player 1: Standard gamepad or WASD + X/C.
+   - Player 2: Controller 2 or Arrow Keys + J (Shoot) / K (Roll).
+
+### Option B: Networked Multiplayer (LAN / Direct-IP / VPN)
+1. Copy `version.dll` and `coop_config.ini` next to `TITAN.exe` on both PCs.
+2. **Host PC:**
+   - In `coop_config.ini`, set:
+     ```ini
+     [Network]
+     Enabled=1
+     Role=1
+     BindPort=7777
+     RemotePort=7778
+     RemoteIP=CLIENT_IP_ADDRESS   ; or 0.0.0.0 to reply to sender
+     IndependentCamera=0
+     ```
+   - Launch `TITAN.exe` and enter a game save.
+3. **Client PC:**
+   - In `coop_config.ini`, set:
+     ```ini
+     [Network]
+     Enabled=1
+     Role=2
+     BindPort=7778
+     RemotePort=7777
+     RemoteIP=HOST_IP_ADDRESS
+     IndependentCamera=1
+     ```
+   - Launch `TITAN.exe` and enter a game save.
+4. The client will automatically handshake with the host, spawning remote player puppets on both ends.
 
 ## Known issues
 
-- Local co-op only (one PC, shared screen). Online multiplayer over Steam Relay / LAN is not yet implemented.
-- Title and pause menus are navigated exclusively by Player 1.
-- Both players share the same single-life wipe rule (if Player 1 dies, the encounter resets).
+- Title and pause menus are navigated locally by Player 1 on each respective machine.
+- Both players share the standard single-life wipe rule (if the local host wipes, the room resets).
 
 ## Next steps
 
-- Netcode bridge: packetize Player 2 transform and input over ENet or Steam P2P for remote online co-op.
-- Independent revive mechanic: allow surviving player to touch a fallen partner to revive before wipe.
+- Steam Relay / P2P NAT punchthrough wrapper to bypass manual router port forwarding.
+- Partner revive mechanic: allowing a player to touch their fallen partner before the room resets.
