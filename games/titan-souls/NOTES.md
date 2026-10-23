@@ -240,3 +240,43 @@ All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update
 [F300] Net:[CLIENT state=2 TX=106 RX=217]| Cam:(415.1,816.0) | P1:(1048.0,1176.0) | P2:(1062.4,1176.0)
 [F360] Net:[CLIENT state=2 TX=167 RX=278]| Cam:(415.1,770.2) | P1:(1048.0,1129.0) | P2:(1062.4,1176.0)
 ```
+
+
+---
+
+## 8. Steamworks P2P Relay Integration
+
+### Interface Bindings & Calling Conventions
+*Titan Souls* dynamically links `steam_api.dll` and initializes the Steam API during game startup. The co-op mod dynamically resolves `SteamNetworking()`, `SteamUser()`, and `SteamFriends()` exported getters.
+
+Because `Net_Init()` is called on the first swap buffer frame (`Hooked_SDL_GL_SwapWindow`), `SteamAPI_Init()` has already completed inside the engine, guaranteeing non-null interface pointers.
+
+#### 1. ISteamNetworking Vtable Map
+- Index 0: `bool SendP2PPacket(CSteamID steamIDRemote, const void *pubData, uint32_t cubData, EP2PSend eP2PSendType, int nChannel)`
+  - Parameter `eP2PSendType = k_EP2PSendUnreliableNoDelay (1)` provides 60 Hz UDP-like delivery over Valve's relay network without packet delay.
+- Index 1: `bool IsP2PPacketAvailable(uint32_t *pcubMsgSize, int nChannel)`
+- Index 2: `bool ReadP2PPacket(void *pubDest, uint32_t cubDest, uint32_t *pcubMsgSize, CSteamID *psteamIDRemote, int nChannel)`
+- Index 3: `bool AcceptP2PSessionWithUser(CSteamID steamIDRemote)`
+- Index 4: `bool CloseP2PSessionWithUser(CSteamID steamIDRemote)`
+
+#### 2. ISteamUser & CSteamID ABI
+- Index 2: `CSteamID GetSteamID(void)`
+- **Calling Convention Quirk:** Under MSVC x86 32-bit calling convention, returning a non-POD 64-bit struct with a constructor (`CSteamID`) uses a hidden output pointer passed as the first parameter:
+  `void __thiscall GetSteamID(void* pThis, uint64_t* pOutSteamID);`
+  Calling this function populates the local Steam ID (e.g. `76561198138204395`) without stack corruption.
+
+#### 3. ISteamFriends & In-Game Overlay
+- Index 0: `const char* GetPersonaName(void)` — retrieves current user persona name (`big bango bongo`).
+- Index 29: `void ActivateGameOverlay(const char *pchDialog)` — bound to **F7** hotkey (`ActivateGameOverlay("Friends")`) for convenient friend inviting.
+
+### Live Initialization Verification Log
+```text
+=== Titan Souls Co-op Mod Initializing ===
+Configuration loaded from coop_config.ini:
+  QuickStart: 1 | RunAutomatedTest: 0 | MidpointCamera: 1
+  Network: Enabled=1 | Transport=steam | Role=HOST | BindPort=7777 | Remote=127.0.0.1:7778 | FriendSteamID=0 | IndepCam=0
+Bound xinput1_4.dll successfully.
+All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update, Camera::Update).
+[Net] Steamworks P2P active. Persona: 'big bango bongo' | My SteamID: 76561198138204395 | Target Friend: 0
+[Frame 60] [MENU] P1: 0x00000000 | QuickStart: 1 | NetEnabled: 1 (Transport: Steam, Role: 1)
+```

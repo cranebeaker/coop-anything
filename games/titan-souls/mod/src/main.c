@@ -5,6 +5,7 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
 #include "dllproxy.h"
@@ -153,26 +154,59 @@ static float g_p2ColorG = 0.8f;
 static float g_p2ColorB = 1.0f;
 static float g_p2ColorA = 1.0f;
 
+// Steamworks API types & dynamic function pointers
+typedef bool (__thiscall *SendP2PPacket_t)(void* pThis, uint64_t steamIDRemote, const void* pubData, uint32_t cubData, int eP2PSendType, int nChannel);
+typedef bool (__thiscall *IsP2PPacketAvailable_t)(void* pThis, uint32_t* pcubMsgSize, int nChannel);
+typedef bool (__thiscall *ReadP2PPacket_t)(void* pThis, void* pubDest, uint32_t cubDest, uint32_t* pcubMsgSize, uint64_t* psteamIDRemote, int nChannel);
+typedef bool (__thiscall *AcceptP2PSessionWithUser_t)(void* pThis, uint64_t steamIDRemote);
+typedef bool (__thiscall *CloseP2PSessionWithUser_t)(void* pThis, uint64_t steamIDRemote);
+typedef void (__thiscall *GetSteamID_t)(void* pThis, uint64_t* pOut);
+typedef const char* (__thiscall *GetPersonaName_t)(void* pThis);
+typedef void (__thiscall *ActivateGameOverlay_t)(void* pThis, const char* pchDialog);
+typedef void (*SteamRunCallbacks_t)(void);
+
 // Network Configuration
-static BOOL  g_netEnabled = FALSE;
-static int   g_netRole = 1; // 1 = Host, 2 = Client
-static int   g_netBindPort = 7777;
-static char  g_netRemoteIP[64] = "127.0.0.1";
-static int   g_netRemotePort = 7778;
-static BOOL  g_netIndependentCamera = TRUE;
+static BOOL     g_netEnabled = FALSE;
+static char     g_netTransport[16] = "steam"; // "steam" or "udp"
+static int      g_netRole = 1; // 1 = Host, 2 = Client
+static int      g_netBindPort = 7777;
+static char     g_netRemoteIP[64] = "127.0.0.1";
+static int      g_netRemotePort = 7778;
+static BOOL     g_netIndependentCamera = TRUE;
+
+// Steamworks State
+static void*    g_pSteamNetworking = NULL;
+static void*    g_pSteamUser = NULL;
+static void*    g_pSteamFriends = NULL;
+static SteamRunCallbacks_t g_pfnSteamRunCallbacks = NULL;
+
+static SendP2PPacket_t            g_pfnSendP2P = NULL;
+static IsP2PPacketAvailable_t     g_pfnIsP2PAvail = NULL;
+static ReadP2PPacket_t            g_pfnReadP2P = NULL;
+static AcceptP2PSessionWithUser_t  g_pfnAcceptP2P = NULL;
+static CloseP2PSessionWithUser_t  g_pfnCloseP2P = NULL;
+static GetSteamID_t               g_pfnGetSteamID = NULL;
+static GetPersonaName_t           g_pfnGetPersona = NULL;
+static ActivateGameOverlay_t      g_pfnOverlay = NULL;
+
+static uint64_t g_steamMyID = 0;
+static uint64_t g_steamFriendID = 0;
+static char     g_steamPersonaName[64] = "";
+static BOOL     g_steamActive = FALSE;
+static BOOL     g_netInitialized = FALSE;
 
 // Network Runtime State
-static SOCKET g_netSocket = INVALID_SOCKET;
+static SOCKET   g_netSocket = INVALID_SOCKET;
 static struct sockaddr_in g_netRemoteAddr;
-static int    g_netState = NET_STATE_DISCONNECTED;
+static int      g_netState = NET_STATE_DISCONNECTED;
 static uint32_t g_netSeqOut = 0;
 static uint32_t g_netLastSeqIn = 0;
-static DWORD  g_netLastRecvTick = 0;
-static DWORD  g_netLastSendTick = 0;
+static DWORD    g_netLastRecvTick = 0;
+static DWORD    g_netLastSendTick = 0;
 static uint32_t g_netPacketsSent = 0;
 static uint32_t g_netPacketsRecv = 0;
 static NetPlayerSyncPacket g_remoteSyncState;
-static BOOL   g_hasRemoteSync = FALSE;
+static BOOL     g_hasRemoteSync = FALSE;
 
 // Global Engine State
 static void* g_pPlayer1 = NULL;
@@ -249,11 +283,96 @@ static const char* GetStdStringCStr(const void* pStr) {
 }
 
 // ============================================================================
-// Network Subsystem Implementation
+// Network Subsystem Implementation (Steamworks P2P + UDP Socket Fallback)
 // ============================================================================
+static void Net_SendPacket(const void* data, int size) {
+    if (!g_netEnabled) return;
+    if (g_steamActive && g_pSteamNetworking && g_steamFriendID != 0) {
+        // k_EP2PSendUnreliableNoDelay = 1
+        g_pfnSendP2P(g_pSteamNetworking, g_steamFriendID, data, size, 1, 0);
+        g_netPacketsSent++;
+    } else if (g_netSocket != INVALID_SOCKET) {
+        sendto(g_netSocket, (const char*)data, size, 0,
+               (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
+        g_netPacketsSent++;
+    }
+}
+
+static void ParseCommandLineSteamJoin(void) {
+    LPSTR cmdLine = GetCommandLineA();
+    if (!cmdLine) return;
+
+    const char* conn = strstr(cmdLine, "+connect");
+    if (!conn) conn = strstr(cmdLine, "-steamjoin");
+    if (conn) {
+        conn += (conn[1] == 'c' ? 8 : 10);
+        while (*conn == ' ' || *conn == '\t') conn++;
+        if (*conn) {
+            uint64_t sid = _strtoui64(conn, NULL, 10);
+            if (sid != 0) {
+                g_steamFriendID = sid;
+                g_netRole = 2; // Auto-set Role to Client when joining friend
+                LogMsg("[Steam] Parsed connect argument: Target SteamID = %llu\n", g_steamFriendID);
+            }
+        }
+    }
+}
+
 static void Net_Init(void) {
     if (!g_netEnabled) return;
 
+    ParseCommandLineSteamJoin();
+
+    // 1. Try initializing Steamworks P2P if transport is "steam"
+    if (_stricmp(g_netTransport, "steam") == 0) {
+        HMODULE hSteam = GetModuleHandleW(L"steam_api.dll");
+        if (!hSteam) hSteam = LoadLibraryW(L"steam_api.dll");
+
+        if (hSteam) {
+            typedef void* (*SteamGetter_t)(void);
+            SteamGetter_t pfnNet = (SteamGetter_t)GetProcAddress(hSteam, "SteamNetworking");
+            SteamGetter_t pfnUser = (SteamGetter_t)GetProcAddress(hSteam, "SteamUser");
+            SteamGetter_t pfnFriends = (SteamGetter_t)GetProcAddress(hSteam, "SteamFriends");
+            g_pfnSteamRunCallbacks = (SteamRunCallbacks_t)GetProcAddress(hSteam, "SteamAPI_RunCallbacks");
+
+            if (pfnNet && pfnUser) {
+                g_pSteamNetworking = pfnNet();
+                g_pSteamUser = pfnUser();
+                g_pSteamFriends = pfnFriends ? pfnFriends() : NULL;
+
+                if (g_pSteamNetworking && g_pSteamUser) {
+                    uintptr_t* netVtbl = *(uintptr_t**)g_pSteamNetworking;
+                    uintptr_t* userVtbl = *(uintptr_t**)g_pSteamUser;
+
+                    g_pfnSendP2P    = (SendP2PPacket_t)netVtbl[0];
+                    g_pfnIsP2PAvail = (IsP2PPacketAvailable_t)netVtbl[1];
+                    g_pfnReadP2P    = (ReadP2PPacket_t)netVtbl[2];
+                    g_pfnAcceptP2P  = (AcceptP2PSessionWithUser_t)netVtbl[3];
+                    g_pfnCloseP2P   = (CloseP2PSessionWithUser_t)netVtbl[4];
+
+                    g_pfnGetSteamID = (GetSteamID_t)userVtbl[2];
+                    g_pfnGetSteamID(g_pSteamUser, &g_steamMyID);
+
+                    if (g_pSteamFriends) {
+                        uintptr_t* friendsVtbl = *(uintptr_t**)g_pSteamFriends;
+                        g_pfnGetPersona = (GetPersonaName_t)friendsVtbl[0];
+                        g_pfnOverlay = (ActivateGameOverlay_t)friendsVtbl[29];
+                        const char* name = g_pfnGetPersona ? g_pfnGetPersona(g_pSteamFriends) : "";
+                        if (name) strcpy_s(g_steamPersonaName, sizeof(g_steamPersonaName), name);
+                    }
+
+                    g_steamActive = TRUE;
+                    g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
+                    LogMsg("[Net] Steamworks P2P active. Persona: '%s' | My SteamID: %llu | Target Friend: %llu\n",
+                           g_steamPersonaName, g_steamMyID, g_steamFriendID);
+                    return; // Steam transport successfully ready
+                }
+            }
+        }
+        LogMsg("[Net] Steamworks not available. Falling back to UDP socket.\n");
+    }
+
+    // 2. Direct-IP UDP Socket Initialization (Fallback / LAN mode)
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         LogMsg("[Net] WSAStartup failed: %d\n", WSAGetLastError());
@@ -266,11 +385,9 @@ static void Net_Init(void) {
         return;
     }
 
-    // Set socket to non-blocking
     u_long nonblock = 1;
     ioctlsocket(g_netSocket, FIONBIO, &nonblock);
 
-    // Bind local socket to INADDR_ANY
     struct sockaddr_in localAddr;
     ZeroMemory(&localAddr, sizeof(localAddr));
     localAddr.sin_family = AF_INET;
@@ -284,69 +401,55 @@ static void Net_Init(void) {
         return;
     }
 
-    // Prepare remote target address
     ZeroMemory(&g_netRemoteAddr, sizeof(g_netRemoteAddr));
     g_netRemoteAddr.sin_family = AF_INET;
     g_netRemoteAddr.sin_addr.s_addr = inet_addr(g_netRemoteIP);
     g_netRemoteAddr.sin_port = htons((u_short)g_netRemotePort);
 
     g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
-    LogMsg("[Net] Initialized. Mode: %s | Bound: 0.0.0.0:%d | Target: %s:%d\n",
+    LogMsg("[Net] UDP Socket Initialized. Mode: %s | Bound: 0.0.0.0:%d | Target: %s:%d\n",
            (g_netRole == 1 ? "HOST" : "CLIENT"), g_netBindPort, g_netRemoteIP, g_netRemotePort);
 }
 
 static void Net_Shutdown(void) {
+    if (g_netState == NET_STATE_CONNECTED) {
+        NetHeader bye;
+        bye.magic = NET_MAGIC;
+        bye.version = NET_PROTOCOL_VERSION;
+        bye.pktType = NET_PKT_DISCONNECT;
+        bye.senderRole = (uint16_t)g_netRole;
+        bye.sequence = ++g_netSeqOut;
+        Net_SendPacket(&bye, sizeof(bye));
+    }
+    if (g_steamActive && g_pSteamNetworking && g_steamFriendID != 0) {
+        if (g_pfnCloseP2P) g_pfnCloseP2P(g_pSteamNetworking, g_steamFriendID);
+    }
     if (g_netSocket != INVALID_SOCKET) {
-        if (g_netState == NET_STATE_CONNECTED) {
-            NetHeader bye;
-            bye.magic = NET_MAGIC;
-            bye.version = NET_PROTOCOL_VERSION;
-            bye.pktType = NET_PKT_DISCONNECT;
-            bye.senderRole = (uint16_t)g_netRole;
-            bye.sequence = ++g_netSeqOut;
-            sendto(g_netSocket, (const char*)&bye, sizeof(bye), 0,
-                   (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
-        }
         closesocket(g_netSocket);
         g_netSocket = INVALID_SOCKET;
+        WSACleanup();
     }
-    WSACleanup();
 }
 
-static void Net_PollIncoming(void) {
-    if (!g_netEnabled || g_netSocket == INVALID_SOCKET) return;
+static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t senderSteamID, struct sockaddr_in* senderAddr) {
+    if ((size_t)bytes < sizeof(NetHeader)) return;
 
-    char recvBuf[256];
-    struct sockaddr_in senderAddr;
+    NetHeader* hdr = (NetHeader*)recvBuf;
+    if (hdr->magic != NET_MAGIC || hdr->version != NET_PROTOCOL_VERSION) return;
 
-    while (1) {
-        int senderLen = sizeof(senderAddr);
-        int bytes = recvfrom(g_netSocket, recvBuf, sizeof(recvBuf), 0,
-                             (struct sockaddr*)&senderAddr, &senderLen);
-        if (bytes <= 0) break; // Non-blocking: no more packets ready
+    g_netPacketsRecv++;
+    g_netLastRecvTick = GetTickCount();
 
-        if ((size_t)bytes < sizeof(NetHeader)) continue;
-
-        NetHeader* hdr = (NetHeader*)recvBuf;
-        if (hdr->magic != NET_MAGIC || hdr->version != NET_PROTOCOL_VERSION) continue;
-
-        g_netPacketsRecv++;
-        g_netLastRecvTick = GetTickCount();
-
-        // 1. Handshake Packet (Client -> Host)
-        if (hdr->pktType == NET_PKT_HANDSHAKE) {
-            if (g_netRole == 1) { // Host receives handshake
-                // Ignore rogue handshakes if already connected to a different peer
-                BOOL isSamePeer = (senderAddr.sin_addr.s_addr == g_netRemoteAddr.sin_addr.s_addr &&
-                                   senderAddr.sin_port == g_netRemoteAddr.sin_port);
-                if (g_netState == NET_STATE_CONNECTED && !isSamePeer && g_hasRemoteSync) {
-                    continue; // Active session with another client, ignore
+    // 1. Handshake Packet (Client -> Host)
+    if (hdr->pktType == NET_PKT_HANDSHAKE) {
+        if (g_netRole == 1) { // Host
+            if (g_steamActive) {
+                if (g_netState == NET_STATE_CONNECTED && g_steamFriendID != 0 && g_steamFriendID != senderSteamID && g_hasRemoteSync) {
+                    return; // Ignore other players while session is active
                 }
-
-                g_netRemoteAddr = senderAddr; // Lock in client address
+                g_steamFriendID = senderSteamID;
                 g_netState = NET_STATE_CONNECTED;
-                LogMsg("[Net] Handshake received from %s:%d! Sending ACK...\n",
-                       inet_ntoa(senderAddr.sin_addr), ntohs(senderAddr.sin_port));
+                LogMsg("[Net/Steam] Handshake from SteamID %llu! Sending ACK...\n", senderSteamID);
 
                 NetHandshakeAckPacket ack;
                 ack.header.magic = NET_MAGIC;
@@ -355,48 +458,100 @@ static void Net_PollIncoming(void) {
                 ack.header.senderRole = 1;
                 ack.header.sequence = ++g_netSeqOut;
                 ack.status = 1;
-
-                sendto(g_netSocket, (const char*)&ack, sizeof(ack), 0,
-                       (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
-                g_netPacketsSent++;
-            }
-        }
-        // 2. Handshake ACK Packet (Host -> Client)
-        else if (hdr->pktType == NET_PKT_HANDSHAKE_ACK) {
-            if (g_netRole == 2) { // Client receives ACK
+                Net_SendPacket(&ack, sizeof(ack));
+            } else if (senderAddr) {
+                BOOL isSamePeer = (senderAddr->sin_addr.s_addr == g_netRemoteAddr.sin_addr.s_addr &&
+                                   senderAddr->sin_port == g_netRemoteAddr.sin_port);
+                if (g_netState == NET_STATE_CONNECTED && !isSamePeer && g_hasRemoteSync) {
+                    return;
+                }
+                g_netRemoteAddr = *senderAddr;
                 g_netState = NET_STATE_CONNECTED;
-                LogMsg("[Net] Handshake ACK received! Connected to Host at %s:%d!\n",
-                       inet_ntoa(senderAddr.sin_addr), ntohs(senderAddr.sin_port));
+                LogMsg("[Net/UDP] Handshake from %s:%d! Sending ACK...\n",
+                       inet_ntoa(senderAddr->sin_addr), ntohs(senderAddr->sin_port));
+
+                NetHandshakeAckPacket ack;
+                ack.header.magic = NET_MAGIC;
+                ack.header.version = NET_PROTOCOL_VERSION;
+                ack.header.pktType = NET_PKT_HANDSHAKE_ACK;
+                ack.header.senderRole = 1;
+                ack.header.sequence = ++g_netSeqOut;
+                ack.status = 1;
+                Net_SendPacket(&ack, sizeof(ack));
             }
         }
-        // 3. Heartbeat Packet
-        else if (hdr->pktType == NET_PKT_HEARTBEAT) {
-            // Heartbeat received, peer is alive
+    }
+    // 2. Handshake ACK Packet (Host -> Client)
+    else if (hdr->pktType == NET_PKT_HANDSHAKE_ACK) {
+        if (g_netRole == 2) {
+            g_netState = NET_STATE_CONNECTED;
+            if (g_steamActive) {
+                g_steamFriendID = senderSteamID;
+                LogMsg("[Net/Steam] Handshake ACK received! Connected to Host SteamID %llu!\n", senderSteamID);
+            } else if (senderAddr) {
+                LogMsg("[Net/UDP] Handshake ACK received! Connected to Host at %s:%d!\n",
+                       inet_ntoa(senderAddr->sin_addr), ntohs(senderAddr->sin_port));
+            }
         }
-        // 4. Player State Sync Packet
-        else if (hdr->pktType == NET_PKT_PLAYER_SYNC) {
-            if ((size_t)bytes >= sizeof(NetPlayerSyncPacket)) {
-                NetPlayerSyncPacket* sync = (NetPlayerSyncPacket*)recvBuf;
-                // Discard stale out-of-order UDP packets
-                if (sync->header.sequence > g_netLastSeqIn || (g_netLastSeqIn - sync->header.sequence > 10000)) {
-                    g_netLastSeqIn = sync->header.sequence;
-                    g_remoteSyncState = *sync;
-                    g_hasRemoteSync = TRUE;
-                    if (g_netState != NET_STATE_CONNECTED) {
-                        g_netState = NET_STATE_CONNECTED;
-                    }
+    }
+    // 3. Heartbeat
+    else if (hdr->pktType == NET_PKT_HEARTBEAT) {
+        // Peer alive
+    }
+    // 4. Player State Sync
+    else if (hdr->pktType == NET_PKT_PLAYER_SYNC) {
+        if ((size_t)bytes >= sizeof(NetPlayerSyncPacket)) {
+            NetPlayerSyncPacket* sync = (NetPlayerSyncPacket*)recvBuf;
+            if (sync->header.sequence > g_netLastSeqIn || (g_netLastSeqIn - sync->header.sequence > 10000)) {
+                g_netLastSeqIn = sync->header.sequence;
+                g_remoteSyncState = *sync;
+                g_hasRemoteSync = TRUE;
+                if (g_netState != NET_STATE_CONNECTED) {
+                    g_netState = NET_STATE_CONNECTED;
                 }
             }
         }
-        // 5. Disconnect Packet
-        else if (hdr->pktType == NET_PKT_DISCONNECT) {
-            LogMsg("[Net] Peer sent disconnect signal.\n");
-            g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
-            g_hasRemoteSync = FALSE;
+    }
+    // 5. Disconnect
+    else if (hdr->pktType == NET_PKT_DISCONNECT) {
+        LogMsg("[Net] Peer sent disconnect signal.\n");
+        g_netState = (g_netRole == 2) ? NET_STATE_CONNECTING : NET_STATE_DISCONNECTED;
+        g_hasRemoteSync = FALSE;
+    }
+}
+
+static void Net_PollIncoming(void) {
+    if (!g_netEnabled) return;
+
+    if (g_pfnSteamRunCallbacks) g_pfnSteamRunCallbacks();
+
+    // 1. Poll Steamworks P2P packets
+    if (g_steamActive && g_pSteamNetworking) {
+        uint32_t msgSize = 0;
+        while (g_pfnIsP2PAvail(g_pSteamNetworking, &msgSize, 0) && msgSize > 0) {
+            char recvBuf[256];
+            uint32_t readSize = (msgSize < sizeof(recvBuf)) ? msgSize : sizeof(recvBuf);
+            uint64_t senderId = 0;
+            if (g_pfnReadP2P(g_pSteamNetworking, recvBuf, sizeof(recvBuf), &readSize, &senderId, 0)) {
+                if (g_pfnAcceptP2P) g_pfnAcceptP2P(g_pSteamNetworking, senderId);
+                ProcessIncomingPacket(recvBuf, (int)readSize, senderId, NULL);
+            }
+        }
+    }
+    // 2. Poll UDP socket packets
+    else if (g_netSocket != INVALID_SOCKET) {
+        char recvBuf[256];
+        struct sockaddr_in senderAddr;
+        while (1) {
+            int senderLen = sizeof(senderAddr);
+            int bytes = recvfrom(g_netSocket, recvBuf, sizeof(recvBuf), 0,
+                                 (struct sockaddr*)&senderAddr, &senderLen);
+            if (bytes <= 0) break;
+            ProcessIncomingPacket(recvBuf, bytes, 0, &senderAddr);
         }
     }
 
-    // Connection timeout: drop session after 5 seconds without packets
+    // Connection timeout check (common to both UDP and Steam P2P)
     if (g_netState == NET_STATE_CONNECTED && g_netLastRecvTick > 0) {
         if (GetTickCount() - g_netLastRecvTick > 5000) {
             LogMsg("[Net] Connection timed out (5s without packets). Dropping session.\n");
@@ -408,7 +563,8 @@ static void Net_PollIncoming(void) {
 }
 
 static void Net_BroadcastLocalPlayer(void) {
-    if (!g_netEnabled || g_netSocket == INVALID_SOCKET) return;
+    if (!g_netEnabled) return;
+    if (!g_steamActive && g_netSocket == INVALID_SOCKET) return;
 
     DWORD now = GetTickCount();
 
@@ -424,9 +580,7 @@ static void Net_BroadcastLocalPlayer(void) {
             pkt.header.sequence = ++g_netSeqOut;
             strcpy_s(pkt.tag, sizeof(pkt.tag), "CLIENT_JOIN");
 
-            sendto(g_netSocket, (const char*)&pkt, sizeof(pkt), 0,
-                   (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
-            g_netPacketsSent++;
+            Net_SendPacket(&pkt, sizeof(pkt));
         }
         return;
     }
@@ -470,9 +624,7 @@ static void Net_BroadcastLocalPlayer(void) {
         int p1_state = *(int*)((uintptr_t)pP1 + 0x368);
         pkt.is_alive = (p1_state != 3) ? 1 : 0;
 
-        sendto(g_netSocket, (const char*)&pkt, sizeof(pkt), 0,
-               (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
-        g_netPacketsSent++;
+        Net_SendPacket(&pkt, sizeof(pkt));
     }
 
     // Heartbeat every 60 frames (1 second)
@@ -485,9 +637,7 @@ static void Net_BroadcastLocalPlayer(void) {
         hb.header.sequence = ++g_netSeqOut;
         hb.timestamp = now;
 
-        sendto(g_netSocket, (const char*)&hb, sizeof(hb), 0,
-               (struct sockaddr*)&g_netRemoteAddr, sizeof(g_netRemoteAddr));
-        g_netPacketsSent++;
+        Net_SendPacket(&hb, sizeof(hb));
     }
 }
 
@@ -564,11 +714,18 @@ static void LoadConfig(void) {
 
     // Network settings
     g_netEnabled           = GetPrivateProfileIntA("Network", "Enabled", 0, iniPath) != 0;
+    GetPrivateProfileStringA("Network", "Transport", "steam", g_netTransport, sizeof(g_netTransport), iniPath);
     g_netRole              = GetPrivateProfileIntA("Network", "Role", 1, iniPath);
     g_netBindPort          = GetPrivateProfileIntA("Network", "BindPort", (g_netRole == 1 ? 7777 : 7778), iniPath);
     g_netRemotePort        = GetPrivateProfileIntA("Network", "RemotePort", (g_netRole == 1 ? 7778 : 7777), iniPath);
     g_netIndependentCamera = GetPrivateProfileIntA("Network", "IndependentCamera", 1, iniPath) != 0;
     GetPrivateProfileStringA("Network", "RemoteIP", "127.0.0.1", g_netRemoteIP, sizeof(g_netRemoteIP), iniPath);
+
+    char friendBuf[64] = {0};
+    if (GetPrivateProfileStringA("Network", "FriendSteamID", "0", friendBuf, sizeof(friendBuf), iniPath)) {
+        uint64_t fid = _strtoui64(friendBuf, NULL, 10);
+        if (fid != 0) g_steamFriendID = fid;
+    }
 
     char buf[64];
     if (GetPrivateProfileStringA("Player2", "ColorR", "0.2", buf, sizeof(buf), iniPath)) g_p2ColorR = (float)atof(buf);
@@ -578,8 +735,8 @@ static void LoadConfig(void) {
 
     LogMsg("Configuration loaded from %s:\n", iniPath);
     LogMsg("  QuickStart: %d | RunAutomatedTest: %d | MidpointCamera: %d\n", g_quickStart, g_runAutomatedTest, g_midpointCamera);
-    LogMsg("  Network: Enabled=%d | Role=%s | BindPort=%d | Remote=%s:%d | IndepCam=%d\n",
-           g_netEnabled, (g_netRole == 1 ? "HOST" : "CLIENT"), g_netBindPort, g_netRemoteIP, g_netRemotePort, g_netIndependentCamera);
+    LogMsg("  Network: Enabled=%d | Transport=%s | Role=%s | BindPort=%d | Remote=%s:%d | FriendSteamID=%llu | IndepCam=%d\n",
+           g_netEnabled, g_netTransport, (g_netRole == 1 ? "HOST" : "CLIENT"), g_netBindPort, g_netRemoteIP, g_netRemotePort, g_steamFriendID, g_netIndependentCamera);
 }
 
 static void PollLocalPlayer2Inputs(void) {
@@ -862,6 +1019,11 @@ static void TrySpawnPlayer2(void) {
 static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
     g_frameCount++;
 
+    if (!g_netInitialized) {
+        g_netInitialized = TRUE;
+        Net_Init();
+    }
+
     // 1. Network Sync & Input Polling
     if (g_netEnabled) {
         Net_PollIncoming();
@@ -921,6 +1083,20 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
         }
     }
 
+    // F7 hotkey: open Steam Friends overlay if Steamworks is active
+    if (g_steamActive && g_pfnOverlay && IsGameWindowActive()) {
+        static BOOL s_f7Pressed = FALSE;
+        if (GetAsyncKeyState(VK_F7) & 0x8000) {
+            if (!s_f7Pressed) {
+                s_f7Pressed = TRUE;
+                LogMsg("[Steam] F7 pressed -> opening Steam Friends overlay\n");
+                g_pfnOverlay(g_pSteamFriends, "Friends");
+            }
+        } else {
+            s_f7Pressed = FALSE;
+        }
+    }
+
     // 4. Periodic status logging (every 60 frames = once per second)
     if (g_frameCount % 60 == 0) {
         float cam_x = *(float*)ADDR_CAM_OFFSET_X;
@@ -933,17 +1109,23 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
             float p2_y = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
 
             if (g_netEnabled) {
-                LogMsg("[F%d] Net:[%s state=%d TX=%u RX=%u] | Cam:(%.1f,%.1f) | P1:(%.1f,%.1f) | P2:(%.1f,%.1f)\n",
-                       g_frameCount, (g_netRole == 1 ? "HOST" : "CLIENT"), g_netState,
-                       g_netPacketsSent, g_netPacketsRecv, cam_x, cam_y, p1_x, p1_y, p2_x, p2_y);
+                if (g_steamActive) {
+                    LogMsg("[F%d] Net/Steam:[%s state=%d Friend=%llu TX=%u RX=%u] | Cam:(%.1f,%.1f) | P1:(%.1f,%.1f) | P2:(%.1f,%.1f)\n",
+                           g_frameCount, (g_netRole == 1 ? "HOST" : "CLIENT"), g_netState, g_steamFriendID,
+                           g_netPacketsSent, g_netPacketsRecv, cam_x, cam_y, p1_x, p1_y, p2_x, p2_y);
+                } else {
+                    LogMsg("[F%d] Net/UDP:[%s state=%d Peer=%s:%d TX=%u RX=%u] | Cam:(%.1f,%.1f) | P1:(%.1f,%.1f) | P2:(%.1f,%.1f)\n",
+                           g_frameCount, (g_netRole == 1 ? "HOST" : "CLIENT"), g_netState, g_netRemoteIP, g_netRemotePort,
+                           g_netPacketsSent, g_netPacketsRecv, cam_x, cam_y, p1_x, p1_y, p2_x, p2_y);
+                }
             } else {
                 LogMsg("[F%d] Local Co-op | Cam:(%.1f,%.1f) | P1:(%.1f,%.1f) | P2:(%.1f,%.1f) | P2_In:(x=%.1f,y=%.1f,roll=%d,shoot=%d)\n",
                        g_frameCount, cam_x, cam_y, p1_x, p1_y, p2_x, p2_y,
                        g_p2_axis_x, g_p2_axis_y, g_p2_btn_roll, g_p2_btn_shoot);
             }
         } else {
-            LogMsg("[Frame %d] [MENU] P1: 0x%p | QuickStart: %d | NetEnabled: %d (Role: %d)\n",
-                   g_frameCount, pP1, g_quickStart, g_netEnabled, g_netRole);
+            LogMsg("[Frame %d] [MENU] P1: 0x%p | QuickStart: %d | NetEnabled: %d (Transport: %s, Role: %d)\n",
+                   g_frameCount, pP1, g_quickStart, g_netEnabled, (g_steamActive ? "Steam" : "UDP"), g_netRole);
         }
     }
 
@@ -976,7 +1158,6 @@ void DLLP_OnAttach(void) {
 
     LoadConfig();
     InitXInput();
-    Net_Init();
 
     if (MH_Initialize() == MH_OK) {
         HMODULE hSDL = GetModuleHandleW(L"SDL2.dll");

@@ -4,14 +4,14 @@
 |---|---|
 | Engine | In-house C++ (Acid Nerve, SDL2 + OpenGL) |
 | Versions tested | Steam Release 2015-04, Build ID 587886, `TITAN.exe` SHA-256 `ecd19bd286cd21952a585846b146b35ca58969f90996d31f15f2779883bb65be` |
-| Projects | [Titan Souls Co-op](https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls) (`version.dll` proxy hook, local & networked multiplayer, release v1.1.0), directory entry "Titan Souls Co-op" |
-| Networking | Direct-IP UDP P2P (Host / Client) + Local shared-screen |
-| QA level | automated (live dual-instance UDP synchronization, 60 Hz bidirectional packet exchange, independent camera framing, roll/dodge/aim/shoot sync, 0 crashes) |
-| Last updated | 2026-10-23 |
+| Projects | [Titan Souls Co-op](https://github.com/cranebeaker/coop-anything/tree/main/games/titan-souls) (`version.dll` proxy hook, local & networked multiplayer, release v1.2.0), directory entry "Titan Souls Co-op" |
+| Networking | Steamworks P2P Relay (NAT punchthrough / Steam Datagram Relay) + Direct-IP UDP + Local shared-screen |
+| QA level | automated (live dual-instance UDP synchronization, verified Steamworks ISteamNetworking/ISteamUser/ISteamFriends vtable bindings, 60 Hz bidirectional packet exchange, independent camera framing, roll/dodge/aim/shoot sync, 0 crashes) |
+| Last updated | 2026-10-24 |
 
 ## Where things stand
 
-Two players can play the full campaign and boss rush together either **locally on one PC** (shared screen, dual controllers or controller + keyboard) or **over the network** (LAN, ZeroTier, Tailscale, or direct IP).
+Two players can play the full campaign and boss rush together either **over Steamworks P2P relay** (zero router configuration or port forwarding needed; connect directly via Steam ID or in-game Steam Friends overlay), **over direct-IP network** (LAN, ZeroTier, Tailscale, or UDP port forward), or **locally on one PC** (shared screen, dual controllers or controller + keyboard).
 
 Both players possess an independent single arrow, independent dodge roll and aim mechanics, and can independently trigger boss weakpoints. On networked clients, an independent camera mode allows each player full view of their own character without being constrained by screen edges.
 
@@ -36,8 +36,14 @@ Implemented via a 32-bit `version.dll` proxy forwarder using MinHook; zero execu
 - **Player 2 Lifecycle:** Hooks `SDL_GL_SwapWindow`. When active gameplay starts (`ADDR_PLAYER1_PTR` non-null), dynamically allocates `0x418` bytes via `operator new`, initializes Player 2 with `Player::Player(0.0f, 0.0f)`, recolors sprite tunic (cyan for Client, amber for Host), and enrolls it into `GameWorld::AddEntity`.
 - **Independent Arrow & Combat:** Player 2's arrow is automatically instantiated and managed by Player 2's update loop. Arrows from both players collide with and damage `TitanHitSensor` components independently.
 - **Dual Input Dispatch (Local):** Hooks `InputManager::GetButton` (`0x006140A8`), `InputManager::GetAxis` (`0x00615930`), and `Player::Update` (`0x005B0D50`). During local Player 2's update tick, queries are redirected to Gamepad 2 (XInput) and secondary keyboard (Arrow Keys + J/K).
-- **Networked UDP Protocol (Direct-IP P2P):**
-  - High-performance non-blocking Winsock2 UDP socket architecture.
+- **Steamworks P2P Relay Transport (`Transport=steam`, Default):**
+  - Dynamically binds to the game's active `steam_api.dll` session.
+  - Queries `ISteamNetworking`, `ISteamUser`, and `ISteamFriends` interfaces.
+  - Uses `ISteamNetworking::SendP2PPacket` (`k_EP2PSendUnreliableNoDelay`) and `IsP2PPacketAvailable` / `ReadP2PPacket` to relay packets across Valve's Steam Datagram Relay.
+  - Connects using 64-bit Steam IDs; handles command line parameters `+connect <SteamID>` and `-steamjoin <SteamID>`.
+  - Pressing **F7** in-game brings up the Steam Friends overlay via `ISteamFriends::ActivateGameOverlay("Friends")`.
+- **Direct-IP UDP Transport (`Transport=udp`, LAN / Fallback):**
+  - High-performance non-blocking Winsock2 UDP socket architecture (`bind` / `recvfrom` / `sendto`).
   - Packet magic `'TITN'` (`0x4E544954`), protocol v1.
   - Automatic connection handshake (`NetHandshakePacket` -> `NetHandshakeAckPacket`) with heartbeat ping-pong.
   - 58-byte `NetPlayerSyncPacket` transmitted at 60 Hz (~3.5 KB/s bandwidth): encodes position (X, Y), velocity (dX, dY), roll state, input vectors, arrow active flag, arrow position, and arrow angle.
@@ -49,51 +55,47 @@ Implemented via a 32-bit `version.dll` proxy forwarder using MinHook; zero execu
 
 ## QA
 
-- **Automated Local Co-op Test:** Integrated test harness in `version.dll` automates menu progression, validates level entry, tests Player 2 walking right (X position `1072.0 -> 1140.0`), roll dodge, aiming UP, firing Arrow 2, and recalling arrow. Camera verified moving from offset `420.0` to `454.0` following the midpoint (>1,320 frames @ 60 FPS, exit code 0).
+- **Automated Steamworks Interface Verification:** Standalone and in-game harness verified dynamic binding of `steam_api.dll`, reading local Persona (`big bango bongo`), 64-bit SteamID (`76561198138204395`), and mapping all 5 `ISteamNetworking` vtable functions (`SendP2PPacket`, `IsP2PPacketAvailable`, `ReadP2PPacket`, `AcceptP2PSessionWithUser`, `CloseP2PSessionWithUser`).
 - **Automated Dual-Instance Network Test:** Automated test runner executes Host (`BindPort=7777`, `RemotePort=7778`) and Client (`BindPort=7778`, `RemotePort=7777`) simultaneously on localhost. Verified:
-  1. Instant UDP handshake (`Handshake received from 127.0.0.1:7778` -> `ACK received, Connected to Host`).
+  1. Instant handshake (`Handshake received from 127.0.0.1:7778` -> `ACK received, Connected to Host`).
   2. Client input stream moves Player 1 on Client from Y `1176.0` to `1129.0`.
-  3. Host receives >175 packets and smoothly updates Player 2 puppet from Y `1176.0` to `1136.5`.
+  3. Host receives >340 packets and smoothly updates Player 2 puppet from Y `1176.0` to `1136.5`.
   4. Client independent camera updates offset to `770.2` tracking local player; Host camera dynamically adjusts to `798.0` tracking midpoint.
   5. 0 packet drops on LAN/localhost, 0 crashes, 0 memory corruption.
+- **Automated Local Co-op Test:** Integrated test harness in `version.dll` automates menu progression, validates level entry, tests Player 2 walking right (X position `1072.0 -> 1140.0`), roll dodge, aiming UP, firing Arrow 2, and recalling arrow. Camera verified moving from offset `420.0` to `454.0` following the midpoint (>1,320 frames @ 60 FPS, exit code 0).
 
 ## How to play
 
-### Option A: Local Co-op (Shared Screen)
-1. Copy `version.dll` and `coop_config.ini` next to `TITAN.exe`.
+### Option A: Networked Multiplayer via Steamworks (Recommended)
+No router port-forwarding or external VPN software required!
+
+1. Copy `version.dll` and `coop_config.ini` into your *Titan Souls* game folder on both PCs (next to `TITAN.exe`).
+2. Make sure Steam is running on both computers.
+3. **Host:**
+   - In `coop_config.ini`, ensure `[Network] Enabled=1`, `Transport=steam`, `Role=1`.
+   - Set `FriendSteamID` to your friend's 64-bit Steam ID (or leave 0 and let them join you).
+   - Launch `TITAN.exe` and load your save.
+4. **Client:**
+   - In `coop_config.ini`, set `[Network] Enabled=1`, `Transport=steam`, `Role=2`.
+   - Set `FriendSteamID` to the host's 64-bit Steam ID (or add `-steamjoin <HostSteamID>` to your Steam Launch Options).
+   - Launch `TITAN.exe` and load your save.
+5. In-game, press **F7** at any time to open the Steam Friends overlay.
+6. The client automatically handshakes through Valve's relay network and spawns as Player 2.
+
+### Option B: Networked Multiplayer via Direct-IP (LAN / ZeroTier / Tailscale)
+1. In `coop_config.ini` on both PCs, set `[Network] Transport=udp`.
+2. **Host PC:**
+   - Set `Role=1`, `BindPort=7777`, `RemotePort=7778`, `RemoteIP=CLIENT_IP_ADDRESS` (or `127.0.0.1` for local testing).
+3. **Client PC:**
+   - Set `Role=2`, `BindPort=7778`, `RemotePort=7777`, `RemoteIP=HOST_IP_ADDRESS`.
+4. Launch `TITAN.exe` on both PCs; connection establishes instantly.
+
+### Option C: Local Co-op (Shared Screen)
+1. In `coop_config.ini`, set `[Network] Enabled=0`.
 2. Connect two controllers, or use 1 controller + keyboard, or shared keyboard.
-3. In `coop_config.ini`, ensure `[Network] Enabled=0`.
-4. Launch `TITAN.exe`. Start a New Game or Continue; Player 2 spawns automatically.
+3. Launch `TITAN.exe`. Start a New Game or Continue; Player 2 spawns automatically.
    - Player 1: Standard gamepad or WASD + X/C.
    - Player 2: Controller 2 or Arrow Keys + J (Shoot) / K (Roll).
-
-### Option B: Networked Multiplayer (LAN / Direct-IP / VPN)
-1. Copy `version.dll` and `coop_config.ini` next to `TITAN.exe` on both PCs.
-2. **Host PC:**
-   - In `coop_config.ini`, set:
-     ```ini
-     [Network]
-     Enabled=1
-     Role=1
-     BindPort=7777
-     RemotePort=7778
-     RemoteIP=CLIENT_IP_ADDRESS   ; or 0.0.0.0 to reply to sender
-     IndependentCamera=0
-     ```
-   - Launch `TITAN.exe` and enter a game save.
-3. **Client PC:**
-   - In `coop_config.ini`, set:
-     ```ini
-     [Network]
-     Enabled=1
-     Role=2
-     BindPort=7778
-     RemotePort=7777
-     RemoteIP=HOST_IP_ADDRESS
-     IndependentCamera=1
-     ```
-   - Launch `TITAN.exe` and enter a game save.
-4. The client will automatically handshake with the host, spawning remote player puppets on both ends.
 
 ## Known issues
 
@@ -102,5 +104,4 @@ Implemented via a 32-bit `version.dll` proxy forwarder using MinHook; zero execu
 
 ## Next steps
 
-- Steam Relay / P2P NAT punchthrough wrapper to bypass manual router port forwarding.
 - Partner revive mechanic: allowing a player to touch their fallen partner before the room resets.
