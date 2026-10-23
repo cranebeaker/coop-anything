@@ -7727,3 +7727,38 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: 'Pitfall: The Lost Expedition'
+  year: 2004
+  engine: Edge of Reality in-house (unknown name), PS2 on PCSX2
+  project: coop-anything ghost co-op (PCSX2 PINE peer + pnach)
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/pitfall-the-lost-expedition
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: '2'
+  networking: vpn-needed
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: PS2 NTSC-U only (SLUS-20408, CRC 394F402E) on PCSX2 v2.8.2. A pnach spawns a second Harry in Crash
+    Site fed by controller port 2; a Python peer per PC exchanges positions over UDP (Tailscale or a forwarded
+    port) and steers the puppet with port-2 key presses, so it runs with the game's animations. Worlds are not
+    shared and other levels are not supported. Tested with two PCSX2 clients on one PC through a lag and loss
+    relay; two real PCs untested. A 2004 PC port by Beenox exists.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/pitfall-the-lost-expedition
+  - https://en.wikipedia.org/wiki/Pitfall:_The_Lost_Expedition
+  - https://github.com/Avasam/ptle-tools
+  checked: '2026-10-23'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, and public GitHub issues and PRs for Pitfall (nothing), 2026-10-23'
+  - 'WebSearch: Pitfall The Lost Expedition co-op mod, multiplayer, decompilation, two player (only ptle-tools,
+    a GameCube/Dolphin toolset), 2026-10-23'
+  - 'Not checked: Reddit, Discord, Nexus Mods, ModDB, speedrun community resources beyond ptle-tools'
