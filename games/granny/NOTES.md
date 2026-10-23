@@ -2625,3 +2625,68 @@ them. An item spawned by the game after prepare (new day) is picked up by the ne
 (physics, QA nudge) and the next table undoes it, which is intended, but a guest that
 drops an item sends only that one record — a simultaneous host table can briefly win
 before the host's next capture reads the dropped position. Not observed in a run yet.
+
+## 31. One-click installer: everything a player needs in one exe (2026-10-23)
+
+**Problem.** The manual path has five steps a player can get wrong (MelonLoader version,
+"launch once so `Mods/` appears", .NET 6 presence, where the dll goes, CLI flags), and
+several people hit them. A release that is "download three things and read a guide" is not
+playable for a non-modder.
+
+**What shipped.** `GrannyCoop-Setup-1.0.0.exe`, 48,414,720 B (46.2 MB), SHA-256
+`71b3798292cbd26896808c825a836da48de3a372010364fbf9c2cb75639fa02c`, attached to release
+v0.8.0. It is a net48 WinForms app that **embeds** the three things a player would otherwise
+fetch:
+
+| Payload | Bytes | SHA-256 (checked at build and again after download) |
+|---|---|---|
+| MelonLoader.x64.zip v0.7.3 (Apache-2.0) | 20,155,622 | `5b2b2f3d…dda416` |
+| dotnet-runtime-6.0.36-win-x64.exe (Microsoft) | 28,101,408 | `6bdad7bc…efe84` |
+| `GrannyCoop.dll` | 72 KB | built from the same tag |
+
+**Why net48 + x64.** net48 is present on every Windows 10/11, so the installer itself needs
+no runtime; a self-contained .NET 8 build would double the download. x64 with
+`Prefer32Bit=false` matters for a concrete reason: a 32-bit process sees `Program Files
+(x86)` as `Program Files`, so `Runtime.Roots()` would look under
+`C:\Program Files (x86)\dotnet\shared\Microsoft.NETCore.App\6.*` and never find the x64
+runtime. (That path bug existed: `Roots()` missed the `dotnet` segment and the installer
+"installed" .NET 6 on a machine that already had it. Fixed before shipping; the CLI now
+prints `найден` and exits 0.)
+
+**Install order** (`tools/setup/README.md` has the full list): Steam locator (uninstall key
+`Steam App 962400` → `libraryfolders.vdf` → default path, plus a Browse button) → build
+check (`0xFAB11BAF`, metadata v31) → refuse if `Granny.exe` runs → .NET 6 check/install →
+MelonLoader (skip when 0.7.3 is there, else rename `version.dll` and `MelonLoader/` to
+`*.bak-<stamp>` and extract the zip entry by entry) → `Mods/GrannyCoop.dll` → merge only
+`[GrannyCoop]` in `UserData/MelonPreferences.cfg` → verify the four files.
+
+**Build.** `tools/build-setup.ps1` downloads the two payloads if missing (pinned URL, size
+and SHA-256, re-checks after download), builds the mod against `$env:GRANNY_TEST`, builds the
+installer, copies it to `dist/GrannyCoop-Setup-<FileVersion>.exe`. `.gitignore` excludes
+`payload/` (48 MB) and `dist/` — the payload is fetched, not committed.
+
+**Verified**, on a genuinely fresh copy (`C:\Users\Public\granny-test3`, no MelonLoader):
+
+- clean install: 164 MelonLoader files, the mod, the cfg, every check printed `ok`, exit 0;
+- re-run: MelonLoader skipped, dll replaced with a `.bak`, cfg rewritten;
+- GUI screenshot: auto-detected `F:\SteamLibrary\steamapps\common\Granny`;
+- first launch: `COOP initialised v0.8.0 role=Host`, `COOP net listening on udp/47790`,
+  `COOP scene -> 'SplashScreen'`.
+
+**Not verified (honest gaps).** The .NET 6 **install** branch never actually ran: the test
+machine already had 6.0.36, so no `runas`/UAC prompt was seen on a PC that lacks it. The
+test shell was not elevated. The .NET 6 runtime is a Microsoft installer, not code we own —
+its `/quiet /norestart` behaviour on a machine without it is assumed, not observed.
+
+**Licensing/redistribution.** MelonLoader is Apache-2.0; its `LICENSE.md` and `NOTICE.txt`
+are inside the zip and are extracted with it, so the install directory carries them. The
+.NET installer is redistributed unmodified from the official Microsoft URL. The mod is MIT.
+MelonLoader's generated `Dependencies/` and `Il2CppAssemblies/` (55–56 MB, derived from the
+game's own metadata) are **not** bundled; the first launch downloads Cpp2IL and builds them,
+which is why that launch needs internet once.
+
+**Tooling note.** `local/gh-upload.ps1` streams a release asset with the GitHub Desktop token
+(`AllowWriteStreamBuffering=false`; `$req.UserAgent` instead of adding a `User-Agent`
+header, which HttpWebRequest rejects). `local/gh-api.ps1` gained `-BodyFile` because a
+release body with Cyrillic is too long and too quote-hostile for a command line; the bytes
+are written as UTF-8 without BOM.

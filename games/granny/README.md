@@ -124,8 +124,16 @@ was exercised with a forced deviation (`--coop-placetest`), not a natural one.
 
 ## How to play
 
-There is a release: [granny-coop v0.8.0](https://github.com/roosterdevv/granny-coop/releases/tag/v0.8.0)
-(`GrannyCoop.dll` plus a RU/EN install guide). To build from source:
+There is a release: [granny-coop v0.8.0](https://github.com/roosterdevv/granny-coop/releases/tag/v0.8.0).
+The fastest route is the bundled Windows installer, **`GrannyCoop-Setup-1.0.0.exe`** (46 MB,
+SHA-256 `71b37982…fa02c`): it finds the Steam install (or takes a folder you pick), checks the
+build, installs MelonLoader 0.7.3 and the .NET 6 runtime if they are missing, copies
+`GrannyCoop.dll` into `Mods/` and writes the Host/Join role into `MelonPreferences.cfg`.
+Nothing else has to be downloaded; the first game launch afterwards takes 1–2 min while
+MelonLoader generates the Il2Cpp assemblies (that one step needs internet).
+
+The release also carries `GrannyCoop-0.8.0.zip` (the DLL plus a RU/EN install guide) for a
+manual install. To build from source:
 
 1. Copy your Granny install to a separate folder (do not mod the only install).
 2. Install MelonLoader **0.7.3** into that copy and run the game once so it generates

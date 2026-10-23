@@ -7773,7 +7773,10 @@
     two installs on one PC roll the same layout, hence the forced deviation. Scene follow and
     the post-death spectator view work; the catch itself, the van and the day cycle are not
     synced. Every run was two processes on one PC, no real network yet. v0.8.0 (protocol v2)
-    is released with a RU/EN install guide; both players need the same version. MIT licensed.
+    is released with a RU/EN install guide and a one-click Windows installer
+    (`GrannyCoop-Setup-1.0.0.exe`, 46 MB) that locates the Steam folder, bundles
+    MelonLoader 0.7.3 and the .NET 6 runtime, and writes the Host/Join role; both
+    players need the same version. MIT licensed.
     No other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
     different commercial game by another developer.
   sources:
