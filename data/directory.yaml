@@ -2818,13 +2818,14 @@
   players: unknown
   networking: dedicated-server
   open_source: true
-  last_activity: unknown
+  last_activity: 2024-12
   qa: none
   notes: Syncs player appearance, equipment, movement, basic animations and vehicles with passengers; not a campaign
-    co-op. Not to be confused with the separate closed CyberMP project.
+    co-op. Not to be confused with the separate closed CyberMP project. Last push 2024-12-21 (verified via GitHub
+    API), stalled at the patch 2.2 era; lives on through NightCityMP (2.31a continuation) and the oxylol story fork.
   sources:
   - https://github.com/tiltedphoques/CyberpunkMP/blob/main/README.md
-  checked: 2026-10-16
+  checked: 2026-10-23
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2845,11 +2846,12 @@
   last_activity: 2026-06
   qa: none
   notes: GTA Online style sandbox with player-run servers, not a campaign co-op. June 2026 reports say no public
-    download yet and a semi-open phase is being prepared; server package may be open sourced later.
+    download yet and a semi-open phase is being prepared; server package may be open sourced later. Site
+    (cyber.mp) still live, checked 2026-10-23. Distinct from the story-co-op project NightCoop (beta 2026-10-23).
   sources:
   - https://www.pcgamesn.com/cyberpunk-2077/multiplayer-cybermp-mod
   - https://www.dsogaming.com/videotrailer-news/the-cyberpunk-2077-multiplayer-mod-is-still-alive/
-  checked: 2026-10-16
+  checked: 2026-10-23
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2866,13 +2868,14 @@
   players: unknown
   networking: unknown
   open_source: true
-  last_activity: unknown
+  last_activity: 2026-10
   qa: none
   notes: Adds a shared-story layer where one player is story host and others' worlds follow theirs, each from their
-    own save. Targets game patch 2.31 and needs RED4ext, redscript, Codeware, ArchiveXL, TweakXL.
+    own save. Targets game patch 2.31 and needs RED4ext, redscript, Codeware, ArchiveXL, TweakXL. Host pushes game
+    time, weather and tracked quest every 2 s; guest clocks only move forward. Last push 2026-10-10 (GitHub API).
   sources:
   - https://github.com/oxylol/cp2077-coop
-  checked: 2026-10-16
+  checked: 2026-10-23
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2889,15 +2892,181 @@
   players: '2'
   networking: hosted-relay
   open_source: true
-  last_activity: unknown
+  last_activity: 2026-10
   qa: automated
   notes: Two-player co-op for game 2.31a via CET, redscript and RED4ext, with the partner shown as a stand-in NPC.
     The repo has test bench tooling and headless tests, so qa is automated only for those smoke tests, not a real
-    playthrough.
+    playthrough. Downloadable v0.0.37/alpha.5 ZIP (CET host/join panel, Python relay on UDP 11778). Source now
+    integrates Bukczyk's typed session foundation for player groups. Last push 2026-10-20 (GitHub API).
   sources:
   - https://github.com/KyleBuildsAI/cp2077-coop
   - https://github.com/KyleBuildsAI/cp2077-coop/pull/3
-  checked: 2026-10-16
+  checked: 2026-10-23
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: NightCoop
+  url: https://nightcoop.net/
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: per-player
+  players: up to 8
+  networking: hosted-relay
+  open_source: false
+  last_activity: 2026-10
+  qa: none
+  notes: Story co-op, closed source and free. Open beta started 2026-10-23 covering the prologue and Act 1. The
+    campaign runs in the host's world, each player as their own V (own appearance, level, gear, cyberware, own
+    purchases and ripperdoc visits). Dialogue by majority vote, synced cutscenes and combat, shared vehicles,
+    optional host-toggled PvP with level-normalized damage and revives. Native RED4ext plugin, game patch 2.31,
+    Windows; UDP direct or via the team's relay hub behind NAT. Capability claims are the project's own until
+    community reports land.
+  sources:
+  - https://nightcoop.net/
+  - https://www.polygon.com/cyberpunk-2077-co-op-mod-nightcoop
+  - https://www.gamingbible.com/news/platform/pc/cyberpunk-2077-co-op-multiplayer-mod-nightcoop-184269-20261020
+  checked: 2026-10-23
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: NightCityMP
+  url: https://github.com/blyatiful1/NightCityMP
+  other_urls: []
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: unknown
+  players: unknown
+  networking: direct-ip
+  open_source: true
+  last_activity: 2026-07
+  qa: none
+  notes: Continuation of CyberpunkMP ported to game patch 2.31a, Minecraft-style host & join. Syncs appearance,
+    clothes and drawn weapon, movement with animations, nameplates and chat, server-authoritative time of day,
+    emotes and upstream's demo jobs. NPCs, traffic, world state, quests and combat damage are not synced yet.
+    Distribution limited to GitHub and the project's own site per upstream license. Last push 2026-07-20.
+  sources:
+  - https://github.com/blyatiful1/NightCityMP
+  checked: 2026-10-23
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: Bukczyk/CP2077-Coop (session foundation)
+  url: https://github.com/Bukczyk/CP2077-Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: partial
+    world_state: no
+    items: unknown
+  players: '2'
+  networking: lan
+  open_source: true
+  last_activity: 2026-10
+  qa: none
+  notes: Experimental typed session foundation (SessionServer, CoopPlugin, runtime/session); collaboration upstream
+    of KyleBuildsAI/cp2077-coop. A one-PC/two-client diagnostic reached JOINER-fires-at-HOST validation with
+    health loss and death presentation at commit 481609a; reconnect death recovery still fails. Not a public
+    release. Last push 2026-10-20 (GitHub API).
+  sources:
+  - https://github.com/Bukczyk/CP2077-Coop
+  checked: 2026-10-23
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: RedSync
+  url: https://github.com/nobody71004/RedSync
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: true
+  last_activity: 2026-08
+  qa: none
+  notes: AGPL-3.0. RED4ext C++ client + redscript layer + .NET 9 server over Valve GameNetworkingSockets.
+    Remote players appear as Codeware/AMM puppets. Deepest public quest sync found, host-authoritative quest-fact
+    relay with a whitelist (Phantom Liberty q301-q307 plus base-game prefixes), late-join fact snapshots; journal,
+    mission NPC AI and dialogue relay still open. CERBERUS scripted bot events (8-50 bots). README download links
+    still point at a placeholder domain, so no public player download found. Last push 2026-08-25 (GitHub API).
+  sources:
+  - https://github.com/nobody71004/RedSync
+  checked: 2026-10-23
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: OPEN//77
+  url: https://open2077.net/
+  other_urls:
+  - https://github.com/Open2077
+  kind: framework
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: Dedicated-server multiplayer platform (alpha access), not story co-op. Native client module + custom
+    replication protocol; per the 2026-08-25 devblog, movement, animation, emotes, combat (with synced audio),
+    PvP, full vehicle replication, time of day, weather and world destruction replicate; crowd population is
+    sanitized out so the server owns the world. Accounts, launcher, server browser, Lua-scriptable resources,
+    Windows/Linux servers. Org repos (app, resources, devkit) public; client module source status not confirmed.
+    Org repos last pushed 2026-10-22.
+  sources:
+  - https://open2077.net/devblog/2026-08-25-state-of-the-net
+  - https://open2077.net/
+  - https://github.com/Open2077/open77-app
+  checked: 2026-10-23
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: Chaoskjell/Coop-Cyberpunk-Mod
+  url: https://github.com/Chaoskjell/Coop-Cyberpunk-Mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: no
+    enemies: no
+    world_state: no
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: true
+  last_activity: 2026-08
+  qa: none
+  notes: MIT. v0 scaffold, 8 commits on one day (2026-08-09). CET Lua mods exchange plain files with a Python
+    bridge process that forwards over TCP to a relay; setup GUI for non-technical users. No gameplay sync claims
+    verified. Last push 2026-08-09 (GitHub API).
+  sources:
+  - https://github.com/Chaoskjell/Coop-Cyberpunk-Mod
+  checked: 2026-10-23
 - game: Elden Ring
   year: 2022
   engine: FromSoftware proprietary
