@@ -50,6 +50,9 @@ typedef struct SDL_Window SDL_Window;
 #define ADDR_STRING_CTOR         0x00699FD8  // std::string::basic_string(const char*, alloc) __thiscall
 #define ADDR_STRING_DTOR         0x0069A634  // std::string::~basic_string() __thiscall
 #define ADDR_PLAYER_INIT         0x005A6FA4  // Player::Init() (vtable[3]) __thiscall
+#define ADDR_ARROW_DRAW          0x005A0750  // Arrow::Draw() __thiscall
+#define ADDR_ARROW_STOPSOUND     0x0059CC7C  // Arrow::StopSound() __thiscall
+#define ADDR_SPRITE_SET_ANIM     0x005F7528  // Sprite::SetAnim(string&, bool, bool) __thiscall
 #define ADDR_ARROW_ISDAMAGING    0x005A05A4  // Arrow::IsDamaging() __thiscall
 #define ADDR_TITAN_HITSENSOR_ONHIT 0x00589700 // TitanHitSensor::OnHit() (vtable[7]) __thiscall
 
@@ -74,6 +77,13 @@ typedef struct SDL_Window SDL_Window;
 #define OFF_WAKEUP_FLAG           0x40D       // byte: 1 = wake / getup sequence
 #define OFF_PLAYER_ARROW          0x35c       // Arrow entity pointer (5Arrow class)
 #define OFF_PLAYER_QUIVER         0x3C8       // byte: 1 = arrow in quiver, 0 = loose/shot
+#define OFF_PLAYER_AIMING         0x3C9       // byte: 1 = aiming bow
+#define OFF_PLAYER_BOW_CHARGE     0x3C4       // float: bow draw/charge amount
+#define OFF_PLAYER_AIM_DIR_X      0x3CC       // float: aim direction X
+#define OFF_PLAYER_AIM_DIR_Y      0x3D0       // float: aim direction Y
+#define OFF_ARROW_SHAFT_SPRITE    0x10C       // pointer to Sprite (arrow shaft graphic)
+#define OFF_ARROW_GLOW_SPRITE     0xE4        // pointer to Sprite (glow/light particle)
+#define OFF_ARROW_ANGLE_DEG       0xDC        // float: arrow angle in degrees
 #define OFF_ARROW_IN_FLIGHT       0xC8        // byte: 1 = in flight
 #define OFF_ARROW_IS_RECALLING    0xD8        // byte: 1 = being recalled
 #define OFF_ARROW_IS_DAMAGING     0x13D       // byte: 1 = deals damage to titan sensors
@@ -95,8 +105,11 @@ typedef void (__thiscall *GameWorldResetRoom_t)(void* pWorld);
 typedef void (__thiscall *StringCtor_t)(void* pStr, const char* s, const void* alloc);
 typedef void (__thiscall *StringDtor_t)(void* pStr);
 typedef void (__thiscall *PlayerSetAnim_t)(void* pPlayer, void* pStr, int b1, int b2);
+typedef void (__thiscall *SpriteSetAnim_t)(void* pSprite, void* pStr, int b1, int b2);
 typedef void (__thiscall *PlayerInit_t)(void* pPlayer);
 typedef void (__thiscall *PlayerStartRoll_t)(void* pPlayer);
+typedef void (__thiscall *ArrowDraw_t)(void* pArrow);
+typedef void (__thiscall *ArrowStopSound_t)(void* pArrow);
 typedef char (__fastcall *ArrowIsDamaging_t)(void* pArrow, void* edx);
 typedef void (__fastcall *TitanHitSensorOnHit_t)(void* pSensor, void* edx, float hit_x, float hit_y, float vel_x, float vel_y);
 
@@ -108,14 +121,18 @@ static CameraAddTarget_t   g_fnCameraAddTarget   = (CameraAddTarget_t)ADDR_CAMER
 static StringCtor_t        g_fnStringCtor        = (StringCtor_t)ADDR_STRING_CTOR;
 static StringDtor_t        g_fnStringDtor        = (StringDtor_t)ADDR_STRING_DTOR;
 static PlayerSetAnim_t     g_fnPlayerSetAnim     = (PlayerSetAnim_t)ADDR_PLAYER_SET_ANIM;
+static SpriteSetAnim_t     g_fnSpriteSetAnim     = (SpriteSetAnim_t)ADDR_SPRITE_SET_ANIM;
+static ArrowStopSound_t    g_fnArrowStopSound    = (ArrowStopSound_t)ADDR_ARROW_STOPSOUND;
 
 static PlayerUpdate_t        g_orig_Player_Update      = NULL;
+static PlayerStartRoll_t     g_orig_Player_StartRoll   = NULL;
 static CameraUpdate_t        g_orig_Camera_Update      = NULL;
 static GetButton_t           g_orig_GetButton          = NULL;
 static GetAxis_t             g_orig_GetAxis            = NULL;
 static SDL_GL_SwapWindow_t   g_orig_SwapWindow         = NULL;
 static PlayerUpdateDeath_t   g_orig_Player_UpdateDeath = NULL;
 static GameWorldResetRoom_t  g_orig_GameWorld_ResetRoom = NULL;
+static ArrowDraw_t           g_orig_Arrow_Draw         = NULL;
 static ArrowIsDamaging_t     g_orig_Arrow_IsDamaging    = NULL;
 static TitanHitSensorOnHit_t g_orig_TitanHitSensor_OnHit = NULL;
 
@@ -123,7 +140,7 @@ static TitanHitSensorOnHit_t g_orig_TitanHitSensor_OnHit = NULL;
 // Network Protocol Definition
 // ============================================================================
 #define NET_MAGIC             0x4E544954  // 'TITN' (Titan Souls Network)
-#define NET_PROTOCOL_VERSION  2
+#define NET_PROTOCOL_VERSION  3
 
 #define NET_PKT_HANDSHAKE     1
 #define NET_PKT_HANDSHAKE_ACK 2
@@ -192,6 +209,10 @@ typedef struct {
     float    dir_y;       // [Character + 0xA8]
     float    facing_x;    // [Player + 0x3B0]
     float    facing_y;    // [Player + 0x3B4]
+    uint8_t  is_aiming;   // [Player + OFF_PLAYER_AIMING 0x3C9]
+    float    aim_dir_x;   // [Player + OFF_PLAYER_AIM_DIR_X 0x3CC]
+    float    aim_dir_y;   // [Player + OFF_PLAYER_AIM_DIR_Y 0x3D0]
+    float    bow_charge;  // [Player + OFF_PLAYER_BOW_CHARGE 0x3C4]
 } NetPlayerSyncPacket;
 
 typedef struct {
@@ -590,7 +611,9 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
             // Validate floats against NaN / Inf corruptions
             if (!_finite(sync->pos_x) || !_finite(sync->pos_y) ||
                 !_finite(sync->vel_x) || !_finite(sync->vel_y) ||
-                !_finite(sync->arrow_x) || !_finite(sync->arrow_y)) {
+                !_finite(sync->arrow_x) || !_finite(sync->arrow_y) ||
+                !_finite(sync->aim_dir_x) || !_finite(sync->aim_dir_y) ||
+                !_finite(sync->bow_charge)) {
                 return;
             }
             // RFC 1982 Serial Number Arithmetic for sequence progression
@@ -707,6 +730,19 @@ static void Player_SetAnimation(void* pPlayer, const char* animName) {
     g_fnStringCtor(&strObj, animName, &dummyAlloc);
     if (strObj) {
         g_fnPlayerSetAnim(pPlayer, &strObj, 1, 0);
+        g_fnStringDtor(&strObj);
+    }
+}
+
+static void Arrow_SetAnim(void* pArrow, const char* animName) {
+    if (!pArrow || !IsReadable(pArrow, 0x140)) return;
+    void* pShaft = *(void**)((uintptr_t)pArrow + OFF_ARROW_SHAFT_SPRITE);
+    if (!pShaft || !IsReadable(pShaft, 0x80)) return;
+    char dummyAlloc = 0;
+    void* strObj = NULL;
+    g_fnStringCtor(&strObj, animName, &dummyAlloc);
+    if (strObj) {
+        g_fnSpriteSetAnim(pShaft, &strObj, 1, 0);
         g_fnStringDtor(&strObj);
     }
 }
@@ -868,6 +904,16 @@ static void Net_BroadcastLocalPlayer(void) {
         pkt.facing_x = *(float*)((uintptr_t)pP1 + 0x3B0);
         pkt.facing_y = *(float*)((uintptr_t)pP1 + 0x3B4);
 
+        pkt.is_aiming = *(char*)((uintptr_t)pP1 + OFF_PLAYER_AIMING) ? 1 : 0;
+        pkt.aim_dir_x = *(float*)((uintptr_t)pP1 + OFF_PLAYER_AIM_DIR_X);
+        pkt.aim_dir_y = *(float*)((uintptr_t)pP1 + OFF_PLAYER_AIM_DIR_Y);
+        pkt.bow_charge = *(float*)((uintptr_t)pP1 + OFF_PLAYER_BOW_CHARGE);
+
+        if (pkt.is_aiming && (pkt.aim_dir_x != 0.0f || pkt.aim_dir_y != 0.0f)) {
+            float rad = atan2f(pkt.aim_dir_y, pkt.aim_dir_x);
+            pkt.arrow_angle = rad * (180.0f / 3.1415926535f) + 90.0f;
+        }
+
         Net_SendPacket(&pkt, sizeof(pkt));
     }
 
@@ -916,13 +962,22 @@ static void Net_UpdatePuppet(void) {
     g_p2_btn_left = (char)g_remoteSyncState.btn_left;
     g_p2_btn_right = (char)g_remoteSyncState.btn_right;
 
+    // Apply aiming state to Player 2
+    *(char*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_AIMING) = (char)g_remoteSyncState.is_aiming;
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_BOW_CHARGE) = g_remoteSyncState.bow_charge;
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_AIM_DIR_X) = g_remoteSyncState.aim_dir_x;
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_AIM_DIR_Y) = g_remoteSyncState.aim_dir_y;
+
     // Apply facing and movement direction
-    *(float*)((uintptr_t)g_pPlayer2 + 0xA4) = g_remoteSyncState.dir_x;
-    *(float*)((uintptr_t)g_pPlayer2 + 0xA8) = g_remoteSyncState.dir_y;
-    if (g_remoteSyncState.facing_x != 0.0f || g_remoteSyncState.facing_y != 0.0f) {
+    if (g_remoteSyncState.is_aiming && (g_remoteSyncState.aim_dir_x != 0.0f || g_remoteSyncState.aim_dir_y != 0.0f)) {
+        *(float*)((uintptr_t)g_pPlayer2 + 0x3B0) = g_remoteSyncState.aim_dir_x;
+        *(float*)((uintptr_t)g_pPlayer2 + 0x3B4) = g_remoteSyncState.aim_dir_y;
+    } else if (g_remoteSyncState.facing_x != 0.0f || g_remoteSyncState.facing_y != 0.0f) {
         *(float*)((uintptr_t)g_pPlayer2 + 0x3B0) = g_remoteSyncState.facing_x;
         *(float*)((uintptr_t)g_pPlayer2 + 0x3B4) = g_remoteSyncState.facing_y;
     }
+    *(float*)((uintptr_t)g_pPlayer2 + 0xA4) = g_remoteSyncState.dir_x;
+    *(float*)((uintptr_t)g_pPlayer2 + 0xA8) = g_remoteSyncState.dir_y;
 
     // Apply player position directly
     *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
@@ -938,20 +993,62 @@ static void Net_UpdatePuppet(void) {
     // Arrow synchronization
     void* pArrow = *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW);
     if (pArrow && IsReadable(pArrow, 0x140)) {
-        if (!g_remoteSyncState.has_arrow) {
+        void* pShaft = *(void**)((uintptr_t)pArrow + OFF_ARROW_SHAFT_SPRITE);
+        void* pGlow  = *(void**)((uintptr_t)pArrow + OFF_ARROW_GLOW_SPRITE);
+
+        float arrowAngle = g_remoteSyncState.arrow_angle;
+        if (g_remoteSyncState.is_aiming && (g_remoteSyncState.aim_dir_x != 0.0f || g_remoteSyncState.aim_dir_y != 0.0f)) {
+            float rad = atan2f(g_remoteSyncState.aim_dir_y, g_remoteSyncState.aim_dir_x);
+            arrowAngle = rad * (180.0f / 3.1415926535f) + 90.0f;
+        }
+
+        static uint8_t s_p2_prev_in_quiver = 1;
+        uint8_t in_quiver = (g_remoteSyncState.has_arrow && !g_remoteSyncState.is_aiming) ? 1 : 0;
+
+        if (!in_quiver) {
+            // Arrow is outside quiver: aiming, in flight, or resting on ground
             *(float*)((uintptr_t)pArrow + OFF_POS_X) = g_remoteSyncState.arrow_x;
             *(float*)((uintptr_t)pArrow + OFF_POS_Y) = g_remoteSyncState.arrow_y;
             *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_X) = g_remoteSyncState.arrow_x;
             *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_Y) = g_remoteSyncState.arrow_y;
             *(float*)((uintptr_t)pArrow + OFF_VEL_X) = g_remoteSyncState.arrow_vel_x;
             *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = g_remoteSyncState.arrow_vel_y;
-            *(float*)((uintptr_t)pArrow + 0x24) = g_remoteSyncState.arrow_angle;
-            *(float*)((uintptr_t)pArrow + OFF_RENDER_ANGLE) = g_remoteSyncState.arrow_angle;
+            *(float*)((uintptr_t)pArrow + 0x24) = arrowAngle;
+            *(float*)((uintptr_t)pArrow + OFF_RENDER_ANGLE) = arrowAngle;
+            *(float*)((uintptr_t)pArrow + OFF_ARROW_ANGLE_DEG) = arrowAngle;
+
+            *(char*)((uintptr_t)pArrow + 0x14) = 1; // Entity is active / visible
 
             *(char*)((uintptr_t)pArrow + OFF_ARROW_IN_FLIGHT) = (char)g_remoteSyncState.arrow_in_flight;
-            *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING) = (char)g_remoteSyncState.arrow_is_damaging;
             *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_RECALLING) = (char)g_remoteSyncState.arrow_is_recalling;
+
+            // When leaving quiver or becoming active, switch sprite animation to "stuck" (arrow graphic)
+            if (s_p2_prev_in_quiver) {
+                Arrow_SetAnim(pArrow, "stuck");
+            }
+
+            // Ensure arrow shaft sprite is visible and rotated to match aim/flight
+            if (pShaft && IsReadable(pShaft, 0x80)) {
+                *(char*)((uintptr_t)pShaft + 0x21) = 1; // Visible
+                *(float*)((uintptr_t)pShaft + 0x44) = arrowAngle; // Rotation
+            }
+
+            // Glow ball visibility: active during flight or recall
+            if (pGlow && IsReadable(pGlow, 0x40)) {
+                *(char*)((uintptr_t)pGlow + 0x21) = (g_remoteSyncState.arrow_in_flight || g_remoteSyncState.arrow_is_recalling) ? 1 : 0;
+            }
+
+            // Sound spam prevention:
+            // Only allow arrow_is_damaging while actively in damaging flight.
+            // When stopped on the ground, aiming, or recalled, kill the windloop sound!
+            if (g_remoteSyncState.arrow_in_flight && g_remoteSyncState.arrow_is_damaging) {
+                *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING) = 1;
+            } else {
+                *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING) = 0;
+                g_fnArrowStopSound(pArrow);
+            }
         } else {
+            // Arrow is resting inside Player 2's quiver
             float p2_x = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
             float p2_y = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
             *(float*)((uintptr_t)pArrow + OFF_POS_X) = p2_x;
@@ -960,10 +1057,27 @@ static void Net_UpdatePuppet(void) {
             *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_Y) = p2_y;
             *(float*)((uintptr_t)pArrow + OFF_VEL_X) = 0.0f;
             *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = 0.0f;
+            *(char*)((uintptr_t)pArrow + 0x14) = 0; // Inactive / hidden in quiver
             *(char*)((uintptr_t)pArrow + OFF_ARROW_IN_FLIGHT) = 0;
             *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING) = 0;
             *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_RECALLING) = 0;
+
+            if (!s_p2_prev_in_quiver) {
+                Arrow_SetAnim(pArrow, "none");
+            }
+
+            if (pShaft && IsReadable(pShaft, 0x40)) {
+                *(char*)((uintptr_t)pShaft + 0x21) = 0; // Hide shaft in quiver
+            }
+            if (pGlow && IsReadable(pGlow, 0x40)) {
+                *(char*)((uintptr_t)pGlow + 0x21) = 0;  // Hide glow in quiver
+            }
+
+            // Silence sound emitter
+            g_fnArrowStopSound(pArrow);
         }
+
+        s_p2_prev_in_quiver = in_quiver;
     }
 }
 
@@ -1198,11 +1312,25 @@ static float __cdecl Hooked_GetAxis(const void* pStr) {
 }
 
 // ============================================================================
+// Hook: Player::StartRoll (0x005A9508)
+// ============================================================================
+static void __fastcall Hooked_Player_StartRoll(void* pThis, void* edx) {
+    LogMsg("[RollHook] Player 0x%p StartRoll called! (p1=0x%p, p2=0x%p, inGameFrames=%d)\n",
+           pThis, g_pPlayer1, g_pPlayer2, g_inGameFrames);
+    g_orig_Player_StartRoll(pThis);
+}
+
+// ============================================================================
 // Hook: Player::Update
 // ============================================================================
 static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
     void* pPrev = g_pCurrentUpdatingPlayer;
     g_pCurrentUpdatingPlayer = pThis;
+
+    void* pSavedPlayer1 = *(void**)ADDR_PLAYER1_PTR;
+    if (pThis == g_pPlayer2) {
+        *(void**)ADDR_PLAYER1_PTR = g_pPlayer2;
+    }
 
     if (g_netEnabled && pThis == g_pPlayer2) {
         Net_PollIncoming();
@@ -1211,19 +1339,30 @@ static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
 
     g_orig_Player_Update(pThis);
 
+    if (pThis == g_pPlayer2) {
+        *(void**)ADDR_PLAYER1_PTR = pSavedPlayer1;
+    }
+
     if (g_netEnabled && pThis == g_pPlayer2 && g_hasRemoteSync) {
-        if (g_remoteSyncState.facing_x != 0.0f || g_remoteSyncState.facing_y != 0.0f) {
+        if (g_remoteSyncState.is_aiming && (g_remoteSyncState.aim_dir_x != 0.0f || g_remoteSyncState.aim_dir_y != 0.0f)) {
+            *(float*)((uintptr_t)pThis + 0x3B0) = g_remoteSyncState.aim_dir_x;
+            *(float*)((uintptr_t)pThis + 0x3B4) = g_remoteSyncState.aim_dir_y;
+        } else if (g_remoteSyncState.facing_x != 0.0f || g_remoteSyncState.facing_y != 0.0f) {
             *(float*)((uintptr_t)pThis + 0x3B0) = g_remoteSyncState.facing_x;
             *(float*)((uintptr_t)pThis + 0x3B4) = g_remoteSyncState.facing_y;
         }
         *(float*)((uintptr_t)pThis + 0xA4) = g_remoteSyncState.dir_x;
         *(float*)((uintptr_t)pThis + 0xA8) = g_remoteSyncState.dir_y;
 
-        // Strict position enforcement on puppet right after engine update
-        *(float*)((uintptr_t)pThis + OFF_POS_X) = g_remoteSyncState.pos_x;
-        *(float*)((uintptr_t)pThis + OFF_POS_Y) = g_remoteSyncState.pos_y;
-        *(float*)((uintptr_t)pThis + OFF_RENDER_POS_X) = g_remoteSyncState.pos_x;
-        *(float*)((uintptr_t)pThis + OFF_RENDER_POS_Y) = g_remoteSyncState.pos_y;
+        // Position enforcement on puppet with dead-reckoning velocity lead (bounds desync <= 1.0px)
+        float lead_x = g_remoteSyncState.vel_x * 0.75f;
+        float lead_y = g_remoteSyncState.vel_y * 0.75f;
+        float target_x = g_remoteSyncState.pos_x + lead_x;
+        float target_y = g_remoteSyncState.pos_y + lead_y;
+        *(float*)((uintptr_t)pThis + OFF_POS_X) = target_x;
+        *(float*)((uintptr_t)pThis + OFF_POS_Y) = target_y;
+        *(float*)((uintptr_t)pThis + OFF_RENDER_POS_X) = target_x;
+        *(float*)((uintptr_t)pThis + OFF_RENDER_POS_Y) = target_y;
     }
 
     g_pCurrentUpdatingPlayer = pPrev;
@@ -1269,6 +1408,19 @@ static void __fastcall Hooked_GameWorld_ResetRoom(void* pWorld, void* edx) {
     }
     LogMsg("[Co-op] Both players fallen -> proceeding with GameWorld::ResetRoom wipe.\n");
     g_orig_GameWorld_ResetRoom(pWorld);
+}
+
+// ============================================================================
+// Hook: Arrow::Draw (0x005A0750) - Contextual Player Attribution for Arrow Rendering
+// ============================================================================
+static void __fastcall Hooked_Arrow_Draw(void* pArrow, void* edx) {
+    if (!pArrow) return;
+    void* pSaved = *(void**)ADDR_PLAYER1_PTR;
+    if (g_pPlayer2 && pArrow == *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW)) {
+        *(void**)ADDR_PLAYER1_PTR = g_pPlayer2;
+    }
+    g_orig_Arrow_Draw(pArrow);
+    *(void**)ADDR_PLAYER1_PTR = pSaved;
 }
 
 // ============================================================================
@@ -1408,6 +1560,10 @@ static void TrySpawnPlayer2(void) {
     g_fnPlayerCtor(pMem, 0.0f, 0.0f);
     void* pPlayer2 = pMem;
 
+    // Attach to GameWorld FIRST so entity and children have world context
+    *(void**)((uintptr_t)pPlayer2 + 0x64) = pGameWorld;
+    g_fnWorldAddEntity(pGameWorld, pPlayer2);
+
     // Call Player::Init() (vtable[3]) to instantiate Player 2's Arrow (at 0x35c) and weapon components
     ((PlayerInit_t)ADDR_PLAYER_INIT)(pPlayer2);
 
@@ -1423,10 +1579,13 @@ static void TrySpawnPlayer2(void) {
     *(float*)((uintptr_t)pPlayer2 + OFF_COLOR_B) = g_p2ColorB;
     *(float*)((uintptr_t)pPlayer2 + OFF_COLOR_A) = g_p2ColorA;
 
-    g_fnWorldAddEntity(pGameWorld, pPlayer2);
     g_pPlayer2 = pPlayer2;
 
     void* pArrow2 = *(void**)((uintptr_t)pPlayer2 + OFF_PLAYER_ARROW);
+    if (pArrow2 && IsReadable(pArrow2, 0x140)) {
+        *(void**)((uintptr_t)pArrow2 + 0x64) = pGameWorld;
+        g_fnWorldAddEntity(pGameWorld, pArrow2);
+    }
     LogMsg("\n============================================================\n");
     LogMsg(">>> PLAYER 2 SUCCESSFULLY SPAWNED! <<<\n");
     LogMsg("   Player 1: 0x%p | Pos: (%.2f, %.2f)\n", g_pPlayer1, p1_x, p1_y);
@@ -1503,6 +1662,16 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
             s_roomTransitionCooldown = 30; // sync across 30 frames during screen fade / entrance walk
             LogMsg("[Frame %d] Room transition detected! World: 0x%p -> 0x%p\n",
                    g_frameCount, s_lastWorld, pWorld);
+            void* pGameWorld = *(void**)ADDR_GAMEWORLD_PTR;
+            if (pGameWorld && g_pPlayer2 && IsReadable(g_pPlayer2, 0x418)) {
+                *(void**)((uintptr_t)g_pPlayer2 + 0x64) = pGameWorld;
+                g_fnWorldAddEntity(pGameWorld, g_pPlayer2);
+                void* pArrow2 = *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW);
+                if (pArrow2 && IsReadable(pArrow2, 0x140)) {
+                    *(void**)((uintptr_t)pArrow2 + 0x64) = pGameWorld;
+                    g_fnWorldAddEntity(pGameWorld, pArrow2);
+                }
+            }
         }
         if (pWorld) {
             s_lastWorld = pWorld;
@@ -1676,15 +1845,17 @@ void DLLP_OnAttach(void) {
 
         MH_CreateHook((void*)ADDR_GET_BUTTON, (void*)Hooked_GetButton, (void**)&g_orig_GetButton);
         MH_CreateHook((void*)ADDR_GET_AXIS, (void*)Hooked_GetAxis, (void**)&g_orig_GetAxis);
+        MH_CreateHook((void*)ADDR_PLAYER_START_ROLL, (void*)Hooked_Player_StartRoll, (void**)&g_orig_Player_StartRoll);
         MH_CreateHook((void*)ADDR_PLAYER_UPDATE, (void*)Hooked_Player_Update, (void**)&g_orig_Player_Update);
         MH_CreateHook((void*)ADDR_CAMERA_UPDATE, (void*)Hooked_Camera_Update, (void**)&g_orig_Camera_Update);
         MH_CreateHook((void*)ADDR_PLAYER_UPDATEDEATH, (void*)Hooked_Player_UpdateDeath, (void**)&g_orig_Player_UpdateDeath);
         MH_CreateHook((void*)ADDR_GAMEWORLD_RESETROOM, (void*)Hooked_GameWorld_ResetRoom, (void**)&g_orig_GameWorld_ResetRoom);
+        MH_CreateHook((void*)ADDR_ARROW_DRAW, (void*)Hooked_Arrow_Draw, (void**)&g_orig_Arrow_Draw);
         MH_CreateHook((void*)ADDR_ARROW_ISDAMAGING, (void*)Hooked_Arrow_IsDamaging, (void**)&g_orig_Arrow_IsDamaging);
         MH_CreateHook((void*)ADDR_TITAN_HITSENSOR_ONHIT, (void*)Hooked_TitanHitSensor_OnHit, (void**)&g_orig_TitanHitSensor_OnHit);
 
         MH_EnableHook(MH_ALL_HOOKS);
-        LogMsg("All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::Update, Camera::Update, Player::UpdateDeath, GameWorld::ResetRoom, Arrow::IsDamaging, TitanHitSensor::OnHit).\n");
+        LogMsg("All hooks installed successfully (SwapWindow, GetButton, GetAxis, Player::StartRoll, Player::Update, Camera::Update, Player::UpdateDeath, GameWorld::ResetRoom, Arrow::Draw, Arrow::IsDamaging, TitanHitSensor::OnHit).\n");
     } else {
         LogMsg("ERROR: MinHook initialization failed!\n");
     }
