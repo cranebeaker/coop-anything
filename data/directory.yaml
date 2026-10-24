@@ -4013,6 +4013,41 @@
   - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
   - https://steamcommunity.com/app/214490/discussions/0/598198356181958694/
   checked: 2026-10-16
+- game: 'Alien: Isolation'
+  year: 2014
+  engine: Creative Assembly proprietary
+  project: AI co-op (build from zero, this fork)
+  url: https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: per-player
+  players: "2"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: >
+    Build-from-zero presence co-op. A mock steam_api.dll plus a narrow two-jump
+    patch of AI.exe lets a second instance boot; an in-process D3D11 probe
+    (coopnet.dll) syncs player position and facing over UDP at 20 Hz and draws
+    the peer as a body-shaped, screen-space avatar in both instances, with
+    snapshot interpolation, a 1.5 s peer timeout, and an edge arrow when the
+    peer is off screen or behind the camera. Each player is in their own world
+    (no shared enemies/doors/items); both must load the same mission save.
+    Occlusion was attempted via depth sampling at Present and found not viable
+    (the depth buffer is cleared before Present); the avatar draws through
+    walls. Packaging scripts (install/host/join/local2p/status) provided.
+    Tested with a two-instance harness (wingame/tile/keys/ocr/winshot/pix) on
+    a 3440x1440 rig, side by side on one display.
+  sources:
+  - https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation
+  checked: 2026-10-23
 - game: 'Kingdom Come: Deliverance'
   year: 2018
   engine: CryEngine
