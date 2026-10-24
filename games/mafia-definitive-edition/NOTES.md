@@ -3,7 +3,8 @@
 Target: Steam app 1030840, build 16502642, `mafiadefinitiveedition.exe` SHA-256
 `34B06C6C11326E51001EF2FD82933C7F200ACAD27EDBFCC0C159A7051978675E`, Windows 10 x64. All work so far ran on an
 isolated copy of the install (`<lab>\mafia-de`, verified as the same 4,882 files and 38,908,493,197 bytes as the
-store install) or read the exe without changing it. The game has not been launched.
+store install) or read the exe without changing it. From the 2026-10-24 probe section on, the test copy was
+launched, offline and guarded, by bots.
 
 ## 2026-10-24: triage and research
 
@@ -115,3 +116,115 @@ Unknown:
 - A hard-linked "test copy" is not isolated. An earlier copy on the test PC turned out to have 4,843 of its files
   hard-linked to the store install, so any write into it would have changed the real game. Check with
   `fsutil hardlink list` before trusting a copy.
+
+## 2026-10-24: story API (static, Ghidra)
+
+Method:
+- Ghidra 12.1.4 full auto-analysis (about 2 h), then headless scripts of my own: string cross-references with
+  decompilation of each referencing function, and a scan of `.rdata`/`.data` for arrays of
+  `{pointer to ASCII name, pointer into .text}` pairs ending in `{0, 0}`.
+
+Observed:
+- Story class names (`C_MissionCloseState`, `C_Quest`, `C_PlotlinesManagerSaveBlock`, `C_GameDirectorGRD`, …) are
+  only used by reflection type registration (for example `C_MissionCloseState` hash `0x2aaa22d5`). They do not lead
+  to the managers' code.
+- `0x143812940` is a generic script-wrapper type check with 588 call sites, so game objects are exposed to
+  HavokScript.
+- 436 `luaL_Reg`-style tables, 5,800 entries. Story functions and addresses are in the README. The quest functions
+  call a global object at `0x14635a740` (+8 interface) through its vtable: `QuestSetActive` → vt+0x70,
+  `SetCurrentAct` → vt+0x1a8. `SetCurrentStoryId` → getter `0x142d61440`, then `0x142d6e330(mgr, id, -1)`.
+  `SetMissionState` → getter `0x142438260`, then `0x142438730(mgr, id, bool)`.
+- The first 24 bytes are unique only for `GameOver`, `SetCurrentAct`, `SetCurrentSubAct`, `SetCurrentStoryId`,
+  `SetMissionState`, `Retry` and `CrossedCheckPoint`.
+
+Guess:
+- `0x14635a740` is `C_GameDirector` or its quest interface. Not confirmed.
+
+## 2026-10-24: probe DLL and guarded launches
+
+Method:
+- The exe imports `VERSION.dll` (6 functions), so a `version.dll` proxy in the test copy loads first. It forwards the
+  17 version exports to the system DLL and patches the exe's import table.
+- `SHGetFolderPathA` for `CSIDL_PERSONAL`, `CSIDL_APPDATA` and `CSIDL_LOCAL_APPDATA` returns a per-instance folder.
+  The probe exits the game if the folder is not set.
+- A harness snapshots, before and after each run: the real install's file list and exe hash, `Documents\My Games`,
+  Saved Games, Steam `userdata` (recursive), the top level of Documents, AppData, LocalAppData, LocalLow and the user
+  profile, and HKCU `Software\2K Games` and `Software\Hangar 13`.
+
+Observed (first run, online, 120 s, no input):
+- The redirect worked (calls for 0x1a and 0x5). The game created `Documents\My Games\Mafia Definitive Edition\Saves\`
+  (`launcconfig.cfg`, `videoconfig.cfg`) and `Data\<SteamID64>\profiles\temporaryprofile\*.pf` there.
+- Guard: install and exe hash unchanged. Only Steam client bookkeeping changed: `config\localconfig.vdf`,
+  `config\librarycache\<appid>.json`, `gamerecordings\gamerecording.pb`. No Steam remote-storage folder appeared.
+- No `GetProcAddress` for Steam functions, so the Steam API is linked statically.
+- The window was 1280×720 windowed. The 960×540 written to `videoconfig.cfg` beforehand was not used.
+- **The game's HTTP library wrote verbose HTTPS traffic to standard output, including a 2K single sign-on bearer
+  token.** It contacted `*.my.2k.com` and `sso`, `telemetry` and `promotions` hosts under `api.2kcoretech.online`,
+  and posted to an SSO endpoint by itself. Keep the game's stdout in a private file, never in shared logs.
+
+Method (offline mode, all later runs):
+- Import hooks on `getaddrinfo`, `gethostbyname`, `connect` and `sendto` (ws2_32 imports by ordinal 52, 4 and 20)
+  fail non-loopback targets.
+
+Observed:
+- Offline, the main menu is reached after a "cannot connect to 2K" dialog. No tokens were logged.
+
+## 2026-10-24: bot input
+
+Observed:
+- Posted `WM_KEYDOWN`/`WM_KEYUP` have no effect. The game reads the keyboard through DirectInput 8 and pads through
+  XInput: the import plus run-time `GetProcAddress` of `XInputGetCapabilities` and `XInputSetState`.
+- Hooking only the XInput imports was not enough: the UI ignored the virtual pad until the probe also returned its
+  hooks from `GetProcAddress`.
+- The UI follows the real cursor, and moving the mouse switched it to keyboard-and-mouse prompts. Pinning
+  `GetCursorPos` to the window centre and ignoring `ClipCursor` fixed it.
+- Cutscenes paused (with a keyboard skip prompt) when the window lost focus. Subclassing the window procedure fixed
+  it: `WM_ACTIVATEAPP` and `WM_ACTIVATE` forced active, `WM_KILLFOCUS` swallowed.
+- The game polls `XInputGetState` about 120 times a second in menus and about 60 in a mission.
+- Start flow, offline: intros (A skips after about 20 s), title screen (A), "connecting", "cannot connect to 2K"
+  (A), main menu (Continue, Story, Free Ride, …). A scripted path from launch into the profile's mission passed
+  several times, about 97 s from launch.
+- Tapping A, holding A for 1.5 s and pressing B do not skip cutscenes.
+
+Unknown:
+- The pad binding for skipping cutscenes.
+
+## 2026-10-24: chapter 1 call sequence
+
+Method:
+- The probe wraps 579 functions from 8 tables (`0x145ad0780`, `0x145af5810`, `0x145af7b50`, `0x145ae3b20`,
+  `0x145ae3450`, `0x145af5d20`, `0x145af45d0`, `0x145af9720`), metamethods excluded. Each entry is swapped only if its name pointer and function pointer match this build: all
+  579 matched. Logging is limited to 8 calls per function per 5 s, with call counts.
+- A string argument's object layout was read from live values: u64 length at +0x08, u32 hash at +0x10, text at
+  +0x14 (`mm_10_chase`: length 0x0b, hash `b96a5469`).
+
+Observed:
+- The sequence in the README, from Continue on a profile whose autosave is at the start of chapter 1. The idle bot
+  reached the first checkpoint, `cp_020`, and died about 27 s later in the car chase.
+- Earlier in the same log, when the main menu opens: `RegisterScriptedMenuEvent("MainMenu", 0..7, …)`.
+
+Derived:
+- Mission start, checkpoint, objectives and death each have their own call with string ids, so they can be replayed
+  on a client.
+
+## 2026-10-24: chapter replay unlock
+
+Method:
+- Cross-references to `MissionReplayUnlocked`, `PersistentDataStorage`, `S_VariableNumber` and others.
+
+Observed:
+- The Chapter Replay list (`0x142fe01b0`) reads the number `MissionReplayUnlocked` from the script data store and
+  marks entry *i* unlocked if *i* is below it. The store group comes from the `PersistentDataStorage` save block
+  (`0x1423632f0`, group key at `0x14635f3b0`).
+- Names are hashed by `0x143cbae50`: FNV-1 64-bit (multiply by `0x100000001b3`, then xor), offset basis
+  `0xcbf29ce484222325`. A name made only of digits (not starting with 0) is parsed as a decimal number instead.
+- `.pf` profile files are XML followed by 4 bytes. For all 11 files in the test profile, those bytes are the CRC32 of
+  the XML, little endian.
+- Variable classes: `S_VariableNumber` id `0x48c8e903`, `S_VariableString` `0x48c8e904` (`m_Type` 3 in a saved
+  file), `S_VariableBool` `0x48c8e905`.
+- After adding `MissionReplayUnlocked` = 99 (`S_VariableNumber`, `m_Type` 2) to the test profile's
+  `profile_data_storage_persistantdata.pf` and fixing the CRC, the menu Story → Chapter Replay listed all 20
+  chapters. Chapter 2 loaded at once and started mission `mm_20_taxi`.
+
+Guess:
+- `m_Type` 2 = number, from the id order. The game accepted it, but the full enum was not read.

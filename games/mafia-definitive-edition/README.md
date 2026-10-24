@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Illusion Engine (Hangar 13); shares code with Mafia III (see below) |
-| Versions tested | Steam app 1030840, build 16502642, `mafiadefinitiveedition.exe` FileVersion 1.0.0.1, SHA-256 `34B06C6C11326E51001EF2FD82933C7F200ACAD27EDBFCC0C159A7051978675E`, Windows 10 x64. Static analysis only: the game has not been launched for this work |
+| Versions tested | Steam app 1030840, build 16502642, `mafiadefinitiveedition.exe` FileVersion 1.0.0.1, SHA-256 `34B06C6C11326E51001EF2FD82933C7F200ACAD27EDBFCC0C159A7051978675E`, Windows 10 x64. Static analysis, plus bot-driven launches of an isolated, offline test copy with a logging probe DLL |
 | Projects | MafiaMP <https://github.com/MafiaHub/MafiaMP> (free roam); MafiaCoop (JustAddMP) <https://github.com/JustAddMP/MafiaDE> (story co-op, pre-release); both in [DIRECTORY.md](../../DIRECTORY.md). This write-up's own work: story co-op from zero, claim [#173](https://github.com/cranebeaker/coop-anything/issues/173) |
 | QA level | none |
 | Last updated | 2026-10-24 |
@@ -12,8 +12,9 @@
 
 Two projects exist. MafiaMP is free roam on a dedicated server, without the story. MafiaCoop (JustAddMP) says the
 story follows the host, but it is a pre-release that its author has tested only on one PC, in a few chapters. This
-write-up covers a third attempt, story co-op built from zero, which is still at research and static analysis: no
-mod code exists yet and the game has not been launched for it.
+write-up covers a third attempt, story co-op built from zero. It is past static analysis: a probe DLL in a test copy
+logs the game's story script calls while a bot plays, and the calls that start a mission, set a checkpoint and change
+objectives are identified. No co-op code exists yet.
 
 Research log with sources, and observed, derived and unknown facts kept apart: [NOTES.md](NOTES.md).
 
@@ -48,19 +49,21 @@ Research log with sources, and observed, derived and unknown facts kept apart: [
 - **Executable**: x64 MSVC, 111 MB, about 76 MB of code. No SteamStub wrapper: there is no `.bind` section, so the
   exe decompiles directly. It has an unusual `.interpr` section, purpose unknown. The PDB (`MafiaDefinitiveEdition.pdb`)
   is not shipped. Most MSVC RTTI type names are missing, but class names survive in reflection and serialization
-  strings.
+  strings. The Steam API is linked statically (the game never loads `steam_api64.dll`).
 - **Shared with Mafia III**: the exe contains Mafia III script paths, for example
   `/scripts/entities/interactions/int_kill_olivia_game_room_guard_l_hold.vi` and `int_kill_the_judge_*`, so Mafia III
   research largely carries over.
-- **Scripting**: the engine embeds HavokScript (namespace `hks`), a Lua 5.1-compatible VM. **Missions are not Lua,
-  though.** The 150 archives in `sds_retail/script` hold 9,249 Generic resources: `.ires.compiled` 4,326,
+- **Scripting**: the engine embeds HavokScript (namespace `hks`), a Lua 5.1-compatible VM. **Missions are not Lua
+  files, though.** The 150 archives in `sds_retail/script` hold 9,249 Generic resources: `.ires.compiled` 4,326,
   `.vi.compiled` 4,210, `.entity.compiled` 358, `.iprofai` 189, `.iproftime` 150 and `.gxml` 15 (extension names from
   Mafia Toolkit's hash table). There are also 15,528 animations, 8,261 textures, 14 cutscenes and **exactly one Lua
   script**, `/scripts/missions/statistic_tracking/statistic_tracking.lua` (Lua 5.1 bytecode). The `.vi.compiled`
-  format is undocumented.
+  format is undocumented. The compiled mission scripts still drive the story through the game's Lua C API, so that
+  API is where story changes can be seen and replayed (below).
 - **Missions** ship as one archive set each: `mm_<n>_<name>_p` plus sub-area archives `mm_<n>_<name>_s_*`. Examples
   are `mm_20_taxi_p`, `mm_110_omerta_p` with `mm_110_omerta_s_bank`, and `mm_200_bank_p`. Open-world content
-  includes `lh_trap_manager_*` and `lh_garage_quest_loc_*`, alongside `game_manager` and `game_over_manager`.
+  includes `lh_trap_manager_*` and `lh_garage_quest_loc_*`, alongside `game_manager` and `game_over_manager`. In
+  game, chapter 1 runs as mission `mm_10_chase` and chapter 2 as `mm_20_taxi`.
 - **SDS v20 archive layout** (worked out from the zlib-licensed Gibbed code and checked against these files): a
   12-byte head (`SDS\0`, version 20, `PC\0\0`), then a 4-byte checksum. Next comes a 52-byte file header (type-table
   offset, block-table offset, XML offset, RAM and VRAM sizes, flags, 16 unknown bytes, resource count) with its own
@@ -69,32 +72,90 @@ Research log with sources, and observed, derived and unknown facts kept apart: [
   goes through the game's own `oo2core_8_win64.dll`. Each resource is a 34-byte header (type, size, version, u64
   name hash, 4×u32 memory) plus a 4-byte checksum, followed by `size - 38` bytes of data. Generic resources begin with
   a u32 type hash and carry a `GENR` tag.
-- **Story state**: the exe names the story systems. Missions: `C_GameDirector`, `C_GameDirectorScriptWrapper`,
-  `C_MissionsDatabase`, `C_Mission` with `C_MissionWaitForOpenState`, `C_MissionOpenDuringReloadState` and
-  `C_MissionCloseState`. Quests and objectives: `C_QuestsManager`, `C_QuestsDatabase`, `C_Quest`,
-  `C_ObjectivesManager`, `C_ObjectiveScriptModule`. Plotlines: `C_PlotlinesManager`, `C_PlotlinesDatabase`,
-  `C_PlotlinesCmdLineInspector`. Also `C_DialogStateManager`, `C_StreamingWorldState`, `C_ScriptMachine` and
-  `C_GameActivity`. Their addresses and functions are not mapped yet.
+- **Script API**: 436 `luaL_Reg`-style tables (`{const char *name, lua_CFunction fn}`) in `.rdata`/`.data`, 5,800
+  functions in all. The story-related ones for this build:
+
+  | Table | Functions (address) |
+  |---|---|
+  | Quests `0x145ad0780` (72) | `QuestSetActive` `0x142245e30`, `QuestSetFinished` `0x142246010`, `QuestSetCustomState` `0x142246e60`, `ObjectiveActivate` `0x142242cc0`, `SetCurrentAct` `0x142244210`, `SetCurrentSubAct` `0x142244470`, `GameOver` `0x142245970`, `CityTransfer` `0x142245af0` |
+  | Saves `0x145af5810` | `EnableSaveLogic` `0x142e56940`, `RequestCheckpointSave` `0x142e56ef0`, `RequestMissionSave` `0x142e56f40`, `Retry` `0x142e570b0` |
+  | HUD `0x145af7b50` (237) | `AddQuestChapter` `0x142f51880`, `AddQuestObjective` `0x142f54590`, `ShowMissionComplete` `0x142f4db40`, `ShowMissionRestart` `0x142f4d830`, `AcceptMissionRestart` `0x142f5bec0` |
+  | `0x145ae3450` (purpose unclear) | `SetMissionState` `0x142677270` |
+  | Game `0x145ae3b20` | `SetCurrentStoryId` `0x142683340`, `GetMissionTime` |
+
+  Most functions are methods (argument 1 is the wrapper userdata). The prologues of the Lua glue functions repeat,
+  so byte signatures are not unique. Resolve them at run time by name from the registration tables instead. The
+  quest functions call a global manager at `0x14635a740` through its vtable (for example `QuestSetActive` → vt+0x70);
+  that it is `C_GameDirector` is a guess.
+- **HavokScript values** (confirmed in the running game): `lua_State` +0x48 top, +0x50 base; stack values are 16
+  bytes, a u32 tag at +0 and the value at +8. Tags: 1 boolean, 3 number (float), 4 string, 7 userdata (the `self`
+  wrappers). A string object holds a u64 length at +0x08, a u32 hash at +0x10 and the text at +0x14.
+- **Story calls in chapter 1**, logged from a bot run (queries and per-frame reads left out; times are seconds after
+  launch):
+
+  | Time | Calls | In game |
+  |---|---|---|
+  | 96.6 | `EnableSaveLogic("main")`, `RequestMissionSave("mm_10_chase")`, `SetMissionState("mm_10_chase", true)`, `UpdateRolloverDateAndImage("$mm_10_chase_date", "mission01")` | mission starts loading |
+  | 108.5 | `CreateScriptActorAction` ×4, `RegisterVehicleDirect("enemy")` | actors set up |
+  | 108–318 | none | opening cutscene |
+  | 318.7 | `ShowTitleCard("$title_card_mm_010_…", …)`, later `HideTitleCard` | chapter title card |
+  | 384.8 | `SetRespawnPosDir`, `QuestSetCustomState("mm_10_chase", "cp_020")`, `UpdateSimpleObjective("$mm_10_chase_cp_020", …)`, `AddSecondaryObjective("$mm_10_chase_cp_030_…", false, 1)`, `OpenScotchTutorial("tutorial_accelerate", …)` | gameplay starts at a checkpoint |
+  | 396.8 | `RegisterIconEntityDirect("traps")`, `AddEntityIndicator("vehicle_trap")` | marker on the gangsters' car |
+  | 400.8 | `ZombieShotAtEntityStart`/`Stop`, `ModifyGameTime(0.3, 1000)` | scripted shots, slow motion |
+  | 411.7 | `ShowMissionRestart("mm_10_chase", "mm_000_go_death")` | "you died" screen (the bot does not drive) |
+
+  Every frame in gameplay, scripts call `GetActivePlayer` about 60 times and `GetMissionTime` 120–240 times a second.
+  The derived sync channel: mission start is `SetMissionState(<mission>, true)`, the checkpoint is
+  `QuestSetCustomState(<mission>, "cp_NNN")`, objectives are `UpdateSimpleObjective`/`AddSecondaryObjective` with `$`
+  text ids, and death is `ShowMissionRestart(<mission>, <reason>)`. Calls for chapters 2–20 are being recorded.
 - **Saves**: the save system writes named blocks, among them `S_QuestsManagerSaveData`,
   `S_PlotlinesManagerSaveData`, `S_DialogStateManagerSaveData`, `S_JournalSaveData`, `S_StreamingWorldStateSaveData`,
-  `C_PoliceForceSaveBlock` and `S_GameActivitiesSpawnSystemSaveData`. Saves and the launcher and video settings go
-  to **`<Documents>\My Games\Mafia Definitive Edition\Saves\`**. The exe gets Documents from
-  `SHGetFolderPathA(CSIDL_PERSONAL)` (`xor r9d,r9d; lea edx,[r9+5]` before four of its five calls). The same
-  functions use `My Games`, `Mafia Definitive Edition`, `\Saves`, `/gamesaves` and
-  `%s%s\%s\Saves\launcconfig.cfg` / `videoconfig.cfg`. Found statically and not yet seen on disk: the game had never
-  been started on the test PC. The folder does not depend on the install path, so every copy of the game shares it,
-  and if Documents is redirected to OneDrive, so are the saves. `Hangar 13 Games` has a single reference outside this
-  code, probably the crash reporter. `/profiles/` and `%s/%llu` probably name subfolders below `Saves` (not checked).
-- **Netcode**: the game is single player. Whether any engine-level network code is left from development is unknown.
+  `C_PoliceForceSaveBlock` and `S_GameActivitiesSpawnSystemSaveData`. Everything goes under
+  `<Documents>\My Games\Mafia Definitive Edition\` (Documents from `SHGetFolderPathA(CSIDL_PERSONAL)`, seen on disk
+  in a redirected test instance): `Saves\launcconfig.cfg` and `Saves\videoconfig.cfg`, the profile in
+  `Data\<SteamID64>\profiles\temporaryprofile\*.pf`, and game saves in `Data\<SteamID64>\gamesaves\default\aslot\save<n>.sav`
+  (binary, `GENR` header). The folder does not depend on the install path, so every copy of the game shares it, and
+  if Documents is redirected to OneDrive, so are the saves.
+- **Profile files** (`*.pf`): XML (`C_SaveDataUnwrapped` with save blocks) followed by a 4-byte trailer, the CRC32
+  of the XML (little endian). Script data storage maps a `C_HashName` (FNV-1 64-bit of the name, multiply then xor;
+  all-digit names are parsed as numbers) to an `S_Variable*`; `m_Type` is 2 for `S_VariableNumber` and 3 for
+  `S_VariableString`. The Chapter Replay menu (`0x142fe01b0`) shows chapter *i* as playable if *i* is below the
+  number `MissionReplayUnlocked` in the `PersistentDataStorage` block, stored in
+  `profile_data_storage_persistantdata.pf`. Setting it in a test profile lists all 20 chapters, and chapter 2 chosen
+  there loaded directly, with no prompt. So both players should be able to load the same chapter without playing
+  up to it (derived, not tested).
+- **Input**: keyboard and mouse through DirectInput 8, pads through XInput (imported and also looked up with
+  `GetProcAddress` at run time). Window messages posted to the game have no effect. The UI follows the real cursor
+  (it switches to mouse prompts when the cursor moves) and calls `ClipCursor`. Cutscenes pause while the window is
+  inactive; the game reacts to `WM_ACTIVATE`/`WM_ACTIVATEAPP`. Tapping or holding A, or pressing B, does not skip
+  cutscenes; the skip binding is unknown.
+- **Online services**: on start the game contacts `*.my.2k.com` and `*.api.2kcoretech.online` (single sign-on,
+  telemetry, promotions). Its HTTP library writes verbose request logs, **including a bearer token**, to standard
+  output. When those lookups fail, it shows a "cannot connect to 2K" dialog and runs normally offline.
+- **Single instance and netcode**: the exe imports `CreateMutexA`/`OpenMutexA`; whether it refuses a second instance
+  is not tested. The game is single player, and whether any engine-level network code remains is unknown.
 
 ## What we changed
 
-Nothing in the game yet. Tools written so far (not published): a read-only SDS v20 script extractor and a
-byte-pattern scanner.
+Nothing in the game files. Tools written so far (not published yet):
+
+- A read-only SDS v20 script extractor and a byte-pattern scanner.
+- Ghidra headless scripts: string cross-references with decompilation, and `luaL_Reg` table finding.
+- A probe DLL loaded as a `version.dll` proxy, in the test copy only. It redirects `SHGetFolderPathA` to a
+  per-instance folder (and exits if it can't), blocks non-loopback network lookups and connects, provides a virtual
+  XInput pad fed from a text file, pins the cursor, keeps the window "active", and wraps 579 Lua C functions from
+  8 tables. Each wrap swaps a table pointer only if the entry's name and address match this build. It logs calls
+  with decoded arguments, rate-limited per function.
+- A launch harness: it snapshots the real install, the exe hash, `Documents\My Games`, Saved Games, Steam
+  `userdata` and the 2K/Hangar 13 registry keys before and after each run and reports any change. A watchdog kills a
+  game started from the real install. Bot scripts drive the menus to a chapter.
+- A `.pf` editor that sets a number variable and fixes the CRC (refuses files whose CRC is already wrong).
 
 ## QA
 
-None yet. No game code exists, so there is nothing to test.
+None for co-op: no co-op code exists. Probe and harness runs so far, all offline, in the test copy: every run's
+guard left the real install, exe hash and saves unchanged. Only Steam client bookkeeping
+(`localconfig.vdf`, `librarycache\*.json`, `gamerecording.pb`) changed.
 
 ## How to play
 
@@ -106,15 +167,13 @@ None, because nothing ships yet.
 
 ## Next steps
 
-1. Finish the Ghidra analysis of the exe. Find each story manager's instance and the functions that change its state
-   (quest and objective stage, plotline state, mission open and close), using cross-references from the name strings
-   above.
-2. Write a probe DLL for an isolated test copy. Log those functions while a bot plays the first mission, to confirm
-   which ones fire when the story advances.
-3. Let the host own the story. Replicate mission open and close, then quest, objective and plotline changes, from
-   host to client, with a re-entrancy guard.
-4. For late join and resync, apply the host's own save blocks (quests, plotlines, journal, dialog state, streaming
-   world state) on the client as a snapshot.
-5. Before the first launch of a test copy, redirect `SHGetFolderPathA(CSIDL_PERSONAL)` per instance (an import-table
-   patch, as for The Witness in `playbook/methods.md` §2), and keep Steam remote storage out of the owner's profile.
-   Snapshot `<Documents>\My Games\Mafia Definitive Edition` and Steam `userdata` before and after every run.
+1. Finish recording each chapter's story calls from Chapter Replay (chapters 2–20, batch running). Get past
+   gameplay by loading later checkpoints, or with a driving and walking bot.
+2. Hook below the Lua glue: the manager behind the quest functions (`0x14635a740`), `SetMissionState` →
+   `0x142438730`, and the save requests. Confirm that native code changes story state only through them.
+3. Let the host own the story. Send mission start, checkpoint, objective and restart calls from host to client and
+   replay them there with a re-entrancy guard. Suppress the client's own calls for those functions.
+4. For late join, load the host's chapter on the client through Chapter Replay, then apply the host's checkpoint.
+   For resync, use the host's save blocks (quests, plotlines, journal, dialog state, streaming world state) as a
+   snapshot.
+5. Test two instances on one PC (each with its own redirected Documents folder) with bots, before two PCs.
