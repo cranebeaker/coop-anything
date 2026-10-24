@@ -68,7 +68,6 @@ typedef struct SDL_Window SDL_Window;
 #define OFF_DEATH_SLOWDOWN    0x3E8       // float: slow-motion / zoom factor
 #define OFF_DEATH_TIMER       0x3EC       // uint16_t: frames elapsed since death
 #define OFF_WAKEUP_FLAG       0x40D       // byte: 1 = wake / getup sequence
-#define OFF_PLAYER_GROUNDSPRITE 0x410     // GroundSprite entity (shadow/ground indicator)
 #define OFF_PLAYER_ARROW      0x35c       // Arrow entity pointer (5Arrow class)
 
 // Typedefs for engine functions
@@ -614,7 +613,8 @@ static void ProcessIncomingPacket(const char* recvBuf, int bytes, uint64_t sende
         if (pGameWorld && IsReadable(pGameWorld, 0x10)) {
             void** pBegin = *(void***)((uintptr_t)pGameWorld + 0x04);
             void** pEnd   = *(void***)((uintptr_t)pGameWorld + 0x08);
-            if (pBegin && pEnd && pEnd > pBegin) {
+            if (pBegin && pEnd && pEnd > pBegin && (size_t)(pEnd - pBegin) <= 2048 &&
+                IsReadable(pBegin, (size_t)(pEnd - pBegin) * sizeof(void*))) {
                 size_t count = pEnd - pBegin;
                 for (size_t i = 0; i < count; i++) {
                     void* pEnt = pBegin[i];
@@ -1257,6 +1257,8 @@ static void __fastcall Hooked_Player_UpdateDeath(void* pThis, void* edx) {
 // Hook: GameWorld::ResetRoom (0x0055309C) - Cooperative Wipe Gatekeeper
 // ============================================================================
 static void __fastcall Hooked_GameWorld_ResetRoom(void* pWorld, void* edx) {
+    if (!pWorld || !IsReadable(pWorld, 0x10)) return;
+
     if (g_pPlayer1 && g_pPlayer2 && IsReadable(g_pPlayer1, 0x418) && IsReadable(g_pPlayer2, 0x418)) {
         BOOL p1_alive = IsPlayerAlive(g_pPlayer1);
         BOOL p2_alive = IsPlayerAlive(g_pPlayer2);
@@ -1277,12 +1279,12 @@ static char __fastcall Hooked_Arrow_IsDamaging(void* pArrow, void* edx) {
     if (g_orig_Arrow_IsDamaging(pArrow, edx)) {
         return 1;
     }
-    // If the inspected arrow is not damaging (e.g. Player 1 standing idle),
-    // check if Player 2's arrow is currently flying / damaging!
-    if (g_pPlayer2 && IsReadable(g_pPlayer2, 0x360)) {
-        void* pArrow2 = *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW);
-        if (pArrow2 && IsReadable(pArrow2, 0x140)) {
-            if (g_orig_Arrow_IsDamaging(pArrow2, NULL)) {
+    // If the inspected arrow is not damaging, check the partner's arrow symmetrically
+    void* pOther = (g_pPlayer1 && pArrow == *(void**)((uintptr_t)g_pPlayer1 + OFF_PLAYER_ARROW)) ? g_pPlayer2 : g_pPlayer1;
+    if (pOther && IsReadable(pOther, 0x418)) {
+        void* pOtherArrow = *(void**)((uintptr_t)pOther + OFF_PLAYER_ARROW);
+        if (pOtherArrow && pOtherArrow != pArrow && IsReadable(pOtherArrow, 0x140)) {
+            if (g_orig_Arrow_IsDamaging(pOtherArrow, NULL)) {
                 return 1;
             }
         }
@@ -1294,6 +1296,8 @@ static char __fastcall Hooked_Arrow_IsDamaging(void* pArrow, void* edx) {
 // Hook: TitanHitSensor::OnHit (0x00589700) - Boss Weakpoint Impact & Sync
 // ============================================================================
 static void __fastcall Hooked_TitanHitSensor_OnHit(void* pSensor, void* edx, float hit_x, float hit_y, float vel_x, float vel_y) {
+    if (!pSensor || !IsReadable(pSensor, 0xA0)) return;
+
     g_orig_TitanHitSensor_OnHit(pSensor, edx, hit_x, hit_y, vel_x, vel_y);
 
     LogMsg("[Frame %d] Boss Weakpoint Hit! Sensor=0x%p Pos=(%.2f, %.2f) Vel=(%.2f, %.2f)\n",
@@ -1549,22 +1553,22 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
             else if (g_inGameFrames == 821) LogMsg("[QA Bot] Phase 9: Sequence Complete (frame %d)\n", g_inGameFrames);
 
             // Phase 10: Co-op Life & Revive Automated Test
-            if (g_inGameFrames == 830 && g_pPlayer2) {
+            if (g_inGameFrames == 830 && g_pPlayer2 && IsReadable(g_pPlayer2, 0x418)) {
                 LogMsg("[QA Revive Test] Step 1: Simulating Player 2 death (roll_state=3)...\n");
                 *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 3;
                 *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) = 0;
                 *(unsigned short*)((uintptr_t)g_pPlayer2 + OFF_DEATH_TIMER) = 85;
             }
-            if (g_inGameFrames == 840 && g_pPlayer2) {
+            if (g_inGameFrames == 840 && g_pPlayer2 && IsReadable(g_pPlayer2, 0x418)) {
                 unsigned short t = *(unsigned short*)((uintptr_t)g_pPlayer2 + OFF_DEATH_TIMER);
                 LogMsg("[QA Revive Test] Step 2: Player 2 death timer is %d (frozen <= 80, room active)\n", t);
             }
-            if (g_inGameFrames == 850 && g_pPlayer1 && g_pPlayer2) {
+            if (g_inGameFrames == 850 && g_pPlayer1 && g_pPlayer2 && IsReadable(g_pPlayer1, 0x418) && IsReadable(g_pPlayer2, 0x418)) {
                 LogMsg("[QA Revive Test] Step 3: Player 1 approaching Player 2 for Revive (dist <= 25.0 px)...\n");
                 *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_X) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) - 10.0f;
                 *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_Y) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
             }
-            if (g_inGameFrames == 860 && g_pPlayer2) {
+            if (g_inGameFrames == 860 && g_pPlayer2 && IsReadable(g_pPlayer2, 0x418)) {
                 int p2_state = *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL);
                 char p2_alive = *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG);
                 LogMsg("[QA Revive Test] Step 4: Player 2 Revive verified -> roll_state=%d, alive=%d (REVIVE SUCCESS!)\n",
