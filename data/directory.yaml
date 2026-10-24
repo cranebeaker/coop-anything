@@ -7727,3 +7727,35 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: 'Metroid Prime 2: Echoes'
+  year: 2004
+  engine: Wii in Dolphin (Gecko and patch code injection)
+  project: Echoes co-op
+  url: https://github.com/FarrenB939/metroid-prime-2-echoes-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/metroid-prime-2-echoes
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: 2-4
+  networking: ''
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: community-reports
+  notes: Local split-screen campaign for 2-4 players in the Metroid Prime Trilogy NTSC-U build (R3ME01 rev 0) on
+    Dolphin, built on Echoes' versus mode with Gecko codes and a Dolphin patch. Any player opens doors and the others
+    follow; shared items, scans and lives; save stations, Scan Visor, cutscenes, the map and enemy/boss targeting work for
+    every player; difficulty codes (Hypermode by default). Played by the owner through the opening hours; later rooms
+    surveyed by a test harness. Revives the abandoned 2019 asset-only attempt by SubsonicBeatz154. Write-up in
+    games/metroid-prime-2-echoes.
+  sources:
+  - https://github.com/FarrenB939/metroid-prime-2-echoes-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/metroid-prime-2-echoes
+  - https://forum.metroidconstruction.com/index.php?topic=4942.0
+  checked: '2026-10-24'
+  made_with_coop_anything: true
