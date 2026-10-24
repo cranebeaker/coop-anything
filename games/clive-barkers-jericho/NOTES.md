@@ -263,7 +263,7 @@
   then cannot load its own modules (`Get-FileHash` not found). A launcher run from a shortcut
   should clean that variable or avoid script-module cmdlets (.NET `SHA256`, `ZipFile`).
 
-## Session 2026-10-23: 0.2.4 (player souls, display settings, release candidate)
+## Session 2026-10-23: 0.2.4 (player souls, display settings)
 
 ### Observations (checked)
 - Many engine menu fields (for example a squad menu entry's `<id>OnSelect`) can be written
@@ -284,7 +284,7 @@
   message box is `Menu.AcceptMenuMultiline(text, nextFunc)`. Saving the configuration rebuilds
   the main menu from a callback after the save, so a box shown at once is replaced.
 
-## Session 2026-10-23: 0.2.5 (the release candidate completed)
+## Session 2026-10-23: 0.2.5 (0.2.4 completed)
 
 ### Observations (checked)
 - "Mouse not found" (PcMouse.cpp) comes from the game's own check inside SecuROM-obfuscated
@@ -313,7 +313,7 @@
   holding the list: its items join with spaces when written as a string, and an empty list
   becomes one empty string.
 
-## Session 2026-10-24: 0.2.6 (clean exit, any version updated)
+## Session 2026-10-24: 0.2.6-0.2.7 (clean exit, any version updated, split screen)
 
 ### Observations (checked)
 - The D3D9 warning on exit is the debug-style check in the engine's own final device
@@ -326,6 +326,24 @@
   0.2.5+ reads it.
 - In the souls test, Rawlings' AI on the host sometimes does not come for a downed puppet
   within 12 s (1 of 3 with 0.2.5's DLL, 2 of 6 with 0.2.6's): the revive is not sent at all.
+  The AI's choice is in the engine; the game's own heal (`WeaponsRawlings.Cure(me, tgt)`:
+  `Team.RevivePlayer`, the light and sound, Rawlings' life cost) can be called for him.
+- `Team.TravelCam` / `Team.EndTravelCam`: the switch's soul flight relies on the game's
+  `SetTimeSpeed(0.005)`; without it the path ends in the same frame and `EndTravelCam`
+  deletes the camera (`cam:Del()` before `SetCam(0, MainCam)`) the engine already took for that
+  frame: "Check failed: GetActiveCamera() != this" (`ScrapEngCamera.cpp` line 48).
+- `Scorer.SetMsgText` is one message line for all users; each user's "Msg" widget shows it.
+  Scorer items' `Visible` takes 1/0; writing a boolean is silently ignored.
+- The game's default `R_LimitFPS` is 0 (no cap); `VSync` is the menu's option.
+- The engine's 2D batcher draws a batch when the texture changes, not when the viewport does:
+  in a split screen view whose HUD pass skipped the batch rule, each player's message line was
+  drawn in the other half on alternate frames (it looked like blinking text in two styles).
+- Unreliable state messages sent just before a level change are delivered after the new level
+  has loaded (the host dropped one from the client at nearly every level start). The host
+  relays clients' states to all peers, the sender included.
+- The game's appear/disappear events of `PsichicCommander`, `EvilFirstBorn`, `SummerianNANNA`
+  and `SummerianUTU` call `oAI:OnAfterAppear/OnAfterDisappear`; the call sets the AI's mode
+  (vtable +0x3a4 -> `005035f0` with 3) and reads AI state that a disabled AI does not keep.
 
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download

@@ -6,30 +6,35 @@
 | Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
 | QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-10-24 (0.2.6) |
+| Last updated | 2026-10-24 (0.2.7) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.6 at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.7 at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
 1-8) found enemies that ignored joining players, walls only they met, scripts that took their
 controls and actions the host did not see; 0.2.2 fixes those. 0.2.3 gives each fire team its
 own player to follow, syncs every breakable and movable object and keeps a downed player on
-their side of a story split. 0.2.4, called a release candidate, gives the players their
+their side of a story split. 0.2.4 gives the players their
 place in the story (the host is Ross's soul, the second player Jones's astral projection,
 players 3-4 the squad members themselves), adds a display mode and refresh rate to the game's
 Video settings, renames the mod Jericho Co-op+ (it does more than co-op) and fixes what a full
-code review and the release tests found. 0.2.5 completes that release candidate: the items
+code review and the release tests found. 0.2.5 completes 0.2.4: the items
 0.2.4 left open (a split screen player waiting for a body, the last boss's rune, game folders
 with any name), a game start without a mouse and an installer record fix. 0.2.6 fixes the
 game's exit, which stopped on a D3D warning box, and lets the installer find and update every
-earlier version, the first test build (no installer) included. A whole campaign played
-through by people is still to come.
+earlier version, the first test build (no installer) included. 0.2.7 keeps the split screen HUD in
+shape on wide screens, shows each split screen player their own hints, stops an engine halt
+when switching squad members in split screen, caps the frame rate at the screen's (twice it in
+split screen), makes Rawlings come for a downed player 3-4 every time, stops a joining PC's
+split screen player from falling through the map at a level's start and fixes a rare crash on
+a joining PC when the psychic commander disappears. A whole campaign played through by people
+is still to come.
 
 ## Existing work
 
@@ -207,6 +212,28 @@ restored on uninstall.
   proxy hooks the device's `Release` (vtable slot 2) and, once the count is down to the
   engine's own last few references, frees its F11 recorder, capture and split screen surfaces
   first.
+- **Split screen HUD on wide screens (0.2.7):** the shape-keeping HUD layout (each user's HUD
+  viewport shrunk to the whole screen's shape, its corners moved to the screen's edges, and
+  the 2D batcher's last batch drawn in the viewport it was made for) is used in the wide view
+  too, where it had been left out: there the HUD was twice as wide as high and each player's
+  message line blinked into the other half.
+- **Frame cap and the switch flight (0.2.7):** with the game's own cap off and no vertical sync,
+  the proxy waits before `Present` to hold the screen's refresh rate (twice it in split screen,
+  where each view gets every other frame). The squad switch's soul flight ended in the frame it
+  started (co-op does not slow the world) and the game deleted the camera the engine was
+  drawing with ("Check failed: GetActiveCamera() != this" in split screen); its end now waits
+  0.1 s.
+- **Body states across a level change (0.2.7):** states a client sent in the last level reach
+  the host after its load, and the host relays every player's state to everyone; the client
+  drove its own split screen player's body, a puppet for the first second until the split
+  screen takes it, to the last level's place, outside the new map. The host now takes a peer's
+  states only after its "level loaded" message, a client none in its first second and no
+  relayed copy of its own bodies.
+- **Enemy events that call the AI (0.2.7):** clients mirror the host's enemy actions, so the
+  animation events run there too; four classes end appear/disappear with a call into their AI
+  (`oAI:OnAfterDisappear()`), which with the client's AI off reached a stale pointer (a crash
+  once in about ten runs of one story split). On a client those events skip the AI call and
+  keep their effects.
 - **Updating any earlier version (0.2.6):** installs without an install record (0.1.0 was
   a zip extracted into the game folder) are recognised by the proxy's own marker string and
   their files; the installer then updates or removes them like a recorded install and never
@@ -235,7 +262,28 @@ Results for 0.2.6 (2026-10-24):
   release (checksum matched).
 - The player souls test showed a downed third player not revived within 12 s in some runs;
   an A/B with the 0.2.5 DLL showed the same (Rawlings' AI on the host does not always come):
-  not a regression, open for the next version.
+  fixed in 0.2.7.
+
+Results for 0.2.7 (2026-10-24):
+
+- Whole campaign by two players over a LAN between two PCs with a split screen player on the
+  joining PC: 33/33 levels, no crash, on the final code (version 0.2.7); gamepads, a real
+  Steam session, all nine story splits, the player souls test twice, player 2 waiting,
+  starting without a mouse.
+- The split screen player's fall at Rom_Coloseum (owner, campaign test): the client log showed
+  bodies moved 6000-87000 units at 10 of 33 level starts; after the fix the host dropped the
+  last level's states at every level start and no body moved across levels in the campaign.
+- A client crash in one story split (WWII_PillBoxes, `AccessViolation at 04A0400B`, the
+  psychic commander's AI call): after the fix the commander's disappear/appear events were
+  forced six times on a joining PC and the last boss split ran, no crash.
+- Rawlings for a downed player 3-4: the host has the AI Rawlings heal a body he left waiting;
+  every souls run revived (one of the first four by that fallback).
+- The squad switch in split screen: the engine stop reproduced within 19-37 switches with the
+  released 0.2.6, none in 3 x 60 and the final 2 x 60 after the fix (lab/splitswitch.ps1).
+- Frame cap measured: 120 frames a second in split screen on a 60 Hz screen, 60 without it.
+- Split screen HUD in the wide view (wider than 1.85): before and after pictures of a level
+  in a 1912x1001 window (lab/splithud.ps1), a hint for one player in their half only, a screen
+  fade over the whole half; then every split screen test again with the new DLL.
 
 Results for 0.2.5 (2026-10-23):
 
