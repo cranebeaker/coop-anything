@@ -81,12 +81,34 @@ Observed:
   `/profiles_xml/`, `%s/%llu`, `SaveSystem`, `SaveManager`, `SaveAsyncWriteHelper`, and `SOFTWARE\2K Games\CrashReport`
   (registry).
 
+Derived (first guess, later corrected):
+- I first guessed `<known folder>\Hangar 13 Games\Mafia Definitive Edition\…\profiles\<SteamID64>`. That was wrong,
+  see below.
+
+Method: import and reference scan, with no Ghidra (its project was locked by the running analysis)
+- Parsed the import table and searched `.text` for RIP-relative ModRM operands (mod=00, rm=101) whose disp32 lands on
+  an import slot or a string.
+- Folder imports: `SHELL32!SHGetFolderPathA` (IAT `0x144a6f8e8`) and `KERNEL32!ExpandEnvironmentStringsA`. There is no
+  `SHGetKnownFolderPath`.
+
+Observed:
+- `SHGetFolderPathA` is called 5 times. At `0x1406eb87d` the folder is `lea edx,[r9+0x1a]` (`CSIDL_APPDATA`), and
+  that call is not near any save string. At `0x14240d440`, `0x1424196ca`, `0x14241a642` and `0x14241a892` it is
+  `xor r9d,r9d; lea edx,[r9+5]` (`CSIDL_PERSONAL`, Documents).
+- Strings used near those calls: `/edit`, `My Games`, `Mafia Definitive Edition`, `\Saves` and `/gamesaves`
+  (`0x14240d300`-`0x14240d800`). Also `%s%s\%s\Saves\launcconfig.cfg` and `%s%s\%s\Saves\videoconfig.cfg`, each
+  with `My Games` and `Mafia Definitive Edition` (`0x1424196a0`, `0x14241a600`).
+- `Hangar 13 Games` (`0x144b1f028`) has a single reference, at `0x14374209b`, outside the save code.
+
 Derived:
-- The save folder is probably `<known folder>\Hangar 13 Games\Mafia Definitive Edition\…\profiles\<SteamID64>`.
+- Saves and the launcher and video settings live in `<Documents>\My Games\Mafia Definitive Edition\Saves\`. The
+  exact separators used by the format strings were not traced.
+- The folder does not depend on the install path, so a test copy shares it with the real game. If Documents is
+  redirected to OneDrive, as on the test PC, the saves sync to the cloud.
 
 Unknown:
-- The base folder. Next step: cross-references to `Hangar 13 Games` in Ghidra, then a before-and-after snapshot on
-  the first guarded launch.
+- What goes below `Saves` (`/profiles/`, `%s/%llu` per Steam ID?). To be checked on the first guarded launch, after
+  redirecting `CSIDL_PERSONAL` for the test copy.
 
 ## Workspace pitfalls
 

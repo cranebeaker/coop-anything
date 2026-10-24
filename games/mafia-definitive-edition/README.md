@@ -77,10 +77,14 @@ Research log with sources, and observed, derived and unknown facts kept apart: [
   `C_GameActivity`. Their addresses and functions are not mapped yet.
 - **Saves**: the save system writes named blocks, among them `S_QuestsManagerSaveData`,
   `S_PlotlinesManagerSaveData`, `S_DialogStateManagerSaveData`, `S_JournalSaveData`, `S_StreamingWorldStateSaveData`,
-  `C_PoliceForceSaveBlock` and `S_GameActivitiesSpawnSystemSaveData`. Path strings in the exe (`Hangar 13 Games`,
-  `Mafia Definitive Edition`, `/profiles/`, `/profiles_b/`, `/profiles_xml/`, `%s/%llu`) suggest a
-  `…\Hangar 13 Games\Mafia Definitive Edition\…\profiles\<SteamID64>` folder. The base folder is unknown: none
-  existed on the test PC, where the game had never been started.
+  `C_PoliceForceSaveBlock` and `S_GameActivitiesSpawnSystemSaveData`. Saves and the launcher and video settings go
+  to **`<Documents>\My Games\Mafia Definitive Edition\Saves\`**. The exe gets Documents from
+  `SHGetFolderPathA(CSIDL_PERSONAL)` (`xor r9d,r9d; lea edx,[r9+5]` before four of its five calls). The same
+  functions use `My Games`, `Mafia Definitive Edition`, `\Saves`, `/gamesaves` and
+  `%s%s\%s\Saves\launcconfig.cfg` / `videoconfig.cfg`. Found statically and not yet seen on disk: the game had never
+  been started on the test PC. The folder does not depend on the install path, so every copy of the game shares it,
+  and if Documents is redirected to OneDrive, so are the saves. `Hangar 13 Games` has a single reference outside this
+  code, probably the crash reporter. `/profiles/` and `%s/%llu` probably name subfolders below `Saves` (not checked).
 - **Netcode**: the game is single player. Whether any engine-level network code is left from development is unknown.
 
 ## What we changed
@@ -111,5 +115,6 @@ None, because nothing ships yet.
    host to client, with a re-entrancy guard.
 4. For late join and resync, apply the host's own save blocks (quests, plotlines, journal, dialog state, streaming
    world state) on the client as a snapshot.
-5. Before the first launch of a test copy, find the save folder and keep the game's saves and Steam remote storage
-   out of the owner's profile (see `playbook/methods.md` §2).
+5. Before the first launch of a test copy, redirect `SHGetFolderPathA(CSIDL_PERSONAL)` per instance (an import-table
+   patch, as for The Witness in `playbook/methods.md` §2), and keep Steam remote storage out of the owner's profile.
+   Snapshot `<Documents>\My Games\Mafia Definitive Edition` and Steam `userdata` before and after every run.
