@@ -7727,3 +7727,31 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: New Star Manager
+  year: 2018
+  engine: Monkey X
+  project: NSM shared league (in progress)
+  url: https://github.com/cranebeaker/coop-anything/issues/175
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: no
+    story: unknown
+    enemies: unknown
+    world_state: no
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Android 1.7.6. Goal is a shared league with one club per player, one phone each, host-owned world. Nothing
+    playable together yet. Done so far - triage, save and day-loop mapping, a Premier start with a real club, and an
+    in-game QA bot that finishes matches unattended (twin with the bot off stalls as expected). Write-up in
+    games/new-star-manager.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/issues/175
+  - https://www.dekudeals.com/items/new-star-manager
+  checked: '2026-10-24'
+  made_with_coop_anything: true
