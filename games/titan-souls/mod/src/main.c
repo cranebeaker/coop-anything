@@ -53,22 +53,31 @@ typedef struct SDL_Window SDL_Window;
 #define ADDR_ARROW_ISDAMAGING    0x005A05A4  // Arrow::IsDamaging() __thiscall
 #define ADDR_TITAN_HITSENSOR_ONHIT 0x00589700 // TitanHitSensor::OnHit() (vtable[7]) __thiscall
 
-// Entity field offsets
-#define OFF_POS_X             0x18
-#define OFF_POS_Y             0x1C
-#define OFF_VEL_X             0x88
-#define OFF_VEL_Y             0x8C
-#define OFF_ACTIVE_FLAG       0xA0        // byte: 1 = active entity
-#define OFF_COLOR_R           0x334
-#define OFF_COLOR_G           0x338
-#define OFF_COLOR_B           0x33C
-#define OFF_COLOR_A           0x340
-#define OFF_PLAYER_ROLL       0x368       // 0=idle/normal, 1=rolling, 2=recovery, 3=dead
-#define OFF_ALIVE_FLAG        0x378       // byte: 1 = alive, 0 = dead
-#define OFF_DEATH_SLOWDOWN    0x3E8       // float: slow-motion / zoom factor
-#define OFF_DEATH_TIMER       0x3EC       // uint16_t: frames elapsed since death
-#define OFF_WAKEUP_FLAG       0x40D       // byte: 1 = wake / getup sequence
-#define OFF_PLAYER_ARROW      0x35c       // Arrow entity pointer (5Arrow class)
+// Player & Arrow field offsets
+#define OFF_POS_X                 0x18
+#define OFF_POS_Y                 0x1C
+#define OFF_RENDER_POS_X          0x94
+#define OFF_RENDER_POS_Y          0x98
+#define OFF_RENDER_ANGLE          0xA0
+#define OFF_VEL_X                 0x88
+#define OFF_VEL_Y                 0x8C
+#define OFF_ACTIVE_FLAG           0xA0        // byte: 1 = active entity
+#define OFF_COLOR_R               0x334
+#define OFF_COLOR_G               0x338
+#define OFF_COLOR_B               0x33C
+#define OFF_COLOR_A               0x340
+#define OFF_PLAYER_IS_ROLLING     0x3A6       // byte: 1 = rolling, 0 = normal
+#define OFF_PLAYER_ROLL_STARTUP   0x3A8       // word: startup counter
+#define OFF_ALIVE_FLAG            0x378       // byte: 1 = alive, 0 = dead
+#define OFF_DEATH_SLOWDOWN        0x3E8       // float: slow-motion / zoom factor
+#define OFF_DEATH_TIMER           0x3EC       // uint16_t: frames elapsed since death
+#define OFF_WAKEUP_FLAG           0x40D       // byte: 1 = wake / getup sequence
+#define OFF_PLAYER_ARROW          0x35c       // Arrow entity pointer (5Arrow class)
+#define OFF_PLAYER_QUIVER         0x3C8       // byte: 1 = arrow in quiver, 0 = loose/shot
+#define OFF_ARROW_IN_FLIGHT       0xC8        // byte: 1 = in flight
+#define OFF_ARROW_IS_RECALLING    0xD8        // byte: 1 = being recalled
+#define OFF_ARROW_IS_DAMAGING     0x13D       // byte: 1 = deals damage to titan sensors
+#define ADDR_PLAYER_START_ROLL    0x005A9508  // Player::StartRoll() __thiscall
 
 // Typedefs for engine functions
 typedef void* (__cdecl *OperatorNew_t)(size_t size);
@@ -87,6 +96,7 @@ typedef void (__thiscall *StringCtor_t)(void* pStr, const char* s, const void* a
 typedef void (__thiscall *StringDtor_t)(void* pStr);
 typedef void (__thiscall *PlayerSetAnim_t)(void* pPlayer, void* pStr, int b1, int b2);
 typedef void (__thiscall *PlayerInit_t)(void* pPlayer);
+typedef void (__thiscall *PlayerStartRoll_t)(void* pPlayer);
 typedef char (__fastcall *ArrowIsDamaging_t)(void* pArrow, void* edx);
 typedef void (__fastcall *TitanHitSensorOnHit_t)(void* pSensor, void* edx, float hit_x, float hit_y, float vel_x, float vel_y);
 
@@ -113,7 +123,7 @@ static TitanHitSensorOnHit_t g_orig_TitanHitSensor_OnHit = NULL;
 // Network Protocol Definition
 // ============================================================================
 #define NET_MAGIC             0x4E544954  // 'TITN' (Titan Souls Network)
-#define NET_PROTOCOL_VERSION  1
+#define NET_PROTOCOL_VERSION  2
 
 #define NET_PKT_HANDSHAKE     1
 #define NET_PKT_HANDSHAKE_ACK 2
@@ -163,7 +173,10 @@ typedef struct {
     float    arrow_vel_x;
     float    arrow_vel_y;
     float    arrow_angle;
-    uint8_t  has_arrow;   // 1 if in quiver, 0 if loose/fired
+    uint8_t  has_arrow;          // 1 if in quiver, 0 if loose/fired
+    uint8_t  arrow_in_flight;    // [Arrow + 0xC8]
+    uint8_t  arrow_is_damaging;  // [Arrow + 0x13D]
+    uint8_t  arrow_is_recalling; // [Arrow + 0xD8]
     // Inputs & actions
     float    input_x;     // Move axis X
     float    input_y;     // Move axis Y
@@ -174,7 +187,7 @@ typedef struct {
     uint8_t  btn_down;
     uint8_t  btn_left;
     uint8_t  btn_right;
-    uint8_t  roll_state;  // [Player + OFF_PLAYER_ROLL]
+    uint8_t  is_rolling;  // [Player + OFF_PLAYER_IS_ROLLING 0x3A6]
     float    dir_x;       // [Character + 0xA4]
     float    dir_y;       // [Character + 0xA8]
     float    facing_x;    // [Player + 0x3B0]
@@ -683,11 +696,8 @@ static void Net_PollIncoming(void) {
 // ============================================================================
 static BOOL IsPlayerAlive(void* pPlayer) {
     if (!pPlayer || !IsReadable(pPlayer, 0x418)) return FALSE;
-    int roll_state = *(int*)((uintptr_t)pPlayer + OFF_PLAYER_ROLL);
-    if (roll_state == 3) return FALSE;
     char alive_byte = *(char*)((uintptr_t)pPlayer + OFF_ALIVE_FLAG);
-    if (alive_byte == 0) return FALSE;
-    return TRUE;
+    return (alive_byte != 0);
 }
 
 static void Player_SetAnimation(void* pPlayer, const char* animName) {
@@ -706,8 +716,7 @@ static void RevivePlayer(void* pDeadPlayer) {
 
     LogMsg("[Co-op Revive] Reviving fallen player 0x%p!\n", pDeadPlayer);
 
-    // 1. Reset death state and roll state to 0
-    *(int*)((uintptr_t)pDeadPlayer + OFF_PLAYER_ROLL) = 0;
+    // 1. Reset death state and roll state
     *(char*)((uintptr_t)pDeadPlayer + OFF_ALIVE_FLAG) = 1;  // is_alive = true
     *(char*)((uintptr_t)pDeadPlayer + 0x37A) = 0;
     *(char*)((uintptr_t)pDeadPlayer + 0x37B) = 0;
@@ -715,7 +724,7 @@ static void RevivePlayer(void* pDeadPlayer) {
     *(float*)((uintptr_t)pDeadPlayer + OFF_DEATH_SLOWDOWN) = 0.0f;
     *(short*)((uintptr_t)pDeadPlayer + OFF_DEATH_TIMER) = 0; // Death frame counter reset
     *(short*)((uintptr_t)pDeadPlayer + 0x3EE) = 0;
-    *(char*)((uintptr_t)pDeadPlayer + 0x3A6) = 0;  // Rolling = false
+    *(char*)((uintptr_t)pDeadPlayer + OFF_PLAYER_IS_ROLLING) = 0;  // Rolling = false
     *(char*)((uintptr_t)pDeadPlayer + OFF_WAKEUP_FLAG) = 1;  // Wakeup flag
     *(char*)((uintptr_t)pDeadPlayer + OFF_ACTIVE_FLAG) = 1;  // Active / visible
 
@@ -817,17 +826,17 @@ static void Net_BroadcastLocalPlayer(void) {
         pkt.vel_y = *(float*)((uintptr_t)pP1 + OFF_VEL_Y);
 
         void* pArrow = *(void**)((uintptr_t)pP1 + OFF_PLAYER_ARROW);
-        if (pArrow && IsReadable(pArrow, 0xAC)) {
+        if (pArrow && IsReadable(pArrow, 0x140)) {
             pkt.arrow_x = *(float*)((uintptr_t)pArrow + OFF_POS_X);
             pkt.arrow_y = *(float*)((uintptr_t)pArrow + OFF_POS_Y);
             pkt.arrow_vel_x = *(float*)((uintptr_t)pArrow + OFF_VEL_X);
             pkt.arrow_vel_y = *(float*)((uintptr_t)pArrow + OFF_VEL_Y);
             pkt.arrow_angle = *(float*)((uintptr_t)pArrow + 0x24);
 
-            float dx = pkt.arrow_x - pkt.pos_x;
-            float dy = pkt.arrow_y - pkt.pos_y;
-            char inQuiver = *(char*)((uintptr_t)pP1 + 0x3C8);
-            pkt.has_arrow = (inQuiver != 0 || (dx * dx + dy * dy < 25.0f)) ? 1 : 0;
+            pkt.has_arrow = *(char*)((uintptr_t)pP1 + OFF_PLAYER_QUIVER) ? 1 : 0;
+            pkt.arrow_in_flight    = (uint8_t)*(char*)((uintptr_t)pArrow + OFF_ARROW_IN_FLIGHT);
+            pkt.arrow_is_damaging  = (uint8_t)*(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING);
+            pkt.arrow_is_recalling = (uint8_t)*(char*)((uintptr_t)pArrow + OFF_ARROW_IS_RECALLING);
         }
 
         // If analog axis is 0, synthesize from keyboard directional buttons
@@ -851,14 +860,8 @@ static void Net_BroadcastLocalPlayer(void) {
         pkt.btn_left = (uint8_t)g_p1_btn_left;
         pkt.btn_right = (uint8_t)g_p1_btn_right;
 
-        char p1_alive_byte = *(char*)((uintptr_t)pP1 + OFF_ALIVE_FLAG);
-        int p1_state = *(int*)((uintptr_t)pP1 + OFF_PLAYER_ROLL);
-        if (p1_alive_byte == 0) {
-            p1_state = 3;
-            *(int*)((uintptr_t)pP1 + OFF_PLAYER_ROLL) = 3;
-        }
-        pkt.is_alive = (p1_state != 3 && p1_alive_byte != 0) ? 1 : 0;
-        pkt.roll_state = (uint8_t)p1_state;
+        pkt.is_alive = IsPlayerAlive(pP1) ? 1 : 0;
+        pkt.is_rolling = *(char*)((uintptr_t)pP1 + OFF_PLAYER_IS_ROLLING) ? 1 : 0;
 
         pkt.dir_x = *(float*)((uintptr_t)pP1 + 0xA4);
         pkt.dir_y = *(float*)((uintptr_t)pP1 + 0xA8);
@@ -888,16 +891,19 @@ static void Net_UpdatePuppet(void) {
 
     // Reflect death state on remote puppet
     if (!g_remoteSyncState.is_alive) {
-        *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 3;
         *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) = 0;
     } else {
-        if (*(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) == 0 || *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) == 3) {
+        if (*(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) == 0) {
             RevivePlayer(g_pPlayer2);
-        } else if (g_remoteSyncState.roll_state == 1) {
-            *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 1;
-        } else if (g_remoteSyncState.roll_state == 0 && *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) == 2) {
-            *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 0;
         }
+    }
+
+    // Roll state sync
+    char p2_rolling = *(char*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_IS_ROLLING);
+    if (g_remoteSyncState.is_rolling && !p2_rolling) {
+        ((PlayerStartRoll_t)ADDR_PLAYER_START_ROLL)(g_pPlayer2);
+    } else if (!g_remoteSyncState.is_rolling && p2_rolling) {
+        *(char*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_IS_ROLLING) = 0;
     }
 
     // Apply received remote inputs
@@ -918,43 +924,45 @@ static void Net_UpdatePuppet(void) {
         *(float*)((uintptr_t)g_pPlayer2 + 0x3B4) = g_remoteSyncState.facing_y;
     }
 
-    // Apply position convergence / smoothing
-    float curr_x = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
-    float curr_y = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
-
-    float dx = g_remoteSyncState.pos_x - curr_x;
-    float dy = g_remoteSyncState.pos_y - curr_y;
-    float distSq = dx * dx + dy * dy;
-
-    // Apply position synchronization directly to eliminate packet latency desync
+    // Apply player position directly
     *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X) = g_remoteSyncState.pos_x;
     *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y) = g_remoteSyncState.pos_y;
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_RENDER_POS_X) = g_remoteSyncState.pos_x;
+    *(float*)((uintptr_t)g_pPlayer2 + OFF_RENDER_POS_Y) = g_remoteSyncState.pos_y;
     *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_X) = g_remoteSyncState.vel_x;
     *(float*)((uintptr_t)g_pPlayer2 + OFF_VEL_Y) = g_remoteSyncState.vel_y;
 
+    // Quiver state on Player 2
+    *(char*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_QUIVER) = g_remoteSyncState.has_arrow ? 1 : 0;
+
     // Arrow synchronization
     void* pArrow = *(void**)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ARROW);
-    if (pArrow && IsReadable(pArrow, 0xAC)) {
+    if (pArrow && IsReadable(pArrow, 0x140)) {
         if (!g_remoteSyncState.has_arrow) {
-            float curr_ax = *(float*)((uintptr_t)pArrow + OFF_POS_X);
-            float curr_ay = *(float*)((uintptr_t)pArrow + OFF_POS_Y);
-            float adx = g_remoteSyncState.arrow_x - curr_ax;
-            float ady = g_remoteSyncState.arrow_y - curr_ay;
-            if (adx * adx + ady * ady > 100.0f) {
-                *(float*)((uintptr_t)pArrow + OFF_POS_X) = g_remoteSyncState.arrow_x;
-                *(float*)((uintptr_t)pArrow + OFF_POS_Y) = g_remoteSyncState.arrow_y;
-            } else {
-                *(float*)((uintptr_t)pArrow + OFF_POS_X) = curr_ax + adx * 0.35f;
-                *(float*)((uintptr_t)pArrow + OFF_POS_Y) = curr_ay + ady * 0.35f;
-            }
+            *(float*)((uintptr_t)pArrow + OFF_POS_X) = g_remoteSyncState.arrow_x;
+            *(float*)((uintptr_t)pArrow + OFF_POS_Y) = g_remoteSyncState.arrow_y;
+            *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_X) = g_remoteSyncState.arrow_x;
+            *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_Y) = g_remoteSyncState.arrow_y;
             *(float*)((uintptr_t)pArrow + OFF_VEL_X) = g_remoteSyncState.arrow_vel_x;
             *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = g_remoteSyncState.arrow_vel_y;
             *(float*)((uintptr_t)pArrow + 0x24) = g_remoteSyncState.arrow_angle;
+            *(float*)((uintptr_t)pArrow + OFF_RENDER_ANGLE) = g_remoteSyncState.arrow_angle;
+
+            *(char*)((uintptr_t)pArrow + OFF_ARROW_IN_FLIGHT) = (char)g_remoteSyncState.arrow_in_flight;
+            *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING) = (char)g_remoteSyncState.arrow_is_damaging;
+            *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_RECALLING) = (char)g_remoteSyncState.arrow_is_recalling;
         } else {
-            *(float*)((uintptr_t)pArrow + OFF_POS_X) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
-            *(float*)((uintptr_t)pArrow + OFF_POS_Y) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
+            float p2_x = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_X);
+            float p2_y = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
+            *(float*)((uintptr_t)pArrow + OFF_POS_X) = p2_x;
+            *(float*)((uintptr_t)pArrow + OFF_POS_Y) = p2_y;
+            *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_X) = p2_x;
+            *(float*)((uintptr_t)pArrow + OFF_RENDER_POS_Y) = p2_y;
             *(float*)((uintptr_t)pArrow + OFF_VEL_X) = 0.0f;
             *(float*)((uintptr_t)pArrow + OFF_VEL_Y) = 0.0f;
+            *(char*)((uintptr_t)pArrow + OFF_ARROW_IN_FLIGHT) = 0;
+            *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_DAMAGING) = 0;
+            *(char*)((uintptr_t)pArrow + OFF_ARROW_IS_RECALLING) = 0;
         }
     }
 }
@@ -1196,18 +1204,9 @@ static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
     void* pPrev = g_pCurrentUpdatingPlayer;
     g_pCurrentUpdatingPlayer = pThis;
 
-    // Detect if this player entered death state in the engine
-    if (pThis && IsReadable(pThis, 0x418)) {
-        char alive_byte = *(char*)((uintptr_t)pThis + OFF_ALIVE_FLAG);
-        int roll_state = *(int*)((uintptr_t)pThis + OFF_PLAYER_ROLL);
-        if (alive_byte == 0 && roll_state != 3) {
-            *(int*)((uintptr_t)pThis + OFF_PLAYER_ROLL) = 3;
-            LogMsg("[Co-op] Player 0x%p entered death state (roll_state=3)\n", pThis);
-        }
-    }
-
     if (g_netEnabled && pThis == g_pPlayer2) {
         Net_PollIncoming();
+        Net_UpdatePuppet();
     }
 
     g_orig_Player_Update(pThis);
@@ -1223,8 +1222,8 @@ static void __fastcall Hooked_Player_Update(void* pThis, void* edx) {
         // Strict position enforcement on puppet right after engine update
         *(float*)((uintptr_t)pThis + OFF_POS_X) = g_remoteSyncState.pos_x;
         *(float*)((uintptr_t)pThis + OFF_POS_Y) = g_remoteSyncState.pos_y;
-        *(float*)((uintptr_t)pThis + 0x94) = g_remoteSyncState.pos_x;
-        *(float*)((uintptr_t)pThis + 0x98) = g_remoteSyncState.pos_y;
+        *(float*)((uintptr_t)pThis + OFF_RENDER_POS_X) = g_remoteSyncState.pos_x;
+        *(float*)((uintptr_t)pThis + OFF_RENDER_POS_Y) = g_remoteSyncState.pos_y;
     }
 
     g_pCurrentUpdatingPlayer = pPrev;
@@ -1554,8 +1553,7 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
 
             // Phase 10: Co-op Life & Revive Automated Test
             if (g_inGameFrames == 830 && g_pPlayer2 && IsReadable(g_pPlayer2, 0x418)) {
-                LogMsg("[QA Revive Test] Step 1: Simulating Player 2 death (roll_state=3)...\n");
-                *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL) = 3;
+                LogMsg("[QA Revive Test] Step 1: Simulating Player 2 death...\n");
                 *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG) = 0;
                 *(unsigned short*)((uintptr_t)g_pPlayer2 + OFF_DEATH_TIMER) = 85;
             }
@@ -1569,10 +1567,9 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
                 *(float*)((uintptr_t)g_pPlayer1 + OFF_POS_Y) = *(float*)((uintptr_t)g_pPlayer2 + OFF_POS_Y);
             }
             if (g_inGameFrames == 860 && g_pPlayer2 && IsReadable(g_pPlayer2, 0x418)) {
-                int p2_state = *(int*)((uintptr_t)g_pPlayer2 + OFF_PLAYER_ROLL);
                 char p2_alive = *(char*)((uintptr_t)g_pPlayer2 + OFF_ALIVE_FLAG);
-                LogMsg("[QA Revive Test] Step 4: Player 2 Revive verified -> roll_state=%d, alive=%d (REVIVE SUCCESS!)\n",
-                       p2_state, p2_alive);
+                LogMsg("[QA Revive Test] Step 4: Player 2 Revive verified -> alive=%d (REVIVE SUCCESS!)\n",
+                       p2_alive);
             }
         }
         if (!g_pPlayer2) {
