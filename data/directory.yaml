@@ -7727,3 +7727,59 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: Call of Duty
+  year: 2003
+  engine: IW 1.0 (Call of Duty, id Tech 3 derived)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No campaign co-op mod found. A 2025 Steam reply names a "CoD 1 Cooperative Mod" with no link or author;
+    no build was found. The ModDB "Call of Duty 1 Splitscreen PC v1.1" file is a 318-byte multiplayer splitscreen
+    launcher, not campaign co-op. Research and reverse-engineering notes for the 1.5 singleplayer exe (4 server client
+    slots kept, network transport stripped to loopback) and a per-mission script survey are in games/call-of-duty.
+    The native networking part is open for someone to take on.
+  sources:
+  - https://steamcommunity.com/discussions/forum/0/2284960483102477437/
+  - https://www.moddb.com/downloads/call-of-duty-1-splitscreen-pc-v11
+  checked: '2026-10-24'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, issues and PRs for "call of duty" (only MW 2019, MW2, MW3 claims), 2026-10-23'
+  - 'WebSearch: Call of Duty 2003 / CoD1 / United Offensive co-op campaign mod, "CoD 1 Cooperative Mod", Russian
+    query, vcodmods/xtnded co-op, 2026-10-23'
+  - 'GitHub repository search via gh: iw1x, codextended, call of duty 1, coduo, cod1 coop, cod coop singleplayer,
+    codsp (multiplayer extensions only), 2026-10-23'
+  - 'Not checked: Discord servers, Reddit, archive.org, Nexus Mods'
+- game: 'Call of Duty: United Offensive'
+  year: 2004
+  engine: IW 1.0 (Call of Duty, id Tech 3 derived)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No campaign co-op mod found. CoDUO-YAP (GPL-3.0, active 2026-10) is a singleplayer and multiplayer
+    quality-of-life plugin with a loader and hooks for the UO exe, a possible base. Open CoD:UO (opencoduo/coduomp)
+    reconstructs the multiplayer client and server source but states no license and has no singleplayer AI code.
+    See games/call-of-duty (UO 1.51 not analysed per mission yet).
+  sources:
+  - https://github.com/Clippy95/CoDUO-YAP
+  - https://github.com/opencoduo/coduomp
+  checked: '2026-10-24'
+  made_with_coop_anything: true
+  searched:
+  - 'Same searches as the Call of Duty (2003) entry, 2026-10-23'
