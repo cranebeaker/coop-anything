@@ -366,6 +366,28 @@ static BOOL IsGameWindowActive(void) {
     return (pid != 0 && pid == GetCurrentProcessId());
 }
 
+static HWND g_hGameWindow = NULL;
+
+static BOOL CALLBACK FindGameWindowCallback(HWND hwnd, LPARAM lParam) {
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid == GetCurrentProcessId() && IsWindowVisible(hwnd)) {
+        char title[128] = {0};
+        GetWindowTextA(hwnd, title, sizeof(title));
+        if (title[0] != '\0') {
+            *(HWND*)lParam = hwnd;
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static HWND GetGameWindow(void) {
+    if (g_hGameWindow && IsWindow(g_hGameWindow)) return g_hGameWindow;
+    EnumWindows(FindGameWindowCallback, (LPARAM)&g_hGameWindow);
+    return g_hGameWindow;
+}
+
 static const char* GetStdStringCStr(const void* pStr) {
     if (!pStr || !IsReadable(pStr, sizeof(void*))) return "";
     const char* cstr = *(const char**)pStr;
@@ -1604,6 +1626,28 @@ static void SDLCALL Hooked_SDL_GL_SwapWindow(SDL_Window* window) {
     if (!g_netInitialized || (g_netEnabled && !g_steamActive && g_netSocket == INVALID_SOCKET && g_frameCount % 60 == 0)) {
         g_netInitialized = TRUE;
         Net_Init();
+    }
+
+    // Dual-instance window arrangement and distinct titles
+    static BOOL s_windowArranged = FALSE;
+    if (!s_windowArranged && g_frameCount >= 10) {
+        HWND hwnd = GetGameWindow();
+        if (hwnd) {
+            RECT rc;
+            GetWindowRect(hwnd, &rc);
+            int w = rc.right - rc.left;
+            int h = rc.bottom - rc.top;
+            if (w > 100 && h > 100) {
+                if (g_netRole == 1) {
+                    SetWindowTextA(hwnd, "Titan Souls Co-op [HOST - Player 1 (Port 7777)]");
+                    SetWindowPos(hwnd, NULL, 40, 60, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+                } else if (g_netRole == 2) {
+                    SetWindowTextA(hwnd, "Titan Souls Co-op [CLIENT - Player 2 (Port 7778)]");
+                    SetWindowPos(hwnd, NULL, 40 + w + 16, 60, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+                }
+                s_windowArranged = TRUE;
+            }
+        }
     }
 
     // 1. Network Sync & Input Polling
