@@ -1,12 +1,12 @@
 # Granny (2018, DVloper) — co-op notes
 
 Owner's target: play the installed Steam copy of **Granny** in co-op with friends.
-Status: **working prototype, v0.4.7 (2026-10-23).** Player, Granny, door and item state
-sync between two instances on one PC; doors verified at 0 mismatches in 13 paired samples
-with one flipper (§23). Open: the item have-flag self-reverts in the game itself, the
-catch sequence is not synced, no scene follow, no real-network run yet. §1–§22 are the
-chronological log; §23 is the current state. The real install and saves are never
-touched.
+Status: **working prototype, v0.8.1 (2026-10-24).** Players, Granny, doors and items sync
+between two instances on one PC; a take and a drop now move the visible item on both ends
+(§32), and a caught player spectates the survivor with the last known pose. Open: one item
+checked visually, no second PC, no 3+ players, no full playthrough. §1–§30 are the
+chronological log, §31 the one-click installer, §32 the current state. All tests run on
+copies of the install; one accidental launch from the real install is recorded in §33.
 
 ## 1. Game identity (verified 2026-10-22)
 
@@ -2690,3 +2690,54 @@ which is why that launch needs internet once.
 header, which HttpWebRequest rejects). `local/gh-api.ps1` gained `-BodyFile` because a
 release body with Cyrillic is too long and too quote-hostile for a command line; the bytes
 are written as UTF-8 without BOM.
+
+## 32. v0.8.1: the item that moves is the one you can see (2026-10-24)
+
+The report was precise: a held item was visible in the hands, but after a drop the other
+player still saw it where it had been, and the guest's own later move was invisible to the
+host. The cause was a wrong object. Every item has a visible scene instance
+(`UsefulObjects/Vas`, id 25878) and, in the same name table, an uninstantiated prefab root
+(`Vas`, path `Vas`) that never moves. v0.8.0's placement table resolved the name to the
+prefab and wrote positions there, so the pose it replicated was one no player can see.
+
+The lookup now searches live scene objects with `FindObjectsInactive.Include`, prefers
+`Name(Clone)`, ranks active before inactive, uses the nearest drop hint, and excludes
+`GrannyCoop*` and `HandHoldObjects`. A take deactivates the world object and shows a hand
+replica; a drop re-instantiates the game's own `Vas(Clone)` at the drop point and sends its
+pose 0.4 s later. `ItemSync` distinguishes a real take from the game's `CheckInventory`
+drop handler, which is what makes guest→host work as well.
+
+Verified with the final `bin/Release` DLL (SHA-256 `432bb7f6…7925fc`), two instances on one
+PC, 130 s (`local/export/granny-coop/tools/runs/dropvis-081-both.txt`):
+
+- host takes the vase at `04:37:29.293` (`UsefulObjects/Vas` at `(7.90, 22.40, -9.93)`);
+  guest applies `iApplied=1` at `04:37:30.003` and places the vase at
+  `04:37:32.390 (12.71, 26.40, -7.04)`; host drops at `04:37:32.266`;
+- guest takes at `04:38:00.506`; host logs `04:38:00.656 peer holds vas`; guest drops at
+  `04:38:03.489`; host logs `04:38:03.687 peer no longer holds vas` and places the vase at
+  `04:38:04.099 (11.38, 21.91, -7.04) active=y`;
+- spectator: host caught at `04:37:55.513`, camera `PlayerEyes`; after
+  `04:38:02.733 player active -> False` the samples continue once a second labelled
+  `(last known)`;
+- no `ERROR`, `Exception` or `CRITICAL` line.
+
+The installer was rebuilt with this DLL (the file name stays `GrannyCoop-Setup-1.0.0.exe`;
+the asset embeds v0.8.1). Installing it over the test copy exited 0 and produced a DLL
+byte-identical to the build; a launch logged `COOP initialised v0.8.1 role=Off`.
+
+**Correction to §30.** The v0.8.0 evidence was vacuous: `ipos=50:D6465449` hashed 50
+*prefab* poses, identical on both ends because the prefabs are identical, and the
+`-PlaceTest` nudge moved `tb1`'s prefab and was "restored" by writing the same prefab pose
+back. Neither showed a visible item moving. What still holds from §30: the layout seed
+cannot be replayed from outside the game, the wire format, and host authority. The first
+evidence that a visible item moves is the run above (20 live objects out of 50; the other
+30 use the `SpawnWorld` fallback and were not checked visually).
+
+## 33. Process note: one accidental launch from the real install (2026-10-24)
+
+During test setup, one launch was started from the real Steam install instead of a copy,
+with Steam closed. The process was stopped immediately. No mod files were installed into
+that directory, no MelonPreferences config was added, and no save was found. All
+measurements in §32 were made on copies under `C:\Users\Public\granny-test*`. This is
+recorded because the notes previously said the real install was never touched, and that
+was no longer true.
