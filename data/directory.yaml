@@ -7183,7 +7183,7 @@
   url: https://github.com/Reudo/drg-survivor-coop
   other_urls: []
   kind: mod
-  status: prototype
+  status: abandoned
   coop_scope:
     players_visible: partial
   players: '2'
@@ -7193,10 +7193,34 @@
   qa: automated
   notes: Host-authoritative BepInEx/LiteNetLib prototype, direct IP only. The automated runs use two
     clients on ONE PC; the first real two-PC test went badly, so treat it as experimental. Details in
-    games/deep-rock-galactic-survivor/.
+    games/deep-rock-galactic-survivor/. The author archived it (2026-10) in favour of the local co-op plugin below.
   sources:
   - https://github.com/Reudo/drg-survivor-coop
-  checked: '2026-10-21'
+  checked: '2026-10-24'
+- game: 'Deep Rock Galactic: Survivor'
+  year: 2024
+  engine: Unity 6 (IL2CPP)
+  project: drg-survivor-local-coop
+  url: https://github.com/Reudo/drg-survivor-local-coop
+  other_urls:
+  - https://github.com/Reudo/drg-survivor-local-coop/releases/tag/v1.0.0
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes (MIT)'
+  last_activity: 2026-10
+  qa: automated
+  notes: Local co-op for two controllers on one PC (a BepInEx 6 IL2CPP plugin; the second dwarf is a second player object in the same game process, no network code). Elimination and Escort missions. Online with a friend through Steam Remote Play Together (invite works, not tested screen by screen). Full runs hand-tested with two controllers by the owner; harness checks have twin flags that turn them red. Known gaps in the repo README (end-screen damage numbers probably inaccurate, DLCs not supported and not tested). Release 1.0.0 with installer.
+  sources:
+  - https://github.com/Reudo/drg-survivor-local-coop
+  checked: '2026-10-24'
+  made_with_coop_anything: true
 - game: Little Nightmares
   year: 2017
   engine: Unreal Engine 4
