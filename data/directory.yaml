@@ -1174,14 +1174,16 @@
   networking: hosted-relay
   open_source: partial
   last_activity: 2026-03
-  qa: none
+  qa: community-reports
   notes: Final mod files, not buildable code, 39 stars, last push 2026-03. Needs the wiltOS Mod Launcher and Advanced
     SDK; a community master server proxies connections. Press says Ubisoft and Valve blessed a Community Edition,
-    and an early test build lacked player models, revive polish and cutscenes.
+    and an early test build lacked player models, revive polish and cutscenes. On Linux, A2-03.23 loads and reaches
+    the co-op menu under Proton Experimental (2026-10-23); see games/dark-messiah-of-might-and-magic.
   sources:
   - https://github.com/KingDavidW/DarkMessiah-Coop-Mod-Files
+  - https://github.com/KingDavidW/DarkMessiah-Coop-Mod-Files/issues/1
   - https://wccftech.com/dark-messiah-of-might-and-magic-rtx-remix-mod-gets-new-trailer-online-co-op-mod-now-available/amp/
-  checked: '2026-10-16'
+  checked: '2026-10-23'
 - game: Far Cry
   year: 2004
   engine: CryEngine 1
