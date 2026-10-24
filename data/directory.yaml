@@ -6630,22 +6630,25 @@
   networking: lan
   open_source: 'yes'
   last_activity: '2026-10'
-  qa: none
+  qa: automated
   notes: >-
     No public Far Cry 2 co-op campaign project exists (searched 2026-10-19). Research prototype for Steam 1.03: a
     dinput8.dll proxy runs a Lua 4.0 channel and native commands inside the game, finds the player's Havok body by
     class, and exchanges position over its own UDP socket between two copies on one PC; each copy spawns an
     invincible avatar of the peer and moves it smoothly. Players see each other only as a sliding, idle-pose avatar:
     no animation, heading, weapons, health, mission or world sync. Stock multiplayer cannot carry the campaign
-    (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). Checked by hand with the owner watching, no
-    automated tests. Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
+    (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). QA covers only the position puppet: a script
+    (tests/two_copy_walk.ps1, in MortyRei/fc2-coop-probe#1, not merged) starts both copies, walks one player and
+    checks the other copy's avatar and player positions; 16/16 checks passed on 2026-10-24, and it fails on the probe
+    before its avatar-body fix. Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
   sources:
   - https://github.com/MortyRei/fc2-coop-probe
+  - https://github.com/MortyRei/fc2-coop-probe/pull/1
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
-  checked: '2026-10-19'
+  checked: '2026-10-24'
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity

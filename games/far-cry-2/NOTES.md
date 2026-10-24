@@ -678,3 +678,77 @@ Observations:
 - Writing the walking vector into the avatar was not tried: its object does not have that layout.
 
 Derived: locomotion data belongs to the controller side of a player-controlled pawn, which a script-spawned `PawnPlayer.*` pawn does not get. Options left: (a) find an AI pawn archetype and let the engine's own `MoveTo` command walk it to a moving target (natural animation and collision, but lag and AI behaviour); (b) decode `CPawnControllerMemento` and feed the engine's third-party path; (c) accept an idle-pose puppet. None was attempted.
+
+## Second PC: profile patch correction, two copies, avatar body fix (2026-10-24)
+
+Identity (second PC): Steam, app 19900, build id 52164, `PatchNotes.txt` "v1.03"; `Dunia.dll`
+SHA-256 `6353936a...2765`, 20,183,176 bytes (identical to the file above); Windows 11 23H2, 64-bit.
+Two test copies of the install; the owner's install and profile were only read. Probe built from
+fc2-coop-probe `583772f` with winlibs i686 gcc 9.5.0 (no hashed 9.2 build available; the 9.5.0
+archive matched its published SHA-256 and SHA-512). Before every launch a file snapshot of the
+owner's profile folder and both test profile folders was taken, and a kill switch watched the
+probe log for the owner's profile path.
+
+Observations (all ran):
+- With the documented patches only (0xE08950 mutex, 0xE089A0 `My Games\Far Cry 2\` →
+  `My Games\FC2test_A\`), the probe log showed `CreateFileW <Documents>\My Games\Far Cry 2\GamerProfile.xml`
+  (read, open-existing): the game opened the owner's real profile. Copy killed after ~45 s; no file in any
+  profile folder changed.
+- `Dunia.dll` has separate strings next to `CGamerProfileNative`: 0xE0E080 `\GamerProfile.xml`,
+  0xE0E094 `\Far Cry 2` (10 bytes + NUL), 0xE0E0A0 `\My Games`. The ASCII `My Games\Far Cry 2\` at
+  0xE089A0 is the only other ASCII occurrence; the 12 UTF-16 ones are in `.rsrc`, inside XML with
+  `KnownFolderID=... path="My Games\Far Cry 2\Saved Games"` (Game Explorer metadata, by the look).
+- After also patching 0xE0E094 to `\FC2test_A` / `\FC2test_B` (17 bytes differ from the original per
+  copy): copy A opened `FC2test_A\GamerProfile.xml`, then on Continue `FC2test_A\saved games\<save>.sav`;
+  copy B the `FC2test_B` ones. Window 800x600 as set in the test profiles. Both copies ran at once.
+- This explains the 2026-10-19 observations above (window 1408x792 instead of 800x600; "whether the
+  new profile path is read at all" unknown): the 0xE089A0 patch never moved the profile.
+- `GetLocalPlayerId()` returned the same id in both copies after loading the same save.
+- `netstart` on both: about 16 packets/s each way (log every second, e.g. `tx=694 rx=697` after ~44 s),
+  each copy's `remote` equal to the other's `local`.
+- Avatar binding bug: both copies logged `avatar body bound` with the avatar body equal to the local
+  player's body (A `3bd8e940` both, B `3bd48a40` both). Both players stood on the same spot after
+  loading, so the nearest body to the freshly spawned avatar was the local player's. Stopped there
+  (no movement test with the bug).
+- With the fix (avatar search skips the local body, waits until it is known; `av_valid` rejects
+  equality): A avatar `3babb100` vs local `3bb54580`, B avatar `3ba96980` vs local `3bd22900`. The first
+  avatar search found 0 matches and succeeded about 1 s later. `walk 3 20 2` in A: B's `pos <avatar id>`
+  every 2 s followed A's circle 0.5-1 m behind (e.g. remote `2589.02 2456.56` → avatar `2589.62 2456.96`);
+  B's `pos <player id>` stayed within 0.1 m (the same drift was there before the walk).
+- After the walk A's body rose from z 18.49 to 19.29 and settled.
+- The avatar's `dir` stayed `(1,0)` the whole time.
+- No CRASH or ACCESS VIOLATION lines in any of the runs; after every run all profile folders matched
+  the snapshot taken before it.
+- The first start of the second copy raised a Windows Firewall prompt for its `FarCry2.exe`
+  (the engine binds UDP 9000/9001); the owner answered it.
+- Code reading: the `scan` command still dereferences memory directly (only `findbody` uses chunked
+  `ReadProcessMemory`); `setpos` exists but is not in the probe README; `ent`, `pos`, `setpos` never drop
+  the entity holder's reference count.
+
+Derived:
+- The profile folder and the save folder both come from 0xE0E094.
+- The avatar bug only shows when both players start within 1 m of each other; the 2026-10-19 runs had
+  moved one player first (teleports, `tpb`) and did not hit it.
+
+Unknown:
+- What the 0xE089A0 string is used for.
+- Whether new saves (autosave) also go to the test folder: no save was written in these runs.
+- Why the walked body rose 0.8 m after `walk` ended.
+## Automated two-copy walk test (2026-10-24)
+
+Script `tests/two_copy_walk.ps1`, added to the probe in https://github.com/MortyRei/fc2-coop-probe/pull/1.
+What it asserts is listed in the README's QA section.
+
+Observations (ran, same PC and copies as the section above):
+- Probe with the avatar-body fix (`dinput8.dll` SHA-256 `87cb733b...431c`): 16 checks, 0 failed, about 2 minutes
+  from start to kill. Copy A needed 8 Enter presses to reach its save, copy B 3. Avatar bodies differed from the local
+  ones in both copies; 16.0 packets/s each way; 17 avatar samples during the 20 s walk, all paired with a `remote`
+  position; avatar span 5.92 m; distance to A mean 0.43 m, max 1.07 m; B's own player drift 0.12 m; no crash lines;
+  real and test profile folders unchanged.
+- Negative control with the probe before the fix (`22ac2fea...8001`), same script: 3 checks failed. `B player stays
+  put`: max drift 16.46 m. `avatar body A/B`: the old log line has no pointers, so it cannot be compared.
+  `avatar moved` (span 16.01 m) and `avatar follows A` (mean 0.19 m) passed.
+
+Derived: with the bug both players are written to each other's position, so they move together (hence the 16 m
+drift and an "avatar" that seems to follow); only the check that the receiving copy's own player stays put tells the
+two cases apart.

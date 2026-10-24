@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | Engine | Dunia (a CryEngine 1 derivative), 32-bit x86. The 28 KB `FarCry2.exe` is a stub that calls `Dunia.dll!RunGame`; engine and netcode are in `Dunia.dll`, Lua game logic is in the archives |
-| Versions tested | Steam, app id 19900, version 1.03, build id 52164. `Dunia.dll` SHA-256 `6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765` (20,183,176 bytes). Every address in this write-up is for that file |
+| Versions tested | Steam, app id 19900, version 1.03, build id 52164. `Dunia.dll` SHA-256 `6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765` (20,183,176 bytes). Every address in this write-up is for that file. Reproduced on a second PC (Windows 11 23H2) with the identical file on 2026-10-24 |
 | Projects | No public co-op project. A research prototype (position puppet, below): https://github.com/MortyRei/fc2-coop-probe (MIT) |
-| QA level | none (the prototype was checked by hand, the owner looking at the screen; there is no automated test) |
-| Last updated | 2026-10-19 |
+| QA level | automated, for the position puppet only (two-copy walk test, 16/16 on 2026-10-24; see QA). Story, enemies and world state are not synced, so there is nothing to test there yet |
+| Last updated | 2026-10-24 |
 
 ## Where things stand
 
@@ -76,17 +76,26 @@ What follows was observed on the test copies; each point is dated and sourced in
   every frame from it, so writing the entity does nothing. Heap addresses change per
   session; finding the body by class and nearest position worked in every session.
 - **Two copies on one PC.** A second copy needs its own mutex (the string `FarCry2Instance`
-  in `Dunia.dll`) and its own profile folder (the 19-byte string `My Games\Far Cry 2\` at
-  file offset 0xE089A0, replaced by another string of the same length). The profile file
+  in `Dunia.dll`, file offset 0xE08950) and its own profile folder. The profile folder comes
+  from the 10-byte string `\Far Cry 2` at file offset **0xE0E094** (next to `\My Games` at
+  0xE0E0A0 and `\GamerProfile.xml` at 0xE0E080, used by `CGamerProfileNative`); replace it with
+  another 10-byte string such as `\FC2test_A`. Saves follow it (`<profile>\saved games\`).
+  The 19-byte string `My Games\Far Cry 2\` at 0xE089A0 does **not** move the profile: with
+  only that patch the game still opened the owner's real `GamerProfile.xml` (probe log,
+  2026-10-24); what that string is used for is unknown. The profile file
   `GamerProfile.xml` must exist, otherwise the client quits.
 
 ## What we changed
 
 All changes are in test copies only; nothing touched the owner's install, profile or saves.
 
-1. **Single-instance and profile patches** (two same-length string replacements in a test
-   copy's `Dunia.dll`): lets two copies run at once, each with its own windowed profile.
-   Proof: two copies running together in the world for minutes.
+1. **Single-instance and profile patches** (same-length string replacements in a test
+   copy's `Dunia.dll`: the mutex at 0xE08950 and the profile folder at 0xE0E094): lets two
+   copies run at once, each with its own windowed profile and saves. Proof: the probe's
+   `CreateFileW` log shows copy A opening `FC2test_A\GamerProfile.xml` and
+   `FC2test_A\saved games\<save>.sav`, copy B the `FC2test_B` ones, with an 800x600 window
+   as set in each test profile (2026-10-24). The earlier recipe patched 0xE089A0 instead, which
+   does not redirect the profile (the 2026-10-19 notes had left this open).
 2. **In-process probe** (`dinput8.dll` proxy for the test copies, built with MinGW,
    about 850 lines of C, source in https://github.com/MortyRei/fc2-coop-probe). It hooks the engine's Winsock, file and `PeekMessage` imports and
    adds: a Lua channel (a file `coop_cmd.lua` is run on the main thread through
@@ -104,12 +113,52 @@ All changes are in test copies only; nothing touched the owner's install, profil
    from the pinned writes and ended the mission with "Game over" in both copies); the probe
    writes its body position every main-loop tick with 25 % smoothing. Proof: the owner
    watched the avatar of the other copy ride a 3 m circle smoothly, no falling, no Game over.
+5. **Avatar body binding fix** (2026-10-24). Bug: when both copies load the same save and nobody
+   has moved yet, the avatar is spawned where the local player stands, and the body search
+   (nearest body of the class within 1 m) returned the **local player's own body**. Both copies
+   logged the avatar body equal to the local body, so the probe wrote the peer's position into the
+   local player instead of the avatar. Fix (8 lines in `find_body` / `av_tick` / `av_valid`): the
+   avatar search skips the local body and waits until it is known. Proof (logs and `pos` readings,
+   not an automated test): after the fix the two bodies differ in both copies; with `walk 3 20 2`
+   in copy A, copy B's avatar followed A's circle 0.5-1 m behind while B's own player stayed put
+   (about 0.1 m drift). The fix is not in the probe repository yet.
 
 ## QA
 
-No automated suite. What was checked, by hand and from logs, is listed with dates in
-[NOTES.md](NOTES.md). A real test would drive two copies with the probe's own commands and
-assert on the `net:` log lines and the entity positions; that harness does not exist yet.
+One automated test: `tests/two_copy_walk.ps1` in the probe repository (added in
+https://github.com/MortyRei/fc2-coop-probe/pull/1, not merged yet). It drives two real game
+clients on one PC; both copies must already be patched and have their test profiles.
+
+```
+powershell -ExecutionPolicy Bypass -File tests\two_copy_walk.ps1 -CopyA <test copy A> -CopyB <test copy B> -OutDir <results folder>
+```
+
+It starts both copies, presses Enter until each probe log shows its own save being opened,
+reads the player id through the Lua channel, runs `netstart` on both, walks copy A's player
+with `walk 3 20 2`, and samples `pos <avatar>` / `pos <player>` in copy B. It asserts: each copy
+reads its own profile and save; the same player id in both; the avatar's body differs from the
+local body; at least 10 packets/s each way; the avatar moves (span at least 1.5 x radius); the
+avatar stays within 1.5 m (mean) and 2.5 m (max) of A's position as received by B; B's own
+player drifts at most 0.5 m; no `CRASH` / `ACCESS VIOLATION` lines; the real profile folder is
+unchanged (snapshot before and after). A kill switch stops both copies if a log line names the
+real profile folder. It presses Enter in the game windows, so the keyboard must be left alone.
+
+Last results (2026-10-24, Steam 1.03, one PC, Windows 11 23H2):
+
+```
+probe with the avatar-body fix:
+RESULT: 16 checks, 0 failed -> PASS   (~2 min)
+  link A/B 16.0 / 16.0 packets/s; avatar span 5.92 m; distance to A mean 0.43 m, max 1.07 m;
+  B player drift 0.12 m; real profile: new 0, changed 0, removed 0
+
+negative control, probe before the fix:
+RESULT: 16 checks, 3 failed -> FAIL
+  B player stays put: max drift 16.46 m (B's own player dragged); avatar body A/B: no pointers in the old log line
+```
+
+The drift check is the one that catches the avatar-body bug; `avatar moved` and
+`avatar follows A` passed with the old probe too. Earlier checks, by hand and from logs, are
+listed with dates in [NOTES.md](NOTES.md).
 
 ## How to play
 
@@ -127,7 +176,11 @@ https://github.com/MortyRei/fc2-coop-probe (MIT); the game code is kept there, n
 - No mission, objective or world-state sync; no vehicles.
 - A script-spawned pawn made from the player's archetype looks like the player; other
   `PawnPlayer.<name>` archetypes also looked the same in the campaign.
-- Scanning memory with direct reads crashed one copy once; the probe now reads in chunks.
+- Scanning memory with direct reads crashed one copy once; `findbody` now reads in chunks, but the
+  `scan` command still reads memory directly and can crash a copy.
+- In the probe as published, the avatar can bind to the local player's body when both players
+  start on the same spot (see "What we changed", item 5).
+- The avatar never turns (`dir` stays `(1,0)`).
 - Everything depends on the exact 1.03 build; the offsets above are not portable.
 
 ## Next steps
@@ -139,5 +192,7 @@ https://github.com/MortyRei/fc2-coop-probe (MIT); the game code is kept there, n
 2. Mission state: reproduce the set of active mission layers and Domino state in the
    second copy; `Game:MissionSetState` and `SaveGame` are the entry points seen.
 3. A real transport (hosted or direct, with a join code) instead of loopback ports.
-4. Add a test harness to the probe repository (two copies driven by its own commands,
-   asserting on the `net:` log lines and entity positions).
+4. Extend the two-copy test as features land: heading (compare the avatar's direction with
+   the peer's), then mission state. It does not patch `Dunia.dll` or create the test profiles
+   yet; scripting those would make it runnable from a clean install.
+5. Find out what the 0xE089A0 string `My Games\Far Cry 2\` is used for.
