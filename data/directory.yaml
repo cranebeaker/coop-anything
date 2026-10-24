@@ -7240,6 +7240,40 @@
   - https://en.wikipedia.org/wiki/List_of_Yu-Gi-Oh!_video_games
   checked: '2026-10-20'
   made_with_coop_anything: true
+- game: 'StarCraft II: Wings of Liberty'
+  year: 2010
+  engine: Blizzard SC2 engine
+  project: SC2Coop (campaign co-op launcher)
+  url: https://github.com/Cryswar/sc2-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/starcraft-2
+  kind: framework
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: External launcher that runs the retail Wings of Liberty campaign maps of custom campaigns (WoL@Kit fan campaigns
+    and mods that keep Blizzard's campaign scripts) as two-player games through Blizzard's s2client API, on each player's
+    own install; both share player 1's army (or, on maps made for it, each has their own), each has their own hub.
+    Steam relay (Spacewar app id) or direct IP with UPnP. Code (MIT) and test releases since 2026-10-23. One-PC smoke test
+    (each mission launched from the hub, won by test command, back to the hub) passed for all 29 missions of one
+    WoL@Kit campaign and of three campaigns on Blizzard's scripts, and 4 missions of a fourth; two-PC sessions by
+    testers.
+  sources:
+  - https://github.com/Cryswar/sc2-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/starcraft-2
+  - https://github.com/Blizzard/s2client-proto
+  - https://github.com/Blizzard/s2client-proto/blob/master/docs/protocol.md
+  checked: '2026-10-23'
+  made_with_coop_anything: true
 - game: 'Middle-earth: Shadow of War'
   year: 2017
   engine: Firebird (LithTech derivative)
