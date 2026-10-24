@@ -7727,3 +7727,66 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: Granny
+  year: 2018
+  engine: Unity 6000.0.58f2 (IL2CPP)
+  project: granny-coop
+  url: https://github.com/roosterdevv/granny-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: >-
+    MelonLoader mod for the Steam build (app 962400, buildid 21006637, Unity 6000.0.58f2
+    IL2CPP). Players see each other and share a host-authoritative Granny; the guest turns
+    her NavMeshAgent off and pins her transform. All 48 doors sync both ways, keyed by a
+    hash of the transform path, repaired by a 10 s snapshot, locked doors enforced by the
+    host. Inventory have-flags cross the wire in both directions with an owner
+    byte: the picker drives the game's real hand slot and the peer sees a clone in the peer
+    avatar's hand, so one pickup shows in one hand (v0.7.0). The old "items revert after
+    7-8 s" was the mod's own CheckInventory refresh, corrected in v0.6.0. Item placement is
+    host-authoritative: from v0.8.1 the table addresses **live scene objects** (the visible
+    `UsefulObjects/Vas`; prefabs and `HandHoldObjects` excluded). Each peer rolls its own
+    random layout on scene load, so the host sends a placement table (item hash, position,
+    rotation, active state) in chunks of 20 at prepare, on request and every 15 s, and each
+    end moves its own object there; held items are skipped and a drop sends its own
+    placement 0.4 s later. Both status lines print a live `ipos=n:XXXXXXXX` fingerprint.
+    v0.8.0's `ipos=50:D6465449` and `-PlaceTest` evidence is withdrawn: it hashed and moved
+    prefab roots that never appear in the scene, so it matched vacuously. Avatars are built
+    from the peer's real feet at 1.85 m (0.95 m crouched) with a crouch flag on the wire.
+    The host's settings menu no longer stops the world: Time.timeScale is restored to 1 each
+    frame while connected, except during the death sequence and spectator view. A human
+    pickup is still untested, and the pause was tested against a simulated menu pause, not
+    the real button. Scripted two-instance QA: 0 door mismatches in 13 paired samples with
+    one flipper, the pair survives the bad_wifi chaos profile and an 8 s outage, item
+    ownership and avatar height in a 150 s -ItemTest, two simulated pauses each restored on
+    the next frame in a 150 s -PauseTest, and a 130 s -DropVis -ClientDropVis run on the
+    final v0.8.1 DLL where a host take moved the visible vase on the guest, a guest take
+    showed in the host's hand, both drops moved the vase on the other end, and the spectator
+    camera followed the survivor's last known pose; 20 of 50 items resolve as live scene
+    objects, the other 30 use a SpawnWorld fallback and were not checked visually. Placement
+    was not run across two PCs with different saves: two installs on one PC roll the same
+    layout. Scene follow and the post-death spectator view work; the catch itself, the van
+    and the day cycle are not synced. Every run was two processes on one PC, no real network
+    yet. v0.8.1 (protocol v2) is released with a RU/EN install guide and a one-click Windows
+    installer (`GrannyCoop-Setup-1.0.0.exe`, 46 MB; same file name, embeds 0.8.1) that
+    locates the Steam folder, bundles MelonLoader 0.7.3 and the .NET 6 runtime, and writes
+    the Host/Join role; both players need the same version. MIT licensed.
+    No other co-op mod exists for this game; Granny: Escape Together (Steam 3070520) is a
+    different commercial game by another developer.
+  sources:
+  - https://github.com/roosterdevv/granny-coop
+  - https://store.steampowered.com/app/962400/
+  checked: '2026-10-24'
+  made_with_coop_anything: true
+
