@@ -228,3 +228,33 @@ Observed:
 
 Guess:
 - `m_Type` 2 = number, from the id order. The game accepted it, but the full enum was not read.
+
+## 2026-10-24: all chapters from Chapter Replay
+
+Method:
+- One guarded, offline launch per chapter: Story → Chapter Replay → entry *N*, press A on the loading screen's
+  "Continue" prompt, record until the first `QuestSetCustomState` plus 45 s (or a death screen, or 15 min), stop,
+  compare snapshots. Calls are summarised from the probe log (queries and per-frame reads dropped).
+
+Observed:
+- All 20 entries recorded; the table is in the README. Every chapter loads exactly one `mm_*` mission.
+- Loading from Chapter Replay ends on a loading screen that waits for "Continue". Loading through the main menu's
+  Continue did not.
+- Bot pitfalls, each found from a wrong chapter or a stuck run:
+  - The "cannot connect to 2K" dialog does not appear on every offline start. Blind, timed presses then hit
+    Continue on the main menu and load the autosave.
+  - A press held 0.4 s carried over from the dialog into the main menu (screenshots: connecting, dialog, then the
+    autosave loading).
+  - In the Chapter Replay list, one DOWN sometimes moved two rows: 7 presses of 0.15 s moved 11 rows. The list
+    always opens on row 1.
+  - Working method: check the screen before pressing. The main menu's gold title (top left) is present on the
+    main menu and Story submenu only, and the selection box's left border marks the highlighted list row.
+- Running the batch while another game ran fullscreen on the same PC: the test copy stopped responding (Windows
+  reported `AppHangB1`) about 18 s after that game started, and on a second try it exited silently. The batch
+  needs the PC to itself.
+- Each game launch re-stamps Steam's Notes cache (`userdata\<id>\2371090\remotecache.vdf`, app 2371090), with the
+  same content. The guard treats that file as expected bookkeeping.
+
+Unknown:
+- Where `mm_90_funeral` is played: no Chapter Replay entry loaded it.
+- The checkpoints after the first few in each mission, and the calls at mission end.

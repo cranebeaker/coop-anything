@@ -107,7 +107,41 @@ Research log with sources, and observed, derived and unknown facts kept apart: [
   Every frame in gameplay, scripts call `GetActivePlayer` about 60 times and `GetMissionTime` 120–240 times a second.
   The derived sync channel: mission start is `SetMissionState(<mission>, true)`, the checkpoint is
   `QuestSetCustomState(<mission>, "cp_NNN")`, objectives are `UpdateSimpleObjective`/`AddSecondaryObjective` with `$`
-  text ids, and death is `ShowMissionRestart(<mission>, <reason>)`. Calls for chapters 2–20 are being recorded.
+  text ids, and death is `ShowMissionRestart(<mission>, <reason>)`.
+- **All 20 chapters**, loaded one by one from Chapter Replay by a bot and recorded until shortly after the first
+  gameplay checkpoint (one launch per chapter; the bot does not play, so later checkpoints are not covered):
+
+  | Chapter (list position) | Mission | Title card | Checkpoints seen | First objective text id |
+  |---|---|---|---|---|
+  | 1 | `mm_10_chase` | `$title_card_mm_010_…` | `cp_015`, `cp_020` | `$mm_10_chase_cp_020` |
+  | 2 | `mm_20_taxi` | `$title_card_mm_020_title` | `cp_020` | `$mm_20_taxi_cp_010` |
+  | 3 | `mm_30_molotov` | `$title_card_mm_030_title` | `cp_020` | `$mm_30_molotov_cp_020_look_around` |
+  | 4 | `mm_40_motel` | `$title_card_mm_040_title` | `cp_010`, `cp_020` | `$mm_40_motel_cp_005` |
+  | 5 | `mm_50_race` | `$title_card_mm_050_title` | `cp_020`, `cp_030`, `cp_040`, `cp_050` | `$mm_50_race_cp_030` |
+  | 6 | `mm_60_sarah` | `$title_card_mm_060_title` | `cp_020` | `$mm_60_sarah_cp_020` |
+  | 7 | `mm_70_hoodlums` | `$title_card_mm_070_title` | `cp_020` | `$mm_70_hoodlums_cp_020` |
+  | 8 | `mm_80_brothel` | `$title_card_mm_080_title` | `cp_015`, `cp_020` | `$mm_80_brothel_cp_015` |
+  | 9 | `mm_100_farm` | `$title_card_mm_100_title` | `cp_015`, `cp_020`, `cp_030` | `$mm_100_farm_cp_015` |
+  | 10 | `mm_110_omerta` | `$title_card_mm_110_title` | `cp_020`, `cp_030` | `$mm_110_omerta_cp_020` |
+  | 11 | `mm_120_mansion` | `$title_card_mm_120_title` | `cp_020` | `$mm_120_mansion_cp_010` |
+  | 12 | `mm_130_parking` | `$title_card_mm_130_title` | `cp_020`, `cp_030` | `$mm_130_parking_cp_010` |
+  | 13 | `mm_140_salieri` | `$title_card_mm_140_title` | `cp_020` | `$mm_140_salieri_cp_020` |
+  | 14 | `mm_150_boat` | `$title_card_mm_150_title` | `cp_020`, `cp_030` | `$mm_150_boat_cp_010` |
+  | 15 | `mm_160_harbor` | `$title_card_mm_160_title` | `cp_015`, `cp_020` | `$mm_160_harbor_cp_020` |
+  | 16 | `mm_170_plane` | `$title_card_mm_170_title` | `cp_020` | `$mm_170_plane_cp_020_1` |
+  | 17 | `mm_180_sniper` | `$title_card_mm_180_title` | `cp_020` | `$mm_180_sniper_cp_010` |
+  | 18 | `mm_190_cigars` | `$title_card_mm_190_title` | `cp_020`, `cp_030`, `cp_040` | `$mm_190_cigars_cp_020` |
+  | 19 | `mm_200_bank` | `$title_card_mm_200_title` | `cp_050`, `cp_060` | `$mm_200_bank_cp_010` |
+  | 20 | `mm_210_gallery` | `$title_card_mm_210_title` | `cp_020` | `$mm_210_gallery_cp_020` |
+
+  Every chapter is one mission, started with `SetMissionState("<mission>", true)`, then a title card
+  `$title_card_mm_<NNN>_…`. Checkpoints are always `QuestSetCustomState("<mission>", "cp_NNN")`, and objective ids
+  follow `$<mission>_cp_NNN…`, so a client needs only the mission name and checkpoint id to follow the host. The
+  first objective can belong to an earlier checkpoint than the first `QuestSetCustomState` (for example `cp_010`
+  before `cp_020`), so the mission start acts as an implicit first checkpoint. Chapter 19 starts at `cp_050`.
+  Archive names in `sds_retail` also include `mm_90_funeral`, which no Chapter Replay entry loaded, and
+  `mm_03_morello`, `mm_010_bridge`, `mm_020_prologue`, `mm_040_chase`, `mm_070_acetylene` and `mm_180_prison`;
+  what they are used for was not checked.
 - **Saves**: the save system writes named blocks, among them `S_QuestsManagerSaveData`,
   `S_PlotlinesManagerSaveData`, `S_DialogStateManagerSaveData`, `S_JournalSaveData`, `S_StreamingWorldStateSaveData`,
   `C_PoliceForceSaveBlock` and `S_GameActivitiesSpawnSystemSaveData`. Everything goes under
@@ -121,14 +155,17 @@ Research log with sources, and observed, derived and unknown facts kept apart: [
   all-digit names are parsed as numbers) to an `S_Variable*`; `m_Type` is 2 for `S_VariableNumber` and 3 for
   `S_VariableString`. The Chapter Replay menu (`0x142fe01b0`) shows chapter *i* as playable if *i* is below the
   number `MissionReplayUnlocked` in the `PersistentDataStorage` block, stored in
-  `profile_data_storage_persistantdata.pf`. Setting it in a test profile lists all 20 chapters, and chapter 2 chosen
-  there loaded directly, with no prompt. So both players should be able to load the same chapter without playing
-  up to it (derived, not tested).
+  `profile_data_storage_persistantdata.pf`. Setting it in a test profile unlocks all 20 chapters; each loaded
+  directly, with no prompt, ending on a loading screen that waits for "Continue". So both players should be able to
+  load the same chapter without playing up to it (derived, not tested with two instances).
 - **Input**: keyboard and mouse through DirectInput 8, pads through XInput (imported and also looked up with
   `GetProcAddress` at run time). Window messages posted to the game have no effect. The UI follows the real cursor
   (it switches to mouse prompts when the cursor moves) and calls `ClipCursor`. Cutscenes pause while the window is
   inactive; the game reacts to `WM_ACTIVATE`/`WM_ACTIVATEAPP`. Tapping or holding A, or pressing B, does not skip
-  cutscenes; the skip binding is unknown.
+  cutscenes; the skip binding is unknown. For bots: a button held 0.4 s carries over into the next screen (an A
+  that closes the "cannot connect to 2K" dialog then also hits Continue on the main menu), and in the Chapter Replay
+  list one DOWN sometimes moves two rows, even with 0.15 s presses. Verify the highlighted entry before selecting.
+  The "cannot connect to 2K" dialog does not appear on every offline start.
 - **Online services**: on start the game contacts `*.my.2k.com` and `*.api.2kcoretech.online` (single sign-on,
   telemetry, promotions). Its HTTP library writes verbose request logs, **including a bearer token**, to standard
   output. When those lookups fail, it shows a "cannot connect to 2K" dialog and runs normally offline.
@@ -148,14 +185,17 @@ Nothing in the game files. Tools written so far (not published yet):
   with decoded arguments, rate-limited per function.
 - A launch harness: it snapshots the real install, the exe hash, `Documents\My Games`, Saved Games, Steam
   `userdata` and the 2K/Hangar 13 registry keys before and after each run and reports any change. A watchdog kills a
-  game started from the real install. Bot scripts drive the menus to a chapter.
+  game started from the real install. Bot scripts drive the menus to any chapter, checking the screen before each
+  press (main-menu title present, highlighted row in the chapter list) from window screenshots.
 - A `.pf` editor that sets a number variable and fixes the CRC (refuses files whose CRC is already wrong).
 
 ## QA
 
-None for co-op: no co-op code exists. Probe and harness runs so far, all offline, in the test copy: every run's
-guard left the real install, exe hash and saves unchanged. Only Steam client bookkeeping
-(`localconfig.vdf`, `librarycache\*.json`, `gamerecording.pb`) changed.
+None for co-op: no co-op code exists. Probe and harness runs so far (36 guarded launches of the test copy, all
+offline except the first): every run's guard left the real install, exe hash and saves unchanged. Only Steam client bookkeeping
+changed (`localconfig.vdf`, `librarycache\*.json`, `gamerecording.pb`, and the Steam Notes cache
+`userdata\<id>\2371090\remotecache.vdf`, re-stamped with unchanged content). One run also caught another game's
+Steam files, from a game started on the PC during the run.
 
 ## How to play
 
@@ -167,8 +207,9 @@ None, because nothing ships yet.
 
 ## Next steps
 
-1. Finish recording each chapter's story calls from Chapter Replay (chapters 2–20, batch running). Get past
-   gameplay by loading later checkpoints, or with a driving and walking bot.
+1. Record each chapter past its first checkpoints: list every `cp_NNN` per mission and the calls at mission end
+   (`ShowMissionComplete`, the next mission's start). Needs a driving and walking bot, or a way to jump to a
+   checkpoint.
 2. Hook below the Lua glue: the manager behind the quest functions (`0x14635a740`), `SetMissionState` →
    `0x142438730`, and the save requests. Confirm that native code changes story state only through them.
 3. Let the host own the story. Send mission start, checkpoint, objective and restart calls from host to client and
