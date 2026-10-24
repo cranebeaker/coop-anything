@@ -4384,7 +4384,6 @@
   url: https://github.com/MafiaHub/MafiaMP
   other_urls:
   - https://github.com/mafiahub
-  - https://github.com/JustAddMP/MafiaDE
   kind: framework
   status: alpha
   coop_scope:
@@ -4398,11 +4397,43 @@
   last_activity: 2026-10
   qa: none
   notes: Open source multiplayer built on the MafiaHub Framework with a Lua gamemode repo; repo updated Oct 15 2026
-    and recruiting contributors. JustAddMP/MafiaDE is an unaffiliated co-op build needing UDP 27015.
+    and recruiting contributors. Free roam, no story. Licence is MafiaHub OSS, whose clause 5 allows derivative work
+    only to contribute back to MafiaMP. Its 394 client byte patterns all match Steam build 16502642 (382 unique).
   sources:
   - https://github.com/MafiaHub/MafiaMP
+  - https://github.com/MafiaHub/MafiaMP/blob/master/LICENSE.txt
+  - https://github.com/cranebeaker/coop-anything/issues/173
+  checked: 2026-10-24
+- game: 'Mafia: Definitive Edition'
+  year: 2020
+  engine: Illusion Engine
+  project: MafiaCoop (JustAddMP)
+  url: https://github.com/JustAddMP/MafiaDE
+  other_urls:
+  - https://github.com/JustAddMP/core
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: direct-ip
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: One DLL plus launcher for Steam build 16502642. The author says chapter, checkpoint, objectives and cutscenes
+    follow the host, and since 0.17.0 the host runs traffic, police, pedestrians and enemies. Story tested only in
+    a few chapters (Omerta, Taxi, Bon Appetit). Latest is the 0.17.1 pre-release, checked on one PC with two game
+    copies, not yet on two PCs. Join by IP or Steam invite (transport udp or steam). Source is public, but neither
+    repo has a licence file.
+  sources:
   - https://github.com/JustAddMP/MafiaDE
-  checked: 2026-10-16
+  - https://github.com/JustAddMP/MafiaDE/releases/tag/v0.17.1
+  - https://github.com/JustAddMP/MafiaDE/blob/main/README-dev.md
+  checked: 2026-10-24
 - game: Sifu
   year: 2022
   engine: Unreal Engine 4
