@@ -7738,13 +7738,13 @@
   status: prototype
   coop_scope:
     players_visible: unknown
-    story: no
+    story: 'no'
     enemies: partial
-    world_state: no
-    items: no
+    world_state: 'no'
+    items: 'no'
   players: '2'
   networking: direct-ip
-  open_source: yes
+  open_source: 'yes'
   last_activity: 2026-08
   qa: none
   notes: Proof of concept by the SDK author (added 2023-04). Source read on 2026-10-24 sends only the second Hitman's
