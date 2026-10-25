@@ -6,7 +6,7 @@
 # Usage: coop_smoke.ps1 [-Lab <lab root>] [-Level og_story/01_Slaver_Camp_Landing.xml]
 #        [-Campaign com-wolfire-overgrowth-campaign] [-KeepRunning]
 param(
-    [string]$Lab = "C:\Users\rouge\Projects\overgrowth-coop\lab",
+    [string]$Lab = $(if ($env:OG_LAB) { $env:OG_LAB } else { Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path "lab" }),  # <project root>\lab next to the clone, or $env:OG_LAB
     [string]$Level = "og_story/01_Slaver_Camp_Landing.xml",
     [string]$Campaign = "com-wolfire-overgrowth-campaign",
     [int]$HostBridge = 47001,

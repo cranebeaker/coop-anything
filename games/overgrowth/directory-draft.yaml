@@ -12,7 +12,7 @@
   status: alpha
   coop_scope:
     players_visible: yes
-    story: unknown
+    story: partial
     enemies: unknown
     world_state: unknown
     items: unknown
@@ -20,11 +20,12 @@
   networking: steam-relay
   open_source: yes
   last_activity: 2026-10
-  qa: none
-  notes: Engine fork with rewritten movement replication (local player simulation, snapshots, clock sync), a story co-op mode, revive, server browser, Steam friend join and direct IP. Nine days old, one author, daily builds; release 0.40.0 (2026-10-23). Apache-2.0. Bundled "Overhaul" mod is optional but must match across players.
+  qa: automated
+  notes: Engine fork with rewritten movement replication (local player simulation, snapshots, clock sync), a story co-op mode, revive, server browser, Steam friend join and direct IP. Nine days old, one author, daily builds; release 0.40.0 (2026-10-23). Apache-2.0. Bundled "Overhaul" mod is optional but must match across players. Tested with two real clients on one PC (games/overgrowth): join, first story level with its cutscene, movement sync and a level change pass; a join is refused when Workshop mods are subscribed (order-dependent mod check, bug reported in the write-up). Enemies, items, dialogue choices, checkpoints and deaths not yet checked.
   sources:
     - https://github.com/crxhvrd/overgrowth-online
     - https://api.github.com/repos/crxhvrd/overgrowth-online/releases
+    - https://github.com/cranebeaker/coop-anything/tree/main/games/overgrowth
   checked: 2026-10-25
 
 - game: Overgrowth
