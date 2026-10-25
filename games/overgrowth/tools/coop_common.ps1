@@ -82,14 +82,29 @@ function Get-LogLines($pair, [string]$Side, [string]$Pattern, [int]$Last = 10) {
     return @(Get-Content $log | Select-String -Pattern $Pattern | Select-Object -Last $Last -ExpandProperty Line)
 }
 
-# Poll a scriptblock over Get-Avatars until it returns true. Throws on timeout.
+# One line per machine: its own avatar and its view of the other player's (for failure messages)
+function Describe-Avatars($pair) {
+    $out = @()
+    foreach ($side in @(@("host", $pair.HostBridge), @("client", $pair.ClientBridge))) {
+        try {
+            $gs = Get-GameState $side[1]
+            $own = $gs.characters | Where-Object { $_.id -eq $gs.my_avatar } | Select-Object -First 1
+            $players = @($gs.characters | Where-Object { $_.is_player -or $_.remote -or $_.id -eq $gs.my_avatar })
+            $desc = $players | ForEach-Object { "id=$($_.id)/c$($_.common_id) ctrl=$($_.controlled) remote=$($_.remote) proxy=$($_.proxy) vis=$($_.visible) ko=$($_.knocked_out) pos=$(($_.pos | ForEach-Object { [math]::Round($_,1) }) -join ',')" }
+            $out += "$($side[0]) my_avatar=$($gs.my_avatar) own_present=$($null -ne $own): " + ($desc -join ' ; ')
+        } catch { $out += "$($side[0]): no state ($($_.Exception.Message))" }
+    }
+    return ($out -join ' || ')
+}
+
+# Poll a scriptblock over Get-Avatars until it returns true. Throws on timeout, with both machines' avatars in the message.
 function Wait-Avatars($pair, [scriptblock]$Check, [int]$TimeoutS, [string]$What) {
     $sw = [Diagnostics.Stopwatch]::StartNew()
     while ($sw.Elapsed.TotalSeconds -lt $TimeoutS) {
         try { $a = Get-Avatars $pair; if ($a -and (& $Check $a)) { return $a } } catch { }
         Start-Sleep -Milliseconds 700
     }
-    throw "timeout after ${TimeoutS}s waiting for $What"
+    throw "timeout after ${TimeoutS}s waiting for $What [$(Describe-Avatars $pair)]"
 }
 
 function Stop-Pair($pair) {
