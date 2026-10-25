@@ -2,3 +2,24 @@
 __pycache__/
 build/
 coop-bots-out/
+# Root-level build artifacts from games/outlast-2/src/build.bat and the test
+# builds (cl writes .obj into the current directory, which is the repo root).
+/dinput8proxy.obj
+/dinput8proxy.lib
+/dinput8proxy.exp
+/coop_net.obj
+/coop_session.obj
+/coop_relay.obj
+/coop_interp.obj
+/protocol_test.obj
+/net_loopback_test.obj
+/session_test.obj
+/relay_test.obj
+/interp_test.obj
+# games/outlast-2/tests build outputs
+/games/outlast-2/tests/*.obj
+/games/outlast-2/tests/*.exe
+/games/outlast-2/tests/*.pdb
+# Generated import libs (build.bat and tests/run.bat regenerate these from the .def files)
+/games/outlast-2/src/*.lib
+/games/outlast-2/src/*.exp

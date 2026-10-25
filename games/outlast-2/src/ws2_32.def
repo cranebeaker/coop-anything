@@ -1,0 +1,13 @@
+LIBRARY ws2_32.dll
+EXPORTS
+    WSAStartup
+    WSACleanup
+    bind
+    closesocket
+    getsockname
+    htons
+    ntohs
+    recvfrom
+    sendto
+    setsockopt
+    socket

@@ -7608,6 +7608,53 @@
   - 'Repo DIRECTORY.md and games; public GitHub issue/PR and repository search for Godfather 2 / Godfather II co-op and multiplayer, 2026-10-20'
   - 'English web searches: Godfather II co-op campaign, co-op mod, online co-op, multiplayer mod; checked Nexus, ModDB, GameBanana, GameFAQs results and PCGamingWiki, 2026-10-20'
   - 'Not checked: game Discord, Steam guides in depth, Archive.org; attempted Russian, German, Italian and Spanish queries were rate-limited (HTTP 429)'
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL
+  url: https://github.com/ShyKiss/OpenOL
+  other_urls:
+  - https://github.com/ShyKiss/OpenOL-Relay
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: "2-8"
+  networking: hosted-relay
+  open_source: yes
+  last_activity: '2023'
+  qa: community-reports
+  notes: Modified client and UDP relay server for Outlast 1. Synchronizes player puppets, doors, enemy states, and items, with late-join room snapshot persistence.
+  sources:
+  - https://github.com/ShyKiss/OpenOL
+  - https://github.com/ShyKiss/OpenOL-Relay
+  checked: '2026-10-21'
+- game: Outlast 2
+  year: 2017
+  engine: Unreal Engine 3
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No working co-op or multiplayer mod found for Outlast 2. Sibling title Outlast 1 has the OpenOL client mod and relay server. The Outlast Trials provides official multiplayer. Co-op-from-zero work in progress in this repo (games/outlast-2) - proxy dinput8.dll hook installs in an isolated install, and protocol/UDP transport/relay session/host relay/puppet interpolation are implemented with 24 offline check groups passing (tests/run.bat); engine wiring is blocked on the first live ProcessEvent capture, so no two-client game test has run yet.
+  sources:
+  - https://www.nexusmods.com/outlast2
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/outlast-2
+  checked: '2026-10-24'
+  searched:
+  - 'WebSearch: Outlast 2 co-op multiplayer mod on github.com, nexusmods.com, moddb.com, steamcommunity.com, reddit.com'
+  - 'Nexus Mods Outlast 2 catalog: checked all mods (O2menu trainer found; no co-op mods)'
 - game: Autonauts
   year: 2019
   engine: Unity
