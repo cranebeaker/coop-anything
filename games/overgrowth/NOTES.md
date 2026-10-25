@@ -119,3 +119,5 @@ Also: the client log repeats `Tried to get own players state, but there is no st
 | fix branch | matching | PASS |
 
 Observation on the fork's `main` (0.41.3): a guest's avatar has different local ids on the two machines (host 1309, guest 1278); the bridge's `common_id` is the stable key. The scripts now match avatars by `common_id`. Build time 2 min (Overgrowth target only) on this PC.
+
+**Fix sent (2026-10-25):** https://github.com/crxhvrd/overgrowth-online/pull/1 from the owner's fork branch `fix/mod-list-order` (commit `aba7dd8f`): sorted mod ids in `GetActiveModsString`, installer carries Workshop activation states over. Verification matrix in the PR body.

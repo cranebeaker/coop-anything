@@ -26,7 +26,7 @@ Full engine source plus every shipped script (`Data/Scripts/*.as`). The engine a
 
 ## What we changed
 
-Nothing in the engine yet. Found and documented for the fork's author (draft in `fork-bug-report-draft.md`):
+A fix sent to the fork as [crxhvrd/overgrowth-online#1](https://github.com/crxhvrd/overgrowth-online/pull/1) (branch `fix/mod-list-order` on the owner's fork), verified with the harness: the shipped build fails the join only when the same mods are found in a different order, the fixed build passes both ways. The report:
 
 - **Join refused with "not using the same mods" between identical installs.** The host compares the active-mod list as a string built in mod discovery order; Workshop mods are discovered in callback order, which differs per process. Also, the fork's installer writes a mod config without the player's Workshop subscriptions, so the engine activates all of them on first start. Workaround: set every Workshop mod to deactivated on every machine. Fix: sorted comparison, and an installer that carries over activation states.
 
@@ -54,6 +54,6 @@ Until the fork's installer bug is fixed, every player: buy Overgrowth on Steam, 
 ## Next steps
 
 - Scenarios for the known campaign bugs: dialogue choices, a kill barrier hit by the guest, checkpoints, death and revive, enemies hitting both players, items.
-- Report the mod-list bug to the fork's author and offer the sorted-compare fix.
+- Follow up on the fix PR with the fork's author.
 - Mutation twins for each assertion; a run with `net_sim` latency and loss (the fork's bridge has it) and the hub's chaos relay.
 - A two-PC session over Steam friends with a second account to confirm the relay path.
