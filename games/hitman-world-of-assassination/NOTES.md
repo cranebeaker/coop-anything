@@ -38,3 +38,37 @@ Session 2026-10-24. Research only (phases 0-1). No game install was available, s
   Glacier 2 co-op ZHMModSDK", Peacock server, Stone & Knight status (several phrasings).
 - GitHub: cloned OrfeasZ/ZHMModSDK and sdwhw/ZHMModSDK. GitHub search API not available in this session.
 - Not checked: Nexus file pages, Reddit, Hitman modding Discord, this repo's issues/PRs (API not available).
+
+## Session 2026-10-25: build from zero, step 1 (design and game-free sync core)
+
+Owner has a Windows PC with the game; this session ran in a Linux cloud sandbox without it, so this step is game-free.
+
+### Done
+- Design: authority (host runs every NPC; players own themselves; dragged bodies owned by the dragger with epochs;
+  host-ordered mission log; world epoch per save load), engine facts from ZHMModSDK headers, phased plan with tests.
+- Sync core `hmcoop` (C++17, no engine dependency) built on `tools/ownership`, wrapped as a `tools/fuzz` target.
+- Lives in its own repo (not published yet): `hitman-coop`, with DESIGN.md, tests and regression scenarios.
+
+### Checks that ran (Linux, g++ 13.3, 2026-10-25)
+- `tools/ownership/run_tests.py`: ALL OK (30 tests, 7 of 7 twins). `tools/fuzz/run_tests.py`: ALL OK (12 of 12 twins).
+- `hmcoop_tests`: 24 passed, 111 checks, 2995 fuzz sessions, 7 of 7 mutation twins caught, ALL OK.
+- `hmfuzz --minutes 2`: 254377 sessions over 2, 3 and 4 players, 0 failed.
+- QA level for the game: none (no game client involved).
+
+### Bugs the fuzzer found in our own core (fixed, regression scenario kept for each)
+1. Delayed hello from an old connection hijacked the new session (fix: session ids grow per connection, host keeps the
+   last one across a leave).
+2. Host's refused drag request still made the body follow the host.
+3. Host acked a position packet while rejecting the body update inside it, so the body's last position was lost.
+4. A guest re-requesting a body it had just dropped ended up owning it without reporting it.
+
+### Observed in ZHMModSDK source (not yet in game)
+- `IActor`: IsAlive / IsDead / IsPacified, ItemPickup, DropItem, Knowledge(). `ZActor::m_OutfitRepositoryID`, `m_rOutfit`.
+- `ZPlayerRegistry` has 4 player slots; `ZNetPlayerController` has `m_bConnectedToMultiplayer` and a RakNet replica
+  pointer (likely Ghost Mode leftovers).
+- Scene load/clear hooks exist; QuickSave saves by signalling `SaveQuick` on an entity.
+
+### Unknown (next session needs the game)
+- Whether NPC AI perceives a second Hitman. This is the gate for the whole project.
+- How to stop a client's NPC AI without disabling the NPC; which event carries target kills and objectives.
+- Game identity (version, exe SHA-256) of the owner's install.
