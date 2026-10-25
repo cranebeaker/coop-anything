@@ -7953,3 +7953,42 @@
   - https://github.com/Blizzard/s2client-proto/blob/master/docs/protocol.md
   checked: '2026-10-23'
   made_with_coop_anything: true
+- game: 'The Legend of Zelda: Skyward Sword'
+  year: 2011
+  engine: Nintendo in-house (EGG / NW4R g3d), Wii; decompilation zeldaret/ss
+  project: ss-coop
+  url: https://github.com/ItsPainY/ss-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/skyward-sword
+  - https://github.com/zeldaret/ss
+  kind: emulator-netplay
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: Wii USA disc SOUE01 revision 0 in Dolphin 2609a, each player with their own dump. A bridge next to each
+    Dolphin reads and writes guest memory and talks UDP (host forwards one port); a REL built from the zeldaret/ss
+    decomp replaces the unused J_TEST actor and draws the other player as a second Link (models, outfit, real
+    animations, sword, shield, held items). Story, item, scene, dungeon (keys), chest and enemy defeat flags are
+    shared and written to both save files; loads and resets cannot erase the other player's progress. Live enemies
+    are owned by the nearer player (epochs, following playbook/actor-ownership.md); the other game shows them at the
+    owner's position with shared (lower) health, and Keese, ChuChus, Remlits and Skytails also with the owner's
+    animation. Enemies only damage their own game's Link. A two-PC internet session was played with version 0.1;
+    later features are covered by an automated two-client bot test (21 checks, Skyloft, see games/skyward-sword).
+  sources:
+  - https://github.com/ItsPainY/ss-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/skyward-sword
+  - https://github.com/zeldaret/ss
+  checked: '2026-10-25'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, and public GitHub issues and PRs for "skyward" (nothing), 2026-10-25'
+  - 'Archipelago games list: not supported; Skyward Sword randomizers (Wii, HD) are single-player, 2026-10-25'
