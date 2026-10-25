@@ -7953,3 +7953,27 @@
   - https://github.com/Blizzard/s2client-proto/blob/master/docs/protocol.md
   checked: '2026-10-23'
   made_with_coop_anything: true
+- game: 'The Legend of Heroes: Trails in the Sky FC'
+  year: 2004
+  engine: Nihon Falcom (DirectX 9 / x86)
+  project: Trails in the Sky FC Co-op Mod
+  url: https://github.com/UkuleleBorisu/trails-sky-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: shared
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: Turn-based AT combat multiplexing, S-Break cut-in interrupts, and field exploration leader toggle via dinput8 proxy.
+  sources:
+  - https://github.com/UkuleleBorisu/trails-sky-coop
+  checked: '2026-10-25'
+  made_with_coop_anything: true
