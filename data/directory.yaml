@@ -1357,6 +1357,35 @@
   - 'WebSearch: Max Payne co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com steamcommunity.com
     (nothing for MP1)'
   - 'Not checked: Reddit (blocked to the search tool)'
+- game: Mad Max
+  year: 2015
+  engine: Avalanche Engine
+  project: madmax-coop
+  url: https://github.com/cranebeaker/coop-anything
+  other_urls:
+  - https://github.com/JustAddMP/MadMax
+  - https://github.com/JustAddMP/core
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Functional 2-player parallel co-op mod for Mad Max (Max & Chumbucket). Max drives the Magnum Opus while Chumbucket operates rear mounted harpoons/weapons, mid-drive hood repairs, or dismounts on foot with Blackfinger Zeal and pipe wrench brawling. Complete removal of slow-motion time dilation, Bink2 intro skip, and save isolation. Verified with automated multi-instance test suite on Steam build 1398848. Claim issue cranebeaker/coop-anything#180.
+  sources:
+  - https://github.com/JustAddMP/MadMax
+  - https://github.com/JustAddMP/core
+  - https://github.com/gibbed/Gibbed.MadMax
+  - https://github.com/cranebeaker/coop-anything/issues/180
+  checked: '2026-10-24'
+  made_with_coop_anything: true
 - game: 'Mafia: The City of Lost Heaven'
   year: 2002
   engine: LS3D
