@@ -1,0 +1,132 @@
+# Draft entries for data/directory.yaml (coop-anything). Not yet validated with tools/build_directory.py.
+# Checked 2026-10-25. Every claim is from the linked sources; nothing here was run by us yet.
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire, open source)
+  project: Overgrowth Online (CoreFX)
+  url: https://github.com/crxhvrd/overgrowth-online
+  other_urls:
+    - https://github.com/crxhvrd/overgrowth-online/releases
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: Engine fork with rewritten movement replication (local player simulation, snapshots, clock sync), a story co-op mode, revive, server browser, Steam friend join and direct IP. Nine days old, one author, daily builds; release 0.40.0 (2026-10-23). Apache-2.0. Bundled "Overhaul" mod is optional but must match across players. Tested with two real clients on one PC (games/overgrowth): join, first story level with its cutscene, movement sync and a level change pass; a join is refused when Workshop mods are subscribed (order-dependent mod check, bug reported in the write-up). Enemies, items, dialogue choices, checkpoints and deaths not yet checked.
+  sources:
+    - https://github.com/crxhvrd/overgrowth-online
+    - https://api.github.com/repos/crxhvrd/overgrowth-online/releases
+    - https://github.com/cranebeaker/coop-anything/tree/main/games/overgrowth
+  checked: 2026-10-25
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire, open source)
+  project: Wolfire Online Multiplayer Prototype
+  url: https://www.wolfire.com/blog/2021/12/Overgrowth-Online-Multiplayer-Prototype/
+  other_urls:
+    - https://github.com/WolfireGames/overgrowth
+  kind: official
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2022-04
+  qa: community-reports
+  notes: Steam beta branch internal_multiplayer_testing (2021-12-15). Host simulates everything; clients send input and receive poses, so remote players report heavy input lag. Campaign levels are only exposed through a mod (see Story Multiplayer). Code is in Source/Online of the open-source engine; no upstream commits to it since open-sourcing.
+  sources:
+    - https://www.wolfire.com/blog/2021/12/Overgrowth-Online-Multiplayer-Prototype/
+    - https://steamcommunity.com/app/25000/discussions/0/3415432674403889605/
+    - https://github.com/WolfireGames/overgrowth/tree/main/Source/Online
+  checked: 2026-10-25
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire, open source)
+  project: Overgrowth Story Multiplayer
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=3496994351
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: no
+  last_activity: 2025-06
+  qa: community-reports
+  notes: Adds the campaign to the official prototype's multiplayer menu (needs the multiplayer beta branch). Author lists rough latency, client moving during dialogue, kill barriers killing the host, and guests waiting for the host's level load. No source found.
+  sources:
+    - https://steamcommunity.com/sharedfiles/filedetails/?id=3496994351
+  checked: 2026-10-25
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire, open source)
+  project: Full Coop (Campaign, arena...)
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=2637639111
+  other_urls:
+    - https://github.com/Denperidge/Overgrowth-Full-Local-Coop
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: unknown
+  players: "1-4"
+  networking: lan
+  open_source: yes
+  last_activity: 2021-10
+  qa: community-reports
+  notes: Local split screen only (F9 adds a player, F10 removes). Online only via Steam Remote Play Together. MIT source. Players report it still works as of 2023-12; over Remote Play both players sometimes drive the same character. networking value is the closest schema option; it is really shared-screen.
+  sources:
+    - https://steamcommunity.com/sharedfiles/filedetails/?id=2637639111
+    - https://github.com/Denperidge/Overgrowth-Full-Local-Coop
+  checked: 2026-10-25
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire, open source)
+  project: OGMP
+  url: https://github.com/ogmp/ogmp_client
+  other_urls:
+    - https://github.com/ogmp/ogmp_server
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: unknown
+  networking: dedicated-server
+  open_source: yes
+  last_activity: unknown
+  qa: none
+  notes: Pre-1.0 alpha-era mod: presence, chat and positions through a Linux server. Public server gone by 2020. GPL-2.0.
+  sources:
+    - https://github.com/ogmp/ogmp_client
+    - https://steamcommunity.com/app/25000/discussions/0/540733524019609149/?ctp=28
+  checked: 2026-10-25
