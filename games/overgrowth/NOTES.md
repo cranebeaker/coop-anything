@@ -104,3 +104,18 @@ Also: the client log repeats `Tried to get own players state, but there is no st
 **Hub tools (Python 3.12 via winget, 2026-10-25):** `python -I tools/test_all.py`: PASS scenarios, bots, animcheck, inspect, buildlock; bridge passes its Python tests; chaos, flight, ownership, fakeworld, fuzz, hotreload, mutants and the C++ parts need cmake, which is not installed (not needed yet). `tools/build_directory.py` needs PyYAML (installed with pip). Directory: five Overgrowth entries added, `--check` passes (316 entries).
 
 **Give back (2026-10-25):** branch `game/overgrowth` pushed to the owner's fork; draft PR https://github.com/cranebeaker/coop-anything/pull/205 opened with the template (owner-review box left for the owner). The "claim a game" issue is filled in the browser but not yet submitted; the fork bug report (`fork-bug-report-draft.md`) is not yet posted.
+
+**Reporting the mod-list bug to the fork (2026-10-25):** crxhvrd/overgrowth-online has Issues and Discussions disabled (GitHub API `has_issues: false`, `has_discussions: false`; the new-issue page is a 404). The only on-GitHub route is a pull request with the fix. The draft stays in `fork-bug-report-draft.md` for the PR description.
+
+**Mod-order bug, Steam-free reproduction (2026-10-25):** two empty test mods (`order-test-a`, `order-test-b`, both `SupportsOnline`) in each copy's write-dir `Data/Mods`, in folders `a_order`/`b_order` on the host and swapped on the client, so each machine finds the same set in a different order. Shipped 0.40.0 build: the join is refused (`Connection closed by the host: You are not using the same mods the host is`), `coop_smoke.ps1` -> `RESULT: FAIL` at the join step. This is the negative control for the fix (sorted ids in `OnlineUtility::GetActiveModsString`, fork branch `fix/mod-list-order`). Build: VS 2022 Build Tools 17.14 (already on the PC) + CMake 4.4.4 via winget; configure `-G "Visual Studio 17 2022" -A x64 -DENABLE_STEAMWORKS=Off -DENABLE_GAMENETWORKINGSOCKETS=On -DBUILD_OGDA=Off -DBUILD_ID=2001 -DAUX_DATA=<test copy>`; the Steamworks build needs the proprietary SDK submodule, which is not public.
+
+**Fix verified (2026-10-25), fork branch `fix/mod-list-order` (sorted ids in `OnlineUtility::GetActiveModsString`; installer carries Workshop activation states over):** matrix with `tools/coop_smoke.ps1`, two empty `SupportsOnline` test mods per copy (unique thumbnail file names: two mods shipping the same `Data/Images/thumb.png` collide and the second never activates, `kValidityActiveModCollision`):
+
+| Build | Test mod folders on the client | Result |
+|---|---|---|
+| release 0.40.0 | swapped (same set, different order) | FAIL, "You are not using the same mods the host is" |
+| release 0.40.0 | matching | PASS |
+| fix branch, GNS build (`-Exe <repo>\Build\Release\OvergrowthOnline.exe -WorkingDir <repo>`) | swapped | PASS |
+| fix branch | matching | PASS |
+
+Observation on the fork's `main` (0.41.3): a guest's avatar has different local ids on the two machines (host 1309, guest 1278); the bridge's `common_id` is the stable key. The scripts now match avatars by `common_id`. Build time 2 min (Overgrowth target only) on this PC.

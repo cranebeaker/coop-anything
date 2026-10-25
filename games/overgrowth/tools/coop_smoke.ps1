@@ -12,6 +12,9 @@ param(
     [int]$HostBridge = 47001,
     [int]$ClientBridge = 47002,
     [int]$GamePort = 27960,
+    [string]$Exe = "",            # engine exe to run instead of the installed one (a fresh build: <repo>\Build\Release\OvergrowthOnline.exe)
+    [string]$WorkingDir = "",     # passed as --working-dir (a source checkout: its Data overlay is used, as the fork's own harness does)
+    [string]$WriteDirName = "write",  # which <lab>\<copy>\<name> write dir to use
     [switch]$KeepRunning
 )
 $ErrorActionPreference = "Stop"
@@ -26,12 +29,14 @@ function Say($m) { Write-Host ("[{0}] {1}" -f (Elapsed), $m) }
 
 function Start-Copy([string]$Name, [int]$Bridge) {
     $dir = Join-Path $Lab $Name
-    $exe = Join-Path $dir "game\OvergrowthOnline\OvergrowthOnline.exe"
-    $log = Join-Path $dir "write\logfile.txt"
+    $exe = if ($Exe) { $Exe } else { Join-Path $dir "game\OvergrowthOnline\OvergrowthOnline.exe" }
+    $write = Join-Path $dir $WriteDirName
+    $log = Join-Path $write "logfile.txt"
     if (Test-Path $log) { Remove-Item $log -Force }
-    $p = Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru -WindowStyle Minimized `
-        -ArgumentList @("--write-dir", "`"$dir\write`"", "--test-bridge", "$Bridge", "--clear-log")
-    Say "$Name started, pid $($p.Id)"
+    $argv = @("--write-dir", "`"$write`"", "--test-bridge", "$Bridge", "--clear-log")
+    if ($WorkingDir) { $argv += @("--working-dir", "`"$($WorkingDir.TrimEnd('\'))/`"", "--game-data", "`"$dir\game`"") }
+    $p = Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru -WindowStyle Minimized -ArgumentList $argv
+    Say "$Name started, pid $($p.Id) ($exe)"
     return $p
 }
 
@@ -80,26 +85,29 @@ try {
     Say "host characters:";  Format-Chars $hstate | Where-Object { $_ -match "player=True|remote=True" } | ForEach-Object { Say "  $_" }
     Say "client characters:"; Format-Chars $cstate | Where-Object { $_ -match "player=True|remote=True|proxy=False" } | ForEach-Object { Say "  $_" }
 
-    # Assertions: each side controls exactly one non-remote character (its own avatar) and sees the other's as remote
-    $hOwn = @($hstate.characters | Where-Object { $_.id -eq $hstate.my_avatar -and $_.controlled -and -not $_.remote })
-    $hOther = @($hstate.characters | Where-Object { $_.id -eq $cstate.my_avatar -and $_.remote })
-    $cOwn = @($cstate.characters | Where-Object { $_.id -eq $cstate.my_avatar -and $_.controlled -and -not $_.remote })
-    $cOther = @($cstate.characters | Where-Object { $_.id -eq $hstate.my_avatar -and $_.remote })
+    # Assertions: each side controls exactly one non-remote character (its own avatar) and sees the other's as remote.
+    # Local object ids differ between machines (builds after 0.40.0), so the other machine's view of an avatar is
+    # found through the bridge's common_id (the host's id, the same everywhere).
     if ($hstate.my_avatar -lt 0 -or $cstate.my_avatar -lt 0) { throw "an avatar id is missing (host $($hstate.my_avatar), client $($cstate.my_avatar))" }
-    if ($hstate.my_avatar -eq $cstate.my_avatar) { throw "both sides claim avatar $($hstate.my_avatar)" }
+    $hOwn = @($hstate.characters | Where-Object { $_.id -eq $hstate.my_avatar -and $_.controlled -and -not $_.remote })
+    $cOwn = @($cstate.characters | Where-Object { $_.id -eq $cstate.my_avatar -and $_.controlled -and -not $_.remote })
     if ($hOwn.Count -ne 1) { throw "host does not control its own avatar $($hstate.my_avatar) locally" }
     if ($cOwn.Count -ne 1) { throw "client does not control its own avatar $($cstate.my_avatar) locally (cutscene still on?)" }
-    if ($hOther.Count -ne 1) { throw "host does not see the client's avatar $($cstate.my_avatar) as remote" }
-    if ($cOther.Count -ne 1) { throw "client does not see the host's avatar $($hstate.my_avatar) as remote" }
+    $hCommon = $hOwn[0].common_id; $cCommon = $cOwn[0].common_id
+    if ($hCommon -eq $cCommon) { throw "both sides claim the same avatar (common id $hCommon)" }
+    $hOther = @($hstate.characters | Where-Object { $_.common_id -eq $cCommon -and $_.remote })
+    $cOther = @($cstate.characters | Where-Object { $_.common_id -eq $hCommon -and $_.remote })
+    if ($hOther.Count -ne 1) { throw "host does not see the client's avatar (common id $cCommon) as remote" }
+    if ($cOther.Count -ne 1) { throw "client does not see the host's avatar (common id $hCommon) as remote" }
 
     # Movement sync: the client walks forward for 2 s; the host must see that avatar move
-    $before = ($hstate.characters | Where-Object { $_.id -eq $cstate.my_avatar }).pos
+    $before = $hOther[0].pos
     Send-Bridge -Port $ClientBridge -Request @{cmd = "input"; hold = @{up = 1.0}; steps = 240} | Out-Null
     Start-Sleep -Seconds 4
     $hstate2 = Get-GameState $HostBridge
     $cstate2 = Get-GameState $ClientBridge
-    $afterH = ($hstate2.characters | Where-Object { $_.id -eq $cstate.my_avatar }).pos
-    $afterC = ($cstate2.characters | Where-Object { $_.id -eq $cstate.my_avatar }).pos
+    $afterH = ($hstate2.characters | Where-Object { $_.common_id -eq $cCommon }).pos
+    $afterC = ($cstate2.characters | Where-Object { $_.common_id -eq $cCommon }).pos
     $movedH = [math]::Sqrt(($afterH[0]-$before[0])*($afterH[0]-$before[0]) + ($afterH[2]-$before[2])*($afterH[2]-$before[2]))
     $gap = [math]::Sqrt(($afterH[0]-$afterC[0])*($afterH[0]-$afterC[0]) + ($afterH[1]-$afterC[1])*($afterH[1]-$afterC[1]) + ($afterH[2]-$afterC[2])*($afterH[2]-$afterC[2]))
     Say ("client avatar moved {0:F2} m as seen by the host; host/client position gap {1:F2} m" -f $movedH, $gap)
@@ -112,7 +120,7 @@ try {
     $reason = $_.Exception.Message
     Say "FAILED: $reason"
     foreach ($n in "host", "client") {
-        $log = Join-Path $Lab "$n\write\logfile.txt"
+        $log = Join-Path $Lab "$n\$WriteDirName\logfile.txt"
         if (Test-Path $log) {
             Say "--- $n log, last online/error lines ---"
             Get-Content $log | Select-String -Pattern "online\.cpp|gns_net|Online:|\[e\]|\[f\]|closed" | Select-Object -Last 12 -ExpandProperty Line | ForEach-Object { Say "  $_" }

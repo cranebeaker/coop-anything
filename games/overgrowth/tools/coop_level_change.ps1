@@ -34,9 +34,10 @@ function Wait-BothInScene([int]$TimeoutS = 120) {
         $cs = Get-GameState $ClientBridge; $hs = Get-GameState $HostBridge
         $cOwn = @($cs.characters | Where-Object { $_.id -eq $cs.my_avatar -and $_.controlled -and -not $_.remote })
         $hOwn = @($hs.characters | Where-Object { $_.id -eq $hs.my_avatar -and $_.controlled -and -not $_.remote })
-        $hSees = @($hs.characters | Where-Object { $_.id -eq $cs.my_avatar -and $_.remote })
-        $cSees = @($cs.characters | Where-Object { $_.id -eq $hs.my_avatar -and $_.remote })
-        if ($cOwn.Count -eq 1 -and $hOwn.Count -eq 1 -and $hSees.Count -eq 1 -and $cSees.Count -eq 1 -and $hs.my_avatar -ne $cs.my_avatar) {
+        # (the other machine's view of an avatar: by common_id, local ids differ between machines)
+        $hSees = @(if ($cOwn.Count -eq 1) { $hs.characters | Where-Object { $_.common_id -eq $cOwn[0].common_id -and $_.remote } })
+        $cSees = @(if ($hOwn.Count -eq 1) { $cs.characters | Where-Object { $_.common_id -eq $hOwn[0].common_id -and $_.remote } })
+        if ($cOwn.Count -eq 1 -and $hOwn.Count -eq 1 -and $hSees.Count -eq 1 -and $cSees.Count -eq 1 -and $hOwn[0].common_id -ne $cOwn[0].common_id) {
             return @{host = $hs; client = $cs}
         }
     }
