@@ -7727,3 +7727,36 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: HITMAN World of Assassination
+  year: 2023
+  engine: Glacier 2
+  project: Hitmen (sample mod in ZHMModSDK)
+  url: https://github.com/OrfeasZ/ZHMModSDK/tree/master/Mods/Hitmen
+  other_urls:
+  - https://github.com/sdwhw/ZHMModSDK
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: 'no'
+    enemies: partial
+    world_state: 'no'
+    items: 'no'
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-08
+  qa: none
+  notes: Proof of concept by the SDK author (added 2023-04). Source read on 2026-10-24 sends only the second Hitman's
+    world matrix plus a raw 0x148-byte input block, and every live NPC's world matrix (host to client, unreliable,
+    no interpolation). No story, objectives, AI state, items, doors or save sync. The mod is commented out of the
+    root CMakeLists.txt, so release builds do not ship it, and its receive code copies network bytes straight into
+    game memory (marked "extremely incredibly unsafe" in the source). Last commits touching it (2026-08) are renames;
+    the last functional change was 2024-12. Separately, IO Interactive announced an official two-player co-op mode,
+    Stone & Knight, in June 2025; no release date found by search on 2026-10-24.
+  sources:
+  - https://github.com/OrfeasZ/ZHMModSDK
+  - https://github.com/sdwhw/ZHMModSDK
+  - https://steamcommunity.com/games/1659040/announcements/detail/510709651799539989
+  - https://www.pcgamer.com/games/action/a-hitman-co-op-mode-is-in-development-featuring-two-familiar-faces-from-agent-47s-past/
+  checked: '2026-10-24'
