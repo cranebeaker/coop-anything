@@ -7727,3 +7727,36 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: Crime Scene Cleaner
+  year: 2024
+  engine: Unity (IL2CPP)
+  project: CSC Coop
+  url: ''
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: shared
+  players: 2 tested (designed for 4)
+  networking: steam-relay
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 6 (be.791) plugin for the Steam build (buildid 26046462). Players see each other as capsules and share every grabbable item (grab, carry,
+    throw, host-authoritative with smoothing) over ISteamNetworkingMessages on the game's own Steam session, tested by the owner with a friend on two real
+    accounts. Also synced, so far tested only with two game copies on one PC by pass/fail live suites with mutants, are stains and cleaning, bodies and the
+    van, quest progress, doors (key, card-reader and one-side doors), keys, breakable objects and their shards, trash and trash bags, each player's own
+    bucket, lamp and power washer with cleaning products, valuables, evidence, and leaving the job together (everyone gets the report and pay). Players
+    meet in a Steam lobby and follow the host into jobs; lobby creation was checked on one Steam account, joining not yet. Source not published yet;
+    details in games/crime-scene-cleaner.
+  sources:
+  - https://store.steampowered.com/app/1040200/
+  - https://www.gamedeveloper.com/press-release/crime-scene-cleaner-release-date-announcement
+  - https://builds.bepinex.dev/projects/bepinex_be
+  - https://crowdcontrol.live/guides/crimescenecleaner
+  checked: '2026-10-25'
+  made_with_coop_anything: true

@@ -129,6 +129,16 @@ while (ManualDispatch_GetNextCallback(pipe, &msg)) {
 }
 ```
 
+If the game already runs Steamworks.NET's `CallbackDispatcher` (manual dispatch
+from its own `Update`), your plugin cannot run this loop: the game's loop takes
+every message first and frees call results it has no `CallResult` for, so polling
+`ISteamUtils.GetAPICallResult` reports failure reason 2 (invalid handle) and
+`SteamAPI_RegisterCallResult` is never called back. Put your object into the
+dispatcher's own table instead: derive from `Steamworks.CallResult` (inject the
+class in IL2CPP), override `OnRunCallResult(IntPtr param, bool failed, ulong call)`,
+and add it to `CallbackDispatcher.m_registeredCallResults[call]`. That worked for
+`CreateLobby` in Crime Scene Cleaner (IL2CPP, where `CallResult<T>` itself was stripped).
+
 Callback ids:
 
 | Callback | Id |
