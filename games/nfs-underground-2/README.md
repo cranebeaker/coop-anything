@@ -105,11 +105,12 @@ headless client received both cars with coordinates matching `[0x89CCF8]+0x50` i
 process: `(944.70, -1190.17, 14.12)` and `(939.47, -1266.38, 13.98)`.
 Remote cars are now drawn by borrowing one of the game''s own render-list cars
 (`[0x89CCF8]` entries 1..3): at `CarRenderInfo::Render` the borrowed car''s position and
-basis are replaced with the remote player''s, and `EndScene` restores them. Model swapping was attempted and does not work: swapping the car object pointer (`+0x00`)
-crashes the game, and swapping `CarRenderInfo` `+0x04`/`+0x08` (or pointing `[RI]` at a
-clone of the local car) leaves the borrowed car with its own traffic model (Skyline,
-Civic). The model is bound when the car is spawned, not read from these fields at draw
-time, so a real fix needs the spawn function.
+basis are replaced with the remote player''s, and `EndScene` restores them. The model is swapped properly: `car+0x554` is the root of a 0x2EC0-byte render object built
+at spawn, and `FUN_0063A5A0(car, model)` (found in the Ghidra decompile) rebuilds it from a
+model and refreshes the draw batches. The mod calls it once per borrowed car with the local
+player''s model (`ModelSwap=1`), so the stand-in renders with the player''s body instead of
+its traffic one. Paint and tuning still come from the donor car; sending the remote model id
+over the session is next.
 Not verified in game: traffic mirror (no binding), automatic race completion (no
 checkpoint binding; the director aborts after 20 min).
 

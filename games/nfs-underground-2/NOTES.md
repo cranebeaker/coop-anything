@@ -156,3 +156,21 @@ Then, on a machine where the game runs: attach x64dbg, break at `0x5FFE70`, and 
 - Next: use the bridge to walk the graph for a pointer whose `+0x0C` equals the car''s own
   model name, and swap that one live (bridge write, screenshot, revert) instead of
   restarting.
+
+## Model swap solved (2026-10-27, Ghidra)
+
+- Decompiled `speed2.exe` with Ghidra 12.2 headless (`tools/ghidra_scripts/DecompileAll.java`):
+  14,913 functions into `build/decomp/all.c` + `index.tsv`; search with
+  `tools/search_decomp.py`.
+- `car+0x554` is the root of a 0x2EC0-byte render/model object built at spawn. It is not a
+  pointer to copy: `FUN_0063A5A0(car, model)` mallocs a new object, builds it with
+  `FUN_00638190(model, car)` and refreshes the batches with `FUN_0061B2E0(car)`.
+- Verified live through the bridge (`car.reload` method): calling `FUN_0063A5A0` on a
+  traffic stand-in with the local car''s model (read from `[localCar+0x554]+0x04`)
+  rebuilds it, the game stays alive, and the car renders with the player''s body.
+- Wired into the mod: `ModelSwap=1` (default). Once per borrowed car, on the game thread
+  in `restorePuppets`, the renderer calls `FUN_0063A5A0(borrowedCar, localModel)`.
+  Log: `render: reloaded model 00890170 on car ...`; bridge check shows `descName=CELICA`
+  for a `COROLLA` stand-in.
+- Next: send the remote player''s model id over the session so each peer gets the other''s
+  own model, then paint/tuning.
