@@ -79,3 +79,63 @@ cd nfsu2-coop
 Then, on a machine where the game runs: attach x64dbg, break at `0x5FFE70`, and fill
 `[Bindings]` (see `nfsu2-coop/docs/GAME-BINDINGS.ru.md`).
 
+
+## Remote car model hunt (2026-10-27, later session)
+
+### Observations (verified)
+
+- Borrowed render-list car is drawn at the remote position, but keeps its own traffic
+  model (`SKYLINE`/Civic), never the player''s `CELICA`.
+- Car object header: `+0x0C` = pointer to the model name string; `+0x04` = per-model
+  instance-ish pointer; `+0x08` = car index used by the registry.
+- Registry writer: `0x5F0DCD` `mov [0x89CCF8+edi*4],eax` (index from `car->+0x08`), then
+  the same index fills `0x89CD50`, `0x89CDA8`, `0x89CE00`, `0x89CE58`, `0x89CEB0` with
+  `car+0x28/+0x34/+0x24/+0x2C` pointers. Despawn/clear path at `0x5F4545`.
+- `CarRenderInfo::Render` caller at `0x6311xx` passes per-car object fields `+0x900`
+  (object), `+0x960` (`lea [esp+0x54]`), `+0xa60` (`lea [esp+0xa0]`) — these are the
+  per-car render/model arguments, not the header fields we were swapping.
+- Class-name strings exist and are referenced from code: `StreamingTrafficCar`
+  (`0x784750`, ref `0x40BD47`), `StreamingTrafficCarManager` (`0x785080`, ref `0x412728`),
+  `CarController` (`0x78445C`, refs `0x404827/0x40483C`), `TrafficController` (`0x785B98`),
+  `TrafficMover` (`0x78458C`).
+
+### Attempts (all failed to change the model)
+
+- Swap car `+0x00` (model object) permanently: crash at `0x1C2C9A`; transient swap in the
+  render hook: also crashes.
+- Swap car `+0x04`, `+0x08`, `+0x0C`, `+0x10`, `+0x14`, `+0x18`, `+0x1C`, `+0x20`, `+0x2C`
+  for the frame (restored at `EndScene`): no visual change, stable.
+- Swap `CarRenderInfo` `+0x04`/`+0x08` (also as a default for a while): no visual change;
+  it was also what crashed the guest instance after ~3 s, so it is off by default now.
+- Point `[CarRenderInfo]` at a clone of the local car object (copied with a
+  `VirtualQuery`-sized copy after fixing a short-read bug): no visual change.
+- `x64dbg headless -pid` + `-cf` script with `bp 0x5F0DCD` /
+  `bpc "[0x89CCF8+edi*4]==0"`: script runs (`GUI_SCRIPT_*` messages), but headless does
+  not emit `log` output (GUI callbacks are `[TODO] Not implemented`), and stopping the
+  debugger takes the game process down with it.
+- In-process hardware watchpoints (DR0–DR3 on the four slots + VEH): armed
+  (`dr7=DDDD0055`), the game crashed before the first log line.
+
+### Derived
+
+- The model is bound when the car is created, not read from the car header at draw time;
+  render-time writes to that header cannot change it.
+- Headless x64dbg is unusable for this loop: no log output plus an unsafe detach.
+- `0x89CCF8` is the render registry, not the spawn list; the spawn path is still unknown.
+
+### Unknowns
+
+- The function that creates a car and selects its model (candidate: around the
+  `StreamingTrafficCar` / `StreamingTrafficCarManager` class code).
+- Whether a render-copy object exists that holds the model the renderer actually uses.
+- Whether `+0x900/+0x960/+0xA60` of the render object are the model switch to pursue.
+
+### Next
+
+- Build the in-game bridge from `playbook/in-game-bridge.md` (loopback TCP, main-thread
+  queue) so fields can be written and observed without restarts or attach/detach.
+- Use the bridge to write the `+0x900/+0x960/+0xA60` candidates and see which one the
+  renderer reads back.
+- If that fails, Ghidra headless decompile-all around the `StreamingTrafficCar` class
+  references and find the spawn/model-selection function; then call it with the
+  player''s model id.
