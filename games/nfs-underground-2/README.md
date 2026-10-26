@@ -103,8 +103,13 @@ After the owner moved the cars, the host HUD read `Test 30 m E` and the guest
 `Player 30 m W` (same distance, opposite bearing, `puppets 1` on both), and a third
 headless client received both cars with coordinates matching `[0x89CCF8]+0x50` in each
 process: `(944.70, -1190.17, 14.12)` and `(939.47, -1266.38, 13.98)`.
-Not verified in game: traffic mirror (no binding), drawing remote cars, automatic race
-completion (no checkpoint binding; the director aborts after 20 min).
+Remote cars are now drawn by borrowing one of the game''s own render-list cars
+(`[0x89CCF8]` entries 1..3): at `CarRenderInfo::Render` the borrowed car''s position and
+basis are replaced with the remote player''s, and `EndScene` restores them. Verified
+visually with a smoke test that places the borrowed car 7 m in front of the local car.
+The borrowed model is a traffic car, not the friend''s car model yet.
+Not verified in game: traffic mirror (no binding), automatic race completion (no
+checkpoint binding; the director aborts after 20 min).
 
 ## How to play
 
@@ -128,6 +133,7 @@ completion (no checkpoint binding; the director aborts after 20 min).
 Bindings for car and traffic on a working install → render-hook puppets → `StartEvent`
 and event-completion capture → relay → profile persistence. Details in
 `nfsu2-coop/docs/KNOWN-ISSUES.ru.md`.
+
 
 
 
