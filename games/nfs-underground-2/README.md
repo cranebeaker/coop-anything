@@ -105,11 +105,11 @@ headless client received both cars with coordinates matching `[0x89CCF8]+0x50` i
 process: `(944.70, -1190.17, 14.12)` and `(939.47, -1266.38, 13.98)`.
 Remote cars are now drawn by borrowing one of the game''s own render-list cars
 (`[0x89CCF8]` entries 1..3): at `CarRenderInfo::Render` the borrowed car''s position and
-basis are replaced with the remote player''s, and `EndScene` restores them. The model is
-swapped too: the render info''s `+0x04` (per-model tables) and `+0x08` (geometry) are
-taken from the local player''s render info for the frame, so the borrowed car is drawn
-with the player''s car model (verified in game: a green Celica next to the orange one,
-stable while driving). Paint/materials still come from the traffic car.
+basis are replaced with the remote player''s, and `EndScene` restores them. Model swapping was attempted and does not work: swapping the car object pointer (`+0x00`)
+crashes the game, and swapping `CarRenderInfo` `+0x04`/`+0x08` (or pointing `[RI]` at a
+clone of the local car) leaves the borrowed car with its own traffic model (Skyline,
+Civic). The model is bound when the car is spawned, not read from these fields at draw
+time, so a real fix needs the spawn function.
 Not verified in game: traffic mirror (no binding), automatic race completion (no
 checkpoint binding; the director aborts after 20 min).
 
@@ -135,6 +135,7 @@ checkpoint binding; the director aborts after 20 min).
 Bindings for car and traffic on a working install → render-hook puppets → `StartEvent`
 and event-completion capture → relay → profile persistence. Details in
 `nfsu2-coop/docs/KNOWN-ISSUES.ru.md`.
+
 
 
 
