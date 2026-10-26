@@ -82,6 +82,10 @@ animation checker.
 - **Check what the other player sees.** A motion name set on a body is not a motion running; measure "is it running". Check also that enemies pick a remote player by themselves; forced attacks hid that they never did (Gothic 3, first human look).
 - **Own processes positively.** Stop only a process your run started (its PID, or a marker on its command line). A blanket kill by image name once destroyed a live two-player session (The Doors of Trithius).
 
+- **A zero is an answer.** A poll helper that returns the measured value treats `0.0` as "not yet" in most languages, so a perfect match (gap 0.0) timed out. Return a tuple or a flag, not the value (Skyward Sword).
+- **Startup is a gate.** If the games never come up, the runner must still print `RESULT: FAIL`; one run crashed with a traceback instead, which a scorer may read as no result at all (Skyward Sword).
+- **Savestates pin the build.** On emulators a savestate holds the mod's code as it was loaded. Write a build number where the bot can read it and fail the boot gate when it does not match, or you test yesterday's code (Skyward Sword).
+- **Give the bot dev commands for states it cannot reach.** With no button input and an early save, the bot could not make an enemy switch animation; a one-shot "play animation N on enemy X" field in the mod's mailbox, ignored in normal play, made the check possible. Keep such commands out of player-facing paths (Skyward Sword).
 - **Validate the checksum itself.** Exclude padding and inactive history only with native control-flow evidence; retain mutation checks for active fields ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Respect fixture boundaries.** Inject controls before the measured binding stage and end special assertions on schedule; keep general invariants running ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 

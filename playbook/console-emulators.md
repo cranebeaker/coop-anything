@@ -133,6 +133,7 @@ Status column is "as found", not a promise. "Kind" uses: `netplay`, `memory-sync
 | Super Mario 64 (N64 plus PS2) | PS2 recompilation linked to an N64 via a Pico | memory-sync (hardware) | One-off demo by Carl Does Tech Things, no public project page or download in the article. | [Time Extension, Feb 2026](https://www.timeextension.com/news/2026/02/modder-somehow-conjures-super-mario-64-cross-play-between-n64-and-ps2), [video](https://www.youtube.com/watch?v=gCza2KrstxE) |
 | Banjo-Kazooie | Banjo-Kazooie Online (on ModLoader64) | memory-sync | Listed by Kotaku; no current repo checked. **UNVERIFIED**. | [Kotaku](https://kotaku.com/games/banjo-kazooie-online), [Highlander News](https://www.highlandernews.org/?p=74563) |
 | Jak and Daxter (PS2, via OpenGOAL PC port) | Teamruns mod | port-mod | Online and local multiplayer in the OpenGOAL launcher Mods section; built for speedrunners; Jak 1 only per coverage. | [DSOGaming](https://www.dsogaming.com/news/the-unofficial-pc-port-of-jak-daxter-now-supports-online-and-local-multiplayer/), [Retro Dodo](https://retrododo.com/jak-daxter-return-with-online-local-multiplayer/) |
+| Skyward Sword (Wii, Dolphin) | ss-coop | memory-sync | Alpha, built with this playbook: second Link drawn by an actor built from the zeldaret/ss decomp, shared flags, kills and enemy positions; automated two-client QA. | [write-up](../games/skyward-sword/README.md) |
 | Pokemon Gen 3 (GBA) | PK-GBA Multiplayer | memory-sync | Alpha 4; developer silent for months per one commenter; **UNVERIFIED** | [PokeCommunity](https://www.pokecommunity.com/threads/pk-gba-multiplayer.484949/) |
 | Ratchet: Deadlocked, Up Your Arsenal (PS2) | Horizon + Clank Medius servers | server-revival | Enhanced online servers with custom maps and modes; PCSX2 compatibility not confirmed on repo pages. | [Horizon-Private-Server](https://github.com/Horizon-Private-Server), [Clank](https://github.com/xtvaser/clank) |
 | SOCOM (PS2) | Community servers with DEV9 | server-revival | Community DNS; trust the operators. | [guide mirror](https://red.127.pp.ua/r/SOCOM/wiki/how-to-play-socom-ii-online) |
@@ -234,6 +235,18 @@ Short decision notes; details in the sources above.
 
 - **N64:** If the game has a recomp or decomp, use that (SM64 coop-dx, SoH + Anchor). Otherwise ModLoader64 for supported titles, or BizHawk Lua plus a Node/Python relay. Netplay for 4-player games via gopher64.
 - **GameCube/Wii:** Dolphin netplay for local-multiplayer titles; Dolphin Memory Engine or Felk's Python fork for single-player-to-co-op bridges. Wiimmfi for dead Wii online services.
+  If the game has a decompilation that rebuilds byte for byte, you can add your own actor instead of only writing memory
+  (Skyward Sword, [write-up](../games/skyward-sword/README.md)):
+  - Build a REL with the decomp's toolchain that replaces an unused actor slot (a debug or test actor whose profile
+    the game never spawns), and pack it into the extracted game's `rels.arc` in a fixed-size slot so the archive layout
+    never changes between builds.
+  - Spawn it with a small Gecko C2 hook at the game scene's execute function. Keep a data block inside the hook: its
+    address is the actor's parameter, and an outside bridge finds it from the hook's branch and uses it as a mailbox.
+  - Guest RAM is a `MEM_MAPPED` view whose first bytes are the game ID; no Dolphin fork is needed.
+  - A savestate contains the loaded REL and the hook's block, so it only works with the build it was made with:
+    write a build number into the block and check it before trusting a savestate.
+  - Dolphin's savestate hotkey only reaches the game when its render window has focus; check the state file's
+    timestamp after asking a person to save.
 - **PS1:** No mainline netplay; BizHawk Lua works on PS1 per its supported systems list ([BizHawk](https://github.com/TASEmulators/BizHawk)). Check for ports first (OpenGOAL-style efforts).
 - **GBA/GB:** mGBA Lua scripting with sockets is the cleanest; one script per instance, TCP relay in the middle. Pokemon-style shared worlds are done by writing "other trainer" data into NPC slots.
 - **DS/3DS:** Use the emulator's own local-wireless emulation (Azahar rooms, melonDS Wi-Fi path), not RAM sync, when the game already supports local wireless.
