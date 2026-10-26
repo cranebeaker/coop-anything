@@ -6,7 +6,7 @@
 | Versions tested | Wii disc, USA, game ID `SOUE01`, revision 0, disc SHA-1 `9cf9a4a7ed2a6a4abb4582e3304af1327c160640`; emulator Dolphin 2609a on Windows 11 x64 |
 | Projects | [ss-coop](https://github.com/ItsPainY/ss-coop) (CC0, built with Co-op Anything). No other co-op project found |
 | QA level | automated (two real game clients on one PC, Skyloft only; see QA) |
-| Last updated | 2026-10-25 |
+| Last updated | 2026-10-26 |
 
 ## Where things stand
 
@@ -102,6 +102,10 @@ no game files: a setup checks the dump, extracts it into its own folder and inst
 and `3 Join.cmd` start Dolphin and the bridge. The host forwards one UDP port. Start from the same save. Both players
 need the same version (versions do not connect to each other). Source and build steps:
 [ss-coop](https://github.com/ItsPainY/ss-coop).
+
+No Wii hardware is needed: the package ships a Dolphin profile for any Xbox controller (left stick = Nunchuk, right
+stick = sword swings, click = stab, mouse = pointer). Setup uses it when a player has no controls yet; otherwise it can
+be picked in Dolphin's Controllers window.
 
 ## Known issues
 

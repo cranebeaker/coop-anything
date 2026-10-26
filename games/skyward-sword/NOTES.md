@@ -552,6 +552,38 @@ buffer (4 x 0x2400 per slot), and takes the remote frame on every new mail.
 - Keese, ChuChu, Skytail offsets only from headers (vtable check guards them); no such enemy in the test save.
 - Enemies damage only their own game's Link; other enemy types animate separately.
 
+## Phase 7b: Xbox controller layout, v0.9.1 (2026-10-26)
+
+- Players have Xbox controllers, no Wii Remotes. Dolphin's emulated Wii Remote + Nunchuk + MotionPlus is mapped to
+  an XInput gamepad (`XInput/0/Gamepad`, any Xbox controller on Windows): left stick = Nunchuk stick, right stick =
+  Swing directions, right stick click = Swing forward (stab), LT/LB = Z/C, RB = Nunchuk shake, pointer (IR) on the
+  mouse. Based on the layout the owner set up and played with on an Elite 2 (SDL device), generalized.
+- Package: `controls\Xbox controller (ss-coop).ini` (Dolphin profile), `controls.ps1` (setup adds the profile and uses
+  it only if `WiimoteNew.ini` does not exist; `-Apply` / `4 Xbox controls.cmd` replaces it with a timestamped backup).
+- Observed: the script in a scratch folder (fresh, existing kept, -Apply with backup); every XInput input name used
+  is present in Dolphin 2609a's binary. Not tested: how it plays (no person has used this exact profile yet), the
+  spin attack mapping.
+
+## Phase 5n (in progress): reaching hostile enemies for the bot (2026-10-26)
+
+- Puppet build 20: dev/QA warp (Shared::warp* at +0x12C, mod/tools/warp.py) calls dScGame_c::triggerEntrance once.
+  Works: F000 at night (night sky, puppet respawned), F100 Faron Woods by day.
+- Teleporting Link ~4000 units in one write loses him (he reappeared at the entrance, camera stayed): move enemies to
+  Link instead, never Link far.
+- Skyloft at night in this early save has only the two Remlits, and they still take the day branch (ANM_Sleep 19).
+  A night Remlit attacks when Link is within mPatrolAreaSize (1000) of its mStartingPos (dAcObjBase_c +0x1FC), so
+  moving the Remlit alone never triggers it. No Keese at night in this save.
+- Faron Woods (F100 room 0) has 7 placed Octoroks (E_OR, ids 0xDC..0xE2). Entering it the first time starts Fi's
+  dialogue, which needs a button press; the bot cannot continue past it. Plan: owner clicks through it once in both
+  test windows and makes savestates there.
+- Done (owner pressed through Fi's dialogue, savestates in F100). Moving an Octorok and its mStartingPos next to Link
+  did not make it attack (Octoroks pop up from their mound when they see Link). Guided session: owner walked COOP A,
+  B's Link was kept 80 units next to A by the script; ownership of the nearest Octorok followed (B owned it while B's
+  Link was nearer). The reachable part of F100 room 0 ends at a story-locked wall of trunks; all Octoroks sit on
+  ledges 1700-2300 units higher that cannot be reached this early. No hit recorded, so whether the non-owner's copy
+  hits its own player is still unknown. Enemy hits on the other player wait for a save with reachable hostile
+  enemies.
+
 ## Phase 6: bot-driven QA (2026-10-25)
 
 `mod/qa/coop_qa.py [--expect-build 11] [--keep-open] [--mutant NAME]`: two test Dolphins boot from their
