@@ -21,9 +21,11 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Attacks, dodges, jumps replicate both ways | Works |
 | Zombies visible on both machines, clothed, animated on the client (no T-pose), host's hit reactions shown | Works (verified 2026-10-24) |
 | Zombies target, chase and damage her, also with him 300-450 m away | Works (soaks 2026-10-24) |
-| Her melee hits and kills zombies; her kills counted for her, not the host | Works on fresh boots before the final crash fix; **re-check on the final build pending** |
-| Host player's own weapon kills zombies, counted for him | Same as above, **re-check pending** |
-| Zombies attack the host player | Seen during tests; **explicit health-drop check pending** (`local/goal_check.py`) |
+| Her melee hits and kills zombies; her kills counted for her, not the host | Works (final build 2026-10-26: her +1, host +0) |
+| Host player's own weapon kills zombies, counted for him | Works (final build 2026-10-26: his +4, hers +0) |
+| Zombies attack the host player | Works (final build 2026-10-26: 90 -> 1 in 15 s) |
+| Zombies attack her with the host's player near (20 m) | Works (final build 2026-10-26: 100 -> 64 in 9 s) |
+| Zombies attack her with the host's player far (300 m) | **Unreliable**: they chase and stop 2-4 m away without entering combat states (open, see log) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Root cause found and fixed** (minimap name-table race, see log); two 40-min soaks clean |
 | Looting / doors / searching for the joining player | Not working yet (findings in NOTES "World interaction") |
@@ -67,8 +69,8 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 ## Next steps
 
-1. With the display on: fresh boot, run `python local/goal_check.py` and record its four results here
-   (her kills, his weapon kills, zombies hurting him, zombies hurting her far from him).
+1. Zombies far from the host's camera: find what keeps them out of combat states near her (snapshot their
+   condition flags near vs far with `local/cond_snap.py`, as done for doors).
 2. World interaction for the joining player: register her with the interaction system (`local/interact.py`)
    and find how UL creates a real survivor record for a recruit (borrowing records is unstable).
 3. Commit/PR only when the user asks.
@@ -76,6 +78,20 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - final-build zombie checks, animation NaN guard, far-combat gap
+- `local/goal_check.py` on fresh boots: her kills counted for her (+1, host +0), the host player's weapon kills
+  counted for him (+4, hers +0), zombies take him from 90 to 1 in 15 s, and her from 100 to 64 in 9 s with him
+  20 m away.
+- Test-harness trap: teleports can leave a player in a fatal-landing state (client) / lying downed (host); zombie
+  hits then never apply and `SetHealth` reads oddly (she read 80). `goal_check.stand_up()` resets both players'
+  state machines to idle and heals them. Earlier soak "80 (from 100)" readings were this, not damage.
+- New client exit: assert `!_isnan(val)` in `CAnimationGraphState::SetInput` (0x7C9F60). `crash_guards.
+  anim_input_guard` (both machines) replaces non-finite values with 0.
+- Open: with the host's player 300 m away, zombies targeting her walk up and stop 2-4 m away in Basic.Move/Taunt
+  states and never enter Combat (0 strikes in 20 s; with him at 20 m they close to ~1.5 m and hit her). Not the
+  physics range (es_MaxPhysDist 2000), skeleton updates (ca_ForceUpdateSkeletons 1), g_visibilityTimeout (already
+  0) or g_forceFastUpdate 1. zombie_targets' strike reach (1.8 m) is not the limit either (2.6 m: no strikes).
 
 ### 2026-10-26 - repository housekeeping
 - Moved the old handoff notes and chat backup from the parent folder into the repo root (excluded from git via
