@@ -99,8 +99,12 @@ In-game (two instances, 2026-10-27): `.asi` loaded, `speed2.exe` parsed, 10/10 a
 resolved, `EndScene` hooked, host listening on udp/27970, guest welcomed as slot 1,
 HUD 2 players / 15 ms RTT, guest `puppets 1` (host car position received). Car position
 read from `[0x89CCF8]` entry 0 at `+0x50`; two instances report positions ~8 m apart.
-Not verified in game: traffic mirror, drawing remote cars, automatic race completion
-(no checkpoint binding; the director aborts after 20 min).
+After the owner moved the cars, the host HUD read `Test 30 m E` and the guest
+`Player 30 m W` (same distance, opposite bearing, `puppets 1` on both), and a third
+headless client received both cars with coordinates matching `[0x89CCF8]+0x50` in each
+process: `(944.70, -1190.17, 14.12)` and `(939.47, -1266.38, 13.98)`.
+Not verified in game: traffic mirror (no binding), drawing remote cars, automatic race
+completion (no checkpoint binding; the director aborts after 20 min).
 
 ## How to play
 
@@ -124,5 +128,6 @@ Not verified in game: traffic mirror, drawing remote cars, automatic race comple
 Bindings for car and traffic on a working install → render-hook puppets → `StartEvent`
 and event-completion capture → relay → profile persistence. Details in
 `nfsu2-coop/docs/KNOWN-ISSUES.ru.md`.
+
 
 
