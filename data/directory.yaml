@@ -8443,3 +8443,28 @@
   - https://github.com/cranebeaker/coop-anything/issues/214
   checked: '2026-10-26'
   made_with_coop_anything: true
+
+- game: 'Need for Speed: Underground 2'
+  year: 2004
+  engine: EAGL (EA Black Box)
+  project: NFSU2 Co-op
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/nfs-underground-2
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: partial
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: '2-8'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: 'Built from zero (no career co-op existed). Host-authoritative session layer: lobby, countdown, race director with finish-time standings, shared career ledger (idempotent event keys), mirrored traffic/AI cars from the host engine, digest+repair, D3D9/ImGui HUD, dedicated coopd host. Automated suite drives a real host and 2-3 real clients over UDP, including 25% loss/duplicates and a 1.2 s partition (22 tests, ALL OK); two-process coopd+2 bots finish a race with identical career digests. In-game: .asi loads, speed2.exe parses, 10/10 documented anchors resolve, EndScene hook + ImGui come up; reading the player car/traffic needs a per-build [Bindings] table and remote cars are not drawn yet. Game crashes at 0x3DBBBA in the test environment even unmodded, so no in-game playthrough was possible. Code in nfsu2-coop/ in this working tree; not yet published as its own repo.'
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/nfs-underground-2
+  checked: '2026-10-27'
+  made_with_coop_anything: true
