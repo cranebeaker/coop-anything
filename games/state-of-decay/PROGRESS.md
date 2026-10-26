@@ -28,8 +28,8 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Not working yet (findings in NOTES "World interaction") |
-| Missions, community, journal data for the joining player | Not started (she has no survivor record) |
+| Looting / doors / searching for the joining player | **In progress**: her host copy opens doors with a real survivor record (`maya_record.py`); not shown on her screen yet; searching untested |
+| Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
 
@@ -80,6 +80,32 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - a real survivor record for her; her host copy uses doors
+- Record creation path found: console command `com_addMember` ("Add a new character to your community",
+  handler 0x14B6BF0) takes the first free record of the character table ([0x1EA83B8], 100 x 0x178; free =
+  flags +0x15C bit 0 clear, handle +0x48 = 0x0FFF8000), initialises it (0x15473C0 random character; with a name
+  argument 0x1547580 with a data id), adds it to the community (flags 0x29) and spawns its NPC body `ULNPCnn`.
+  The name argument is a `Table.Entry` data-id name, not a character name; character definitions are not in
+  that registry, so re-skinning is used instead: 0x15472D0 (thiscall record, definition index).
+- `local/maya_record.py`: com_addMember -> re-skin to definition 145 (Maya Torres) -> record +0x58 = her entity id
+  -> hide/deactivate/move the spawned body (otherwise it floods the log in her place) -> register her with the
+  door system (`interact.register`). Unlike the earlier borrowed "known" record, her player state machine stays
+  in UL's extra list, and the "Entity <her id> is not part of the community" flood stops (all three log sites in
+  0x1716740/0x17167F0/0x1716880 go to 0; they find records by iterating active records and comparing +0x58).
+- Result (fresh boot): at the door pose the host player gets (`door_pose.py`), her host copy now gets the door
+  context (blackboard +0x14D8 = 383) and runs `Interact.Door.Front.ContextTest -> OpenStart -> Locked.Start ->
+  Locked.Loop` on the host (Door_1 is locked) when she presses the interact key on her machine
+  (`local/door_use.py client`). Her own screen does not show it yet: the client runs no door system, so her
+  states and the door state must be mirrored from the host.
+- In a long session the same setup gave no context: the door routine (0x1442B60, per-actor loop over 0x1E7EBB0)
+  visited her entry but her distance test to every door candidate failed. Not explained; it worked again after a
+  reboot.
+- Tooling: `Proc.count_exec(..., when=(esp_offset, value))` counts only hits where a stack slot (e.g. a loop
+  index) matches. Fixed a crash in `count_exec`/`watch_writes`: when the exception handler resumes a thread,
+  Windows restores the debug registers from the exception context, which could re-arm a breakpoint after it was
+  cleared. The handler would then be removed and the next hit was an unhandled breakpoint exception that killed
+  the host (dump 0x80000004 at the breakpoint address). The handler now clears Dr7 itself while disarming.
 
 ### 2026-10-26 - host out-of-memory after ~7 h idle: our own leak, fixed
 - The host died after sitting idle for about 7 hours with "Memory allocation for 54884 bytes failed" (game log;
