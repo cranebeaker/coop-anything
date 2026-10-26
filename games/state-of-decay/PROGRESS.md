@@ -27,7 +27,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player near (20 m) | Works (final build 2026-10-26: 100 -> 64 in 9 s) |
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
-| Host stability (hangs / silent deaths) | **Root cause found and fixed** (minimap name-table race, see log); two 40-min soaks clean |
+| Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
 | Looting / doors / searching for the joining player | Not working yet (findings in NOTES "World interaction") |
 | Missions, community, journal data for the joining player | Not started (she has no survivor record) |
 
@@ -80,6 +80,18 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - host out-of-memory after ~7 h idle: our own leak, fixed
+- The host died after sitting idle for about 7 hours with "Memory allocation for 54884 bytes failed" (game log;
+  dump save failed for the same reason). Cause: `sodlib.Proc.lua()` / `console()` / `run_code()` allocated a
+  buffer in the game per call and never freed it. Each `VirtualAllocEx` reserves at least 64 KB of the 32-bit
+  process's address space, and `hud_relay` calls `lua()` every 0.5 s (about 7.5 MB/min). This probably also
+  explains the older "long sessions degrade" observations.
+- Fix: `Proc.free()` and the per-call buffers are released after the call (kept only on a timeout, when the game
+  may still use them). `local/vm_watch.py` (address space per process): after the fix, flat at ~636 allocations
+  / 1.3 GB on the host over 5 minutes with the relay running.
+- Side note: the host log grows by gigabytes per day from "Entity <her id> is not part of the community"
+  (every frame); it goes away once she has a survivor record.
 
 ### 2026-10-26 - test-harness side effects in zombie fights (not co-op bugs)
 - `goal_check.stand_up()` (forcing her host state machine to idle while she is knocked down) leaves the zombies
