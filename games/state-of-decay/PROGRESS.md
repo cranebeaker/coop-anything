@@ -66,7 +66,7 @@ Use a real Python 3 (the Windows Store stub does not work); `capstone` and `pill
 Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_test.py`, `kill_verify.py`,
 `goal_check.py`, `path_hit.py`, `zombie_spawn.py`, `dbg_watch.py`, `exit_watch.py`, `anim_twice.py`,
 `zm_dupes.py`, `use_test.py`, `door_pose.py`, `use_conds.py`, `cond_snap.py`, `far_strikes.py`, `anim_rate.py`,
-`zcomb_conds.py`.
+`zcomb_conds.py`, `reaction_ab.py`, `contact_ab.py`.
 
 ## Next steps
 
@@ -80,6 +80,21 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - test-harness side effects in zombie fights (not co-op bugs)
+- `goal_check.stand_up()` (forcing her host state machine to idle while she is knocked down) leaves the zombies
+  believing she is still down: they cycle `Combat.*.Strike.TargetDown.*` and walk loops without moving, and her
+  health does not change. Moving her a few metres frees them (they then wander off). Prefer a fresh group and
+  `SetHealth` only (`local/reaction_ab.py`, `local/contact_ab.py`). `stand_up` stays for the fatal-landing case
+  only.
+- `SetHealth(100)` reads back 90 / 80 after heavy damage: max health drops with injuries (game rule), not a
+  sync problem.
+- Zombies teleported onto her show `Reaction.Basic` (light hit reactions) for a while; around the host's player
+  they never do. In steady state (15 s later) there were 0 reaction samples and `peer_melee` fired 0 times, so it
+  is the arrival push of her teleport, not phantom hits. zombie_targets' injected "Hero" contact makes no
+  difference (A/B, radius 1.4 m vs 0).
+- Fresh-boot baseline (`reaction_ab.py`): the host's player among a group goes 90 -> 1 in 15 s; she goes
+  100 -> 74 with him 20 m away. The zombie spawner around the test sites runs dry after ~30 min of tests (reboot).
 
 ### 2026-10-26 - far combat works; the "never attack" result was a test artifact
 - Fresh boot, `local/far_strikes.py` (her among a group, host's player moved, 4 s settle, 15 s): with him 300 m
