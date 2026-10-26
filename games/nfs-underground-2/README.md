@@ -17,10 +17,12 @@ suite that drives a real host and real clients over UDP (including 25 % loss, du
 and a 1.2 s partition). The in-game side is deliberately split: networking, races,
 standings and career work with no addresses at all; reading the player car and the
 traffic list needs a `[Bindings]` table for the target build, and drawing other players'
-cars needs a render hook that is not written yet. The game could not be played on this
-machine (it crashes at `0x3DBBBA` with a clean install too), so nothing in-game is
-claimed beyond the plugin loading, the PE being parsed, 10/10 documented anchors
-resolving and the HUD hook coming up.
+cars needs a render hook that is not written yet. The game crashed at `0x3DBBBA` on the first machine (it did so with a clean install
+too), but the owner fixed the missing files and two instances now run. With both
+instances in game: host + guest connect over UDP, the HUD shows 2 players and 15 ms RTT,
+and the guest receives the host car's position and spawns a puppet (`puppets 1`). The
+local car's position is now read on the verified build (car array `0x89CCF8`, index 0,
+position `+0x50`); traffic has no binding yet, and remote cars are not drawn.
 
 ## Existing work
 
@@ -93,10 +95,12 @@ cd nfsu2-coop
 Last run 2026-10-27: 22 tests / 214 checks, ALL OK; e2e career digest identical on both
 bots; probe 10/10.
 
-In-game: `.asi` loaded by `dinput8.dll`, `speed2.exe` parsed, 10/10 anchors resolved,
-`EndScene` hooked, ImGui initialised. The game then crashed at `0x3DBBBA` — the same
-crash happens with the mod removed, so it is an environment problem (no verified
-playthrough possible here).
+In-game (two instances, 2026-10-27): `.asi` loaded, `speed2.exe` parsed, 10/10 anchors
+resolved, `EndScene` hooked, host listening on udp/27970, guest welcomed as slot 1,
+HUD 2 players / 15 ms RTT, guest `puppets 1` (host car position received). Car position
+read from `[0x89CCF8]` entry 0 at `+0x50`; two instances report positions ~8 m apart.
+Not verified in game: traffic mirror, drawing remote cars, automatic race completion
+(no checkpoint binding; the director aborts after 20 min).
 
 ## How to play
 
@@ -120,4 +124,5 @@ playthrough possible here).
 Bindings for car and traffic on a working install → render-hook puppets → `StartEvent`
 and event-completion capture → relay → profile persistence. Details in
 `nfsu2-coop/docs/KNOWN-ISSUES.ru.md`.
+
 

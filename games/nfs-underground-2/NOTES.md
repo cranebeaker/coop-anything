@@ -19,6 +19,21 @@
 - Existing install already has an ASI loader: `dinput8.dll` (Ultimate ASI Loader from the
   Widescreen Fix) and `scripts\NFSUnderground2.WidescreenFix.asi`.
 
+## In-game (second session, 2026-10-27)
+
+- Owner fixed the missing files; two installs run: `<...>\game` (host, slot 0) and
+  `<...>\game test player` (guest, slot 1).
+- Both load `NFSU2Coop.asi`; logs (one per PID now) show 10/10 anchors, built-in
+  bindings, EndScene hook, host listening, guest `welcome slot=1`.
+- Guest HUD: 2 players, rtt 15–16 ms, `puppets 1` — the host car position arrives and a
+  puppet is created.
+- Car array found by hooking `CarRenderInfo::Render` with an injected probe (`tap.dll`):
+  `this` → `[this]` = car object; `[0x89CCF8]` in .data holds four Car* in free roam;
+  position `+0x50` (second, near-identical triple at `+0x60`), 3x3 basis at `+0x90`.
+  Host and guest report `(913.8, -1213.1, 13.4)` and `(919.5, -1218.4, 13.9)`.
+- Not found: traffic/AI list, speed/gear, checkpoint progress. Race completion still
+  needs a checkpoint binding or a finish-screen hook.
+
 ## Derived
 
 - The documented anchors belong to this exact build; offsets from the same mod's docs
@@ -63,3 +78,4 @@ cd nfsu2-coop
 
 Then, on a machine where the game runs: attach x64dbg, break at `0x5FFE70`, and fill
 `[Bindings]` (see `nfsu2-coop/docs/GAME-BINDINGS.ru.md`).
+
