@@ -139,3 +139,20 @@ Then, on a machine where the game runs: attach x64dbg, break at `0x5FFE70`, and 
 - If that fails, Ghidra headless decompile-all around the `StreamingTrafficCar` class
   references and find the spawn/model-selection function; then call it with the
   player''s model id.
+
+## In-game bridge (2026-10-27, end of session)
+
+- The plugin embeds `coop-anything/tools/bridge/include/coopbridge/server.h` and serves
+  the standard protocol plus `mem.read`, `mem.write`, `car.slots`, `car.name`
+  (ini `[Debug] BridgePort=27971`, pumped from the EndScene hook). Verified with
+  `tools/bridge/bridge_client.py`: `ping` (frames, mainLoopAgeMs), `version`, `methods`,
+  `state` (pid, four cars, localPos, localModel), `car.slots`, `mem.read`.
+- Bridge pauses with the game when the window loses focus: `mainLoopAgeMs` ~70 s means
+  paused, requests answer `-32001` until the game pumps again.
+- Object graph read live: car `+0x00` and `+0x04` point at objects whose `+0x0C` string is
+  a traffic model name (`4DR_SEDAN02`, `PICKUP`, `PARCELVAN`, `TAXI`), not the car''s own
+  model (`CELICA`, `SUPRA`, `GTO`, `RSX`). So those two pointers are not the model
+  switch to flip.
+- Next: use the bridge to walk the graph for a pointer whose `+0x0C` equals the car''s own
+  model name, and swap that one live (bridge write, screenshot, revert) instead of
+  restarting.
