@@ -1294,3 +1294,100 @@ the combo, PushKick -> PushKick_Left, 0x11A/0x112); Space while moving plays the
   kill-count banner (UIAction.ShowElement/CallFunction run from inside the native kill hook on the host and the
   chat hook on the client). kill_counts.SHOW_BANNERS is now False: counts are still kept and synced, not shown.
   Re-verification soak pending.
+- 30-minute soak after disabling the banners: no hang, host up the whole time, zombies still chase her at 300/450 m.
+
+### Zombie models on the client: players excluded (2026-10-23 evening)
+- The joining player turned into a zombie on her own screen (host still showed Maya). `ClCoopZombieModels` matched
+  entities by index (id & 0xFFFF), assumed equal on both machines; they are not, and her client index matched a host
+  zombie's. The client handler (loose `singleplayer.lua`, both installs) now only touches actors named like zombies
+  that are not players or the local actor. Fixed live (handler redefined, her model reloaded) and on disk.
+
+### World interaction for the joining player - findings, not working yet (2026-10-23 evening)
+- The interact key is not CryAction `use`: E fires `xi_use` (press), `xi_use_hold` (while held) and `ui_use`.
+  `xi_use` sets IPlayerInput +0xFC, `xi_use_hold` +0xFD; both are in the bytes already forwarded to the host, and
+  her host copy's blackboard input block shows the same bits as the host player's (+0x1251 0x80, +0x1252 0x01).
+  `local/action_fire.py` / `use_test.py` fire actions through `CPlayerInput::OnAction` (0x164F890) without keys.
+- Host player at a door: `Interact.Door.Logic.ContextTest` -> `Door.Back.CloseFar` (doors), `Interact.Search.*`,
+  `Interact.Barricade.*` states; UL action types include DoorAcquire/Open/Close/Lock/Release, SearchMode,
+  RucksackPickup/Drop, DisableUseButtonMode (action table 0x1F378A8).
+- The door/interaction system keeps its own actor list (0x1E7EBB0, count 0x1E80BF8, max 128), filled by a UL
+  entity-query category callback (0x143F7C0 add, 0x1441140 remove, both cdecl (param, &?, actor array, count),
+  registered at 0x1444E08 via 0x1522C90/0x1522CF0, called from the category add routine at 0x15253C4). She is in
+  no category, so she is never registered. For registered actors it writes the interaction target into the
+  blackboard through actor methods: transform +0x14B4..+0x14D4 and target index +0x14D8 (0x1463DB0, caller
+  0x1443D11), cleared to -1 by 0x1462200; +0x1524 = interaction kind (3 near a door).
+- Context conditions also read her UL survivor record: condition type 96 (0x16FEE50) -> 0x1716740 looks up the
+  record by entity id (0x14AF690 matches record +0x58; 100 x 0x178 records at [0x1EA83B8]) and logs
+  "Entity %u is not part of the community" when there is none - the source of the host log flood with her id.
+- Results: with her registered (`local/interact.py`) her blackboard gets the door target (+0x14D8 0x17F at a pose
+  where the host player gets one; `door_pose.py` searches poses). Once, with record 16 (a community member) also
+  pointed at her entity, her host copy ran `Interact.Door.Front.ContextTest -> OpenStart -> Locked.Start ->
+  Locked.Loop` on a locked door. Not reproduced since (same door, same pose, record bound, re-registered).
+  Without a record a locked door went to an unnamed state and the host died. Pointing a "known" generic
+  survivor's record (flags 0x1) at her made UL drop her player state machine from its extra list. Building a
+  record by copying another one broke the record handle (identity fields +0x48/+0x54/+0x5C/+0xEC) and crashed
+  the lookup. The client runs no door system (no UL world tick): doors must run on the host and her animation and
+  the door state must be mirrored to the client.
+- Remaining differences between him and her at the door (`local/use_conds.py`, per-record condition snapshots via
+  `cond_snap.py`): a type-96 record check (key 0x060D000A), type-92 timers, type-88 "hand item is Fists"
+  (blackboard +0x1458 string; forcing "Fists" alone did not help), and uninitialised-looking blackboard areas on
+  her copy (+0x1254..+0x12C4 = 0xC5E instead of -1, random data from +0x1534).
+- Next: find how UL creates a survivor record for a new recruit (so she gets a real one without hijacking), and
+  why her copy's blackboard differs; then mirror her interaction states and door state to the client.
+
+### Zombie animation on the client, position matching, NaN guard (2026-10-23 night)
+- Client zombies stood in the bind pose (T-pose) and warped when hit: the UL state machine that animates them only
+  runs on the host (client zombie records stay at state 0x1FFFF). The host starts zombie clips by name through
+  0x820BC0 (stdcall entity, name, CryCharAnimationParams*, speed; params +0 blend, +0x10 layer, +0x18 flags:
+  0x4082 looping, 0x4084 one-shot), e.g. `Behavior_hunt`, `Test_wander_run`, `ZombieMelee_run_forward_loop`,
+  `ZombieMelee_strike_stand_high_right`, `ZombieReact_mid_front_light`; the clothed client bodies have the same
+  clips (Lua `StartAnimation` succeeds).
+- Entity ids and names of the same zombie differ between the machines (host ULZombie6 = client ULZombie51, ids
+  unrelated), and the client keeps showing zombies the host already put away. `local/zombie_sync.py`: a hook on
+  0x820BC0 logs zombie clips; hud_relay sends live zombies (position, body, loop clip, last clip + sequence) at
+  most every 0.5 s through `ClCoopZombieModels`; the client matches by nearest position (4 m), applies body and
+  clips, and hides unmatched client zombies after two misses. Screenshots: zombies around her reach and move.
+- With clips playing, physics once gave a client zombie a NaN position; `CEntity::SetPosRotScale` (0xBC8950)
+  asserts `!_isnan(vPos.x)` and the assert handler exits the process (caught by the client exit trap).
+  `crash_guards.nan_guard` (both machines) ignores non-finite positions.
+- A soak with the relay sending every 0.25 s hung the host after ~10 min in a corrupted red-black tree (query
+  category add path, 0x1522C40 -> 0x14CD07A -> ... -> 0x9E80D7). With the relay throttled to 0.5 s a 20-minute
+  soak passed (18 cycles, both machines responding, no exits). Mailbox load as a factor is suspected, not proven.
+- Fresh-boot checks this round: her kills +2 for her (client +2, host +0); the host player's own weapon kill +1
+  for him; zombies chase her with him 300/450 m away (0-1 frozen walkers per test) and hit her.
+- Client hit reactions confirmed by the clips the client actually plays (wrapped handler, `local/clip_log.py`):
+  four swings by her -> client played ZombieReact_mid_front_light x5, _heavy x2, DownFace/downknees reactions,
+  strikes and a grab, matching the host's Reaction.* states.
+
+### Host stability investigation (2026-10-23 late night) - open
+- Exit codes caught by `local/exit_watch.py`: 0xC0000374 (heap corruption) once, 0xC0000005 without a dump once,
+  0x4000001F (unhandled breakpoint while `local/dbg_watch.py` was attached; ntdll stops on heap corruption when a
+  debugger is present) once. Clean runs: 20, 20, 25, 25 min. Not tied to the relay update rate or message size
+  (both changed, failures continued). Earlier "silent deaths" fit heap corruption (no dump, exit trap not hit).
+- Splitting relay RMIs into <=400-character parts (`zombie_sync.parts`, icons in 360-hex parts, client joins them)
+  is kept, but did not fix it.
+- The host log of a failing session had 183k "Animation-queue overflow ... zombie/skeleton/skeleton.chr" and
+  6.5k "CSkeletonAnim::ProcessAnimations ... process called multiple times a frame" warnings. `local/anim_twice.py`
+  (stub at ProcessAnimations 0xAA6C90 entry, records stacks when the in-progress flag +0x3C0 is already set):
+  all events on the main thread from the zombie manager's virtual-zombie path (0x13BC726: slot flags bit 3 clear
+  -> character vt+0x10C), one character (0x40930920) that belongs to no entity - i.e. two manager slots hold the
+  same pooled character. The engine returns early on the second call (ret 0x14 at 0xAA6CDE), so the double
+  processing itself is harmless; the shared character is a use-after-free candidate. Bursts came during soak cycles
+  where the spawn helper looped through sites with zm_spawn/zm_spawnPathZombies after the players had been 300 m
+  apart; not reproduced by toggling distance (cull on, 6 rounds) or by 12 spawn rounds alone.
+- Test environment: the laptop display turning off makes new game processes fail ("Could not find any
+  compatible Direct3D devices") and an "Unsupported video card detected!" dialog now shows at boot
+  (`local/keep_awake.py`; the dialog is OK-ed by a helper during restart).
+- ROOT CAUSE FOUND (2026-10-24): `Proc.trap_faults` (in-process vectored handler that saves the record,
+  registers and stack of an access violation / heap corruption / fast fail and parks the thread) caught the host
+  crash within a minute of a soak, on the render thread: AV at 0x112700E in the engine's name-table hash map,
+  reached from the minimap renderer 0x1380B00 (vtable entry at 0x18C4BF4, ULHUD_Map_* shader params) asking the UI
+  manager for "Class3HUDRadar" every frame (0x1380D7F: [gEnv+0x84] vt+0x34 -> CCryName -> [gEnv+0x58] table). The
+  table is not thread-safe and the main thread adds/removes names constantly; this is a stock race that co-op
+  (relays, RMIs, extra lookups) makes much more likely. It explains the hangs (bucket node linked to itself, same
+  table), heap-corruption exits and dump-less access violations. A debugger attached hid it (timing).
+- Fix `crash_guards.radar_cache` (both machines, via coop_setup): the element is looked up once on the main
+  thread and the renderer uses that pointer. Two fresh-boot 40-minute soaks with the fix and fault traps on both
+  machines: no faults, both responding (23 + 25 cycles); before the fix the trap fired in about a minute.
+- Earlier suspects that were not the cause: relay update rate, RMI message size, the shared pooled zombie
+  character (only an engine warning; the engine returns early).

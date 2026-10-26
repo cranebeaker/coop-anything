@@ -67,10 +67,10 @@ There is no installable build: a session is the two test copies booted by `local
 
 - Missions, community, journal data and use prompts are single-player state on the host; the joining player has no survivor record.
 - New zombies spawn around the joining player only while she is within 300 m of the host's camera (the host streams the level around its own camera only; spawning 550 m out killed the host once). Zombies already near her are kept at any distance.
-- A 30-minute stress test (constant teleports and spawns) hung the host once in the game's own lookup of the radar HUD element: the UI element map had a node linked to itself. The likely cause, the kill-count banner running UI script from inside native hooks, is now off (the count is still kept, just not shown). Not yet re-verified by a full soak.
+- Host hangs and silent deaths in long sessions came from a stock engine race: the minimap renderer looks up the radar UI element by name every frame on the render thread, in a name table the main thread changes constantly. `local/crash_guards.py` (`radar_cache`) now looks it up once on the main thread; two 40-minute stress tests were clean afterwards. The kill-count banner stays off (the count is still kept, just not shown).
 - Windows sleep (Modern Standby) during a session throttles both games and crashes both renderers on wake. Keep the PC awake while testing.
 - Spawn density follows the map: some areas (near the home base, open fields) have no zombies for either player.
 
 ## Next steps
 
-Re-run the 30-minute soak (`local/zm_soak.py`) without the kill banners to confirm the host hang is gone, then give the joining player a survivor record of her own (journal, prompts, community), and move the remaining runtime patches toward something installable. Do not launch the Steam install. See [NOTES.md](NOTES.md) (Phase 4a) for addresses and failed attempts.
+Re-run the zombie checks on the final build (`local/goal_check.py`), then give the joining player a survivor record of her own (doors, looting, journal, prompts, community), and move the remaining runtime patches toward something installable. Do not launch the Steam install. Current state and the running findings log are in [PROGRESS.md](PROGRESS.md); addresses and failed attempts are in [NOTES.md](NOTES.md) (Phase 4a).
