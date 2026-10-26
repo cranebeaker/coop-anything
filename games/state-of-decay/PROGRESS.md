@@ -111,7 +111,7 @@ Newest first. One entry per discovery; link the NOTES section for details.
   state machines to idle and heals them. Earlier soak "80 (from 100)" readings were this, not damage.
 - New client exit: assert `!_isnan(val)` in `CAnimationGraphState::SetInput` (0x7C9F60). `crash_guards.
   anim_input_guard` (both machines) replaces non-finite values with 0.
-- (Resolved in the next entry: a test artifact.) With the host's player 300 m away, zombies targeting her walk up and stop 2-4 m away in Basic.Move/Taunt
+- (Resolved in the newer entry above: a test artifact.) With the host's player 300 m away, zombies targeting her walk up and stop 2-4 m away in Basic.Move/Taunt
   states and never enter Combat (0 strikes in 20 s; with him at 20 m they close to ~1.5 m and hit her). Not the
   physics range (es_MaxPhysDist 2000), skeleton updates (ca_ForceUpdateSkeletons 1), g_visibilityTimeout (already
   0) or g_forceFastUpdate 1. zombie_targets' strike reach (1.8 m) is not the limit either (2.6 m: no strikes).
