@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Doors work and show on her screen (`maya_record.py`, `door_sync.py`); her own door animation and door collision on her machine missing; searching untested |
+| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`); host collision gap for doors used out of his view; searching untested |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -81,6 +81,33 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - doors fully on the joining player's machine: animations, collision, state
+- Initial state: door spots keep their state in a flags byte (`[0x1E7E770][spot]`: 0x8 open, 0x4 clip playing,
+  0x2 other side, 0x1 locked); placed doors: count 0x1E7E760, spot ids `[0x1E7E758]`, positions `[0x1E7E74C]`;
+  door types `[0x1E7E788]` (8 x 0x34: clip names, model at +0x28). Doors placed before the hook get the clip of
+  their current state (`door_sync.state_clip`), so every door shows open/closed correctly from the start.
+- Stalled doors: a door clip only advances while the host's camera renders the door. A door she used out of his
+  view stayed at flag 0x4 with clip time 0 forever, and then no actor could use it again (the door search accepts
+  flags & 0xC in {0, 8} only). `door_sync.settle_stalled` replays a clip that hasn't moved for 1.2 s with
+  jump-to-end; the game's finalizer 0x143FE20 then sets the state bits and collision (0x143FB50). Not fixed by
+  `ENTITY_UPDATE_ALWAYS`, `ForceCharacterUpdate` or `ca_ForceUpdateSkeletons` (cvar block 0x19627F8 +0xD8).
+- Collision on her machine: the client handler physicalizes closed doors (`Physicalize(0, PE_STATIC)`, 2 s after a
+  normal closing clip / 0.15 s after a jump, so the closed pose is used) and removes physics from open ones.
+  Ray probe through the doorway (`local/door_ray.py`): closed 9/9 hits on both machines, open 0/9. Walking with
+  real input (`local/door_walk.py --flip`): open -> she walks through (5.4 m past), closed -> stopped 0.47 m short.
+- Players' door animations on her screen: the client has no door context, so the host mirrors each player's
+  animated `MachineDriven.Interact.Door.*` states (not the logic states) through RMI `ClCoopPeerState` -> cvar
+  `coop_peer_state` -> a stub chained in front of the client's pass-1 detour that writes the state index into her
+  record or the client's copy of the host's player. Verified: her client went `OpenAway` / `CloseFar` /
+  `CloseClose` with the host, and the client's copy of Marcus `OpenStart -> OpenAway -> idle`.
+- Latency: the host's per-client send budget (`sv_bandwidth`, default 30000 bit/s) was full of co-op RMIs, so
+  door changes reached the client ~3.4 s late; `coop_setup` sets 300000 -> 0.4-0.7 s.
+- Test-harness notes: the client's "use" key with no client-side target opened the Radio Assistance menu
+  (blocks input; Escape closes it). Teleports to exact floor height can leave her stuck (lift 0.15 m).
+- Known gap: on the host, a door she operated out of his camera's view is settled by the jump-to-end replay, but
+  its host-side collision does not match the closed pose (rays pass; the host never rendered the pose). Her
+  machine is correct. Affects host zombies and the host player at doors he never looked at.
 
 ### 2026-10-26 - doors on the joining player's screen (door relay)
 - The door system plays door clips through 0x143F0A0 (thiscall door entity; clip name such as
