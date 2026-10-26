@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | **In progress**: her host copy opens doors with a real survivor record (`maya_record.py`); not shown on her screen yet; searching untested |
+| Looting / doors / searching for the joining player | Doors work and show on her screen (`maya_record.py`, `door_sync.py`); her own door animation and door collision on her machine missing; searching untested |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -81,6 +81,28 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - doors on the joining player's screen (door relay)
+- The door system plays door clips through 0x143F0A0 (thiscall door entity; clip name such as
+  `door_door_handle_left_open_away` / `..._right_close_close` / `..._close_far`; flag = jump to the last frame,
+  used when a spot is set up). Clips are started by id (skeleton anim vt+0x28) with "repeat last key", so the last
+  frame is the door's open/closed pose. Door models are animated `.cga` characters (slot 0: `animated_door`,
+  `anmated_door_glass`, `animated_door_firedoor`, ...; path at character +0xB8). Lua: the script table's
+  `__this` is the IEntity pointer.
+- `local/door_sync.py` + new RMI `SinglePlayer.Client:ClCoopDoors` (loose `singleplayer.lua`, both installs):
+  the host hooks 0x143F0A0 (ring of entity, flag, clip); `hud_relay.py` sends the placed doors every 0.5-3 s
+  (`index,pos,angles,model,clip,flag,seq`, split into parts). The client handler loads the model on the same
+  `Door_N`, places it and plays a new clip when the sequence changes (jump-to-end clips at speed 100). Doors the
+  host no longer places go back under the map.
+- Verified on a fresh boot: the client's door pool matches the host's (9 doors, same positions and angles).
+  Marcus opened the restroom door, and it showed open on her screen. She pressed the interact key at it: her
+  host copy ran `Interact.Door.Front.CloseClose`, the client handler applied the close clip (seq 1 -> 2), and
+  her screenshot shows it closed. `local/door_check.py` prints the host clip/seq and the client's applied seq
+  for the door at `door_pose.txt`.
+- Not yet: her own door animation on her screen (her client state machine stays idle; the door interaction runs
+  on her host copy), and collision for closed doors on the client (the client door has no physics). Doors set up
+  before the hook was installed show their default pose until their next clip.
+- `coop_setup.py` now runs `maya_record.install` (her survivor record + door-system registration).
 
 ### 2026-10-26 - doors are a host-side entity pool; the client has none
 - `Door_N` entities (class `ULDoor`, native, empty script table) are a pool that UL's door system assigns to door
