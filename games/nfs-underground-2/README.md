@@ -77,7 +77,7 @@ Tests that prove it:
 | Suite | What it proves |
 |---|---|
 | `core-tests` (14 tests, 120 checks) | wire format survives truncation, race rules, DNF, idempotent career, digests, packet framing/CRC |
-| `sync-tests` (6, 66) | two/three real clients on loopback: visibility, traffic mirror, full race, career once, late join, host stop |
+| `sync-tests` (6, 70) | two/three real clients on loopback: visibility, traffic mirror, full race, career once, late join, host stop |
 | `net-tests` (2, 24) | same cluster through a chaos proxy: 25 % loss + 10 % duplicates converges; 1.2 s partition recovers |
 | `run_all.ps1` e2e | `coopd.exe` + two `coop-bot.exe`: race finished, career applied once, identical digests |
 
@@ -90,7 +90,7 @@ cd nfsu2-coop
 .\tests\run_all.ps1        # prints ALL OK
 ```
 
-Last run 2026-10-27: 22 tests / 210 checks, ALL OK; e2e career digest identical on both
+Last run 2026-10-27: 22 tests / 214 checks, ALL OK; e2e career digest identical on both
 bots; probe 10/10.
 
 In-game: `.asi` loaded by `dinput8.dll`, `speed2.exe` parsed, 10/10 anchors resolved,
@@ -120,3 +120,4 @@ playthrough possible here).
 Bindings for car and traffic on a working install → render-hook puppets → `StartEvent`
 and event-completion capture → relay → profile persistence. Details in
 `nfsu2-coop/docs/KNOWN-ISSUES.ru.md`.
+
