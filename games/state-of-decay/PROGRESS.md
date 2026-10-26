@@ -73,13 +73,25 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 1. Optional: more zombies around her when the host's player is far (population pass density, `zm_focus`), so
    far fights are as dense as near ones. Zombies near her spend much time in `Reaction.Basic` (not from her
    attacks; cause unknown).
-2. World interaction for the joining player: register her with the interaction system (`local/interact.py`)
-   and find how UL creates a real survivor record for a recruit (borrowing records is unstable).
+2. World interaction for the joining player: her record and door use on the host work (`local/maya_record.py`);
+   next: a host -> client door relay (pool entities, see log), mirror her interaction states to her machine, then
+   searching containers. Run `maya_record.py` after `coop_setup.py` (not yet part of it).
 3. Commit/PR only when the user asks.
 
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - doors are a host-side entity pool; the client has none
+- `Door_N` entities (class `ULDoor`, native, empty script table) are a pool that UL's door system assigns to door
+  spots near the player: the same name moves between doors (Door_2 was at 3100,3323, later at 3175,3366); unused
+  ones sit at 0,0. On the host the assigned ones have one geometry slot and their open/closed angle; on the
+  client every `Door_N` is at 0,0 with no slots (no UL world tick there). So her screen shows no door state at
+  all, for either player's doors. Mirroring needs a door relay like the zombie one: for each assigned host door,
+  position, angle and geometry (slot 0 static object), applied to the client's pool entities.
+- Unlocked doors found for tests: Door_5 at (3173,3349) at the time of the test (the host player opened it:
+  `Interact.Door.Back.OpenStart -> OpenAway`). Door_1 at (3102,3339) is locked. Pool names change, so look doors
+  up by position.
 
 ### 2026-10-26 - a real survivor record for her; her host copy uses doors
 - Record creation path found: console command `com_addMember` ("Add a new character to your community",
