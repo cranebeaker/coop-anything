@@ -25,7 +25,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Host player's own weapon kills zombies, counted for him | Works (final build 2026-10-26: his +4, hers +0) |
 | Zombies attack the host player | Works (final build 2026-10-26: 90 -> 1 in 15 s) |
 | Zombies attack her with the host's player near (20 m) | Works (final build 2026-10-26: 100 -> 64 in 9 s) |
-| Zombies attack her with the host's player far (300 m) | **Unreliable**: they chase and stop 2-4 m away without entering combat states (open, see log) |
+| Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Root cause found and fixed** (minimap name-table race, see log); two 40-min soaks clean |
 | Looting / doors / searching for the joining player | Not working yet (findings in NOTES "World interaction") |
@@ -65,12 +65,14 @@ Use a real Python 3 (the Windows Store stub does not work); `capstone` and `pill
 
 Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_test.py`, `kill_verify.py`,
 `goal_check.py`, `path_hit.py`, `zombie_spawn.py`, `dbg_watch.py`, `exit_watch.py`, `anim_twice.py`,
-`zm_dupes.py`, `use_test.py`, `door_pose.py`, `use_conds.py`, `cond_snap.py`.
+`zm_dupes.py`, `use_test.py`, `door_pose.py`, `use_conds.py`, `cond_snap.py`, `far_strikes.py`, `anim_rate.py`,
+`zcomb_conds.py`.
 
 ## Next steps
 
-1. Zombies far from the host's camera: find what keeps them out of combat states near her (snapshot their
-   condition flags near vs far with `local/cond_snap.py`, as done for doors).
+1. Optional: more zombies around her when the host's player is far (population pass density, `zm_focus`), so
+   far fights are as dense as near ones. Zombies near her spend much time in `Reaction.Basic` (not from her
+   attacks; cause unknown).
 2. World interaction for the joining player: register her with the interaction system (`local/interact.py`)
    and find how UL creates a real survivor record for a recruit (borrowing records is unstable).
 3. Commit/PR only when the user asks.
@@ -78,6 +80,27 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-26 - far combat works; the "never attack" result was a test artifact
+- Fresh boot, `local/far_strikes.py` (her among a group, host's player moved, 4 s settle, 15 s): with him 300 m
+  away her health went 100 -> 86 and 100 -> 72; with him 20 m away 100 -> 17 and 94 -> 2. Far fights are weaker
+  because fewer zombies stay around her (about half the zombie-samples within 4 m), not because combat is
+  blocked. The damage is the game's own: zombie_targets' fallback strike hook fired 0 times in all runs.
+- Teleport hitch: for 2-3 s after the host's player jumps 300 m the host streams the new area and runs at about
+  8 fps, and each frame advances at most about one normal frame of game time, so every zombie's animation clock
+  (UL time-in-state, blackboard +0x1340) runs at about 0.12x. Measure only after a settle delay
+  (`local/anim_rate.py`). Animation-state time: actor vt+0x158 -> vt+0x16C -> state +0x28, written each frame
+  at 0x81FBD4 from the animation's normalized time.
+- The earlier "0 strikes in 20 s" run was in a long session where her host state machine was stuck in
+  `Stunned.Basic.Down` and her health read a constant 60/80 even after `SetHealth(100)`. Reboot before judging
+  combat.
+- Console variables `ca_ForceUpdateSkeletons`, `g_forceFastUpdate` and `es_VisCheckForUpdate` do not change at
+  runtime (`System.SetCVar` and the console both leave them at the defaults 0/0/1), so the earlier "not
+  caused by" checks with them proved nothing.
+- Condition snapshots: the UL flag buffer (0x1F36D60) is shared by all records. Each evaluation writes only the
+  first `[0x1F36D58]` flags, and which condition sits at which index depends on the active states. Compare by
+  (condition type, data), not by index (`local/zcomb_conds.py`; `cond_snap` now keeps the flag count and
+  arguments).
 
 ### 2026-10-26 - final-build zombie checks, animation NaN guard, far-combat gap
 - `local/goal_check.py` on fresh boots: her kills counted for her (+1, host +0), the host player's weapon kills
@@ -88,7 +111,7 @@ Newest first. One entry per discovery; link the NOTES section for details.
   state machines to idle and heals them. Earlier soak "80 (from 100)" readings were this, not damage.
 - New client exit: assert `!_isnan(val)` in `CAnimationGraphState::SetInput` (0x7C9F60). `crash_guards.
   anim_input_guard` (both machines) replaces non-finite values with 0.
-- Open: with the host's player 300 m away, zombies targeting her walk up and stop 2-4 m away in Basic.Move/Taunt
+- (Resolved in the next entry: a test artifact.) With the host's player 300 m away, zombies targeting her walk up and stop 2-4 m away in Basic.Move/Taunt
   states and never enter Combat (0 strikes in 20 s; with him at 20 m they close to ~1.5 m and hit her). Not the
   physics range (es_MaxPhysDist 2000), skeleton updates (ca_ForceUpdateSkeletons 1), g_visibilityTimeout (already
   0) or g_forceFastUpdate 1. zombie_targets' strike reach (1.8 m) is not the limit either (2.6 m: no strikes).
