@@ -77,6 +77,10 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
   - Hardening after a review: session key, client source check, slot binding, peer expiry, finite-value
     checks. Test: wrong-key, right-key-other-address and NaN floods ignored.
 - **Autorun from `coop.ini`**, and on-screen status through `ui.RewardMessage`.
+- **Force powers for puppets:** pad Force Push needs controller 0's per-controller object plus a profile
+  with the powers unlocked. On the host the stubs share controller 0's object and puppets get the host
+  player's profile (Force energy stays per character). On clients sharing made puppets act on their own,
+  so it is host only. Test: a remote player's pad push threw a host trooper 18 m; no kills while idle.
 
 ## QA
 
@@ -111,5 +115,5 @@ See `PLAYING.md` in the tfu-coop package:
 
 - A real two-PC session over the internet.
 - A full-level playthrough, checking doors and objectives on clients with the world diff.
-- Force powers for players 3–4.
+- Force powers other than Push (lightning, grip, repulse) for remote players.
 - Frame rate above 30 fps (the game caps at 30; physics is reported to break above 60).

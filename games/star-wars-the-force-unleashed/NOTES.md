@@ -651,6 +651,26 @@ Observed:
   "lost connection" (5 s silence), "rejoined". m12a: all seen, including the lost connection after
   closing the client.
 
+## Force powers for puppets (2026-10-27)
+
+Observed (3 instances, frozen target troopers on the host via `ai.DisableBrain`):
+- B (0x2000) from the client's pad, relayed to its puppet on the host, did nothing for slots 1 and 2. The
+  host's own B threw a frozen trooper 11 m (control). Lightsaber attacks (X) by puppets do work.
+- `player.ForcePush(1)` on the host made the slot-1 puppet push (trooper thrown 8 m), so the power itself
+  works.
+- Pad Force Push needs both the per-controller object of controller 0 (puppets got the zeroed dummy) and a
+  profile with the powers unlocked (puppets got the controller-1 profile). Either alone did nothing; both
+  together: trooper thrown 13 m.
+- Force energy stays per character: the puppet's push took it 100 → 74; the host stayed at 100.
+- Sharing controller 0's object on clients made puppets act on the local player's state: both players
+  drifted ~2.8 m and puppets killed enemy copies locally (m8r10). So it is enabled on the host only, where
+  puppets matter; client puppets stay cosmetic.
+- m8r11: all three checks pass, no local-death warnings. 20 s idle with all players next to troopers on the
+  host: no unexpected kills. Player 3's pad push from client 2: trooper thrown 18 m.
+
+Untested: other powers (lightning, grip, repulse), and whether host-side sharing affects the host's own
+targeting in combat.
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
