@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); its loot screen opens on her machine (`loot_relay.py`). Not yet: her backpack in it, Take/Use relayed to the host |
+| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); its loot screen opens on her machine and Take goes into her backpack on the host (`loot_relay.py`). Not yet: her backpack shown in her loot screen |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -84,6 +84,27 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-27 - Take from her loot screen works; boot crash on her saved record fixed
+- Verified: on her machine Take (Space) moves the item from the host's container into HER backpack on the host
+  (shown by the host's loot screen with her record as current player: her portrait, rifle, axe, snacks,
+  painkillers, plus the taken snack), and her screen refreshes to "Nothing left. / Empty".
+- How:
+  - her machine's menu callback 0x145B520 is replaced by a stub that sends `lotc:SS:FFFF:DDDDDDDD`
+    (slot, action flags, data) to the host as a chat message (new tag in `peer_input.py`);
+  - the host runs UL's callback in her search context, with the client-actor getter returning her actor
+    (search_ctx "force" cell) and the current-player record getter 0x14B0420 returning her record handle
+    (0x14AF690 by entity);
+  - the callback's own refresh (0x145CD60 with flag 1) goes back through the loot relay. Her machine passes
+    flag 1 when the node is already the one shown, else an emptied container closed instead of redrawing.
+- Her machine has no UL character records at all (the record table is empty, current-player handle 0xFFF8000),
+  so the left panel of her loot screen shows a default survivor with placeholder slots. Next: show her
+  backpack there.
+- Intermittent host crash while the saved world loads (dumps 15:25, 16:07): the per-record update asks the body
+  actor of her saved survivor record for its state machine (0x154832C -> 0x1461960) without a null check; the
+  record names the previous session's player entity, which no longer exists. `crash_guards.record_body_guard`
+  (null body skips that part) and `collision_guard` are now installed at boot by `session_join_leave.py`, right
+  after the save redirect (both report True).
 
 ### 2026-10-27 - her loot screen opens on her machine
 - Verified end to end: her full search on the host -> the loot screen ("Found some remaining items", Snack) opens
