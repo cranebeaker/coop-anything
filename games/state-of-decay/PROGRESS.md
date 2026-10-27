@@ -82,6 +82,24 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-27 - her door animation on her screen; walking through doors
+- No door animation on her screen: a state written into her client state machine neither switches the animation
+  graph's "StateMachine" input on (0x1463510) nor starts the state's clips (entry actions skipped). The client stub
+  now calls 0x1463510 for door states (0x1463550 for idle). The zombie_sync hook on 0x820BC0 also logs the players'
+  clips ("Dude..." entities), and `PeerStates` sends each player's latest `Interact_door_handle_*` clip with the
+  state ("...|clipHost|clipPeer"). The client handler starts it on "Dude" / "Dude(1)" 60 ms later. Her screenshot
+  mid-`CloseFar` shows her stepping into the doorway, arm out; standing idle she is upright.
+- Walking through doors: (1) the relay sent every `Door_N` with a position, but when the pool reuses a spot its
+  old entity stays there (two doors on one spot), and a stale one could carry an open state over a closed door.
+  `placed_doors` now uses the door system's placed list (entity pointers at 0x1E7E750, count 0x1E7E760). (2)
+  Client collision built by a timer after the clip sometimes came from a mid-animation pose (7/9 or 0/9 rays). A
+  closing/closed door is now reloaded (default pose = closed) and physicalized at once, then the clip plays.
+  `local/door_audit.py` (every placed door: host flags, client state and physics, rays on both machines): 0
+  mismatches, also after a pool shuffle. Walk: closed door stops her 0.43 m short; after she opens it she walks
+  2.6 m through.
+- Test harness: a door use pressed right after a teleport (before the door context and, for the host's player, the
+  interaction kind +0x1524 = 3 were set) did nothing on slow frames; `door_use.py` now waits for them.
+
 ### 2026-10-27 - test saves separated from Steam; Maya clones; stuck after door use
 - **The test copies were saving into the owner's Steam save folder.** The game saves `Class3.0.ulsave`,
   `Sandbox.0.ulsave` and `UserStats*.cfg` into the folder from `ISteamUser::GetUserDataFolder` (vtable slot 6):
