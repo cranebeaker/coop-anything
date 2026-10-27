@@ -73,12 +73,10 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 1. Optional: more zombies around her when the host's player is far (population pass density, `zm_focus`), so
    far fights are as dense as near ones. Zombies near her spend much time in `Reaction.Basic` (not from her
    attacks; cause unknown).
-2. Looting for the joining player: doors, her search and her loot screen work. Next:
-   - the left panel should show her record and backpack (the client's current-player record is a default
-     survivor);
-   - relay Take/Use (callback 0x145B520 on the client) to the host, applied to her record and the host's
-     container;
-   - her backpack synced.
+2. Looting for the joining player works (search, her loot screen with her backpack, Take, Use). Not covered yet:
+   - her backpack outside loot screens (her journal / HUD consumable slot on her machine);
+   - other containers (vehicles, community storage);
+   - two players searching at once against one manager.
 3. Commit/PR only when the user asks.
 
 ## Findings log
