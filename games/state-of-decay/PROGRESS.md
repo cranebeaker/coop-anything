@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); the loot screen still opens on the host's screen, not hers |
+| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); its loot screen opens on her machine (`loot_relay.py`). Not yet: her backpack in it, Take/Use relayed to the host |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -73,16 +73,54 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 1. Optional: more zombies around her when the host's player is far (population pass density, `zm_focus`), so
    far fights are as dense as near ones. Zombies near her spend much time in `Reaction.Basic` (not from her
    attacks; cause unknown).
-2. Looting for the joining player: doors and her search work. Next, the loot screen for her search completion:
-   - keep it off the host's screen;
-   - open it on her machine (node items + her backpack);
-   - relay Take/Use/Close back to the host.
-   Then her own backpack, synced.
+2. Looting for the joining player: doors, her search and her loot screen work. Next:
+   - the left panel should show her record and backpack (the client's current-player record is a default
+     survivor);
+   - relay Take/Use (callback 0x145B520 on the client) to the host, applied to her record and the host's
+     container;
+   - her backpack synced.
 3. Commit/PR only when the user asks.
 
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-27 - her loot screen opens on her machine
+- Verified end to end: her full search on the host -> the loot screen ("Found some remaining items", Snack) opens
+  on her machine, not on the host's. Still to do: the left panel shows the client's own current-player record (a
+  default survivor with an empty placeholder backpack), not her backpack, and Take/Use/Close are not relayed back.
+- How UL opens it: `0x145CD60(node, flag)` needs node == the last focused node [0x1970E04]. It reads the
+  container entry from the table at 0x1EA64A8 (20 x 0x68 bytes: +0 node, +4 count, +8 item handles,
+  +0x48 counts, +0x58 kinds), picks the status text (string ids 0x20B..0x213) and calls ShowContainerMenu
+  0x148BAE0 with the menu callback 0x145B520 (Take/Use). Her manager reaches it through 0x1630C20 -> 0x145EE80
+  (SetInput when the node is already searched, or right after a search completes).
+- The client has the same node ids and UI. Writing the host's container entry into the client's table and
+  calling the client's 0x145CD60 shows the same screen there.
+- `local/loot_relay.py`:
+  - host: 0x145CD60, called while her search context is in (search_ctx override cell set), copies the
+    container entry into a ring and returns without the host UI;
+  - `hud_relay.py` sends it as RMI `ClCoopLoot("seq:hex")`;
+  - client: the Lua handler sets cvar `coop_loot`, and a stub chained on pass 1 writes the entry into the
+    client's table, sets its last node and calls 0x145CD60.
+  - New RMI in both `singleplayer.lua` copies (handler placed before the door marker).
+- Her search-node perception: candidates come from her perception query (actor +0x1170 list, entries in the
+  perception manager 0x1634090 at +0x6B1A8 + idx * 0xAC, results written to blackboard +0x204 + i * 0x6C by
+  0x16493E0). The query's transform is set by a state-machine action (0x170B340). When it was stale she saw no
+  node.
+- Her host copy got stuck in `Combat.Idle.BluntLight` (weapon out) on fresh boots and after fights, while her
+  client was back in Observer. The exit waits for combat tags (0x7E...) that the host only clears for its own
+  player, and those tags (0xCD) block the search. `search_ctx.stand_down` (from `hud_relay.py`): after 3 s in a
+  combat idle state with no button held on her machine, her copy returns to idle and the combat tags
+  (0x2C, 0x09, 0x7E, 0xCD, 0x199) are removed. Verified: Observer about 4 s later.
+- Her search could lose focus while her LowVert search animation moved her (node out of reach after ~1 s). Her focus
+  now stays while her manager is searching (state 2/3).
+- Crash found and fixed: `peer_melee` and `remote_fx` baked her state-machine record address into their stubs.
+  After UL re-created her state machine (new address) the stub wrote through freed memory (host access
+  violation in the stub). Both now read the record from her actor (+0x1110) each time. Host crash dumps are
+  parsed with `local/dump_exc.py` (exception, registers, stack code addresses).
+- Test notes: node state persists in the test save (a depleted node stays depleted, status 0 from 0x1451B30).
+  For tests, node flags at [[0x1E80E80]+0x20]+node = 0 make it searchable again. Nearby fresh nodes: 1467
+  (0x5BB) LowVert near 3281.5,3410 and 0x5BA. Zombies at the cabins knock the host player down during tests.
 
 ### 2026-10-27 - her search works on the host, completion opens the loot screen (on the host's screen)
 - Verified: at a search spot she holds use on her machine, her host copy runs `Interact.Search.Logic.ContextTest
