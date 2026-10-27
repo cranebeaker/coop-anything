@@ -82,6 +82,34 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-27 - test saves separated from Steam; Maya clones; stuck after door use
+- **The test copies were saving into the owner's Steam save folder.** The game saves `Class3.0.ulsave`,
+  `Sandbox.0.ulsave` and `UserStats*.cfg` into the folder from `ISteamUser::GetUserDataFolder` (vtable slot 6):
+  `Steam\userdata\<account>\241540\local`, the same folder the owner's Steam copy uses. `sys_user_folder` /
+  `%USER%` only cover profiles. `local/save_redirect.py` replaces that vtable slot in each test-copy process
+  (per process, nothing on disk) with a stub returning `local/test-saves/host|client`. `session_join_leave.py`
+  installs it right after each process starts, before any game is loaded. The path is only asked for when a game
+  is loaded or saved; a menu-only boot has no cached copy. Current save copied there once; the Steam save is no
+  longer written (timestamp unchanged after reboots and sessions).
+- "Other NPCs look like Maya": every boot `maya_record` created a new Maya record, and the save kept them, so their
+  NPC bodies walked around as Mayas. It now reuses a saved Maya record. Extra ones become unused generic
+  survivors with their bodies re-skinned. Her own old body (`ULNPC<record>`) is also hidden on the client, and
+  setup runs it before the client model sync.
+- "Stuck in place after a door": two causes on her machine, both from mirrored door states written into her
+  client state machine (their state actions and exits don't run):
+  1. The animation graph input "StateMachine" stayed on (actor +0x1114 = 1; on: 0x1463510, off: 0x1463550), so
+     the graph kept waiting for the state machine and she could not move at all, even on open ground. The
+     client stub now calls 0x1463550 whenever it writes the idle state (`peer_input.reset_state` too). 8 door uses
+     in a row: she walks 3.6-3.9 m after each.
+  2. ULActor stamina request stacks (+0x12EC cap 4, +0x1300 cap 8) filled up. The assert "SM stamina tank rate
+     requests exceeded stack space" (ULActor::ProcessStateMachineBehavior) then quit the client (caught by the
+     exit trap). The client stub resets a stack one short of full.
+- Host side: her host copy could loop in `...Locked.Loop` (locked door rattle) forever after she released the use
+  button (her stand-in input showed it up; her client left at once). `door_sync.end_locked_loop` moves it to
+  the matching `...Locked.End` after 0.5 s with the button up.
+- Test harness: teleporting her to a `door_pose.txt` pose can embed her in place even with no door involved; a
+  stuck walk test there is not a game bug. Test movement on open ground after the door use.
+
 ### 2026-10-27 - door gaps closed: host collision, stuck pairing, Marcus turned into Maya
 - Host collision for doors she closes out of his camera's view (the gap in the previous entry): the host never
   computes the closing pose, so the door's static physics stayed where the open leaf was. `settle_stalled` now,
