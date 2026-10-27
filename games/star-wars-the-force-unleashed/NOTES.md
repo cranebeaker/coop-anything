@@ -691,9 +691,22 @@ Derived (not verified):
 - Grip state lives in a global ForceGripManager (`*0x012f0fa4`, created in FUN_0041e2b0), a map from
   ren to a grip entry (+0x4c = slot index, -1 = none). Lookup: FUN_0053a0a0 / FUN_0053a140.
   `player.StopForceGrip` (0x833ae0) and `player.IsGrippingObject` (0x833b70) take a controller number.
-- Grip picks its target by aim (strings `AutoLockDefAsset`, `Force Grip cam ...`), most likely from
-  controller 0's camera, which puppets never see. Next: decompile the `PlayerInputGripPressed` handler and
-  the auto-lock target search to find the controller-0-only step.
+- Grip picks its target by aim (strings `AutoLockDefAsset`, `Force Grip cam ...`). Controllers 1..3 fall
+  back to camera 0 (FUN_00c35100), the host's camera.
+
+Update, same day: **grip works for puppets.** `tools/m13-grip-run.sh <label> 1` (fresh games, both players
+4 m behind an untouched trooper along +z, camera turned with `camera.SetTargetDirection`): the puppet
+gripped it (gripper = puppet, y 13.7 → 16.2), puppet energy 150 → 120, host unchanged (m13g4). The host
+control passes the same way (m13g2). No code change was needed. The earlier misses were test setup:
+- moving an AI with `location.SetPosition` does not move its physics body, so powers miss it;
+- targets that had died (health 0) still sat in the list;
+- on the slope right of F014116C the client slides, the puppet is snapped (> 0.5 m) about every second and
+  spends time in the air, where it cannot grip (m13g1 failed there; the flat spot passes).
+- A tried fix (skip keyboard bindings for controllers 1..3 in the action query 0x6a70a0) made no
+  difference: grip passed without it too (m13g5neg), so it was dropped.
+
+Open: puppet snapping on slopes could keep the puppet's own height when within 0.5 m so it stays on the
+ground; a slope run without that change was started (m13g6slope) but stopped before it finished.
 
 ## Derived (not yet verified)
 

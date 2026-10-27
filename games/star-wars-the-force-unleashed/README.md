@@ -115,6 +115,6 @@ See `PLAYING.md` in the tfu-coop package:
 
 - A real two-PC session over the internet.
 - A full-level playthrough, checking doors and objectives on clients with the world diff.
-- Force powers other than Push for remote players. Grip does not work yet: the trigger reaches the host,
-  but the puppet never starts a grip (probably aim-based targeting tied to the host camera).
+- Force powers for remote players: Push and Grip work on the host (Grip: m13-grip-run, a puppet lifted a
+  trooper 2.5 m); lightning and repulse untested; a puppet snapped on a slope is often in the air and cannot grip.
 - Frame rate above 30 fps (the game caps at 30; physics is reported to break above 60).
