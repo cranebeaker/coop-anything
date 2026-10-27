@@ -9,7 +9,7 @@ data (no machine names, user folders, IP addresses, account names).
 
 ## Current state
 
-Last updated: 2026-10-26.
+Last updated: 2026-10-27.
 
 Two copies of the game run side by side (host = "Marcus", joining player = "Maya"). Everything is applied at
 runtime by Python scripts under the gitignored `local/` folder; no game file is modified except the loose
@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`); searching untested |
+| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); the loot screen still opens on the host's screen, not hers |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -73,14 +73,53 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 1. Optional: more zombies around her when the host's player is far (population pass density, `zm_focus`), so
    far fights are as dense as near ones. Zombies near her spend much time in `Reaction.Basic` (not from her
    attacks; cause unknown).
-2. World interaction for the joining player: her record and door use on the host work (`local/maya_record.py`);
-   next: a host -> client door relay (pool entities, see log), mirror her interaction states to her machine, then
-   searching containers. Run `maya_record.py` after `coop_setup.py` (not yet part of it).
+2. Looting for the joining player: doors and her search work. Next, the loot screen for her search completion:
+   - keep it off the host's screen;
+   - open it on her machine (node items + her backpack);
+   - relay Take/Use/Close back to the host.
+   Then her own backpack, synced.
 3. Commit/PR only when the user asks.
 
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-27 - her search works on the host, completion opens the loot screen (on the host's screen)
+- Verified: at a search spot she holds use on her machine, her host copy runs `Interact.Search.Logic.ContextTest
+  -> Search.Normal.Ground.Start -> Loop`, progress accumulates while held, release gives `Stop -> Observer`, and a
+  full search completes (manager state 4); further holds on that node stop at once. Her own screen shows her
+  crouched searching (state mirroring from the door work). The loot screen then opens, but on the host's
+  screen, with his portrait and backpack. Next phase: that screen on her machine.
+- Why her player state machine dropped at random (the earlier "trait 492" theory was wrong): the per-record update
+  0x1547920 also streams each survivor's NPC body. From distances it sets "hidden"/"inactive" and then
+  releases the body's player state machine (0x1466AD0 -> 0x1636780) or creates one (0x1463C20). Her record's
+  entity (+0x58) is her player actor, so depending on where she stood UL "despawned" her. `maya_record.
+  keep_active` forces both flags off for her record at 0x15482C9; a lost state machine also comes back by itself.
+  Caught with a logging detour on 0x1636780 (`local/sm_release_log.py`, installed by `coop_setup.py`).
+- UL's search system is a singleton for the local player. The manager is the object at [0x1EED390]
+  (0x7C bytes, ctor 0x162F880; +0x40 focused node, +0x6C state 0 none / 1 focused / 2,3 searching / 4 done /
+  5 stopped, +0x60 time searched). Two more globals belong to it: the last node [0x1970E04] and the focus
+  timeout [0x1E81F78], both written by the node candidate check 0x14569A0 that the finder runs for each player.
+  - The finder runs for both players, so the player with no node in reach reset the focus (her kind flickered).
+  - Only the local player's update feeds use input to the manager (0x1468A03: actor +0x10A4, null for her).
+  - Tags and the search handle go to the client actor (getter 0x6683A0, used at 10 places in the manager code).
+    One of them is tag 0xC6, which ContextTest needs.
+- Fix `local/search_ctx.py`: she gets her own manager, focus and timeout, swapped into those globals:
+  - around her finder call, then her use input (stand-in input bytes +0xFD/+0x117) is fed to her manager;
+  - once per frame for her manager's tick, after the host's, including her focus timeout;
+  - the HUD progress bar only for the host's manager;
+  - the client-actor getter returns her actor when called from the manager code while her context is in.
+- Actor tag sets: actor +0x10B0 (512 bits; tag = 64 * qword + 63 - bit, `local/tags.py`), copied to blackboard
+  +0x12E0 each tick (0x1461E00); added/removed by CPlayer virtuals 0x1461DE0 / 0x1461E20 when states are entered
+  and left. Condition type 19 tests them; type 40 checks a blackboard slot; type 92 is a "held for N s" timer;
+  type 56 is an edge detector; type 17 combines other results (bit 0 OR, bit 1 negate).
+- Test-harness traps found on the way, all from forcing her state index (`goal_check.stand_up`,
+  `peer_input.reset_state`), which skips state exits:
+  - stale tags (e.g. 0xCD, which blocks the search);
+  - a stale search handle at actor +0x153C (the manager then saw "already searching"). `reset_state` now clears
+    the handle.
+  Also: writing a string over the blackboard hand-item pointer (+0x1458 is a `char*`) crashed the host. The
+  "Fists" and trait differences were not needed.
 
 ### 2026-10-27 - looting for the joining player: findings so far (in progress)
 - Goal chosen by the owner: the full loot screen on her machine (search, loot screen with take/use/close, her own
