@@ -100,6 +100,8 @@ Newest first. One entry per discovery; link the NOTES section for details.
 - Her machine has no UL character records at all (the record table is empty, current-player handle 0xFFF8000),
   so the left panel of her loot screen shows a default survivor with placeholder slots. Next: show her
   backpack there.
+- Use (Q) on her screen does not reach the menu callback (Take does). Her machine's UI probably checks the
+  current player before calling back, and she has no record there. Same missing piece as the backpack panel.
 - Intermittent host crash while the saved world loads (dumps 15:25, 16:07): the per-record update asks the body
   actor of her saved survivor record for its state machine (0x154832C -> 0x1461960) without a null check; the
   record names the previous session's player entity, which no longer exists. `crash_guards.record_body_guard`
