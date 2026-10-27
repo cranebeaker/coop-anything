@@ -82,6 +82,32 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-27 - looting for the joining player: findings so far (in progress)
+- Goal chosen by the owner: the full loot screen on her machine (search, loot screen with take/use/close, her own
+  backpack), not a simplified version.
+- Search spots are not entities. The host's interaction finder `0x1464000(actor)` runs every frame for both
+  players (actor update, gated by actor vt+0x130) and writes the interaction kind to blackboard +0x1524 (prompt
+  icon 0x406000N): 1 = barricade, 3 = door, 5 = search, 8 = something else seen in cabins. Search spots found
+  by sweeping the host player with the kind (`local/search_spots.txt`; a cabin at about 3246,3396 facing 3.14 and
+  3276,3406 facing 0). A full hold (`sr_searchDurationNormal` 10 s; `sr_tapWindowDuration` 0.25) runs
+  `Interact.Search.Normal.<Ground|LowFlat|...>.Start/Loop/Stop`, then opens the loot screen (journal UI,
+  `Item.Journal` state): his backpack on the left, the container's items on the right, Take/Use/Close.
+  `sr_debug 1` overlays the node id and the container model's states (base/full/searched/depleted).
+- Her host copy gets kind 5 at a search spot, and her use input arrives, but she never enters
+  `Interact.Search.Logic.ContextTest`. Forced into it, she drops back to idle at once. Condition type 96
+  (0x16FEE50 -> 0x1716740 -> 0x14A5880 -> 0x15325B0) checks traits: record +0 holds 36 trait indices into
+  [0x1EE2620] (0x34-byte entries, data id at +0). The host player's record has 0x06090001 (index 492; Ed has it
+  too) and 0x060D000A (index 208); her record, created as a random survivor, has neither.
+- Adding trait 492 to her record made UL release her player state machine (removed from the extra list by
+  0x16366B0 via the release function 0x1636780(rec), callers 0x1461CC1 / 0x1466B6C / 0x14682D7, actor +0x1110 =
+  its record). Redirecting her entity to the host player's record in 0x1716740 (`maya_record.share_traits`,
+  currently off: `SHARE_TRAITS = False`) dropped it too in one run but not in another; not understood yet.
+- Test harness: forcing a state every few ms (`local/search_conds.py`) crashed the host once (entity-query code);
+  don't. Teleporting her into small cabins pushes her up to ~2 m; check her host position.
+- Next: find why the trait makes UL release her state machine (probably a player/NPC role decision for records
+  with that trait) and keep it, then the search result -> loot screen path for a non-local searcher, then the
+  client side (loot screen and backpack).
+
 ### 2026-10-27 - her door animation on her screen; walking through doors
 - No door animation on her screen: a state written into her client state machine neither switches the animation
   graph's "StateMachine" input on (0x1463510) nor starts the state's clips (entry actions skipped). The client stub
