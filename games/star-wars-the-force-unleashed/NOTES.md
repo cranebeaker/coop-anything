@@ -668,8 +668,32 @@ Observed (3 instances, frozen target troopers on the host via `ai.DisableBrain`)
 - m8r11: all three checks pass, no local-death warnings. 20 s idle with all players next to troopers on the
   host: no unexpected kills. Player 3's pad push from client 2: trooper thrown 18 m.
 
-Untested: other powers (lightning, grip, repulse), and whether host-side sharing affects the host's own
-targeting in combat.
+Untested: lightning and repulse, and whether host-side sharing affects the host's own targeting in combat.
+
+### Force Grip for puppets (2026-10-27, not working)
+
+Button map from `ControllerConfig.txt`: Saber BUTTON_1 (X), Jump 2, Push 3 (B), Lightning 4 (Y), Dash 5,
+LockOn 6, Block 7, Grip 8. On the pad, Grip is the right trigger (confirmed by test).
+
+Observed (2 instances, Kashyyyk prologue from the menu, m9m5):
+- The trigger reaches the host. The pad poll (FUN_006a2940) puts LT and RT into button slots 14 and 15
+  (0..255). With the client holding RT, `coop_input_raw(1)` on the host showed slot 15 = FF for the whole
+  hold, so the network path carries it.
+- The host's own RT with nothing in view: Force energy 150 → 120, then back to 150. Something was
+  gripped, but `game.IsGripped` was false for every AI (probably a physics object).
+- The puppet holding RT in the same place: energy stayed 150, nothing gripped. `game.SetForceGripRank(1, 1)`
+  did not change this.
+- `tools/m13-power-run.sh grip "0, 0,0,0,0, 0, 255" 2500 1` (target trooper with its brain off, player put
+  2 m away facing it): neither the host nor the puppet lifted it. So that setup does not test grip; the
+  host's earlier successful lift (y 13.7 → 15.3) was on a live trooper in view of the camera.
+
+Derived (not verified):
+- Grip state lives in a global ForceGripManager (`*0x012f0fa4`, created in FUN_0041e2b0), a map from
+  ren to a grip entry (+0x4c = slot index, -1 = none). Lookup: FUN_0053a0a0 / FUN_0053a140.
+  `player.StopForceGrip` (0x833ae0) and `player.IsGrippingObject` (0x833b70) take a controller number.
+- Grip picks its target by aim (strings `AutoLockDefAsset`, `Force Grip cam ...`), most likely from
+  controller 0's camera, which puppets never see. Next: decompile the `PlayerInputGripPressed` handler and
+  the auto-lock target search to find the controller-0-only step.
 
 ## Derived (not yet verified)
 
