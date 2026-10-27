@@ -1083,12 +1083,13 @@
   qa: community-reports
   notes: Host-authoritative co-op where the host's inventory and quests are synchronised per its 2016 description,
     but core client and server binaries are closed; launcher and a server SDK mirror are public. Quest and encounter
-    handling is client-side, so full story sync is not guaranteed.
+    handling is client-side, so full story sync is not guaranteed. Tale of Two Wastelands declares it incompatible
+    (TTW's startup script shows an NV:MP message when NV:MP's client DLL is loaded).
   sources:
   - https://www.co-optimus.com/article/13884/fallout-new-vegas-co-op-mod-needs-beta-testers.html
   - https://github.com/NVMP/ClientLauncher
   - https://github.com/clayne/NVMP-SDK
-  checked: '2026-10-16'
+  checked: '2026-10-26'
 - game: 'Fallout: New Vegas'
   year: 2010
   engine: Gamebryo
@@ -1109,10 +1110,11 @@
   qa: automated
   notes: Developer preview of a story layer (xNVSE plugin plus sync core) meant to run next to NV:MP; no player release
     yet. Automated tests cover the sync core, host capture and guest apply of quest-script effects, and quest-stage sync
-    between two real game copies. MIT licensed.
+    between two real game copies. MIT licensed. Also runs on Tale of Two Wastelands (two copies, all TTW plugins) with
+    the fixes described in games/fallout-new-vegas.
   sources:
   - https://github.com/cranebeaker/fnv-coop
-  checked: '2026-10-16'
+  checked: '2026-10-26'
 - game: 'Vampire: The Masquerade - Bloodlines'
   year: 2004
   engine: Source (2004)
