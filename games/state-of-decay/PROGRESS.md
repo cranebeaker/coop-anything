@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`); host collision gap for doors used out of his view; searching untested |
+| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`); searching untested |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -81,6 +81,28 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-27 - door gaps closed: host collision, stuck pairing, Marcus turned into Maya
+- Host collision for doors she closes out of his camera's view (the gap in the previous entry): the host never
+  computes the closing pose, so the door's static physics stayed where the open leaf was. `settle_stalled` now,
+  for a stalled clip that ends closed, reloads the door model (default pose = closed) and physicalizes it static
+  before the jump-to-end replay; the game's finalizer then sets state and part flags as usual. Four out-of-view
+  toggles: closed 9/9 rays on both machines, open 0/9 on both; the host player's in-view use of the same door still
+  works. Not fixed by `ENTITY_UPDATE_ALWAYS` + `Activate` + `ForceCharacterUpdate` together either.
+- Doors stuck in "clip playing" (0x4) from before the hook (seen on a fresh boot: 0xC) are settled too, using the
+  clip of the state they are heading for.
+- Stuck door pairing: a player whose state machine left a door state without DoorRelease (action 55: 0x1440960(actor,
+  door) + blackboard +0x14E0 = 2) stays in the pair list 0x1E7E754 and never gets a door context again (her
+  host copy stuck in Locked.Loop, then reset). `release_stuck` releases players paired but outside Interact
+  states for 1.5 s.
+- Bug: `maya_record.py` used the re-skin function 0x15472D0, which also re-skins the current player: the host's
+  player had been showing Maya's model (both machines) since the record was introduced. It now writes the
+  definition index (+0xF0) directly; models restored with `coop_setup.load_model`.
+- The Radio Assistance menu that blocked her input yesterday could not be reproduced (held "use" 0.3-2 s, no
+  target); unexplained. Test harness: `door_walk.py` now forces focus (ALT tap) and starts 0.15 m above the floor;
+  `door_full.py [rounds] [door]` (pool names change between boots; Door_5 was locked in this save).
+- Fresh-boot `door_full.py 2 Door_0`: her states mirrored, door state/seq equal, collision equal, walk blocked
+  closed (0.49 m short) / through when open.
 
 ### 2026-10-26 - doors fully on the joining player's machine: animations, collision, state
 - Initial state: door spots keep their state in a flags byte (`[0x1E7E770][spot]`: 0x8 open, 0x4 clip playing,
