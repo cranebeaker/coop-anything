@@ -29,6 +29,8 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
 | Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); her loot screen opens on her machine with her own backpack, and Take/Use apply to her backpack on the host (`loot_relay.py`) |
+| Getting hurt, going down and getting up (her) | Works: health replicated, HUD follows, down at 1 HP, mash Space to get up (`downed.py`) |
+| Session stability | Asserts and missing-entity updates no longer kill the host (`crash_guards.py`); play soak 5/5 and 20 min without a crash |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -82,6 +84,35 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-27 - playable sessions: she goes down instead of dying, assert/entity crashes guarded, play soak
+- `local/play.sh` starts a full session (keep-awake, both copies, co-op layer, relay). `local/play_soak.py` runs
+  play-like cycles: she fights a fresh zombie group (mashing jump when down), then searches and takes at a
+  cabin spot. Result on a fresh boot: 5/5 cycles, real zombie damage, she went down at 1 HP once, got up and
+  was given 51 HP back by the game, every search and Take worked, both games alive. Earlier 20- and 12-minute
+  runs: both games alive throughout, no asserts.
+- Her HUD health arc follows her health (health is replicated).
+- Death: at 0 health UL's actor is dead for good; raising it again asserts "SetHealth reviving a dead actor"
+  (ULActor.cpp), and the assert quit the host. `local/downed.py`:
+  - her health never goes below 1 (hook on ULActor::SetHealth 0x1461E40, her actor only). Like the host's
+    player, she then lies down and gets up by mashing jump (Space); her input reaches her host copy through
+    peer_input, and the game restores her health on getting up;
+  - a finisher's death animation (`ReactionGrab.Dying/Death_*`) becomes the down idle after 4 s.
+  - Forcing her straight to idle instead (state index write) skipped the down states' exit actions and she then
+    took no damage at all; the same happened to the host's player after test resets.
+- Asserts: the game's assert handler 0x58DF40 calls exit(1) right away (no dump). `crash_guards.assert_guard`
+  makes it record and return (count + ring of caller and message), installed at boot on both copies.
+- Silent host deaths: UL's EntityDbUpdate (0x1525610, EntityDb.cpp) asserted on a registered entity id the engine
+  no longer had. `crash_guards.entitydb_guard` skips that entry instead (the assert block is rewritten in place).
+- Search fixes from the soak:
+  - her search focus now survives 1 s without a refresh: the start animation moved her and aborted it;
+  - the local player's "down, press Space to get up" byte (0x1EA6DED, read by the finder through 0x146DBD0)
+    switched interactions off for everyone, so while the host's player lay down she could not search. It is
+    now swapped in her search context too.
+- Test-harness notes:
+  - Escape on her machine with no loot screen open opens the Game Menu, which swallows her input (the first
+    soak ran with it open);
+  - the client crash at 0x1527E74 (null client actor) is a consequence of the host going away.
 
 ### 2026-10-27 - looting works for the joining player: her backpack on her screen, Take and Use
 - Verified on her machine: search, then her loot screen shows the container on the right and HER portrait and
