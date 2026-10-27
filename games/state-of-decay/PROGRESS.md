@@ -28,7 +28,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Zombies attack her with the host's player far (300 m) | Works, weaker (fresh boot 2026-10-26: 100 -> 86 / 72 in 15 s vs 100 -> 17 near; fewer zombies around her) |
 | Weapons: her starter hammer, cycling from community storage (middle mouse), host's journal equip | Works |
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
-| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); its loot screen opens on her machine and Take goes into her backpack on the host (`loot_relay.py`). Not yet: her backpack shown in her loot screen |
+| Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); her loot screen opens on her machine with her own backpack, and Take/Use apply to her backpack on the host (`loot_relay.py`) |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
 
 ## How to run a session
@@ -84,6 +84,32 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-27 - looting works for the joining player: her backpack on her screen, Take and Use
+- Verified on her machine: search, then her loot screen shows the container on the right and HER portrait and
+  backpack on the left (rifle, axe, snacks, painkillers, weight). Take moves the item into her backpack (stack
+  1 -> 2, 11.9 -> 12.2 lbs, container "Nothing left"). Use consumes it (container emptied, backpack unchanged).
+  Everything is applied on the host to her survivor record and the host's container.
+- Her backpack panel: the left panel is drawn by 0x1653F60 from the current player's record with Flash calls
+  PIShow, PIFocusSet, PICapacitySet, PIPortraitSet, PIWeightSet, PIItemSet/PIItemClear per slot, PIBackpackSet,
+  PIRucksackSet. Her machine has no record, so:
+  - the host runs 0x1653F60 for her record while Flash Invoke (0x6E37D0: name, variant array, flag) records the
+    calls instead of making them;
+  - `hud_relay.py` sends them as text (RMI `ClCoopLootPI`, in parts, before the container);
+  - her machine's 0x1653F60 is replaced by a replay stub (cvar `coop_loot_pi`).
+- Flash argument arrays: data with the element count at [data-4] (& 0x7FFFFFFF) and 8-byte elements
+  (type info, value). Types: int 0x1970A88, bool 0x195F30C, float 0x195F32C, string 0x195F1EC (char* with a
+  CryString header; refcount at -0xC, -1 = static, never freed), 0x195F2EC. The array object also holds
+  converted values at +0xC and flags at +0x14: Invoke converts again only when bit 0x4 is set, so a reused
+  array must set it before every call (the first replay showed every call with the first call's values). The
+  object must be built with its constructor 0x5CD0A0 (a zeroed one crashed her machine inside Invoke).
+- Use (flags 0x80) runs the record's UseItem (0x1548EE0), which only applies an item to a record with flag 0x4
+  (+0x15C; his record has it, her survivor record does not). The host's action handler sets that bit on her
+  record for the duration of a loot action and clears it again (her record stays 0x29, her state machine
+  stays).
+- Test notes: a host container menu closed with Escape can leave bit 0x8 of [0x1EA7FFC] set, after which
+  ShowContainerMenu only updates data and opens nothing. `local/host_her_screen.py` opens the host's loot
+  screen for her record (debugging), and `local/ui_capture.py` logs Flash calls.
 
 ### 2026-10-27 - Take from her loot screen works; boot crash on her saved record fixed
 - Verified: on her machine Take (Space) moves the item from the host's container into HER backpack on the host
