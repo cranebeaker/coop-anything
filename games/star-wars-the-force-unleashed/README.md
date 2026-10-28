@@ -77,6 +77,9 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
   - Hardening after a review: session key, client source check, slot binding, peer expiry, finite-value
     checks. Test: wrong-key, right-key-other-address and NaN floods ignored.
 - **Autorun from `coop.ini`**, and on-screen status through `ui.RewardMessage`.
+- **Level reloads and cutscenes:** the host counts world loads (marker rens vanish on a load) and sends the
+  count; clients reload when it goes up. `skip_cutscenes=1` presses A while no Lua runs, which skips
+  level intros. Test: reload in 2 min 13 s, both reload once (m14r4).
 - **Force powers for puppets:** pad Force Push needs controller 0's per-controller object plus a profile
   with the powers unlocked. On the host the stubs share controller 0's object and puppets get the host
   player's profile (Force energy stays per character). On clients sharing made puppets act on their own,
@@ -108,8 +111,10 @@ See `PLAYING.md` in the tfu-coop package:
 - Enemies on clients slide into place instead of walking, because their AI is off. Walking them with
   `mobility.RequestPathToPosition` was too slow (~0.5 m/s), and it let them die from the client's own
   hits.
-- Pre-rendered movies between levels play on each PC separately.
-- Loading a save with clients connected and mid-level checkpoints have not been tried.
+- Pre-rendered movies between levels play on each PC separately (the cutscene skip probably skips them;
+  not tested).
+- A reload of the same level on the host now reloads it on clients (tested with `ronin.LoadWorld`). A
+  checkpoint restart from the pause menu and loading a save with clients connected have not been tried.
 
 ## Next steps
 

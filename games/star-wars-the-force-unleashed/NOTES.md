@@ -721,6 +721,47 @@ on the host.
 `game.SetForceLightningRank(0, 3)`. So Vader cannot use Lightning in the Kashyyyk prologue as set up here,
 and remote Lightning needs a level where the host's Lightning works first. Repulse is untested.
 
+## Level reloads, cutscene skip, parallel launch (2026-10-28)
+
+Observed:
+- A reload of the same level (`ronin.LoadWorld` of the loaded world, as a restart from a checkpoint does)
+  keeps the world name, so before this change neither side noticed: the host kept its old per-AI state
+  and the client stayed in its old level state (it later spawned a copy of a host enemy that had
+  respawned on the host but was dead on the client).
+- The Kashyyyk prologue replays its ~3 min intro cinematic on a reload. No Lua runs during it (the
+  console only queues files), so nothing can be sent or pressed from Lua meanwhile.
+- `light.AddPointLight` rejected every vector form tried ("Trying to get an invalid vector from lua"), so
+  it cannot provide a marker ren. `scripts.GetAllInRadius` returned nothing next to a puppet.
+- Pressing A skips the level-intro cinematic: Lua resumed 0.1 s after A (m15a; A was the first button
+  tried, through a `.pad` file).
+- Two copies launched at the same moment booted fine three times (m9m8par, m15a, m14r4): no GPU errors.
+  The 2026-10-25 GPU failure with simultaneous starts did not recur.
+
+Changed:
+- `m6_spawn_record.lua` counts world loads (`coop_world_gen`). Sentinels: 8 level rens that are neither AIs
+  nor players, re-picked after each load (and when half are gone); all gone plus the player's ren gone
+  means a load. `m6_enemies.lua` resets on a count change instead of a name change; the host sends
+  `W <world> <count>;` and a client reloads the same world when the host's count goes up.
+  `m5_link.lua` keys puppet spawn tries by world and count.
+- DLL: `*.pad` files in the console folder queue virtual pad events without Lua
+  (`<after ms> <pad> <buttons hex> [lx ly rx ry lt rt]`, `off <after ms> <pad>`).
+- DLL: `skip_cutscenes=1` in coop.ini: once co-op runs, no Lua call for 1.5 s presses A on virtual pad 0
+  (at most every 3 s). Dialogs and the pause menu keep calling Lua (ronin.Update with dt = 0), so they are
+  not pressed.
+- Test drivers: `LAUNCH_GAP=0` starts both copies together (m9-menu-run, m5-run).
+
+Tests (all with LAUNCH_GAP=0 and skip_cutscenes=1):
+- m14r4 `tools/m14-reload-run.sh`: RELOAD PASS in 2 min 13 s (10 min without the skip, m14r3): host and
+  client count the reload, the client reloads once, the puppet comes back, the client pairs host enemies.
+- m7l10 `tools/m7-level-run.sh`: LEVEL PASS (the client follows the host to RaxusPrime_Act1_A).
+- m9m8par `tools/m9-menu-run.sh`: MENU PASS.
+- m7l9 failed because copies from the previous test were still running (the client's log was locked);
+  `m5-run.sh` now closes leftover copies first.
+
+Not tested: pre-rendered (Bink) movies between levels with the skip; a real checkpoint restart from the
+pause menu (only `ronin.LoadWorld` of the same world was tried); loading a save from the menu while
+clients are connected.
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
