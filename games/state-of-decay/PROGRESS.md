@@ -9,7 +9,7 @@ data (no machine names, user folders, IP addresses, account names).
 
 ## Current state
 
-Last updated: 2026-10-27.
+Last updated: 2026-10-28.
 
 Two copies of the game run side by side (host = "Marcus", joining player = "Maya"). Everything is applied at
 runtime by Python scripts under the gitignored `local/` folder; no game file is modified except the loose
@@ -30,6 +30,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Host stability (hangs / silent deaths) | **Fixed**: minimap name-table race (2026-10-24) and a per-call buffer leak in our tooling (2026-10-26) |
 | Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); her loot screen opens on her machine with her own backpack, and Take/Use apply to her backpack on the host (`loot_relay.py`) |
 | Getting hurt, going down and getting up (her) | Works: health replicated, HUD follows, down at 1 HP, mash Space to get up (`downed.py`) |
+| Starting a session from the game's main menu | Works: "Co-op Play" item with Host Game (Continue / New Story) and Join Game (hosts found on the local network); `coop_agent.py` per copy runs the co-op setup on each side (2026-10-28) |
 | Session stability | Asserts and missing-entity updates no longer kill the host (`crash_guards.py`); 25-minute play soak 19/19 cycles without a crash |
 | Vehicles | Untested in co-op: the only vehicle at the story start is locked for both players |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
@@ -41,11 +42,15 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 2. Keep the PC awake and the display on: `python local/keep_awake.py 4`. With the display off a new game
    process finds no Direct3D device ("Could not find any compatible Direct3D devices"); waking from Modern
    Standby crashes both renderers. A locked screen also blocks booting.
-3. `local/restart_session.sh` (kills only the test copies, boots host + client, OKs the "Unsupported video card"
+3. From the game's menu: `local/play_menu.sh` starts both copies through `local/coop_agent.py` (one agent per
+   copy; on two PCs run one `coop_agent.py` per PC). In one window Co-op Play > Host Game > Continue Story or
+   New Story; in the other Co-op Play > Join Game > the host's entry. Steps 4-5 are then done by the agents.
+   Scripted alternative: steps 4-5.
+4. `local/restart_session.sh` (kills only the test copies, boots host + client, OKs the "Unsupported video card"
    dialog via `local/dismiss_gpu.ps1`).
-4. `python local/coop_setup.py` installs everything on both machines and starts `local/hud_relay.py`
+5. `python local/coop_setup.py` installs everything on both machines and starts `local/hud_relay.py`
    (must keep running on the host).
-5. Optional diagnostics: `Proc.trap_faults()` on both processes (in-process crash catcher), exit watchers
+6. Optional diagnostics: `Proc.trap_faults()` on both processes (in-process crash catcher), exit watchers
    (`local/exit_watch.py host|client`).
 
 Use a real Python 3 (the Windows Store stub does not work); `capstone` and `pillow` are needed by the tools.
@@ -64,6 +69,7 @@ Use a real Python 3 (the Windows Store stub does not work); `capstone` and `pill
 | `weapon_relay.py` | Melee weapon hash relay both ways, starter hammer, cycling |
 | `pause_sync.py`, `remote_fx.py`, `turn_clamp.py`, `sync_models.py` | Shared pause, no host screen FX on client, turning, NPC models |
 | `hud_relay.py` + `zombie_sync.py` | Host -> client over RMIs: banner, minimap icons, zombie bodies + animations + visibility (matched by position), split into <=400-char parts |
+| `coop_menu.py`, `coop_agent.py` | Main-menu "Co-op Play" item and submenus (native hooks on the menu filler, title lookup and back input); per-copy agent: LAN discovery (UDP 64091), control channel (TCP 64092), host/join flows, coop_setup steps split by machine |
 | `crash_guards.py` | Null guards, NaN-position guard, **radar_cache** (stability fix) |
 
 Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_test.py`, `kill_verify.py`,
@@ -84,6 +90,33 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-28 - co-op from the main menu (Host / Join with LAN search)
+- The main menu (front-end screen 2) keeps its items in a static array: 11 slots of 0x90 bytes at `0x1EE81A0`
+  (+0 accept callback, +4 other-input callback, +0xC inline text shown as is, +0x78 1.0), count `0x1EE87D0`,
+  selected `0x1EE87D4`. The filler `0x161A1C0` (menu enter and its refresh timer) fills them and tail-jumps to
+  the shared builder `0x1618E10`, which sends them to Flash every frame. The shared input handler `0x16144E0`:
+  6 accept calls the item's callback, 9 back pops the menu (`0x16144FE`), 11/12 down/up.
+- `coop_menu.py`: the filler's tail inserts "Co-op Play" before "Exit Game"; in submenus the items come from
+  per-mode tables. Every custom item has one native accept stub (navigation done natively, other choices
+  posted to a request cell the agent polls); back in a submenu goes to the parent instead of popping.
+- The menu title is a localization hash (`0x1EE88C4`, looked up by `0x14F1C50`); a plain string showed
+  `ENGLISH_LOC_MISSING`. The builder's two lookups go through a stub that maps our own hashes to our titles.
+- `coop_agent.py` (one per copy/PC): starts the game with test saves and boot guards, serves the menu. Host Game:
+  force `map %s server`, accept Continue / Start a New Game through the menu's own input handler, answer LAN
+  probes (UDP broadcast on every local subnet and loopback), wait for the player. Join Game: lists the hosts
+  that answer, connects, then both agents run their half of `coop_setup.py` over a TCP control channel
+  (`coop_setup` is now split into host_first / client_first / host_main / client_main / host_last;
+  `sync_models.sync_to` and `weapon_relay.give_host/select_client` take the cross-machine data as values).
+- Pitfall found on the way: `user.cfg`'s `sv_bind` held the test PC's old LAN address; after a DHCP change
+  the server was not created ("Failed creating network nub") and every hosted load crashed (null current
+  level at `0x143E5CB` for Continue, null `[0x19F65F4]` at `0x92D5A2` for New Game) - also with the old
+  scripted boot. The agent and `session_join_leave.py` now set `sv_bind` to the current LAN address at runtime.
+- The joining copy's game framework exists at the menu already, and a copy started while another holds
+  `class3.log` writes `class3(N).log`: the agents detect the join from the actor list (channel 1 and 2 actors).
+- Verified on one PC: both copies started by agents, host via Host Game > Continue Story, joining copy found it
+  in Join Game and joined; setup finished on both sides in ~1 min; short play soak 2/2 search + Take cycles,
+  both games alive.
 
 ### 2026-10-27 - final soak; vehicles and HUD consumables checked
 - 25-minute play soak on a fresh boot (`local/play_soak.py 25`): 19/19 search + Take cycles, she went down
