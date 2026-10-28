@@ -762,6 +762,29 @@ Not tested: pre-rendered (Bink) movies between levels with the skip; a real chec
 pause menu (only `ronin.LoadWorld` of the same world was tried); loading a save from the menu while
 clients are connected.
 
+## Puppet facing, autosave, Lightning (2026-10-28)
+
+- Puppet facing: puppets turned only from their owner's stick, so after a teleport or script turn on the
+  owner's PC they kept facing elsewhere. `m5_link.lua` now turns a puppet to its owner's yaw when more
+  than 30 degrees off. `tools/m16-facing-run.sh`: m16f1 FACING PASS (0 degrees off at three headings);
+  without the change m16f2neg FACING FAIL (90, 180, 45 degrees off).
+- Autosave with a client connected: `ui.TriggerAutoSave()` on host and client at once wrote both save
+  files (16:06:57), no dialog, link and enemy sync kept running.
+- Lightning (screenshots through computer use, both copies on screen 1, the client's window on top):
+  - Y is Lightning on the pad. Holding Y on the host drew bolts from the host's puppet on the client's
+    screen (Raxus Prime), so a puppet fires Lightning from network input. Client puppets have no
+    controller-0 object (host only), so Lightning does not need it, unlike Push.
+  - Lightning with nothing in range costs no Force energy (host energy stayed 100 while bolts were
+    drawn), so energy cannot show that it fired; only Push drained energy without a target.
+  - `game.GetUnlockPackageCurRank("FORCE_LIGHTNING", ren)` = 3 at Raxus Prime; push, grip, repulse,
+    saber throw also 3.
+  - Not shown yet: damage from a remote player's Lightning on the host. Raxus Prime has no living AIs at
+    the start; `Mp.CacheEncounterAsset("stormTrooper.actor.xml")` there gives a dead AI (health 0); in the
+    TIE Factory the host's Lightning at a trooper 4 m ahead did no damage, and the client's camera showed
+    only the floor after its teleport (player in or under the floor), so that setup is unreliable.
+- Pressing Back on the pad opens a menu that keeps the player from acting until B closes it; tests must
+  not send Back.
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
