@@ -26,7 +26,6 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=1948676361
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3749212454
   checked: '2026-10-16'
-
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -49,7 +48,6 @@
   sources:
   - https://github.com/MisterCalvin/dxhx-coop-server
   checked: '2026-10-16'
-
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -74,7 +72,6 @@
   - https://www.moddb.com/mods/roleplay-coop
   - https://www.moddb.com/mods/roleplay-coop/downloads
   checked: '2026-10-16'
-
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -97,7 +94,6 @@
   sources:
   - https://github.com/roman-dzieciol/ue-deus-ex-coop
   checked: '2026-10-16'
-
 - game: State of Decay
   year: 2013
   engine: CryEngine 3
@@ -112,23 +108,24 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: No shared-world co-op mod found for the 2013 Steam release (app 241540, build 305948). Undead Labs cancelled
-    official co-op in 2013. A Steam thread is an idea with no build. ModDB's three mods are not multiplayer. State of
-    Decay 2 is a different game and already has official co-op. In-progress investigation of this build's dormant
-    CryEngine netcode is in games/state-of-decay. On isolated test copies (not the Steam install) a second process connects and the host spawns a second player character, but it is not playable yet (host does not render gameplay; joiner does not control its character). That result depends on runtime helpers kept under gitignored local/ (join NULL patch, UDP relay, pak reader) and is not reproducible from the published write-up alone.
+  notes: No published shared-world co-op mod for the 2013 Steam release (app 241540, build 305948).
+    Undead Labs cancelled official co-op in 2013. State of Decay 2 is a different game with official co-op.
+    An in-progress investigation of this build's dormant CryEngine netcode is in games/state-of-decay
+    (test-copy join, rendered host, joiner walk/combat/zombies). Those results depend on runtime helpers
+    under gitignored local/ (host_boot_coop, join patches, coop_setup, etc.) and cannot be reproduced
+    from the published write-up alone. No installable co-op build.
   sources:
   - https://www.gamesradar.com/state-decay-scraps-plans-co-op/
   - https://www.eurogamer.net/heres-whats-new-in-state-of-decay-year-one-survival-edition
   - https://steamcommunity.com/app/241540/discussions/0/810939351105827815
   - https://www.moddb.com/games/state-of-decay/mods
-  checked: '2026-10-19'
+  checked: '2026-10-28'
   searched:
-  - 'GitHub search API repo:cranebeaker/coop-anything State of Decay, total_count 0, 2026-10-19 (gh CLI not installed)'
+  - 'GitHub search API repo:cranebeaker/coop-anything State of Decay, total_count 0, 2026-10-19'
   - 'WebSearch: State of Decay 2013 co-op mod multiplayer CryEngine; Nucleus handler; GitHub coop/multiplayer'
   - 'ModDB mods page fetched 2026-10-19 (3 mods, none multiplayer)'
   - 'Nexus site search for multiplayer/coop under stateofdecay returned single-player mods; full catalog not paged'
   - 'Not checked: archive.org, Discord export, playground.ru file contents, forks of every GitHub hit'
-
 - game: System Shock 2
   year: 1999
   engine: Dark Engine (Thief engine fork)
@@ -156,7 +153,6 @@
   - https://www.systemshock.org/index.php?topic=10910.0
   - https://www.systemshock.org/index.php?topic=12190.0
   checked: '2026-10-16'
-
 - game: System Shock 2
   year: 1999
   engine: Nightdive KEX / Dark Engine
@@ -182,7 +178,6 @@
   - https://steamcommunity.com/app/866570/discussions/0/601897401881495589/
   - https://github.com/partydeck/partydeck/issues/229
   checked: '2026-10-16'
-
 - game: 'Thief II: The Metal Age'
   year: 2000
   engine: Dark Engine (NewDark)
@@ -211,7 +206,39 @@
   - https://steamcommunity.com/app/211740/discussions/0/1473095331498569970/
   - https://github.com/vfig/t2mpfun
   checked: '2026-10-16'
-
+- game: 'Thief II: The Metal Age'
+  year: 2000
+  engine: Dark Engine (NewDark)
+  project: NewDark multiplayer beta (Thief2MP.exe) + T2MPFix
+  url: https://www.ttlg.com/forums/showthread.php?t=153456
+  other_urls:
+  - https://github.com/D3c3453d/T2MPFix
+  - https://github.com/Xanfre/T2Fix
+  - https://www.systemshock.org/index.php?topic=12190.0
+  kind: mod
+  status: playable
+  coop_scope:
+    story: 'yes'
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: 2-4
+  networking: direct-ip
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: NewDark ships its own multiplayer beta since 1.27 (2019); 1.29 (2026-09) fixes server-list and readables
+    crashes. Stock remote avatars lag, stick on geometry and warp (send only when 4+ units off, physics steering,
+    12-unit snap, and the steering reads uninitialized memory), a 4th joiner kicks two players, and lava does no
+    damage. T2MPFix (MIT-licensed dinput.dll proxy; NewDark itself is closed) has four separate fixes, each switched on
+    its own; automated A/B with real instances shows avatar path deviation max 7.65 -> 0.13 units.
+  sources:
+  - https://www.ttlg.com/forums/showthread.php?t=146448
+  - https://www.ttlg.com/forums/showthread.php?t=153456
+  - https://www.youtube.com/watch?v=aRiVJqx9cnQ
+  - https://www.systemshock.org/index.php?topic=12190.0
+  checked: '2026-10-26'
+  made_with_coop_anything: true
 - game: Half-Life
   year: 1998
   engine: GoldSrc
@@ -238,7 +265,6 @@
   - https://www.svencoop.com/description.php
   - https://www.pcgamesn.com/sven-co-op-brings-communal-half-life-to-steam-its-out-now-and-its-completely-free
   checked: '2026-10-16'
-
 - game: Half-Life 2
   year: 2004
   engine: Source
@@ -265,7 +291,6 @@
   - https://www.moddb.com/mods/synergy
   - https://www.co-optimus.com/game/101/pc/synergy-hl2-mod.html
   checked: '2026-10-16'
-
 - game: Half-Life 2
   year: 2004
   engine: Source
@@ -291,7 +316,6 @@
   - https://www.moddb.com/mods/obsidian-conflict
   - https://steamcommunity.com/app/320/discussions/0/1648791520844781371/
   checked: '2026-10-16'
-
 - game: Half-Life 2
   year: 2004
   engine: Source
@@ -316,7 +340,6 @@
   - https://store.steampowered.com/app/3564500/Lambda_Fortress/
   - https://www.pcgamesn.com/half-life-2/mod-lambda-fortress-steam
   checked: '2026-10-16'
-
 - game: Doom 3
   year: 2004
   engine: id Tech 4
@@ -342,7 +365,6 @@
   - https://github.com/Stradex/librecoop
   - https://www.moddb.com/members/stradexengine/downloads
   checked: '2026-10-16'
-
 - game: Doom 3
   year: 2004
   engine: id Tech 4
@@ -368,7 +390,6 @@
   - https://www.fileplanet.com/archive/p-45635/DOOM-3-OpenCoop-v1-1
   - https://steamcommunity.com/app/9070/discussions/0/1488861734103585263
   checked: '2026-10-16'
-
 - game: Quake 4
   year: 2005
   engine: id Tech 4
@@ -393,7 +414,6 @@
   - https://www.moddb.com/mods/q4-opencoop
   - https://steamcommunity.com/app/2210/discussions/0/5183064363534214418/
   checked: '2026-10-16'
-
 - game: Quake
   year: 1996
   engine: Quake engine
@@ -420,7 +440,6 @@
   - https://www.moddb.com/mods/millennium-co-op
   - https://github.com/Hezkore/q1-survival
   checked: '2026-10-16'
-
 - game: Quake II
   year: 1997
   engine: id Tech 2
@@ -444,7 +463,6 @@
   sources:
   - https://www.co-optimus.com/amparticle/13383/quake-2-co-op-or-die-stream-recap.html
   checked: '2026-10-16'
-
 - game: 'Hexen: Beyond Heretic'
   year: 1995
   engine: Doom engine
@@ -471,7 +489,6 @@
   - https://zandronum.com/forum/viewtopic.php?t=4498
   - https://www.moddb.com/games/zandronum
   checked: '2026-10-16'
-
 - game: Duke Nukem 3D
   year: 1996
   engine: Build engine (EDuke32)
@@ -498,7 +515,6 @@
   - https://openports.pl/path/games/eduke32
   - https://www.co-optimus.com/game/358/classic/duke-nukem-3d.html
   checked: '2026-10-16'
-
 - game: F.E.A.R.
   year: 2005
   engine: Jupiter EX (LithTech)
@@ -524,7 +540,6 @@
   - https://www.moddb.com/downloads/fear-cooperative
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3123894206
   checked: '2026-10-16'
-
 - game: F.E.A.R.
   year: 2005
   engine: Jupiter EX (LithTech)
@@ -548,7 +563,6 @@
   sources:
   - https://github.com/Vityacv/fearservmod
   checked: '2026-10-16'
-
 - game: BioShock Remastered
   year: 2016
   engine: Unreal Engine 2.5/3
@@ -558,23 +572,29 @@
   kind: mod
   status: alpha
   coop_scope:
+    players_visible: 'yes'
     story: 'yes'
-    enemies: partial
-    world_state: unknown
-    items: unknown
+    enemies: 'yes'
+    world_state: partial
+    items: partial
   players: '2'
-  networking: unknown
-  open_source: unknown
+  networking: direct-ip
+  open_source: 'no'
   last_activity: 2026-10
   qa: none
-  notes: Two-player co-op for the full campaign, v0.1 alpha. The Fontaine boss fight cannot be synchronised, and
-    users may see enemy desync and a Little Sister crash. Needs Steam BioShock Remastered and no other file mods.
-    Base game is 2007, remaster 2016.
+  notes: Two-player co-op for the full campaign, v0.1 alpha (Nexus upload 2026-10-09, author NykoVoidCrownStudios).
+    The author says the whole campaign has been played start to finish in co-op. The partner has a real in-world
+    character (a Splicer model) and a location marker. The host controls enemy state; both players fight the same
+    enemies and Big Daddies, with occasional desyncs. Doors, switches, hacking and quest items are shared; Little
+    Sister choices and ADAM are per player; elevators are individual, and Hephaestus, Olympus Heights and Proving
+    Grounds objectives are partly per player. The Fontaine boss fight is individual, cutscenes are not fully
+    supported, and the client can crash in Little Sister sequences. Connects by direct IP on UDP 27015 (LAN, port
+    forwarding or a virtual LAN such as Hamachi or Radmin). Both players need the same mod version, Steam BioShock
+    Remastered and no other file mods. Closed source, no repository. Base game is 2007, remaster 2016.
   sources:
   - https://www.nexusmods.com/bioshock/mods/178
   - https://www.keengamer.com/articles/news/new-game-mod-enables-a-bioshock-multiplayer-co-op-mode/
-  checked: '2026-10-16'
-
+  checked: '2026-10-25'
 - game: 'S.T.A.L.K.E.R.: Shadow of Chernobyl'
   year: 2007
   engine: X-Ray (xrMPE)
@@ -601,7 +621,6 @@
   - https://steamcommunity.com/app/4500/discussions/0/4326349159969780968/
   - https://github.com/M4dMurloc/xrMPE_Launcher_Release
   checked: '2026-10-16'
-
 - game: 'S.T.A.L.K.E.R.: Shadow of Chernobyl'
   year: 2007
   engine: X-Ray (xrMPE)
@@ -627,7 +646,6 @@
   sources:
   - https://github.com/cranebeaker/stalker-soc-coop-fixes
   checked: '2026-10-16'
-
 - game: 'S.T.A.L.K.E.R.: Clear Sky'
   year: 2008
   engine: X-Ray (xrMPE)
@@ -653,7 +671,6 @@
   - https://ap-pro.ru/index/modding/25032024/
   - https://ap-pro.ru/forums/topic/6156-clear-coop/
   checked: '2026-10-16'
-
 - game: 'S.T.A.L.K.E.R.: Call of Pripyat'
   year: 2009
   engine: X-Ray (xrMPE)
@@ -680,7 +697,6 @@
   - https://dsogaming.com/?p=184267
   - https://steamcommunity.com/app/41700/discussions/0/6400272691576709710
   checked: '2026-10-16'
-
 - game: 'S.T.A.L.K.E.R.: Call of Pripyat'
   year: 2009
   engine: X-Ray
@@ -703,7 +719,6 @@
   sources:
   - https://www.moddb.com/mods/ray-of-hope-co-op-online
   checked: '2026-10-16'
-
 - game: Gothic / Gothic II
   year: 2001
   engine: ZenGin
@@ -729,7 +744,6 @@
   - https://github.com/Gothic-Workshop/GothicCoop
   - https://vgtimes.com/games/gothic/files/73962-modo-cooperativo.html
   checked: '2026-10-16'
-
 - game: 'Gothic II: Night of the Raven'
   year: 2003
   engine: ZenGin
@@ -755,7 +769,6 @@
   - https://github.com/skejt23/GothicMultiplayer
   - https://www.gamestar.de/artikel/gothic-mmo-hunderte-spieler-rollenspiel-traum-deutscher-server,3411240.html
   checked: '2026-10-16'
-
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -782,7 +795,6 @@
   - https://www.nexusmods.com/gothic3/mods/1?tab=forum
   - https://steamcommunity.com/app/39500/discussions/0/361798516951039653/
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls III: Morrowind'
   year: 2002
   engine: OpenMW
@@ -807,7 +819,6 @@
   - https://github.com/TES3MP/TES3MP
   - https://www.gamingonlinux.com/2022/02/online-multiplayer-for-openmw-morrowind-tes3mp-is-alive-again/page=1
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -832,7 +843,6 @@
   - https://www.moddb.com/mods/obliviononline
   - https://steamcommunity.com/groups/TESOR
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -856,7 +866,6 @@
   sources:
   - https://www.nexusmods.com/oblivion/mods/47303
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -881,7 +890,6 @@
   - https://www.nexusmods.com/oblivion/mods/40325
   - https://www.nexusmods.com/oblivion/mods/40393
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -904,7 +912,6 @@
   sources:
   - https://gamebanshee.com/fpca
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls V: Skyrim'
   year: 2011
   engine: Creation Engine
@@ -930,7 +937,6 @@
   - https://primagames.com/news/skyrim-together-reborn-co-op-mod-released-90000-downloads
   - https://twinfinite.net/news/skyrim-together-reborn-mod-multiplayer/
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls V: Skyrim'
   year: 2011
   engine: Creation Engine
@@ -953,7 +959,6 @@
   sources:
   - https://github.com/tiltedphoques/TiltedEvolution
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls V: Skyrim'
   year: 2011
   engine: Creation Engine
@@ -977,7 +982,6 @@
   sources:
   - https://github.com/skyrim-multiplayer/skymp
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls II: Daggerfall'
   year: 1996
   engine: Daggerfall Unity
@@ -1001,7 +1005,6 @@
   sources:
   - https://github.com/sixthlaw/DaggerfallMultiplayer_Sixthlaw
   checked: '2026-10-16'
-
 - game: 'The Elder Scrolls II: Daggerfall'
   year: 1996
   engine: Daggerfall Unity
@@ -1026,7 +1029,6 @@
   - https://github.com/EmptyBottleInc/DFU-Tanguy-Multiplayer/releases
   - https://github.com/EmptyBottleInc/DFU-Tanguy-Multiplayer
   checked: '2026-10-16'
-
 - game: Fallout
   year: 1997
   engine: Fallout CE (fallout1-ce)
@@ -1051,7 +1053,6 @@
   - https://github.com/FadingTwo/fallout1-coop
   - https://github.com/FadingTwo/fallout1-coop/releases/tag/v1.5.9
   checked: '2026-10-16'
-
 - game: Fallout
   year: 1997
   engine: Fallout CE (fallout1-ce)
@@ -1076,7 +1077,6 @@
   - https://github.com/00kopatich00-alt/fallout1-companion-coop
   - https://github.com/00kopatich00-alt/fallout1-companion-coop/releases/tag/v0.6
   checked: '2026-10-16'
-
 - game: Fallout 2
   year: 1998
   engine: Fallout 2 CE
@@ -1102,7 +1102,6 @@
   - https://github.com/Cahb/fallout2-ce-coop
   - https://newreleases.io/project/github/Cahb/fallout2-ce-coop/release/v0.2
   checked: '2026-10-16'
-
 - game: Fallout 3
   year: 2008
   engine: Gamebryo
@@ -1127,7 +1126,6 @@
   - https://github.com/foxtacles/vaultmp
   - https://code.google.com/archive/p/vaultmp
   checked: '2026-10-16'
-
 - game: 'Fallout: New Vegas'
   year: 2010
   engine: Gamebryo
@@ -1135,28 +1133,35 @@
   url: https://www.co-optimus.com/article/13884/fallout-new-vegas-co-op-mod-needs-beta-testers.html
   other_urls:
   - https://github.com/NVMP/ClientLauncher
+  - https://github.com/NVMP/ClientDistribution/releases
   - https://github.com/clayne/NVMP-SDK
+  - https://nuwiki.nv-mp.com/wiki/Getting_Started
   kind: mod
   status: playable
   coop_scope:
-    story: partial
+    players_visible: yes
+    story: no
     enemies: 'yes'
     world_state: partial
     items: unknown
-  players: unknown
-  networking: dedicated-server
+  players: 4
+  networking: direct-ip
   open_source: partial
-  last_activity: 2025-11
+  last_activity: 2026-10
   qa: community-reports
-  notes: Host-authoritative co-op where the host's inventory and quests are synchronised per its 2016 description,
-    but core client and server binaries are closed; launcher and a server SDK mirror are public. Quest and encounter
-    handling is client-side, so full story sync is not guaranteed.
+  notes: "Closed-netcode co-op (ENet, UDP 27015): players, NPC motion and combat. Client 9.4 released 2026-10-09; the
+    client and server binaries are closed, the launcher and a server SDK mirror are public. Quests are not synced: the
+    2016 announcement says each player keeps their own quest log, and the 9.4 binaries localise quest-flagged actors,
+    so quest state, objectives and dialogue results stay per-player. VATS is unavailable in multiplayer. A private
+    session needs no Discord account (only the official ATK server does). Host with the launcher and have friends
+    \"Connect via IP\", on LAN, over a VPN or with 27015 forwarded."
   sources:
   - https://www.co-optimus.com/article/13884/fallout-new-vegas-co-op-mod-needs-beta-testers.html
   - https://github.com/NVMP/ClientLauncher
+  - https://github.com/NVMP/ClientDistribution/releases
   - https://github.com/clayne/NVMP-SDK
-  checked: '2026-10-16'
-
+  - https://nuwiki.nv-mp.com/wiki/Getting_Started
+  checked: '2026-10-22'
 - game: 'Fallout: New Vegas'
   year: 2010
   engine: Gamebryo
@@ -1166,22 +1171,27 @@
   kind: framework
   status: prototype
   coop_scope:
+    players_visible: partial
     story: partial
     enemies: unknown
     world_state: partial
     items: unknown
   players: 2-4
-  networking: unknown
+  networking: direct-ip
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: Developer preview of a story layer (xNVSE plugin plus sync core) meant to run next to NV:MP; no player release
-    yet. Automated tests cover the sync core, host capture and guest apply of quest-script effects, and quest-stage sync
-    between two real game copies. MIT licensed.
+  notes: "Developer preview of a story layer (xNVSE plugin plus game-free sync core) meant to run next to NV:MP: the host
+    captures the effects of a quest script as one transaction and the clients apply it without re-running the script.
+    No player release yet, but the installer, launcher and player guide are in the tree; the host listens on UDP 27960
+    and the launcher caps the party at 4. The installer accepts the Russian/PCR Steam release (appid 22490, folder
+    \"Fallout New Vegas enplczru\") as well as the English one, both at exe 1.4.0.525. Enemy sync in the real game is
+    claimed by another contributor; the avatar, combat, loot and world layers are written but untested in game. MIT
+    licensed."
   sources:
   - https://github.com/cranebeaker/fnv-coop
-  checked: '2026-10-16'
-
+  - https://github.com/cranebeaker/fnv-coop/blob/main/docs/05-nvmp-intel.md
+  checked: '2026-10-22'
 - game: 'Vampire: The Masquerade - Bloodlines'
   year: 2004
   engine: Source (2004)
@@ -1208,7 +1218,6 @@
   - https://steamcommunity.com/app/2600/discussions/0/530647080137558731/
   - https://www.moddb.com/mods/bloodlines-resurgence
   checked: '2026-10-16'
-
 - game: 'Vampire: The Masquerade - Redemption'
   year: 2000
   engine: Nihilistic Zorro engine
@@ -1233,7 +1242,6 @@
   - https://www.gamebanshee.com/kdc6r
   - https://www.co-optimus.com/game/1553/pc/vampire-the-masquerade-redemption.html
   checked: '2026-10-16'
-
 - game: Dark Messiah of Might and Magic
   year: 2006
   engine: Source
@@ -1252,15 +1260,16 @@
   networking: hosted-relay
   open_source: partial
   last_activity: 2026-03
-  qa: none
+  qa: community-reports
   notes: Final mod files, not buildable code, 39 stars, last push 2026-03. Needs the wiltOS Mod Launcher and Advanced
     SDK; a community master server proxies connections. Press says Ubisoft and Valve blessed a Community Edition,
-    and an early test build lacked player models, revive polish and cutscenes.
+    and an early test build lacked player models, revive polish and cutscenes. On Linux, A2-03.23 loads and reaches
+    the co-op menu under Proton Experimental (2026-10-23); see games/dark-messiah-of-might-and-magic.
   sources:
   - https://github.com/KingDavidW/DarkMessiah-Coop-Mod-Files
+  - https://github.com/KingDavidW/DarkMessiah-Coop-Mod-Files/issues/1
   - https://wccftech.com/dark-messiah-of-might-and-magic-rtx-remix-mod-gets-new-trailer-online-co-op-mod-now-available/amp/
-  checked: '2026-10-16'
-
+  checked: '2026-10-23'
 - game: Far Cry
   year: 2004
   engine: CryEngine 1
@@ -1286,7 +1295,6 @@
   - https://www.moddb.com/mods/assault-coop/downloads
   - https://steamcommunity.com/sharedfiles/filedetails/?id=2677117740
   checked: '2026-10-16'
-
 - game: Far Cry
   year: 2004
   engine: CryEngine 1
@@ -1310,7 +1318,34 @@
   sources:
   - https://farcry1.itch.io/far-cry-advanced-version
   checked: '2026-10-16'
-
+- game: Far Cry
+  year: 2004
+  engine: CryEngine 1
+  project: FarCryCoop
+  url: https://github.com/Bantila/FarCryCoop/tree/main
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: per-player
+  players: 2-4
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: none
+  notes: Stock campaign maps as a listen or dedicated server; Lua mod pak plus an ASI that hooks CryGame.dll 1.4
+    (snapshot budget, area triggers for remote players). Also written, but untested in game (joining through a Steam Spacewar relay,
+    the launcher lobby and player shirt colors). 0.2 beta, 2 players checked by hand. Host saves (autosave at checkpoints, save and load commands) keep players and dead enemies, not mission progress; a difficulty setting. A sweep of the 20 levels found 18 that load; Treehouse and Swamp crashed at the load and load now with a workaround (baked physics states are skipped). Helicopters follow once they move on the host; no cutscenes for clients. MIT license.
+    Write-up in games/far-cry.
+  sources:
+  - https://github.com/Bantila/FarCryCoop/tree/main
+  - https://github.com/Bantila/FarCryCoop/blob/main/games/far-cry/NOTES.md
+  checked: '2026-10-22'
+  made_with_coop_anything: true
 - game: Crysis
   year: 2007
   engine: CryEngine 2
@@ -1337,7 +1372,6 @@
   - https://overclock3d.net/news/software/co-op-crysis-mod-targets-december-release-contains-crysis-and-warhead-campaigns/
   - https://powerupgaming.co.uk/2019/11/13/crysis-co-op-mod-is-more-complete-than-ever/
   checked: '2026-10-16'
-
 - game: Crysis
   year: 2007
   engine: CryEngine 2
@@ -1362,7 +1396,6 @@
   sources:
   - https://github.com/SeniorStackOverflow/crysis-coop
   checked: '2026-10-16'
-
 - game: 'Max Payne 2: The Fall of Max Payne'
   year: 2003
   engine: MaxFX
@@ -1388,7 +1421,6 @@
   - https://www.moddb.com/mods/share-the-payne/downloads
   - https://steamcommunity.com/app/12150/discussions/0/1621726179568705445/
   checked: '2026-10-16'
-
 - game: Max Payne
   year: 2001
   engine: MaxFX
@@ -1413,7 +1445,6 @@
   - 'WebSearch: Max Payne co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com steamcommunity.com
     (nothing for MP1)'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: 'Mafia: The City of Lost Heaven'
   year: 2002
   engine: LS3D
@@ -1438,7 +1469,6 @@
   - https://www.gamepressure.com/download/mafia-the-city-of-lost-heaven-lost-heaven-multiplayer-mod/z2e436
   - https://steamcommunity.com/groups/mafiamp
   checked: '2026-10-16'
-
 - game: Mafia II
   year: 2010
   engine: Illusion Engine
@@ -1463,7 +1493,6 @@
   - https://www.moddb.com/mods/mafia-2-multiplayer
   - https://www.moddb.com/mods/mafia-2-multiplayer/downloads/mafia-2-multiplayer-01b-rc2-1
   checked: '2026-10-16'
-
 - game: Mafia II
   year: 2010
   engine: Illusion Engine
@@ -1487,7 +1516,6 @@
   sources:
   - https://github.com/mafia2online/m2o-reborn
   checked: '2026-10-16'
-
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1511,7 +1539,6 @@
   - https://github.com/Tornamic/CoopAndreas
   - https://libertycity.net/files/gta-san-andreas/230164-coopandreas.html
   checked: '2026-10-18'
-
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1535,7 +1562,6 @@
   sources:
   - https://github.com/Parricidium/SACoop
   checked: '2026-10-16'
-
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1560,7 +1586,6 @@
   sources:
   - https://github.com/xreginold/GTA-SA-Open-Co-Op
   checked: '2026-10-16'
-
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1587,7 +1612,6 @@
   - https://gtaforums.com/topic/744210-sacleowip-2-player-missions-loader/
   - https://gtaforums.com/topic/874934-cleo-2-player-mode-enhancements/
   checked: '2026-10-16'
-
 - game: 'Grand Theft Auto: San Andreas'
   year: 2004
   engine: RenderWare
@@ -1612,7 +1636,6 @@
   - https://www.grandtheftwiki.com/SA-MP
   - https://www.gtabase.com/gta-san-andreas/multiplayer/
   checked: '2026-10-16'
-
 - game: Grand Theft Auto IV
   year: 2008
   engine: RAGE
@@ -1637,7 +1660,6 @@
   - https://gtaforums.com/topic/439665-ivwipbetamission-loadercoop-missions/
   - https://steamcommunity.com/app/12210/discussions/0/882959527722536115/
   checked: '2026-10-16'
-
 - game: Grand Theft Auto IV
   year: 2008
   engine: RAGE
@@ -1664,7 +1686,6 @@
   - https://github.com/TheFRiChicken/ivmultiplayer
   - https://www.co-optimus.com/game/954/pc/grand-theft-auto-iv.html
   checked: '2026-10-16'
-
 - game: 'Grand Theft Auto: Vice City'
   year: 2002
   engine: RenderWare
@@ -1689,7 +1710,6 @@
   - https://www.grandtheftwiki.com/Vice_City_Multiplayer
   - https://www.gamepressure.com/download/grand-theft-auto-vice-city-vice-city-multiplayer-v04-client-mod/zbce12
   checked: '2026-10-16'
-
 - game: Dungeon Keeper
   year: 1997
   engine: KeeperFX
@@ -1717,7 +1737,6 @@
   - https://github.com/dkfans/keeperfx/pull/5178
   - https://github.com/dkfans/keeperfx/pull/5171
   checked: '2026-10-16'
-
 - game: Dungeon Keeper
   year: 1997
   engine: KeeperFX
@@ -1743,7 +1762,6 @@
   sources:
   - https://github.com/cranebeaker/dungeon-keeper-coop
   checked: '2026-10-16'
-
 - game: Dungeon Keeper 2
   year: 1999
   engine: Flame patch loader
@@ -1770,7 +1788,6 @@
   - https://ciphercom.github.io/dk2-coop
   - https://github.com/ciphercom/dk2-coop
   checked: '2026-10-16'
-
 - game: 'Serious Sam: The Second Encounter'
   year: 2002
   engine: Serious Engine 1
@@ -1795,7 +1812,6 @@
   - https://store.steampowered.com/app/41060/Serious_Sam_Classic_The_Second_Encounter/
   - https://www.co-optimus.com/game/890/pc/serious-sam-the-first-encounter.html
   checked: '2026-10-16'
-
 - game: 'Serious Sam: The Second Encounter'
   year: 2002
   engine: Serious Engine 1
@@ -1819,7 +1835,6 @@
   sources:
   - https://github.com/DreamyCecil/AdvancedMultiplayer2
   checked: '2026-10-16'
-
 - game: Unreal
   year: 1998
   engine: Unreal Engine 1
@@ -1846,7 +1861,6 @@
   - https://www.moddb.com/mods/return-to-na-pali-search-prelude
   - https://www.oldunreal.com/wiki/index.php?title=Oldunreal_227_FAQ
   checked: '2026-10-16'
-
 - game: Unreal
   year: 1998
   engine: Unreal Engine 1
@@ -1870,7 +1884,6 @@
   sources:
   - https://www.moddb.com/mods/wolf-coop/articles
   checked: '2026-10-16'
-
 - game: 'Hitman: Blood Money'
   year: 2006
   engine: Glacier
@@ -1895,7 +1908,6 @@
   - 'WebSearch: Hitman co-op mod Blood Money Contracts multiplayer, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: 'Tom Clancy''s Splinter Cell: Chaos Theory'
   year: 2005
   engine: Unreal Engine 2.5
@@ -1924,7 +1936,6 @@
   - https://github.com/savvamadar/Splinter-Cell-Chaos-Theory-Co-op-Saver
   - https://www.co-optimus.com/game/188/pc/splinter-cell-chaos-theory.html
   checked: '2026-10-16'
-
 - game: Mass Effect / Mass Effect 2
   year: 2007
   engine: Unreal Engine 3
@@ -1951,7 +1962,6 @@
   - 'WebSearch: Mass Effect 1 2 co-op mod campaign multiplayer, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: 'Star Wars: Knights of the Old Republic'
   year: 2003
   engine: reone (engine reimplementation)
@@ -1978,7 +1988,6 @@
   - https://www.gamestar.de/artikel/sw-kotor-koop,3360443.html
   - https://git.wbrawner.com/wbrawner/reone/raw/commit/117012b750596a1c45a4d7fd55e670d65da01cc9/README.md
   checked: '2026-10-16'
-
 - game: Arx Fatalis
   year: 2002
   engine: Arx Libertatis
@@ -2003,7 +2012,6 @@
   - https://github.com/kingzmanh/arx-fatalis-coop
   - https://github.com/kingzmanh/arx-fatalis-coop/releases/tag/v0.22
   checked: '2026-10-16'
-
 - game: Arx Fatalis
   year: 2002
   engine: Arx Libertatis
@@ -2029,7 +2037,6 @@
   - https://github.com/Parricidium/ArxCoop
   - https://github.com/Parricidium/ArxCoop/releases/tag/v2026.09.14aj
   checked: '2026-10-16'
-
 - game: Risen
   year: 2009
   engine: Genome
@@ -2052,7 +2059,6 @@
   - 'WebSearch: Risen co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com steamcommunity.com'
   - 'WebSearch: Risen Piranha Bytes co-op multiplayer mod (unrestricted)'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: Metro 2033
   year: 2010
   engine: 4A Engine
@@ -2077,7 +2083,6 @@
   searched:
   - 'WebSearch: Metro 2033 co-op mod, unrestricted and restricted to github.com moddb.com nexusmods.com steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: Dead Space
   year: 2008
   engine: Visceral Engine
@@ -2103,7 +2108,6 @@
   - 'WebSearch: Dead Space 1 co-op mod PC and Dead Space co-op mod restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: 'Dragon Age: Origins'
   year: 2009
   engine: Eclipse Engine
@@ -2113,9 +2117,9 @@
   - https://github.com/cranebeaker/coop-anything/issues/79
   - https://github.com/Whocares66-Dev/DAOLib
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
-    players_visible: partial
+    players_visible: yes
     story: no
     enemies: partial
     world_state: no
@@ -2129,19 +2133,22 @@
     Work in progress on DAOLib, a GPLv3 SKSE-style native plugin framework with
     an address library for the GOG/EA/Steam builds of 1.05.13263.0. Verified in
     the game: a guest joins over the network by save transfer, two players
-    control two different party members in the same world with each game
-    mirroring the other's creature, and a host-resolved hostile's health and
-    death state reach the guest. No real combat arbitration (guest attacks are
-    not relayed), no effect, quest or area-transition sync, LAN only, and the
-    ini file is the only interface. Automated two-client tests and a 0.6.0
-    install package are in the project repo.
+    control two different party members in the same world mirroring each
+    other, the guest's attack orders are validated and resolved in the host's
+    game, a fallen player's party is revived after the fight, the guest rejoins
+    when the host loads another save, and a plugin-owned SWF HUD screen shows
+    the session event log (filters, creature names). Missing: animation, effect
+    and loot sync, area transitions, a host/join menu and an internet
+    transport; LAN only. Automated two-client tests (sync, join, two avatars,
+    combat, arbitration, death, rejoin, UI) and a 0.7.4 install package with an
+    install script are in the project repo.
   sources:
   - https://github.com/vmosenkov/dao-coop
   - https://github.com/vmosenkov/dao-coop/blob/main/docs/STATUS.md
+  - https://github.com/vmosenkov/dao-coop/blob/main/docs/UI.md
   - https://github.com/cranebeaker/coop-anything/issues/79
   - https://github.com/Whocares66-Dev/DAOLib
-  checked: '2026-10-20'
-
+  checked: '2026-10-23'
 - game: Psychonauts
   year: 2005
   engine: Despair Engine / Gamebryo
@@ -2165,7 +2172,6 @@
   - 'WebSearch: Psychonauts co-op OR multiplayer mod (unrestricted and restricted to github.com moddb.com nexusmods.com
     steamcommunity.com)'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: Prey (2006)
   year: 2006
   engine: id Tech 4
@@ -2190,7 +2196,6 @@
   - 'WebSearch: Prey 2006 co-op campaign mod (unrestricted and restricted to github.com moddb.com nexusmods.com
     steamcommunity.com)'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: Freedom Fighters
   year: 2003
   engine: Zero (IOI engine)
@@ -2214,7 +2219,6 @@
   searched:
   - 'WebSearch: Freedom Fighters co-op mod (unrestricted and restricted to github.com moddb.com nexusmods.com steamcommunity.com)'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: Silent Hill 2
   year: 2001
   engine: Proprietary (Konami)
@@ -2239,7 +2243,6 @@
   - 'WebSearch: Silent Hill 2 original 2001 multiplayer co-op mod, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool)'
-
 - game: Silent Hill
   year: 1999
   engine: Proprietary (Konami)
@@ -2265,7 +2268,6 @@
   - https://github.com/Depmify/Silent-Hill-United-Public
   - https://www.gfinityesports.com/article/silent-hill-gets-co-op-mode-via-new-fan-mod
   checked: '2026-10-16'
-
 - game: Resident Evil 4 (2005)
   year: 2005
   engine: MT Framework (Ultimate HD Edition)
@@ -2291,7 +2293,6 @@
   - https://www.nexusmods.com/residentevil4/mods/934
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3452882900
   checked: '2026-10-16'
-
 - game: Resident Evil 4 (2005)
   year: 2005
   engine: MT Framework (Ultimate HD Edition)
@@ -2318,7 +2319,6 @@
   - https://github.com/googprojects/remp
   - https://steamcommunity.com/app/254700/discussions/0/2828702372996790378/
   checked: '2026-10-16'
-
 - game: 'Mount & Blade: Warband'
   year: 2010
   engine: Warband (WSE)
@@ -2346,7 +2346,6 @@
   - https://steamcommunity.com/app/48700/discussions/0/846958634252615569/
   - https://steamcommunity.com/sharedfiles/filedetails/?id=509672401
   checked: '2026-10-16'
-
 - game: Diablo
   year: 1996
   engine: DevilutionX
@@ -2372,7 +2371,6 @@
   - https://gamingonlinux.com/2021/11/diablo-and-hellfire-source-port-devilutionx-gets-a-big-upgrade
   - https://www.gamingonlinux.com/2024/02/diablo-game-engine-devilutionx-fixes-up-multiplayer-in-v152/page=1
   checked: '2026-10-16'
-
 - game: Baldur's Gate
   year: 1998
   engine: Infinity Engine
@@ -2399,7 +2397,6 @@
   - https://gamesbeat.com/baldurs-gate-enhanced-edition-cross-platform-cooperative-multiplayer/
   - https://www.gog.com/forum/baldurs_gate_series/can_i_actually_play_this_multiplayer_and_cooperative
   checked: '2026-10-16'
-
 - game: Neverwinter Nights
   year: 2002
   engine: Aurora
@@ -2423,7 +2420,62 @@
   - https://store.steampowered.com/app/704450/Neverwinter_Nights_Enhanced_Edition/
   - https://www.co-optimus.com/game/212/pc/neverwinter-nights.html
   checked: '2026-10-16'
-
+- game: 'Star Wars Jedi Knight II: Jedi Outcast'
+  year: 2002
+  engine: id Tech 3 (OpenJK)
+  project: jedi-outcast-coop
+  url: https://github.com/Benehiko/jedi-outcast-coop
+  other_urls: []
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-07
+  qa: none
+  notes: GPL-2.0 single-player campaign co-op on OpenJK, shipped as patches 0001-0031 on a pinned OpenJK commit plus a
+    Go installer/launcher (Linux and Windows). The host runs the campaign; joiners run the game code as "dual-load"
+    remote clients over UDP or LAN discovery. Its README lists objectives/cutscene sync for joiners (Track F) as in
+    progress. Continued in masonan777/Jedi-Outcast-Coop; write-up in games/jedi-outcast.
+  sources:
+  - https://github.com/Benehiko/jedi-outcast-coop
+  checked: '2026-10-25'
+- game: 'Star Wars Jedi Knight II: Jedi Outcast'
+  year: 2002
+  engine: id Tech 3 (OpenJK)
+  project: Jedi-Outcast-Coop (fork of jedi-outcast-coop)
+  url: https://github.com/masonan777/Jedi-Outcast-Coop
+  other_urls:
+  - https://github.com/Benehiko/jedi-outcast-coop
+  kind: fork
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Continues Benehiko's mod with one cumulative patch (0032). Level scripts, enemies, Force powers and the
+    lightsaber now work for joiners, plus a revive system, in-game CO-OP menus, same-PC split screen with two
+    controllers (second window started by the game), LAN and direct IP. A level-crawl bot loaded all 26 campaign
+    maps with a joiner in one run (RESULT PASS 26/26). Tested with 2 players on one PC; two PCs and 3-4 players
+    untested. GPL-2.0. Write-up in games/jedi-outcast.
+  sources:
+  - https://github.com/masonan777/Jedi-Outcast-Coop
+  - https://github.com/masonan777/Jedi-Outcast-Coop/blob/main/docs/fork-changes.md
+  checked: '2026-10-25'
+  made_with_coop_anything: true
 - game: 'Star Wars Jedi Knight: Jedi Academy'
   year: 2003
   engine: id Tech 3 (OpenJK)
@@ -2445,14 +2497,14 @@
   qa: none
   notes: GPL-2.0 single-player campaign co-op on OpenJK, 2 to 16 players per current listings (the GitHub readme
     header still says 2 to 4). Each player keeps their own character and force powers; releases on GitHub, Nexus
-    and JKHub. The main repo koevetmc/JACoop returned not found. No Jedi Outcast co-op was found.
+    and JKHub. The main repo koevetmc/JACoop returned not found. Jedi Outcast co-op on OpenJK with the same
+    dual-load design exists (jedi-outcast-coop, see that game).
   sources:
   - https://github.com/Parricidium/JACoop
   - https://github.com/koevetmc/JACoop
   - https://github.com/JACoders/OpenJK
   - https://jkhub.org/
   checked: '2026-10-16'
-
 - game: Star Wars Republic Commando
   year: 2005
   engine: Unreal Engine 2.5
@@ -2480,7 +2532,6 @@
   - https://www.nexusmods.com/starwarsrepubliccommando/mods/9
   - https://www.gamepressure.com/download/star-wars-republic-commando-republic-commando-coop-mod-v20012019/z21176c
   checked: '2026-10-16'
-
 - game: SWAT 4
   year: 2005
   engine: Unreal Engine 2.0
@@ -2506,7 +2557,6 @@
   - https://en.wikipedia.org/wiki/SWAT_4
   - https://www.co-op.gg/pc/game/swat-4
   checked: '2026-10-16'
-
 - game: 'No One Lives Forever 2: A Spy in H.A.R.M.''s Way'
   year: 2002
   engine: LithTech Jupiter
@@ -2533,7 +2583,6 @@
   - https://www.gamepressure.com/download/no-one-lives-forever-2-a-spy-in-harms-way-coop-mod-v18072016/z1efa5
   - https://www.gamepressure.com/download/no-one-lives-forever-2-a-spy-in-harms-way-multiplayer-package-v1/z7efc9
   checked: '2026-10-16'
-
 - game: 'Thief: The Dark Project / Gold'
   year: 1998
   engine: Dark Engine
@@ -2558,7 +2607,6 @@
   - 'WebSearch: Thief Dark Project Gold co-op multiplayer mod, restricted to github.com moddb.com nexusmods.com
     steamcommunity.com'
   - 'Not checked: Reddit (blocked to the search tool), TTLG forums'
-
 - game: 'The Elder Scrolls V: Skyrim Special Edition'
   year: 2016
   engine: Creation Engine
@@ -2584,7 +2632,6 @@
   - https://www.nexusmods.com/skyrimspecialedition/mods/69993
   - https://mp1st.com/news/skyrim-multiplayer-co-op-mod-together-reborn-finally-released
   checked: 2026-10-16
-
 - game: 'The Elder Scrolls V: Skyrim Special Edition'
   year: 2016
   engine: Creation Engine
@@ -2610,7 +2657,6 @@
   - https://github.com/skyrim-roleplay/skymp
   - https://discord.com/servers/skymp-699653182946803722
   checked: 2026-10-16
-
 - game: Fallout 4
   year: 2015
   engine: Creation Engine
@@ -2639,7 +2685,6 @@
   - https://github.com/tiltedphoques/TiltedEvolution/discussions/776
   - https://reddit.rtrace.io/r/SkyrimTogether
   checked: 2026-10-16
-
 - game: Fallout 4
   year: 2015
   engine: Creation Engine
@@ -2664,7 +2709,6 @@
   - https://opencollective.com/f4mp
   - https://gametree.me/blog/fallout-4-multiplayer-mod/
   checked: 2026-10-16
-
 - game: Starfield
   year: 2023
   engine: Creation Engine 2
@@ -2691,7 +2735,6 @@
   - https://starfieldportal.com/article/skyrim-together-modders-cease-work-on-starfield-together
   - https://www.gfinityesports.com/article/starfield-together-mod-abandoned
   checked: 2026-10-16
-
 - game: Starfield
   year: 2023
   engine: Creation Engine 2
@@ -2717,7 +2760,6 @@
   - https://github.com/ramisotti13-eng/pulsar-tool/
   - https://github.com/JMPZ11/sf-pulsar-next
   checked: 2026-10-16
-
 - game: Starfield
   year: 2023
   engine: Creation Engine 2
@@ -2740,7 +2782,6 @@
   sources:
   - https://github.com/OrbitOnlineTeam/OrbitOnline
   checked: 2026-10-16
-
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2779,7 +2820,6 @@
   - https://rejuvenate.gitbook.io/witcheronline/general-information/playguide
   - https://overclock3d.net/news/software/the-witcher-online-2-0-has-arrived-and-its-nuts/
   checked: 2026-10-18
-
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2811,7 +2851,6 @@
   - https://github.com/Emillock/witcher3-coop/releases/tag/v0.1.0
   - https://github.com/Emillock/WitcherOnline/tree/remastered-5.01
   checked: 2026-10-18
-
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2837,7 +2876,6 @@
   - https://github.com/eofim/WitcherMMO
   - https://github.com/eofim/WitcherMMO/commits/main
   checked: 2026-10-18
-
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2863,7 +2901,6 @@
   - https://github.com/momo5502/w3m
   - https://github.com/momo5502/w3m/issues/322
   checked: 2026-10-18
-
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2888,7 +2925,6 @@
   sources:
   - https://github.com/werasik2aa/Witcher3-Multiplayer
   checked: 2026-10-18
-
 - game: 'The Witcher 3: Wild Hunt'
   year: 2015
   engine: REDengine 3
@@ -2915,7 +2951,6 @@
   - https://github.com/Hyjarion/Witcher3-MP
   - https://github.com/Hyjarion/Witcher3-MP/releases/tag/v0.0.1
   checked: 2026-10-18
-
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2932,14 +2967,15 @@
   players: unknown
   networking: dedicated-server
   open_source: true
-  last_activity: unknown
+  last_activity: 2024-12
   qa: none
   notes: Syncs player appearance, equipment, movement, basic animations and vehicles with passengers; not a campaign
-    co-op. Not to be confused with the separate closed CyberMP project.
+    co-op. Not to be confused with the separate closed CyberMP project. Last push 2024-12-21 (verified via GitHub
+    API), stalled at the patch 2.2 era; lives on through NightCityMP (2.31a continuation) and the oxylol story fork.
   sources:
+  - https://api.github.com/repos/tiltedphoques/CyberpunkMP
   - https://github.com/tiltedphoques/CyberpunkMP/blob/main/README.md
-  checked: 2026-10-16
-
+  checked: 2026-10-25
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2960,12 +2996,12 @@
   last_activity: 2026-06
   qa: none
   notes: GTA Online style sandbox with player-run servers, not a campaign co-op. June 2026 reports say no public
-    download yet and a semi-open phase is being prepared; server package may be open sourced later.
+    download yet and a semi-open phase is being prepared; server package may be open sourced later. Site
+    (cyber.mp) still live, checked 2026-10-23. Distinct from the story-co-op project NightCoop (beta 2026-10-23).
   sources:
   - https://www.pcgamesn.com/cyberpunk-2077/multiplayer-cybermp-mod
   - https://www.dsogaming.com/videotrailer-news/the-cyberpunk-2077-multiplayer-mod-is-still-alive/
-  checked: 2026-10-16
-
+  checked: 2026-10-25
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -2982,14 +3018,15 @@
   players: unknown
   networking: unknown
   open_source: true
-  last_activity: unknown
+  last_activity: 2026-10
   qa: none
   notes: Adds a shared-story layer where one player is story host and others' worlds follow theirs, each from their
-    own save. Targets game patch 2.31 and needs RED4ext, redscript, Codeware, ArchiveXL, TweakXL.
+    own save. Targets game patch 2.31 and needs RED4ext, redscript, Codeware, ArchiveXL, TweakXL. Host pushes game
+    time, weather and tracked quest every 2 s; guest clocks only move forward. Last push 2026-10-10 (GitHub API).
   sources:
+  - https://api.github.com/repos/oxylol/cp2077-coop
   - https://github.com/oxylol/cp2077-coop
-  checked: 2026-10-16
-
+  checked: 2026-10-25
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
@@ -3006,16 +3043,187 @@
   players: '2'
   networking: hosted-relay
   open_source: true
-  last_activity: unknown
+  last_activity: 2026-10
   qa: automated
   notes: Two-player co-op for game 2.31a via CET, redscript and RED4ext, with the partner shown as a stand-in NPC.
     The repo has test bench tooling and headless tests, so qa is automated only for those smoke tests, not a real
-    playthrough.
+    playthrough. Downloadable v0.0.37/alpha.5 ZIP (CET host/join panel, Python relay on UDP 11778). Source now
+    integrates Bukczyk's typed session foundation for player groups. Last push 2026-10-20 (GitHub API).
   sources:
+  - https://api.github.com/repos/KyleBuildsAI/cp2077-coop
   - https://github.com/KyleBuildsAI/cp2077-coop
   - https://github.com/KyleBuildsAI/cp2077-coop/pull/3
-  checked: 2026-10-16
-
+  checked: 2026-10-25
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: NightCoop
+  url: https://nightcoop.net/
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: per-player
+  players: up to 8
+  networking: hosted-relay
+  open_source: false
+  last_activity: 2026-10
+  qa: none
+  notes: Story co-op, closed source and free. Open beta started 2026-10-23 covering the prologue and Act 1. The
+    campaign runs in the host's world, each player as their own V (own appearance, level, gear, cyberware, own
+    purchases and ripperdoc visits). Dialogue by majority vote, synced cutscenes and combat, shared vehicles,
+    optional host-toggled PvP with level-normalized damage and revives. Native RED4ext plugin, game patch 2.31,
+    Windows; UDP direct or via the team's relay hub behind NAT. Capability claims are the project's own until
+    community reports land.
+  sources:
+  - https://nightcoop.net/
+  - https://www.polygon.com/cyberpunk-2077-co-op-mod-nightcoop
+  - https://www.gamingbible.com/news/platform/pc/cyberpunk-2077-co-op-multiplayer-mod-nightcoop-184269-20261020
+  checked: 2026-10-25
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: NightCityMP
+  url: https://github.com/blyatiful1/NightCityMP
+  other_urls: []
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: unknown
+  players: unknown
+  networking: direct-ip
+  open_source: true
+  last_activity: 2026-07
+  qa: none
+  notes: Continuation of CyberpunkMP ported to game patch 2.31a, Minecraft-style host & join. Syncs appearance,
+    clothes and drawn weapon, movement with animations, nameplates and chat, server-authoritative time of day,
+    emotes and upstream's demo jobs. NPCs, traffic, world state, quests and combat damage are not synced yet.
+    Distribution limited to GitHub and the project's own site per upstream license. Last push 2026-07-20.
+  sources:
+  - https://api.github.com/repos/blyatiful1/NightCityMP
+  - https://github.com/blyatiful1/NightCityMP
+  checked: 2026-10-25
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: Bukczyk/CP2077-Coop (session foundation)
+  url: https://github.com/Bukczyk/CP2077-Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: partial
+    world_state: no
+    items: unknown
+  players: '2'
+  networking: lan
+  open_source: true
+  last_activity: 2026-10
+  qa: none
+  notes: Experimental typed session foundation (SessionServer, CoopPlugin, runtime/session); collaboration upstream
+    of KyleBuildsAI/cp2077-coop. A one-PC/two-client diagnostic reached JOINER-fires-at-HOST validation with
+    health loss and death presentation at commit 481609a; reconnect death recovery still fails. Not a public
+    release. Last push 2026-10-20 (GitHub API).
+  sources:
+  - https://api.github.com/repos/Bukczyk/CP2077-Coop
+  - https://github.com/Bukczyk/CP2077-Coop
+  checked: 2026-10-25
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: RedSync
+  url: https://github.com/nobody71004/RedSync
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: true
+  last_activity: 2026-08
+  qa: none
+  notes: AGPL-3.0. RED4ext C++ client + redscript layer + .NET 9 server over Valve GameNetworkingSockets.
+    Remote players appear as Codeware/AMM puppets. Deepest public quest sync found, host-authoritative quest-fact
+    relay with a whitelist (Phantom Liberty q301-q307 plus base-game prefixes), late-join fact snapshots; journal,
+    mission NPC AI and dialogue relay still open. CERBERUS scripted bot events (8-50 bots). README download links
+    still point at a placeholder domain, so no public player download found. Last push 2026-08-25 (GitHub API).
+  sources:
+  - https://api.github.com/repos/nobody71004/RedSync
+  - https://github.com/nobody71004/RedSync
+  checked: 2026-10-25
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: OPEN//77
+  url: https://open2077.net/
+  other_urls:
+  - https://github.com/Open2077
+  kind: framework
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: Dedicated-server multiplayer platform (alpha access), not story co-op. Native client module + custom
+    replication protocol; per the 2026-08-25 devblog, movement, animation, emotes, combat (with synced audio),
+    PvP, full vehicle replication, time of day, weather and world destruction replicate; crowd population is
+    sanitized out so the server owns the world. Accounts, launcher, server browser, Lua-scriptable resources,
+    Windows/Linux servers. Org repos (app, resources, devkit) public; client module source status not confirmed.
+    Org repos last pushed 2026-10-22.
+  sources:
+  - https://api.github.com/repos/Open2077/open77-app
+  - https://open2077.net/devblog/2026-08-25-state-of-the-net
+  - https://open2077.net/
+  - https://github.com/Open2077/open77-app
+  checked: 2026-10-25
+- game: Cyberpunk 2077
+  year: 2020
+  engine: REDengine 4
+  project: Chaoskjell/Coop-Cyberpunk-Mod
+  url: https://github.com/Chaoskjell/Coop-Cyberpunk-Mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: no
+    enemies: no
+    world_state: no
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: true
+  last_activity: 2026-08
+  qa: none
+  notes: MIT. v0 scaffold, 8 commits on one day (2026-08-09). CET Lua mods exchange plain files with a Python
+    bridge process that forwards over TCP to a relay; setup GUI for non-technical users. No gameplay sync claims
+    verified. Last push 2026-08-09 (GitHub API).
+  sources:
+  - https://api.github.com/repos/Chaoskjell/Coop-Cyberpunk-Mod
+  - https://github.com/Chaoskjell/Coop-Cyberpunk-Mod
+  checked: 2026-10-25
 - game: Elden Ring
   year: 2022
   engine: FromSoftware proprietary
@@ -3041,7 +3249,6 @@
   - https://www.nexusmods.com/eldenring/mods/510
   - https://www.exitlag.com/blog/elden-ring-seamless-co-op/
   checked: 2026-10-16
-
 - game: Elden Ring Nightreign
   year: 2025
   engine: FromSoftware proprietary
@@ -3067,7 +3274,6 @@
   - https://www.nexusmods.com/eldenringnightreign/mods/3
   - https://hothardware.com/news/elden-ring-nightreign-duos-co-op-mod
   checked: 2026-10-16
-
 - game: Dark Souls Remastered
   year: 2018
   engine: FromSoftware proprietary
@@ -3092,7 +3298,6 @@
   - https://www.nexusmods.com/darksoulsremastered/mods/899
   - https://www.timeextension.com/news/2025/04/dark-souls-remastereds-new-seamless-co-op-mod-lets-you-play-with-friends-without-interruptions
   checked: 2026-10-16
-
 - game: Dark Souls III
   year: 2016
   engine: FromSoftware proprietary
@@ -3117,7 +3322,6 @@
   - https://www.nexusmods.com/darksouls3/mods/1895
   - https://forums.nexusmods.com/topic/13508641-announcement-dark-souls-iii-seamless-co-op/
   checked: 2026-10-16
-
 - game: 'Sekiro: Shadows Die Twice'
   year: 2019
   engine: FromSoftware proprietary
@@ -3142,7 +3346,6 @@
   - https://www.nexusmods.com/sekiro/mods/577
   - https://www.siliconera.com/sekiro-online-mod-adds-co-op-and-pvp-on-pcs/
   checked: 2026-10-16
-
 - game: 'Sekiro: Shadows Die Twice'
   year: 2019
   engine: FromSoftware proprietary
@@ -3152,21 +3355,24 @@
   kind: mod
   status: prototype
   coop_scope:
-    story: unknown
-    enemies: unknown
-    world_state: unknown
+    players_visible: no
+    story: partial
+    enemies: partial
+    world_state: partial
     items: unknown
   players: '2'
   networking: direct-ip
   open_source: true
-  last_activity: unknown
+  last_activity: 2026-06
   qa: none
-  notes: Rust seamless two-player co-op for Sekiro v1.06 injected via me3 with a UDP data plane; README says not
-    yet end-user playable.
+  notes: Rust seamless two-player co-op for Sekiro Steam 1.06 injected via me3, MinHook, raw UDP direct IP
+    (Steam P2P stub). Session, player snapshots, flag/effect events and host enemy HP reproduced against its
+    peer simulator on one PC (2026-10-27); the remote player is not rendered. Puppet probes in games/sekiro.
+    AGPL-3.0-or-later.
   sources:
   - https://github.com/mstampfli/sekiro-coop
-  checked: 2026-10-16
-
+  - https://github.com/cranebeaker/coop-anything/blob/main/games/sekiro/NOTES.md
+  checked: 2026-10-27
 - game: Lies of P
   year: 2023
   engine: Unreal Engine 4
@@ -3192,7 +3398,6 @@
   - https://www.nexusmods.com/liesofp/mods/368
   - https://kitguru.net/gaming/joao-silva/lies-of-p-co-op-mod-hits-v1-0-with-full-campaign-support/
   checked: 2026-10-16
-
 - game: 'Clair Obscur: Expedition 33'
   year: 2025
   engine: Unreal Engine 5
@@ -3217,7 +3422,6 @@
   - https://www.dsogaming.com/mods/clair-obscur-expedition-33-just-got-a-really-cool-co-op-mod/
   - https://tecnobits.com/en/Expedition-33-in-local-co-op-mode-on-PC/
   checked: 2026-10-16
-
 - game: Yakuza 0
   year: 2015
   engine: unknown
@@ -3243,7 +3447,6 @@
   - https://www.nexusmods.com/yakuza0/mods/1276
   - https://www.dsogaming.com/?p=191357
   checked: 2026-10-16
-
 - game: Resident Evil 4 (2023 remake)
   year: 2023
   engine: RE Engine
@@ -3269,7 +3472,38 @@
   - https://www.nexusmods.com/residentevil42023/mods/6539
   - https://www.kitguru.net/page/2/!https:/www.kitguru.net/gaming/matthew-wilson/resident-evil-4-remake-can-be-played-in-co-op-thanks-to-new-mod/
   checked: 2026-10-16
-
+- game: Resident Evil 2
+  year: 1998
+  engine: Capcom proprietary
+  project: re2coop
+  url: https://github.com/shoukyperry/re2coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: "2"
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: ASI plugin for the Steam re-release running Mulder's Steam Enhancement Pack (Sourcenext bio2.exe
+    + Classic REbirth). v0.2. The other player is an NPC (Leon or Claire) spawned with the game's own em_set and
+    walked with plc_dest; the client follows the host through doors (also across stages). Host-authoritative
+    room enemies (client mirrors them, client hits applied by the host, host enemies attack the client), kill
+    flags, shared items and story flags (Flg_on/Flg_off hooked on the client); inventories per player;
+    cutscenes and bosses not synced. Steam Spacewar relay or direct UDP. Two-instance bot suite 33/33 plus
+    enemy, story and real-pickup tests on UDP and a Steam mock; two real Steam accounts not tested together.
+    MIT license. Write-up in games/resident-evil-2-1998.
+  sources:
+  - https://github.com/shoukyperry/re2coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/resident-evil-2-1998
+  checked: '2026-10-28'
+  made_with_coop_anything: true
 - game: Resident Evil 2 (2019 remake)
   year: 2019
   engine: RE Engine
@@ -3294,7 +3528,37 @@
   - https://www.nexusmods.com/residentevil22019/mods/2938
   - https://www.dsogaming.com/?p=197583
   checked: 2026-10-16
-
+- game: Resident Evil 2 (2019 remake)
+  year: 2019
+  engine: RE Engine
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No released online campaign co-op mod found in the sources searched on 2026-10-23.
+    Local Couch Co-op and RE2 Party Mode provide local play; see their separate entries.
+    This is a dated research gap, not proof that no private or unreleased prototype exists.
+  searched:
+  - GitHub repository search, 2026-10-23; no online campaign project recorded.
+  - Nexus Mods descriptions and posts for Local Couch Co-op and RE2 Party Mode, 2026-10-23.
+  - ModDB and general web search, 2026-10-23; no released online campaign candidate recorded.
+  - Detailed search queries were not retained; Steam forums and Reddit were not independently rechecked for this entry.
+  sources:
+  - https://www.nexusmods.com/residentevil22019/mods/2938
+  - https://www.nexusmods.com/residentevil22019/mods/3024
+  checked: 2026-10-23
 - game: Resident Evil Village
   year: 2021
   engine: RE Engine
@@ -3321,7 +3585,6 @@
   checked: 2026-10-16
   searched:
   - search Nexus, ModDB, GitHub and Steam via web search, 2026-10-16, no co-op results
-
 - game: Resident Evil Requiem
   year: 2026
   engine: RE Engine
@@ -3351,7 +3614,6 @@
   checked: 2026-10-18
   searched:
   - search Nexus, ModDB, GitHub, Discord and YouTube via web search, 2026-10-18, only the unreleased YouTube project
-
 - game: Hogwarts Legacy
   year: 2023
   engine: Unreal Engine 4
@@ -3375,7 +3637,6 @@
   sources:
   - https://www.nexusmods.com/hogwartslegacy/mods/2588
   checked: 2026-10-16
-
 - game: Hogwarts Legacy
   year: 2023
   engine: Unreal Engine 4
@@ -3402,7 +3663,6 @@
   - https://www.nexusmods.com/hogwartslegacy/mods/1378
   - https://github.com/hogwarts-mp/mod
   checked: 2026-10-16
-
 - game: 'The Elder Scrolls IV: Oblivion Remastered'
   year: 2025
   engine: Unreal Engine 5 with Gamebryo
@@ -3429,7 +3689,6 @@
   - https://www.pcgameshardware.de/Oblivion-Remastered-Spiel-75181/News/Neue-Multiplayer-Mod-OblivionMP-1521511/
   - https://discord.com/servers/ob-mp-readym-1477979108045754408
   checked: 2026-10-16
-
 - game: 'Black Myth: Wukong'
   year: 2024
   engine: Unreal Engine 5
@@ -3457,7 +3716,6 @@
   - https://www.dsogaming.com/?p=187707
   - https://www.nuget.org/profiles/ReadyM
   checked: 2026-10-16
-
 - game: Red Dead Redemption 2
   year: 2019
   engine: RAGE
@@ -3482,7 +3740,6 @@
   sources:
   - https://github.com/JuliPodie/rdr2-coop-story
   checked: 2026-10-16
-
 - game: Red Dead Redemption 2
   year: 2019
   engine: RAGE
@@ -3506,7 +3763,6 @@
   sources:
   - https://github.com/Chimiscuilo123/RDR2Coop
   checked: 2026-10-16
-
 - game: Red Dead Redemption 2
   year: 2019
   engine: RAGE
@@ -3530,7 +3786,6 @@
   sources:
   - https://www.nexusmods.com/reddeadredemption2/mods/10865
   checked: 2026-10-16
-
 - game: Grand Theft Auto V
   year: 2015
   engine: RAGE
@@ -3557,7 +3812,6 @@
   - https://www.gta5-mods.com/scripts/ragecoop-v
   - https://techraptor.net/gaming/news/new-mod-allows-multiplayer-co-op-in-gta-v
   checked: 2026-10-16
-
 - game: Mass Effect Legendary Edition
   year: 2021
   engine: Unreal Engine 3
@@ -3581,7 +3835,6 @@
   sources:
   - https://www.nexusmods.com/masseffectlegendaryedition/mods/3463
   checked: 2026-10-16
-
 - game: Mass Effect Legendary Edition
   year: 2021
   engine: Unreal Engine 3
@@ -3608,7 +3861,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: DOOM Eternal
   year: 2020
   engine: id Tech 7
@@ -3636,7 +3888,6 @@
   - https://www.moddb.com/mods/co-operative-mode/downloads
   - https://www.ggrecon.com/articles/doom-eternal-mod-support-could-finally-add-campaign-co-op
   checked: 2026-10-16
-
 - game: 'Wolfenstein: The New Order and Wolfenstein II'
   year: 2014
   engine: id Tech 5
@@ -3664,7 +3915,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Titanfall 2 (campaign)
   year: 2016
   engine: Source (modified)
@@ -3693,7 +3943,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB, Thunderstore and Steam via web search, 2026-10-16
-
 - game: Metro Exodus
   year: 2019
   engine: 4A Engine
@@ -3721,7 +3970,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Far Cry 3
   year: 2012
   engine: Dunia
@@ -3750,7 +3998,6 @@
   - https://www.nexusmods.com/farcry3/mods/262
   - https://www.dsogaming.com/news/there-is-now-a-co-op-mod-for-far-cry-3-that-you-can-download
   checked: 2026-10-16
-
 - game: Far Cry 4
   year: 2014
   engine: Dunia
@@ -3777,7 +4024,6 @@
   - https://www.nexusmods.com/farcry4/mods/153
   - https://www.nexusmods.com/farcry4/mods/179
   checked: 2026-10-16
-
 - game: Subnautica
   year: 2018
   engine: Unity
@@ -3805,7 +4051,6 @@
   - https://github.com/SubnauticaNitrox/Nitrox/blob/master/README.md
   - https://gittrend.io/repo/SubnauticaNitrox/Nitrox
   checked: 2026-10-16
-
 - game: 'Subnautica: Below Zero'
   year: 2021
   engine: Unity
@@ -3830,7 +4075,6 @@
   - https://subnauticamultiplayer.com/download
   - https://steamcommunity.com/app/848450/discussions/0/4408543731841128691
   checked: 2026-10-16
-
 - game: Hollow Knight
   year: 2017
   engine: Unity
@@ -3856,7 +4100,6 @@
   - https://github.com/Extremelyd1/HKMP
   - https://pypi.org/project/hk-horn
   checked: 2026-10-16
-
 - game: 'Hollow Knight: Silksong'
   year: 2025
   engine: Unity
@@ -3883,7 +4126,6 @@
   - https://allthings.how/hollow-knight-silksong-multiplayer-mod-co-op-and-pvp-install-and-setup-guide/
   - https://www.dsogaming.com/pc-performance-analyses/hollow-knight-silksong-got-a-multiplayer-mod-with-pvp-support/
   checked: 2026-10-16
-
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -3914,7 +4156,6 @@
   - https://github.com/0x0ade/CelesteNet
   - https://gamebanana.com/mods/53695
   checked: 2026-10-16
-
 - game: The Long Dark
   year: 2017
   engine: Unity
@@ -3942,7 +4183,6 @@
   - https://playco-opgame.com/multiplayer-mod/the-long-dark-multiplayer-mod/
   - https://co-optimus.com/game/16285/pc/blackfrost-the-long-dark-2.html
   checked: 2026-10-16
-
 - game: Outer Wilds
   year: 2019
   engine: Unity
@@ -3968,7 +4208,6 @@
   - https://outerwildsmods.com/mods/quantumspacebuddies/
   - https://vgtimes.com/games/outer-wilds/files/73658-quantum-space-buddies-qsb-multiplayer-mod.html
   checked: 2026-10-16
-
 - game: Hades
   year: 2020
   engine: Supergiant proprietary
@@ -3992,7 +4231,6 @@
   sources:
   - https://www.nexusmods.com/hades/mods/215
   checked: 2026-10-16
-
 - game: Hades
   year: 2020
   engine: Supergiant proprietary
@@ -4021,7 +4259,6 @@
   - https://github.com/Yarmungandr/Hades-Multiplayer-COOP-Anything
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: Hades II
   year: 2025
   engine: Supergiant proprietary
@@ -4046,7 +4283,6 @@
   - https://www.nexusmods.com/hades2/mods/125
   - https://deltiasgaming.com/?p=355456
   checked: 2026-10-16
-
 - game: Dishonored
   year: 2012
   engine: Unreal Engine 3 (modified)
@@ -4072,7 +4308,6 @@
   - https://www.nexusmods.com/dishonored/mods/450
   - https://www.nexusmods.com/dishonored/mods/motm
   checked: 2026-10-16
-
 - game: Dishonored 2
   year: 2016
   engine: Void Engine
@@ -4096,7 +4331,6 @@
   sources:
   - https://www.nexusmods.com/dishonored2/mods/222
   checked: 2026-10-16
-
 - game: Dishonored
   year: 2012
   engine: Unreal Engine 3 (modified)
@@ -4120,7 +4354,6 @@
   sources:
   - https://github.com/ectrc/dismod
   checked: 2026-10-16
-
 - game: Prey (2017)
   year: 2017
   engine: CryEngine
@@ -4148,7 +4381,6 @@
   - https://www.nexusmods.com/prey2017/mods/218?tab=description
   - https://github.com/x0rp01s0n/prey-coop
   checked: 2026-10-16
-
 - game: 'Alien: Isolation'
   year: 2014
   engine: Creative Assembly proprietary
@@ -4174,7 +4406,93 @@
   - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
   - https://steamcommunity.com/app/214490/discussions/0/598198356181958694/
   checked: 2026-10-16
-
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL (multiplayer beta, with OpenOL-Relay)
+  url: https://github.com/ShyKiss/OpenOL
+  other_urls:
+  - https://github.com/ShyKiss/OpenOL-Relay
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: partial
+  last_activity: 2026-08
+  qa: automated
+  notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
+    beta since 2.0.1, release 2.1.0 (2026-08-29). Source is public but no license is stated. Joining works through
+    the standalone OpenOL-Relay 2.1.0 (room PUBLIC); the relay source embedded in the OpenOL repo uses the old packet
+    format. Two-client tests show players, doors, player-spawned enemies (attacks, death, respawn) and story triggers
+    synced; checkpoint loads are not synced, triggers fire for everyone wherever they are, and map enemies are
+    duplicated (every client runs its own copy). Open upstream issues report that connect and Start Server do nothing.
+    A scripted suite (two real clients plus protocol tests, 67 pass, 4 known-bug expectations) and three small relay patches (out-of-context triggers, enemy packet ids, late-join snapshots) is in the own fork https://github.com/G3RKA/OpenOL (tools/outlast-coop); details in games/outlast.
+  sources:
+  - https://github.com/ShyKiss/OpenOL
+  - https://github.com/ShyKiss/OpenOL-Relay
+  - https://github.com/ShyKiss/OpenOL/issues/7
+  - https://github.com/ShyKiss/OpenOL/issues/8
+  checked: 2026-10-21
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL fork with a native enemy patch, play kit and tests (own development)
+  url: https://github.com/G3RKA/OpenOL
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: A fork of OpenOL with its own work in tools/outlast-coop (the upstream has no license, the folder is MIT). A native patch
+    of OpenOL 2.1.0's OLGame.exe keeps one real copy of every map enemy (the lower player id wins) instead of two,
+    the same rule is written in EnemyChannel.cpp (not compiled), plus host and join scripts, three relay patches as files and an
+    automated suite with real clients (67 pass, 4 known-bug expectations; menu path, New Game and rejoin 6 of 6). Tested on one PC
+    with two copies of the game; two PCs, the internet and three players are untested. Checkpoint loads are still not shared and
+    story triggers still fire for everyone wherever they are.
+  sources:
+  - https://github.com/G3RKA/OpenOL
+  - https://github.com/ShyKiss/OpenOL
+  checked: 2026-10-22
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: Outlast-Together
+  url: https://github.com/LucianLandIsBack/Outlast-Together
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2025-02
+  qa: none
+  notes: MIT-licensed school project with a networking DLL and a client folder, no releases. The README says there will be
+    no updates after the school release unless the author feels like it, and the last commits scrap the DLL hook.
+    What it synced was not checked.
+  sources:
+  - https://github.com/LucianLandIsBack/Outlast-Together
+  checked: 2026-10-21
 - game: 'Kingdom Come: Deliverance'
   year: 2018
   engine: CryEngine
@@ -4198,7 +4516,6 @@
   sources:
   - https://github.com/MafiaHub/kcdmp_archived
   checked: 2026-10-16
-
 - game: 'Kingdom Come: Deliverance II'
   year: 2025
   engine: CryEngine
@@ -4226,7 +4543,6 @@
   - https://www.dexerto.com/gaming/kingdom-come-deliverance-2-finally-gets-multiplayer-thanks-to-mod-3412974/
   - https://www.nexusmods.com/absolver/news/15627
   checked: 2026-10-16
-
 - game: 'Kingdom Come: Deliverance II'
   year: 2025
   engine: CryEngine
@@ -4250,7 +4566,6 @@
   sources:
   - https://dsogaming.com/mods/co-op-mods-for-kingdom-come-deliverance-2-and-dragons-dogma-2-released/
   checked: 2026-10-16
-
 - game: Dragon's Dogma 2
   year: 2024
   engine: RE Engine
@@ -4276,7 +4591,6 @@
   - https://www.nexusmods.com/dragonsdogma2/mods/1479
   - https://foro3d.com/en/2026/agosto/dd2gether-lleva-el-cooperativo-online-a-dragons-dogma-2.html
   checked: 2026-10-16
-
 - game: Atomic Heart
   year: 2023
   engine: Unreal Engine 4
@@ -4304,7 +4618,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: 'Star Wars Jedi: Fallen Order and Survivor'
   year: 2019
   engine: Unreal Engine 4
@@ -4332,10 +4645,9 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
-
 - game: God of War (2018)
   year: 2022
-  engine: Santa Monica Studio proprietary
+  engine: Santa Monica Studio Kinetica
   project: (none found)
   url: ''
   other_urls: []
@@ -4351,15 +4663,17 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: PC release year shown; no co-op or multiplayer mod found, only trainers, cosmetic mods and an Atreus companion
-    AI tweak. Reddit could not be searched with my tool.
+  notes: PC release year shown; no public co-op mod found on GitHub/Nexus/ModDB. Static and runtime analysis of Steam build 11168363 (games/god-of-war-2018) verified that GoW.exe code/data are unencrypted on disk, gameplay and Atreus AI run on 1,423 uncompressed Lua 5.2 scripts in .wad files with full debug info, GoW.exe links socket.core (LuaSocket TCP/UDP) and cmsgpack into every Lua VM, and an asymmetric Kratos + Atreus UDP co-op prototype (version.dll + creature/locomotion.lua in son00's VM) was built and verified with 2 simultaneous instances and tools/chaos on 1 PC.
   sources:
+  - https://github.com/Nukem9/godofwar-gameplay-tweaks
+  - https://github.com/adore11s/God-of-War-VR-Mod
+  - https://github.com/kainotoa/GOWTool
+  - https://www.eurogamer.net/god-of-war-modder-makes-atreus-playable
   - https://www.moddb.com/games/god-of-war-2018/mods
   - https://www.nexusmods.com/godofwar/mods/top
-  checked: 2026-10-16
+  checked: 2026-10-28
   searched:
-  - search GitHub, Nexus and ModDB via web search, 2026-10-16
-
+  - search GitHub (repos, forks, issues/PRs), Nexus, ModDB and Reddit via web search, 2026-10-28
 - game: Horizon Zero Dawn
   year: 2020
   engine: Decima
@@ -4386,7 +4700,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
-
 - game: Death Stranding
   year: 2020
   engine: Decima
@@ -4414,7 +4727,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Ghost of Tsushima Director's Cut
   year: 2024
   engine: Sucker Punch proprietary
@@ -4441,7 +4753,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus and ModDB via web search, 2026-10-16
-
 - game: Marvel's Spider-Man Remastered
   year: 2022
   engine: Insomniac proprietary
@@ -4474,7 +4785,6 @@
   - https://www.patreon.com/hbgda
   - https://www.inkl.com/news/marvel-s-spider-man-multiplayer-co-op-mod-blows-up-online-and-fans-are-loving-it
   checked: 2026-10-19
-
 - game: Marvel's Spider-Man 2
   year: 2025
   engine: Insomniac proprietary
@@ -4500,7 +4810,6 @@
   - https://www.nexusmods.com/marvelsspiderman2/mods/2412
   - https://www.nexusmods.com/marvelsspiderman2/mods/2856
   checked: 2026-10-16
-
 - game: 'Mount & Blade II: Bannerlord'
   year: 2022
   engine: TaleWorlds proprietary
@@ -4526,7 +4835,6 @@
   - https://www.moddb.com/mods/bannerlord-coop
   - https://gamebanshee.com/a9xc4
   checked: 2026-10-16
-
 - game: Just Cause 3
   year: 2015
   engine: Apex
@@ -4552,7 +4860,6 @@
   - https://pcgamesn.com/just-cause-3/just-cause-3-multiplayer-mod-cancelled
   - https://techraptor.net/gaming/news/just-cause-3-multiplayer-mod-delayed-indefinitely-another-takes-its-place
   checked: 2026-10-16
-
 - game: 'Mafia: Definitive Edition'
   year: 2020
   engine: Illusion Engine
@@ -4579,7 +4886,6 @@
   - https://github.com/MafiaHub/MafiaMP
   - https://github.com/JustAddMP/MafiaDE
   checked: 2026-10-16
-
 - game: Sifu
   year: 2022
   engine: Unreal Engine 4
@@ -4606,7 +4912,6 @@
   - https://github.com/Zanci19/SifuCoop
   - https://github.com/mashburnn/tailcoop
   checked: 2026-10-16
-
 - game: 'Batman: Arkham Knight'
   year: 2015
   engine: Unreal Engine 3
@@ -4633,7 +4938,35 @@
   - https://github.com/NightfallTogether/Nightfall-Together-Batman-Arkham-Knight-Multiplayer
   - https://www.nexusmods.com/batmanarkhamknight/mods/2505
   checked: 2026-10-16
-
+- game: 'Batman: Arkham Knight'
+  year: 2015
+  engine: Unreal Engine 3
+  project: Arkham Knight Co-op (SplitScreen)
+  url: https://www.nexusmods.com/batmanarkhamknight/mods/3609
+  other_urls:
+  - https://github.com/Team-BmSDK/BmSDK-AK
+  kind: mod
+  status: partial
+  coop_scope:
+    story: partial
+    enemies: true
+    world_state: true
+    items: unknown
+  players: 2-4
+  networking: lan
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Local split-screen on one PC (Steam version), each player on their own controller with their own camera, HUD
+    and gadgets. Player 1 is Batman and the others pick Robin, Nightwing, Catwoman, Azrael, Batgirl, Harley Quinn
+    or Red Hood (some need DLC). Works in the story, new games and AR challenges. Version 1.0.0 by Arysr and Bitcrusader,
+    uploaded 2026-10-27. The author says 2 players is the supported setup (3 and 4 are experimental), some scripted
+    story sequences misbehave, crashes still happen and HUD glitches remain. Runs on BmSDK-AK, the MIT-licensed
+    C# scripting platform for Arkham Knight by Team BmSDK.
+  sources:
+  - https://www.nexusmods.com/batmanarkhamknight/mods/3609
+  - https://github.com/Team-BmSDK/BmSDK-AK
+  checked: 2026-10-27
 - game: 'S.T.A.L.K.E.R. 2: Heart of Chornobyl'
   year: 2024
   engine: Unreal Engine 5
@@ -4657,7 +4990,6 @@
   sources:
   - https://www.nexusmods.com/stalker2heartofchornobyl/mods/2980
   checked: 2026-10-16
-
 - game: S.T.A.L.K.E.R. Anomaly (standalone, X-Ray engine)
   year: 2018
   engine: X-Ray
@@ -4683,7 +5015,6 @@
   - https://www.moddb.com/downloads/anomaly-together-2-coop
   - https://www.moddb.com/games/stalker-call-of-pripyat/downloads/anomaly-together-20-beta-patch-211
   checked: 2026-10-16
-
 - game: The Last of Us Part I
   year: 2023
   engine: Naughty Dog proprietary
@@ -4711,7 +5042,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Assassin's Creed Origins, Odyssey and Valhalla
   year: 2017
   engine: AnvilNext
@@ -4740,7 +5070,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Dead Space (2023 remake)
   year: 2023
   engine: Frostbite
@@ -4767,7 +5096,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Alan Wake 2 and Control
   year: 2023
   engine: Northlight
@@ -4796,7 +5124,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: 'Sleeping Dogs: Definitive Edition'
   year: 2014
   engine: unknown
@@ -4823,7 +5150,6 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -4848,7 +5174,6 @@
   sources:
   - https://github.com/cranebeaker/deus-ex-coop
   checked: '2026-10-16'
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian, libultraship)
@@ -4879,7 +5204,6 @@
   - https://github.com/HarbourMasters/Shipwright/issues/7378
   - https://github.com/bghill95/OOT-True-Co-op
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: HarbourMasters 64 ports (libultraship)
@@ -4906,7 +5230,6 @@
   - https://github.com/garrettjoecox/Anchor
   - https://github.com/HarbourMasters/Lighthouse
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork on Anchor)
@@ -4933,7 +5256,6 @@
   sources:
   - https://github.com/bghill95/OOT-True-Co-op
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork)
@@ -4961,7 +5283,6 @@
   - https://github.com/fReEsPiRiT-Spiritsoft/Shipwright-Online
   - https://github.com/cranebeaker/ocarina-coop
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork)
@@ -4988,7 +5309,6 @@
   sources:
   - https://github.com/cranebeaker/ocarina-coop
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (OOT True Co-op fork)
@@ -5014,7 +5334,6 @@
   sources:
   - https://github.com/phattbeats/7daystozelda
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 emulation via ModLoader64 (Mupen64Plus)
@@ -5045,7 +5364,6 @@
   - https://www.zeldadungeon.net/modders-add-cooperative-multiplayer-to-ocarina-of-time/
   - https://redlib.belloworld.it/r/ZeldaOoT/comments/1f21sk7/is_modloader64_dead
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Majora''s Mask'
   year: 2000
   engine: N64 emulation via ModLoader64 (Mupen64Plus)
@@ -5070,7 +5388,6 @@
   sources:
   - https://github.com/hylian-modding/Z64Online
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Mupen64Plus-based N64 emulator host
@@ -5098,7 +5415,6 @@
   - https://github.com/hylian-modding/ModLoader64-GUI
   - https://community.linuxmint.com/software/view/com.hylianmodding.modloader64
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Majora''s Mask'
   year: 2000
   engine: Zelda64Recomp (N64 static recompilation)
@@ -5124,7 +5440,6 @@
   sources:
   - https://github.com/fern-maker/MMChat
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (Ship of Harkinian fork with Archipelago)
@@ -5151,7 +5466,6 @@
   - https://github.com/HarbourMasters/Archipelago-SoH
   - https://github.com/Odrannnn/Shipwright-Archipelago-Android
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Python multiworld server with per-game clients
@@ -5179,7 +5493,6 @@
   - https://github.com/ArchipelagoMW/Archipelago/blob/main/docs/network%20protocol.md
   - https://nex-3.com/blog/becoming-a-video-game-scientist-part-1/
   checked: 2026-10-16
-
 - game: Super Mario 64
   year: 1996
   engine: N64 decompilation PC port (sm64ex)
@@ -5205,7 +5518,6 @@
   sources:
   - https://github.com/coop-deluxe/sm64coopdx
   checked: 2026-10-16
-
 - game: Super Mario 64
   year: 1996
   engine: N64 decompilation PC port (sm64ex)
@@ -5230,7 +5542,6 @@
   - https://github.com/djoslin0/sm64ex-coop
   - https://github.com/coop-deluxe/sm64coopdx
   checked: 2026-10-16
-
 - game: Super Mario 64
   year: 1996
   engine: N64 emulation with memory hooks
@@ -5257,7 +5568,6 @@
   - https://github.com/net64-mod/net64-coop
   - https://github.com/Tarnadas/net64plus
   checked: 2026-10-16
-
 - game: Animal Crossing (GameCube)
   year: 2001
   engine: GameCube decompilation native PC port (ac-decomp, OpenGL 3.3)
@@ -5286,7 +5596,6 @@
   - https://github.com/vsimochi/ACGC-PC-Multiplayer
   - https://github.com/vsimochi/ACGC-PC-Multiplayer/tree/multiplayer
   checked: 2026-10-16
-
 - game: Banjo-Kazooie
   year: 1998
   engine: N64 decompilation port (Lighthouse, libultraship)
@@ -5312,7 +5621,6 @@
   sources:
   - https://github.com/HarbourMasters/Lighthouse
   checked: 2026-10-16
-
 - game: Banjo-Kazooie
   year: 1998
   engine: 'N64 static recompilation (Banjo: Recompiled)'
@@ -5337,7 +5645,6 @@
   sources:
   - https://github.com/Lebbitheplow/BanjoCoop
   checked: 2026-10-16
-
 - game: Banjo-Kazooie
   year: 1998
   engine: 'N64 static recompilation (Banjo: Recompiled)'
@@ -5363,7 +5670,6 @@
   sources:
   - https://github.com/wilrojasdev/Banjo-Recomp-Online
   checked: 2026-10-16
-
 - game: 'Banjo-Kazooie: Nuts & Bolts'
   year: 2008
   engine: Xbox 360 emulated in Xenia
@@ -5389,7 +5695,6 @@
   sources:
   - https://github.com/weighta/NB-Multiplayer
   checked: 2026-10-16
-
 - game: Super Mario Sunshine
   year: 2002
   engine: GameCube in Dolphin with Better Sunshine Engine
@@ -5417,7 +5722,6 @@
   - https://dsogaming.com/mods/super-mario-sunshine-online-mod-released-for-pc/
   - https://www.timeextension.com/news/2026/07/this-is-the-way-to-enjoy-a-vacation-with-your-friends-super-mario-sunshine-gets-new-10-player-online-mod-with-co-op-and-hide-and-seek
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: The Wind Waker'
   year: 2003
   engine: GameCube in Dolphin (memory sync)
@@ -5442,7 +5746,6 @@
   sources:
   - https://github.com/BrandenEK/Windwaker-coop
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: The Wind Waker'
   year: 2003
   engine: GameCube in Dolphin (PowerPC code injection)
@@ -5467,7 +5770,6 @@
   sources:
   - https://github.com/StephenSHorton/ww-multiplayer
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: The Wind Waker'
   year: 2003
   engine: GameCube in Dolphin
@@ -5493,7 +5795,6 @@
   sources:
   - https://github.com/datstarkey/ww-online
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Twilight Princess'
   year: 2006
   engine: Dusklight (from-scratch reimplementation)
@@ -5521,7 +5822,6 @@
   - https://github.com/remiafterdark/crests-of-courage
   - https://github.com/TwilitRealm/dusklight
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Twilight Princess'
   year: 2006
   engine: Dusklight (from-scratch reimplementation)
@@ -5546,7 +5846,6 @@
   sources:
   - https://github.com/LegendarySavageGamer/Hero-s-Of-Twilight
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: Twilight Princess'
   year: 2006
   engine: Dusklight (from-scratch reimplementation)
@@ -5571,7 +5870,6 @@
   sources:
   - https://github.com/StuartCameronW/dusklight-multiplayer
   checked: 2026-10-16
-
 - game: Perfect Dark
   year: 2000
   engine: N64 decompilation port (fgsfdsfgs port-net branch)
@@ -5599,7 +5897,6 @@
   - https://github.com/fgsfdsfgs/perfect_dark
   - https://github.com/fgsfdsfgs/perfect_dark/blob/port-net/docs/netplay.md
   checked: 2026-10-16
-
 - game: Perfect Dark
   year: 2000
   engine: N64 decompilation port (PD2 fork on port-net)
@@ -5624,7 +5921,6 @@
   sources:
   - https://github.com/MikeHazeJr/perfect-dark-2
   checked: 2026-10-16
-
 - game: Perfect Dark
   year: 2000
   engine: N64 decompilation port (fork)
@@ -5649,7 +5945,6 @@
   sources:
   - https://github.com/cylonicboom/pd-friends-of-joanna
   checked: 2026-10-16
-
 - game: GoldenEye 007
   year: 1997
   engine: N64 decompilation (goldeneye_src) fork
@@ -5674,7 +5969,6 @@
   sources:
   - https://github.com/Joshua-1248/GoldenEye-007-Plus
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: A Link to the Past'
   year: 1991
   engine: SNES in custom bsnes build (bsnes-as with AngelScript)
@@ -5701,7 +5995,6 @@
   - https://github.com/alttpo/alttpo
   - https://go-mode-a-link-to-the-past-randomizer-podcast.castos.com/episodes/smz3-w-solski-sgl2021-brackets-no-logic-co-op-infoshare
   checked: 2026-10-16
-
 - game: 'The Legend of Zelda: A Link to the Past'
   year: 1991
   engine: SNES PC port (snesrev/zelda3)
@@ -5726,7 +6019,6 @@
   sources:
   - https://github.com/aliBrita/Zelda3-Multiplayer
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: BizHawk Lua scripts
@@ -5751,7 +6043,6 @@
   sources:
   - https://github.com/TestRunnerSRL/bizhawk-co-op
   checked: 2026-10-16
-
 - game: Jak 3
   year: 2004
   engine: OpenGOAL (Jak 3 decompilation)
@@ -5777,7 +6068,6 @@
   sources:
   - https://github.com/whozghiar/jak3-multiplayer
   checked: 2026-10-16
-
 - game: Jak 3
   year: 2004
   engine: OpenGOAL (Jak 3 decompilation)
@@ -5804,7 +6094,6 @@
   sources:
   - https://github.com/FUNKI-DELIRE-LEON-GAGIN/Jak-3-Online
   checked: 2026-10-16
-
 - game: Kingdom Hearts II Final Mix
   year: 2002
   engine: PC Steam version (memory-level mod)
@@ -5830,7 +6119,6 @@
   sources:
   - https://github.com/TCM-Murray/Kingdom-Hearts-II-Coop-Multiplayer
   checked: 2026-10-16
-
 - game: Pokemon Red/Blue (Gen 1 Recomp)
   year: 1996
   engine: Gen 1 recompilation (Pokeport engine)
@@ -5855,7 +6143,6 @@
   sources:
   - https://github.com/AshJamB/SilphNet
   checked: 2026-10-16
-
 - game: Pokemon Red/Blue (Gen 1 Recomp)
   year: 1996
   engine: Gen 1 recompilation (Pokeport engine)
@@ -5880,7 +6167,6 @@
   sources:
   - https://github.com/gamecorner-033/Gen1Co-op
   checked: 2026-10-16
-
 - game: Sonic Riders
   year: 2006
   engine: PC version with mod loader
@@ -5905,7 +6191,6 @@
   sources:
   - https://github.com/Sewer56/Riders.Tweakbox
   checked: 2026-10-16
-
 - game: Sonic Adventure DX
   year: 2003
   engine: PC version with SADX Mod Loader
@@ -5930,7 +6215,6 @@
   sources:
   - https://github.com/kellsnc/sadx-multiplayer
   checked: 2026-10-16
-
 - game: Sonic Adventure 2
   year: 2001
   engine: PC Steam version with SA Mod Manager
@@ -5955,7 +6239,6 @@
   sources:
   - https://github.com/Regrant-Dev/SA2-CHAO-ONLINE
   checked: 2026-10-16
-
 - game: 'Spyro: A Hero''s Tail'
   year: 2004
   engine: GameCube in Dolphin (Dolphin NetPlay)
@@ -5980,7 +6263,6 @@
   sources:
   - https://github.com/BrinchEbsen/AHT_MultiPlayer
   checked: 2026-10-16
-
 - game: 'Spyro 2: Ripto''s Rage'
   year: 1999
   engine: PS1 (ISO patch)
@@ -6006,7 +6288,6 @@
   - https://github.com/Spyromain/Spyro2x2
   - https://retrododo.com/the-original-spyro-game-now-has-a-co-op-mod-with-two-player-split-screen/
   checked: 2026-10-16
-
 - game: Crash Team Racing
   year: 1999
   engine: PS1 in DuckStation (patched disc)
@@ -6033,7 +6314,6 @@
   - https://github.com/OnlineCTR/server
   - https://www.dsogaming.com/news/modders-bring-crash-team-racing-to-pc-with-60fps-and-online-multiplayer-support/
   checked: 2026-10-16
-
 - game: Donkey Kong 64
   year: 1999
   engine: N64 emulation via ModLoader64
@@ -6057,7 +6337,6 @@
   sources:
   - https://github.com/ml64lostmods/Dk64Online
   checked: 2026-10-16
-
 - game: 'Halo: Combat Evolved'
   year: 2001
   engine: Halo Custom Edition 1.0.10
@@ -6084,7 +6363,6 @@
   - https://github.com/Sledmine/coop-evolved
   - https://mp1st.com/news/halo-ce-mod-adds-new-way-play-co-op-worst-way
   checked: 2026-10-16
-
 - game: Super Mario Odyssey
   year: 2017
   engine: Nintendo Switch (code mod)
@@ -6111,7 +6389,6 @@
   - https://github.com/CraftyBoss/SuperMarioOdysseyOnline
   - https://github.com/Sanae6/SmoOnlineServer
   checked: 2026-10-16
-
 - game: Sonic Robo Blast 2
   year: 1998
   engine: Doom Legacy derived engine (fan game)
@@ -6138,7 +6415,6 @@
   - https://en.wikipedia.org/wiki/Sonic_Robo_Blast_2
   - https://github.com/STJr/SRB2
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Windows tool launching multiple game instances
@@ -6166,7 +6442,6 @@
   - https://github.com/SplitScreen-Me/splitscreenme-nucleus
   - https://github.com/lucasassislar/nucleuscoop
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Windows DLL injection tool
@@ -6190,7 +6465,6 @@
   sources:
   - https://github.com/UniversalSplitScreen/UniversalSplitScreen
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Steam streaming feature
@@ -6216,7 +6490,6 @@
   sources:
   - https://store.steampowered.com/remoteplay
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Remote desktop streaming
@@ -6241,7 +6514,6 @@
   sources:
   - https://parsec.app/
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Dolphin emulator NetPlay
@@ -6270,7 +6542,6 @@
   - https://ubuntuhandbook.org/index.php/2026/09/dolphin-emulator-2609-released-with-android-netplay/
   - https://github.com/dolphin-emu/dolphin
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: libretro frontend netplay
@@ -6297,7 +6568,6 @@
   - https://docs.libretro.com/guides/netplay-getting-started/
   - https://github.com/libretro/RetroArch
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: Mupen64Plus based N64 emulator
@@ -6324,7 +6594,6 @@
   - https://emulation.gametechwiki.com/index.php/Simple64
   - https://github.com/simple64/simple64
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: DuckStation PS1 emulator fork (GGPO rollback)
@@ -6351,7 +6620,6 @@
   - https://exputer.com/news/playstation/ps1-emulator-rollback-netcode/
   - https://timeextension.com/news/2023/03/popular-ps1-emulator-gets-incredible-update-for-online-multiplayer
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: RPCS3 PS3 emulator matchmaking
@@ -6378,7 +6646,6 @@
   - https://github.com/RipleyTom/rpcn
   - https://github.com/The-OPERATIONS-Team/OPERATION-ETERNAL-LIBERATION
   checked: 2026-10-16
-
 - game: (multiple)
   year: unknown
   engine: PCSX2 PS2 emulator fork
@@ -6405,7 +6672,6 @@
   - https://github.com/alexsharoff/pcsx2-online
   - https://github.com/YungMoniCA1/pcsx2-netplay-reborn
   checked: 2026-10-16
-
 - game: Jak and Daxter
   year: 2001
   engine: OpenGOAL (PC reimplementation)
@@ -6428,7 +6694,6 @@
   sources:
   - https://www.dsogaming.com/news/the-unofficial-pc-port-of-jak-daxter-now-supports-online-and-local-multiplayer/
   checked: '2026-10-16'
-
 - game: "The Legend of Zelda: Majora's Mask"
   year: 2000
   engine: 2 Ship 2 Harkinian (decomp PC port)
@@ -6451,7 +6716,6 @@
   sources:
   - https://github.com/tjoaks/anchor-2s2h
   checked: '2026-10-16'
-
 - game: Mega Man X
   year: 1993
   engine: SNES (native PC static recompilation, snesrecomp)
@@ -6475,7 +6739,6 @@
   - https://github.com/mstan/MegaManXSNESRecomp
   - https://github.com/mstan/MegaManXSNESRecomp/blob/main/docs/netplay.md
   checked: '2026-10-17'
-
 - game: Mega Man X4
   year: 1997
   engine: PS1 (native PC static recompilation, PSXRecomp)
@@ -6499,7 +6762,6 @@
   - https://github.com/mstan/MegaManX4Recomp
   - https://1379.tech/mega-man-x4-recompiled-x-zero-coop-preview/
   checked: '2026-10-17'
-
 - game: Pilotwings 64
   year: 1996
   engine: N64 (native PC build from the Pilotwings64Decomp decompilation)
@@ -6522,7 +6784,6 @@
   sources:
   - https://github.com/NoahVl/Birdman64
   checked: '2026-10-17'
-
 - game: World in Conflict (with Soviet Assault)
   year: 2007
   engine: Masstech (Massive Entertainment)
@@ -6548,7 +6809,6 @@
   - 'WebSearch: World in Conflict campaign co-op mod multiplayer singleplayer missions; "World in Conflict" coop campaign
     mod moddb; play campaign with friend co-op, 2026-10-17'
   - 'Not checked: Massgate forums, WiC Discords, Reddit, non-English searches'
-
 - game: Crab Champions
   engine: Unreal Engine 5
   project: CrabSync
@@ -6573,7 +6833,6 @@
   - https://github.com/Dudiebug/CrabMods
   - https://github.com/Dudiebug/CrabMods/releases
   checked: '2026-10-18'
-
 - game: Half Sword
   engine: Unreal Engine 5
   project: Half Sword Multiplayer Mod (HSMMod)
@@ -6596,7 +6855,6 @@
   - https://github.com/Dudiebug/halfsword-multiplayer-mod
   - https://github.com/Dudiebug/halfsword-multiplayer-mod/releases
   checked: '2026-10-18'
-
 - game: Command & Conquer 3 Tiberium Wars
   year: 2007
   engine: SAGE (C&C3 era)
@@ -6623,7 +6881,6 @@
   - https://github.com/cranebeaker/coop-anything/tree/main/games/command-and-conquer-3
   - https://forums.revora.net/topic/100755-how-to-play-c-c-3-campaign-co-op-please-help/
   checked: '2026-10-18'
-
 - game: Command & Conquer 3 Kane's Wrath
   year: 2008
   engine: SAGE (C&C3 era)
@@ -6643,7 +6900,6 @@
   searched: this repo, web search, GitHub repo search, 2026-10-17; ModDB only via search results (Cloudflare check)
   sources: []
   checked: '2026-10-18'
-
 - game: "Divinity II: Developer's Cut"
   engine: Gamebryo-derived (Larian "Divinity Application")
   project: divinity2-split-screen
@@ -6666,7 +6922,6 @@
   - https://github.com/cranebeaker/coop-anything/tree/main/games/divinity-2-developers-cut
   - https://en.wikipedia.org/wiki/Divinity_II
   checked: '2026-10-18'
-
 - game: Stacklands
   year: 2022
   engine: Unity
@@ -6692,7 +6947,6 @@
   sources:
   - https://github.com/Dudiebug/stacklands-coop
   checked: '2026-10-17'
-
 - game: Enter the Gungeon
   year: 2016
   engine: Unity 2017.4 (Mono)
@@ -6718,7 +6972,6 @@
   - https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/
   - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
   checked: '2026-10-18'
-
 - game: Enter the Gungeon
   year: 2016
   engine: Unity 2017.4 (Mono)
@@ -6745,14 +6998,12 @@
   - https://thunderstore.io/c/enter-the-gungeon/p/Rec/GungeonTogether_3Player/
   - https://github.com/cranebeaker/coop-anything/tree/main/games/enter-the-gungeon
   checked: '2026-10-18'
-
 - game: Clive Barker's Jericho
   year: 2007
   engine: MercurySteam ScrapEngine (Scrapland engine, Lua 5.1)
-  project: Jericho Co-op
+  project: Jericho Co-op+
   url: https://github.com/dolbaras/jericho-coop
-  other_urls:
-  - https://github.com/MAK-PIVO/jericho-coop
+  other_urls: []
   kind: mod
   status: alpha
   coop_scope:
@@ -6767,17 +7018,22 @@
   last_activity: 2026-10
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Test builds with an installer (0.2.1). LAN/direct IP over ENet or Steam lobbies (runs as Spacewar),
-    in a dinput8.dll proxy (the exe's code is not patched); host-authoritative enemies, story, scenes, powers, doors and saves; QTE
-    and cutscene view are session settings. The whole campaign runs in automated tests over a LAN between two PCs;
-    human playthroughs just started. MIT. The MAK-PIVO fork's Steam, shared QTE, sync and boss/power work was merged
-    back in 0.2.1. Write-up in games/clive-barkers-jericho.
+    split screen. Version 0.2.7 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
+    player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
+    display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
+    releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
+    Spacewar), in a dinput8.dll proxy (two engine faults handled in memory, a split screen crash and a NULL read at
+    the last boss; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes,
+    powers, doors, breakable and movable objects and saves; each fire team follows its own player. The whole
+    campaign runs in automated tests over a LAN between two PCs, every story split with a real host and client; a
+    first human session over Steam (missions 1-8) was fixed up in 0.2.2, a full human playthrough is still to come.
+    MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
+    0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
-  - https://github.com/MAK-PIVO/jericho-coop
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-10-22'
+  checked: '2026-10-23'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -6816,7 +7072,6 @@
   searched:
   - search GitHub (repo search, 435 results), Nexus mods list (58 mods), ModDB, Steam store API and web search, 2026-10-18
   - coop-anything issues/PRs via GitHub search API (0 hits), 2026-10-18
-
 - game: 'Call of Duty: Modern Warfare 3'
   year: 2011
   engine: IW 5.0 (Call of Duty)
@@ -6844,7 +7099,6 @@
   - https://forum.alterware.dev/t/iw5-mod-install-guide/462
   - https://www.moddb.com/mods/mw3-survival-mode-revived
   checked: '2026-10-19'
-
 - game: 'Call of Duty: Modern Warfare 3'
   year: 2011
   engine: IW 5.0 (Call of Duty)
@@ -6873,7 +7127,6 @@
   checked: '2026-10-19'
   searched:
   - GitHub, Nexus, ModDB, Steam and the AlterWare forums via web search, 2026-10-18
-
 - game: Far Cry 2
   year: 2008
   engine: Dunia (CryEngine 1 derivative)
@@ -6889,27 +7142,32 @@
     enemies: 'no'
     world_state: 'no'
     items: 'no'
-  players: '2 (two copies on one PC)'
-  networking: lan
+  players: '2 (two PCs over Steam, or two copies on one PC)'
+  networking: steam-relay
   open_source: 'yes'
   last_activity: '2026-10'
-  qa: none
+  qa: automated
   notes: >-
     No public Far Cry 2 co-op campaign project exists (searched 2026-10-19). Research prototype for Steam 1.03: a
     dinput8.dll proxy runs a Lua 4.0 channel and native commands inside the game, finds the player's Havok body by
-    class, and exchanges position over its own UDP socket between two copies on one PC; each copy spawns an
-    invincible avatar of the peer and moves it smoothly. Players see each other only as a sliding, idle-pose avatar:
-    no animation, heading, weapons, health, mission or world sync. Stock multiplayer cannot carry the campaign
-    (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). Checked by hand with the owner watching, no
-    automated tests. Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
+    class, and exchanges position and heading over its own UDP socket; each copy spawns an invincible avatar of the
+    peer, moves and turns it. A relay (in the probe's open PRs) carries this over Steam (Spacewar lobby, no IPs or
+    port forwarding): one manual run between two PCs on different networks on 2026-10-25 kept a 16/s link for ~7
+    minutes with 0 dropped and the avatar followed the host's walk. Players see each other only as a sliding,
+    idle-pose avatar: no animation, weapons, health, mission or world sync. Stock multiplayer cannot carry the
+    campaign (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). QA covers only the position
+    puppet: a script (tests/two_copy_walk.ps1, in MortyRei/fc2-coop-probe#1-#3, not merged) drives two copies on one
+    PC and checks positions and heading (20/20, 22/22 through relays; it fails on the probe before its fixes).
+    Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
   sources:
   - https://github.com/MortyRei/fc2-coop-probe
+  - https://github.com/MortyRei/fc2-coop-probe/pull/1
+  - https://github.com/MortyRei/fc2-coop-probe/pull/3
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
-  checked: '2026-10-19'
-
+  checked: '2026-10-25'
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
@@ -6937,7 +7195,6 @@
   sources:
   - https://www.nexusmods.com/taintedgrailthefallofavalon/mods/211
   checked: '2026-10-20'
-
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -6963,7 +7220,6 @@
   sources:
   - https://gothic.org.pl/gothic/modyfikacje/gothic-3-heroes-w-trybie-kooperacji/
   checked: '2026-10-16'
-
 - game: Gothic 3
   year: 2006
   engine: Genome
@@ -6992,34 +7248,37 @@
   - https://github.com/yevh/Gothic3/releases/tag/v0.35.0-beta.1
   - https://github.com/yevh/Gothic3/blob/327c0b0a2409db1f7ba0ba9a7f09cb171c5500e0/LICENSE
   checked: '2026-10-17'
-
 - game: Gothic 3
   year: 2006
   engine: Genome
   project: G3 Together
   url: https://github.com/GGM1k3y23/g3-together
-  other_urls: []
+  other_urls:
+  - https://github.com/GGM1k3y23/g3-together/releases
   kind: mod
-  status: alpha
+  status: playable
   coop_scope:
     players_visible: 'yes'
     story: 'yes'
     enemies: 'yes'
-    world_state: partial
+    world_state: 'yes'
     items: 'yes'
   players: '2'
   networking: direct-ip
   open_source: 'yes'
   last_activity: '2026-10'
   qa: automated
-  notes: 'Built from zero on the Gothic 3 SDK, ENet, GPL-3.0-or-later; work in progress. Steam CP 1.75.14. Bot suites
-    with two real game clients on one PC (each stage 3 passes plus a failing negative control): players, NPCs,
-    combat, quests, dialogs, items, trade, clock, saves and regional NPC ownership. Human review pending; internet
-    play, a full playthrough and more than two players untested. See games/gothic-3.'
+  notes: 'Full Gothic 3 campaign co-op for two players, built from zero on the Gothic 3 SDK and ENet,
+    GPL-3.0-or-later. Public beta v0.6.0 (2026-10-26) with setup in English, German and Polish. Shared: quests,
+    dialogs and story, enemies and combat, loot and chests, trade between players, freed towns and story moves,
+    town reputation, the clock and the host''s saves; a downed player can be revived. Every feature is covered by
+    bot suites driving two real game clients (187 runs for 0.6.0), and the bots played the story to Innos'' ending.
+    Needs Steam CP 1.75.14 and Parallel Universe Patch 1.1.1. Not yet played by people: the Adanos and Beliar
+    endings and more than two players. See games/gothic-3.'
   sources:
   - https://github.com/GGM1k3y23/g3-together
-  checked: '2026-10-20'
-
+  - https://github.com/GGM1k3y23/g3-together/releases/tag/v0.6.0-beta
+  checked: '2026-10-26'
 - game: Crimson Desert
   year: 2026
   engine: BlackSpace Engine
@@ -7055,7 +7314,6 @@
   - https://github.com/cranebeaker/coop-anything/issues/51
   checked: '2026-10-19'
   up_for_adoption: true
-
 - game: Crimson Desert
   year: 2026
   engine: BlackSpace Engine
@@ -7082,7 +7340,6 @@
   sources:
   - https://github.com/blizz3010/CrimsonDesertCoop
   checked: '2026-10-19'
-
 - game: Crimson Desert
   year: 2026
   engine: BlackSpace Engine
@@ -7110,7 +7367,6 @@
   - https://wccftech.com/crimson-desert-2-player-co-op-mod-but-more-advanced-soon/
   - https://insider-gaming.com/crimson-desert-multiplayer-mod-is-being-tested/
   checked: '2026-10-19'
-
 - game: Fear & Hunger
   year: 2020
   engine: RPG Maker MV
@@ -7140,7 +7396,6 @@
   - https://github.com/glynn568-glitch/fear-and-hunger-together
   - https://phosphopho.itch.io/fear-and-hunger-together
   checked: '2026-10-20'
-
 - game: 'Call of Duty: Modern Warfare 2'
   year: 2009
   engine: IW 4.0 (Call of Duty)
@@ -7170,36 +7425,41 @@
   - https://steamcommunity.com/app/10180/discussions/0/3087772148451672664
   - https://github.com/FreeTheTech101/cod-mod
   checked: '2026-10-19'
-
 - game: 'Call of Duty: Modern Warfare 2'
   year: 2009
   engine: IW 4.0 (Call of Duty)
   project: mw2_coop
   url: https://github.com/stxlvn/mw2_coop
-  other_urls: []
+  other_urls:
+  - https://github.com/stxlvn/mw2_coop/releases
+  - https://www.nexusmods.com/codmw2/mods/99
   kind: mod
-  status: prototype
+  status: partial
   coop_scope:
     players_visible: yes
     story: partial
-    enemies: unknown
-    world_state: unknown
-    items: synced weapons
+    enemies: yes
+    world_state: yes
+    items: per-player
   players: 2
   networking: direct-ip
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: Work in progress. MIT prototype for the 64-bit Steam build. A winmm.dll proxy plus load-time
-    GSC patches on top of the game's own lockstep Spec Ops co-op netcode. Two copies play S.S.D.D.
-    together (checkpoints, restart when both are down, saved progress), move on to the next mission
-    together and share the Team Player convoy Humvee (turret for whoever boards first, seat swap) and
-    the Wolverines! Humvee rides; in-game QA passes on both machines. Other missions not done; not
-    playable through yet. Write-up in games/modern-warfare-2.
+  notes: Beta (v0.5.0-beta), playable. MIT mod for the 64-bit Steam build. A winmm.dll proxy plus load-time
+    GSC patches on top of the game's own lockstep Spec Ops co-op netcode, hosted and joined from the
+    game's menus (lobby, LAN list, address, Steam invite). Every set piece is reworked for two players, among them S.S.D.D.,
+    Team Player, Wolverines!, the rope and rappel scenes (Gulag, Just Like Old Times, Escape from Favela), Takedown's car, The Only Easy Day's swim, Cliffhanger's climb and
+    snowmobiles, No Russian, Second Sun's crash and ISS, Loose Ends' betrayal, Endgame's boat and knife
+    fight; enemies fight both players, both play the difficulty the host picks, friendly fire is a lobby switch and every level has checkpoints. The game's co-op runs in lockstep (both PCs run the same level), so the world
+    is shared. In-game QA on two copies, including a bot tour of the start points of all 19 levels (the Museum epilogue still fails for player 2); two people played parts of the story on two PCs, from the start up to and including No Russian. The missions after it were checked by bots only; not played through end to end yet. Write-up in
+    games/modern-warfare-2.
   sources:
   - https://github.com/stxlvn/mw2_coop
-  checked: '2026-10-20'
-
+  - https://github.com/stxlvn/mw2_coop/releases
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/modern-warfare-2
+  checked: '2026-10-25'
+  made_with_coop_anything: true
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -7228,7 +7488,6 @@
   - https://gamebanana.com/mods/453706
   - https://github.com/corkr900/CoopHelper
   checked: 2026-10-16
-
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -7256,7 +7515,6 @@
   sources:
   - https://gamebanana.com/mods/150725
   checked: 2026-10-16
-
 - game: Celeste
   year: 2018
   engine: XNA/FNA
@@ -7283,7 +7541,6 @@
   sources:
   - https://gamebanana.com/mods/713075
   checked: 2026-10-16
-
 - game: Dave the Diver
   year: 2023
   engine: Unity
@@ -7311,7 +7568,6 @@
   - https://github.com/masonan777/Daves-the-Diver-Coop-Mod
   checked: '2026-10-19'
   made_with_coop_anything: true
-
 - game: Dave the Diver
   year: 2023
   engine: Unity
@@ -7337,7 +7593,6 @@
   sources:
   - https://github.com/S1ii/Coop-Divers
   checked: '2026-10-19'
-
 - game: Pacific Drive
   year: 2024
   engine: Unreal Engine 4
@@ -7346,11 +7601,11 @@
   other_urls:
   - https://discord.com/channels/1561411702082510879/1562166509659230338
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
     players_visible: 'yes'
     story: 'no'
-    enemies: unknown
+    enemies: 'no'
     world_state: partial
     items: partial
   players: '2'
@@ -7358,17 +7613,20 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: Two-player research prototype on Unreal's own listen-server netcode, driven by a UE4SS Lua mod. Automated
-    two-instance tests on one PC pass for joining, riding as a passenger, rejoining, map travel, shared world items,
-    a shared car trunk and car health, fuel and battery following the host. Inventories are per player; quests,
-    crafting and the host's saves are not synced. Only tested on localhost (host needs UDP 7777 reachable) with
-    Steam build 21896301. Earlier, a 2024 fan attempt was frozen. MIT.
+  notes: Two-player alpha on Unreal's own listen-server netcode, driven by a UE4SS Lua mod, with an installer that
+    sets up UE4SS, updates the mod from GitHub releases and collects logs (release v0.8.0). Automated two-instance
+    tests pass for joining and rejoining, riding as a passenger, map travel, shared world items, a shared car trunk,
+    car part health, fuel and battery following the host, item state (fuel, charge, durability), player 2's refuel
+    and charge, player 2's saved inventory, and down/revive/team death; one live session over the internet (Radmin
+    VPN) was played. In progress on the main branch, the host's generated zone content (abandoned cars, props, doors,
+    containers) replicated to player 2, door state shared both ways, lootable containers holding the host's items.
+    Not synced yet are quests and progress, hazards and weather, and which car parts are installed; player 2 cannot
+    drive. Host needs UDP 7777 reachable. Steam build 21896301. MIT.
   sources:
   - https://github.com/BroZYTnikkkk/pacific-drive-coop
-  - https://steamcommunity.com/app/1458140/discussions/0/604153001708376779
-  checked: '2026-10-20'
+  - https://github.com/BroZYTnikkkk/pacific-drive-coop/releases/tag/v0.8.0
+  checked: '2026-10-22'
   made_with_coop_anything: true
-
 - game: BattleTech
   year: 2018
   engine: Unity
@@ -7390,7 +7648,6 @@
   - https://www.pcgamingwiki.com/wiki/BattleTech
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: 'Half-Life: Alyx'
   year: 2020
   engine: Source 2
@@ -7415,7 +7672,6 @@
   - https://www.pcgamingwiki.com/wiki/Half-Life%3A_Alyx
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: Final Fantasy VII Remake Intergrade
   year: 2021
   engine: Unreal Engine 4
@@ -7437,7 +7693,6 @@
   - https://www.pcgamingwiki.com/wiki/Final_Fantasy_VII_Remake_Intergrade
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
@@ -7459,29 +7714,30 @@
   - https://www.pcgamingwiki.com/wiki/Spider-Man%3A_Friend_or_Foe
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: 'Deep Rock Galactic: Survivor'
   year: 2024
   engine: Unity 6 (IL2CPP)
-  project: drg-survivor-coop
-  url: https://github.com/Reudo/drg-survivor-coop
-  other_urls: []
+  project: drg-survivor-local-coop
+  url: https://github.com/Reudo/drg-survivor-local-coop
+  other_urls:
+  - https://github.com/Reudo/drg-survivor-local-coop/releases/tag/v1.0.0
   kind: mod
-  status: prototype
+  status: playable
   coop_scope:
-    players_visible: partial
+    players_visible: yes
+    enemies: yes
+    world_state: yes
+    items: per-player
   players: '2'
-  networking: direct-ip
-  open_source: 'yes (MIT)'
+  networking: unknown
+  open_source: yes
   last_activity: 2026-10
   qa: automated
-  notes: Host-authoritative BepInEx/LiteNetLib prototype, direct IP only. The automated runs use two
-    clients on ONE PC; the first real two-PC test went badly, so treat it as experimental. Details in
-    games/deep-rock-galactic-survivor/.
+  notes: 'Local co-op for two controllers on one PC (a BepInEx 6 IL2CPP plugin; the second dwarf is a second player object in the same game process). Licence: MIT. It has no network code of its own; online play with a friend only works through Steam Remote Play Together (Steam''s own streaming; the invite works, not tested screen by screen). Elimination and Escort missions. Automated QA, one PC, test copy of the game with virtual gamepads (harness in the repo, tools/batch_*.ps1), every check has a twin flag that turns it red. Results 2026-10-21 to 2026-10-23 (run ids in the repo''s PLAN.md): main menu 11/11, real mouse clicks 5/5, real start from the menu (class and mission read back from the live second dwarf), menu locks 10/10 (twin 6 ok, 4 fail), bonus mirror 5/5 (twin 0/5), pause menu per player 5/5 (twins red), retry run 7/7, revive and loot-crate tests green (twins red). The author has also played several full runs by hand with two controllers: no game-breaking bugs, at most small visual ones such as a wrong UI display; no independent report yet. Known gaps in the repo README (end-screen damage numbers probably inaccurate, DLCs not supported and not tested). Release 1.0.0 with installer.'
   sources:
-  - https://github.com/Reudo/drg-survivor-coop
-  checked: '2026-10-21'
-
+  - https://github.com/Reudo/drg-survivor-local-coop
+  checked: '2026-10-24'
+  made_with_coop_anything: true
 - game: Little Nightmares
   year: 2017
   engine: Unreal Engine 4
@@ -7504,7 +7760,6 @@
   - https://www.pcgamingwiki.com/wiki/Little_Nightmares
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: Yu-Gi-Oh! 5D's Tag Force 4
   year: 2009
   engine: unknown
@@ -7526,7 +7781,6 @@
   - https://en.wikipedia.org/wiki/List_of_Yu-Gi-Oh!_video_games
   checked: '2026-10-20'
   made_with_coop_anything: true
-
 - game: 'Middle-earth: Shadow of War'
   year: 2017
   engine: Firebird (LithTech derivative)
@@ -7556,7 +7810,6 @@
   - GitHub repository search "shadow of war" (first 30 results read), 2026-10-20
   - Nexus mod pages (automated fetch blocked, 403; search-result text only), Steam forum threads via search, 2026-10-20
   - Not searched yet; Reddit, ModDB, the game's modding Discord, non-English sources
-
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)
@@ -7588,7 +7841,6 @@
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/releases/tag/Beta1-2-0
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/issues/22
   checked: '2026-10-20'
-
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)
@@ -7621,7 +7873,6 @@
   - https://github.com/Zonda001/graveyard-keeper-multiplayer/issues
   - https://github.com/ZlordHUN/GYK-Back-From-The-Grave/pull/9
   checked: '2026-10-20'
-
 - game: MDK2 HD
   year: 2011
   engine: BioWare in-house (MDK2), OpenGL 3, Lua 3.1 scripting
@@ -7643,16 +7894,15 @@
   qa: automated
   notes: Native dinput8.dll bridge plus Lua injected through settings.lua. The host runs the world; clients mirror
     enemies, replay shots including delayed Doganboy grenades, share pickups, doors and checkpoints, follow level loads, and revive at a partner when
-    they go down. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP. Co-op saves and reconnect after a crash.
-    Text chat, pings, proximity voice, difficulty presets, controls presets, a launcher, couch (split-screen) co-op. Installer and a v0.1.0-alpha
-    pre-release; master is ahead of it. Automated checkpoint sweep of all 96 checkpoints with two real clients and a
-    host/client state diff (before the N-player change), plus 3- and 8-player suites; feature suites for the newer parts.
+    they go down. Cutscenes start together with a skip vote. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP, chosen in
+    a launcher. Co-op saves and reconnect after a crash. Text chat, pings, proximity voice, difficulty and controls presets, character and emote wheels,
+    couch (split-screen) co-op. Public alpha v0.2.0-alpha with an installer; before it, an automated ladder of 31 gates including all 96
+    checkpoints with two real clients and a host/client state diff.
   sources:
   - https://github.com/TommoDotCommo/mdk2-coop
   - https://store.steampowered.com/app/213350/
-  checked: '2026-10-22'
+  checked: '2026-10-23'
   made_with_coop_anything: true
-
 - game: Resident Evil 2 (2019 remake)
   year: 2019
   engine: RE Engine
@@ -7678,7 +7928,6 @@
   sources:
   - https://www.nexusmods.com/residentevil22019/mods/3024
   checked: '2026-10-21'
-
 - game: 'The Elder Scrolls IV: Oblivion'
   year: 2006
   engine: Gamebryo
@@ -7704,7 +7953,6 @@
   sources:
   - https://www.nexusmods.com/oblivion/mods/56734
   checked: '2026-10-21'
-
 - game: 'Call of Duty: Black Ops III'
   year: 2015
   engine: IW engine (Call of Duty, Treyarch fork)
@@ -7732,7 +7980,6 @@
   - https://www.nexusmods.com/callofdutyblackops3/mods/53
   - https://github.com/LocalPlayer123/BO3-4-Player-Local-Splitscreen-on-PC
   checked: '2026-10-21'
-
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
@@ -7759,7 +8006,6 @@
   - https://www.swiftworld.net/2007/10/13/pc-spider-man-friend-or-foe-review/
   - https://www.gamespot.com/reviews/spider-man-friend-or-foe-review/1900-6180451/
   checked: '2026-10-20'
-
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
@@ -7792,7 +8038,6 @@
   checked: '2026-10-21'
   up_for_adoption: false
   made_with_coop_anything: true
-
 - game: Ghostrunner
   year: 2020
   engine: Unreal Engine 4
@@ -7821,7 +8066,6 @@
   - 'Steam forums, Steam appdetails API, Reddit r/GhostRunner, YouTube, general web, 2026-10-21'
   - 'UE4SS CustomGameConfigs list: no Ghostrunner entry, 2026-10-21'
   - 'Local binary triage of the shipping exe and pak footer, 2026-10-21'
-
 - game: Dave the Diver
   year: 2023
   engine: Unity
@@ -7912,7 +8156,7 @@
   url: https://github.com/Shocklinks/autonauts-coop
   other_urls: []
   kind: mod
-  status: alpha
+  status: playable
   coop_scope:
     players_visible: 'yes'
     story: 'yes'
@@ -7924,14 +8168,15 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: BepInEx 5 plugin, host-authoritative mirror (joiner sims frozen, input replayed on the host). Steam
-    lobbies/invites plus direct IP (TCP 27015). Joiners build with undo, teach and program bots, and use building menus,
-    bot server, groups, catapult, spaceport and planning; characters are stored with the host's save while away.
-    Two-instance automated suite 101/101 (TCP) and 84/84 (Steam framing over UDP) plus a big-base stress test; the real
-    Steam lobby path between two PCs is untested. MIT. Write-up in games/autonauts.
+  notes: First beta (0.13.0). BepInEx 5 plugin, host-authoritative mirror (joiner sims frozen, input replayed on the
+    host). Host and join from the game's own menus (Esc > Host Multiplayer; main menu > Multiplayer), Steam lobbies and
+    invites plus direct IP (TCP 27015). Joiners build with undo, teach and program bots, use building menus, bot server,
+    groups, catapult, spaceport, planning and the Creative spawn menu; characters are stored with the host's save while
+    away. Automated suites with real game clients on one PC (2 players 116/116, 4 players 46/46, own late-game save
+    18/18); one two-PC Steam session over the internet by the author. MIT. Write-up in games/autonauts.
   sources:
   - https://github.com/Shocklinks/autonauts-coop
-  checked: '2026-10-21'
+  checked: '2026-10-26'
 - game: 'The Lord of the Rings: The Two Towers'
   year: 2002
   engine: Stormfront Fusion (Xbox), static recompilation to PC (The Two Towers Recompiled, xboxrecomp)
@@ -8024,3 +8269,656 @@
   - 'GitHub repository search via the API: the witness multiplayer, witness coop, the witness randomizer, TheWitnessExplorer, witness64_d3d11 (no co-op project), 2026-10-22'
   - 'WebSearch (extended): The Witness Jonathan Blow multiplayer co-op mod; also randomizer / Archipelago client and engine queries (no co-op mod), 2026-10-22'
   - 'Not checked: Nexus Mods, ModDB, Reddit, archive.org, Steam guides in depth, the game or speedrun Discords, non-English communities'
+- game: Call of Duty
+  year: 2003
+  engine: IW 1.0 (Call of Duty, id Tech 3 derived)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No campaign co-op mod found. A 2025 Steam reply names a "CoD 1 Cooperative Mod" with no link or author;
+    no build was found. The ModDB "Call of Duty 1 Splitscreen PC v1.1" file is a 318-byte multiplayer splitscreen
+    launcher, not campaign co-op. Research and reverse-engineering notes for the 1.5 singleplayer exe (4 server client
+    slots kept, network transport stripped to loopback) and a per-mission script survey are in games/call-of-duty.
+    The native networking part is open for someone to take on.
+  sources:
+  - https://steamcommunity.com/discussions/forum/0/2284960483102477437/
+  - https://www.moddb.com/downloads/call-of-duty-1-splitscreen-pc-v11
+  checked: '2026-10-24'
+  searched:
+  - 'Repo DIRECTORY.md, games/, issues and PRs for "call of duty" (only MW 2019, MW2, MW3 claims), 2026-10-23'
+  - 'WebSearch: Call of Duty 2003 / CoD1 / United Offensive co-op campaign mod, "CoD 1 Cooperative Mod", Russian
+    query, vcodmods/xtnded co-op, 2026-10-23'
+  - 'GitHub repository search via gh: iw1x, codextended, call of duty 1, coduo, cod1 coop, cod coop singleplayer,
+    codsp (multiplayer extensions only), 2026-10-23'
+  - 'Not checked: Discord servers, Reddit, archive.org, Nexus Mods'
+- game: 'Call of Duty: United Offensive'
+  year: 2004
+  engine: IW 1.0 (Call of Duty, id Tech 3 derived)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No campaign co-op mod found. CoDUO-YAP (GPL-3.0, active 2026-10) is a singleplayer and multiplayer
+    quality-of-life plugin with a loader and hooks for the UO exe, a possible base. Open CoD:UO (opencoduo/coduomp)
+    reconstructs the multiplayer client and server source but states no license and has no singleplayer AI code.
+    See games/call-of-duty (UO 1.51 not analysed per mission yet).
+  sources:
+  - https://github.com/Clippy95/CoDUO-YAP
+  - https://github.com/opencoduo/coduomp
+  checked: '2026-10-24'
+  searched:
+  - 'Same searches as the Call of Duty (2003) entry, 2026-10-23'
+- game: Obscure
+  year: 2004
+  engine: Hydravision in-house (.hvp archives, .hoe scripts); not RenderWare
+  project: obscure-coop
+  url: https://github.com/Gyurooo/obscure-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Online co-op over Steam for the Steam version (build 215286), built on the game's own 2-player local co-op. A proxy xinput1_3.dll makes the friend's controller
+    the host's player 2 and mirrors the host's game to the friend's copy (characters, enemies, items, doors, story flags, levels, weapons, inventory, deaths,
+    save loading), with smoothing over the internet. Optional in-game supersampling, 16x filtering, a tuned ReShade setup and 16:9 widescreen. Ladders, racks and locks
+    do not animate on the friend's screen. Bot tests drive two real copies on one PC (load, death, doors, items, combat) but only ran on builds up to 1.0;
+    builds 1.1 to 1.8 (smoothing, graphics, widescreen) were not bot-tested, only checked by screenshots, measurements and playtests over Steam. MIT.
+    Write-up in games/obscure.
+  sources:
+  - https://github.com/Gyurooo/obscure-coop
+  - https://github.com/cranebeaker/coop-anything/issues/183
+  - https://store.steampowered.com/app/254460/
+  checked: '2026-10-25'
+- game: Vanquish
+  year: 2010
+  engine: Platinum Engine (in-house, Havok physics)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found for the PC port (Steam 460810, 2017). The game shipped with no multiplayer at all and PlatinumGames said at release
+    they never built any. Modding on Nexus is limited to cheat tables, trainers and texture/skin packs. Build from zero would mean reverse engineering a closed
+    custom-engine binary (C++, Havok, script files in .pkg-style archives) with no netcode, no scripting layer and no same-engine co-op framework; see
+    games/vanquish for what is known and where to start.
+  sources:
+  - https://en.wikipedia.org/wiki/Vanquish_(video_game)
+  - https://www.eurogamer.net/no-multiplayer-modes-for-vanquish
+  - https://steamcommunity.com/app/460810/discussions/0/1333474229082146537/
+  - https://www.nexusmods.com/vanquish/mods/latest/
+  - https://www.pcgamingwiki.com/wiki/Engine:Platinum_Engine
+  checked: '2026-10-22'
+  searched:
+  - 'Repo DIRECTORY.md, games/, playbook and public GitHub issues and PRs for Vanquish (nothing), 2026-10-22'
+  - 'GitHub repository and code search via the API: vanquish (no co-op project; hits are a Kali tool, phone trees, a Sublime theme), 2026-10-22'
+  - 'WebSearch: Vanquish co-op mod / multiplayer mod / online mod, Nexus and ModDB mentions, Steam forums (requests only, no project), 2026-10-22'
+  - 'Not checked: archive.org, Reddit threads in depth, the game''s Discord (none found), Japanese-language communities (Bayonetta/Vanquish modders)'
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: ProjectSync
+  url: ''
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: yes
+    world_state: unknown
+    items: partial
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: No public download as of 2026-10-23. Online co-op for No Return first, then the story campaign. A demo showed two
+    players in the safe house with movement, animations, weapons, backpack, flashlights, melee, enemy AI and damage
+    synced. Promised free and open source; no repository found yet.
+  sources:
+  - https://www.gamingbible.com/news/the-last-of-us-projectsync-co-op-mod-128815-20261018
+  - https://www.reddit.com/r/thelastofus/comments/1x8w74m/coop_for_no_return_in_the_last_of_us_part_ii/
+  checked: 2026-10-23
+  searched:
+  - GitHub repository and code search via API, web search for ProjectSync and leiden_core, 2026-10-23
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: TLOU2 Co-op (Awperati)
+  url: https://github.com/Awperati/tlou2-coop
+  other_urls:
+  - https://github.com/Awperati/tlou2-coop/releases/tag/v0.1.0
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: lan
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: Two-PC story co-op where player 2 takes the chapter companion. v0.1.0 (2026-10-17) has a tested network layer,
+    teleport, roster, overlay and loader, but the README says the game link is not mapped, so characters cannot be moved
+    in game yet. Targets the 2025-04-03 launch build (PE timestamp 67ED75F7). Public source has no license file. The
+    optional internet relay was not tested here.
+  sources:
+  - https://github.com/Awperati/tlou2-coop
+  - https://github.com/Awperati/tlou2-coop/releases/tag/v0.1.0
+  checked: 2026-10-23
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: TLOU2 Multiplayer Mod (Speclizer)
+  url: ''
+  other_urls:
+  - https://x.com/Speclizer_
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2-8'
+  networking: unknown
+  open_source: no
+  last_activity: 2026-09
+  qa: none
+  notes: PvP and experimental co-op work shown from January to September 2026; reached 4v4, five maps, loadouts and
+    leaderboards. Cancelled on 2026-09-14 after a letter from Sony Interactive Entertainment requesting it not be
+    released. Never released; do not revive.
+  sources:
+  - https://www.pcgamer.com/games/action/that-last-of-us-2-multiplayer-mod-everyone-was-looking-forward-to-has-been-killed-by-sony/
+  - https://www.pcgamer.com/games/action/the-last-of-us-multiplayer-mod-has-hit-a-big-milestone-as-it-prepares-for-launch-in-september
+  checked: 2026-10-23
+- game: The Last of Us Part II Remastered
+  year: 2025
+  engine: Naughty Dog proprietary
+  project: TLOU2 Co-op Hook (foufouadi)
+  url: https://github.com/foufouadi/TLOU2_Co-op
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: partial
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: '2'
+  networking: lan
+  open_source: partial
+  last_activity: 2026-08
+  qa: none
+  notes: One-commit experiment. Injects a DLL, syncs position between two instances over local UDP and spawns a visual
+    clone of Ellie on F10, but there is no independently controlled second player and no NPC state sync. Not
+    functional. Public source has no license file.
+  sources:
+  - https://github.com/foufouadi/TLOU2_Co-op
+  checked: 2026-10-23
+- game: Night in the Woods
+  year: 2017
+  engine: Unity 5.6.2p4 (Mono)
+  project: Night in the Woods Co-op prototype
+  url: https://github.com/SamuelAustin2001/night-in-the-woods-coop
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'no'
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: unknown
+  players: 2 (shared Mae)
+  networking: direct-ip
+  open_source: 'no'
+  qa: none
+  notes: Experimental host/client prototype. One-off loopback checks are not a verified playable release; normal dialogue choices, scripted effects, persistent saves, and a full story run remain unverified.
+  sources:
+  - https://github.com/SamuelAustin2001/night-in-the-woods-coop
+  - https://store.steampowered.com/app/481510/Night_in_the_Woods/
+  checked: '2026-10-22'
+- game: 'StarCraft II: Wings of Liberty'
+  year: 2010
+  engine: Blizzard SC2 engine
+  project: SC2Coop (campaign co-op launcher)
+  url: https://github.com/Cryswar/sc2-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/starcraft-2
+  kind: framework
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: External launcher that runs the retail Wings of Liberty campaign maps of custom campaigns (WoL@Kit fan campaigns
+    and mods that keep Blizzard's campaign scripts) as two-player games through Blizzard's s2client API, on each player's
+    own install; both share player 1's army (or, on maps made for it, each has their own), each has their own hub.
+    Steam relay (Spacewar app id) or direct IP with UPnP. Code (MIT) and test releases since 2026-10-23. One-PC smoke test
+    (each mission launched from the hub, won by test command, back to the hub) passed for all 29 missions of one
+    WoL@Kit campaign and of three campaigns on Blizzard's scripts, and 4 missions of a fourth; two-PC sessions by
+    testers.
+  sources:
+  - https://github.com/Cryswar/sc2-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/starcraft-2
+  - https://github.com/Blizzard/s2client-proto
+  - https://github.com/Blizzard/s2client-proto/blob/master/docs/protocol.md
+  checked: '2026-10-23'
+  made_with_coop_anything: true
+- game: Teenage Mutant Ninja Turtles (TMNT)
+  year: 2007
+  engine: Ubisoft Jade
+  project: TMNT local co-op (DLL injection)
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/tmnt-2007
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: none
+  notes: Local couch co-op on one PC for the PC game (TMNTGame.exe 1.0.0.188), two controllers, one shared midpoint camera,
+    one game process. Work in progress, not stable. An injected DLL spawns a second turtle with the game's own spawn function and splits input around
+    its update; enemies target it, it has a health bar and respawns. Player 2 lacks history-based moves (double jump,
+    combos, dodge) and team moves are off while it is present. Level loads untested. Not released; no structured testing yet.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/tmnt-2007
+  - https://en.wikipedia.org/wiki/TMNT_(video_game)
+  - https://github.com/xan1242/UbiTMNTHax
+  - https://github.com/hogsy/jaded
+  checked: '2026-10-25'
+  made_with_coop_anything: false
+- game: Tony Hawk's Underground 2
+  year: 2004
+  engine: Neversoft engine
+  project: thug2-coop
+  url: https://github.com/LeftGamer1/thug2-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'no'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: community-reports
+  notes: Story Mode for two online on top of THEMOD 1.3 (a dinput8.dll proxy plus one QB script). The friend joins
+    the host's story; cutscenes, goal cameras, won goals, guest swaps and the pro teammate are synced, and shared
+    goals are won once both finish them. Skater stats stay per player. Ships a byte patcher that rebuilds THEMOD
+    1.3's exe from the player's own THUG2.exe, since THEMOD can no longer be downloaded. The tester and a friend
+    play it online; a scripted two-client walkthrough checks for crashes only. MIT. Write-up in
+    games/tony-hawks-underground-2.
+  sources:
+  - https://github.com/LeftGamer1/thug2-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/tony-hawks-underground-2
+  checked: '2026-10-26'
+  made_with_coop_anything: true
+- game: Gedonia
+  year: 2022
+  engine: Unity 2019.4 (Mono)
+  project: Gedonia Co-op
+  url: https://github.com/Zerbith/gedonia-coop
+  other_urls:
+  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.7.1
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: '2-4'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one tester with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; shared combat XP; spell effects and transformations shown to others; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 35 scenarios, logged assertions and screenshots); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
+  sources:
+  - https://github.com/Zerbith/gedonia-coop
+  - https://github.com/cranebeaker/coop-anything/issues/214
+  checked: '2026-10-26'
+  made_with_coop_anything: true
+
+- game: Code Vein
+  year: 2019
+  engine: Unreal Engine 4
+  project: CoopSeamless (UE4SS Lua, work in progress)
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/code-vein
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/issues/207
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: unknown
+    enemies: yes
+    world_state: unknown
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: no
+  last_activity: 2026-10
+  qa: none
+  notes: Extends the game's own host + 1 guest Steam session instead of replacing it (UE4SS Lua plus a native hook DLL). Host
+    re-signals and guests re-join automatically after field deaths, host deaths, boss-room deaths and boss kills (two-PC sessions);
+    co-op works in areas whose boss is dead. Native experiments for resting at Mistles in co-op and keeping a dead guest in the session
+    (spectating) are in progress. Goal is seamless story co-op for 3+ players. Not released; code not yet published. UE 4.18, Denuvo
+    present, UE4SS works with HookLoadMap = 0.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/issues/207
+  checked: '2026-10-27'
+  made_with_coop_anything: true
+- game: Code Vein
+  year: 2019
+  engine: Unreal Engine 4
+  project: Nexus mod 192 ("co-op mod")
+  url: https://www.nexusmods.com/codevein/mods/192
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: yes
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2020
+  qa: community-reports
+  notes: Per a forum reply, it only lets the host send distress signals in areas whose boss is dead; the guest is still
+    removed on boss death and fog walls remain. The mod page itself was not checked.
+  sources:
+  - https://steamcommunity.com/app/678960/discussions/0/7098294290812770549
+  checked: '2026-10-27'
+- game: Genesis Alpha One
+  year: 2019
+  engine: Unreal Engine 4
+  project: genesis-alpha-one-coop
+  url: https://github.com/Blackouest/genesis-alpha-one-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: partial
+    story: no
+    enemies: unknown
+    world_state: partial
+    items: no
+  players: "2"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: none
+  notes: >-
+    Build-from-zero UE4SS Lua prototype on the Epic Games Store build (UE 4.23). Uses the engine's own
+    netcode: GameNetDriver is pointed at IpNetDriver (the shipped SteamNetDriver is missing in the Epic
+    build), host reopens the map with ?listen. The mod copies the host's runtime ship level instances to
+    the guest, hides the HUD fade left black by the join and initializes the guest's character. A string
+    channel (ServerChangeName / ClientMessage) forwards the guest's input actions to the host: the guest
+    walks, switches and fires weapons with real damage on both sides, sees its own shots, has its own
+    health bar, hit feedback and hints. Death and crew promotion for the guest are in progress; lockers,
+    terminals, PDA and map do not work for the guest yet. Tested manually with two instances on one PC.
+    MIT. Write-up in games/genesis-alpha-one.
+  sources:
+    - https://github.com/Blackouest/genesis-alpha-one-coop
+    - https://steamcommunity.com/app/712190/discussions/0/3809532340214341715
+  checked: '2026-10-26'
+  made_with_coop_anything: true
+- game: Baldi's Basics Plus
+  year: 2020
+  engine: Unity 2020.3.49f1 (Mono)
+  project: Baldi Together
+  url: https://github.com/multiplayereverything/baldi-plus-coop
+  other_urls:
+  - https://github.com/multiplayereverything/baldi-plus-coop/releases/tag/v0.9.2
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/baldis-basics-plus
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: '2-4'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Host-authoritative co-op for game version 0.14.5 Hide & Seek runs (BepInEx 5 and MelonLoader builds that
+    play together). Syncs players (directional sprites, names, pings), every named NPC and its abilities, doors,
+    windows, notebooks, free pickups, teammates' item effects, Johnny's shop with a shared YTP wallet, elevator
+    results, individual capture with teammate spectating, and LAN host migration. LAN over TCP, or online through
+    the game's own Steamworks.NET (Steam lobbies, invites, Valve relay; no host migration there). Random events follow the host (fog, Mystery Room, ruler and time-out mirrored; others host-only); field trips get
+    the same Pitstop on every copy; challenges and Endless are not validated. MIT. v0.9.2 pre-release. The lab suite drives two
+    and three real game processes (tours plus two-process LAN, NPC, soak and chaos-proxy link tests); the Steam
+    transport ran on Steam's in-process socket pair under one account, and no two-account Steam session has run yet. The author's own hands-on testing (not yet with friends) found it mostly works well.
+  sources:
+  - https://github.com/multiplayereverything/baldi-plus-coop
+  - https://github.com/multiplayereverything/baldi-plus-coop/blob/main/docs/ONLINE-0.9.0.md
+  - https://github.com/multiplayereverything/baldi-plus-coop/releases/tag/v0.9.2
+  checked: '2026-10-26'
+  made_with_coop_anything: true
+- game: MiSide
+  year: 2024
+  engine: Unity 2021.3.35f1 (IL2CPP)
+  project: MiSide Together
+  url: https://github.com/multiplayereverything/miside-coop
+  other_urls:
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/miside
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: shared
+  players: '2-4'
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 6 (be.790, Unity.IL2CPP) plugin for the Steam build. The host leads the story and clients follow;
+    story events (presses, triggers, dialogue choices, keypads) are relayed rather than state, and the host runs
+    every cutscene on its own clock. Players see each other as the main character with the full 68-bone pose.
+    Interactions that put an item in the hand are done by the presser only; the rest play the same animation on
+    every player's own character. Mita and NPCs are host-driven; chasers hunt each player locally, and a death
+    restarts everyone at the checkpoint. Shared key inventory, seeded randomness, room objects, minigame end events,
+    the Scene 18 visual novel; host migration; joins wait for the next chapter. Not shared yet - the Scene 13-15
+    computers (folders, phone chat, the Scene 14 PC game) and the handheld Tetris. Steam P2P through the game's own
+    steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.2 release. The lab suite
+    drives 2-4 game copies on one PC (21 tours plus an every-chapter interaction run, 17 of 18 chapters);
+    Steam was tested with one account only. Source is public with no licence file yet.
+  sources:
+  - https://github.com/multiplayereverything/miside-coop
+  - https://github.com/multiplayereverything/miside-coop/blob/main/docs/SYNC.md
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
+  checked: '2026-10-27'
+- game: "Spooky's Jump Scare Mansion: HD Renovation"
+  year: 2017
+  engine: Unity 2021.3 (Mono)
+  project: Spooky Together
+  url: https://github.com/multiplayereverything/spooky-together
+  other_urls:
+  - https://github.com/multiplayereverything/spooky-together/releases/tag/v0.2.11
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/spooky-jump-scare-mansion
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: '2-4'
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 5 and MelonLoader 0.7 builds that play together, for the Steam build. The host picks every room
+    (seeded room randomness) and runs every specimen; a transpiler retargets each specimen at the nearest standing
+    player, including specimens that keep the player in a variable. One shared copy of the run's keys and inventory
+    with a 10 s checksum repair; pickups, unlocks and weapons (the axe) shared, hits relayed to every copy, specimen
+    and Taker damage decided on the host. Endings take the whole team; downed players spectate and revive at the
+    next room. Covers the base mansion, Endless, the hospital and the Dollhouse. Taker boss attacks, health, stamina
+    and some puzzle props are per player or refresh on re-entry; no host migration. Steam P2P through the game's own
+    Steamworks (lobbies, invites, Valve relay) or LAN/direct TCP 27020. v0.2.11 pre-release. The lab suite runs up to
+    four minimized game copies (mixed loaders) through scripted tours with error, heap, desync and frame-cost checks,
+    plus a mutation check per fix; the author has also played it four-player with friends on separate Steam accounts and reports it works very well. Source is public with no licence file yet.
+  sources:
+  - https://github.com/multiplayereverything/spooky-together
+  - https://github.com/multiplayereverything/spooky-together/blob/main/MODLOG.md
+  - https://github.com/multiplayereverything/spooky-together/releases/tag/v0.2.11
+  checked: '2026-10-27'
+  made_with_coop_anything: true
+- game: Crime Scene Cleaner
+  year: 2024
+  engine: Unity (IL2CPP)
+  project: Crime Scene Cleaner Co-op
+  url: https://github.com/gogoigor51-tech/crime-scene-cleaner-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 6 be.791 IL2CPP plugin for Steam build 26046462. Co-op screen in the main menu (host or join a
+    Steam friend, pick a save slot); the client follows the host into jobs, both leave together, laptop jobs reach
+    both, each keeps their own report, money and skills. Shared items, bodies (carry, throw, van), blood cleaning
+    and new stains, trash and bags, doors, drawers, lifts, power, conveyors, hacking terminals, furniture back in
+    place and knocked over, evidence, valuables, secrets, cassettes, shards, story objects and objective flags; the
+    other player is a skinned figure with the tool in hand and a carried body on the shoulder. Two players finished
+    chapters 1-6 together (0.4.1); 0.4.2 fixes checked on one job and by bot suites (two game copies on one PC over
+    localhost UDP driving items, stains, bodies, doors, trash, world machinery, jobs, laptop mails, the CCTV laptop
+    and a mutant run). Known gaps - deleted CCTV recordings are per player; 3-4 players, Nightmare and the last
+    chapters untested. MIT. Write-up in games/crime-scene-cleaner.
+  sources:
+  - https://github.com/gogoigor51-tech/crime-scene-cleaner-coop
+  - https://github.com/gogoigor51-tech/crime-scene-cleaner-coop/releases/tag/v0.4.2
+  checked: '2026-10-27'
+  made_with_coop_anything: true
+- game: Dead Cells
+  year: 2018
+  engine: Haxe / HashLink (Heaps)
+  project: Dead Cells Local Co-op
+  url: https://github.com/Osman-Mujic/DeadCellsLocalCoop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/dead-cells
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Local co-op on one PC with two controllers (no networking), a code mod for Dead Cells Core Modding (DCCM)
+    35.14.1 on game version 35 (Steam). A second real hero with its own health, flasks, gear, mutations, scrolls and
+    HUD; shared camera on the players' midpoint; down and revive; per-player copies of loot, starting weapons and
+    reward-room choices; menus, forge, pause screen and outfit room work on player 2's pad; shared keys; doors, boss
+    arenas and teleporters bring the partner along, plus an L3 regroup. The owner played v0.6.0 from the start of a run
+    to the Bank; v0.7 and v0.8 (fixes for that run, controller picker, per-player outfits) are not yet played. No
+    automated tests. Player 2 has no visible head. MIT license. Write-up in games/dead-cells.
+  sources:
+  - https://github.com/Osman-Mujic/DeadCellsLocalCoop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/dead-cells
+  checked: '2026-10-27'
+  made_with_coop_anything: true
+- game: Dead Cells
+  year: 2018
+  engine: Haxe / HashLink (Heaps)
+  project: DeadCellsMultiplayerMod
+  url: https://github.com/vaiserYT/DeadCellsMultiplayerMod
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: In active development (584 commits, last one 2026-10-19 when checked); no release was tested by us.
+    Online host and client on DCCM (direct TCP port 1234 or Steam P2P). The remote player is shown as a ghost
+    entity (GhostKing, a KingSkin), not a second real hero; no local play. MIT. Its Steam Workshop item showed as
+    removed for violating Steam's guidelines when checked (reason not given), as did DCCM's own Workshop item.
+  sources:
+  - https://github.com/vaiserYT/DeadCellsMultiplayerMod
+  checked: '2026-10-23'

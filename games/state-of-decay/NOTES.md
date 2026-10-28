@@ -758,7 +758,7 @@ The hard-coded action-name addresses in the old `inject_onaction.py` were wrong:
 
 ## Phase 3r — Control feel, survivors and HUD on the joining copy (2026-10-21 late, Claude Code)
 
-Owner report after Phase 3q: turning was "tanky" (character followed the camera late, in steps), strafing played the walk-forward animation, and the joining player played random animations on the host.
+After Phase 3q: turning was "tanky" (character followed the camera late, in steps), strafing played the walk-forward animation, and the joining player played random animations on the host.
 
 ### Observations
 
@@ -808,7 +808,7 @@ Owner report after Phase 3q: turning was "tanky" (character followed the camera 
 
 ## Phase 3t — Held items visible; movement/animation sync (2026-10-22, Claude Code)
 
-Owner report: movement animations felt out of sync with WASD/camera on both machines, the joining player played random animations on the host, and held items (Marcus's weapon, the journal on Tab) were invisible.
+Observed: movement animations felt out of sync with WASD/camera on both machines, the joining player played random animations on the host, and held items (Marcus's weapon, the journal on Tab) were invisible.
 
 ### Observations
 
@@ -896,7 +896,7 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
 - Host-only HUD still missing on the client: the radar's "Home Status" panel (`SetBaseStatus`) and the
   building-interior minimap.
 
-## Phase 3v — Joining player's actions (2026-10-22, owner report: "client can only walk")
+## Phase 3v — Joining player's actions (2026-10-22; client could only walk)
 
 - Inputs arrive: `act_probe.py client lmb|<scancode>` logs `CPlayerInput::OnAction` (`0x164F890`). A left click gives
   `attack1`, `ul_melee_attack`, `ul_shoot`; Space gives `jump`/`jump_hold`. They are the same on the host.
@@ -913,7 +913,7 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
   so they don't damage host-simulated zombies. Next step: forward the UL action to the host (client → server RMI) and
   feed it into the host's state machine for `Dude(1)`.
 
-## Phase 3w — Owner's four reports: journal mouse, actions on the host, prompts, journal data (2026-10-22 afternoon)
+## Phase 3w — Journal mouse, actions on the host, prompts, journal data (2026-10-22 afternoon)
 
 ### Boot fix: title carousel
 - Three joins in a row failed: the client got game-rules class "TeamRandomSoundVolume" and disconnected. The host had
@@ -950,11 +950,11 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
 - The journal character page, the item slot and the prompts all read UL's character table `[0x1EA83B8]`
   (100 × 0x178), which is empty on a client. The records hold heap pointers (`+0xE0`, `+0xE4`, e.g. into a definitions
   array), so copying the table to the client needs pointer translation, plus the item/backpack pools behind it.
-- Design question for the owner: SoD has no "player 2"; the natural co-op model is that the joining player takes over
+- Design note: SoD has no "player 2"; the natural co-op model is that the joining player takes over
   a community survivor (switching survivors is how SoD works). Then the host's data for that survivor is what the
   client's journal, item slot and prompts should show, and interactions (greet, loot) must run on the host.
 
-### Toward "player 2 = a community survivor" (owner's choice, 2026-10-22)
+### Toward "player 2 = a community survivor" (2026-10-22)
 - Character definitions: `[0x1EE25E4]`, 146 × 0x34, `+8` = model path (0 = Marcus, 142 = Ed Jones, 145 = Maya Torres).
 - Character records `[0x1EA83B8]` (100 × 0x178): `+0xF0` word = definition index, `+0x15C` flags (bit 0 = known,
   `0x8` = community member, `0x20000` seen on Ed = following, `0xF` on the player's record), `+0xE0` → link object for
@@ -1011,7 +1011,7 @@ the combo, PushKick -> PushKick_Left, 0x11A/0x112); Space while moving plays the
 - Items 2 and 4 (journal data, interaction prompts): see Phase 3w plan.
 
 ### Both directions (2026-10-22 late)
-- Owner: the host saw the client's attacks but not the other way round. The client runs no state machine for its
+- Observed: the host saw the client's attacks but not the other way round. The client runs no state machine for its
   copy of the host's player and never received the host's input.
 - `player_sm.py host|client`: on both machines the local player's input bytes go out as chat (client tag `coop:`,
   host tag `cooh:`; the host's catcher only takes `coop:`, so its own messages go out to clients as normal
