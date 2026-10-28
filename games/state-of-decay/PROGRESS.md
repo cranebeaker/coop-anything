@@ -11,7 +11,8 @@ data (no machine names, user folders, IP addresses, account names).
 
 Last updated: 2026-10-28.
 
-Two copies of the game run side by side (host = "Marcus", joining player = "Maya"). Everything is applied at
+Two copies of the game run side by side (host = Marcus Campbell, joining player = Ed Jones since 2026-10-28;
+before that the joining player was "Maya"). Everything is applied at
 runtime by Python scripts under the gitignored `local/` folder; no game file is modified except the loose
 `Game/scripts/gamerules/singleplayer.lua` (extra RMIs) in both test copies.
 
@@ -31,6 +32,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); her loot screen opens on her machine with her own backpack, and Take/Use apply to her backpack on the host (`loot_relay.py`) |
 | Getting hurt, going down and getting up (her) | Works: health replicated, HUD follows, down at 1 HP, mash Space to get up (`downed.py`) |
 | Starting a session from the game's main menu | Works: "Co-op Play" item with Host Game (Continue / New Story) and Join Game (hosts found on the local network); `coop_agent.py` per copy runs the co-op setup on each side (2026-10-28) |
+| Characters | New story: host Marcus, joining player Ed (Ed's own survivor record, his NPC body hidden on both machines); players 3+ would get random generic survivors, never a story character (`maya_record.pick_def`; the co-op layer itself still supports one joining player) |
 | Session stability | Asserts and missing-entity updates no longer kill the host (`crash_guards.py`); 25-minute play soak 19/19 cycles without a crash |
 | Vehicles | Untested in co-op: the only vehicle at the story start is locked for both players |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
@@ -90,6 +92,26 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-28 - joining player is Ed Jones; no doubled characters
+- Character definitions: 146 entries at `[0x1EE25E4]` (0x34 bytes, +8 model path). Story characters have models
+  under `story_characters/`: 0 Marcus Campbell, 116 (swat01), 124-145 (142 Ed Jones, 145 Maya Torres); the rest
+  are generic survivors (`/human/body/`).
+- In a new story Ed has a community record from the start (flags 0x20029) with an NPC body (`ULNPC01`); the
+  host player's own record body (`ULNPC00`, Marcus) is hidden by UL on the host only. Body names are the same on
+  both machines but do not follow the record index (record 16 had `ULNPC15`), so the client gets names, not indices.
+- `maya_record.py` now binds the joining player to a chosen character: `pick_def(slot)` gives Ed for player 2
+  while he has a record, else (and for players 3+) a random generic survivor no record or player uses; story
+  characters are never picked. Ed's existing record is bound like a saved Maya record was (record +0x58 = her
+  entity, `keep_active`, bad trait stripped) and his NPC body hidden, deactivated and moved under the map.
+- `coop_setup.host_first` picks the character and the host's actual model (Marcus in a new story; a continued
+  save may have the host on another survivor - the old code always loaded Marcus); the client loads both, and
+  `hide_player_doubles` hides every `ULNPC*` body wearing a player's model on the joining machine.
+- Verified: fresh New Story started from the menu: host Marcus, joining player Ed; both NPC doubles hidden on both
+  machines before and after a 5-minute play soak (3/3 search + Take, she went down at 1 HP and got up, both alive).
+- Not checked yet: story missions that script Ed's NPC (his body is hidden now) further into the story.
+- Only one joining player is supported by the co-op layer (channel 2 everywhere); the character rule for players
+  3+ is ready in `pick_def` but has nothing to run on yet.
 
 ### 2026-10-28 - co-op from the main menu (Host / Join with LAN search)
 - The main menu (front-end screen 2) keeps its items in a static array: 11 slots of 0x90 bytes at `0x1EE81A0`
