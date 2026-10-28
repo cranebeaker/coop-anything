@@ -711,7 +711,15 @@ control passes the same way (m13g2). No code change was needed. The earlier miss
 - Keeping the puppet's own height on a snap (when within 0.5 m) did not help there (m13g7slope failed), so
   it was dropped.
 
-Open: find what pushes the puppet up at that spot (list physics objects near it on both PCs).
+Open: find what pushes the puppet up at that spot. `scripts.GetAllInRadius` (2.5 m) found nothing there
+on the host.
+
+### Force Lightning (2026-10-28, not testable in the prologue)
+
+`POWER=lightning tools/m13-grip-run.sh m13l1 1` (Y held 3 s, same setup): the puppet did nothing (target hp
+120 → 120, energy unchanged). The host control did nothing either, also after
+`game.SetForceLightningRank(0, 3)`. So Vader cannot use Lightning in the Kashyyyk prologue as set up here,
+and remote Lightning needs a level where the host's Lightning works first. Repulse is untested.
 
 ## Derived (not yet verified)
 
