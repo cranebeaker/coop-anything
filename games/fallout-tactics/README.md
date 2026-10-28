@@ -107,7 +107,6 @@ Tailscale or ZeroTier. Full steps in the mod's README.
 - Joining from the Multiplayer menu waits about 3 s while DirectPlay closes the menu's session search.
 - A character who joins the squad through a story conversation (not the recruiter) still means a save and reload
   for everyone.
-- Fog of war on the world map isn't synced: ground the host explored while you weren't connected stays dark for you.
 - Not yet played over the internet.
 
 ## Next steps

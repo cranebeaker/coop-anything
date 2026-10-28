@@ -1360,4 +1360,10 @@ with `test/run_test.py <name>` on one PC (2 to 4 copies), or the owner's two-PC 
 
 ### Unknown
 - Why the joiner's copy uploaded its save at 1031 s on 2026-10-27 (no joiner log); most likely the table-growth check.
-- Corpse looting, a joiner loading its own save, forced speech, gambling, other traders, multi-recruit, fog of war.
+- Corpse looting, a joiner loading its own save, forced speech, gambling, other traders, multi-recruit.
+- (Later, 2026-10-28) Fog of war was listed here as not shared; it is: campaign +0x1ad holds it (columns of 0x38-byte
+  cells, first int 0 unseen to 2 seen), joiners load it with the host's save and their party follows the host's,
+  so both uncover the same cells (`worldmap`: 45 -> 46 cells, same hash on both copies, 35/35).
+- (Later, 2026-10-28) The table growth guess was right: a delta's bookkeeping, written again after its deferred
+  destroys, cut the freed slots off the free list (94 per recruit visit, 3 per level-up, the same on every copy).
+  Fixed by putting every unreached unused slot back on it in slot order (`recruit_host` lost 94 -> 0).
