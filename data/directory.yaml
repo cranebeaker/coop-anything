@@ -8890,3 +8890,36 @@
   sources:
   - https://github.com/vaiserYT/DeadCellsMultiplayerMod
   checked: '2026-10-23'
+- game: 'Fallout Tactics: Brotherhood of Steel'
+  year: 2001
+  engine: Proprietary (Micro Forte)
+  project: fallout-tactics-coop
+  url: https://github.com/thennak3/fallout-tactics-coop
+  other_urls:
+  - https://github.com/thennak3/fallout-tactics-coop/releases
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: 'yes'
+  players: '2-4'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: 'Campaign co-op for 2 to 4 players sharing one squad, built from zero on the game''s own lockstep multiplayer
+    layer (a DLL loaded by FTSE), MIT. Every player can order every squad member; the host''s campaign is played and
+    its save is copied to joiners, who can drop in mid-mission. Synced on top of the lockstep: conversations, quest
+    variables, shops (pausing nobody), recruiting, level-ups, looting, turn-based combat (Individual and Squad), the
+    host''s settings, the world map (the host travels, everyone sees it, map pings in each player''s colour) and random
+    encounters; a drift check corrects positions, HP, inventories, equipment and the entity table without a reload.
+    Bot tests drive 2 to 4 real game copies on one PC; played by people on two PCs on one home network. Needs GOG
+    1.27 and FTSE 0.60a. Pre-release v0.9.4 (2026-10-28). See games/fallout-tactics.'
+  sources:
+  - https://github.com/thennak3/fallout-tactics-coop
+  - https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.9.4
+  checked: '2026-10-28'
+  made_with_coop_anything: true
