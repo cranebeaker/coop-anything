@@ -3611,7 +3611,6 @@
   project: HogWarp
   url: https://www.nexusmods.com/hogwartslegacy/mods/1378
   other_urls:
-  - https://github.com/hogwarts-mp/mod
   - https://80.lv/articles/skyrim-together-team-presented-hogwarts-legacy-multiplayer-mod-prototype/
   kind: mod
   status: abandoned
@@ -3622,15 +3621,96 @@
     items: unknown
   players: up to 8 planned
   networking: dedicated-server
-  open_source: partial
+  open_source: unknown
   last_activity: 2023-07
   qa: none
-  notes: By the Skyrim Together team; Nexus build 0.8.0-beta2 is about 1,200 days old and needs Discord auth. The
-    hogwarts-mp repo README says it is not playable. Last activity date is an estimate from Nexus relative dates.
+  notes: By the Skyrim Together team; Nexus build 0.8.0-beta2 is about 1,200 days old and needs Discord auth. Last
+    activity date is an estimate from Nexus relative dates. Corrected 2026-10-28 in the Hogwarts Legacy co-op write-up;
+    github.com/hogwarts-mp/mod was listed here, but hogwarts-mp is MafiaHub's HogwartsMP (its own entry) and that
+    repo is a 404.
   sources:
   - https://www.nexusmods.com/hogwartslegacy/mods/1378
-  - https://github.com/hogwarts-mp/mod
+  - https://80.lv/articles/skyrim-together-team-presented-hogwarts-legacy-multiplayer-mod-prototype/
   checked: 2026-10-16
+- game: Hogwarts Legacy
+  year: 2023
+  engine: Unreal Engine 4
+  project: HogwartsMP
+  url: https://github.com/hogwarts-mp/docs
+  other_urls:
+  - https://github.com/hogwarts-mp/foundations
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: false
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: 32 by default (server config)
+  networking: dedicated-server
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: By MafiaHub. Server-scripted roleplay multiplayer (players, NPCs and creatures, encounters, PvP, mounts,
+    Quidditch) with a JavaScript/TypeScript server API; the mod itself is closed source, the scripting docs and
+    foundations are public. Its docs say some places come from "a story script a multiplayer session never runs",
+    so no story. Status alpha is a guess from testing releases; not tested here.
+  sources:
+  - https://github.com/hogwarts-mp/docs
+  - https://github.com/hogwarts-mp/foundations
+  checked: 2026-10-28
+- game: Hogwarts Legacy
+  year: 2023
+  engine: Unreal Engine 4
+  project: HogwartsLegacyMP (Kheartz)
+  url: https://github.com/Kheartz/HogwartsLegacyMP
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: false
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: partial
+  last_activity: 2026-06
+  qa: none
+  notes: UE4SS + C++ Lua extension + ENet client and a C++ server; the README says early development, not yet
+    playable, position sync only. Source is public but has no license file.
+  sources:
+  - https://github.com/Kheartz/HogwartsLegacyMP
+  checked: 2026-10-28
+- game: Hogwarts Legacy
+  year: 2023
+  engine: Unreal Engine 4
+  project: HL Co-op
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/hogwarts-legacy
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: 2-8 (3 tested in game)
+  networking: vpn-needed
+  open_source: no
+  last_activity: 2026-10
+  qa: automated
+  notes: Story co-op by checkpoint. UE4SS Lua mod plus an ENet helper. After an invite, joiners take the host's quests
+    and world from its live save database and load it in place in about 5 s, keeping their own character; only the
+    host moves the story. Shared enemies, PvP switch, brooms and mounts on puppets. Two game copies tested by bots;
+    one real two-PC session. Code repo and kit not public yet. See the write-up.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/hogwarts-legacy
+  checked: 2026-10-28
+  made_with_coop_anything: true
 - game: 'The Elder Scrolls IV: Oblivion Remastered'
   year: 2025
   engine: Unreal Engine 5 with Gamebryo
