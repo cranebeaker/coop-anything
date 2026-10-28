@@ -893,3 +893,513 @@ Derived:
 Unknown:
 - Why the launch path started preferring system DLLs between 23:46 and 23:58 on 2026-10-21.
 - Couch co-op with real gamepads, and voice with a real microphone, are still untested by hand.
+
+## 2026-10-22: automated regression ladder and oracle checks
+
+Observations:
+- Added a sequential regression runner in the mod worktree: offline, smoke, features,
+  campaign and full profiles; per-gate timeouts, lab leasing/cleanup, terminal result
+  validation, JSON/Markdown summaries and optional recorded progression routes.
+- Existing input and network tests had stale dependencies and failed to link. The
+  input fixture also selected the old background flag instead of the new synthetic
+  input mode. Updated fixture dependencies and mode selection; input tests pass.
+- Host welcome now queues EV_RULES before gameplay events. Updated the network
+  test's reliable-event sequence/ack assertions and verified welcome after nonce reset.
+- Offline profile passes all five gates: DLL build, route/input/oracle checks,
+  projectile core, pad mapping and fake-Steam/loopback network tests.
+- The two-client 1-1 through 1-3 sweep produced matching worlds (zero state warnings
+  at each checkpoint), matching enemy counts and HP, and no Lua errors. The first
+  strict scorer incorrectly rejected three client orphan-deletion messages at 1-3.
+  Source inspection confirmed these record successful removal of local spawner
+  duplicates; removed actors are counted as evidence, not surviving world mismatches.
+- The default process launcher did not load the proxy in this agent environment;
+  MDK2_PROCESS_SERVICE=1 loaded it. Both attempts were stopped and leases released.
+
+Derived facts:
+- Sweep process success previously did not establish suite success: the script
+  returned zero even for state failures and missing shard rows. The new scorer
+  explicitly checks requested checkpoint rows and fails absent/incomplete evidence.
+- NaN coordinates can bypass threshold comparisons. State parsing must validate
+  finite positions before calculating distances; empty/missing-header dumps fail.
+
+Unknown:
+- Feature profile validation is in progress. Full 96-checkpoint campaign and actual
+  recorded progression routes have not been rerun by this session yet.
+
+Further observations:
+- Feature ladder: three-player qa_n passed 38/38. Two-player qa.sh passed 30 and
+  failed four death/revive timing checks; retained as failures, no relaxed asserts.
+- Added a disposable-installer gate staging only mod code and reading an executable
+  from the lease. The first fixture attempt under WSL UNC failed at the Win32 INI
+  API; fixtures now use the lease's NTFS scratch folder, with their location recorded
+  in the ignored evidence directory. No original install or owner saves are used.
+- Python oracle suite now has 20 tests, including artifact-collection failure with
+  guaranteed lease release. Mutants cover the production state/sweep/runner scorers.
+
+Validation update:
+- qa_save passed 38/38; qa_revive passed 33/33; installer fixtures passed 22/22
+  after moving them to NTFS. The remaining menu/UI feature reruns were interrupted
+  to prioritize the new level sampler; the feature profile's report is FAIL with
+  an INTERRUPTED runner row, not a claimed full pass.
+- Checkpoint smoke 1-1 through 1-3 passed end-to-end through the regression runner
+  with all game logs/configurations captured before the next gate.
+- Added --levels to the sweep: first checkpoint of each of the twelve levels,
+  using F8 between fixtures, with the same gameplay actions and state comparisons.
+  Its first run reached all twelve with matching state but failed while writing
+  the summary because the shell source was edited during execution. Scoring the
+  saved rows directly passed 12/12. A clean end-to-end rerun is in progress.
+- Sweep now rejects invalid endpoints, invalid instance/shard counts and leases
+  too small for the requested shards. Sharded ports follow actual leased slots,
+  including noncontiguous slot sets, rather than overlapping fixed offsets.
+- Final offline profile passed all five gates, including 235 network assertions;
+  Python tests now total 21. The manifest test requires every qa*.sh game suite
+  to be registered in the full profile.
+
+Lesson:
+- Do not rewrite a running shell harness. Bash may read the next top-level command
+  from the modified file at its old byte offset. Finish or stop the run first, or
+  execute an immutable copy. The observed failure here was runner syntax, not a
+  game-state mismatch; keep that distinction in the evidence and rerun the gate.
+
+Clean sampler result:
+- The unmodified --levels rerun passed all twelve checkpoints end-to-end in
+  143.4 seconds, with both processes surviving and no scored world failures.
+  Evidence: local/regression/20261022-144137-501292 and
+  local/sweeps/20261022-144139 in the mod worktree. The lease was released.
+- Full 96-checkpoint and the remaining feature/menu suites were not rerun;
+  no complete campaign traversal or recorded route is claimed.
+
+Sharded validation:
+- Two shards (two real clients per shard) passed checkpoint fixtures 1-1 and 1-2
+  in 39 seconds using noncontiguous leased slots 0,1,4,5. This exercised child
+  summaries, all-child exit checks, merged scoring and port assignment across a
+  slot gap. Evidence: local/sweeps/20261022-144447-x2. All four slots released;
+  the other game's two-client lease remained running.
+
+Final gate validation:
+- Installer also passed end-to-end through the new runner (22 checks, 7.4 seconds),
+  including diagnostic collection, process cleanup and lease release. Evidence:
+  local/regression/20261022-144550-480965 in the mod worktree.
+- Documentation links, shell syntax checks and git diff --check passed. Changes
+  remain in the worktree; this session did not publish or push them.
+
+Continuation: revive reliability and broader validation
+
+Observations:
+- The unchanged two-player QA reran successfully, 34/34; the prior four failures
+  are intermittent, not a consistently reproduced revive defect. Evidence:
+  local/regression/20261022-145655-357320 in the mod worktree.
+- Added a game-free fixture around the actual bridge/revive.c implementation:
+  69 assertions covering damage/lava/void, bleed-out and pause clamping, a teammate
+  holding revive, range checks, health restoration, spectating/cycling, checkpoint
+  authority, zone-clear delay, one-shot wipe/reload and solo fallback.
+- Ten deliberately broken source variants were rejected by those state assertions:
+  unreachable damage, missing spectating, excessive revive range, missing wipe,
+  bleeding while revived, full-health respawn, wrong checkpoint authority,
+  repeated held-key revive, pause-induced bleed-out and intercepting solo death.
+- Reworked two-player death phase to load a fresh checkpoint after combat; it now
+  checks native local/received life state, survivor preconditions and replication
+  before requesting respawns. This change is under real-game validation.
+
+Derived facts:
+- The old fixture's assumptions were not asserted: the survivor could still be
+  fighting previously spawned enemies, and a fixed sleep could expire before the
+  peer's dead/alive state was received. The new fixture exposes these as explicit
+  conditions rather than treating an old log line as current life state.
+
+Unknown:
+- The exact cause of the earlier four failures is unknown: complete bridge logs
+  from that initial run were overwritten before diagnostic collection was added.
+
+Epoch regression discovered while hardening the death fixture:
+
+Observations:
+- A host reset to the same checkpoint generated a new epoch but the client logged
+  "already here", retained old actor IDs and kept the already collected item gone.
+  This is a world-reset defect as well as a test-fixture precondition problem.
+- Added qa_epoch.sh: mutate both worlds through a host spawn and client pickup,
+  reset the host at exactly the same checkpoint, require both games to really load
+  and restore the fixture, then cut the client network for 12 seconds and require
+  a same-epoch continuation without another reload.
+- Against the old build it failed 5 of 20 checks: client reload, reset world match,
+  fixture restoration, and the post-reconnect world/fixture. Evidence:
+  local/regression/20261022-150740-647152 and local/qa-epoch/20261022-150745.
+- A new network assertion failed against the old code because net_level_event
+  adopted the pending epoch before the load completed. After the fix, all 243
+  network assertions pass, including spawn deferral and 16-bit epoch wrap.
+- Fixed net_level_event to defer epoch adoption to net_level_reset and removed
+  FollowLevel's checkpoint-number-only reuse path. Same-epoch reuse remains the
+  explicit same==2 case. Real-client validation of the fix is in progress.
+- The revised two-player QA fixture hops through 1-1 before returning to 1-2,
+  explicitly verifies real loads and reads local/received life state. It passed
+  50/50 before the epoch fix; evidence local/regression/20261022-150457-829600.
+
+Derived facts:
+- Equal checkpoint numbers do not establish equal worlds. The epoch must match
+  before a reconnect can safely retain actors/items and apply newly received events.
+
+Epoch fix validation:
+- The same immutable qa_epoch.sh passed 20/20 against the fixed build, including
+  actual same-checkpoint reloads, restored pickup/spawn state, and no reload on a
+  same-epoch reconnect. Evidence local/regression/20261022-150907-236075.
+- Full feature validation is now running with the fixed native/Lua build. Added a
+  lossy epoch gate and an optional --campaign-shards setting on the runner so the
+  complete checkpoint fixtures can run in bounded parallel sets with proper leases.
+
+Game-free and motion coverage expansion:
+- Network regression now includes four compiled broken variants, all rejected by
+  assertions: eager epoch adoption, applying spawns while loading, blocking a
+  same-epoch reconnect and ignoring epoch zero. Baseline passes 243 checks.
+- Added test-only per-frame Lua motion telemetry and qa_motion.sh for real walking,
+  strafing and jump/jet behavior on Kurt, Max and Doc in both games. It never writes
+  player transforms, requires a stable idle control, opposite motion directions,
+  sufficient frames, live players, actual movement/rise and matching worlds.
+  Real-game fixture validation is pending the ongoing feature lease.
+- Motion scoring has mutation tests for missing/duplicate probes, wrong character,
+  zero samples, bad life/menu/loading state, unstable idle, wrong direction,
+  stationary controls, missing jump rise, NaN/Inf and malformed numbers. Total
+  Python tests: 26, including resource/diagnostic checks for sharded runner gates.
+
+## 2026-10-22 mdk-save: lab trial
+- Slots 2,3,4 via `lab acquire --slots 3` (no wait), `eval "$(lab env mdk2)"`, ports 27932+.
+- tools/qa_revive.sh: 33 passed, 0 failed. tools/qa_save.sh: 38 passed, 0 failed.
+- Both scripts already lab-aware (MDK2_DIR*, MDK2_PORT, MDK2_PIDS from env); no changes.
+- No collisions seen; the other agents' Witness games ran concurrently, mdk_kill is path-scoped.
+
+## 2026-10-22 mdk-sweep: lab trial, tools/qa.sh
+- Observed: `lab acquire --slots 2` from the worktree gave slots 0,1 (owner mdk-sweep); an acquire run from another cwd takes that folder's name as owner (released it). Port 27900, dirs C:\coop\lab\mdk2\s0/s1, pids under run\mdk-sweep.
+- Observed: `tools/qa.sh` with lease env: 34 passed, 0 failed (about 4 min), while mdk-save held slots 2-4. No collision seen.
+- Observed: check "client hurt only via host" passed vacuously (0 HURT, 0 host hits).
+- Not run: qa_n.sh, sweep.sh. No code changed.
+
+## 2026-10-23: cutscenes together (shared go, skip vote, end barrier, skydive ghosts, host-triggered movies)
+Observations:
+- Every game runs a level's movies itself: `StartMovie(gob, { tasks..., Done = fn })` (script.lua) puts a task list on a gob and
+  `ScriptUpdate` steps it; a movie of the level load starts inside the level script's Init, i.e. inside the `level()` call
+  (the log line of the first movie comes before "level N checkpoint M started"). A movie's Done usually loads the next level
+  (`mdkNewGame`), or starts the next movie (1-9's lounge scene -> corridor movie -> 1-12 skydive -> 1-1).
+- The abort key is COM_ABORTMOVIE (Backspace, `comfuncs.game`); `StopScript` runs the Done, or, with a minigame later in the
+  list (levels 1, 2, 5, 9), jumps to the minigame instead; `Save.inminigame` blocks the key during it.
+- With the dev keys on, the emote browser bound Backspace to its stop command; the engine gives a key to the command bound last and the
+  game saved that into settings.lua, so abort-movie then read -1 (key dead) on every later start, test copies included
+  (settings.lua is shared by all copies). Rebinding the command at start (omBindCommandI) fixed it.
+- Lua 3.1 has no `true` (an undefined global, nil): a mutant "if (true) then" never ran.
+- Events a client sends while its level is still loading carry the old epoch and are dropped by the host: send from the next
+  frame's tick, after the load call returned.
+- 2-player run of tools/qa_cutscene.sh: 34 of 34 (lounge scene and corridor movie skipped by vote, skydive skipped up to the
+  minigame, minigame not skippable, the host waits in the end hold until the client has landed, both load 1-1, a stand-in
+  host-triggered movie played by the client, ghost of the other player in the sky, screenshot shows both skydivers);
+  mutants "no end barrier" and "one-player vote" are caught by the checks that guard them.
+Derived:
+- Movies need keeping together, not copying: the same scripts run everywhere, so the host only needs to say when to start, whether the
+  vote passed and when everyone has reached the end. A paused script (`stack.paused`) is a clean start barrier; wrapping `sc.Done`
+  is a clean end barrier (the Done runs from the host's tick when every game has reported).
+- Triggered movies (boss entrance, fan cutscene) only play in the game whose player triggered them; the functions that start them
+  (`Level.PlayBossMovie`, `l1_r6.StartCutScene`, ...) can be wrapped so the host announces them and the others call their own copy.
+Unknown:
+- Triggered movies in levels other than the stand-in on level 1 (wrapped by name from the scripts, not run): the clients' copies
+  of the function may rely on state the host's game has (boss gobs, items); they are called protected.
+- With three or more real players: counts follow the majority rule, only two were run.
+
+## 2026-10-23 (later): ghosts in the other three minigames
+Observations:
+- Levels 2 (checkpoint 13), 5 (11) and 9 (13) each have one torpedo-style minigame: a ship (`torpgob`, `podgob`, `jdgob`) steered on one or two axes
+  (z only; x and z; x and z) at a fixed depth, dodging meteors; a hit sets `.dead`, the movie script retries on a negative result.
+- Ghosts of the other players (their own ship model, placed from the two numbers they send) show in levels 2 and 9 screenshots
+  (qa_minigames 15/15 by log lines). In level 5's screenshot the host's own pod had just exploded, so no ghost is visible there.
+Unknown: how the ghosts look while moving with several players; level 5 ghost by eye.
+
+## 2026-10-23: Controls page in the game's colours, gamepad tab, pad in normal games
+Observations:
+- The Controls picture now uses black and amber with notched panels (cap, tab and mouse panels share one `panel()`
+  helper in ctrlview.c); qa_controls 40/40 with a new Gamepad page and a check that the pad follows each preset.
+Derived:
+- The pad's action keys come from the preset through `coop_pad_keys`; the arrow keys stay pressed beside them so menus work.
+- In a normal game the pad is merged into the real keyboard/mouse reads (state and buffered), only while the window is focused.
+Unknown:
+- The non-couch pad path with a real pad: only the mapping (pad_test) and the Controls page were run. Real pads, by hand, untested.
+
+## 2026-10-23 character wheel (switch hero at any time)
+Observations:
+- Each level script calls exactly one of CreateKurt / CreateMax / CreateDoctor (levels 6 and 12: CreateDoctor + CreateHyde).
+- The debug menu's "Switch Player Character" (debug.lua) deletes the camera, calls CreateX(), moves `bob` to the old
+  position and deletes the old player gob. Doing the same from Lua in a running level worked for Kurt <-> Max <-> Doc in
+  level 1 (checkpoint 2) although that level normally only has Kurt: player type read back as 100 / 101 / 102.
+Derived: the puppet must follow the peer's player_type (it already travels in every packet); the bridge replaces it on a change.
+Unknown: switching in Hyde levels (left out), health carried over (not done: the new hero starts fresh), levels other than 1-2.
+Evidence: tools/qa_char.sh 9/9, tools/qa_char2.sh 7/7 (2 games), qa.sh 50/50, qa_emote 19/19, qa_controls 37/37.
+
+## 2026-10-23: softer player outlines, HUD text in the game's menu font
+Observations:
+- Outlines are now a person-shaped curve (Catmull-Rom through ~35 points: head, shoulders, arms, legs), 1.5 px with a faint
+  dark under-line, alpha 0.6 at most, faded to nothing between 11 and 3 game units from the camera; lying down when downed;
+  wider for Max and Doc. Seen in a 3-game qa_hud screenshot: thin, readable, roughly the puppet's size.
+- The game's `font.dds` has upper and lower case; the HUD (tags, panel, chat, headings) draws it as textured quads (cell 32 px,
+  tinted), the launcher's loader shared. Small controls-page text stays on the Windows font (the sheet is too soft at ~10 px).
+Unknown:
+- qa_hud's panel-row checks (3 of 11) fail on slot numbers in the row text (rows read 5 and 6, the script expects 2 and the
+  client slot); not looked into, not caused by drawing.
+- Not a mesh silhouette: the shape is generic, the puppet's pose is not followed.
+
+## 2026-10-23: save browser (sessions) and level picker
+Observations:
+- The game cuts the whole save path to 15 characters (`save\` + 6 + `.sav`), so a co-op save file name is `c` + 2 base-36 digits of the
+  copy's player id + 2 of the session + a/b. My first try (`c` + 4 hex + 4 hex + a/b) was never written: "co-op save N: ... was not written".
+- Lua 3.1 has no upvalues: a menu item's `Select` function that used a local of the building function was a load error
+  (`running coop.lua ...: 1`, nothing else in bridge.log). Keep what a closure needs on the item or look it up again.
+- Sessions: each new game from the title screen (or Start at level) makes a session id (1..1295); the save event carries it, so each client
+  files its own save under the same session. saves.ini keeps who played (names), the most players at once, last played and progress, per
+  session, in every game's copy. The launcher's Saves tab lists them (cards: level-checkpoint, CO-OP n PLAYERS badge, names, host, age, progress bar),
+  picks "Continue" for a session this copy hosted, and has a level/checkpoint picker for a new game (the debug menu's 96-checkpoint list).
+  The choice goes to coop.ini `[start] action=new|resume` and coop_dev.lua uses it once from the title screen.
+Derived: a client can only continue a session through its host (the host resumes, clients follow), so friends' sessions are shown, not selectable.
+Evidence: tools/qa_launcher.sh 29/29 (saves page with seeded sessions, Continue, new game at 2-3 started by itself); tools/qa_save.sh with the
+session checks (same session in every game, all players recorded, resume keeps one session, Start at level makes a second) - see the final run in the
+session summary. Level names: unknown (the page shows numbers only).
+Unknown: whether a session's old files survive the game's own save-slot clean-up (nothing in the game deletes them that I saw); the in-game
+"Start at level..." menu was only built and driven from Lua (`coop.BuildStart()`, `coop.StartAt`), not clicked by hand.
+
+## 2026-10-23: level captions and numbering
+Observations:
+- `mdk2.str` (in mdk2.tar) holds the loading screen captions as UTF-16 text, "<place>, <town>: 9:05AM". Level scripts show them with
+  `HideNextLoadingScreen(strings.l<N>chk1)` (ids 207-209 for levels 1-3, 509-515 for 4-10); there is none for 11 and 12, and a second
+  one for level 1 (`l1chk2`, the intro movie). The first ten time-stamped strings in file order are levels 1-10 in order.
+- Characters per level come from the one `CreateKurt/CreateMax/CreateDoctor` call in each level script (6 and 12 also CreateHyde):
+  Kurt 1,4,7,10; Max 2,5,8,11; Doc 3,6,9,12.
+- The launcher reads the captions at run time (nothing of the text is kept in the repo) and numbers checkpoints in play order.
+Unknown: the .str index format (not decoded; strings found by scanning); names for levels 11 and 12.
+Evidence: tools/qa_launcher.sh 30/30, tools/qa_save.sh 52/52, saves page screenshot in the qa output folder.
+
+## 2026-10-23: skydive ghosts face the right way, homing missile ghost, cutscene countdown
+Observations (from a manual two-window playtest, then scripts):
+- The skydive ghost was upside down in both games. The game registers `ktgame_kurt` with a tilted orientation
+  (quaternion 0.5228, 0.1249, -0.0978, -0.8376); the ghost was created with the identity orientation. It now copies
+  the player's own Kurt's orientation, read from the gob (new bridge call `coop_pose(gob)` -> position + quaternion,
+  OMGOB +0x18 / +0x24).
+- Each game runs its own skydive: lasers (`ktgame_laser0`, aimed at random points) and every fifth shot a homing
+  bullet (`OBJ_TURSHOT07`, `mdkShootBullet` at your Kurt, kept in `kurtgame.lastmis`). The engine moves that bullet, so
+  its Lua fields hold no position; `coop_pose` reads it. It is sent 8 times a second (`MV_FALLMIS`) and the others draw
+  a harmless `ktgame_missl0` ghost, extrapolated along its last heading (at most 0.5 s ahead).
+- This game's Lua is 3.1: `getn` does not exist ("call expression not a function" at movie start, the host retried
+  autostart in a loop and the client stayed on the title screen).
+- Cutscene banner: the skip vote has no time limit any more (it lasts until the movie ends, Backspace takes it back);
+  the banner counts down the time the movie has left. A movie's length is not in its script (it follows animation
+  lengths and dialog timers), so it is learned: the play time (waits and the minigame left out) when a movie ends
+  unskipped, kept in `coop.ini [movies]` under level_gobname_stepcount.
+Derived: a learned length is only as good as the play-through; a skipped movie never records one.
+Unknown: lengths of all the game's movies (the seed table `coop.mvlen` is empty; a fresh install shows no countdown
+until a movie has been watched to its end once); whether `ktgame_missl0` is the model of the real homing bullet (it is
+the level's unused missile model; looks plausible, not compared side by side).
+Evidence: tools/qa_cutscene.sh 40/41 then the failing check's pattern fixed (log had the line, the pattern required
+end of line before `\r`), checked against the run's log; MUTANT=upright caught by "client's ghost Kurt faces like its
+own" (orientation dot 1.000 with the fix); tools/qa_minigames.sh 15/15; skydive screenshot shows both Kurts in the same pose.
+
+## 2026-10-23: two client crashes in movies (level 8 intro, end of the torpedo minigame), measuring movie lengths
+Observations:
+- Level 8's intro (8-8) crashed the client a few seconds after go, every time (two of two), host fine. Crash
+  in gob_delete (0x449715, write to 0xa6 = null gob + the flags word). The movie deletes the level's coneheads
+  by name (`Level.ForAllConeheads(omGobDelete)`, level8.lua); a client has already removed its copies of the
+  host's enemies. Fix: coop.lua wraps omGobDelete to skip a gob coop_alive says is gone (coop.lua loads before
+  the level scripts, so the movie tables capture the wrapper).
+- End of the level 2 torpedo minigame (won through the game's own tpgame_timer.OnCustomKey): the client crashed
+  3 s later (when torpgob.OnTimer swaps the scenes back) in every unguarded co-op run (more than six); once the host
+  as well. A single game did not crash. Not caused by the minigame ghost (fallspec off), the puppet (removed) or
+  stasis calls on gone gobs (guarded, none logged).
+- Crash site 0x48b00d: SSE memcpy (0x483cb0) past the end of a heap block, called from 0x447bf2 in the update of
+  a gob part of kind 1 (gob +0x70 -> part, dword 0 = kind; dispatcher 0x448930, kind 1 -> 0x447ab0). That part is
+  a particle emitter: realloc (0x473550) of an array of 32-byte entries at +0x7c, max +0x0c (capped 256), and a
+  memmove of [+0x34] * 32 bytes. On the client, `ml2b_cameragob` (level 2's movie camera) has an emitter whose
+  +0x34 is -15 from the level load on (the host's is 0), so the move size is about 4 GB.
+- The game writes -15 back every frame while that camera is held. The bridge now resets a negative +0x34 before
+  each scene update (frame.c, fix_emitters; `coop_emitter_guard(0)` turns it off): the client survives (two of two).
+- Code read from a running game's memory (ReadProcessMemory, 0x400000..0x4e0000): the exe on disk is packed.
+- tools/qa_launcher.sh left `player.ini` with id 0a0b0c0d in the lab copies it used; a client sharing an id with
+  an earlier player got player 3 instead of 2, and the cutscene test failed on that. It now restores the files.
+Derived: +0x34 is an index into that emitter's ring of particles (other writers at 0x447802 / 0x44845c set it
+from a running index), not a plain count.
+Unknown: why the client's camera emitter gets -15 (only on the client, already at load); whether levels 5 and 9
+hit the same crash (qa_minigames now checks all three).
+Measuring movies: tools/measure_movies.sh boots two games at each movie checkpoint (the cp == N branches of the
+level scripts' Level.Init) and wins minigames through the same hooks; lengths repeat within 0.2 s between runs.
+Movie names: the playing gob's name, step count and a sum of its animation ids and waits; the level is not in it
+(a movie of a level load starts before coop.level is set, so it held the previous level).
+Results (later the same day):
+- 31 movies measured (every Level.Init movie checkpoint and what their Done chains led to, credits 329 s); the table is
+  coop.mvlen in lua/coop_dev.lua (the longest measure of each). The same movie measured twice differs by 0.2 s or less,
+  except the shared boss.lua boss movie (75.5 / 77.0 / 77.5 s over levels 10, 11, 12).
+- Trigger movies (coop.moviehooks: room cutscenes, death movies, bridge, KillZizzy): calling the function at each play
+  checkpoint did not play any in 45 minutes (l1_r6 started at 1-1 and did not end in 10 minutes; l3_bathroom03 at none).
+  They get a countdown once a game has watched one to its end (learned, coop.ini [movies]).
+- The torpedo-minigame crash guard: tools/qa_minigames.sh 24/24 (all three minigames won, both games live on);
+  MUTANT=noguard (coop.ini [test] emitter_guard=0 from the start) fails level 2 only. Turning the guard off after the
+  level has loaded does not crash: the bad index appears during the load and is repaired by then.
+- Level 8 intro: tools/qa_level8_intro.sh 6/6; MUTANT=gonegob crashes the client. Deleting a fresh gob twice does not
+  crash, so that was no test of this.
+- The host keeps each player id's slot ([slots] in player.ini) and gives a new id a slot nobody has had: lab copies that
+  hosted earlier runs made their client player 3, 4, ... and tests that expect player 2 failed. tools/install.sh now
+  drops [slots] / [steam_slots] from the copies it sets up.
+- Two installs at once can collide on the shared settings.lua (`sed: cannot rename ... Permission denied`).
+Evidence: tools/qa_cutscene.sh 42/42 with the table (banner "Cutscene 1:27 | Skip cutscene: 1 of 2 (Backspace)" on the
+first viewing of the lounge movie); measuring output in local/movies/.
+
+## 2026-10-23: every option in the launcher, an Interface page, the skip key as an action, the missile ghost's nose
+Observations:
+- mdkGobPointToXYZ(g, dx, dy, dz) takes a direction (not a point) and turns the model's +y that way: for
+  (0, 0, 10) it gave the quaternion (0.707, 0.707, 0, 0). The skydive's missile model (ktgame_missl0) has its
+  nose on +z, so a ghost turned that way flew on its side. Three still test missiles (no rotation; +x; +y,
+  screenshot) showed it: the unrotated one is a dot seen from above, nose up. The ghost now gets the rotation
+  from +z to its heading, written with a new bridge call (coop_set_quat; the engine's setter copies the
+  quaternion at gob +0x24 the same way).
+- The game has no master volume: three levels in settings.lua (chSndSetEffectsVolume, chSndMusicVolume,
+  chSndSetVoiceVolume, 0..1, default 0.25), and the game saves them from its own state, so scaling them in
+  Lua would compound on every save. The launcher edits those three lines (10% steps).
+- "sed: cannot rename ... Permission denied" when installs ran beside starting games: inject.sh's lock only
+  serialises installs; a game that is starting has settings.lua open and Windows refuses the rename. A copy
+  that failed there kept its old coop.lua and failed tests on code it did not have. inject.sh now retries.
+- The cutscene test's host died in the skydive once (a laser), which starts the death camera as new movies and
+  broke the end-of-skydive checks; the test now swaps the game's missile update for one that never hits.
+Derived: a [features] switch that takes an action's keys away (coop.BindAction) needs no change in the bridge.
+Evidence: qa_launcher 32/32 (Interface switch and music level written), qa_menu 38/38 (Interface page
+screenshot), qa_emote 21/21 (MUTANT=nofeat caught), qa_cutscene 48/48 (cutscene box, timer and ghost switches,
+missile nose; MUTANT=sideways caught), qa_controls 40/40 (Skip cutscene on the Co-op page).
+
+## 2026-10-23: Esc skipped a co-op cutscene for one player; character collision distance
+Observations:
+- In a manual session the 112 s opening comic ended after 3 to 10 s with no skip vote logged. A key sweep
+  (W, E, F, Tab, Enter, Space, 0, keypad 0, both mouse buttons, Esc, Backspace, one at a time on the client,
+  StopScript wrapped to log) showed Esc: the engine handles COM_PAUSE itself (no comfuncs entry) and during a
+  movie it calls StopScript(Save.movietocancel). The script runner also calls StopScript when a script runs past
+  its last step, so the wrapper only turns a stop in the middle of the co-op movie, within 1 s of a key press,
+  into a skip vote.
+- Character collision: with the partner's puppet held d units from the standing host at 1-1 (moving the host
+  there each time), d >= 1 moved nothing; d <= 0.75 moved the host out to 0.88 apart, smoothly. The puppet was
+  kept 3 away, which players saw as the partner sliding off. Now 1. A host simply standing next to a puppet held
+  0.5 away was not moved at all, so only moving into an overlap triggers the push.
+- The skydive lands by itself when ktgame_timer's animation reaches its custom key: a test that waits must hold
+  that back.
+Evidence: qa_cutscene 49/49 (MUTANT=escskip caught), qa.sh 52/52 (MUTANT=overlap and magnet caught by the
+"partner right beside" check).
+
+## 2026-10-23: a hero stuck in a wall after a switch; emote wheels per hero
+Observations:
+- Doc walked into the wall left of 1-1's start (x -39), then the switch to Kurt put Kurt on Doc's spot: Kurt could
+  not move in any direction. Placed 0.2 or more away from the wall he moved. Kurt (and Max) are wider than Doc.
+- Tried as a test of a spot: mdkAILineOfSight between the player and a probe character (reported clear even 2 units
+  into the wall, and differed by direction: facing, not walls); dropping the hero from 0.4 above the spot (a stuck
+  hero still falls). Neither tells a stuck spot. Going back 0.5 along the recent path did not help when Doc had slid
+  along the wall (0.17 away). What works: after a switch, while a move key is held and the hero has not moved, try
+  the spots around in turn (8 directions, 0.3 then 0.6); the first worked here.
+- Animations each hero has (om_anim_state on the player, ids 0-159): Kurt 61, Max 61, Doc 70. Max has no THROW (57),
+  Doc no ACTION05 (82): the shared wheel's slots logged "does not exist for this character".
+Evidence: qa_char 12/12 (MUTANT=nounstick caught), qa_emote 25/25.
+
+## 2026-10-23: regression takeover, private configuration and bounded QA lanes
+
+Observations:
+- The inherited sequential full ladder completed 31 gates: 28 passed. Controls failed
+  22 checks, the lossy projectile gate failed one movement check, and campaign
+  fixtures 3-10 and 3-11 reported client Lua arithmetic errors. Evidence:
+  `local/regression/20261023-163734-876744`, sweep `local/sweeps/20261023-171411-x4`.
+- The controls screenshot shows Interface where the test expected Controls: adding
+  Interface shifted the navigation by one item. The restart PID write was also
+  accidentally inside a shell comment. Both test defects have been corrected.
+- The lossy projectile's first client-3 snapshot contained an active grenade with
+  velocity; its second snapshot contained no grenade. The test failed because it
+  requires two positions, not because the captured positions were identical.
+- Five subprocess-based runner tests verify actual suite overlap, exclusive gate
+  barriers, busy-allocation rollback, malformed-allocation cleanup, conflicting
+  resource rejection and cancellation. All 31 Python tests passed after integration.
+- Workstation instructions and allocation commands have moved to ignored private
+  configuration. Public tooling uses documented environment variables and an
+  optional command/JSON resource interface; no particular local allocator is required.
+
+Derived facts:
+- An early movie GO path sets state to play without initialising tick_at, while
+  MovieTick subtracts tick_at from the clock. The affected campaign logs show the
+  early-GO message immediately before arithmetic errors. This is a strong candidate
+  for the campaign failures; a targeted reproducer/fix is still pending.
+
+Unknown:
+- Whether the lossy projectile movement check is consistently sampling too late.
+- Full parity and runtime of the new three-lane ladder; validation is running.
+
+Follow-up observations:
+- The three-lane full ladder passed 30/31 gates, including all 96 checkpoints, in
+  about 21 minutes. The sole failure was character-motion: later-level probes had
+  only 11-17 frames in a one-second sample (the oracle requires 20), and one jump
+  was missed. Sequential baseline evidence had passed. Character-motion is now an
+  exclusive gate; no motion assertion was lowered.
+- A subsequent three-lane selection passed character-motion (44 checks, 74 s),
+  HUD, native projectiles and lossy native projectiles. Motion ran alone before
+  the other three overlapped. The two projectile variants started in the same
+  second and produced distinct evidence directories after adding PID suffixes.
+- Native projectile snapshots are now captured as a short pair per client, with
+  clients sampled concurrently, so another client's shell round trips do not
+  consume the grenade's lifetime before the second snapshot. The same active,
+  foreign-projectile and position-change assertions remain in place.
+Evidence: `local/regression/20261023-171852-379664` (full),
+`local/regression/20261023-174024-204153` (exclusive motion plus simultaneous
+projectile variants).
+
+Deterministic movie-race validation:
+- Receiving MV_GO before MovieStarted formerly entered play with nil tick_at,
+  producing the same arithmetic errors as the earlier campaign fixtures. The
+  branch now calls the ordinary MovieGo initialiser. The focused two-game check
+  observes a positive elapsed clock, normal completion and no Lua errors.
+- The earlygo mutant restores the original branch and is caught by the clock
+  assertion, with the arithmetic errors also observed. An initial test assertion
+  accidentally matched the echoed command source; anchoring it to the actual
+  `lua:` log prefix fixed the false positive before accepting the mutant result.
+Evidence: `local/regression/movie-clock-20261023-174546` (positive 4/4; the mutant
+must fail the clock and no-error checks, and the negative harness reports caught).
+
+Fresh-resource sweep observation:
+- A campaign-only run with a newly created helper folder hit concurrent NTFS file
+  creation errors while shards copied PowerShell scripts. Install failure was then
+  ignored and the sweep booted stale configuration. The invalid run was cancelled;
+  all eight owned games and the lease were released.
+- Helper copying now takes a short lock, and a failed install stops a shard before
+  boot. A real-shell concurrency reproducer fails before the lock and passes after;
+  another shell test verifies that failed installation never boots a game. All 33
+  Python tests pass. A new fresh-folder campaign retest is running.
+Invalid-run evidence: `local/regression/20261023-174743-655439`.
+
+Final fresh-folder validation:
+- Campaign profile passed all seven gates, including all 96 checkpoints after
+  the movie-clock and helper-install fixes. All 16 resource slots were free after
+  cleanup. The final 33-test Python run, shell syntax, Markdown target checks and
+  tracked-file workstation audit pass.
+Evidence: `local/regression/20261023-175357-180407`,
+`local/sweeps/20261023-175423-761414-x4`.
+
+## 2026-10-23: separate private workstation configuration from public requirements
+
+Observations:
+- Workstation instructions, environment integration, allocation adapter and private
+  handover history now live in a separate private workspace. Ignored links keep the
+  existing checkout's generic configuration entry points working. A filesystem-only
+  setup helper attaches new worktrees and refuses to overwrite different configuration.
+- The public guides retain generic configuration, allocator protocol and executable
+  dependencies. Unnecessary workstation-specific setup prose has been removed.
+- Validation: all 33 repository Python tests and three private setup tests pass;
+  environment mapping, adapter permissions, symlinks, shell syntax, Markdown targets
+  and whitespace checks pass. No game tests were run for this configuration move.
+
+## 2026-10-23: full ladder before the public alpha, a hero stuck when the player waits
+
+Observations:
+- Full ladder with three lanes and four campaign shards on the release candidate: 30 of 31 gates passed, the
+  campaign (96 checkpoints) in 240 s. Controls and character-motion, which failed in earlier runs, passed.
+- character-wheel failed one check: after switching from Doc to Kurt at the wall in 1-1, Kurt did not move
+  (-39.09 124.64 before and after W, S and D). In the two earlier full runs he moved about 10 units, and the game
+  logged `character: unstuck at spot 1`; this time that line is missing.
+- The unstick time limit (4 s) started at the switch. The test switched, waited 3 s, read the position over a
+  command round trip, then pressed keys; with the other lanes running, the keys arrived after the limit.
+
+Derived facts:
+- A player who switches hero at a wall and waits more than 4 s before walking stays stuck. Fix: the limit starts
+  with the first held move key. The test now waits 6 s after the switch, past the old limit.
+
+Evidence:
+- Fixed code: character-wheel gate 12/12, Kurt -39.09 124.64 -> -29.42 126.11. `MUTANT=nounstick`: caught. The
+  previous code with the new test: the wall check fails. Mod commit 75998a7, released as v0.2.0-alpha.

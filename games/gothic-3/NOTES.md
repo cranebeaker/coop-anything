@@ -676,6 +676,7 @@ Changed:
   the host shows the client's puppet lying (its played motion is `Hero_LieKnockDown_..._Ambient_Loop`); the kill cheat on each
   machine ends in a knock-out and the hero gets up; the session stays intact. Negative control
   (`downedoff`): the hero stays dead.
+
 Not covered yet: monsters attacking a downed hero (no monsters near the start), whether humans rob a
 knocked-out hero, a revive by the partner (today the game's own timer gets the hero up), the hero's death
 outside co-op (the redirect is always on while the mod runs).
@@ -752,6 +753,7 @@ equip the recorded ones, then levels, experience, learn points and attributes.
   save name; a client loading that save gets its own record applied 3 s after the world runs.
   stageD3a: the client's hero (sword, +150 XP) differs from the host's; host saves; the client loads a copy of
   the host's save and has its own hero (identical summary), not the host's. Negative `herorestoreoff`.
+
 Not covered yet: the save travelling to the client by itself (copied by the test), a first-time joiner without
 a record (gets a copy of the host's hero), position, quick slots, active effects, political fame and the
 city reputation on enclave entities.
@@ -885,6 +887,7 @@ Every NPC is simulated on one machine, its owner; the others mirror it (protocol
   ZS_FollowPlayer), the host stops sending it and mirrors the client's snapshots; JoinPlayer false or the player
   leaving gives it back. Suite stageE3: the client recruits Lester; the host shows him as the client's (owner 2);
   the client walks 12 m on and Lester follows on both machines. Negative: dialog results not passed on.
+
 Not covered yet: NPC-vs-NPC fights across owners (dropped), a companion after a save/load, 3+ players.
 - A puppet removed while NPCs fight it crashed a client twice in stage E2 (host leaves mid-fight; access violation in
   SharedBase under an AI state run through our wrapper, Game.dll+0x169724 in the stack, right after "puppet 1
@@ -965,6 +968,7 @@ Static analysis (second agent, Ghidra, Script_Game.dll; details private in the w
   its own attitude branch (`GetAttitudeToPlayer`: crimes and fame per faction). A second `PC_Hero` NPC falls back
   to political alignment and species tables. For orcs vs. a human with alignment None both give 0: never a target.
 - Party membership (leader = player) has no branch in `GetAttitude`; companions are judged by their own faction.
+
 Observed (QA line `NEARX end`): the puppet is in `GetNPCs()`, alignment 0, species 0 (human), AI mode 10.
 Fix: wrap the script `GetAttitude` (swap `gSScript::m_funcScript`); when `other` is a puppet, call the original
 with the local hero instead. The puppet no longer joins the hero's party (it put it into the follower list).
@@ -1026,6 +1030,7 @@ Observed (`rangeddiag`, branch agent-b at 9deb53d, both directions):
 - Screenshots: the tutorial hint box "Tipp: Die Orks wurden besiegt" is open on both machines during the casts;
   on the client the hero still visibly holds the sword after `ready It_Spell_Meteor`; the host's camera faces
   the sky.
+
 Derived, not tested: the player path aims with the camera, not with the body or focus, so arrows fly where the
 camera looks (explains the misses). Whether the open hint box or the missing cast animation blocks the cast:
 unknown. The state names used exist in Script_Game (`PS_Ranged_*`, `PS_Magic_*`), and so do `_AI_Shoot`,
@@ -1161,3 +1166,468 @@ Derived:
 
 Unknown:
 - Whether other species (animals, humans) die the same way on the client; only orcs of the start village were tested.
+
+## P2 arrows, first version (agent B, 2026-10-20, pair 2, commit ce6c5c7 on agent-b, protocol 37)
+
+Static (Script_Game and Game.dll, details in the private findings): the player's PS_Ranged calls the script `Shoot`
+directly, not through the script table, so it is hooked in place (address taken from the table entry, prologue
+checked first). For the player `Shoot` sets ShootVelocity = the held arrow's DamageHitMultiplier x 200 and aims at
+`PSCamera::GetScreenCenterPickPoint()`. It turns collision off only with the shooter and one more entity, not with the
+hero's body-part entities. `gCProjectile_PS::OnTouch` disarms a projectile at its first touch (collision group 6).
+
+Approach: the shooter's machine announces its own arrow a frame after it shows up (template, pose, TargetDirection,
+ShootVelocity, path style, touch behaviour, damage, target). The watcher spawns a copy from the template that belongs
+to the shooter's puppet and shoots it the same way. The combat filter's rule 1 then drops its hits, as with the
+meteor copies.
+
+Observed (suite `stageP2`, runs 20261020-083728 to -091232-together-p2):
+- Every arrow the shooter's game spawned was announced and copied (6 of 6 per green run). Copies are owned by the
+  puppet. Copies flew like the arrow: 0 to 16 degrees apart, similar distance, except where the watcher's world
+  differed (the client still showed some of the host's dead orcs standing; `ce6c5c7` does not contain agent A's
+  dead-mirror fix `9acdaf5`, checked with `git merge-base --is-ancestor` on 2026-10-21).
+- Negative control `shotmirroroff`: no copies, red as intended.
+- 1 of 3 runs green. In the red runs the shooter's own arrow failed:
+  - The bot shoots from the idle stance, where the new arrow starts inside `Body_Player`/`Head_Player` and stops at
+    once. Drawing first (state `PS_Ranged_Aim`, 2 s) mostly avoids that and lets the game set the draw (multiplier
+    0.74).
+  - In one run the QA scan reported `spawned=0`: it found no new arrow of the shooter within 2 s. That is the scan's
+    count, not the return value of `Entity::Spawn` (see experiment 0 and agent C's arrow note below).
+- No arrow (the shooter's or a copy) ever hurt an NPC. Arrows on the physics path passed within 10 cm of a target's
+  chest and flew on, without a call to AddHitPoints. Cause: unknown.
+
+Derived: the idle-stance failures are the test shooter's. For the `spawned=0` run it is unknown whether the arrow
+existed; the mirroring announces only arrows it finds, so that run does not separate the shooter from the mirroring.
+
+Not covered yet: exactly-once in a run (needs an arrow that hits); crossbows; projectile spells (MagicProjectile);
+late join.
+
+## 2026-10-20: the rare puppet turn (agent A)
+
+Observed:
+- Trace with call chains (frame-pointer walk from the `AISetTask` hook) and a lookup of the script admin tables by
+  address: after a hit reaction (`ZS_Stumble`, `ZS_Slide`) the game runs the script `ContinueRoutine`
+  (Script_Game.dll RVA 0xa5ea0) for the puppet; its `SelectRoutineTask` (0xa9440: arena, `ZS_FollowPlayer` or the
+  routine) set `ZS_HangAround` every frame for about 3 s and the puppet turned on the spot.
+- Wrapping the `ContinueRoutine` entry of the script table and not running it for puppets (commit `a4da3aa`, DLL
+  `b0ec5c94…`): `ZS_HangAround` on puppets at least once in 63 of 63 traced runs before, 0 of 20 after; `stage2` 19 of
+  20 (the red one is a different case, still open: a client running under orc hits, the puppet one to two metres
+  behind).
+- The 63-run count does not separate the short `ZS_HangAround` at puppet creation (an earlier trace that morning saw
+  it replaced after 16 to 350 ms) from the 3-s chain above. The visible turn was rarer: that day's `stage2` series
+  before the fix had 2 of 10, 1 of 15, 3 of 15 and 4 of 20 red runs, and not all of them were the turn (test errors,
+  below, and one run with the client under orc attack).
+- Two earlier "puppet does not reach the step" failures were test errors: orc hits pushed the client's hero 1.3 m on,
+  the puppet followed it exactly.
+- Cutting the stumble motion off on puppets made the game restart it every frame (up to 257 times); reverted, the
+  stumble is left as it is (cosmetic, direction may differ).
+
+Derived:
+- Hit reactions on a puppet are judged by the host's own damage script (Script_Game.dll RVA 0xb4f50, call chain from
+  Game.dll+0x16093b), which also starts a stumble there.
+
+Unknown:
+- Whether `ContinueRoutine` is also reached without the script table. Direct native callers were not checked, and
+  the wrapper covers only table calls (as with `Shoot`, which had to be hooked in place).
+
+## Why the bot's arrows never hurt NPCs: experiment 0 (agent B, 2026-10-20, pair 2, run 20261020-122311-together-p2)
+
+A QA hook on `gCProjectile_PS::OnTouch` (exported by Game.dll) logs every touch. The property set the handler checks
+before calling the arrow's `FuncOnTargetHit` is `eEPropertySetType_NPC` (30): a hit means "the touched entity is a
+figure". The contact type is the property set that produced the contact: 14 = CollisionShape, 100 = Animation
+(bone hit zones).
+Observed:
+- The host's arrows (4 shots at a villager 5 m away) touched a treasure chest (`G3_Object_Interact_Animated_Chest_01`),
+  unnamed geometry and then a house wall, and never reached the target. The test's spot finder only avoided figures,
+  not objects.
+- The client's arrows touched the shooter's own sword and then the shooter's own spine
+  (`PC_Hero type=100 bone=Hero_Spine_Spine_1`) and stuck there. In this run that went with `spawned=0` readings: a
+  stuck arrow is moved under what it hit and drops out of `Entity::GetEntities`, so the QA scan does not find it.
+
+Derived:
+- Bone hit zones do register arrow contacts. `Shoot` turns off collision with the shooter's shape only, not with its
+  bone hit zones. A bot shooting from the idle stance can therefore hit itself.
+- The NPC-side hypotheses (tunnelling, inactive hit zones on passive NPCs) are not needed to explain the misses in
+  this run. They are not ruled out for the arrows that passed within 10 cm of a target and flew on (P2 arrows above).
+
+Unknown:
+- Whether the self-hit hurts the shooter; why the client's line from hand to target crossed its own back.
+
+## P2 spell projectiles, the fireball first (agent B, 2026-10-20, pair 2, commit ba72045 on agent-b, protocol 38)
+
+`MagicProjectile` is called by name (`_AI_StartCastPhase`), so its script-table entry is wrapped. The caster's
+projectile (`Mis_Fireball`, line path with the target set, speed 100) is announced like an arrow, with the item cast
+from. The copy gets that item's spell, as the original does from `MagicProjectile`; what it hits may read the spell.
+Observed (suite `stageP2fire`, 3 green runs): host and client fireballs reached Hamlar at the first try (they home).
+The copy touched the same figure on the other machine. The host applied each fireball once: the host's directly, the
+client's as a claim. Negative control `shotcopyhero` (copy owned by the watcher's hero) red, the copy's hit counted
+too.
+
+Arrows in comparison (suite `stageP2hit`, target Hamlar, commit `875d676` on agent-b, DLL `f3c6e4f7…`): in every run
+where an arrow reached the target, the host applied it exactly once (the host's arrow directly, the client's as a
+claim); the copy touched the same spot and did not count. 2 of 4 runs green: one run had no host arrow reach the
+target in 8 tries, one was aborted (the host hung after a teleport, no crash report). Negative control `shotcopyhero`
+red (double hit). A later rerun was green, 3 of 5 in all: not yet three green runs in a row. Crossbow bolts did not
+reach the target in the village, so exactly-once is not shown for bolts.
+
+## 2026-10-20: static NPC spells, world callbacks and crash signatures (agent C)
+
+Static only, mod source baseline `d4dc47e`; no game processes, installations or runtime tests.
+Evidence was read from isolated Ghidra project copies and existing QA logs. Detailed decompilation and
+machine-specific logs remain private. Source anchors below are DLL RVAs or mod source paths.
+
+Observed in code:
+- `NpcRecord` has HP/pose/animation/equipment, not NPC status clocks or party type. AI state filtering
+  (`src/ai.cpp`) does not generally stop normal scripts such as OnTick/OnEnterProcessingRange.
+- `MagicHypnosis` (`Script_Game+0x543b0`) starts `ZS_MagicSleep`, whose NPC loop exits above TaskTime30;
+  the separately registered Hypnosis loop has a different limit and is not selected by that cast.
+- `CanControl` (`+0x549a0`) requires caster == local GetPlayer. Control/taming use helper `+0x54770`
+  to dismiss Controlled party members and kill Summoned members before adding the new Controlled member.
+  `MagicCallAnimals` (`+0x54160`) redirects existing animals; it does not spawn followers.
+- Poison sets bit4 and a world-clock timestamp, then OnTick supplies HP loss. Disease sets bit8 and
+  stamina0. Status replication must account for active callbacks, not just visuals.
+- Mist uses one global bit64 per NPC; a new mist retires existing mists, and ending/processing exit
+  clears status broadly. Independent full simulations of visual copies would not preserve this lifecycle.
+- Theft/crime callbacks (`+0x60930`, `+0x60670`) check the local player explicitly. Enclave transitions
+  (`+0x602d0`) change crime/fame/member fields in addition to status. Native EnterArea quest handling
+  (`Game+0x158e20`) increments DeliveryCounter, which the existing quest-status sync does not carry.
+- Natural respawn (`Script_Game+0xac3c0`) depends on calendar age, random selection and local player/
+  neighbour distances. A death-only journal has no explicit generation for a new life of the same GUID.
+
+Corrections to old crash hypotheses:
+- `Script.dll+0x13EA3` (inside `Entity::AttachTo`) is `mov edx,[eax+0xA0]`, after reading the passed entity's vtable. The passed entity
+  is nonnull and already passed a null check; ECX0 in the exception context is not the failed dereference.
+  Five archived instances have invalid vtable values. The outer caller/lifetime violation remains unknown.
+- `Game.dll+0x2BD1F3` is inside the data string `CurrentAttackerEntity` in `.rdata`, not a teleport function.
+  It was the faulting EIP of a host crash (2026-10-20 13:10, pair 2, once, right after a test-bot teleport, which is
+  where the teleport reading came from); ESP `0x0019E849` was not 4-byte aligned and EBP was `0xAA101779`.
+  A corrupted return/function pointer or earlier stack corruption is a candidate, not a proven cause.
+- The diagnostic stack scan yields module-address candidates, not an unwound call chain; record stack
+  offsets, raw exception access kind (including execute) and relevant input pointers before inferring a cause.
+
+Derived next steps: route spell intent to each NPC's simulation owner with real player identity and spell
+context; apply results once; preserve status/party/lifecycle state through ownership transfer and loading.
+Test host/client/simultaneous casts, ineligible targets, duplicate intents, expiry and re-entry. Replaying
+an original single-player script with a puppet is not automatically equivalent to the real caster.
+These are implementation/test proposals, not new claims of working co-op features.
+
+Cross-check: OnTick calls AddHitPoints directly (`Script_Game+0xb11ab → +0x35b50`), bypassing
+the mod's script-table-only damage wrapper. Mirrored poison/burning therefore needs its own tick gate
+or a visual-only representation; the current damage filter is not a general safety net for status effects.
+Afterwards (commit `2a9e983`, 2026-10-20 21:47, per its message): poison and disease on another machine's NPC are
+cast on its owner, and OnTick is skipped on mirrors and puppets. Not re-tested in this write-up.
+
+## Agent C second static assignment (2026-10-20, request labelled 18:00)
+
+Private evidence is in `g3-workspace/re/findings/*-c.md`; no game was started, installed or stopped,
+and no mod source was changed. These are static findings and interpretations of archived runs.
+
+Observed (code and archived runs):
+- Entity GUID reassignment is supported by the exported `eCNode::SetID` (Engine.dll RVA 0x20DAB0).
+  It removes the old SceneAdmin map key, assigns the new 20-byte `bCPropertyID` by value and
+  registers the entity again. Existing keys are overwritten without an identity check.
+  Existing proxies retain their stored IDs. See `entity-guids-c.md` for ABI, raw prolog bytes,
+  save implications and a direct-call proposal.
+- Hailstorm and Meteor both reach native `DoLogicalDamage` before `AddHitPoints`. Hailstorm chooses
+  targets independently in each simulated cloud. In the failed run `20261020-165728-together-p2`,
+  the observer's cloud judged a low-HP target while its HP delta was rejected, then the target died
+  without the remote claim/XP completion. `AssessHit` can schedule death before the filter;
+  RagdollDead writes HP zero directly.
+- Normal orc death leaves a corpse; it does not immediately delete the entity. Script Entity wrappers
+  copy raw entity/property-set pointers, unlike native proxies. QA GameHit calls OnDamage directly
+  into AssessHit and does not update LastInflictor through DoLogicalDamage.
+- ArmyOfDarkness has 6/8/10 spawn attempts (equal Skeleton/SlaveZombie groups at INT thresholds
+  250 and 300), after clearing the previous summoned group. OnTick kills nonwaiting Summoned
+  creatures farther than 4000 world units from the local player. Native party data is save-relevant.
+- OnHit uses attacker Self and CurrentTarget; OnDamage uses victim Self and damage-source Other.
+  Reset directly sets HP/SP/MP to maximum. Ghost combines local input, camera, focus and movement.
+  DuskToDawn changes the clock factor to 3840, console time scale and finally resets player values.
+- The 21 AI names that the runtime inventory listed without an original address (444 state names,
+  423 with an RVA) are resolved: 19 function definitions in the private Script_Game project, two in
+  Script_paru. Original registration pointers and real bodies are recorded in
+  `missing-ai-complete-c.tsv` and `missing-ai-c.md`. Hold/Use/Equip functions can create, split or
+  delete inventory stacks; SayBossNews/Bribe can change crime/combat state. LieKnockDown itself
+  only advances the coroutine.
+- Personal hero restoration currently preserves existing Skill stacks and teaches missing ones;
+  it forms a union with skills already present in the loaded campaign rather than an exact
+  replacement. The record does not fully encode learned/activation state. See `xp-attributes-c.md`
+  for the complete kill/quest/dialog/teacher/companion/summon/consumable/perk path comparison.
+
+Derived:
+- Rekey an entity before binding party/target/owner references to it. The mod's `missing` mirror
+  cache needs an explicit retry after a delayed spawn.
+- The Hailstorm run strongly supports a pre-filter authority defect, not a demonstrated owner-ID
+  loss: a filter in `AddHitPoints` alone does not stop every death.
+- Later ragdoll code can inspect an older inflictor after a QA GameHit.
+- The mod's slavery adoption path is not a faithful restore of Summoned type 5. Ordinary clock
+  snapshots do not represent the whole DuskToDawn transaction.
+- A joining client loads the host's save, whose hero is the host's, so learned skills of the host's
+  hero stay on the client's hero after the restore (static; not reproduced at runtime).
+
+Unknown:
+- The exact death attribution in the Hailstorm run: the run has no Task trace and had active orcs.
+- The actual caller of the old AttachTo fault (`crash-lifetimes-c.md` lists ring-buffer/AV
+  measurement points). None of the 21 AI entries is newly runtime-tested.
+
+## Agent C: actor identity and social world reactions (2026-10-20)
+
+Static follow-up, mod baseline `d4dc47e`. Additions on that baseline that C checked as already
+implemented (not written up elsewhere in these notes; summaries from their commit messages):
+A's F1 (`58b3a14`, NPCs react to the client's hits through AssessTarget with ReactToDamage) and
+W1 (`96fd5d0`, doors and locks are the same for every player, world state kind 10), B's Charm
+(`fae2751`, Charm on another machine's NPC runs there) and area-spell copy fix `5628884`
+(`MagicAreaDamageTick` hooked in place, skipped for copies owned by a puppet). No game or runtime
+test was started by C. Detailed private findings: `re/findings/social-identity-c.md`,
+`social-crime-identity-c.md`, `social-player-context-c.md`, `social-mod-gaps-c.md`.
+The concrete A/B work plan is `social-coop-auftraege-c.md`. Addresses are Script_Game.dll RVAs
+unless a module is named.
+
+Observed (code):
+- SendPerceptionTakeItem (0x32840) calls CanReceivePerceptionFrom and AssessTakeItem directly,
+  so a script-table-only perception wrapper does not cover those calls. The item is read from the
+  actor's current target. Counting theft and deciding witnesses are separate paths.
+- AssessPlayerWeapon (0x2F780) requires the local GetPlayer; AssessPlayerZone (0x2FCA0) uses
+  `Entity::IsPlayer` (Script.dll RVA 0x14900), a pointer comparison against a cached player entity.
+  AssessPlayerSneaking (0x2F5B0) has no direct player guard, but normal active perception invokes
+  it from the local-player slot.
+- ZS_ReactToZone_Loop (0x224C0) fetches GetPlayer again after its state timer and uses it for
+  distance/Goto. ZS_GotoPlayerZone (0x30280) also fetches the local player's zone late.
+- `gCNPC_PS::WriteSaveGame`/`ReadSaveGame` (Game.dll RVAs 0x144E90/0x144D00) explicitly carry
+  player-related crime/fight memory and target proxies. `gCPlayerMemory_PS::WriteSaveGame`/
+  `ReadSaveGame` (Game.dll RVAs 0x14E740/0x14E630) carry the four political arrays.
+- `_AI_SayGuardNews` (0x3A3C0) sets/clears DIA_BRIBE, DIA_EXCUSE and DIA_PROVOKE on PlayerMemory;
+  story.cpp currently shares PlayerKnows as world events. Guard severity also uses process-global
+  values.
+- talk.cpp holds are not full exclusive reservations: repeated Begin overwrites the holder, End
+  does not verify holder identity, and host-local dialogs are not integrated.
+
+Derived:
+- Mapping a remote body to the local hero inside GetAttitude gives a shared attitude answer, but
+  not a persistent actor context for crime, dialog or later AI states.
+- Preserve the item identity before removal or focus changes and bind crime effects to the
+  accepted inventory transaction. Do not generalize one player guard across all scripts.
+- Correcting only an entry argument would leave the delayed identity dependencies above.
+- Native save support is not live replication or a per-player ledger.
+- Wrong dialog options for an uninvolved player are a runtime test candidate, not a reproduced
+  failure. Do not blacklist all DIA_* blindly.
+- Session identity, persistent participant identity, and the current visible body need distinct
+  treatment across disconnect, transform, save and owner handoff.
+
+The proposed first vertical test is a client taking owned property while the innocent
+host stands nearby, followed by a correctly targeted warning and rejoin. Further work
+covers complete combat feedback, dialog/quest conflicts, interaction cancellation,
+world re-entry and coordinated time. All runtime acceptance remains with A/B on their
+own two-player pairs; these are findings and test instructions, not new tested features.
+
+## Agent C: outside review of cross-system transitions (2026-10-20)
+
+An owner-authorized Fable 5.1 consultation reviewed abstract assumptions, then a
+bounded set of versioned mod excerpts (A d2e331f8, B 760af83f). The completed code
+review suggested testing rejected item transfers with lasting native side effects,
+world/personal-save consistency, and reactions interrupted by puppet replacement.
+These are hypotheses and proposed tests, not new runtime results.
+
+Local static checks constrain those suggestions:
+
+- The host's native world save completes before its Campaign notification makes
+  the client write the personal hero record. Container changes are observed on a
+  polling interval, so an empty pending set alone does not prove all local changes
+  have reached the host. Test the reachable save/transfer order; do not claim an
+  observed duplication from this ordering alone.
+- Container replies and Campaign notifications use the same reliable channel.
+  Do not invent arbitrary reordering of those messages. Existing container
+  compensation must be included in the experiment.
+- The transferred campaign's local name and hero-record prefix are consistent.
+  The review's uncertainty about that naming is resolved by the complete local path.
+- ItemTook is sent after the local world entity disappears. A proposed reverse
+  loss case cannot be inferred merely from a multi-frame take animation.
+- Two native quest completions can correctly award two eligible players. Count
+  authorized effects per recipient and follow their cause through replication.
+- Replaying a result can itself trigger native logic. Hash equality only covers
+  selected fields at a comparable version. Neither proves semantic correctness.
+
+Keep the existing distributed simulation and per-domain mechanisms unless an
+experiment establishes a concrete reason to change them. Subsequent reviews should
+carry the last answer, its limitations, the exact source baseline, and new evidence.
+
+## Agent C: poison and disease implementation handoff (2026-10-20)
+
+Static follow-up against B f1ad45e3, protocol 40; no new runtime claim. The previously
+missing poison implementation plan is now in the private workspace findings.
+
+Observed (code; Script_Game.dll RVAs):
+- Native OnTick (0xB0EF0) calls AddHitPoints directly at 0xB11AB, then can select
+  unconsciousness or death.
+- Entry bytes 55 8B EC 83 E4 F8 are three complete instructions. The registered
+  ABI is four-argument stdcall, RET 10h, despite three arguments in decompilation.
+- Poison contributes -5 per executed callback, not a proven -5 per second.
+  Disease initially zeroes stamina and has different player/NPC regeneration.
+  Stamina (SP) is in neither NpcRecord nor PlayerState, so no SP state travels.
+- Successful reapplication refreshes the world timestamp even if already poisoned.
+  Two applications within the same world second can have identical before/after
+  bits and timestamps. Both MagicPoison/Disease and AssessHit contain status
+  application paths.
+- Specific poison/disease cures target other; HealOther clears the statuses and
+  heals HP, while ordinary Cure only heals HP in the examined body. B's current
+  HealOther routing covers player targets, not foreign NPCs.
+- OnTick's other=None and a later CurrentAttacker are not reliable stored spell
+  provenance. IsMirrored currently becomes true only after body.pacified.
+
+Derived and proposed (not tested):
+- Blocking only the HP write leaves the later decision active. Proposed guard:
+  native OnTick entry for foreign replicas, preserving the local controlled body
+  and authoritative NPC simulation. Check the full build-specific fingerprint
+  before patching.
+- Observe the accepted status setter within the source context; extend HealOther
+  target routing to foreign NPCs.
+- Keep the source through the actual native Kill/Defeat completion. Proposed
+  completion hooks preserve native actor/KO semantics and use one reward path with
+  duplicate protection, including local and remote recipients.
+- Guard the known ownership transition as well as body.pacified. Handoff needs
+  status time, source and canonical defeated state, distinct from the mirror's
+  temporary XP suppression flag.
+
+Cleanup and reward integration were checked independently; a final review corrected
+two assumptions, and the bullets above are the corrected versions: no SP transport
+exists to rely on, and HealOther routing reaches player targets only. Native tick
+cadence, complete cleanup coverage and the proposed hooks still require B's
+isolated runtime tests. (B's `2a9e983` later skipped OnTick on mirrors and puppets,
+see the first agent C section.)
+
+## Agent C: death attribution, creature lifetime and first-frame arrows (2026-10-20)
+
+Static analysis (C's fourth assignment) against mod commit 7595022 (protocol 40,
+including DeedContext 32fbcfe: net.h records who did a deed and with what). No games,
+builds, installations or mod changes. Detailed private findings: death-events-c.md,
+creature-distance-c.md, review-b-c.md, arrow-spawn-c.md. Fixed source excerpts,
+native call sites and hook bytes were checked; this is not runtime acceptance.
+
+Observed (code and archived runs; Script_Game.dll RVAs):
+- Native Kill (0x1BC30) and Defeat (0x27510) are two entry points suitable for one
+  victim-scoped completion routine. Their direct callers include cleanup as well as
+  combat states, which registration-table wrappers miss.
+- OnCheatKill stops the victim and selects a death task but does not write
+  CurrentAttacker. A caller passing victim as both arguments has not thereby
+  replaced an older attacker.
+- OnTick's summoned-creature distance branch exits before poison/burn damage,
+  clears the party leader, but leaves CurrentAttacker. Native fall death explicitly
+  clears CurrentAttacker.
+- Kill can call NotifyEnclave, which can call Kill(None, another member). Native
+  Entity::Kill is a different removal mechanism.
+- One cast can kill several victims; one summon can kill repeatedly; KO and later
+  death have different XP/crime effects.
+- Client-owned creature snapshots stop beyond 40 m. Host claims bypass the normal
+  three-second stale release, while the copy checker refreshes its timer from
+  IsMirrored (pacified), not a fresh packet. Three passing `stageCreatureLife` runs
+  (`20261020-185021`, `-185346` and `-185644-together-p2`) accepted six living
+  mirrored ArmyOfDarkness creatures on the host after the client moved 50 m away:
+  the suite rejects only `free`, not `mirrored`. This concerns summoned creatures,
+  not the NPC hand-back of stage E1, whose client disconnects.
+- Two TakeOver defects in the code: host takeover leaves the prior client claim,
+  and failed takeover leaves a delayed 700-ms Follow task. No concrete UAF or
+  overflow in the three numeric status reports was demonstrated.
+- Arrow `spawned=0` is a world-list/owner scan timeout, not Entity::Spawn's return.
+  Native early attachment and projectile OnExitProcessingRange -> Entity::Kill are
+  distinct paths in the code.
+
+Derived and proposed (not tested):
+- Capture confirmed claim provenance before the delayed death state; validate
+  victim authority and source ownership first. Cleanup reason must outrank stale
+  hit/status context.
+- Use victim-scoped reentrancy and completion identities rather than inheriting a
+  single global killer. Separate source-action identity from completion identity,
+  include life/session generations, and migrate the existing reward path rather
+  than adding a second one. Process-local counters plus player names alone are not
+  persistent deduplication identities.
+- Send reliable creature endings independently of movement interest; clear
+  replica/claim registrations together. Temporary summons must not be re-offered as
+  persistent slave companions. `stageCreatureLife` needs to fail on a frozen
+  `mirrored` copy.
+- Record spawn, touch, attachment, range exit, decay and destruction per arrow GUID
+  before changing behavior.
+
+Unknown:
+- The cause of the eight `spawned=0` shots in run `20261020-204556-together-p2`
+  (`shots=8 announced=0 unresolved=8`, no touch log, no new arrow GUID). Experiment 0
+  above shows one way it happens (self-hit, arrow attached to the shooter), but this
+  run has no contact evidence.
+
+The death plan received three independent cross-checks. Implementation and
+isolated runtime acceptance remain with the gameplay agents.
+
+## Agent C: release-day guard and transport review (2026-10-21)
+
+Static release candidate fdb1229, compared with packaged baseline 64ad370.
+No mod edits, builds, installations or new runtime acceptance. Private reports:
+attachto-guard-c.md, release-review-c.md, hamachi-net-c.md; player-docs draft and
+an empty playtest form were also prepared for the gameplay agents.
+
+Observed (code and archived crash logs):
+- The crash register values match AttachTo's failed VTable-slot read, not a null
+  Entity argument. The matching GetCombatMoveLength return address follows its
+  Other-wrapper construction. That routine uses only Self.Species and action for
+  its result.
+- The crash logger scans stack words for module-range addresses; it does not
+  unwind frames. Native callsites support a candidate chain through a saved
+  combat action target.
+- New reputation synchronization can overwrite unscanned local changes when a
+  host state arrives before the client's 500-ms scan; reliable packet order does
+  not protect local state changes. Pending theft rollback uses a global
+  returned-item counter rather than matching the rejected transaction.
+- The host binds all IPv4 interfaces. Vendored ENet limits UDP payload to 1392
+  bytes by default; that can mean 1420 bytes including inner IPv4/UDP headers.
+- NPC snapshots reach 3031 application bytes; save chunks reach 16012. ENet
+  fragments them, but oversized packets sent with flags zero are promoted to
+  reliable fragments unless UNRELIABLE_FRAGMENT is explicitly selected. Losing
+  such an NPC fragment can hold later snapshots behind its reliable sequence.
+- ENet peer timeouts, 15-second puppet expiry and three-second NPC stale handling
+  are separate mechanisms. No existing configurable latency/loss simulator was
+  found; disabling a snapshot handler does not test UDP loss or retransmission.
+
+Derived and proposed (not tested by C):
+- An independently reviewed narrow guard passes an empty Entity wrapper for Other,
+  without binding the suspect raw target. Passing null instead would re-enter the
+  original SPU Other lookup. Validate the original implementation before wrapping.
+  This avoids one unnecessary dereference, not every upstream/downstream target use
+  or the unproven source of corruption. The runtime guard requires combat
+  regression. A global dead-entity AI skip or virtual IsKilled on a suspect pointer
+  is not a safe lifetime proof.
+- ENet host MTU 1200 before connection establishment and 18-record NPC send
+  batches, retaining the 48-record receive limit and wire layout. Datagram
+  aggregation means smaller batches alone do not cap UDP size.
+
+Unknown:
+- The exact target GUID and destruction history behind the AttachTo crash.
+- The actual VPN/path MTU (unmeasured, so no universal Hamachi MTU was asserted).
+
+Afterwards in `master` (per commit messages, not re-tested in this write-up): `5bea542`
+gives GetCombatMoveLength the empty wrapper (QA `movelength`, suite `stageRaid`);
+`66e44e1` sets ENet MTU 1200 and 18 NPCs per message, and a client now reports its
+unreported deeds before taking the host's counters and keeps held-back thefts on top.
+
+The package choice and runtime acceptance remain with the release agents and
+owner. Player texts distinguish the fallback package from the unapproved candidate;
+final ZIP identity and compatible fallback save are intentionally not invented.
+
+## 2026-10-21: code review of the 2026-10-20/21 notes
+
+A review of the sections above found contradictions; each was checked against the
+mod's git history and the private findings, and the sections were corrected in place.
+No game was started and no test was run for this review.
+
+Observed:
+- `ce6c5c7` (P2 arrows, first version) does not contain the dead-mirror fix
+  `9acdaf5`; every later baseline named above (`d4dc47e`, `5628884`, `760af83f`,
+  `d2e331f8`, `f1ad45e3`, `32fbcfe`, `7595022`, `64ad370`, `fdb1229`) does
+  (`git merge-base --is-ancestor`). The standing dead orcs in the first P2 runs
+  therefore do not contradict the fix.
+- The six frozen mirrored copies are ArmyOfDarkness creatures in `stageCreatureLife`,
+  not stage E1 NPCs.
+- `Game.dll+0x2BD1F3` was a faulting EIP, not a stack-scan word.
+
+Derived:
+- Agent A's `0x100b4f50` is the VA of Script_Game.dll RVA 0xb4f50: the same trace
+  writes `ContinueRoutine` as `0x100a5ea0`, which the notes give as RVA 0xa5ea0.
+
+Unknown:
+- Whether `ContinueRoutine` has direct native callers (see the puppet-turn section).
+- Whether the skill union on hero restore shows at runtime.

@@ -678,3 +678,159 @@ Observations:
 - Writing the walking vector into the avatar was not tried: its object does not have that layout.
 
 Derived: locomotion data belongs to the controller side of a player-controlled pawn, which a script-spawned `PawnPlayer.*` pawn does not get. Options left: (a) find an AI pawn archetype and let the engine's own `MoveTo` command walk it to a moving target (natural animation and collision, but lag and AI behaviour); (b) decode `CPawnControllerMemento` and feed the engine's third-party path; (c) accept an idle-pose puppet. None was attempted.
+
+## Second PC: profile patch correction, two copies, avatar body fix (2026-10-24)
+
+Identity (second PC): Steam, app 19900, build id 52164, `PatchNotes.txt` "v1.03"; `Dunia.dll`
+SHA-256 `6353936a...2765`, 20,183,176 bytes (identical to the file above); Windows 11 23H2, 64-bit.
+Two test copies of the install; the owner's install and profile were only read. Probe built from
+fc2-coop-probe `583772f` with winlibs i686 gcc 9.5.0 (no hashed 9.2 build available; the 9.5.0
+archive matched its published SHA-256 and SHA-512). Before every launch a file snapshot of the
+owner's profile folder and both test profile folders was taken, and a kill switch watched the
+probe log for the owner's profile path.
+
+Observations (all ran):
+- With the documented patches only (0xE08950 mutex, 0xE089A0 `My Games\Far Cry 2\` →
+  `My Games\FC2test_A\`), the probe log showed `CreateFileW <Documents>\My Games\Far Cry 2\GamerProfile.xml`
+  (read, open-existing): the game opened the owner's real profile. Copy killed after ~45 s; no file in any
+  profile folder changed.
+- `Dunia.dll` has separate strings next to `CGamerProfileNative`: 0xE0E080 `\GamerProfile.xml`,
+  0xE0E094 `\Far Cry 2` (10 bytes + NUL), 0xE0E0A0 `\My Games`. The ASCII `My Games\Far Cry 2\` at
+  0xE089A0 is the only other ASCII occurrence; the 12 UTF-16 ones are in `.rsrc`, inside XML with
+  `KnownFolderID=... path="My Games\Far Cry 2\Saved Games"` (Game Explorer metadata, by the look).
+- After also patching 0xE0E094 to `\FC2test_A` / `\FC2test_B` (17 bytes differ from the original per
+  copy): copy A opened `FC2test_A\GamerProfile.xml`, then on Continue `FC2test_A\saved games\<save>.sav`;
+  copy B the `FC2test_B` ones. Window 800x600 as set in the test profiles. Both copies ran at once.
+- This explains the 2026-10-19 observations above (window 1408x792 instead of 800x600; "whether the
+  new profile path is read at all" unknown): the 0xE089A0 patch never moved the profile.
+- `GetLocalPlayerId()` returned the same id in both copies after loading the same save.
+- `netstart` on both: about 16 packets/s each way (log every second, e.g. `tx=694 rx=697` after ~44 s),
+  each copy's `remote` equal to the other's `local`.
+- Avatar binding bug: both copies logged `avatar body bound` with the avatar body equal to the local
+  player's body (A `3bd8e940` both, B `3bd48a40` both). Both players stood on the same spot after
+  loading, so the nearest body to the freshly spawned avatar was the local player's. Stopped there
+  (no movement test with the bug).
+- With the fix (avatar search skips the local body, waits until it is known; `av_valid` rejects
+  equality): A avatar `3babb100` vs local `3bb54580`, B avatar `3ba96980` vs local `3bd22900`. The first
+  avatar search found 0 matches and succeeded about 1 s later. `walk 3 20 2` in A: B's `pos <avatar id>`
+  every 2 s followed A's circle 0.5-1 m behind (e.g. remote `2589.02 2456.56` → avatar `2589.62 2456.96`);
+  B's `pos <player id>` stayed within 0.1 m (the same drift was there before the walk).
+- After the walk A's body rose from z 18.49 to 19.29 and settled.
+- The avatar's `dir` stayed `(1,0)` the whole time.
+- No CRASH or ACCESS VIOLATION lines in any of the runs; after every run all profile folders matched
+  the snapshot taken before it.
+- The first start of the second copy raised a Windows Firewall prompt for its `FarCry2.exe`
+  (the engine binds UDP 9000/9001); the owner answered it.
+- Code reading: the `scan` command still dereferences memory directly (only `findbody` uses chunked
+  `ReadProcessMemory`); `setpos` exists but is not in the probe README; `ent`, `pos`, `setpos` never drop
+  the entity holder's reference count.
+
+Derived:
+- The profile folder and the save folder both come from 0xE0E094.
+- The avatar bug only shows when both players start within 1 m of each other; the 2026-10-19 runs had
+  moved one player first (teleports, `tpb`) and did not hit it.
+
+Unknown:
+- What the 0xE089A0 string is used for.
+- Whether new saves (autosave) also go to the test folder: no save was written in these runs.
+- Why the walked body rose 0.8 m after `walk` ended.
+## Automated two-copy walk test (2026-10-24)
+
+Script `tests/two_copy_walk.ps1`, added to the probe in https://github.com/MortyRei/fc2-coop-probe/pull/1.
+What it asserts is listed in the README's QA section.
+
+Observations (ran, same PC and copies as the section above):
+- Probe with the avatar-body fix (`dinput8.dll` SHA-256 `87cb733b...431c`): 16 checks, 0 failed, about 2 minutes
+  from start to kill. Copy A needed 8 Enter presses to reach its save, copy B 3. Avatar bodies differed from the local
+  ones in both copies; 16.0 packets/s each way; 17 avatar samples during the 20 s walk, all paired with a `remote`
+  position; avatar span 5.92 m; distance to A mean 0.43 m, max 1.07 m; B's own player drift 0.12 m; no crash lines;
+  real and test profile folders unchanged.
+- Negative control with the probe before the fix (`22ac2fea...8001`), same script: 3 checks failed. `B player stays
+  put`: max drift 16.46 m. `avatar body A/B`: the old log line has no pointers, so it cannot be compared.
+  `avatar moved` (span 16.01 m) and `avatar follows A` (mean 0.19 m) passed.
+
+Derived: with the bug both players are written to each other's position, so they move together (hence the 16 m
+drift and an "avatar" that seems to follow); only the check that the receiving copy's own player stays put tells the
+two cases apart.
+## Heading, network mode, Steam relay (2026-10-24, later)
+
+Observations (ran; one PC unless stated):
+- The player's physics body matrix is always identity (upright capsule) while the entity direction changes; mouse
+  look (relative `mouse_event`) turned the player: entity dir (-0.640, 0.768) -> (-0.913, -0.409), body unchanged.
+  Player entity rows: (d0, d1, 0), (-d1, d0, 0), (0, 0, 1).
+- On a script-spawned pawn: writing its body rotation sticks in the body but the entity dir stays (1,0);
+  `TeleportEntity(id, x, y, z, a, b, c)` returns and changes nothing (neither rotation nor position);
+  `SpawnEntityFromArchetype(..., 0, 0, 90)` gives dir (0,1) (last argument = yaw in degrees; radians or other axes
+  do nothing); writing the pawn's entity rotation rows sticks (still (0,1) 3 s later).
+- Probe change: the avatar's entity rotation rows get the received direction every tick (25 % smoothing).
+  Two-copy test with a mouse-turn phase: 18/18, A and B's avatar at 128.1/128.1, -145.4/-145.4, 149.8/149.8 deg;
+  without the change: avatar stayed at 0 deg (1 check failed).
+- Owner's view (both copies side by side): B's avatar turned with A, also when the owner turned A by hand.
+  My own screenshots never caught the avatar: the opening save's dialogue camera pans by itself; a pawn spawned
+  outdoors with a later save was not visible either, and an unpinned pawn moved by `tpb` fell through the
+  terrain (z 108.9 -> 63.0).
+- Network mode: peer not 127.x -> bind 0.0.0.0, only packets from the peer's IP count (`drop` counter). Test with
+  the PC's own LAN address: 19/19; 30 forged packets from 127.0.0.1 dropped.
+- Relay (`relay/fc2_relay.py`): udp stand-in and Steam (Spacewar, 64-bit ctypes over the flat API of
+  `steam_api64.dll` from Steamworks.NET Standalone 2025.164.1, SHA-256 eb17909a...fb75). Test through two udp
+  relays: 22/22. Steam host side on one account: init, friends-only lobby created and left.
+
+## Two PCs over Steam (2026-10-25)
+
+Setup: the first PC (host) and a second PC on a different network (Wi-Fi vs Ethernet, no ping between them), each
+with its own Steam account, the accounts friends; the second PC had never run the game. Same `Dunia.dll`
+(6353936a...2765) on both. The second PC was prepared from a kit (probe build, relay, scripts) plus the shared
+save and a test profile passed by hand.
+
+Observations (ran):
+- First attempt: the second PC's copy was patched at 0xE08950 and 0xE0E094 only. It read its own
+  `FC2test_B\GamerProfile.xml`, but Story Mode offered only New Story; the auto-Enter run never opened a save.
+  The first PC's copies also had 0xE089A0 patched (`My Games\FC2test_A\`). After patching 0xE089A0 on the second
+  PC its `Dunia.dll` matched the first PC's copy with the same three patches (SHA-256 e0fef7c2...) and the save
+  was listed and loaded (`CreateFileW ...\FC2test_B\saved games\222368278550.sav`).
+- Second attempt: host in the world and lobby created 13:05:54; the joining relay found no lobby on its first try,
+  found the friend in a Spacewar lobby on the second (13:05:56), entered it, the session was accepted, and the
+  first message decoded with the sender identity at offset 16. Avatars spawned on both sides (bound bodies differ
+  from the local ones).
+- Packets: about 16/s each way for ~7 minutes, dropped=0 in every relay stats line on both sides, peer never
+  down while both ran (joining side final tx 6711 / rx 6624).
+- `walk 3 20 2` on the host at about 13:06:40. Joining side, `pos <avatar>` every 2 s: about two circles between
+  ~13:06:58 and ~13:07:19, centre about (2587.3, 2459.2), radius about 3 m; the walk's centre is the start point
+  minus the radius in x, (2587.36, 2459.24), and 2 m/s x 20 s = 40 m = 2.1 circles of 18.85 m. The joining PC's own
+  player stayed within about 0.1 m. The avatar's dir stayed (-0.989, 0.151), equal to the host player's: `walk`
+  does not turn the player.
+- Owner (by eye): the avatar moved on the first PC's screen, and on the second PC it went round in a circle.
+- After the joining side stopped (13:13:00), the host's relay showed peer=down after its 20 s timeout.
+- No CRASH / ACCESS VIOLATION lines on either side; neither probe log named a real profile folder; the test
+  profiles were unchanged (the game saved nothing).
+
+Derived:
+- 0xE0E094 decides the profile and the save file that is opened; 0xE089A0 decides the folder the save list is
+  built from. The 2026-10-24 statement that 0xE089A0 is not needed was wrong.
+- The Steam relay carries the probe's traffic between two PCs without IP addresses or port forwarding.
+
+Unknown: heading across PCs (not exercised), invites and Join Game, behaviour over a longer session or with loss.
+## Two PCs: heading, Steam invite, Join Game (2026-10-25, afternoon)
+
+Same two PCs and test copies as above; host with `scripts/start-coop.ps1 -Role host`, joining side with the same
+script (its relay patched with `--join wait`, byte-identical to the probe repository's).
+
+Observations (ran):
+- Heading: the host turned its player with relative mouse input, each direction held ~8 s: 171.3 (start), 81.3,
+  -171.3, 77.6 degrees (clocks of the two PCs agreed to ~1 s: "peer is talking" at 14:38:05 on both). The joining
+  PC's avatar, sampled every 2 s: 171.3 until 14:38:29, 95.7 at 14:38:31 (mid-turn), 81.3 from 14:38:33, -171.3 from
+  14:38:42, 77.6 from 14:38:52; position steady within a few mm.
+- Steam invite: the host relay logged "invite to <name> sent: True" when its lobby was created; the joining relay
+  waited ("waiting for a Steam invite or Join Game ..."); after the owner accepted the invite on the second PC
+  (about 3 minutes later) the relay logged callback 333 ("invite or Join Game accepted (lobby)"), entered the lobby,
+  and the first packets and the avatar followed within 3 s.
+- Join Game: a new host run without any invite created a new lobby; the joining relay waited; after the owner chose
+  Join Game on the host in the Steam friends list, it joined that new lobby, again through callback 333; no 337 was
+  logged. The earlier invite had pointed to the previous (closed) lobby, so this join came from Join Game.
+- All runs: dropped=0 in every relay stats line, no CRASH / ACCESS VIOLATION lines, no real profile folder in
+  either probe log; after a host stopped, the joining relay logged "peer silent for 20 s, dropped".
+- No "accepted session" line in these runs: both sides sent their first message at about the same time, so each
+  side's own send opened the session.
+
+Derived: for a friend who is in a joinable lobby, Steam delivers Join Game as GameLobbyJoinRequested (333), the same
+callback as an accepted invite; GameRichPresenceJoinRequested (337) would need a connect string without a lobby.

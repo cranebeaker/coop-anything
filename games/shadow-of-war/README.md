@@ -100,8 +100,9 @@ No co-op changes yet. Tooling for working on the game safely (not published yet)
 
 ## QA
 
-- Offline test suite for the tooling (no game process): 28 of 28 cases pass; a mutant
-  build with the protections compiled out fails the 8 cases that depend on them.
+- The tooling has an offline test suite (no game process) and a negative-control build
+  with the protections compiled out; both live in an unpublished repo, so no results are
+  claimed here.
 - Live: seven guarded launches on the Steam build. The after-run check against a hashed
   backup of the real saves and Steam folder caught two writes from outside the game
   process: the NVIDIA App rewriting the real `render.cfg`, and `steam.exe` writing the

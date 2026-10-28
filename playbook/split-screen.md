@@ -76,6 +76,15 @@ networking and no second window. Learned on Dave the Diver (Unity IL2CPP, BepInE
   modal locks player 1, drive player 1's character directly from player 1's own bindings until it closes.
 - **Limit:** one camera. Follow the midpoint and keep both players in view, and give player 2 their own
   HUD by copying and tinting the game's.
+- **Second example: Dead Cells** (HashLink, DCCM; [games/dead-cells](../games/dead-cells/README.md)). The game has a
+  real second-controller layer, so player 2 gets their own controller object pinned to pad 2. Game menus take an
+  *exclusive* input lock on player 1's controller: when a menu is handed to player 2, release that lock first or
+  player 1 stays frozen. A second HUD instance must share nothing with the first (sharing the minimap or counters
+  crashed on area changes); find every function that writes to "the HUD" with a bytecode scan and run each with the
+  owner's HUD. Look for state the game keeps once per profile or run rather than per character (outfit, a skill's
+  charge counter, the kill counter, keys counted in "the hero's" inventory): each needs its own per-player copy or a
+  shared rule. A pick that opens a confirm screen can still be declined, so give the partner their copy of an item
+  only once the pick is done.
 
 ## Split screen inside one copy: three ways mods do it
 

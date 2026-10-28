@@ -4,17 +4,28 @@
 |---|---|
 | Engine | Unity 6 (IL2CPP, metadata v39) |
 | Versions tested | Steam build `23854500` (Windows) |
-| Projects | [drg-survivor-coop](https://github.com/Reudo/drg-survivor-coop) (experimental prototype, MIT) |
-| QA level | automated on one PC only; not human-confirmed (first two-PC test contradicted parts, see [STATUS.md](STATUS.md)) |
-| Last updated | 2026-10-21 |
+| Projects | [drg-survivor-local-coop](https://github.com/Reudo/drg-survivor-local-coop) (local co-op, playable, MIT); [drg-survivor-coop](https://github.com/Reudo/drg-survivor-coop) (online prototype, archived) |
+| QA level | local co-op plugin: automated on one PC (results below) plus the author's own play by hand; online prototype: automated on one PC only, not human-confirmed (first two-PC test contradicted parts, see [STATUS.md](STATUS.md)) |
+| Last updated | 2026-10-25 |
 
 > **Current Ist/Soll:** [STATUS.md](STATUS.md) — verified state, known defects, design
 > requirements and the gap table. Detailed working notes: [NOTES.md](NOTES.md) and
 > [notes/](notes/).
 
+## Local co-op plugin (playable, version 1.0.0)
+
+[drg-survivor-local-coop](https://github.com/Reudo/drg-survivor-local-coop) puts two dwarves into one game on one PC, each on its own controller (BepInEx 6 IL2CPP plugin with
+Harmony patches; the second dwarf is a second player object in the same process, so there is no network code and no desync). Elimination and Escort missions: own co-op menu, two HUD
+panels, level-ups and shop one player after the other, pause menu per player, revive, shared XP, the drop pod needs both dwarves. Online with a friend works through Steam
+Remote Play Together. A release ZIP with an installer is on the repo's releases page; screenshots are in its README.
+
+- **QA:** a scripted harness (`tools/batch_*.ps1` in the repo) starts a test copy of the game with virtual gamepads and judges log lines and screenshots; every check has a twin flag that must turn it red. Results, 2026-10-21 to 2026-10-23 (run ids in the repo's `PLAN.md`): main menu 11/11, real mouse clicks 5/5, real start from the menu (class and mission read back from the live second dwarf), menu locks 10/10 (twin 6 ok, 4 fail), bonus mirror 5/5 (twin 0/5), pause menu per player 5/5 (twins red), retry run 7/7, revive and loot-crate tests green (twins red). The author has also played several full runs by hand with two controllers: no game-breaking bugs, at most small visual ones such as a wrong UI display. No independent report yet; one PC only.
+- **Known gaps:** end-screen damage numbers are probably inaccurate; DLCs are not supported and the game was not tested with DLCs active; other mission types are not offered. The repo README lists the rest.
+- This is the path that works today. The online prototype below was stopped and archived; its notes stay as research.
+
 ## Where things stand
 
-There is **no co-op** in Deep Rock Galactic: Survivor and **no published co-op mod**. The game is a
+The game itself has **no co-op**. The rest of this page records the earlier from-zero **online** prototype, written when there was no published co-op mod at all. The game is a
 single-player survivors-like: one dwarf, one cave, and no networking code of any kind in the shipped
 assemblies. Playing together therefore means building co-op from scratch as a mod — there is no
 "finish the existing mod" path, which is why this page records a from-zero effort.

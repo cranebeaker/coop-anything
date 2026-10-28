@@ -135,6 +135,10 @@ Copies the owner never looks at should cost little and never take the screen:
   corrupt on load; no audio can stall a test that waits for a voice line to end. Keep those opt-in.
 - Use the game's own logs and in-game screenshots as evidence, not desktop capture, which grabs whatever else is
   on the owner's screen.
+- Check that a minimized start does not stall the engine. A modded Unreal Engine 3 client (OpenOL) started from a
+  background shell opened minimized and stopped in engine init right after the audio middleware line (CPU idle, log
+  silent for minutes) until its window was minimized and restored once. Wait for that log line, restore the window once
+  (`ShowWindow` minimize then restore), and keep waking it until the client connects.
 
 `gamepool lowcost` applies a profile from the config to the private settings only.
 

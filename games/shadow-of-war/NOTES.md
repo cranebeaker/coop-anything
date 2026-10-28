@@ -1,4 +1,4 @@
-# Middle-earth: Shadow of War: agent notes
+# Middle-earth: Shadow of War: research notes
 
 Raw notes, newest phase last. Paths use `<game dir>`. Goal: online shared-world co-op
 of the main campaign (two players in one Mordor, one Nemesis world).
@@ -168,10 +168,9 @@ Archive.org, Steam guides.
 
 ### Next steps
 
-1. Set up `gh` so hub issues/PRs can be checked; open a "claim a game" issue.
-2. Copy the Steam install to a test folder; record exe hash, version, Denuvo
-   presence in `local/identity.md` and here.
-3. Phase 3: build the mod loader + a logging plugin on the test copy; read
+1. Copy the Steam install to a test folder; record exe hash, version and Denuvo
+   presence here.
+2. Phase 3: build the mod loader + a logging plugin on the test copy; read
    SystematicSkid's save editor and freecam sources for class layouts; map the Nemesis
    structures and the save path.
 
@@ -264,7 +263,7 @@ Archive.org, Steam guides.
 ### Isolation plan (nothing launched until every step passes)
 
 1. **Backup with a hash manifest** of `%LOCALAPPDATA%\WB Games\Shadow of War` and
-   `userdata\<id>\356190` into `local/backups/<date>/` (read from the real folders,
+   `userdata\<id>\356190` into a private backup folder (read from the real folders,
    write only into the workspace).
 2. **Manual step in the Steam client:** turn off Steam Cloud for Shadow of War
    (game Properties > General) for the testing period. Belt and braces with step 3.
@@ -302,7 +301,7 @@ Archive.org, Steam guides.
 ## Session 2026-10-20 d: isolation steps 1 and 2 done
 
 - Step 1 (backup): `%LOCALAPPDATA%\WB Games\Shadow of War` (28 files) and
-  `userdata\<id>\356190` (2 files) copied into `local/backups/2026-10-20/`, with
+  `userdata\<id>\356190` (2 files) copied into a private backup folder, with
   `MANIFEST.sha256` (SHA-256, size, path). Every backup file was hashed against its
   original: 30 files, 0 mismatches.
 - Observation: the main save, save slot 1 and the Steam Cloud save have the same SHA-256,
@@ -313,8 +312,8 @@ Archive.org, Steam guides.
 
 ## Session 2026-10-20 e: guard DLL built and tested offline (isolation step 3)
 
-Code lives in its own repo (`sow-coop`, local only for now, not pushed); this hub gets
-the write-up only.
+The guard's code and its offline tests are not published; this hub gets the write-up
+only, so test results are described, not claimed.
 
 ### Built
 
@@ -340,8 +339,7 @@ the write-up only.
 
 ### Tested (offline, no game process)
 
-- Suite `test_guard.exe run`: **RESULT: PASS (20 of 20 cases passed)**, 2026-10-20.
-  Each case builds a fake user tree, loads the DLL into a child process in test mode
+- Offline tests: each case builds a fake user tree, loads the DLL into a child process in test mode
   (real user paths refused) and checks disk state + exit code. Covers: redirected
   write/read/attributes/listing; forward slashes, lower case, `\?\`, cwd-relative and
   directory-handle-relative `NtCreateFile`; rename/delete/mkdir in the profile; Steam
@@ -349,15 +347,14 @@ the write-up only.
   rename-into all terminate with `0xC0DE0010` and leave the tree unchanged; sockets
   denied/allowed by flag; the four start-up refusals; all 73 forwarders resolve to the
   original; own SHA-256 matches the exe hash above.
-- First run had 19/20: the forwarder test looked for `bink2w64_.dll` before resolving any
+- One case failed at first: the forwarder test looked for `bink2w64_.dll` before resolving any
   export. Forwarders load their target on first resolution (in the game, the exe's
   static `BinkGoto` import does that). Test fixed, not the DLL.
-- Negative control `test_guard.exe mutant` (redirect and guard compiled out):
-  **5 of 5 dependent cases fail as they should**.
+- A negative-control build (redirect and guard compiled out) fails the dependent cases.
 - Dry run of the staged game-mode config inside the test copy with a non-game exe: the
   DLL parsed the config and refused with `0xC0DE0003 unknown exe`.
 - Real saves and Steam userdata re-checked against the backup manifest after all of
-  this: 30/30 unchanged.
+  this: unchanged.
 
 ### Observed in passing
 
@@ -387,7 +384,7 @@ the write-up only.
 
 ## Session 2026-10-20 f: first guarded launch of the test copy
 
-Launched with `launch-sow-a.ps1` (Steam running, backup check passed first), timeout 300 s.
+Launched (Steam running, backup check passed first), timeout 300 s.
 
 ### Observations
 
@@ -399,12 +396,12 @@ Launched with `launch-sow-a.ps1` (Steam running, backup check passed first), tim
   exited is unknown (nobody watched the window; possibly the network denial).
 - Guard log, 71 lines: 20 socket attempts denied (`\Device\Afd\Endpoint`), 32 redirects,
   0 protected-path hits, 0 watched writes, no FATAL.
-- Order seen: sockets denied and Steam userdata `<id>\356190\175823492` probed during the
+- Order seen: sockets denied and Steam userdata `<id>\356190\<id>` probed during the
   first ~1.4 s; then a ~68 s gap with nothing logged; then the game's own boot: probes
   `LocalAppData\WB Games\Shadow of War\` and `Documents\WB Games\Shadow of War\`,
   creates a `{25FFEBFB-B407-4789-ABEB-43655FEB78C6}` file (write test?), opens
   `render.lasterror`, creates `CloudStorage\`, reads and rewrites `render.cfg` several
-  times, writes `gpu.nfo`, writes Steam userdata `356190\175823492` (1,178 bytes). All
+  times, writes `gpu.nfo`, writes Steam userdata `356190\<id>` (1,178 bytes). All
   of it landed in the sandbox profile.
 - The game opened a window: it saved `WindowWidth 960`, `WindowHeight 516`,
   `ScreenX 480`, `ScreenY 258` into the sandbox `render.cfg`.
@@ -451,20 +448,19 @@ Launched with `launch-sow-a.ps1` (Steam running, backup check passed first), tim
   The six real saves and Steam userdata are byte-identical to the backup. So the game
   did not open the save files in this process. Unknown what the menu showed and where
   it came from (Steam stats or achievements over Steam's IPC are a guess).
-- `steam-userdata\356190\175823492` is a hex-text blob (1,178 bytes) that differs from
+- `steam-userdata\356190\<id>` is a hex-text blob (1,178 bytes) that differs from
   the real copy in 1,061 bytes: regenerated, not copied. Not a save.
 
 ### Consequences
 
 - Denying socket creation looks like a bug to the game, not like being offline. Every
   launch would stop at that dialog, which rules out unattended bot tests, and it
-  invites reports to WB about modded runs (contacting anyone needs approval under the
-  hub rules anyway). Next guard version: allow sockets, fail outbound
+  invites reports to WB about modded runs. Next guard version: allow sockets, fail outbound
   connects and DNS the way an offline PC does, and see whether the game then starts
   offline without the dialog. Unknown whether it needs WB's server at all to start.
 - Still open: whether Steam serves `ISteamRemoteStorage` file reads/writes from inside
   the game process (where the guard redirects them; the in-process write of
-  `175823492` suggests yes) or from `steam.exe` (where it can't).
+  `<id>` suggests yes) or from `steam.exe` (where it can't).
 - Decided: keep the NVIDIA-rewritten `render.cfg` (display settings get fixed in the
   game). The backup check now reports `render.cfg` and `gpu.nfo` changes as info only;
   any change to saves or Steam userdata still fails it and blocks a launch.
@@ -489,11 +485,11 @@ dialog that needed a human. Goal: look like an unplugged PC instead.
   unparseable) destination return `STATUS_NETWORK_UNREACHABLE` without reaching the
   driver. Winsock then reports `WSAENETUNREACH` (10051); WinHTTP reports
   `ERROR_WINHTTP_CANNOT_CONNECT` (12029) after 0 ms. Loopback passes.
-- Suite: **RESULT: PASS (21 of 21 cases passed)**. New case `network_offline`: sockets
+- New offline case `network_offline`: sockets
   create; TCP connect, ConnectEx, UDP sendto, UDP connect+send to 192.0.2.1 and TCP,
   ConnectEx, sendto to 2001:db8::1 all give 10051; WinHTTP to 192.0.2.1 gives 12029 in
   under 2 s; TCP and ConnectEx to a 127.0.0.1 listener, TCP to a ::1 listener and a UDP
-  datagram over 127.0.0.1 all work. Mutant build: **6 of 6** dependent cases caught.
+  datagram over 127.0.0.1 all work.
 - One false failure on the way: once the guard was staged in the test copy,
   `sow-a\x64\bink2w64.dll` *is* the guard, and passing it as the "original" made the
   proxy forward to a second copy of itself. That copy found the stubs already hooked
@@ -522,7 +518,7 @@ Overlay` processes were still running. The game window was watched by hand.
   exit 0 (closed by hand from the main menu, see below).
 - Guard log, 48 lines: 24 redirects, 4 offline refusals, 0 protected hits, 0 watched
   writes, no unparsed network request, no FATAL.
-- Timeline: +0.7 s Steam userdata `356190\175823492` opened (read, redirected); +3.5 s
+- Timeline: +0.7 s Steam userdata `356190\<id>` opened (read, redirected); +3.5 s
   the game's own boot starts (save-dir probes, write test file, `render.lasterror`,
   `CloudStorage\`); +3.8-8.3 s `render.cfg` read/written, `gpu.nfo` read; +46.5 s
   `render.cfg` written again; **+46.7 s two HTTPS connects refused, to
@@ -599,17 +595,17 @@ so we learn from it and do not copy code)
   or stripping of Denuvo/SteamStub. No debugger attached (anti-debug risk; also an
   extra install). No full dump of the unpacked exe for now.
 - Only in test copy A, guard always on (saves sandboxed, network offline). Dumps and
-  game-data output stay in `local/`; we publish names, offsets and signatures only.
+  game-data output stay private; we publish names, offsets and signatures only.
 
 ### Steps
 
 1. **Probe module (tooling).** Add a `sowprobe` part to the guard DLL: a background
    thread that waits until the game has unpacked, keeps the game running unfocused,
-   and serves a named pipe so the agent can ask questions while the game runs:
+   and serves a named pipe so a client can ask questions while the game runs:
    `module` (base, sections), `scan <pattern>` (all hits), `read <addr> <len>`,
    `rip <addr>` (resolve rip-relative), `vars` (script-var list), `log` (captured debug
-   prints). Read-only by default; `write`/`call` only with `probe_write=1`. Python
-   client in `sow-coop/tools`. Offline tests like the guard's.
+   prints). Read-only by default; `write`/`call` only with `probe_write=1`. A small Python
+   client.
 2. **Check every known signature and RVA on our build.** Each pattern must hit exactly
    once; each RVA from the save editor must land on a function start. Record a
    signature table (pattern, hits, RVA, meaning, source, date) here. Expect matches
@@ -654,11 +650,11 @@ so we learn from it and do not copy code)
   `48 8B 0D ? ? ? ? E8 ? ? ? ? C7 47`), logs how long that took, and serves read-only
   `ping`, `module`, `scan`, `read`, `rip`, `deref` on a local named pipe. It reads only
   committed, readable, non-guard pages (VirtualQuery first), so it never trips a guard
-  page. Client: `sow-coop/tools/probe.py`.
-- Offline suite: **RESULT: PASS (23 of 23 cases passed)**; new `probe_serve` checks every
+  page. A small Python client talks to it.
+- A new offline case, `probe_serve`, checks every
   command against fixtures in a live child (marker scan exact and with wildcards, read,
   rip-relative resolve, pointer deref, unmapped read -> err, unknown command -> err,
-  still alive after errors) and `probe_off` (no pipe without `probe=1`). Mutant 6/6.
+  still alive after errors), and `probe_off` (no pipe without `probe=1`).
   Python client checked against a live probe.
 - Staged in test copy A (`probe=1`, `network=offline`). Next: launch with the probe on,
   confirm the ready pattern appears and when, then step 2 (check every known signature
@@ -667,8 +663,8 @@ so we learn from it and do not copy code)
 ## Session 2026-10-20 k: phase 3 step 2, signatures checked in the running game
 
 Launched test copy A with guard + probe (`network=offline`), left at the main menu
-(save not loaded). All checks below are read-only (`sow-coop/tools/sigcheck.py`,
-`diskcheck.py`); raw output in `local/phase3/`.
+(save not loaded). All checks below are read-only (small scripts over the probe); raw
+output kept private.
 
 ### Observations
 
@@ -767,7 +763,7 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
 
 ## Session 2026-10-20 l: phase 3 step 3, debug-print capture
 
-### Built (sow-coop `7606a1f`, offline suite 26/26, mutant 6/6)
+### Built
 
 - `probe_write=1` mode: pipe command `write <addr> <hex>` (logged), and hooks.
 - `hook_debug_print=1`: the debug print (found through the save editor's call-site
@@ -789,7 +785,7 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
 - Hook installed 330 ms after launch, before the game's own boot; game ran normally.
 - **0 debug lines** in the first 2+ minutes: release builds gate almost every call behind
   a per-channel byte flag that is off.
-- Static catalogue of the callers (`sow-coop/tools/dpsites.py`, exe file only):
+- Static catalogue of the callers (a script over the exe file only):
   **1,100 call sites**; categories include `[COMBAT|...]` (most), `[QUEST]` (99),
   `[QUEST|JOB]` (47), `[AI|SPAWNAMBIENT|REJECT]` (33), `[FACTION|AMBUSH]` (25),
   `[FACTION|RESURRECTION]` (19), `[FACTION|CATALYST]` (18), `[LOOT]` (18),
@@ -844,7 +840,7 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
   function, which clobbered r9; the `mov rax,imm64; jmp rax` patch also clobbered rax.
   **Root cause: our hook, not the game.**
 
-### Fix (sow-coop `b9e5421`)
+### Fix
 
 - Patch is a 5-byte `jmp rel32` (+ int3) to a stub page allocated within 2 GB of the
   game code: no register touched. The stub writes only the two home slots the original
@@ -854,7 +850,7 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
 - New test: generated machine code sets rax, rcx, rdx, r8-r11, xmm0-5 and two sentinels
   in the caller's home slots, calls the stub, and checks all of them after. The hooked
   stub and the original stub both pass ("regs ok"); a mutant that does not restore r9
-  fails ("changed: r9 r11"). Suite 26/26, mutant 7/7.
+  fails ("changed: r9 r11").
 - `debug_channels=<rva,...>` sets channel flags right after the hook installs (no race
   with the player loading a save). Staged with 22 channels; `FACTION|REWARD|REJECT`
   (`2A34DA8`) left off as noise.
@@ -899,7 +895,7 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
   even with Steam Cloud off for the game (it keeps the local copy and marks it unsynced).
   **In-process file redirection cannot cover this.** Correction to session c and
   session f: the Steam remote-storage writes are not made by the game process (the
-  `175823492` write seen in-process is a different file).
+  `<id>` write seen in-process is a different file).
 - Before any further session in which the game can save, the guard must stop
   `ISteamRemoteStorage` writes inside the game process (e.g. make FileWrite/
   FileWriteAsync/FileDelete/FileForget fail or turn them into no-ops) and the test
@@ -910,7 +906,7 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
 
 - With Steam fully closed (Steam may rewrite `remotecache.vdf` from memory on exit),
   restore `remote\<prefix>_ShadowOfWar.sav` and `remotecache.vdf` from the verified
-  backup `local/backups/2026-10-20/steam-userdata-356190/`, then rerun the backup check.
+  backup, then rerun the backup check.
 
 ### Playbook lesson (isolation)
 
@@ -922,8 +918,8 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
 - Restored (Steam fully exited, no Steam or game process running):
   `remote\<prefix>_ShadowOfWar.sav` and `remotecache.vdf` copied back from the verified
   backup with their original timestamps (robocopy /COPY:DAT); the test-written versions
-  kept in `local/backups/2026-10-20-steam-overwritten-by-test/`. Backup check after:
-  30/30 present, **unchanged** (render.cfg info only). Not yet seen: what Steam
+  kept aside. Backup check after: all
+  present, **unchanged** (render.cfg info only). Not yet seen: what Steam
   does with these files on its next start (it should find them matching its cache).
 
 ## Session 2026-10-20 o: Steam remote-storage guard (built, tested offline, staged)
@@ -936,14 +932,14 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
   FileShare 0x38, SetSyncPlatforms 0x40, FileWriteStreamOpen/WriteChunk/Close/Cancel
   0x48/0x50/0x58/0x60, SetCloudEnabledForApp 0xB8, UGCDownloadToLocation 0x1B0;
   ISteamClient::GetISteamRemoteStorage 0x88.
-- Guard (sow-coop `37a594b`, always on): waits for the game's SteamAPI_Init, gets the
+- Guard (always on): waits for the game's SteamAPI_Init, gets the
   same interface through the flat API, reads the slot offsets from the wrappers' bytes
   (any other shape: exit `0xC0DE0006`), and replaces those 12 write methods in the vtable
   with functions that log and report success (async/stream: invalid). Reads untouched.
 - Offline tests with a stand-in `steam_api64.dll` (byte-exact wrappers, counting
-  vtables; never copied into a game folder): **28/28 pass**; `steam_block`: all 12 writes
+  vtables; never copied into a game folder): `steam_block`: all 12 writes
   answered by the guard, none reached "Steam", FileRead passed through; mutant without
-  the guard: all 12 reached it (caught, 8/8). Note: this compiler emits
+  the guard: all 12 reached it. Note: this compiler emits
   `mov r10,[rax+off]; jmp r10` for such wrappers, so the fake's wrappers are raw bytes.
 - Staged in test copy A; the test copy's real `steam_api64.dll` is untouched (hash equal
   to the real install's). Backup check unchanged.
@@ -977,8 +973,8 @@ Launched test copy A with guard + probe (`network=offline`), left at the main me
 
 Sources: two captures with 22 channels on (combat and `FACTION|REWARD|REJECT` off), manual
 play on the sandboxed save: session 5 (42,977 lines, ~10 min, two captain kills) and
-session 6 (36,108 lines, ~6 min of play, 16 autosaves). Tool: `sow-coop/tools/dpanalyze.py`
-(message templates per category). Raw logs stay in `local/`.
+session 6 (36,108 lines, ~6 min of play, 16 autosaves), summarized into message
+templates per category. Raw logs stay private.
 
 ### Observations
 
@@ -1076,8 +1072,8 @@ session 6 (36,108 lines, ~6 min of play, 16 autosaves). Tool: `sow-coop/tools/dp
 Method (read-only, exe file; `.arch` is identical in memory, see session k): find each
 log format string, find RIP-relative `lea/mov` references to it in `.arch`, map them to
 functions through `.pdata` (following chained unwind entries), disassemble with
-`dumpbin /disasm`, find callers (E8/E9 rel32). Tool: `sow-coop/tools/xref.py`
-(`strings`, `callers`, `func`, `sig`). Signatures: built from the disassembly with only
+`dumpbin /disasm`, find callers (E8/E9 rel32), with a small script of our own.
+Signatures: built from the disassembly with only
 rel32 call/jump targets and RIP-relative disp32 wildcarded, grown until they match
 **exactly once** in `.arch` (checked by the tool). Build: Steam 3095001, exe SHA-256
 `ed0d95ca...0bdaef`, image base 0x140000000.
@@ -1125,8 +1121,8 @@ resurrection record; `"None"` (1DB4ED8) is the name used for a missing subject/o
 ## Session 2026-10-20 s: located functions confirmed in the running game (read-only)
 
 - Run with `probe_write=0` and `hook_debug_print=0` (nothing in the game's code patched;
-  file/network/Steam guards on), game left at the main menu, `sow-coop/tools/sigverify.py`
-  through the probe's read-only commands. **RESULT: PASS.**
+  file/network/Steam guards on), game left at the main menu, a script through the
+  probe's read-only commands.
 - All nine signatures from session r match **exactly once** in the running game, at the
   RVA found in the file, and the 64 live bytes at each equal the file: HandleFactionEventAction
   40C304, ApplyFactionEventOutcome 62E670, OnMemberKilled_EvaluateResurrection 6DB95C,
@@ -1142,5 +1138,838 @@ resurrection record; `"None"` (1DB4ED8) is the name used for a missing subject/o
 - RNG state at 2A25C88 read twice 5 s apart at the main menu: unchanged
   (`33A3E99A5479618B`): no random draws at the menu, so the LCG step itself was not
   observed live (needs a session with play).
-- Steam remote-storage guard in at 359 ms. Game stopped by the agent after the check
+- Steam remote-storage guard in at 359 ms. Game stopped after the check
   (exit 0xFFFFFFFF, forced); backup check unchanged; test-copy config restored.
+
+## Session 2026-10-20 t: is the LithTech client/server split real at runtime? (static, read-only)
+
+Method: strings and their code references, references to registry entries, vtables and
+the code that installs them, call chains back to the program entry. Exe file only
+(`.arch` identical in memory). Tools: small scripts of our own.
+
+### Observations
+
+- **No LithTech client/server protocol in the binary:** no `ILTServer`, `ILTClient`,
+  `CAutoMessage`, `ILTMessage`, `MID_*` message IDs or "ServerMgr" strings. RTTI names
+  exist only for Havok, WB's `hydra` SDK and std.
+- **"GameServerShell" is client code.** `GameServerShell.DebugPause` (handler 177658C)
+  reads the GameClient global (`26FFA98`, the freecam's pointer) and changes pause flags
+  at `GameClient+0xE90`; `GameServerShell.PrintPauseFlags` (17762C) is `ret 0`;
+  `ResetWorldIdentical` / `AdvanceTimeOfDay` go through the neighbouring client globals
+  `26FFAB0` / `26FFAA8` into WorldSimSession code (`178xxxx`). All are defined in
+  `Game\ClientShellDLL\` (GameClientShell.cpp, WorldSimSession.cpp).
+- **Multiplayer settings exist but nothing reads them.** Registry variables `LANOnly`
+  (bool, 1), `publicserver` (bool, 1), `password` (string), `NetMeshGamePort` (int, 1032),
+  `Net.NSM.HostVote.Timeout` (15000), `Net.NSM.HostVote.PauseInStart` (2000) are each
+  referenced by exactly two functions: their registration (around `AFxxx`) and
+  unregistration (around `1065xxx`/`1069xxx`), touching only the record and its list
+  links; no code reads their value (`+0x38`) and their name strings have no code
+  references. Control: `Physics.Client.PhysicsUpdateRate` *is* read (1A8C80 in 1A864C).
+- **A peer "NetMesh" with host/join is compiled in** (around `119F000`-`11A2000`):
+  strings `HostMesh() should only be called when the mesh is disconnected`, `JoinMesh() ...`,
+  `SendJoinRequest() should only be called when we're joining`, `Attempt to add NetNode
+  with invalid ID / 'All' ID / duplicate ID / duplicate endpoint`, `WriteMessage called
+  with an improperly-matched message class`, `DetermineNewHost: Using matchmaking system
+  **NOT IMPLEMENTED**`. NetMesh object: vtables `22C1128` + `22C1170` (multiple
+  inheritance), constructor `119F92C`, destructor `119FB98`; HostMesh `11A0F5C` and
+  JoinMesh `11A1218` are virtual (no direct callers); DetermineNewHost `11A0394` virtual.
+  Host-vote net state machine vtable `1E700A0` (installed by `11D0094`); message classes
+  vtables `22BFA60` / `22BFB00`.
+- **The only creator of a NetMesh is `118056C`,** which is slot 18 of the vtable at
+  `1E6AEC0` (a network-manager-like class; constructor `117F8B0`, destructor `117FE68`).
+  The host-vote and message-class constructors are reached only from NetMesh's own
+  virtual functions.
+- **The network manager is constructed at every start:** `117F8B0` <- `1178778` <-
+  `1178D80` (engine start-up; references `-cmdfile ..\cmdline.txt`) <- `11725C4` <-
+  `8C3E5C` <- `8C3FC8`, which is MSVC's program entry (`sub rsp,28h; call
+  __security_init_cookie; jmp __scrt_common_main_seh`), i.e. the original entry point
+  behind SteamStub.
+- Other network code belongs elsewhere: hydra realtime websockets (`RealtimeWebsocketConnection`,
+  `ServerDisconnectMessage`, `PlayerDisconnectedMessage`, libwebsockets) for WB's online
+  service; matchmaking strings are for invasions (`invasion_matchmaking`,
+  `InvasionSelfMatchmaking`: Online Conquest); `common.base.network.bsdsocket` is Havok's
+  remote-debug socket (`hk2016...\hkBsdSocket.cpp`).
+- Lockstep support exists: `FrameUpdateLock.Enable` ("the game will update with a fixed
+  frame time") and `FrameUpdateLock.TimeMS` ("milliseconds to lockstep frame updates").
+- Game modes are data-driven content modes (`GameModes/Session`, scoring, currency,
+  progression), not network modes.
+
+### Derived (verdict)
+
+- **The LithTech client/server split is not a runtime split in Shadow of War.** The
+  "server shell" commands operate on client-side singletons; there is one process, one
+  world (WorldSimSession inside the client shell), and no LithTech message protocol. A
+  second player cannot simply attach to a host's "server" as in F.E.A.R./NOLF2 co-op.
+- **A generic peer mesh (NetMesh: host, join, nodes, messages, host vote) survives** in the
+  binary, and its manager is created at start-up, but nothing in the game reads the
+  multiplayer settings that would drive hosting, and no non-virtual path to
+  HostMesh/JoinMesh exists. Most likely an engine-level networking layer the game never
+  uses (or kept for unreleased features). It could still be a transport we drive
+  ourselves; unknown whether it is complete enough (encryption, NAT, reliability).
+- Consequence for the design: **build our own host-authoritative sync** (state through
+  `Faction.Save`/`Load` and the event hooks from session r, our own transport such as
+  Steam networking), with the NetMesh as an option to evaluate later, not a base.
+
+### Unknown
+
+- Whether the manager's slot 18 (create NetMesh) is ever called at runtime: it is a
+  virtual call, not resolvable statically here. Runtime check (read-only): log AFD bind /
+  connect requests and the manager's mesh pointer during a session (`net_trace=1`).
+- Whether the NetMesh layer is complete and usable as a transport.
+
+## Sessions 2026-10-20 u to 2026-10-21 w: a second test copy
+
+- Copy B hardlinks everything outside `x64\` to copy A (893 files, the archives and `game\`;
+  the game wrote nothing there in seven launches) and has real copies of the 10 files in
+  `x64\` (exe, DLLs, the proxy and its config). Exe hash equal to A. Disk use: ~0.12 GB.
+- Each copy has its own sandbox profile and its own probe pipe; the windows sit side by side
+  through the sandboxed `render.cfg` keys `ScreenX`, `ScreenY`, `WindowWidth`,
+  `WindowHeight`, `Windowed`. A copy's first full start wrote `"Windowed" "2.000000"` (a
+  1920x1080 window at 0,0); set it back to `1.000000` in that copy's sandbox.
+- A second copy started next to the first stops at the game's online activation, and then at
+  its single-instance check. How the test copies got past both is left out of this
+  write-up: the hub does not publish DRM or launch-check workarounds. From session x on, two
+  copies ran side by side on one PC, offline.
+
+## Session 2026-10-21 x: achievements blocked; both copies in the world (same save, see y)
+
+> Correction (session y): both copies loaded the same save here, the cloud copy Steam
+> serves from the real Steam folder (the 2025-11-20 save), not their sandbox saves. Their
+> results differ only by the play after the load. The stats observation stands.
+
+### Change
+
+- The Steam guard now also replaces the write methods of the game's `ISteamUserStats`
+  (`STEAMUSERSTATS_INTERFACE_VERSION011`, from `ISteamClient` slot 0x68). Offsets from
+  the shipped `steam_api64.dll` flat wrappers: `SetStat0` (float) 0x18, `SetStat`
+  (int32) 0x20, `UpdateAvgRateStat` 0x28, `SetAchievement` 0x38, `ClearAchievement`
+  0x40, `StoreStats` 0x50, `IndicateAchievementProgress` 0x68, `ResetAllStats` 0xA8,
+  `UploadLeaderboardScore` 0xF8, `AttachLeaderboardUGC` 0x100. Reads pass (e.g.
+  `GetAchievement` 0x30). `UploadLeaderboardScore`'s wrapper uses
+  `mov r10,[rcx]; jmp [r10+0xF8]` instead of rax; the shape check accepts both.
+- After this launch, achievements got their own log budget (stats used most of the
+  shared one).
+
+### Setup
+
+- Copy A: its own sandbox save, which descends from the 2025-11-20 save plus ~20 min
+  of earlier test play (sessions n and p, two captain kills).
+- Copy B: the six saves from the backup, copied unchanged (hashes equal); Continue
+  loads the 2025-11-20 save.
+- Both offline; A with the debug-print hook (22 channels), B
+  with the read-only probe.
+
+### Observations
+
+- Each copy loaded its save and was played by hand in turn; stopped after
+  575 s (A) and 558 s (B). Both ~2.3 GB, responding, no crash, no FATAL, PROTECTED or
+  WATCH line in either log.
+- Saves: 6 `FileWrite`s blocked in A (first at +122.8 s), 11 in B (first at +296 s);
+  the files went to each copy's own sandbox with the usual slot rotation. Afterwards A's
+  slot 2 is its previous own save and B's slot 2 is the 2025-11-20 save, so each
+  continued from its own data. Final main saves differ (A `4EF1832137F0...`, B
+  `582CAA5553A6...`).
+- User-stats guard in at 359 ms (A) and 437 ms (B). At load each copy called `SetStat`
+  for 137 stats (`kills`, `killed_captains`, `game_time_played`, ...); the first value
+  of every stat was **the same in A and B** (137 of 137), although the saves differ.
+  During play some changed (`kills` 9 times in A). `StoreStats` 3 times (A) and 4
+  times (B). All blocked. No `SetAchievement`, progress or leaderboard call.
+- Network: the same two HTTPS hosts refused at +55-64 s and again 15 s later; nothing
+  else.
+- Copy A's debug print: 21,787 lines from +7.9 s to +207.8 s, then silent until the
+  stop. `[GAMEMODE|SESSION]: Load:` at +62.8 s. Categories: `FACTION|BUNDLE` 11,942,
+  `QUEST|JOB` 2,907 (818 jobs rejected by "Random Roll"), `FACTION|TRIBE` 2,168,
+  `FACTION|PURPOSE` 2,160, `SIMEVENT|OUTCOME` 1,075 (`HandleFactionEventAction`: 916
+  `FactionMember_RoleSelected_Standard`, 51 `_Notable`, 45 `IsPlayerFollowerApply`, 26
+  `Debug_RecruitFollower`, 12 `DEBUG_AddPIS`, ...).
+- Backup check after the stop: unchanged (render.cfg info only).
+
+### Derived
+
+- Two copies can each run a different save in the world at the same time on one PC and
+  one Steam account. Neither affected the other: separate sandboxes and saves, and the
+  shared parts (Steam cloud, Steam stats) are blocked in both. The copies do not talk to
+  each other yet, so this shows independence, not how co-op handles two different
+  worlds.
+- Steam stats belong to the account, not the save: both copies started from the same
+  values. Two unblocked copies would each push their own increments to one account.
+  Test sessions before this block sent their stat updates unblocked; those probably
+  reached the account (not logged then, so unknown which).
+- A joining player's save will differ from the host's, as here. With host-authoritative
+  sync (session t) the client plays in the host's world; whether the client's own save
+  stays untouched while joined, and what it keeps afterwards, is a design decision.
+- The load alone makes hundreds of random rolls in Nemesis job selection, so even the
+  same save loaded twice would diverge without syncing results (one global LCG,
+  session r).
+
+## Session 2026-10-21 y: unattended loading; the game loads its save from the Steam cloud
+
+### Observations (static)
+
+- Menu path (seen while loading saves by hand): title "press any key",
+  then the campaign list. One real pad drove both copies at once, so the game reads
+  XInput even when its window is not focused.
+- Console registry: `PlayerInput.SetSimInput` "Runs the listed commands in order, once
+  per frame" (menu commands `MenuEnter`, `MenuEscape`, `MenuUp`/`Down`/`Left`/`Right`,
+  `MessageBoxConfirm`, ...); command-line options `SkipSplashScreens`,
+  `MenuUI.SkipUserConfig`, `runworld`.
+- Command line: with no arguments the engine reads `..\cmdline.txt` (relative to `x64\`).
+  The parser (`117DE6C`) runs `+Name arg arg` as the console line `(Name) (arg) (arg)`
+  through `1182FA4`, at engine start-up (`117CF30`). `SetSimInput`'s handler (`17B880C`)
+  does nothing while `GameClient+0x888` (player input) is null, which it is that early.
+  Not used.
+- Input APIs named in the import table: `RegisterRawInputDevices`/`GetRawInputData`
+  (keyboard and mouse are Raw Input, so posted key messages would not reach the game),
+  `XInputGetState`/`XInputSetState` from `XINPUT9_1_0.dll`, `GetActiveWindow`,
+  `GetForegroundWindow`.
+- No debug-print channel reports menu screens. Two markers: `[GAMEMODE|SESSION]: Load:`
+  when the campaign's save has been read, `[QUESTMGR]: GameModeSet - SinglePlayer` when
+  the world starts.
+
+### Change
+
+- `autoload=1`: a virtual pad on XInput user 0. The guard finds the game's
+  `XInputGetState` slot in the rebuilt import table (RVA `1D93098`, start of `.xtext`,
+  filled ~190 ms after start) and points it at its own function, which adds A presses to
+  whatever a real pad reports. Presses start 20 s after the game window appears, then
+  every 8 s, until `GameModeSet` (or 8 presses).
+- `steam_cloud=sandbox`: the game's cloud reads and writes go to the copy's
+  `steam-userdata\356190\remote\` (see below why). `steam_trace=1` logs reads Steam
+  answers.
+
+### Observations (launches, all unattended)
+
+- Copy A alone, pad stopping at `Load:`, `steam_trace=1`: presses at +23.5 s and
+  +31.7 s; right after the second, `GetFileSize('\<prefix>_ShadowOfWar.sav') -> 2334736`
+  and `FileRead(...) -> 2334736 of 2334736 bytes`, then `Load:`. No local `.sav` was
+  touched before the first autosave, here and in session x. 2,334,736 bytes is the size of
+  the 2025-11-20 save in the real Steam folder's `remote\`; A's own sandbox save is
+  2,360,880 bytes. The game then stayed at menu size (~1.25 GB) for 80 s: one more screen
+  wants input.
+- Copy A alone, pad stopping at `GameModeSet`, sandbox cloud seeded with A's own latest
+  save: presses at +23.4, +31.6, +39.8 and +48.0 s; sandbox `FileRead` of 2,360,880 bytes
+  after press 2; `GameModeSet - SinglePlayer` at ~47.6 s; 2.06 GB at 76 s.
+- Copy B started while A was in the world, same settings, sandbox cloud seeded with the
+  2025-11-17 save (backup slot `_2_`): four presses, sandbox `FileRead` of 2,328,976
+  bytes, world start at 48.1 s, 2.11 GB.
+- Both in the world for 90 s with no input: both responding, CPU +73 s (A) and +100 s
+  (B), stats blocked at load (137 and 136), no achievement call, no FATAL or PROTECTED
+  line. No autosave (nobody played), so the cloud files are unchanged. Stopped after 283 s
+  (A) and 193 s (B). Backup check: unchanged.
+
+### Derived
+
+- **Correction to sessions j, n, p and x:** the game never loaded the sandboxed local
+  saves. It loads through `ISteamRemoteStorage::FileRead`, which `steam.exe` answers from
+  the real Steam folder, so every test copy so far loaded the real cloud copy (read only;
+  nothing there changed). The local `.sav` files are written but not what the game loads.
+- With `steam_cloud=sandbox` each copy loads and keeps its own save; with the pad, a test
+  copy gets from launch into the world in ~48 s with no keyboard, mouse or focus.
+
+### Unknown
+
+- Which screen presses 3 and 4 answer (not seen).
+- The sandbox cloud's write path in the real game: no autosave happened (covered by the
+  offline test only).
+
+## Session 2026-10-21 z: the player character in memory; each copy saves to its own cloud
+
+### Observations (static)
+
+- `Teleport` (console handler `19C052C`, "Teleports player to <x><y><z>") takes the
+  player as `[[GameClient]+0x888]` (GameClient pointer at RVA `26FFA98`), reads the
+  current position as three floats at `+0xAC`, and passes `+0xB8` as the rotation when it
+  builds the new transform. `Player.SetOrientation` (`19BFA70`) converts angles to a
+  quaternion (`114A1C0`) and writes it through `EF690`/`1152DE4` on the same object.
+  `Player.GetPos` and `Player.GetOrientation` live in the Denuvo section (`.bss`), not
+  readable.
+- The damage handler `2E4BE8` (where ReaperAnon's health pattern sits, store at `2E4D26`)
+  keeps max health at `+0x428`, health at `+0x42C`, health/max at `+0x430`, a dead flag
+  at `+0x4A0`. Player methods next to `Teleport` (`19B39E4`, `19B3EE0`) call it with
+  `[player+0x26A8]`.
+- `Player.Save` (`19C0984`, 33 bytes) calls `42D9A8(player)`, which (if a global flag at
+  `2672D91` is set and `player+0x3879` is clear) arms a timer at `player+0x3850` with
+  0.5 s (`FF0B4`: start time, duration, a cleared field, a running flag).
+
+### Change
+
+- Probe `player` (read-only): position, rotation, health, max, fraction by that chain.
+- Probe `pad <buttons> <lx> <ly> <rx> <ry> <ms>`: hold virtual pad input (probe_write=1).
+- Probe `save`: once the world has started, the next pad read runs `Player.Save` after
+  checking its 33 bytes and GameClient reference (probe_write=1).
+
+### Observations (live, unattended, copies A and B)
+
+- `player` in A: position (23987.971, 43092.539, 12789.801), rotation
+  (0, 0.9833, 0, 0.1822), health 708 of 708, fraction 1.000.
+- Left stick forward 2 s: position (+48.4, 0, -86.9); left stick right 1.5 s: (-315.5,
+  0, -69.0) more and rotation (0, 0.7686, 0, -0.6397); 2 s after release it moved 3 more
+  units and stopped. The middle coordinate stayed 43092.539 throughout.
+- The freecam mod's camera chain (`GameClient+0x898`, `+0x50`, `+0x98`) led to text, not
+  a pointer, in this state; not used.
+- The game reads the pad on one thread and logs the world start on another (A: 20172
+  and 27508 in one run, 33432 and 21436 in the next; B: 10564 and 24464). All game-logic
+  log lines come from the second.
+- Both copies in the world; B's player at (-1801.088, 44902.633, 37119.199), rotation
+  (0, 1, 0, 0), health 708 of 708.
+- `save` in A: the handler ran on the pad thread, `Player.Save returned`; 531 ms later the
+  game rotated A's local slots and `sandbox cloud FileWrite('\<prefix>_ShadowOfWar.sav') ->
+  2360880 bytes written`. A's cloud file changed (new hash); B's did not.
+- `save` in B 16 s later: same pattern 532 ms after the request, 2,360,512 bytes into
+  B's cloud (before: the 2025-11-17 file, 2,328,976 bytes). A's unchanged.
+- No FATAL, PROTECTED or WATCH line. Backup check after the stop: unchanged.
+
+### Derived
+
+- Player: `[[GameClient]+0x888]`; position float3 at `+0xAC` (Y is up), rotation
+  quaternion (x, y, z, w) at `+0xB8` (yaw only while walking). Character for health:
+  `[player+0x26A8]`, health `+0x42C`, max `+0x428`. Position and rotation are confirmed by
+  movement; health only by a consistent reading (708/708, fraction 1.0), not by a change.
+- Each copy now saves into its own cloud folder; with the load path from session y, each
+  copy keeps its own progress across runs.
+- `Player.Save` from the pad thread: the save happens ~0.5 s later on the game's own
+  schedule, as its delay suggests.
+
+### Unknown
+
+- The units (the stick moved the player ~100 units in 2 s and ~320 in 1.5 s, so likely
+  centimetres with acceleration, not checked).
+- Whether health changes as expected when the player is hit.
+
+## Session 2026-10-21 aa: first co-op step, copy A's player shown in copy B
+
+### Observations
+
+- Sender (A, read-only) sends position, rotation and health 20 times a second as 52-byte
+  UDP packets to 127.0.0.1; B received ~19.7/s, 0 lost, 0 bad (3,979 packets in one run).
+- B shows A with the game's own "last known position" effect, `19C0380(player, &pos)`
+  (what console `TestLKP` calls), at most every 200 ms and after a 25-unit move.
+- Calling it from the pad (input) thread crashed B: AV at `315D5D`, because `1309FC`
+  (per-thread engine context: TlsGetValue, then a global) is null there. Calls that
+  allocate need the simulation thread.
+- Probe `count` on the player vtable (`1F96818`, 41 slots, 2 s): slots 18, 25 and 36 run
+  once per frame (58.5/s) on the simulation thread; slot 36 (`30BA10`, ~2.5 KB, 104 calls)
+  is the per-frame update. A register-preserving pre-hook there runs the effect; no crash.
+- An unfocused copy pauses itself (pause menu; the player's position and rotation then
+  read 0,0,0 and identity; controller B button resumed it). With `background_run=1`
+  (focus-loss messages swallowed; `GetForegroundWindow`/`GetActiveWindow` return the
+  copy's own window; `ClipCursor`/`SetCursorPos` ignored unless really in front) A kept
+  simulating (60 updates/s) and walked with the virtual stick while B was focused.
+- Live (both unattended, same save): A walked ~100 units forward then ~320 right; B redrew
+  the effect along the path and ended at A's final position; 277 redraws over a 90 s
+  back-and-forth walk. Seen on B's screen: a ghost of the player that slides without
+  animation and fades in and out, "decently matched up" with A.
+
+### Derived
+
+- Transport, sampling and display work end to end on one PC. The ghost is the LKP effect
+  re-created at each update (hence fading and no animation); a real remote player needs a
+  puppet character driven by position, rotation and animation state.
+
+## Session 2026-10-21 ab: a real character as the remote player's stand-in (puppet)
+
+### Observations (static)
+
+- No usable spawn command in the release build: `Faction.CreateEmergencyPlayerFollower`
+  is `ret 0` (`7F8F90`); `NemesisForge.CreateFollower`/`CreateNemesis` (`1C775EC`,
+  `1C77604`) create a forge record through `[26FFAA8]+0x6D30`, not a body in the world.
+- Generic object movement: `EF690(object, &quat)` sets rotation (`+0xB8`, 31 callers);
+  `19B7AC4(object, &transform)` (what `Teleport` ends in) forwards to `658CBC(manager
+  [2A86880], object, transform, 1)`, which queues a teleport message (with a timestamp
+  from `[2702598]`) through `659884`; the engine applies it later. The transform is 28
+  bytes: position (3 floats) then quaternion (`1820FC` -> `182110`).
+
+### Observations (live, copy B)
+
+- The player's health object (`[player+0x26A8]`) has class vtable `1F995E0`; its `+0x28`
+  is the owner (the player). `findq` (new, read-only heap search) found 2,108 objects of
+  that class; 22 had an owner whose `+0x26A8` points back: all AI with owner vtable
+  `1FB3640`, health 180 to 600 (one 11,165), the nearest 5,823 units from the player.
+- `coop_show=puppet`: B picked the nearest living character (a 180-health orc 8,606
+  units away), then teleported it to A's position and rotation on every packet from the
+  simulation thread. It landed within ~6 units (the game put it a few units lower,
+  on the ground) with A's rotation; over a 90 s walk 2,540 moves, ending 4.3 units from
+  A's player; both copies kept running.
+- Seen on screen while copy A was played by hand: the orc in B "moved the same, but
+  it's a little laggy".
+- The first heap scans read every committed private page and grew B from ~2 GB to
+  6.3 GB. Scans now read only pages already in the working set (`QueryWorkingSetEx`):
+  after a pick B stayed at 2.27 GB. At the world start a pick found 0 characters (2,074
+  health objects, none with a valid owner yet); the retry 10 s later found 23.
+
+### Derived
+
+- An existing AI character can stand in for the remote player: the game's own queued
+  teleport moves it, and its health object identifies it safely.
+- Lag sources: ~16-20 position updates a second (the sender sleeps 50 ms with a ~15.6 ms
+  timer), each applied as a teleport one frame later, with the orc's own AI moving it
+  in between. Next: send at the game's frame rate and interpolate (or extrapolate) on the
+  simulation thread every frame; later stop the puppet's own AI and drive its animation.
+
+## Session 2026-10-21 ac: smoother puppet (a packet every frame, interpolated)
+
+### Change
+
+- Packet version 2 (60 bytes) adds the sender's clock (QPC, microseconds).
+- Sender: once the simulation-thread hook runs, it sends one packet per game frame from
+  that thread (a frame callback before the queued work). Before that, a high-resolution
+  waitable timer at `coop_rate_hz` (60) replaces the old 50 ms `Sleep`.
+- Receiver: keeps the last 128 packets and takes the clock offset as the smallest
+  receive-minus-send time (measured again every 10 s). Every frame the simulation thread
+  places the puppet where the sender was `coop_delay_ms` (50) ago: position interpolated
+  linearly, rotation by normalized lerp on the shorter arc, applied through the same
+  queued teleport.
+- Offline case `coop_puppet`: a fake simulation thread walks the sender +0.5 units a frame
+  for 200 frames; the puppet has to follow in steps of at most 1 unit, never backwards,
+  and end where the sender stopped.
+
+### Observations (live, unattended, copies A and B, both `background_run=1`)
+
+- A logged "sending once per game frame from the simulation thread"; B picked a
+  300-health orc and logged "puppet moved every frame, 50 ms behind the sender".
+- 58.8 packets a second, 0 lost (22,025 packets over ~6 min). The puppet's move count
+  rose with the packet count (240 of each per 4 s).
+- A walked with the virtual stick (start, full speed, stop); distance between A and B's
+  orc:
+
+  | A's speed (units/s) | orc behind A (units) |
+  |---|---|
+  | 37 (starting) | 6.0 |
+  | 155 | 11.9 |
+  | 235 | 14.0 |
+  | 0 (stopped) | 0.0 |
+
+- Working set: A 2.12 GB, B 2.09 GB.
+- A then walked a loop (right 2.5 s, forward 1.5 s, left 2.5 s, back 1.5 s) for ~50
+  minutes; after ~6 minutes it stayed within ~700 units of its start.
+
+### Derived
+
+- At walking speed the orc is ~50-70 ms behind A: the 50 ms delay plus about one frame
+  (the teleport is applied a frame after it is queued). It no longer moves in 16-20
+  steps a second.
+- What still looks wrong belongs to the orc itself: its own AI and animation still run,
+  so it slides instead of walking. Next: stop its AI, drive its animation from A's speed,
+  then a Talion model.
+
+### Unknown
+
+- How it looks on screen (not watched yet).
+- Real network delay and jitter: only loopback so far; 50 ms was chosen for loopback.
+
+## Session 2026-10-21 ad: the puppet's own AI off, its walk animation driven from copy A
+
+### Observations (static, build 3095001)
+
+- AI characters (class vtable `1FB3640`): slot 36 (`175724`) is their per-frame update
+  (`count`: 1,112 calls/s, 19 characters at 58.5 frames/s). It fills a per-frame context
+  and sets **named animation variables** on `character+0x120` through setters: float
+  `176D78`, bool `375044` (others `4192B4`, `1BCF0D4`). Names are hashed case-blind
+  (`h = h*0x397 + table[c]`, table at `1DB50D0`). About 80 names are set by name in code,
+  among them `RawMoveMag`, `RawMoveYaw`, `Game_MovementAxisX/Y`, `AIDesiredWorldYaw`, `HasDest`,
+  `DestX`, `DestZ`, `WalkAndTalkScale`.
+- **Movement controller** `[character+0x2C78]` (its `+0` is the character): desired mode
+  `+0x68`, current mode `+0x6C` (1 go to the request, 2 idle, 3 driven by mount input,
+  `UsingMountedInput`), request at `+0x70` (0x25 bytes: has-destination byte,
+  destination x/y/z, direction x/z, move type (1 walk, speed factor 0.5; 2 run, 1.0),
+  distance, speed factor, a "direct" byte at `+0x24`). `SetMoveRequest` is `3F4BD8`; the
+  game's go-to-point behaviors fill the request as above with the direct byte 0, which
+  also asks the character's navigator (`[character+0x2528]`, vfunc `+0x140`) for a path.
+  `2F4274` updates every listed controller each frame (`2F42C0`); mode 1 (`374CA0`)
+  pushes `HasDest`/`DestX`/`DestZ` to the animation variables.
+- **AI decision path** (found live with the new `stacks` probe command, below): the
+  simulation thread calls the AI class's slot 18 (`2F94F0`) -> `2F9478` -> slot 119
+  (`+0x3B8`, `2F79A4`, the AI tick) -> at `2F7B40` `mov rcx,[r8]; xor edx,edx; call
+  1919C8` runs the character's behavior tree (`[character+0x2D38]`, whose `+8` is the
+  character) -> ... -> `3F4A3C` (a chase behavior) -> `SetMoveRequest`: 59 calls in 5 s,
+  all through this one chain. The code after the tree call (`2F5EB4`) reads only
+  `rdx`, so leaving the call out is safe.
+
+### Change
+
+- `coop_puppet_ai=off`: the call at `2F7B45` is pointed (bytes checked, patched from the
+  simulation thread) at a jump to a filter that skips the tree whose `+8` is the puppet.
+  Every other character's tree runs as before.
+- `coop_puppet_move=both`: the puppet is still teleported to A every frame, and its
+  controller gets the game's own move request (destination half a second ahead along A's
+  motion, walk or run by A's speed, `coop_run_speed` 300; idle when A stands still).
+  `coop_puppet_move=walk` moves it only with the requests (teleport when more than
+  `coop_teleport_dist`, 600, behind).
+- Probe: `stacks <addr> <entry bytes> <ms> [first-argument qword]` records call stacks
+  into a function for a few seconds (a jmp at its entry, a register-preserving stub with
+  unwind info, the replaced bytes relocated; restored after). `teleport x y z` moves this
+  copy's player. `puppet ai on|off`, `puppet walk x y z type [factor]`, `puppet idle`,
+  `puppet follow walk|teleport|both|none`; `puppet` and `remote` show requests, idles,
+  tree skips and the controller mode.
+- Four code pages within rel32 reach of the image are reserved at start-up: by the time
+  the world runs, the game's heap fills the 2 GB on either side of the image (`stacks` failed with
+  "no free page" on its second use).
+- Offline: 40 of 40 (`probe_stacks`: filter by first argument, stacks through the stub,
+  entry restored; `coop_puppet_walk`: the puppet's tree never runs while its AI is off,
+  another character's does, it runs again after `puppet ai on`, walk then run requests aim
+  ahead, idle at the end, pinned to the sender, `teleport` keeps the rotation). Negative
+  control 17 of 17 (with the hooks compiled out, the puppet's tree ran 159 times).
+
+### Observations (live, copies A and B)
+
+- AI off: B's puppet stood in an idle pose next to B's player and did not attack
+  (screenshot); `tree_skips` rose about once per frame.
+- `both`, A walking with the virtual stick (215-219 units/s): the orc stayed 0-14 units
+  behind, its controller in mode 1 with walk requests (~12/s), and went back to mode 2
+  when A stopped (0 units behind). A sprint that turned into a jump off the platform
+  (~550 units/s, then a ~5,700-unit drop): 25-40 units behind, followed all the way down.
+- Seen on screen (`PrintWindow` of B's window, 150 ms apart, while A walked): the orc's
+  legs alternate through a stride, arms swing, dust at its feet; it stands idle when A
+  stops.
+- `walk` alone: the orc walks at ~115-130 units/s (type 1) and runs at ~480 (type 2); one
+  run request ended within 3 units of the target. Following A it started ~1.5 s late,
+  took its own navmesh route 150-180 units off A's line and stayed 180-300 behind. Later
+  in the same sessions, standalone requests stopped moving it at all (mode 1, position
+  unchanged to 0.1 units).
+- Incidents: `TaskStop` on the background walk loop killed only the bash wrapper; its
+  `sh.exe` kept sending stick input through the probe to the *restarted* copy A, moved the
+  title menu and loaded the DLC3 campaign (`GameModeSet - DLC3`, another hero, 430
+  health), which autosaved into A's sandbox. Stopping that `sh.exe` and restarting A
+  loaded the main campaign again at the usual spot. Both copies later closed with exit
+  code 0 within seconds of each other (17:11), no application error logged; cause
+  unknown.
+
+### Derived
+
+- The game already separates deciding (behavior tree) from moving (controller and
+  navigator) and animating (named variables, then root motion). Skipping one call stops
+  the decisions for one character only; the move request makes its own locomotion
+  animate.
+- Pinning plus requests ("both") gives A's exact position with the orc's own gait; on its
+  own the navigator cannot follow a player who walks where orcs do not path.
+
+### Unknown
+
+- Foot sliding: A walks at ~218 units/s, the orc's walk animation covers ~120 and its run
+  ~480; whether the request's speed factor changes the gait's speed is untested (the
+  test orc no longer answered standalone requests).
+- Why standalone requests stop moving the orc after a while.
+- What the orc does with its tree skipped when B's player attacks it, or when it is hit.
+
+## Session 2026-10-21 ae: a second Talion in copy B (spawned), not animated yet
+
+### Observations (static, build 3095001)
+
+- `Player.SetCharacterModelOverride <name>` (`19C0EFC`, handlers take `(int argc, const
+  char** argv)`) looks the name up with `1B08BB0` and calls `19BF4B8(player, record, 0)`;
+  `Player.ClearCharacterModelOverride` calls `19BB3CC(player, [player+0x2B30], 0)`. Both
+  use player-only fields (`+0x2EC8`..`+0x2EE0`): not usable on an NPC.
+- Records are 40-byte entries in per-type tables (count `+0x28`, array `+0x38`): type id
+  `+0`, name hash `+4` (`423E70`: `h = h*0x397 + table[c]`), name `+0x20`. Two tables
+  share many names: type `0xA66` (281 entries, `[27018B8]`, what `1B08BB0` searches) is a
+  character's appearance (`[character+0x2B30]`: the player wears
+  `PlayerSkin_DarkTalion_ShadowWar`, an orc `Orc_Infantry`); type `0xA06` (177 entries)
+  holds spawnable character types. An AI character keeps its own spawn type at `+0x2E68`,
+  whose `+0x18` is that table. Names include `AI_Talion`, `Talion`, `Dark_Talion`,
+  `GP_Ranger`, `Gondorian_Soldier`.
+- Spawning (call chain recorded live with `stacks` on the AI constructor `49B858` and on
+  `1036D0`, 16 spawns in 20 s): spawner sets -> `1045EC` -> `1036D0(context
+  [[26FFAB0]+0xF58], name, &transform (position, quaternion), spawn-type record, 1, 1, 0,
+  0, 0)` -> `1038F0` -> object factory. The game's queued spawn requests (`1A9290C` and
+  neighbours) then store the region (`[obj+0x26F0] = 168DA8(obj, 0, 0)`) and area
+  (`35DC38(obj, 607610(obj, 0, 0), 0)`); both helpers pass `rdx`/`r8` on, so they must be 0.
+  `501DA4` makes the name unique (appends a number), so any name works.
+
+### Change
+
+- Probe `spawn <type> [x y z]`: finds the type in the `0xA06` table (through the current
+  puppet), calls `1036D0` on the simulation thread with the player's rotation, then the
+  region/area steps and `10AFB0` (the character set-up the spawner path ends with); all
+  functions byte-checked. No offline test yet.
+- Probe `stacks` also reports the first call's `rcx, rdx, r8, r9` per stack.
+
+### Observations (live, copy B)
+
+- `Orc_Infantry`, `GP_Ranger`, `Gondorian_Soldier`, `Talion`, `Dark_Talion` spawned next to
+  B's player; `AI_Talion` created nothing (its record's first fields are null: a stub in
+  this build). Spawned AI types switch themselves on (`+0x19A8` = 1) and act on their own
+  (the orc walked off; after five spawns on one spot next to B's player the next screenshot
+  showed a fight with a hit counter).
+- `Talion` (screenshot): Talion's face and classic ranger outfit, standing in a T-pose;
+  `+0x19A8` stays 0, so the AI tick skips it and its position does not follow the
+  teleports. Writing 1 there by hand made its AI tick run (the tree filter skipped its
+  tree), but it stayed in the T-pose: a cutscene actor without the AI animation set.
+- First try of the region/area steps without the zero arguments crashed B (access
+  violation in `11FBC8` called from `35DC38`); fixed by passing 0, as the game does.
+
+### Derived
+
+- The game can make a Talion look-alike on demand, but the only Talion types in this build
+  are either an empty AI stub or an actor without AI animations.
+- Likely ways forward: put a Talion appearance on an animated human AI type (human
+  skeleton like Talion's), or give the Talion actor an AI animation set. Neither is found yet.
+
+### Unknown
+
+- How an NPC's appearance (`+0x2B30`, type `0xA66`) is applied and rebuilt.
+- Whether `GP_Ranger` or `Gondorian_Soldier` use Talion's skeleton and animations.
+
+## Session 2026-10-21 af: the puppet is a Talion now (spawned, animated, AI off)
+
+### Observations (static, build 3095001)
+
+- Appearance (type `0xA66`) is applied by the character's virtual `+0x440` (`3FAFA4` for AI
+  characters; the player's `19BF404` calls it and adds bundle bookkeeping). At creation the
+  set-up `3FAAEC` (AI class slot 12) reads the spawn type's appearance with `16680C`
+  (call at `3FAB81`) and builds the model from it (`3FA678`).
+- The appearance record's fields have hashed names (descriptor at entry `+8`: 16-byte
+  entries, low 32 bits = the game's name hash). Hashing the exe's strings named the fields
+  of the first 128 entries read, among them `ModelRecord`, `Skeleton`, `BehaviorResource`, `CharacterModelPicker`,
+  `CombatTree`, `AISimulationConfig`, `PlayerMovement`, `ProceduralBody`. The field block
+  (entry `+0x10`) has a fixed layout per type; read live: `+0x148` model (type `0xA19`),
+  `+0x188` AI template, `+0x1C8` skeleton, `+0x1F0` animation base, `+0x280` body.
+- Gondorian humans and orc infantry share `Skeleton_Default` and the `OrcInfantry`
+  animation set; Talion records use `PlayerSkeleton`. `GP_Ranger` is an olog-hai and
+  `Human_Ranger` an orc archer, despite the names. `AI_Talion` (appearance) is complete
+  (PlayerSkeleton, AI template, `talion_anim_base`) but its model is `dcBL_DarkTalion`.
+- A character switches on (the byte at character `+0x19A8`, which the AI tick checks; `+0x18`
+  in a block at `+0x1990`) in `3F0D88`, called each frame from `E7D070` on its animation object (character
+  `+0x120`): only once the animation resource (`+0x1990`) and the behavior resource
+  (`+0x1998`) are set, loading is done and the behavior instance (`anim+0x4A8`, its
+  `+0x10`) exists. Found with a hardware write watch on the flag (spawn, then the write's
+  call stack: `3F0E73` <- `E7D070` <- `2FEEC0` <- ... the frame update). `459474` is the
+  animation object's virtual "set behavior resource" (`+0x4B0` and `+0x1878`).
+
+### Change
+
+- `spawn <type> x y z [appearance | abs:<record> | watch]`: the appearance lookup at
+  `3FAB81` goes through a filter that answers with the given appearance during that one
+  spawn; `watch` arms the write watch on the new character's switch-on flag (probe `watch`
+  shows the hits). The report says what it wears and whether it is switched on.
+- `look <base> <donor> <offset...>`: a private copy of an appearance record with some
+  fields from another. `animres <character> <resource>`: set a behavior resource.
+- `coop_puppet_spawn=<type>`: instead of taking over the nearest character, B spawns one of
+  that type at the sender's position, gives it B's own player's behavior resource
+  (`player+0x1998`) and uses it as the puppet. B's test copy now uses `Talion`.
+- The spawn path is checked only live (no offline test yet).
+
+### Observations (live, copy B)
+
+- Talion appearances on AI spawn types: `AI_Talion` and the player skins made the game
+  create nothing; `Cine_Talion` was created but never switched on. A hybrid
+  `Gondorian_Soldier` with Talion's model rendered as a bald dark body (the Gondorian assets
+  are not loaded in this region; a plain `Gondorian_Soldier` was the same); an
+  `Orc_Infantry` with Talion's model switched on but showed only pieces of the model.
+- The `Talion` type with B's player's behavior resource switched on at once and stood in a
+  natural pose. With `coop_puppet_spawn=Talion`, B spawned it 10 s after the world started
+  (the first try found no characters yet), made it the puppet with AI off, and pinned it to
+  A: screenshots show Talion (classic outfit) beside B's player, then walking away with a
+  full stride, cloak swinging, while A walked.
+- One more incident: after several test spawns at one spot, an olog fought B's player
+  (health down to 216 of 708); B was restarted.
+
+### Derived
+
+- Taking Talion's appearance onto an AI body does not work while the skeletons differ; the
+  cutscene `Talion` actor plus the player's own behavior graph does, and the existing AI-off
+  and walk/run drive work on it unchanged.
+
+### Unknown
+
+- Whether the player's graph reads every variable the AI motion writes (run, turns,
+  stopping) the way it reads them for the player.
+- Whether other characters treat the stand-in as Talion (targets, factions).
+- Foot sliding: not measured for this body yet.
+
+## Status summary 2026-10-21
+
+A condensed view of sessions a to af above; the sessions keep the evidence and sources.
+
+### Where we are
+
+- Phases 0-4 (triage, research, workspace, understanding, choice) are done; we are in
+  phase 5 (build). Decision: build co-op from zero (no usable prior mod), host-authoritative,
+  our own sync and transport.
+- First co-op step works one way on one PC: copy A streams its player (position,
+  rotation, health) over loopback UDP every frame; copy B shows a stand-in Talion that
+  follows A, 50 ms behind, interpolated, with its own AI off and walking with the player's
+  animations. Nothing goes from B to A yet; no world state is shared.
+- QA level: live checks (probe numbers, window captures). The guard's offline tests are in
+  an unpublished repo, so they are not claimed here.
+
+### Key technical facts (build 3095001; RVAs from image base 0x140000000)
+
+- Identity: Steam app 356190, build 3095001, `ShadowOfWar.exe` FileVersion 1.0.8874.0,
+  SHA-256 `ed0d95ca…0bdaef` (full value in session b). SteamStub, Denuvo likely; code in
+  `.arch`; the import table is rebuilt at runtime in `.xtext`. Engine "Kraken" (LithTech
+  lineage, sources under `Game\ObjectDLL`, `ClientShellDLL`, `Shared`).
+- LithTech client/server is **not** a runtime split here (one process, one world); a
+  NetMesh peer layer exists but nothing uses it (session t). Hence our own sync.
+- Nemesis: `HandleFactionEventAction` 40C304, `RollResurrection` 6DBD4C,
+  `SimEvent::Simulate` 622A84 and others (sessions r, s); outcomes come from one global LCG
+  (state 2A25C88), so clients must never roll; `Faction.Save`/`Load` console programs exist.
+- Saves are loaded through the Steam cloud API (`ISteamRemoteStorage::FileRead`;
+  session y).
+- Player: `[[GameClient 26FFA98]+0x888]`, position `+0xAC`, quaternion `+0xB8`, health object
+  `+0x26A8`. Engine calls that allocate must run on the simulation thread; we hook the
+  player vtable `1F96818` slot 36 (per frame).
+- AI characters (vtable `1FB3640`): AI tick slot 119 (`2F79A4`); the behavior-tree call at
+  `2F7B40` (we filter it for the puppet); movement controller `[character+0x2C78]`, move
+  request `3F4BD8` (destination, walk/run, through the navigator); animation variables are
+  named (hash `423E70`).
+- Records: appearance type `0xA66` (table `[27018B8]`, lookup `1B08BB0`; field block with
+  `+0x148` model, `+0x1C8` skeleton) and spawnable types `0xA06` (found through any AI
+  character's `+0x2E68`). Spawn: `1036D0(world ctx [[26FFAB0]+0xF58], name, transform,
+  type, 1, 1, 0, 0, 0)`, then region/area (`168DA8`, `607610`/`35DC38`, with zero args) and
+  `10AFB0`. A character switches on (`+0x19A8`, set in `3F0D88`) only once its behavior
+  resource (`+0x1998`, setter `459474`) is set.
+- The stand-in: the `Talion` spawn type is a cutscene actor (T-pose); given B's own player's
+  behavior resource it switches on and animates. `AI_Talion` is a stub in this build;
+  Talion's model on orc or human AI bodies does not work (different skeleton, assets).
+
+### Guard, test copies and tools (state now)
+
+- `sowguard` (a `bink2w64.dll` proxy, our own code, not published): file redirect into a
+  per-copy profile, writes to the real install and saves blocked, offline network
+  (loopback only), Steam cloud sandbox and stats/achievements write block, virtual pad and
+  unattended loading, background running, simulation-thread hook, co-op send/receive,
+  puppet modes, and an in-process probe (memory reads and scans, the player, pad input,
+  teleport, call stacks, write watches, spawning, puppet control).
+- Two test copies (A sender, B receiver) are copies of the install; the real install and
+  saves are untouched (checked before every launch). Copy B runs `coop_show=puppet`,
+  `coop_puppet_ai=off`, `coop_puppet_move=both`, `coop_puppet_spawn=Talion`; copy A runs
+  `coop_send`. Each copy reaches the world unattended in about 48 s.
+
+### Open questions and biggest risks
+
+- Only one direction, one PC, loopback: no real transport yet (Steam networking is the
+  likely choice), no latency or loss handling beyond interpolation.
+- No shared world: enemies, Nemesis, quests, time and RNG all run separately per copy.
+  This is the largest remaining piece.
+- Stand-in quality unverified: turning, stopping, running, foot sliding; whether other
+  characters treat it as Talion (it might be attacked or ignored); no attacks or combat
+  shown.
+- Everything depends on build 3095001 RVAs (all byte-checked, refused on mismatch); a game
+  update breaks it.
+- Code patches and a debug-register watch ran fine in test copies; long sessions with
+  Denuvo/anti-tamper not observed.
+- Process hygiene: a stray background shell once drove copy A's menu into DLC3 and
+  autosaved; always stop leftover `sh.exe` input loops.
+
+### Next steps, in order
+
+1. Stand-in polish: measure its walk/run speeds, set `coop_run_speed` (and try the request's
+   speed factor) against foot sliding; check turning and stopping on captures.
+2. Offline test for the spawn path (fixtures with the game's byte shapes).
+3. Make it two-way: B sends its player to A, A shows a stand-in too (same code, mirrored config).
+4. Then world state: host authority for enemies and Nemesis events (hook
+   `HandleFactionEventAction`, never roll on the client), and a real network transport.
+
+## Session 2026-10-22 ag: the stand-in walks with the sender's own stride (animation inputs, anim mode)
+
+### Observations (live, copies A and B; the stand-in is the spawned `Talion` with the player's graph)
+
+- Its own move requests (follow `none`, nothing pinning it): walk and run both give
+  ~230 units/s, whatever the request's speed factor (0.5-2), the motion state's speed cap
+  (`[character+0x2CE8]+0x3B0`, read by the mode-1 update `374CA0`, which sends the gait as
+  0.5 walk / 1.0 run) or `Game_AnimRate` (set every frame from our hook). A request aimed
+  into scenery leaves it stuck in mode 1 until it is teleported back onto open floor (that
+  was session ad's "standalone requests stop working").
+- `PrintWindow` captures with B's camera turned toward A: pinned (teleported every frame)
+  the stand-in never strides. It holds a stretched pose (torso upright, legs out behind) or,
+  with teleports every few frames, slides with its legs together. The "full stride" of
+  session af was most likely that pose seen from behind.
+- The player's graph is fed by the player's per-frame update (`30BA10`, the player's vtable
+  slot 36 that our hook already precedes, and `514484`), through the float setter `176D78`
+  on `player+0x120`: `RawMoveMag`, `RawMoveYaw`, `Game_MovementAxisX/Y`, `PlayerVelocity`,
+  `PlayerSmoothVelocity`, `DeltaYaw`, `YawVelocityInDegsPerSec`, camera and pitch values,
+  `Player_Focus`, `Game_SimTimer_TimeScale`, hand and foot positions (37 floats, found with
+  `stacks` on `176D78`), plus three bools per frame (`ToggleStealthOn`, `KBMinputActive`,
+  `CanHide`, through `375044` -> `375110`). An AI character gets none of these.
+- `176D78` posts each value to the graph as a message (`176E40` -> `114B75C`; the queue at
+  `[anim+0x1860]` is shared by all characters, the graph is `[anim+0x480]`), so values are
+  caught as they are set, not read back.
+- Moved only by the inputs (follow `none` or `anim`, no teleports), the stand-in walks with
+  a natural stride: alternating legs, heel strikes, feet on their shadows, cloak swinging
+  (strips of 9 captures 50 ms apart, side view). Its path matches A's (`root_match.py`, the
+  stand-in pinned to A, then left to the inputs while A walks): straight 0.90-0.96 of A's
+  length, ends 18-20 apart; a turn (two stick directions) 1.00-1.01, ends 2-4 apart; walk,
+  stop, walk back 0.98, ends 0.8 apart; half stick 0.97, ends 7.5 apart.
+- `anim` mode over steered walks (`drift.py`, gap to where A was 50 ms earlier): a 4.4 s
+  square, mean 4-5 units, max 7-12, no put-back; three squares (13 s, 12 sharp turns),
+  mean 15-35, max 50-120 between runs, a put-back when past 150, settled within half a
+  second of A stopping. B's own player standing on A's path made it much worse (mean 68):
+  B's world has obstacles that A's does not.
+- Steering the drift away through the inputs: turning the camera inputs
+  (`CameraYawMinusPlayerYaw`, `CharToCamDeltaYawInDegs`) or the stick (`RawMoveYaw`,
+  `Game_MovementAxisX/Y`) by 30 degrees did not change its direction (within 6 degrees);
+  `DeltaYaw` + 30 degrees made it walk in an arc (net 128 of 236 units): `DeltaYaw` turns it.
+  Pursuit steering through `DeltaYaw` (with or without the facing difference, gains 0.3-1,
+  either sign) made the drift worse than none in every run; removed again.
+- Not carried: holding A's jump/parkour button (free-run, 305-419 units/s): the stand-in
+  covered 128 of 275-377 units. A's floats then differ only in `PlayerVelocity` (543); A's
+  graph enters `RunningJump_AutoPicker_*` states (names seen in `114B7D0`, which copies a
+  state or clip name inside the graph runtime, `195988`). No bool for it either.
+- Spawning failed ("the game created nothing") while A's position was where B's own player
+  stood; it worked 150 units beside it.
+
+### Change
+
+- `simhook`: an entry hook on `176D78` (bytes checked; a jmp written with one aligned 8-byte
+  write; the stub calls the handler with the setter's own `rcx`, `rdx`, `xmm2`) records this
+  copy's player's 25 named inputs (and lists other float names for probe `inputs`).
+  `SimApplyPuppetInputs` sets them on the puppet through `176D78` (byte-checked on first use
+  when the copy records nothing itself).
+- `coop`: packets (version 3, 164 bytes) carry the inputs and a mask; the receiver sets the
+  inputs of the sample it shows (50 ms behind) every frame. `coop_puppet_move=anim`: moved by
+  the inputs alone, put back with a teleport past `coop_anim_snap` (150) or 150 up/down, and
+  once A has stood still for half a second and it is more than 15 units or 15 degrees off.
+  Test copy B runs `anim`. A failed stand-in spawn is retried 150 units around the sender.
+  `Head()` byte checks refuse addresses outside the image.
+- Probe: `puppet follow anim`, `puppet inputs on|off`, `puppet snap <units>`,
+  `puppet mirror on|off` (this copy's own inputs on the puppet), `inputs`.
+- Tools (unpublished): one steers a copy's player along a world direction (stick angle =
+  wanted heading - camera yaw, camera yaw = player yaw - `CameraYawMinusPlayerYaw`); others
+  measure the stand-in's path and drift against the sender's and capture the game window.
+- Removed: setting `Game_AnimRate` from the sender's speed, and the `DeltaYaw` steering.
+- A receiver that records nothing itself first skipped the inputs silently (the setter
+  pointer was only set by the recorder) while counting them as given; captures made then
+  showed teleport pinning without inputs. Fixed; the new offline case `coop_puppet_recv`
+  (a receiver alone, packets from the test) failed on the old DLL and passes on the fix.
+- Offline cases: `coop_puppet_walk` (a fake player's inputs reach the puppet, a fourth
+  variable does not) and `coop_puppet_recv` (the receiver alone applies them; `anim` leaves
+  the puppet alone while it is where the sender is and puts it back once the sender is 500
+  units away).
+
+### Derived
+
+- For a stand-in with the player's graph, replicate the graph's inputs and let its own
+  root motion move it; do not pin it every frame. Teleports interrupt the stride, so
+  corrections must stay rare.
+- `DeltaYaw` is the turning lever, so a better drift correction is possible, but it needs a
+  repeatable test path first (the steered legs and B's obstacles made runs vary by 2x).
+
+### Unknown
+
+- How the A button's free-run and jumps reach the player's graph.
+- Attacks, hits and other actions: not carried.
+- Drift on long walks with obstacles only on B's side (the stand-in is blocked, A is not).
+
+### Session ag, continued: free-run and drift corrections
+
+#### Observations (live)
+
+- Free-run (A button held), captured from B: the stand-in runs with a long, fast stride,
+  so the inputs do carry the run animation. It still falls behind: over 0.7 s legs the gap
+  reached 130-150 units (mean 32-65) and it was put back 1-3 times.
+- A call trace (new probe `trace`: an execute breakpoint on `176EFC`, which every message
+  to a graph calls with the graph in `rcx`) on A's player's graph, 600 ms walking against
+  600 ms free-running: the same senders both times (`176E40` floats ~1,300, `375110` bools
+  ~106, `41C028` ~35, one rare). Free-run adds no message kind; only the values change
+  (`PlayerVelocity` 543 instead of ~130).
+- Writing the stand-in's position directly (`+0xAC`, `+0xB4`) moves the model (captures
+  before and after a 100-unit write, idle pose kept). Used as a per-frame correction toward
+  A while walking (a share of the gap, capped at 4-8 units a frame or 12% of A's speed) it
+  made the drift worse in every alternating run (mean 39-67 against 11-31 without), so it
+  is not used.
+
+#### Derived
+
+- The free-run gap is speed, not pose: A's free-run speed comes from somewhere other than
+  the run animation's root motion (likely the player's movement code), so the stand-in's
+  stride matches but its speed does not. The 150-unit put-back hides it for now.

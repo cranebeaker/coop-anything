@@ -6,19 +6,16 @@
 | Versions tested | Steam app 213350, build id 3902, `mdk2hd.exe` SHA-256 `bf5faa81b18837b4c07f35941b107e5c23caa8b105536ccd9c8e5a8e37357f43` |
 | Projects | [mdk2-coop](https://github.com/TommoDotCommo/mdk2-coop) (directory entry "MDK2 HD") |
 | QA level | automated |
-| Last updated | 2026-10-22 |
+| Last updated | 2026-10-23 |
 
 ## Where things stand
 
 MDK2 HD has no multiplayer. mdk2-coop adds drop-in co-op: two or more players move through the campaign
-together, with the host's world (enemies, shots, pickups, doors, checkpoints, level loads) mirrored on every
-client. All 96 checkpoints passed an automated two-client sweep on commit 129b7e3; that sweep ran before the N-player
-change and has not been re-run since. It is alpha: a player build exists
-([v0.1.0-alpha](https://github.com/TommoDotCommo/mdk2-coop/releases/tag/v0.1.0-alpha), a pre-release with an
-installer), but nobody has finished the whole campaign in co-op, and cutscenes and boss fights are only partly
-checked. Since that release, master has gained text chat and pings, proximity voice, a controls page with
-presets, difficulty presets, player outlines through walls, an emote hook, couch (split-screen) co-op and a
-launcher that opens before the game. These were tested feature by feature (below), not by a new full sweep.
+together, with the host's world (enemies, shots, pickups, doors, checkpoints, level loads, cutscenes) mirrored on
+every client. The public alpha [v0.2.0-alpha](https://github.com/TommoDotCommo/mdk2-coop/releases/tag/v0.2.0-alpha)
+(2026-10-23, a pre-release with an installer and a launcher) passed the full automated ladder first: 31 gates,
+including all 96 checkpoints with host and client. Nobody has finished the whole campaign in co-op yet, and the
+automated tests do not solve puzzles or beat bosses.
 
 ## Existing work
 
@@ -67,58 +64,62 @@ Each fix below came from a failing automated or manual check and was re-tested; 
   spectate until the zone is clear or a checkpoint is reached; everyone down reloads the checkpoint.
 - Two transports: direct UDP, and Steam friends-only lobbies with invites and a lobby ID (Steam P2P messages,
   no port forwarding).
-- On screen: players panel, name tags and capsule outlines through walls, chat bubbles and pings.
+- On screen: players panel, name tags, person-shaped outlines through walls (off by default), chat bubbles and pings.
 - Text chat (T) and pings (V or middle mouse); proximity voice (push to talk, host-set range).
 - Options > Co-op menus in the game's own style: players, session, gameplay, difficulty (Story, Normal, Hard,
   Nightmare, Custom) and a Controls page with Original, Modern and Custom key presets.
 - A launcher before the game (host, join or solo, transport, name, settings, screen mode), an installer that
   checks the Steam build hash, and a release script.
 - Couch co-op: 2-4 local players, one window and gamepad each, by running several game copies.
+- Cutscenes: everyone starts together, skipping is a vote with a countdown (Esc), and the next part waits until
+  everyone has reached the end. In the skydives and torpedo minigames the other players are shown as ghosts.
+  An early "go" from the host (received before the local cutscene had started) entered playback without its clock
+  and raised Lua errors on clients in two campaign fixtures; it now uses the normal start path.
+- A character wheel (hold J: Kurt, Max or Doc at any time) and an emote wheel per hero (hold H). Kurt and Max are
+  wider than Doc, so a hero switched in at a wall can be stuck in it; held move keys put it on nearby spots until
+  it moves. The time limit for that started at the switch, so a player who waited 4 s before walking stayed stuck;
+  it now starts with the first held move key.
+- A save browser and a level and checkpoint picker in the launcher.
 - Removed: an AI texture upscaler (it made the game darker and flatter than the original).
 
 ## QA
 
 - Background test mode: the games run unfocused, muted, driven by scripted input inside the game, with
   back-buffer screenshots, so the PC stays usable while tests run.
-- `tools/qa.sh`: two real clients, feature checks on both logs plus host/client state diffs. 30/30.
-- Projectile checks: `make -C bridge test-shots` passed capture/replay cases against a fake engine;
-  `MDK2_N=3 tools/qa_shots.sh` passed all six source/peer flight checks for type 417, including
-  client-to-client relay, exactly one launch each and no local damage from foreign copies (2026-10-21).
-- `tools/qa_n.sh`: 38/38 with 3 players, 53/53 with 8. `tools/qa_save.sh`: 31/31 with 3, 41/41 with 8.
-- `tools/sweep.sh`: every checkpoint (96) with host and client: walk, fire, a client hit, then client followed,
-  both alive, enemies bound, hp equal, no Lua errors, state diff. 96/96 clean on 2026-10-21 (commit 129b7e3,
-  before the N-player change; not re-run since).
-- Feature suites added since (`tools/qa_revive.sh`, `qa_hud.sh`, `qa_chat.sh`, `qa_controls.sh`, `qa_menu.sh`,
-  `qa_voice.sh`, `qa_launcher.sh` with 23 checks, `tools/test_network.sh` and the replay bot's tests) ran during
-  development with screenshots of each page. No pass counts for the merged master are recorded here: the
-  combined suite list and the 96-checkpoint sweep have not been re-run on it.
-- Not covered: a full campaign played through in co-op, boss fights and cutscenes beyond the checkpoint starts,
-  play over the internet, and Steam invites between two real accounts (the Steam path was checked against a
-  simulated Steam and by creating and leaving real lobbies; same-PC tests use UDP).
+- `tools/qa_all.py full` runs the whole ladder: offline tests (build, oracles, projectile, controller, revive and
+  network cores), every feature suite with real games, lossy-network variants, and the campaign (every checkpoint,
+  96, with host and client: walk, fire, a client hit, the client follows, both alive, enemies bound, hp equal, no
+  Lua errors, state diff). `--lanes 3` runs feature suites side by side on separate game copies;
+  `--campaign-shards 4` splits the campaign over four host/client pairs.
+- Before v0.2.0-alpha (2026-10-23): 30 of 31 gates passed, the campaign in 4 minutes. The failure was the stuck
+  hero above, a real bug that showed up only when the PC was busy; after the fix the character-wheel gate passed
+  12/12, and both the old code and a mutant without unsticking fail it.
+- Suites check deliberately broken variants (`MUTANT=...`) where practical, so a gate that cannot fail is caught.
+- Not covered: a full campaign played through in co-op, boss fights and puzzles beyond the checkpoint starts,
+  long sessions over the internet, Steam invites between two separate accounts, and real gamepads, microphones and
+  3-4 couch players (tested with simulated input).
 
 ## How to play
 
 Download the zip from the mod's [Releases](https://github.com/TommoDotCommo/mdk2-coop/releases), unzip it and run
 `Install.cmd`. It finds the Steam install, refuses any build other than Steam 3902, and asks Steam or UDP and host
 or join; `Uninstall.cmd` removes it. Host over Steam from Options > Co-op > Session (invite friends or share the
-lobby ID); over UDP the host forwards port 27900. To build from source, see the mod's README (`bridge/` with
-mingw i686, `tools/install.sh`, `tools/release.sh`). Note that the v0.1.0-alpha zip predates the newer features
-listed above; they are on master only.
+lobby ID); over UDP the host forwards port 27900. A launcher opens before the game for hosting,
+joining, playing solo and every setting; `Couch.cmd` starts couch co-op. To build from source, see the mod's
+`docs/DEVELOPMENT.md` (`bridge/` with mingw i686, `tools/install.sh`, `tools/release.sh`).
 
 ## Known issues
 
-- The only release (v0.1.0-alpha) predates chat, voice, couch co-op, the launcher and the controls page; build master to get them.
-- Host upload is high with many players (about 20 Mbit/s with 8 in a busy level): fine on a LAN, not yet trimmed
-  for internet play.
+- Steam invites between two separate accounts and long internet sessions have not been tested yet.
+- No host migration: if the host leaves, the session ends for everyone.
+- The host uploads about 1.3 Mbit/s with 8 players in a busy level, less with fewer.
+- Some cutscenes started by events inside a level have no countdown until they have been watched once.
 - Voice has no echo cancellation and no voice in couch games (one room, one microphone).
-- Outlines are a fixed-size capsule, not the character's real silhouette.
-- Chat and the Controls page were only exercised by the harness, not played by hand in a focused game.
 - Items made by item spawners run independently on each machine and are matched by name.
 
 ## Next steps
 
-- Re-run the full sweep and all suites on current master, cut a new release, then a full co-op playthrough with
-  known issues written up.
-- Trim enemy snapshots for internet play; test Steam invites between two real accounts.
+- A full co-op playthrough by real players, with the problems found turned into automated checks.
+- Test Steam invites between two real accounts and a long session over the internet.
 - Record routes for the replay bot (the machinery exists; no campaign routes are bundled) to cover what the
-  checkpoint sweep cannot.
+  checkpoint sweep cannot: puzzles and boss fights.
