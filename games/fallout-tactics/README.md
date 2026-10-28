@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Proprietary (Micro Forte), 32-bit, DirectX 7; Lua scripting through [FTSE](https://github.com/melindil/FTSE) |
 | Versions tested | GOG 1.27, `BOS.exe` SHA-256 `C5B91FE56EF8DE118CE22CCD5E6512F217CA16C8B8758EA14C626229EB5A4E40`, with FTSE 0.60a, on Windows 11 |
-| Projects | [fallout-tactics-coop](https://github.com/thennak3/fallout-tactics-coop) (own mod, built from zero, MIT; pre-release, latest [v0.9.4](https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.9.4) of 2026-10-28) |
+| Projects | [fallout-tactics-coop](https://github.com/thennak3/fallout-tactics-coop) (own mod, built from zero, MIT; beta, latest [v0.10.0-beta](https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.10.0-beta) of 2026-10-28) |
 | QA level | automated (in-game bots drive 2 to 4 real game copies on one PC and compare every copy's state), plus sessions played by people on two PCs |
 | Last updated | 2026-10-28 |
 
@@ -13,8 +13,8 @@
 Two to four players can play the campaign together with one shared squad: every player can order every
 character, and the host's campaign is the one being played. Joiners copy the host's save and can drop in
 mid-mission. Conversations, trading, recruiting, level-ups, looting, turn-based combat, the world map and random
-encounters are synced, and a drift check puts the copies back together without reloading. It is a pre-release:
-the bots cover each feature, and two people have played it across two PCs on a home network, which found and fixed
+encounters are synced, and a drift check puts the copies back together without reloading. It is in beta
+(v0.10.0-beta): the bots cover each feature, and two people have played it across two PCs on a home network, which found and fixed
 several bugs (0.9.1 to 0.9.4).
 
 ## Existing work
@@ -84,7 +84,7 @@ The full history is in [NOTES.md](NOTES.md); the main fixes, each with the test 
   frame: every actor's position and HP, every inventory with hands and armour, the entity table's bookkeeping, quest
   variables, attributes, the squad and the merchant's stock. Each scenario adds its own checks (the trade went
   through, the turn passed, no reload happened, and so on). Chaos runs fail on any drift report.
-- Results for 0.9.3 and 0.9.4 (targeted runs, 2026-10-28): `worldmap` 33/33, `trade_host --inv-chaos` 48/48,
+- Results for 0.9.3 and 0.9.4, the code in v0.10.0-beta (targeted runs, 2026-10-28): `worldmap` 33/33, `trade_host --inv-chaos` 48/48,
   `trade_join --inv-chaos` 49/49, `drift_equip` 25/25, `talk_host --grow-table` 30/30, `talk_join --grow-table`
   31/31, `menu_join` 34/34, `menu_join --menu-cancel` 36/36, `dropin` 37/37, `resync` 25/25, `encounter` 26/26,
   `recruitnew_host` 29/29, `chaos` (containers.sav, with equipping) 22/22. The full suite (`test/run_suite.py`)
