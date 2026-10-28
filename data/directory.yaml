@@ -8917,9 +8917,9 @@
     host''s settings, the world map (the host travels, everyone sees it, map pings in each player''s colour) and random
     encounters; a drift check corrects positions, HP, inventories, equipment and the entity table without a reload.
     Bot tests drive 2 to 4 real game copies on one PC; played by people on two PCs on one home network. Needs GOG
-    1.27 and FTSE 0.60a. Beta v0.10.0-beta (2026-10-28). See games/fallout-tactics.'
+    1.27 and FTSE 0.60a. Beta v0.10.1-beta (2026-10-28). See games/fallout-tactics.'
   sources:
   - https://github.com/thennak3/fallout-tactics-coop
-  - https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.10.0-beta
+  - https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.10.1-beta
   checked: '2026-10-28'
   made_with_coop_anything: true

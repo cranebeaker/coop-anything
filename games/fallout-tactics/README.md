@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Proprietary (Micro Forte), 32-bit, DirectX 7; Lua scripting through [FTSE](https://github.com/melindil/FTSE) |
 | Versions tested | GOG 1.27, `BOS.exe` SHA-256 `C5B91FE56EF8DE118CE22CCD5E6512F217CA16C8B8758EA14C626229EB5A4E40`, with FTSE 0.60a, on Windows 11 |
-| Projects | [fallout-tactics-coop](https://github.com/thennak3/fallout-tactics-coop) (own mod, built from zero, MIT; beta, latest [v0.10.0-beta](https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.10.0-beta) of 2026-10-28) |
+| Projects | [fallout-tactics-coop](https://github.com/thennak3/fallout-tactics-coop) (own mod, built from zero, MIT; beta, latest [v0.10.1-beta](https://github.com/thennak3/fallout-tactics-coop/releases/tag/v0.10.1-beta) of 2026-10-28) |
 | QA level | automated (in-game bots drive 2 to 4 real game copies on one PC and compare every copy's state), plus sessions played by people on two PCs |
 | Last updated | 2026-10-28 |
 
@@ -72,15 +72,16 @@ The full history is in [NOTES.md](NOTES.md); the main fixes, each with the test 
   0xC0000409, fixed 36/36).
 - **World map**: only the host moves the party; the others see it travel and can ping a spot in their colour
   (`worldmap`, 33/33). Only the host's copy rolls random encounters, the others follow it (`encounter`, 26/26).
-- **Joining**: fixed 1-2 s polls cut to 250 ms, and DirectPlay's 3 s release moved off the main thread (drop-in
-  join 7.9 s to 3.5 s).
+- **Joining**: fixed 1-2 s polls cut to 250 ms (drop-in join 7.9 s to 3.5 s), and the Multiplayer screen's
+  DirectPlay object is left alive instead of released: its release blocked 3 s, and the next DirectPlay object waited
+  for it even on another thread (Join to playing 3.6 s to 1.2 s, v0.10.1-beta).
 - **Two PCs**: Windows' WSAECONNRESET after an ICMP port unreachable stopped discovery; turned off with
   SIO_UDP_CONNRESET (owner's two PCs).
 
 ## QA
 
 - `python -I test/run_test.py <test>` in the mod repo starts 2 to 4 test copies of the game on one PC, each with an
-  in-game bot (`logger/bot_scenarios.inc`), and checks their logs. Every test compares, at every shared snapshot
+  in-game bot (`src/bot_scenarios.inc`), and checks their logs. Every test compares, at every shared snapshot
   frame: every actor's position and HP, every inventory with hands and armour, the entity table's bookkeeping, quest
   variables, attributes, the squad and the merchant's stock. Each scenario adds its own checks (the trade went
   through, the turn passed, no reload happened, and so on). Chaos runs fail on any drift report.
@@ -104,7 +105,6 @@ Tailscale or ZeroTier. Full steps in the mod's README.
 
 - While a player talks to anyone other than a merchant, or uses the recruiter, the other players' games pause until
   the conversation closes.
-- Joining from the Multiplayer menu waits about 3 s while DirectPlay closes the menu's session search.
 - A character who joins the squad through a story conversation (not the recruiter) still means a save and reload
   for everyone.
 - Not yet played over the internet.
