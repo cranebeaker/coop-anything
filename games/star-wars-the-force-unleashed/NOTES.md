@@ -700,13 +700,18 @@ gripped it (gripper = puppet, y 13.7 → 16.2), puppet energy 150 → 120, host 
 control passes the same way (m13g2). No code change was needed. The earlier misses were test setup:
 - moving an AI with `location.SetPosition` does not move its physics body, so powers miss it;
 - targets that had died (health 0) still sat in the list;
-- on the slope right of F014116C the client slides, the puppet is snapped (> 0.5 m) about every second and
-  spends time in the air, where it cannot grip (m13g1 failed there; the flat spot passes).
+- at the spot right of F014116C (x -517.8) the puppet cannot grip (m13g1, m13g6 failed; the spot 3 m to
+  the left passes). There the client's own player stands still (y 13.75), but the puppet on the host keeps
+  rising to y 14.2 and drifting until it is snapped back (> 0.5 m) about every second, so it is in the air.
+  Something on the host pushes it up, probably a loose physics object that lies elsewhere on the client
+  (physics objects are not synced). Not verified.
 - A tried fix (skip keyboard bindings for controllers 1..3 in the action query 0x6a70a0) made no
   difference: grip passed without it too (m13g5neg), so it was dropped.
 
-Open: puppet snapping on slopes could keep the puppet's own height when within 0.5 m so it stays on the
-ground; a slope run without that change was started (m13g6slope) but stopped before it finished.
+- Keeping the puppet's own height on a snap (when within 0.5 m) did not help there (m13g7slope failed), so
+  it was dropped.
+
+Open: find what pushes the puppet up at that spot (list physics objects near it on both PCs).
 
 ## Derived (not yet verified)
 
