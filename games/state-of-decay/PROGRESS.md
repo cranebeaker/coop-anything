@@ -32,7 +32,8 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Looting / doors / searching for the joining player | Doors work on her machine: state, door and player animations, collision (`maya_record.py`, `door_sync.py`). Her search runs and completes on the host with her own search manager (`search_ctx.py`); her loot screen opens on her machine with her own backpack, and Take/Use apply to her backpack on the host (`loot_relay.py`) |
 | Getting hurt, going down and getting up (her) | Works: health replicated, HUD follows, down at 1 HP, mash Space to get up (`downed.py`) |
 | Starting a session from the game's main menu | Works: "Co-op Play" item with Host Game (Continue / New Story) and Join Game (hosts found on the local network); `coop_agent.py` per copy runs the co-op setup on each side (2026-10-28) |
-| Characters | New story: host Marcus, joining player Ed (Ed's own survivor record, his NPC body hidden on both machines); players 3+ would get random generic survivors, never a story character (`maya_record.pick_def`; the co-op layer itself still supports one joining player) |
+| Characters | New story: host Marcus, player 2 Ed (Ed's own survivor record, his NPC body hidden everywhere), players 3-4 random generic survivors no record uses, never a story character (`maya_record.pick_def`) |
+| Up to 4 players | Works (2026-10-28): host + 3 joining players through the menu; every co-op module handles every joining player; 20-minute 4-player soak 10/10 fight + search/loot cycles; a player leaving mid-game leaves the others playing |
 | Session stability | Asserts and missing-entity updates no longer kill the host (`crash_guards.py`); 25-minute play soak 19/19 cycles without a crash |
 | Vehicles | Untested in co-op: the only vehicle at the story start is locked for both players |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
@@ -92,6 +93,48 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-28 - up to 4 players
+- The network side already took more players: a third copy joined after one more join-crash guard
+  (`patch_client.py` "join null local actor", 0x13BE162: a later joiner binds the other players before its own
+  actor exists). Channels are not 2, 3, 4 in join order (a failed join used up channel 3), entity ids differ per
+  machine, and player actors are named Dude, Dude(1)..Dude(3) everywhere: `local/peers.py` tells players apart by
+  actor/name, own player = the client-actor getter.
+- Every co-op module was single-peer ("channel 2", one baked actor/record). Now per player:
+  - `peer_input.py`: a slot per remote player (queue + stand-in input), chat input routed by the sender's entity id
+    (the game translates it per machine); the host passes each joining player's input on to all clients as
+    "cooh:" with that player as source. Other chat handlers (pause, kills, weapon, loot) get the sender too.
+  - `player_sm.py`: a joining machine ticks its own and every other player's state machine (record read from
+    actor +0x1110 at run time).
+  - `search_ctx.py` (a search manager + context + swap routine per player), `loot_relay.py` (screens tagged with
+    the player, sent with `onClient` to that player's channel only; Take/Use by sender), `downed.py`,
+    `maya_record.py` (record per player, `keep_active` table), `zm_focus.py` (focus point / cull / population
+    pass per player), `pause_sync.py` (host is the authority: pause only when everybody has a menu open),
+    `remote_fx.py`, `kill_counts.py` ("kilh:n:NNNN"), `weapon_relay.py`, `door_sync.py` (4 name slots; the
+    client Lua `ClCoopPeerState` changed in every install's `singleplayer.lua`), `zombie_sync.py`.
+  - Hooks with per-player code run as chains of blocks (`local/chain.py`): `peer_melee`, `zombie_targets`,
+    kill counts.
+  - `coop_setup.py`: once-per-session host part, a per-player host part, the newcomer's machine, and
+    `client_player_joined` for the machines already in the game; `coop_agent.py` hosts up to 3 joiners one at a
+    time (the LAN list shows "n/4 players").
+- Crashes found and fixed on the way (all in `crash_guards.py` unless noted):
+  - a record bound to a player whose actor UL could not resolve (record update, null body, 0x154837B /
+    0x1548660); UL finds actors only through the query lists, so `zombie_targets` now registers the player first;
+  - joining machines ticking other players' state machines: actions writing through a missing per-actor slot
+    (0x170B19F, 0x170B3AE; joining machines give missing handles a spare slot, only for the action handlers'
+    callers) and a condition on a freed zombie actor (0x17325DB; actor and entity vtables checked);
+  - the Lua damage handler killed a joining player outright (health <= 0 -> ProcessDeath -> Kill) before the
+    health floor applied: `singleplayer.lua` (all installs) keeps Dude(n) at 1 there;
+  - a player leaving: its freed actor stayed in the NPC query list and the interaction list (both ours) and
+    crashed the host within a second; the game's own EntityDbRemove now takes it out of the NPC list
+    synchronously, the interaction loop and the NPC tag pass skip non-CPlayer entries, other native loops check
+    the player vtable, and the host agent notices the leave.
+- Verified on one PC with four copies (`local/play_menu.sh 4`, `menu_flow_test.py --new --direct`): New Story,
+  Marcus / Ed / two random survivors, no NPC double of any player on any machine; 20-minute soak with the three
+  joining players taking turns, 10/10 cycles (knock-downs and get-ups included), all four games running; with
+  the 4th player's game killed mid-session the other three kept playing (soak 4/4 afterwards).
+- Not done: a player rejoining into a slot used before; loot screens of two players opened in the same
+  quarter second share one panel capture.
 
 ### 2026-10-28 - joining player is Ed Jones; no doubled characters
 - Character definitions: 146 entries at `[0x1EE25E4]` (0x34 bytes, +8 model path). Story characters have models
