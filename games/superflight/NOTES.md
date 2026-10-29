@@ -373,3 +373,15 @@ zip for the username, `C:\Users` and `OneDrive` (now 0 hits; the PDB is not ship
 the zip's `.sha256` file next to it. Publishing (GitHub repo, release, directory entry) is the
 owner's step: their GitHub account.
 
+### Pre-publish history scrub
+Before the owner pushes, every revision was scanned for the username, `C:\Users`, `OneDrive` and
+the owner's e-mail: a tracked `tests/__pycache__/*.pyc` (compiled path inside) and the old
+`build.ps1` default game folder were in earlier commits. Both were rewritten out with
+`git filter-branch` (index filter for the cache, tree filter for the path line), tag v0.2.0 moved
+to the new head 014e00a, old objects pruned, scan now clean. The release zip was rebuilt from that
+head (embedded commit matches) and `tests/run_two.py` passed on it: `RESULT: PASS`, build 014e00a,
+19:36 local. Final SHA-256 of `SuperflightCoop-0.2.0.zip`:
+2e39331a727521211f2b128f864a92968bc40fff458f70aa1592d48fcfc40654. Commit author identity is the
+owner's own git config; flagged to them (GitHub's "block pushes that expose my email" setting would
+reject the push if it is on).
+
