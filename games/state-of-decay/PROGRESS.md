@@ -103,6 +103,10 @@ Newest first. One entry per discovery; link the NOTES section for details.
   turning into a crouch. `peer_input` now merges everything but the newest entry and applies that one whole on
   the next tick. Verified on one PC: host copy and client both go DodgePrep -> Stealth.Basic.Idle / Movement.Creep
   / Walk; backlog stays bounded (max 6 with constant mouse movement, drained every tick).
+- Hit reactions: `door_sync.PeerStates` (players' states mirrored from the host into every machine's state
+  machines, with the latest clip) now also mirrors `MachineDriven.Reaction.Core.*` (light/heavy hits) and sends
+  their clip whatever its name; knock-downs stay with `downed.py`. Not verified yet: no zombie came close enough
+  to hit in the test spots (no live zombies; zm_spawn gave none either).
 
 ### 2026-10-29 - rucksacks on the ground on the joining machine
 - Dropped supply rucksacks (class UL_Rucksack, created by UL on the host only, e.g. from the save) were missing on
