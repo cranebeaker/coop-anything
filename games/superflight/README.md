@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Unity 2017.2.0, Mono scripting backend |
-| Versions tested | Steam build 2304714 (2025-07-13), identity recorded; no co-op test run yet |
+| Versions tested | Steam build 2304714 (2025-07-13); direct IP tested automatically, Steam lobby code built, two-account Steam run pending |
 | Projects | [SFMF Multiplayer by Phlarfl](https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer) (directory entry: Superflight / SFMF Multiplayer) |
 | QA level | automated (two real copies on one PC, direct IP; see QA) |
 | Last updated | 2026-10-29 |
@@ -11,8 +11,10 @@
 ## Where things stand
 
 A new BepInEx plugin (superflight-coop, alpha) puts players in the same world over direct
-IP, each visible as a tinted copy of the wingsuit with name and score; an automated
-two-copy test passes. Steam friend joins without port forwarding are the next step. The
+IP, each visible as a tinted copy of the wingsuit with name and score; two automated
+two-copy suites pass. Steam friend invites without port forwarding are built on the game's
+own Steamworks.NET (friends-only lobby, P2P with relay, overlay invite, `+connect_lobby`);
+what one PC and one account can test is scripted, the two-account run is pending. The
 2018 SFMF Multiplayer mod it replaces is abandoned (its author doubts it still works).
 
 ## Existing work
@@ -71,7 +73,12 @@ the source audit found (details in NOTES.md):
   before Welcome. Test: about 19 states/s each way over 20 s, no exception in the logs.
 - No rotation sync and sphere puppets: rotation is sent, puppets are mesh clones. Test:
   each copy draws 10 renderers of the other's wingsuit in a frame.
-- Direct IP only: still true in this version (Steam lobby next).
+- Steam friends: `SteamTransport` over `ISteamNetworking` P2P (relay allowed, Steam's reliable
+  send type for the reliable messages) and `SteamLobby` (friends-only lobby of 8, lobby data
+  with game and protocol, overlay invite dialog, rich presence connect string, join from
+  `GameLobbyJoinRequested_t` or `+connect_lobby`, members who leave the lobby are dropped).
+  No extra DLLs: the game ships Steamworks.NET 10.0 and runs the callbacks. Test: see QA;
+  the two-account run is still open.
 - New: leaderboard uploads are blocked while in a session.
 - New: level changes are a choice, not a yank. A portal or fall-out opens "Proceed to next
   level / Respawn in this level" with a scoreboard (name, score, where everyone is). The
@@ -96,21 +103,29 @@ the source audit found (details in NOTES.md):
   rows), host respawn, host proceed (new seed sent, client only pending, not pulled out),
   client crash choice (not paused), client respawn (pending kept), client portal proceed
   (now in the host's level), client portal with nothing pending (cannot get ahead).
-- Last results, 2026-10-29, Steam build 2304714: both suites `RESULT: PASS` (run_two: 377
-  and 399 states in 20 s, 10 puppet renderers each side; run_portal: 40 checks). The run
+- `python -I tests\run_steam.py ...`: one copy, Steam client signed in: Steam API ready,
+  lobby created, session hosting over the Steam transport, one member, leave tears it down.
+  `--join CODE` on a second PC and account: joins, gets the host's world, state and puppet
+  arrive. Not run yet: it creates a lobby on the owner's account.
+- Last results, 2026-10-29, Steam build 2304714: run_two and run_portal `RESULT: PASS`
+  (run_two: 377 and 399 states in 20 s, 10 puppet renderers each side; run_portal: 40
+  checks), rerun after the Steam code landed with 0 warnings or errors in the logs. The run
   without `runInBackground` failed (host paused) and the first run_portal failed on every
   patched behaviour (patches not live): both are the mutation checks for those fixes.
 
 ## How to play
 
 Install BepInEx 5.4.23.6 (win_x64) into the game folder, run the game once, put
-`SuperflightCoop.dll` into `BepInEx\plugins\SuperflightCoop\`. Host: pick a port, click
-Host, forward that UDP port or use a VPN. Join: type `host:port`. Release repo and
-download: not published yet (see Next steps).
+`SuperflightCoop.dll` into `BepInEx\plugins\SuperflightCoop\`. Steam: click "Host for Steam
+friends", then "Invite friends" in the co-op window; friends accept in the overlay (Steam
+starts the game for them if needed), or paste the lobby code the host sees. Direct IP: pick
+a port, click Host, forward that UDP port or use a VPN; friends type `host:port`. Release
+repo and download: not published yet (see Next steps).
 
 ## Known issues
 
-- Direct IP only; friends outside the LAN need a forwarded UDP port or a VPN.
+- The Steam path has not been run between two accounts yet; direct IP (forwarded UDP port
+  or VPN) is the tested fallback. Friends-list "Join Game" via rich presence: unverified.
 - Remote wingsuits do not animate (still mesh copy).
 - No shared scoring mode; each player keeps their own run. The choice screen's scoreboard
   shows everyone's current run score.
@@ -118,8 +133,7 @@ download: not published yet (see Next steps).
 
 ## Next steps
 
-1. Steam transport: friends-only lobby plus `SteamNetworking` P2P with relay through the
-   game's shipped Steamworks.NET and the game's own app id, invite from the overlay. Needs
-   two Steam accounts or two PCs to test.
+1. Steam: run `tests/run_steam.py` on the owner's PC (lobby on their account), then a real
+   two-account run over the internet (owner plus a friend, or `--join CODE` on a second PC).
 2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
 3. Publish the plugin repo and a release; add it to the directory entry.

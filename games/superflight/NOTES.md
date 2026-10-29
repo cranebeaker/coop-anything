@@ -306,3 +306,55 @@ logged its first "upload skipped" only after this fix. Playbook lesson added.
   Screenshots of both choice screens taken through the bridge.
 - Run 7, `tests/run_two.py` regression with the hooks live: PASS; the bot now really steers (2898
   and 3256 units in 20 s), 377 and 399 states, 10 renderers each side.
+
+## 2026-10-29 (evening): Steam friend invites
+
+### Why Steam
+The owner asked which path needs no port forwarding. Direct IP needs the host to forward UDP
+4444 or a VPN; Steam's `ISteamNetworking` P2P is relayed by Steam when no direct path exists.
+Owner chose Steam.
+
+### What the game ships (from the reflection dump, `local/dumps/Assembly-CSharp-firstpass.txt`)
+Steamworks.NET 10.0 (SDK 1.40): `SteamNetworking.SendP2PPacket/IsP2PPacketAvailable/
+ReadP2PPacket/AcceptP2PSessionWithUser/CloseP2PSessionWithUser/AllowP2PPacketRelay`,
+`SteamMatchmaking.CreateLobby/JoinLobby/LeaveLobby/GetLobbyOwner/GetNumLobbyMembers/
+GetLobbyMemberByIndex/SetLobbyData/GetLobbyData`, `SteamFriends.ActivateGameOverlayInviteDialog/
+SetRichPresence/ClearRichPresence`, `Callback<T>.Create`, `CallResult<T>.Create/Set`, structs
+`LobbyCreated_t`, `LobbyEnter_t`, `GameLobbyJoinRequested_t`, `LobbyChatUpdate_t`,
+`P2PSessionRequest_t`, `P2PSessionConnectFail_t`. No `SteamApps.GetLaunchCommandLine` (added in a
+later SDK), so `+connect_lobby` is read from `Environment.GetCommandLineArgs`. The game's own
+`SteamManager` (the stock Steamworks.NET one, IL checked: `Packsize.Test`, `DllCheck.Test`,
+`RestartAppIfNecessary`, `SteamAPI.Init` in Awake, `RunCallbacks` in Update) dispatches our
+callbacks; nothing needs a second init.
+
+### Design (plugin commit d459576, version 0.2.0)
+- `SteamTransport`: `ITransport` over P2P channel 0. Steam's reliable send type carries the
+  reliable messages (Hello, Welcome, Seed, joins), `UnreliableNoDelay` the 20 Hz state. One kind
+  byte (0 payload, 3 keep-alive), keep-alive every second, 15 s silence drops a peer,
+  `P2PSessionConnectFail_t` drops at once. The host accepts a `P2PSessionRequest_t` only from a
+  current lobby member; a client only talks to the lobby owner. Peer key = SteamID string.
+- `SteamLobby`: friends-only lobby of 8 with lobby data `game=superflight-coop`,
+  `protocol=<Protocol.Version>`, `plugin=<version>`; a joiner that finds another game or protocol
+  leaves again with a clear message. Rich presence `connect` = `+connect_lobby <id>`. Overlay
+  invite dialog. `GameLobbyJoinRequested_t` (accept while running) and `+connect_lobby` (Steam
+  starts the game) both queue a join that runs once `LocalGameManager` exists. `LobbyChatUpdate_t`
+  left/disconnected/kicked/banned drops that member from the session; if the owner goes, the
+  client leaves. Fallback for a disabled overlay: the lobby id is shown as a code to paste.
+- `Session` changes shared by both transports: connect timeout per transport (UDP 10 s, Steam
+  30 s), Hello resent every 2 s until Welcome (the host already answered duplicates), `Ended`
+  callback so the lobby is left whenever a session ends, `DropPeer` for lobby departures.
+- Steam identity: the plugin never sends SteamIDs in its own protocol; names still come from the
+  host's roster.
+
+### QA (ran)
+- Run 8, `tests/run_two.py` and `tests/run_portal.py` with the Steam code in, direct IP: both
+  `RESULT: PASS`, 19:24 local time; 9 patches live; 0 warnings or errors in both BepInEx logs;
+  both logs show "steam: lobby callbacks registered", so `SteamManager.Initialized` is true in the
+  test copies (Steam client running on this PC).
+- `tests/run_steam.py` (one copy: Steam ready, `steamhost`, lobby created, hosting over the Steam
+  transport, one member, screenshot, leave tears it down; `--join CODE` mode for a second PC and
+  account): written, NOT yet run. It creates a lobby on the owner's Steam account, so it waits for
+  the owner's go-ahead (AGENTS.md: ask before using their accounts).
+- A full two-player Steam run is impossible on one PC with one account (an account is in a lobby
+  once); it needs the owner and a friend, or a second PC with a second account: `unknown` until
+  then. Rich-presence "Join Game" in the friends list: `unknown`.
