@@ -170,3 +170,85 @@ release repo).
 Playbook contradictions: none yet. The MCP server's test suite fails under
 `python -I` when PyYAML is only in the user site-packages (2 of 13 tests); the server
 itself runs fine without `-I`. Worth a note in `playbook/mcp.md`.
+
+## 2026-10-29: workspace, port to BepInEx, first automated two-copy test
+
+### Workspace (observed)
+
+- Two private copies of the install (plain copies, 130 MB each, not hard links: the game writes
+  `saveGame.gd` and `output_log.txt` under `%USERPROFILE%\AppData\LocalLow\Grizzly Games\<product>`,
+  and PlayerPrefs under `HKCU\Software\Grizzly Games\<product>`). Each copy got its own product
+  name by patching the one 11-byte `SUPERFLIGHT` string in `superflight_Data\globalgamemanagers`
+  (4-byte length prefix; the company string `Grizzly Games` sits 20 bytes earlier, 4-byte aligned)
+  and `app.info`, plus `steam_appid.txt` = 732430 so `SteamAPI.RestartAppIfNecessary` does not
+  relaunch the Steam install. Checked after runs: the real `SUPERFLIGHT` registry key's export hash
+  unchanged; the copies' keys and LocalLow folders created separately. Playbook lesson 51 applied as is.
+- `boot.config` is empty (no single-instance flag); two copies run side by side.
+- BepInEx 5.4.23.6 win_x64 (official release zip, SHA-256
+  `6c57a714a892efb4e9e1fef63d608a3391f30ec984031c465404e4ee381a0755`) loads: "CLR runtime
+  version 2.0.50727.1433", so plugins target .NET 3.5. `Assembly-CSharp.dll` references mscorlib
+  2.0 and System.Core 3.5.
+- Build: Roslyn `csc.exe` from Visual Studio Build Tools against the game's own `Managed\*.dll`
+  plus BepInEx's `BepInEx.dll` and `0Harmony.dll` (`/nostdlib+`, C# 7.3). No NuGet, no SDK
+  project. A reflection dump of all types and members plus a Mono.Cecil IL dump (Cecil taken from
+  BepInEx's core folder) of the world-loading methods were enough; no decompiler was installed.
+
+### What the game does (derived from IL, Steam build 2304714)
+
+- `LocalGameManager.Start` = `LoadCurrentWorld()` + `LoadMenu()`. `LoadMenu` destroys the player
+  object; `LoadFlight` calls `ResetPlayer`, which instantiates it. In the menu
+  `PlayerMovement.Singleton` is null.
+- `LoadCurrentWorld()` (private): `LevelGenerator.GenerateLevel(WorldManager.currentWorld)`, or
+  `GenerateLevel(WorldManager.NewWorld())` when null; resets the combo.
+- `OnSeedEnter(World)` (public): sets `WorldManager.currentWorld`, `LoadCurrentWorld()`, moves the
+  player and camera to the spawn, resets rotation, combo, colour and particles. A client uses it to
+  enter the host's world while flying.
+- `OnPortalEnter`: `GenerateLevel(WorldManager.NewWorld())` plus the same reset. A prefix on
+  `WorldManager.NewWorld` returning `new World(hostSeed)` keeps a client in the host's world
+  through its own portals; a postfix on `LevelGenerator.GenerateLevel(World)` lets the host
+  announce every new seed.
+- `World(int customSeed)` is public; `World.seed` is the int the generator uses.
+- `SteamManager.Awake` is the stock Steamworks.NET sample (Packsize and DllCheck tests,
+  `RestartAppIfNecessary`, `SteamAPI.Init`). Steamworks.NET 10.0.0, SDK 1.40: old-style
+  `SteamNetworking.SendP2PPacket/ReadP2PPacket` with relay, `SteamMatchmaking` lobbies,
+  `Callback<T>.Create`, `CallResult<T>`; no `SteamNetworkingMessages`.
+- `PlayerMovement.GetInput()` (private) fills `horizontalInput` and `verticalInput`; a postfix
+  overwrites them, which is how the test bot steers. `LocalGameManager.QuickReset()` (private)
+  respawns after a death. `LocalGameManager.PlayerState`: Flying, Paused, Dead, Completed, Menu.
+
+### The plugin (what was built)
+
+Repo: superflight-coop (local for now, MIT). BepInEx 5 plugin with Harmony patches, no game file
+modified. Design kept from Phlarfl's mod: host-authoritative, the host's seed, one puppet per
+remote player. Changes: own UDP transport with a small reliable channel (sequence, ack, 250 ms
+resend, in-order delivery, 10 s timeout) instead of UNet; float position and quaternion rotation
+(fixes the int truncation and negative-coordinate bug); names from the host's roster (fixes the
+name mix-up); one relay per update (fixes the N-1 broadcast); timeouts remove ghosts; no send
+before Welcome (fixes the null-dereference window); puppets are a clone of the local wingsuit
+meshes (scripts, physics, particles stripped) tinted with the player's hue, interpolated with a
+100 ms delay and short extrapolation; leaderboard uploads blocked in a session; an in-game bridge
+(coop-anything `tools/bridge` protocol v1: ping, version, methods, events, state, exec, eval,
+waitFor, screenshot) and a test bot (`--coop-bot`).
+
+### QA (ran)
+
+`tests/run_two.py`: two private copies, host (`--coop-host 4444 --coop-autoflight --coop-bot`)
+and client (`--coop-join 127.0.0.1:4444 ...`), bridges over loopback TCP, 20 s hold.
+
+- Run 1, plugin without `Application.runInBackground`: FAIL. The host copy lost focus when the
+  client window opened and Unity paused it entirely; the host never hosted, the client timed out
+  ("lost the host"). This is also the mutation check for that line.
+- Run 2, with runInBackground, no bot: join, seed and state flow PASS, but both players were
+  `Dead` at the spawn after a few seconds (no input), so a movement check would have failed.
+- Run 3, with bot: PASS. Seed 654102576 on both; host moved 547 units, client 1142 in 20 s;
+  376 and 398 states received (about 19/s each way); host's copy of the client position 5.1 units
+  from the client's own; screenshots show the other player's name tag and score in the world.
+- Run 4, with mesh checks: PASS, build d9c7bbb. Seed 120652260; host moved 472, client 1041
+  units; each copy drew 10 renderers of the other's wingsuit clone in a frame (not a sphere);
+  377 and 402 states; positions 6.3 units apart; no error or warning in either BepInEx log.
+
+Not yet tested: more than two players, lag and loss (`tools/chaos`), the host taking a portal
+mid-session, Steam transport (not written yet), two different PCs.
+
+Playbook note: the harness must warn the owner not to touch the game windows; the bot overrides
+steering, but Escape, Enter or the mod's own hotkeys reach the focused copy.

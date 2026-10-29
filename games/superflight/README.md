@@ -5,15 +5,15 @@
 | Engine | Unity 2017.2.0, Mono scripting backend |
 | Versions tested | Steam build 2304714 (2025-07-13), identity recorded; no co-op test run yet |
 | Projects | [SFMF Multiplayer by Phlarfl](https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer) (directory entry: Superflight / SFMF Multiplayer) |
-| QA level | none |
+| QA level | automated (two real copies on one PC, direct IP; see QA) |
 | Last updated | 2026-10-29 |
 
 ## Where things stand
 
-Nobody can play Superflight with a friend today. One multiplayer mod exists, written in
-2018 and published as a DLL in January 2022; its author said in January 2025 they doubt
-it still works, and no player report of a working session was found. The source is public
-and small, so reviving it is the plan.
+A new BepInEx plugin (superflight-coop, alpha) puts players in the same world over direct
+IP, each visible as a tinted copy of the wingsuit with name and score; an automated
+two-copy test passes. Steam friend joins without port forwarding are the next step. The
+2018 SFMF Multiplayer mod it replaces is abandoned (its author doubts it still works).
 
 ## Existing work
 
@@ -57,31 +57,57 @@ Dead ends and where they were searched are in [NOTES.md](NOTES.md).
 
 ## What we changed
 
-Nothing yet. Audit of the 2018 source (details in NOTES.md) found: position serialisation
-truncates to whole units and breaks on negative coordinates; every remote player gets the
-local player's name; each update is broadcast N-1 times; dropped connections leave ghost
-players; a null dereference window between connect and the server's reply; no rotation
-sync; direct IP only.
+The 2018 mod was ported to a BepInEx 5 plugin instead of SFMF's in-place patch of
+`Assembly-CSharp.dll`, keeping its design (host's seed, puppet per player) and fixing what
+the source audit found (details in NOTES.md):
+
+- Position serialisation truncated to whole units and broke on negative coordinates: now
+  floats plus a quaternion for rotation. Test: the host's copy of the client position stays
+  within a few units of the client's own while both fly.
+- Every remote player got the local player's name: names come from the host's roster.
+  Test: the host lists the client as "Bot1".
+- Each update was broadcast N-1 times, dropped connections left ghost players, and a send
+  could run before the host had answered: one relay per update, 10 s timeouts, no send
+  before Welcome. Test: about 19 states/s each way over 20 s, no exception in the logs.
+- No rotation sync and sphere puppets: rotation is sent, puppets are mesh clones. Test:
+  each copy draws 10 renderers of the other's wingsuit in a frame.
+- Direct IP only: still true in this version (Steam lobby next).
+- New: leaderboard uploads are blocked while in a session; a client's portal keeps it in
+  the host's world (Harmony prefix on `WorldManager.NewWorld`); the host's portal sends the
+  new seed to everyone (postfix on `LevelGenerator.GenerateLevel`).
+- Found while testing: a Unity player pauses completely without window focus, so two copies
+  on one PC need `Application.runInBackground = true` (the 2018 mod set it too).
 
 ## QA
 
-No tests run yet.
+- `python -I tests\run_two.py --instances <copy0> <copy1> --coop-anything <clone>` in the
+  plugin repo: starts two private copies, host and client, both with the in-game bot, and
+  asserts through the plugin's bridge: both started, client joined, both see 2 players,
+  same world seed, both players move, both draw the other's wingsuit meshes, state keeps
+  flowing, the host's copy of the client position is close, screenshots written, both
+  still running.
+- Last result: `RESULT: PASS`, 2026-10-29, Steam build 2304714, build d9c7bbb, 20 s hold,
+  377 and 402 state updates received, positions 6.3 units apart, 10 puppet renderers drawn
+  on each side. The run without `runInBackground` failed (host paused), the mutation check
+  for that fix.
 
 ## How to play
 
-Not playable yet.
+Install BepInEx 5.4.23.6 (win_x64) into the game folder, run the game once, put
+`SuperflightCoop.dll` into `BepInEx\plugins\SuperflightCoop\`. Host: pick a port, click
+Host, forward that UDP port or use a VPN. Join: type `host:port`. Release repo and
+download: not published yet (see Next steps).
 
 ## Known issues
 
-See "What we changed" for the bugs in the original mod.
+- Direct IP only; friends outside the LAN need a forwarded UDP port or a VPN.
+- Remote wingsuits do not animate (still mesh copy).
+- No shared scoring mode; each player keeps their own run.
 
 ## Next steps
 
-1. Owner's go-ahead: copy the install to a test folder, pin and download BepInEx 5
-   (win_x64), create a release repo for the plugin code.
-2. Confirm the class and method names above still exist in build 2304714 (dnSpyEx or a
-   reflection dump from a BepInEx plugin).
-3. Port the mod to a BepInEx plugin: puppet per remote player (position plus rotation),
-   host-chosen seed, fix the bugs above, Steam lobby + P2P via the shipped Steamworks.NET
-   with direct IP as fallback, score submission off while connected.
-4. Two real clients on one PC with `tools/gameslot` and the bots harness; chaos runs.
+1. Steam transport: friends-only lobby plus `SteamNetworking` P2P with relay through the
+   game's shipped Steamworks.NET and the game's own app id, invite from the overlay. Needs
+   two Steam accounts or two PCs to test.
+2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
+3. Publish the plugin repo and a release; add it to the directory entry.
