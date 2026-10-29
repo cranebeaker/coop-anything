@@ -106,7 +106,8 @@ the source audit found (details in NOTES.md):
 - `python -I tests\run_steam.py ...`: one copy, Steam client signed in: Steam API ready,
   lobby created, session hosting over the Steam transport, one member, leave tears it down.
   `--join CODE` on a second PC and account: joins, gets the host's world, state and puppet
-  arrive. Not run yet: it creates a lobby on the owner's account.
+  arrive. Host mode ran on the owner's PC with their OK: `RESULT: PASS`, 15 checks (lobby
+  created, hosting over the Steam transport, teardown). The join mode has not run yet.
 - Last results, 2026-10-29, Steam build 2304714: run_two and run_portal `RESULT: PASS`
   (run_two: 377 and 399 states in 20 s, 10 puppet renderers each side; run_portal: 40
   checks), rerun after the Steam code landed with 0 warnings or errors in the logs. The run
@@ -133,7 +134,7 @@ repo and download: not published yet (see Next steps).
 
 ## Next steps
 
-1. Steam: run `tests/run_steam.py` on the owner's PC (lobby on their account), then a real
-   two-account run over the internet (owner plus a friend, or `--join CODE` on a second PC).
+1. Steam: a real two-account run over the internet (owner plus a friend through the overlay
+   invite, or `tests/run_steam.py --join CODE` on a second PC with another account).
 2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
 3. Publish the plugin repo and a release; add it to the directory entry.

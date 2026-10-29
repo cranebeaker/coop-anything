@@ -358,3 +358,9 @@ callbacks; nothing needs a second init.
 - A full two-player Steam run is impossible on one PC with one account (an account is in a lobby
   once); it needs the owner and a friend, or a second PC with a second account: `unknown` until
   then. Rich-presence "Join Game" in the friends list: `unknown`.
+- Run 9, `tests/run_steam.py` host mode with the owner's OK, 19:28 local time: `RESULT: PASS`, 15
+  checks. Steam API ready in the copy, `steamhost` created a friends-only lobby (id logged), the
+  session hosted over the Steam transport with one member and no error, the window showed
+  "Hosting for Steam friends", the invite button and the lobby code; `leave` tore the lobby down
+  and closed the session; the copy kept running. Screenshot `tests/shot-steam-host.png`. Still
+  `unknown`: an actual join and P2P traffic between two accounts.
