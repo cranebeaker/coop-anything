@@ -130,6 +130,9 @@ Newest first. One entry per discovery; link the NOTES section for details.
   moment steam_api's interface pointer exists (no mailbox needed); the stats file then appears in
   `test-saves/<name>`, and the Steam folder's files kept their times through 6 more boots. (`Class3.0.ulsave`
   there changed on 2026-10-28 22:42: the owner's own Steam session, not a test copy.)
+- Never start a test copy's exe directly (even to see whether it boots): a bare launch on 2026-10-29 had no
+  redirect and wrote `UserStats.cfg` into the Steam folder again. Launch through the agent or call
+  `save_redirect.install_early` right after the launch.
 - Verified (one PC, four copies): fresh 4-player New Story; Ed leaves and comes back with his agent run from the
   bundle (Ed again); the 4th player leaves and comes back (same character); soak 6/6 fight + search/loot
   cycles after both rejoins, three knock-downs and get-ups, all four games running.
