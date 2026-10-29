@@ -8890,3 +8890,32 @@
   sources:
   - https://github.com/vaiserYT/DeadCellsMultiplayerMod
   checked: '2026-10-23'
+- game: 'ReStory: Chill Electronics Repairs'
+  year: 2026
+  engine: Unity
+  project: ReStory Multiplayer
+  url: https://github.com/teecil/restory-multiplayer
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/restory-chill-electronics-repairs
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: partial
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 5 plugin for game 1.0.033r (Steam). Co-op in the host's save (shared room, stock, wallet, mail,
+    quests, courier boxes; each player's own bench; day ends when both agree) and a versus race mode. The other
+    player is shown as a name and avatar, not as a character in the shop. Two-copy bot tests 75/75 co-op, 70/70
+    versus; played over a VPN by two players. A Steam lobby route exists but was not tested with two accounts. MIT.
+  sources:
+  - https://github.com/teecil/restory-multiplayer
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/restory-chill-electronics-repairs
+  checked: '2026-10-30'
+  made_with_coop_anything: true
