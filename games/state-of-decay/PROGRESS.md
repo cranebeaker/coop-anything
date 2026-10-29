@@ -96,6 +96,14 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - simultaneous loot, rerun
+- `loot_two.py` (both joining players search the same container at the same moment), 4 runs in a fresh 3-player
+  session: both searches completed every time, but only one loot screen was queued and opened (for either
+  player); the other got none. Same container = one screen, as in single player (the host's container screen
+  is per container). The wrong-panel race the panel ring fixed needs two screens queued within ~0.25 s, i.e. two
+  different containers searched at once; only one container spot is known to the test tools (3276,3408), so that
+  case is not retested. Next: find a second container node near it (search nodes are not entities).
+
 ### 2026-10-29 - a killed joining game can come back
 - A joining game that was killed (not quit) could not rejoin while the host ran on: Windows queues an ICMP "port
   unreachable" for every packet the host still sends to the dead address, and the host socket's next recvfrom
