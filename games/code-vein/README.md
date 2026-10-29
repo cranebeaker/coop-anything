@@ -6,7 +6,7 @@
 | Versions tested | Steam (app 678960), ProductVersion 1.53.93354, game exe SHA-256 `8fa550fe00a8c28c8947a9511128c21924860be0bb4ebf5a09b8a6cf50e0e172` |
 | Projects | [eight8pac/codevein-coop](https://github.com/eight8pac/codevein-coop) (code, MIT; claim: cranebeaker/coop-anything#207); Nexus mod 192 (older, partial) |
 | QA level | none (manual two-PC sessions only) |
-| Last updated | 2026-10-28 |
+| Last updated | 2026-10-29 |
 
 ## Where things stand
 
@@ -114,6 +114,23 @@ back, so a plain level-up on a guest changes nothing. Level, gifts and equipment
 (`ServerInitialDataSync`, sent by `0x140465CA0`, guarded by `bIsInitialSynced`); a guest cannot resend it later. The menu's
 level-up message (`0x2c` to `HumanContextIF` components) did not reach the real level-up `0x1405A2E20` in co-op.
 
+**Mistle teleport.** The world is one persistent map (`/Game/Maps/MainGame`) with streamed stage sublevels, but a Mistle teleport
+is not a move: it is `CheckPointUIComponent:RequestPlayerSpawnToCheckPoint(FieldID, PointIndex)`, a fresh spawn of the player at the
+target Mistle. A solo trace of two teleports saw the characters re-spawn (initial data sync and gift equip multicasts) and no call
+to the deferred-teleport functions (`LIBDeferredTeleportManager:BeginDeferredTeleport`, `ScenarioActor:WaitForDeferredTeleportFinished`).
+`CharacterHelper:RequestPlayerTeleport(target, location, rotation, controller rotation, bSkipAnimation)` moves a player in place
+(used by another modder's test tool), and `CharacterHelper:RequestPlayerSpawn` spawns a fresh pawn for a remote controller.
+
+**Story cutscenes and memories.** Field cutscenes and boss intros already play with a guest present (both see them). The post-boss
+outro (e.g. `Cinematics/Scenario/St09_Mt_Snow/.../BP_ScenarioFlowDiagram_e06700_e06800`) is a chain of native latent waits on
+`ScenarioActor`: `WaitForPreparePolyFinished`, `WaitForLargePolyFinished`, `WaitForDeferredTeleportFinished`, then
+`ScenarioManager:PlayMemoryResidue` and `WaitForMemoryResidueFinished`, with `bSpawnPlayerOnExit`. With the boss-end kick removed the
+host hung on a loading screen at the outro start, before any memory object existed; which wait it hangs on is not known yet. The
+vestige restoration screen (`BP_BCRestorationUIComponent`) asks `AppSessionManager:IsCreateSession` and
+`AppOnlineWrapper:GetOnlineOtherPlayerNum`, shows "ending the distress signal / co-op" (`MultiplayText_0470`/`0480`), destroys the
+session and then jumps into the memory (`JumpToMemory`, `MemoryResidueId`). With a distress signal out, the player cannot try a
+memory alone, so this needs a guest to test.
+
 **Save system.** Story state is string-flag based (`UAppSaveManager::SetGameProgress`). Saves live in the per-user local app data
 folder, under `CodeVein\Saved\SaveGames\<account>\`. `-userdir` is ignored, so isolate test runs by swapping the folder. Copying
 `.sav` files between Steam accounts works with Steam Cloud off.
@@ -204,5 +221,7 @@ matching signal).
 1. Guest progression and shared boss rewards (CoopProgress by Rikka230, eight8pac/codevein-coop#1): two-PC test.
 2. Host death in a boss fight while the guest lives (the host spectates until everyone is dead).
 3. Gifts equip and chests for the guest (likely the same host-side handling as the level-up), enemy reset on every rest.
-4. Vestige restoration and memory sequences in co-op (one player goes through the memory, the other watches).
-5. Group teleport with a vote, a 3-player cap (native: the Steam session's player count or join acceptance), Home Base together.
+4. Vestige restoration and memory sequences in co-op (one player goes through the memory, the other watches): answer "no session"
+   to the restoration screen only; find the outro wait that hangs with a guest present.
+5. Group teleport: after the host's Mistle teleport, spawn each guest next to the host (`RequestPlayerSpawn`, as the group
+   respawn does); later a vote. Then a 3-player cap (native: the Steam session's player count or join acceptance), Home Base together.
