@@ -82,12 +82,12 @@ Highlights, each with the bug that led to it:
 ## QA
 
 - Headless: `dotnet run --project mod/RestoryMultiplayer.Tests -c Release` (network, sync rules, fuzzers, fake Steam link,
-  traffic at a fake 200 ms round trip). 235/235 on 2026-10-30.
+  traffic at a fake 200 ms round trip). 242/242 on 2026-10-30 (mod 0.13.2).
 - Two real game copies with bots (`scripts/run_coop_test.py`, `run_coop_ingame_test.py`, `run_race_test.py` in the
   mod repo): each copy is a copy of the Steam install with its own save folder; the bots move objects, take parts
   from the courier box, buy, deposit cash, take an e-mail order, complete a quest, pause, end the day by the
   bicycle and stamp, rejoin after a crash; the scripts compare both copies' rooms, stocks, wallets, boxes, mail and
-  furniture, and check the owner's real saves are untouched. On 1.0.033r, 2026-10-30: co-op 75/75, co-op from inside
+  furniture, and check the owner's real saves are untouched. On 1.0.033r, 2026-10-30, mod 0.13.2: co-op 78/78, co-op from inside
   a save 11/11, versus 70/70.
 - `scripts/check_game_members.py <decompiled game>`: the 61 game members the mod finds by name; after the
   1.0.033r update only one was gone (the contest neon shadow, removed by the developers).
