@@ -137,4 +137,6 @@ repo and download: not published yet (see Next steps).
 1. Steam: a real two-account run over the internet (owner plus a friend through the overlay
    invite, or `tests/run_steam.py --join CODE` on a second PC with another account).
 2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
-3. Publish the plugin repo and a release; add it to the directory entry.
+3. Publish: the plugin repo is tagged v0.2.0 and `SuperflightCoop-0.2.0.zip` with its SHA-256
+   is packaged; the owner pushes the repo, uploads the release, then the directory entry gets
+   the link.

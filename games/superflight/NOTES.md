@@ -364,3 +364,12 @@ callbacks; nothing needs a second init.
   "Hosting for Steam friends", the invite button and the lobby code; `leave` tore the lobby down
   and closed the session; the copy kept running. Screenshot `tests/shot-steam-host.png`. Still
   `unknown`: an actual join and P2P traffic between two accounts.
+
+### Release package (prepared, not published)
+`SuperflightCoop-0.2.0.zip` (DLL, README, LICENSE, INSTALL.txt) built from plugin tag v0.2.0
+(commit 795e01c) with `/pathmap` so neither the DLL nor the PDB carries a local folder path; the
+first package had the full PDB path inside the DLL's debug directory, caught by a byte scan of the
+zip for the username, `C:\Users` and `OneDrive` (now 0 hits; the PDB is not shipped). SHA-256 in
+the zip's `.sha256` file next to it. Publishing (GitHub repo, release, directory entry) is the
+owner's step: their GitHub account.
+
