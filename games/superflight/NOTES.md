@@ -252,3 +252,57 @@ mid-session, Steam transport (not written yet), two different PCs.
 
 Playbook note: the harness must warn the owner not to touch the game windows; the bot overrides
 steering, but Escape, Enter or the mod's own hotkeys reach the focused copy.
+
+## 2026-10-29 (later): level changes, the choice screen, and a patching bug
+
+### What the game does at a portal and after a crash (derived from IL)
+
+- `Portal.OnTriggerEnter` calls `LocalGameManager.OnPortalEnter` at once: no choice screen in the
+  game. `OnPortalEnter` = stats and achievement, `GenerateLevel(WorldManager.NewWorld())`, portal
+  sound, camera reset, player moved to the spawn, `ComboComplete`. `LevelBottomTrigger` does the
+  same through `OnEndPlaneEnter` when the player falls out of the level.
+- A crash: `PlayerMovement.OnCollisionEnter` → `Die` → `LocalGameManager.OnPlayerDeath` (state
+  Dead, crash sound, death animation, `RunEnded` → run-end canvas after 0.5 s). `QuickReset`
+  (private) = `quickResetFlag`, `CollectPoints`, `ResetPlayer` (new player object at the spawn,
+  scores zeroed, state Flying). `GetInput` only reacts to the reset and menu buttons while Flying.
+  The scene's serialized UI references only `LoadFlight`, `Quit` and `OpenGallery`.
+
+### Owner's design for level changes
+
+The host decides. A portal (or fall-out) opens a choice: proceed to the next level, or respawn in
+the current one, with a scoreboard. The host's proceed sends the new seed; a client keeps it
+pending and gets the same choice at its own next portal, fall-out or crash. Nobody is pulled out of
+a run. Built as `LevelChoice.cs`: Harmony prefixes on `OnPortalEnter` and `OnEndPlaneEnter` show
+the screen and pause (`Time.timeScale = 0`); a postfix on `OnPlayerDeath` shows it after a crash
+when a seed is pending (no pause); a prefix on `QuickReset` blocks the game's own respawn while the
+screen is up. Proceed on the host calls the real `OnPortalEnter` with a pass-through flag; on a
+client it calls `OnSeedEnter(new World(seed))`, or after a crash sets `WorldManager.currentWorld`,
+`LoadCurrentWorld()` and `QuickReset()`. Respawn = `OnSeedEnter(currentWorld)` (regenerate in
+place) or `QuickReset()` after a crash. The `WorldManager.NewWorld` prefix stays as the safety net
+(a client never gets a world the host has not been in). Protocol v2 adds each player's seed to the
+state message so the scoreboard can say "host's level" or "previous level".
+
+### The patching bug (observed, fixed)
+
+Until this point no Harmony patch had ever been live: `harmony.PatchAll(typeof(Patches))` patches
+only the type it is given, and the patches were nested classes inside it. The plugin logged
+"patches applied" and the earlier runs passed because none of them needed a patch (the seed was
+applied by a direct call on join, the bot reset by a direct call). The first portal test failed on
+every patched behaviour at once, which is what exposed it. Fix: `PatchAll(typeof(Plugin).Assembly)`
+and log `GetPatchedMethods()` count at start (9 methods), error when it is 0. The leaderboard block
+logged its first "upload skipped" only after this fix. Playbook lesson added.
+
+### QA (ran)
+
+- Run 5, `tests/run_portal.py` (first attempt): FAIL on every choice and seed check: the patches
+  were not live (see above). The test did its job.
+- Run 6, `tests/run_portal.py` after the fix: PASS, 40 checks, 17:11 local time, build 22fd796+.
+  Host portal → choice open, reason Portal, timeScale 0, seed unchanged, scoreboard 2 rows;
+  respawn → same level, timeScale 1, flying; portal again, proceed → new seed 487603592 →
+  1438637820, client got it as pending and stayed in its level, both still 2 players; client
+  crash → choice, reason Crash, not paused; respawn → same level, pending kept; client portal →
+  proceed → client in the host's level, pending cleared, session seed matches; client portal with
+  nothing pending → proceed acts as respawn, cannot get ahead of the host; both processes alive.
+  Screenshots of both choice screens taken through the bridge.
+- Run 7, `tests/run_two.py` regression with the hooks live: PASS; the bot now really steers (2898
+  and 3256 units in 20 s), 377 and 399 states, 10 renderers each side.

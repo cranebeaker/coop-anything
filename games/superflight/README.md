@@ -72,9 +72,15 @@ the source audit found (details in NOTES.md):
 - No rotation sync and sphere puppets: rotation is sent, puppets are mesh clones. Test:
   each copy draws 10 renderers of the other's wingsuit in a frame.
 - Direct IP only: still true in this version (Steam lobby next).
-- New: leaderboard uploads are blocked while in a session; a client's portal keeps it in
-  the host's world (Harmony prefix on `WorldManager.NewWorld`); the host's portal sends the
-  new seed to everyone (postfix on `LevelGenerator.GenerateLevel`).
+- New: leaderboard uploads are blocked while in a session.
+- New: level changes are a choice, not a yank. A portal or fall-out opens "Proceed to next
+  level / Respawn in this level" with a scoreboard (name, score, where everyone is). The
+  host's Proceed runs the game's own portal code and sends the seed; a client keeps it
+  pending and gets the same screen at its next portal, fall-out or crash. Nobody can get
+  ahead of the host. Test: `tests/run_portal.py`, 40 checks through the bridge.
+- Found while testing: Harmony's `PatchAll(Type)` does not patch nested patch classes, so
+  the first builds ran with no hook live. The plugin now patches the assembly and logs the
+  patched-method count (9) at start.
 - Found while testing: a Unity player pauses completely without window focus, so two copies
   on one PC need `Application.runInBackground = true` (the 2018 mod set it too).
 
@@ -86,10 +92,14 @@ the source audit found (details in NOTES.md):
   same world seed, both players move, both draw the other's wingsuit meshes, state keeps
   flowing, the host's copy of the client position is close, screenshots written, both
   still running.
-- Last result: `RESULT: PASS`, 2026-10-29, Steam build 2304714, build d9c7bbb, 20 s hold,
-  377 and 402 state updates received, positions 6.3 units apart, 10 puppet renderers drawn
-  on each side. The run without `runInBackground` failed (host paused), the mutation check
-  for that fix.
+- `python -I tests\run_portal.py ...`: host portal choice (paused, seed unchanged, scoreboard
+  rows), host respawn, host proceed (new seed sent, client only pending, not pulled out),
+  client crash choice (not paused), client respawn (pending kept), client portal proceed
+  (now in the host's level), client portal with nothing pending (cannot get ahead).
+- Last results, 2026-10-29, Steam build 2304714: both suites `RESULT: PASS` (run_two: 377
+  and 399 states in 20 s, 10 puppet renderers each side; run_portal: 40 checks). The run
+  without `runInBackground` failed (host paused) and the first run_portal failed on every
+  patched behaviour (patches not live): both are the mutation checks for those fixes.
 
 ## How to play
 
@@ -102,7 +112,9 @@ download: not published yet (see Next steps).
 
 - Direct IP only; friends outside the LAN need a forwarded UDP port or a VPN.
 - Remote wingsuits do not animate (still mesh copy).
-- No shared scoring mode; each player keeps their own run.
+- No shared scoring mode; each player keeps their own run. The choice screen's scoreboard
+  shows everyone's current run score.
+- The choice screen shows the level as a number, not the game's share code.
 
 ## Next steps
 
