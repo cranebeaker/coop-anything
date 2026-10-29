@@ -96,6 +96,14 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - crouch of the joining player on the host
+- Holding crouch (C) as the joining player kept its host copy in Dodge.Normal.Prep.DodgePrep <-> EvaluateNoTurbo:
+  the input-queue fix (same day) ORed the newest input into the merged one, so the one-frame "pressed" bytes stayed
+  set in the stand-in input until the next message and the dodge preparation restarted every tick instead of
+  turning into a crouch. `peer_input` now merges everything but the newest entry and applies that one whole on
+  the next tick. Verified on one PC: host copy and client both go DodgePrep -> Stealth.Basic.Idle / Movement.Creep
+  / Walk; backlog stays bounded (max 6 with constant mouse movement, drained every tick).
+
 ### 2026-10-29 - rucksacks on the ground on the joining machine
 - Dropped supply rucksacks (class UL_Rucksack, created by UL on the host only, e.g. from the save) were missing on
   the joining machine (owner's play test). New `rucksack_sync.py`: every 2 s the host sends its visible rucksacks
