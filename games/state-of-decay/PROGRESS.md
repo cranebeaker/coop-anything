@@ -96,6 +96,20 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - host crash while a third player joined; mailbox wait
+- The host crashed (dump in test-install/USER) while a third player was being set up: access violation writing
+  [0+4] at 0x170B3AE, in the fire handler of UL action RTSResourceNodeQueryMode (type 0x72, 0x170B340), whose
+  record lookup (0x164A910) failed for the new player's copy (record not bound yet) and wrote through null.
+  `crash_guards.rts_query_guard` returns from the handler on a failed lookup; installed at boot. The next fresh
+  3-player session joined cleanly.
+- The crash showed as "join failed: mailbox busy" (the host's main thread sat in CryEngine's "Crash Dump Error!"
+  dialog). `sodlib` calls now wait for a pending call to finish (up to the call's timeout) instead of failing at
+  once, so a call that timed out during a hitch no longer fails the next one.
+- `loot_two.py` can now use two different containers (search nodes 0x5BD and 0x5BB, 3.6 m apart; positions from
+  [[0x1E80E80]] + 0x18 * node). In the later sessions no player, the host's included, got a search context at
+  those containers any more (also after restoring the 2026-10-28 host save), so the two-container run is still
+  missing; it needs another searchable spot.
+
 ### 2026-10-29 - simultaneous loot, rerun
 - `loot_two.py` (both joining players search the same container at the same moment), 4 runs in a fresh 3-player
   session: both searches completed every time, but only one loot screen was queued and opened (for either
