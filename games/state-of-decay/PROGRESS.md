@@ -110,6 +110,10 @@ Newest first. One entry per discovery; link the NOTES section for details.
   related); no hurt animation on the joining player's screen when zombies hit it (its host copy plays
   Reaction.Core states, nothing sends them back); zombie hit reactions late and dead zombies sink into the ground
   (zombie clips are replayed on the joining machine with a delay).
+- Rejoin after a killed (not quit) joining game on the same PC failed twice: the host had dropped the old
+  connection ("Unreachable address ...:56219") and ignored the new game's packets from the same address and port
+  (warning "32769 from ...:56219"; the joining game seems to use the same local port every start). A clean quit
+  (the second PC: "Remote disconnected: Nub destroyed") and a join from another address were fine. Open.
 
 ### 2026-10-29 - zombies around the joining player; low-detail zombie bodies
 - No zombies around the joining player until the host's player came near (second-PC test): the extra population
