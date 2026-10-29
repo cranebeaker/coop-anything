@@ -109,7 +109,11 @@ Newest first. One entry per discovery; link the NOTES section for details.
   verified: the list shows only on the host now. UL action type names are read from the type table
   (0x1F378A8, 0x24 per type, name pointer at +0x20); list in `local/action_types.txt`.
 - Green see-through boxes on bases on the joining player's screen (host: none) are not entities with a different
-  hidden state (compared every entity within 15 m on both); still open.
+  hidden state (compared all ~1770 entities on both machines, one log line each: long log lines get cut) and no
+  debug cvar differs; still open (base-building markers? reproduced at the ranger-station base).
+- Same comparison: 15 survivor NPC bodies (ProtoAlly) are hidden on the host but shown on the joining machine,
+  where nothing animates them; a likely part of "NPCs in T-pose" (UL's NPC body streaming only runs on the host).
+- The joining player's radar shows no map at the base while the host's does (reproduced on one PC).
 - A host save written during a co-op session once failed to load (Continue Story: the game stopped right after
   the network setup, before loading the level); New Story worked, a later co-op save loaded. Kept for analysis.
 
