@@ -117,6 +117,11 @@ Newest first. One entry per discovery; link the NOTES section for details.
   scripts the agent needs, `singleplayer.lua`, `user.cfg` and a README; `coop_firewall.ps1` opens UDP 64087,
   UDP 64091, TCP 64092 on private networks (not run here). A joining copy run from an extracted bundle joined,
   left and came back like the others.
+- Tried a stand-in second machine: the WSL virtual machine on the same PC (its own IP on a separate virtual
+  network). It cannot reach the host at all (no ping, no TCP connection to the agent's control port 64092,
+  which listens on every interface): WSL's Hyper-V firewall blocks traffic coming in from the VM by default,
+  and the VM has no UDP tool for the discovery probe. Testing across machines still needs a real second PC
+  (or firewall changes on the host PC), with `coop_firewall.ps1` run on the host.
 - The agent retries the connect once (one rejoin's connection was released by the game right after the server's
   settings arrived, no reason logged; the next attempt got in).
 - Steam stats file: every test-copy boot wrote `UserStats.cfg` (game stats, not the save) into the owner's Steam
