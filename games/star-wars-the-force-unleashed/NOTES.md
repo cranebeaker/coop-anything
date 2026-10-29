@@ -871,6 +871,26 @@ Reverse-engineering maps (agents, static, partly unverified; full text in the te
   (above), FUN_007dbd00 (flag 0x40 when far from player 0), FUN_0089a500/0089a650 (reactions to player 0's
   attacks), IsPlayerMeleeAttackDetected, GetPlayerBlockDuration.
 
+## Enemies attack puppets; client grip (2026-10-29)
+
+- **Cause found:** the AI attack check FUN_007f21a0 asks a player target "may you be attacked"
+  (FUN_007b7cf0(target) -> FUN_007bdd80). That query reads the per-controller entry at 0x7bdd8d, one of the four
+  unchecked reads we redirect to a zeroed dummy for controllers >= 1, so it said no for every puppet: AIs locked
+  on, held at ~2.5 m, never swung. Found live with hardware breakpoints (tfu-coop `coop_watch`: DR0-3 in every
+  thread, write / execute / return-site kinds, hits keyed by EIP and ECX): the check returned 0 for the puppet's
+  attacker every time, 1 for every other AI (m52). Factions, volume masks, player-map flags, the GameStarwarsComp
+  map and the `*0x012f1a14` "Player" registry were all identical for player 0 and the puppet (m42-m49).
+- Fix (tfu-coop c40c44c): that site gets controller 0's real entry (a read-only query). `tools/m53-attacked-run.sh`
+  (puppet 62 m from the host, test switch `coop_attack_query_own(1)` as control): control 0 damage, fixed 1415
+  (ordered) / 1242 (AI picked the puppet itself, `NATURAL=1`), host untouched. Owner confirmed damage in play;
+  health set on the host reaches the client's player. Earlier "the puppet got hit" results were collateral from the
+  host's own attacker (owner's suggestion to separate the players; `game.GetLastAttackerID`).
+- Client grip: the puppet's grip on the host always worked (5 s hold, +2.1 m). The client's own grip on its brainless
+  copy broke within 0.1-0.2 s. Not syncing a gripped copy was not enough; a grip on a brainless AI drops at once.
+  Brain on while gripped: the copy rose 17.1 -> 20.9 m and followed the stick; owner: "it works" (922ae98, 792a1b2).
+- Open from the same playtest: enemy attacks show no animation on the client (copies only play walk/run/idle), and
+  areas past a gate the host has not reached are empty (only the host's progress spawns enemies).
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
