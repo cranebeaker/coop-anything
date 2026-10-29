@@ -96,6 +96,22 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - zombies around the joining player; low-detail zombie bodies
+- No zombies around the joining player until the host's player came near (second-PC test): the extra population
+  pass `zm_focus` runs around each joining player shared the manager's ambient-spawn timer (+0x20) with the host's
+  pass, which had just reset it after spawning, so the extra pass never reached its ambient spawns (the first half,
+  32 spawn zones at 0x1E512A0, was empty). The extra pass now starts from the timer value the host's pass started
+  from (and the host's value is put back after): 0 -> 1-2 zombies within 100 m of the joining player 250 m from the
+  host (one PC, two spots, 60 s each).
+- Beyond ~300 m from the host's camera nothing spawns even with the cap (`POP_MAX_DIST`) raised to 1000 m (no
+  crash either, fault trap on): the ambient spawn candidates (128 entries at 0x1E57104, stride 0x34) come from the
+  level data streamed around the host's camera. Zombies far from the host need the host to stream around the
+  joining players; not done.
+- Low-detail zombies on the joining machine: zombie bodies there are whole-character files picked per gender
+  (`hud_relay.ZOMBIE_BODIES`, all `.../low/low.cdf`); the host assembles each zombie from detailed parts (skeleton +
+  body .chr + head/hair) instead. Fix needs the host's part list per zombie sent and attached on the client (or
+  CDFs built from the detailed parts; the pak's .cdf files are binary XML). Not done.
+
 ### 2026-10-29 - survivor bodies and base markers on the joining machine
 - Green see-through boxes and floor outlines at bases (joining machine only): the base's `FacilitySocket` entities
   (e.g. Facility_RangerStation_Indoor) draw placeholder models that UL's base code, host-only, keeps out of sight.
