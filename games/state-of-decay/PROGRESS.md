@@ -96,6 +96,23 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - fixes from the second-PC play test (movement, emote list)
+- Input queue overrun: each machine queues the other players' inputs (chat messages, sent whenever they change)
+  and took one per frame. A sender running more frames than the receiver (a faster PC; a mouse that never stops
+  moving) outran it: measured on one PC with constant mouse movement, ~42 inputs/s sent, ~36 taken, backlog 52
+  after 8 s in a 16-entry ring, so moves arrived late and overwritten (likely the second PC's crouch that never
+  showed on the host and the twitching). `peer_input` now takes everything queued each frame: sticks and values
+  from the newest input, button bytes ORed so a one-frame press still counts. Backlog stays 0; crouch, crouch-walk,
+  search and take still work (soak: 2/2 loot cycles).
+- The host's emote list (Caps Lock) opened on the joining player's screen and stayed: the client's copy of the
+  host's state machine ran UL action `SocialDisplayMode` (0x81). Added to `remote_fx`'s local-only actions;
+  verified: the list shows only on the host now. UL action type names are read from the type table
+  (0x1F378A8, 0x24 per type, name pointer at +0x20); list in `local/action_types.txt`.
+- Green see-through boxes on bases on the joining player's screen (host: none) are not entities with a different
+  hidden state (compared every entity within 15 m on both); still open.
+- A host save written during a co-op session once failed to load (Continue Story: the game stopped right after
+  the network setup, before loading the level); New Story worked, a later co-op save loaded. Kept for analysis.
+
 ### 2026-10-29 - what the player on the second PC saw (owner's play test)
 First real play on a separate PC, playing Ed (the joining player). Not seen in the one-PC tests (those were
 checked mostly from the host and by scripts):
