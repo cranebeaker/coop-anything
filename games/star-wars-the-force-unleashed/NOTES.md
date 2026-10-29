@@ -829,6 +829,48 @@ each with its cause and the change (tfu-coop commits 5636457 .. 2285923).
 Also found: test drivers that launch copies must close leftover copies first (m31t, m7l9 failed on locked
 logs); `m5-run.sh` and `m9-menu-run.sh` now do.
 
+## Second playtest and "why don't enemies attack puppets" (2026-10-29)
+
+Playtest (owner on the client, host idle): invisible walls gone (tfu-coop 9c38d08); living copies block, dead ones
+do not (547f7d1, `tools/m26-copy-walk-run.sh` now checks both); copies that ignore `game.Kill` (one 449 times) die
+through `game.OverrideHealth(r, 0)` (also kills a brainless AI and an AI with its brain on that ignored Kill).
+Past a gate the host had not reached, the host has no enemies at all; the client fought its own culled AIs that
+level scripts had made visible or revived (32fdf6c re-hides and re-kills them every pass). Enemies never attack
+the client; grip "locks on and stops".
+
+Observed, live (host, puppet in slot 1), debug natives in tfu-coop `redirect/coop_players.cpp` (coop_comp,
+coop_charobj, coop_dbg_groups, coop_volmask, coop_social, coop_call1, coop_aicomp, coop_poke):
+- `ai.AttackTarget(wookiee, puppet)`: target set, Wookiee holds at ~2.0-2.5 m, never swings (0 damage in 8 s),
+  also 0.9 m from player 0. Same Wookiee on player 0: closes to ~1 m, ~700 damage in 10 s. `game.DoDamage` on the
+  puppet works.
+- Identical for host and puppet: `social.GetRenFactionId` (0; Wookiees 6, troopers 7); `volume.GetContaining`;
+  player component +0x10 own ren, +0x14 = 1 (the FUN_007b7cf0 filter, 262 callers), +0x18 controller;
+  GameStarwarsComp present in the `[0x012a0c04]+0x10` map (FUN_0047f300; vtbl+0x20 is only an attacker counter);
+  volume category mask 0x1000 (kPlayer) on both; entry in the registry at `*0x012f1a14` with group 0 (the real
+  spawn's FUN_00436d60 + FUN_00799ef0("Player"); calling them for the puppet changed nothing, m46).
+- Aim mode at player component +0x370 (aim ray, FUN_0088c4b0) is 1 (ren facing) for both. Puppet grip passes
+  with the host camera turned away (`CAMERA_AWAY=1 tools/m13-grip-run.sh`, m43away; target y 13.7 -> 16.1), so the
+  host camera is not what breaks the client's grip in play. Not yet known what does.
+- Brain diff (m47, `lua/m47_brain_diff.lua`): attacker of player 0 vs attacker of the puppet, after 3 s:
+  aiComp+0x598 target correct in both; aiComp+0x208 3 vs 1; brain(+0x10c)+0x250 2 vs 1, +0x2f0 3 vs 1, +0x430 0 vs 1,
+  +0xad0 3 vs -1 (chosen ability, FUN_007ddd60), +0xb8 1 vs 0, +0xb90.. an embedded Ronin::AIBrain (vtbl 0xfbb924)
+  live only for the player-0 attacker. FUN_007dfac0 (ability picker: 16 abilities of 0xa0 at brain+0xd0) skips all
+  while brain+0xb8 & mask == 0, but forcing +0xb8 = 1 every frame did nothing (m48): a symptom; the brain never
+  enters its combat state for a puppet target.
+- Ruled out: FUN_0084c810 (only player 0, but for relation 1 = ally).
+
+Reverse-engineering maps (agents, static, partly unverified; full text in the test folder
+`ghidra-agents/<ai|ai2|aim|triggers|triggers2|players|spawn>/FINDINGS.md`, not in this repo):
+- Volumes: per-frame VolumeTask, ren mask & volume flags (kPlayer 0x1000, kNPC 0x2000, kProp 0x4000; mask set by
+  FUN_00b0b040), "inside"/"outside" to the volume owner, Lua waiters and EDL triggers (FUN_00af61e0 needs a ren in
+  the player map). No player-0 test found in that path; the puppet passes all its filters. Why a puppet ahead of
+  the host starts no encounter: unknown (next: level scripts, spawner activation).
+- Aim: targeting object at player component +0x360, FUN_007acd90 -> FUN_0088fd20 -> FUN_0088c4b0 (ray, mode +0x370)
+  + FUN_0088ea80 (scoring); camera getter FUN_00c35100 falls back to camera 0 for controllers >= 1.
+- Player-0 inventory: GetPlayer(0) at 95 sites, 21 direct camera-0 reads; AI uses of player 0: perception of allies
+  (above), FUN_007dbd00 (flag 0x40 when far from player 0), FUN_0089a500/0089a650 (reactions to player 0's
+  attacks), IsPlayerMeleeAttackDetected, GetPlayerBlockDuration.
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
