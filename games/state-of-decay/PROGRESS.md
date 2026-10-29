@@ -96,6 +96,19 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - survivor bodies and base markers on the joining machine
+- Green see-through boxes and floor outlines at bases (joining machine only): the base's `FacilitySocket` entities
+  (e.g. Facility_RangerStation_Indoor) draw placeholder models that UL's base code, host-only, keeps out of sight.
+  `coop_setup.hide_facility_sockets` turns their slots off on the joining machine at join; verified at the ranger
+  station. (Facilities built later on the host are not handled yet.)
+- Survivor NPC bodies (ULNPCnn, class ProtoAlly; same names and synced positions on every machine): new
+  `npc_sync.py`. zombie_sync's clip hook also logs "ULNP..." entities (marked with a flag bit); once a second the
+  host sends every body's hidden state, loop clip and last clip (RMI `ClCoopNpcs`, new handler in
+  `singleplayer.lua`, `patch_lua_npcs.py` adds it to every install). Verified: hidden states match on both
+  machines (15 differed before); survivors at the base play the host's clips (e.g. Interact_vigilant_low_loop)
+  instead of standing in T-pose. Survivors animated another way (no clip through that helper) are not covered.
+- Second-PC update: `sod-coop-pc2-update.zip` (scripts + `singleplayer.lua`); every machine needs the new Lua.
+
 ### 2026-10-29 - fixes from the second-PC play test (movement, emote list)
 - Input queue overrun: each machine queues the other players' inputs (chat messages, sent whenever they change)
   and took one per frame. A sender running more frames than the receiver (a faster PC; a mouse that never stops
