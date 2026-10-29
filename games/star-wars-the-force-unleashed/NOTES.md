@@ -785,6 +785,50 @@ clients are connected.
 - Pressing Back on the pad opens a menu that keeps the player from acting until B closes it; tests must
   not send Back.
 
+## First human playtest, one PC, two copies (2026-10-28)
+
+The owner played the client with a controller while the host stood idle; findings in the order reported,
+each with its cause and the change (tfu-coop commits 5636457 .. 2285923).
+
+- Controller drove both copies, "laggy, fights my input": every copy reads XInput pad 0. DLL option
+  `real_pad=0` (coop.ini) ignores physical pads on that copy. Reported fixed.
+- A client jump also made the host jump. Cause: the host's puppets shared the host's per-controller
+  object and profile (`coop_controller_share`/`coop_player_share`, added for pad Force Push). Measured with
+  `tools/m22-jump-run.sh`: host rose 1.18 m on a client jump with the sharing, 0 m without (sticks were
+  not affected, `tools/m21-stick-run.sh`). Sharing is now opt-in (`puppet_force=1`); the host instead calls
+  `player.ForcePush(slot)` when a puppet's B goes down. Push (trooper thrown 12 m) and Grip still pass.
+- Walking into the host's puppet on the client felt like a juddering wall (the pushed puppet is snapped
+  back). `physics.DisableCollisionWith` for every pair of players/puppets, every 2 s.
+  `tools/m24-walkthrough-run.sh`: control 7.62 m, through the puppet 7.87 m; without 5.05 m.
+- The client's character juddered on the host's screen. Two causes: snapping back at 0.5 m drift
+  (`tools/m28-puppet-smooth-run.sh`: 10 jumps > 0.4 m in 8 s -> 0 after pulling 20% of the gap per frame,
+  jumping only beyond 2 m), and turning to the owner's yaw on almost every frame while running (only
+  while the owner stands still now). Reported smooth.
+- Enemies on the client "don't react, don't die, drop orbs, highlight beside them": those were the
+  client's own spawns. The host's level spawns enemies only for the host's player; `coop_enter_zones` on
+  the puppet spawned nothing (m25). Client copies' brains are off, and a brainless AI ignores
+  `game.Kill` (stays alive) or dies without ragdoll (m23: brain off, then on, then Kill = dead with
+  ragdoll; the client's 30-frame `DisableAllBrain` also stopped a death on the next frame). Copies now get
+  their brain for the kill and keep it 5 s. `location.SetPosition` moves only the model;
+  `location.Teleport` moves the physics body too (m25: a teleported AI was pushed 6 m), so copies are
+  teleported. Not yet confirmed on screen by the owner.
+- "Stuck on invisible walls" on the client only (the host played normally in the same place; a 10 Hz
+  trace showed the player held at x = 179.65 and pushed back with the stick forward). Turning off
+  collision between the client's player and every AI made it "normal" once, but it came back. Raycasts:
+  `physics.RayCast(from, to, ignoreRen, flags)` returns a table {success, dist, pos, norm, ren_id}; flags
+  0 hits nothing, 1 or 65535 hit. On the client they hit nothing at all (also from inside ronin.Update),
+  and the client's console sees `ren.GetPlayer(0)` at (0,0,0): unexplained.
+  Current theory, not verified: a client ahead of the host triggers its own encounters, which wall the
+  player in until their enemies die, and those enemies were hidden but alive. Change (tfu-coop 9c38d08): the
+  client kills its own unpaired AIs unseen instead of hiding them. m6 passes; `tools/m7-wave-run.sh`
+  passed with it off (m32w4base) and on (m32w5kill: 17 of 17 paired); two earlier runs with it on saw
+  no host wave, so that test is flaky on the host side. Whether it stops the walls: not yet played.
+- Workaround: on the client, holding D-pad Up for 1 s teleports the player next to the host
+  (m31: 15.46 m -> 1.00 m).
+
+Also found: test drivers that launch copies must close leftover copies first (m31t, m7l9 failed on locked
+logs); `m5-run.sh` and `m9-menu-run.sh` now do.
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
