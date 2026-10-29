@@ -34,6 +34,8 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Starting a session from the game's main menu | Works: "Co-op Play" item with Host Game (Continue / New Story) and Join Game (hosts found on the local network); `coop_agent.py` per copy runs the co-op setup on each side (2026-10-28) |
 | Characters | New story: host Marcus, player 2 Ed (Ed's own survivor record, his NPC body hidden everywhere), players 3-4 random generic survivors no record uses, never a story character (`maya_record.pick_def`) |
 | Up to 4 players | Works (2026-10-28): host + 3 joining players through the menu; every co-op module handles every joining player; 20-minute 4-player soak 10/10 fight + search/loot cycles; a player leaving mid-game leaves the others playing |
+| Leaving and coming back | Works (2026-10-29): a player who left frees its slots everywhere; one who comes back (or the next one) takes the free slots and the departed player's character (Ed stays Ed) |
+| Separate PCs | Prepared, not tested (one PC here): `local/make_coop_bundle.py` builds the files another PC needs (README inside), `coop_firewall.ps1` for the host PC, `coop_hosts.txt` when broadcasts don't get through |
 | Session stability | Asserts and missing-entity updates no longer kill the host (`crash_guards.py`); 25-minute play soak 19/19 cycles without a crash |
 | Vehicles | Untested in co-op: the only vehicle at the story start is locked for both players |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
@@ -93,6 +95,39 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-29 - rejoining, simultaneous loot, other PCs, Steam stats file
+- Rejoining: every per-player table frees a departed player's entry (actor/entity id pair: a returning player can
+  get a new actor at the old address) and reuses it (`peer_input`, `player_sm`, `search_ctx`, `downed`,
+  `pause_sync` - its wish becomes "no objection", `weapon_relay`, `door_sync`); the per-player hook blocks of
+  `zombie_targets`/`peer_melee`/`kill_counts` are forgotten and disabled, `remote_fx` wrappers keep the actor in a
+  cell that is cleared, the turn clamp is reinstalled. The host agent tells the remaining agents
+  (`player_left`); the next joiner takes the departed player's character (`host_pick(prefer=...)`).
+- Crashes found while players left and came back (`crash_guards.py`): the players category list (capacity 1) got
+  every network player on a joining machine and the game wrote past its arrays ("Buffer overflow in entity db"
+  assert, garbage actor pointers): a full list now skips the add, as on the host (`entitydb_full_guard`, at boot);
+  a category remove callback on a departing actor (`category_remove_guard`); the NPC-list entry the host keeps for
+  a joining player is removed from inside the game's own EntityDbRemove, before the actor is freed.
+- Simultaneous loot: the host keeps one copy of the backpack-panel capture per queued loot screen (8 slots);
+  test `local/loot_two.py`: two players search the same container at once, each screen went to its own player
+  with its own panel (2 of 3 runs; in the third only one search completed, nothing to compare).
+- Other PCs (not testable on one PC): LAN search sends directed broadcasts for every interface's real subnet
+  (from ipconfig, any mask) and probes the addresses in `coop_hosts.txt`; per-process state moved out of the
+  scripts folder (%TEMP%\sod-coop, a folder per process id + creation time); `make_coop_bundle.py` packs the 40
+  scripts the agent needs, `singleplayer.lua`, `user.cfg` and a README; `coop_firewall.ps1` opens UDP 64087,
+  UDP 64091, TCP 64092 on private networks (not run here). A joining copy run from an extracted bundle joined,
+  left and came back like the others.
+- The agent retries the connect once (one rejoin's connection was released by the game right after the server's
+  settings arrived, no reason logged; the next attempt got in).
+- Steam stats file: every test-copy boot wrote `UserStats.cfg` (game stats, not the save) into the owner's Steam
+  save folder about 8 s after launch, before `save_redirect.install` ran (~18 s); probably since the redirect
+  existed (2026-10-27). `save_redirect.install_early` now patches ISteamUser's GetUserDataFolder slot from the
+  moment steam_api's interface pointer exists (no mailbox needed); the stats file then appears in
+  `test-saves/<name>`, and the Steam folder's files kept their times through 6 more boots. (`Class3.0.ulsave`
+  there changed on 2026-10-28 22:42: the owner's own Steam session, not a test copy.)
+- Verified (one PC, four copies): fresh 4-player New Story; Ed leaves and comes back with his agent run from the
+  bundle (Ed again); the 4th player leaves and comes back (same character); soak 6/6 fight + search/loot
+  cycles after both rejoins, three knock-downs and get-ups, all four games running.
 
 ### 2026-10-28 - up to 4 players
 - The network side already took more players: a third copy joined after one more join-crash guard
