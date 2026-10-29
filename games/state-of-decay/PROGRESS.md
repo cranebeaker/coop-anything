@@ -134,6 +134,11 @@ Newest first. One entry per discovery; link the NOTES section for details.
   connection ("Unreachable address ...:56219") and ignored the new game's packets from the same address and port
   (warning "32769 from ...:56219"; the joining game seems to use the same local port every start). A clean quit
   (the second PC: "Remote disconnected: Nub destroyed") and a join from another address were fine. Open.
+  Reproduced on one PC (20:40): a restarted joining game connects from the same local UDP port as the killed one
+  (60818 both times; 56219 in the earlier case), and the host answers each attempt with warning 32769 for that
+  address. Lowering the host's `net_backofftimeout` (360 s) to 5 s did not help, so the host seems to keep the dead
+  connection's address rather than a timed ban. Ideas: make the joining game bind another local port, or clear
+  the host's entry for the departed player's address.
 
 ### 2026-10-29 - zombies around the joining player; low-detail zombie bodies
 - No zombies around the joining player until the host's player came near (second-PC test): the extra population
