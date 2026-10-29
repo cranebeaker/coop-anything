@@ -4862,24 +4862,34 @@
   other_urls:
   - https://github.com/mashburnn/tailcoop
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
-    story: false
+    players_visible: 'yes'
+    story: partial
     enemies: partial
-    world_state: false
+    world_state: partial
     items: per-player
   players: '2'
   networking: direct-ip
-  open_source: partial
-  last_activity: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
   qa: none
-  notes: Experimental two-player over LAN, port forward or hole punching; enemies split between machines while shrines,
-    upgrades and saves stay separate. TailCoop is a second two-player mod over Tailscale covering Training Room
-    and Arena only.
+  notes: 'Two-player co-op through a dsound.dll proxy next to Sifu-Win64-Shipping.exe, MIT licensed. Player pose,
+    attacks, health, guard and knockdown sync, as do enemy position, health, guard, death and hit reactions, and a
+    level change pulls the joiner along. Each machine simulates part of the enemies, the host owns enemy health and
+    death, and the joiner reports hits as running totals so lost or duplicated packets are harmless; packets carry a
+    truncated HMAC-SHA256 signature. Shrines, upgrades, age, death counter and saves stay separate, the partner
+    weapon is reported but not equipped, dodge, guard and parry do not travel as reliable events, and bosses and
+    cutscenes are untested. Transport is UDP 7777 over Tailscale, LAN, VPN, a forwarded port or hole punching. The
+    address table is per executable (builds/steam.json and builds/epic.json), and the mod checks the exe build
+    fingerprint and refuses to run on a build it has never seen, so both players need the same game version.
+    TailCoop is a second two-player mod over Tailscale covering Training Room, Arena and PvP only, not story mode.'
   sources:
   - https://github.com/Zanci19/SifuCoop
+  - https://github.com/Zanci19/SifuCoop/blob/main/md/SETUP.md
+  - https://github.com/Zanci19/SifuCoop/commits/main
   - https://github.com/mashburnn/tailcoop
-  checked: 2026-10-16
+  checked: 2026-10-29
 - game: 'Batman: Arkham Knight'
   year: 2015
   engine: Unreal Engine 3
