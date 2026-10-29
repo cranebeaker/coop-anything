@@ -96,6 +96,21 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - second play test on two PCs (updates copied to the second PC over its share)
+- Joined from the second PC again (20:01), left at 20:07; a local copy then joined into the same slot (rejoin) fine.
+- Locked doors: the joining player shoulder-broke a locked door; its host copy went Locked.Start -> Loop -> Slam ->
+  Breach in ~2 s (state log `local/state_logger.py`).
+- Emote list on the joining player's own machine opened and never closed: the list is shown while bit 2 of the
+  request mask 0x1F35B2C is set and only hidden when bit 4 ("allowed") is set too (0x16513B0); bit 4 is set by
+  host-side game code (0x14757B2). `coop_setup.enable_emote_list` sets it at join (0x1651B70(4)); verified: shown
+  while Caps Lock is held, hidden on release, a tap no longer leaves it open.
+- Still open from this test: crouch still shows standing on the host (its host copy entered Stealth only for a
+  moment, between dodge rolls); after opening a door the player "flies" a bit and can't sprint (on one PC: sprinting
+  then loops Fall.FromRunning <-> Land.Running without falling, also once before any door, so not proven door
+  related); no hurt animation on the joining player's screen when zombies hit it (its host copy plays
+  Reaction.Core states, nothing sends them back); zombie hit reactions late and dead zombies sink into the ground
+  (zombie clips are replayed on the joining machine with a delay).
+
 ### 2026-10-29 - zombies around the joining player; low-detail zombie bodies
 - No zombies around the joining player until the host's player came near (second-PC test): the extra population
   pass `zm_focus` runs around each joining player shared the manager's ambient-spawn timer (+0x20) with the host's
