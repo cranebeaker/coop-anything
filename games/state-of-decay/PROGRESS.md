@@ -96,6 +96,14 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - rucksacks on the ground on the joining machine
+- Dropped supply rucksacks (class UL_Rucksack, created by UL on the host only, e.g. from the save) were missing on
+  the joining machine (owner's play test). New `rucksack_sync.py`: every 2 s the host sends its visible rucksacks
+  (position, yaw; RMI `ClCoopRucksacks`, handler in `singleplayer.lua` via `patch_lua_npcs.py`); the joining
+  machine moves a pool of non-physical look-alikes (BasicEntity + `.../rucksack/dropped/rucksack.cgf`, needs
+  `LoadObject`) onto them and hides the rest. Verified on one PC: 5 of 5 at the host's positions. Not yet: the
+  world markers the host draws over them; picking one up still goes through the player's host copy (untested).
+
 ### 2026-10-29 - second play test on two PCs (updates copied to the second PC over its share)
 - Joined from the second PC again (20:01), left at 20:07; a local copy then joined into the same slot (rejoin) fine.
 - Locked doors: the joining player shoulder-broke a locked door; its host copy went Locked.Start -> Loop -> Slam ->
