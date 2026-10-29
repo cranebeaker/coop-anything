@@ -135,7 +135,7 @@ SIGNATURES = [
     ("REDengine 4", None, lambda f, d: _ext(f, ".archive") if "archive" in d else None),
     ("LithTech", None, lambda f, d: _ext(f, ".rez")),
     ("Godot", None, lambda f, d: _magic(f, ".pck", b"GDPC")),
-    ("GameMaker", None, lambda f, d: _has(f, "data.win")),
+    ("GameMaker", "GameMaker", lambda f, d: _has(f, "data.win")),
     ("RPG Maker", None, lambda f, d: _ext(f, ".rgss3a", ".rgss2a", ".rgssad") or _has(f, "rpg_core.js", "rmmz_core.js")),
     ("XNA / FNA / MonoGame", None, lambda f, d: _has(f, "fna.dll", "monogame.framework.dll", "microsoft.xna.framework.dll")),
     # Java games ship a .jar plus a bundled runtime (jre or jdk folder), or a launcher that starts java.exe.

@@ -8890,3 +8890,37 @@
   sources:
   - https://github.com/vaiserYT/DeadCellsMultiplayerMod
   checked: '2026-10-23'
+- game: Forager
+  year: 2019
+  engine: GameMaker Studio 2 (YYC)
+  project: Forager Co-op Mod
+  url: https://github.com/melogo5/forager-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/forager
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: 2-4
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Online co-op for up to 4 players (host and 3 guests) as one native version.dll next to Forager.exe (proxy
+    DLL with MinHook hooks into the YYC-compiled game; no game files changed). Steam build 6160665 only (in-game
+    4.1.9). Join by Steam invite (friends-only lobby, Steam P2P), LAN discovery or IP. Host-authoritative world; other
+    players are puppet objPlayer instances, and the host runs a guest's actions through the game's own code by
+    swapping the instance PlayerFind returns. Shared world, enemies, buildings, chests, islands, time and weather, level
+    and XP, coins, skill tree, museum, NPC quests and dungeons; inventory, gear, familiars and costume per player.
+    Classic worlds only; the Void trial does not work in co-op. Scripted tests drive 2 to 4 real game clients on one PC
+    with PASS/FAIL checks and mutation twins; nine two-PC playtests, eight over Steam. 3 and 4 players tested only as
+    copies on one PC. MIT. Write-up in games/forager.
+  sources:
+  - https://github.com/melogo5/forager-coop
+  - https://github.com/melogo5/forager-coop/releases/tag/v0.1.1
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/forager
+  checked: '2026-10-30'
