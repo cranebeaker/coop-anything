@@ -96,6 +96,21 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - a killed joining game can come back
+- A joining game that was killed (not quit) could not rejoin while the host ran on: Windows queues an ICMP "port
+  unreachable" for every packet the host still sends to the dead address, and the host socket's next recvfrom
+  fails with WSAECONNRESET (logged as "32769 from <old address>") instead of returning the newcomer's packet; the
+  host never even logged a connection request. New `udp_connreset.py` finds the host game's UDP socket in the
+  process (getsockname on each handle, port 64087, SOCK_DGRAM) and sets SIO_UDP_CONNRESET = FALSE; `coop_agent`
+  does this once the host listens.
+- With the reports off a killed game's player stayed in the game (no timeout; the console commands `kick` and
+  `kickid` do nothing in this build). The host agent now notices a player whose agent connection closed or reset,
+  turns the reports on until that player has left (the host drops it at once, "Unreachable address"), then off.
+- The joining agent also keeps one UDP socket open on the port Windows would hand the game next (Windows gave the
+  restarted game the same local port as the killed one).
+- Verified on one PC: kill the joining game -> dropped in 1 s -> a restarted game joined at its first attempt
+  (in the world 23 s after connect, same character), no leftover player; twice before that without the drop logic.
+
 ### 2026-10-29 - crouch of the joining player on the host
 - Holding crouch (C) as the joining player kept its host copy in Dodge.Normal.Prep.DodgePrep <-> EvaluateNoTurbo:
   the input-queue fix (same day) ORed the newest input into the merged one, so the one-frame "pressed" bytes stayed
