@@ -8890,3 +8890,33 @@
   sources:
   - https://github.com/vaiserYT/DeadCellsMultiplayerMod
   checked: '2026-10-23'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: Nestmates
+  url: https://github.com/skythebro/Nestmates
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: shared
+  players: 2-5
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 6 (be.785) IL2CPP plugin, clean-room, MIT. Host-authoritative; guests' mission logic is switched off
+    and their presses run on the host. Shares enemies, mission flow, timers, every control, guns and shots, map and
+    cards, engine, lights, espresso machine, record player, one cat per player, avatars with emotes; late join and
+    rejoin. Steam lobbies (friends/invite only) plus a direct-connect TCP option for trusted networks. 30 two-instance
+    bot scenarios with mutant twins (each fix has a twin that must fail). Tested on Steam build 25664742. Write-up in
+    games/iron-nest-heavy-turret-simulator.
+  sources:
+  - https://github.com/skythebro/Nestmates
+  - https://github.com/skythebro/Nestmates/blob/main/README.md
+  checked: '2026-10-29'
+  made_with_coop_anything: true
