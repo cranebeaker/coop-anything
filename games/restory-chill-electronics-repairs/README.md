@@ -5,14 +5,15 @@
 | Engine | Unity 6000.3.10f1, Mono (scripts in `Restory_Data/Managed/Restory.Assembly.dll`), Zenject, FullSerializer saves, Steamworks.NET |
 | Versions tested | Steam 1.0.033r (Fuzzby update, 2026-10-27): `Restory.Assembly.dll` SHA-256 `98bcbc08ec102865787fafee0ee8f53a0f82b81ce2b6b7d9d9e33335421ed66a`, `Restory.exe` SHA-256 `ad7e0d4f72226c5741250658762a4b2f2688a9bea4288ba218ec80d7726630c6`, build-guid `eb5bb3732fca4140921c1f890d4ba957`. Earlier work was on 1.0.015r. Windows 11. |
 | Projects | [ReStory Multiplayer](https://github.com/teecil/restory-multiplayer) (BepInEx 5 plugin: co-op and versus), directory entry "ReStory Multiplayer" |
-| QA level | automated (two real game copies driven by bots, see QA) |
+| QA level | automated (two real game copies driven by bots, see QA), plus human playtests on two PCs |
 | Last updated | 2026-10-30 |
 
 ## Where things stand
 
 Two players can play the career together in the host's save: one shop, one wallet, one parts stock, shared mail
-and quests, each with their own bench, and the day only ends when both agree. Played over a VPN by two players on
-two PCs; the automated two-copy suite passes on the current Steam build. A versus mode (both race to assemble the
+and quests, each with their own bench, and the day only ends when both agree. Two players played it over a VPN on
+two PCs for several in-game days (build 1.0.015r), and their sessions found most of the hard bugs; the automated
+two-copy suite passes on the current Steam build 1.0.033r. A versus mode (both race to assemble the
 same device) works too. The Steam lobby route exists but is not tested with two Steam accounts.
 
 ## Existing work
@@ -90,8 +91,23 @@ Highlights, each with the bug that led to it:
   a save 11/11, versus 70/70.
 - `scripts/check_game_members.py <decompiled game>`: the 61 game members the mod finds by name; after the
   1.0.033r update only one was gone (the contest neon shadow, removed by the developers).
-- Human: two players on two PCs over a VPN on 0.11.x and 0.12.0; their logs found the bandwidth, bench, cash and
-  box bugs above.
+- Human playtests: the owner and a friend on two PCs over the internet (a tunnel, then a VPN; IP route), game
+  build 1.0.015r (before the 1.0.033r update). First a versus match (2026-10-25), then from 2026-10-27 several
+  co-op days on mod 0.10.0 to 0.12.x in the friend's save with the friend as host: taking mail orders,
+  repairing, handing devices back, buying parts, cash from customers, ending the day. Both players' logs (`BepInEx/LogOutput.log`) came back after
+  each session. What only the two-PC games found, each fixed and then added to the bot suite:
+  - the guest saw no devices at all (the device registry was only captured on a register call the guest's shop
+    never made; the test save always had devices, so the bots never hit it);
+  - the host's game took the whole upload and the players' voice chat lagged (resend with no window, the full
+    stock on every change; see Transport);
+  - the host could carry off the device the guest was repairing (unpacking onto the bench is not a drop);
+  - the customer's money showed as 0 on the guest and vanished when deposited; two courier boxes on one spot
+    acted as one;
+  - three empty boxes after a day, the "ready 2/2" label carried into the next day, the one-order-per-contest
+    rule hidden from the player who hit it.
+  The players also asked for what the bots could not judge: one pause for both, the day ending only when both
+  are ready, the host's rules (may the guest take orders) and avatars on a page reachable while playing.
+  The Steam build 1.0.033r was covered by the automated suite only.
 
 ## How to play
 
