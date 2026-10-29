@@ -8626,12 +8626,12 @@
   notes: Extends the game's own host + 1 guest Steam session instead of replacing it (UE4SS Lua plus a native MinHook DLL, MIT).
     Host re-signals and guests re-join automatically after field deaths, host deaths, boss-room deaths and boss kills; co-op works in
     areas whose boss is dead. In two-PC tests a guest who dies for good stays in the host's world, spectates and respawns next to the
-    host at the host's next Mistle rest; the host can rest in co-op; the guest gets his own Mistle menu and can level up there. Not
+    host at the host's next Mistle rest; the host can rest in co-op; the guest gets his own Mistle menu and can level up there; a host Mistle teleport takes the guest along. Not
     released. UE 4.18, Denuvo present, UE4SS works with HookLoadMap = 0.
   sources:
   - https://github.com/eight8pac/codevein-coop
   - https://github.com/cranebeaker/coop-anything/issues/207
-  checked: '2026-10-28'
+  checked: '2026-10-29'
   made_with_coop_anything: true
 - game: Code Vein
   year: 2019

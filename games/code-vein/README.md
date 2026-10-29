@@ -17,7 +17,8 @@ field deaths, host deaths, boss-room deaths and boss kills. A native hook DLL (C
 two-PC sessions: a guest who dies for good stays in the host's world, spectates the host and respawns next to the host at the
 host's next Mistle rest (the partner cannot revive him after his revive window); a guest held in a boss fight lets the host's
 outro play after the kill; the host can rest at a Mistle with a guest connected; and the guest gets his own Mistle menu in the
-host's world and can level up there (both PCs show the new level and max HP). Seamless story co-op for 3+ players is the goal;
+host's world and can level up there (both PCs show the new level and max HP); and a Mistle teleport by the host takes the guest
+along, also into another stage. Seamless story co-op for 3+ players is the goal;
 it is not playable as a release today. Code: [eight8pac/codevein-coop](https://github.com/eight8pac/codevein-coop).
 
 ## Existing work
@@ -119,7 +120,12 @@ is not a move: it is `CheckPointUIComponent:RequestPlayerSpawnToCheckPoint(Field
 target Mistle. A solo trace of two teleports saw the characters re-spawn (initial data sync and gift equip multicasts) and no call
 to the deferred-teleport functions (`LIBDeferredTeleportManager:BeginDeferredTeleport`, `ScenarioActor:WaitForDeferredTeleportFinished`).
 `CharacterHelper:RequestPlayerTeleport(target, location, rotation, controller rotation, bSkipAnimation)` moves a player in place
-(used by another modder's test tool), and `CharacterHelper:RequestPlayerSpawn` spawns a fresh pawn for a remote controller.
+(used by another modder's test tool), and `CharacterHelper:RequestPlayerSpawn` spawns a fresh pawn for a remote controller. The
+native implementation `0x1409A1800(component, FieldID, PointIndex)` gives the destination. A teleport with a guest connected ends
+co-op twice: `SwitchToEndCoop` from `0x146678D02` right at the teleport (after an "ending co-op / distress signal" message,
+`0x14083A630`), and, on arriving in a stage, the area-entry code (`SwitchToEndCoop` from `0x146D627CF`, then `0x1409F1BA0`, which
+shows "multiplayer is not possible in this area" and ends co-op through a Blueprint path). Home Base is a separate map: vanilla ends
+co-op and travels there.
 
 **Story cutscenes and memories.** Field cutscenes and boss intros already play with a guest present (both see them). The post-boss
 outro (e.g. `Cinematics/Scenario/St09_Mt_Snow/.../BP_ScenarioFlowDiagram_e06700_e06800`) is a chain of native latent waits on
@@ -130,6 +136,11 @@ vestige restoration screen (`BP_BCRestorationUIComponent`) asks `AppSessionManag
 `AppOnlineWrapper:GetOnlineOtherPlayerNum`, shows "ending the distress signal / co-op" (`MultiplayText_0470`/`0480`), destroys the
 session and then jumps into the memory (`JumpToMemory`, `MemoryResidueId`). With a distress signal out, the player cannot try a
 memory alone, so this needs a guest to test.
+With the kick removed (two-PC tests, 2026-10-29) the boss intro and the outro start normally, the outro's deferred-teleport
+driver (`DeferredTeleportDriver`, state `Done`, no pause tokens) finishes, and then the host waits on a loading screen before
+`PlayMemoryResidue` until the guest leaves; at that moment the outro plays at once. The wait is in the large-poly loading steps.
+The boss's blood code is granted only after the memory. Tracing the `ScenarioActor` wait UFunctions with exec-thunk detours made
+the boss intro hang, so trace them one at a time.
 
 **Save system.** Story state is string-flag based (`UAppSaveManager::SetGameProgress`). Saves live in the per-user local app data
 folder, under `CodeVein\Saved\SaveGames\<account>\`. `-userdir` is ignored, so isolate test runs by swapping the folder. Copying
@@ -171,6 +182,11 @@ Ultimate ASI Loader as `winmm.dll`, MinHook detours, verifies 16 bytes at each t
   - `keep_dying` (group respawn): vetoes both death paths for the guest's character (host: his pawn; guest: his own pawn) while the
     host lives. Once his revive window has run out, the host removes his body (unpossess, destroy) so the partner cannot revive
     him, he spectates, and the host's next Mistle rest spawns him next to the host with `RequestPlayerSpawn` and the appear effect.
+  - `group_teleport`: vetoes the two end-of-co-op calls of a host teleport (only those callers, for 60 s), skips their messages,
+    then spawns the guest next to the host once CoopNative sees the host's characters re-spawn (`AppCharacter:MulticastInitialDataSync`).
+    `teleport_skip_fields` keeps vanilla behaviour for listed destinations (meant for Home Base).
+  - Falls: a guest whose fall the host decides (`TryExecuteDeath` while falling fast) goes straight to spectating: dissolve, body
+    removed, back at the host's next rest.
   - `guest_rest`: on the guest, E at an opened Mistle skips the vanilla rest and opens his own Mistle menu; switch partner is disabled
     (it left him on a loading screen). Level-up: the menu's level-up becomes a direct `HumanContextIF` level-up on his own component
     with `0x140456A00` forced true for his pawn during the call (spends his haze, sets his level), then he sends
@@ -195,6 +211,10 @@ save swap and SHA-256 checks of the real saves before and after each run), with 
 | Boss kill while the guest is held | host outro plays, guest goes home and rejoins |
 | Guest dies for good in the field (`keep_dying`) | body removed after his revive window, he spectates, host rest respawns him next to the host, visible, with input |
 | Guest at a Mistle (`guest_rest`) | his menu opens; heal sticks; level-up shows on both PCs incl. max HP; switch partner disabled |
+| Gifts on the guest | unlock and equip work (vanilla) once he switches to the gift's blood code |
+| Host Mistle teleport (`group_teleport`) | guest stays and appears next to the host, within a stage and into another stage; guest sees the world unload for a few seconds |
+| Guest falls deep (`keep_dying`) | straight to spectating, back at the host's rest |
+| Boss kill with the kick removed | intro, fight and outro start; host waits before the memory until the guest leaves |
 
 ## How to play
 
@@ -209,9 +229,11 @@ matching signal).
 - A guest whose host stopped on purpose keeps searching every 25 s.
 - Vestige restoration is blocked in co-op (the Mistle menu entries can be enabled; the restoration screen still refuses).
 - Enemies reset only on the first co-op rest of a session; a guest's rest does not reset the host's world.
-- A guest cannot equip gifts he unlocked at his Mistle menu; he cannot open chests and does not see ground items in the host's world.
+- A guest cannot open chests and does not see ground items in the host's world. Story NPCs follow each player's own story
+  progress (one appeared twice on the guest's side).
 - While spectating, the low-health screen filter and heartbeat keep playing; a respawned guest flashes once before the appear effect.
-- A protected guest survives a fall at the bottom of it instead of dying (to become an immediate true death).
+- A guest opening his Mistle menu while the host rests crashes; resting together crashes; enemies no longer reset after the first rest.
+- Teleporting the group to Home Base drops the host into a pit (separate map; its FieldID is to be added to `teleport_skip_fields`).
 - A guest joining while the host sits at a Mistle crashes.
 - If a distress signal "fails to go through", Steam lobby creation is timing out (`k_EResultTimeout` in the game log); restarting the
   Steam client fixed it once.
@@ -223,5 +245,4 @@ matching signal).
 3. Gifts equip and chests for the guest (likely the same host-side handling as the level-up), enemy reset on every rest.
 4. Vestige restoration and memory sequences in co-op (one player goes through the memory, the other watches): answer "no session"
    to the restoration screen only; find the outro wait that hangs with a guest present.
-5. Group teleport: after the host's Mistle teleport, spawn each guest next to the host (`RequestPlayerSpawn`, as the group
-   respawn does); later a vote. Then a 3-player cap (native: the Steam session's player count or join acceptance), Home Base together.
+5. Group teleport: a fade for the guest, Home Base, a vote. Then a 3-player cap (native: the Steam session's player count or join acceptance), Home Base together.
