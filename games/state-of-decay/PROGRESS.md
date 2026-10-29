@@ -96,10 +96,27 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-10-29 - what the player on the second PC saw (owner's play test)
+First real play on a separate PC, playing Ed (the joining player). Not seen in the one-PC tests (those were
+checked mostly from the host and by scripts):
+- Zombies: none around Ed until the host's player comes near; when they appear their models look low-detail
+  (as if not fully loaded).
+- Interaction goes to the host or does nothing: Ed can't shoulder-break a locked door (Marcus gets the break
+  sequence); the base supply box is not there for Ed (he stands inside it, on the host he stands against it);
+  walking up to an NPC shows the "greet" hint on the host's screen.
+- Animations: NPCs doing actions (e.g. lying on a bed) are in T-pose for Ed; in cutscenes the characters are in
+  T-pose for Ed and Ed keeps walking while the host's player is locked in the scene; Ed crouching (holding C) still
+  stands on the host; Ed twitches a little on the host's screen.
+- HUD: green outlines (trigger areas?) on bases; Ed's radar map vanished at some point; the host's emote wheel
+  (Caps Lock) appeared on Ed's screen and stayed; Tab raises Ed's weapon instead of opening the journal; Ed has no
+  inventory grid, portrait, base survivors or base state, and is named "Stranger"; the map opens but points of
+  interest have no titles, map marks can be added with the left button but not removed, no controls/legend.
+- Looting was not tried yet.
+
 ### 2026-10-29 - first join from a second PC
 - A second Windows PC on the same LAN joined a hosted game: its agent reached the host's control port, its game
   connected, it got Ed Jones (survivor record bound, NPC body hidden), the full setup ran (`client_first`,
-  `client_main`, HUD relay, turn clamp), and the host saw Ed walk ~45 m in 20 s while the host's player stood still.
+  `client_main`, HUD relay, turn clamp), and the host saw Ed walk ~45 m in 20 s while the host's player stood still. What the player there saw: next entry.
 - What the second PC got: one folder with the joining game copy (co-op `singleplayer.lua` and `user.cfg`), the
   bundle scripts, a copy of the Python install with capstone + pillow (no install needed) and a `join.bat` that
   runs `coop_agent.py --install <game> --saves pc2`; Steam logged in there.
