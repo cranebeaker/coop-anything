@@ -122,6 +122,11 @@ Newest first. One entry per discovery; link the NOTES section for details.
   which listens on every interface): WSL's Hyper-V firewall blocks traffic coming in from the VM by default,
   and the VM has no UDP tool for the discovery probe. Testing across machines still needs a real second PC
   (or firewall changes on the host PC), with `coop_firewall.ps1` run on the host.
+  Later the same day, after the owner excluded the local subnets from the VPN client running on this PC, the
+  VM reached the host: TCP to the control port and UDP to the game port (64087) and the LAN-search port (64091)
+  all arrived (UDP sent with BusyBox nslookup to the port). So the VPN client, not the Windows firewall, was
+  blocking it; on a PC with a VPN, exclude the LAN from it. A real join still needs a second PC (the VM cannot
+  run the game).
 - The agent retries the connect once (one rejoin's connection was released by the game right after the server's
   settings arrived, no reason logged; the next attempt got in).
 - Steam stats file: every test-copy boot wrote `UserStats.cfg` (game stats, not the save) into the owner's Steam
