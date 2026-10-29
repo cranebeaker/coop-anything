@@ -35,7 +35,7 @@ runtime by Python scripts under the gitignored `local/` folder; no game file is 
 | Characters | New story: host Marcus, player 2 Ed (Ed's own survivor record, his NPC body hidden everywhere), players 3-4 random generic survivors no record uses, never a story character (`maya_record.pick_def`) |
 | Up to 4 players | Works (2026-10-28): host + 3 joining players through the menu; every co-op module handles every joining player; 20-minute 4-player soak 10/10 fight + search/loot cycles; a player leaving mid-game leaves the others playing |
 | Leaving and coming back | Works (2026-10-29): a player who left frees its slots everywhere; one who comes back (or the next one) takes the free slots and the departed player's character (Ed stays Ed) |
-| Separate PCs | Prepared, not tested (one PC here): `local/make_coop_bundle.py` builds the files another PC needs (README inside), `coop_firewall.ps1` for the host PC, `coop_hosts.txt` when broadcasts don't get through |
+| Separate PCs | Works (2026-10-29): a second PC on the LAN joined through Co-op Play > Join Game as Ed; its moves arrive on the host. Files for it: `local/make_coop_bundle.py` (scripts + README), `coop_firewall.ps1` on the host PC, `coop_hosts.txt` when broadcasts don't get through; a VPN on either PC must leave the LAN out |
 | Session stability | Asserts and missing-entity updates no longer kill the host (`crash_guards.py`); 25-minute play soak 19/19 cycles without a crash |
 | Vehicles | Untested in co-op: the only vehicle at the story start is locked for both players |
 | Missions, community, journal data for the joining player | Not started (she now has a community record on the host; nothing mirrored to her machine) |
@@ -95,6 +95,16 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 ## Findings log
 
 Newest first. One entry per discovery; link the NOTES section for details.
+
+### 2026-10-29 - first join from a second PC
+- A second Windows PC on the same LAN joined a hosted game: its agent reached the host's control port, its game
+  connected, it got Ed Jones (survivor record bound, NPC body hidden), the full setup ran (`client_first`,
+  `client_main`, HUD relay, turn clamp), and the host saw Ed walk ~45 m in 20 s while the host's player stood still.
+- What the second PC got: one folder with the joining game copy (co-op `singleplayer.lua` and `user.cfg`), the
+  bundle scripts, a copy of the Python install with capstone + pillow (no install needed) and a `join.bat` that
+  runs `coop_agent.py --install <game> --saves pc2`; Steam logged in there.
+- Before that, a VPN client on the host PC hid the LAN from other machines (see the entry below); excluding the
+  local subnets from it was needed.
 
 ### 2026-10-29 - rejoining, simultaneous loot, other PCs, Steam stats file
 - Rejoining: every per-player table frees a departed player's entry (actor/entity id pair: a returning player can
