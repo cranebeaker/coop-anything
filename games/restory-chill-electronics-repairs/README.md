@@ -11,8 +11,8 @@
 ## Where things stand
 
 Two players can play the career together in the host's save: one shop, one wallet, one parts stock, shared mail
-and quests, each with their own bench, and the day only ends when both agree. Two players played it over a VPN on
-two PCs for several in-game days (build 1.0.015r), and their sessions found most of the hard bugs; the automated
+and quests, each with their own bench, and the day only ends when both agree. Two players played it over the internet
+on two PCs (through Porthole) for several in-game days (build 1.0.015r), and their sessions found most of the hard bugs; the automated
 two-copy suite passes on the current Steam build 1.0.033r. A versus mode (both race to assemble the
 same device) works too. The Steam lobby route exists but is not tested with two Steam accounts.
 
@@ -91,7 +91,8 @@ Highlights, each with the bug that led to it:
   a save 11/11, versus 70/70.
 - `scripts/check_game_members.py <decompiled game>`: the 61 game members the mod finds by name; after the
   1.0.033r update only one was gone (the contest neon shadow, removed by the developers).
-- Human playtests: the owner and a friend on two PCs over the internet (a tunnel, then a VPN; IP route), game
+- Human playtests: the owner and a friend on two PCs over the internet, connected through
+  Porthole (IP route), game
   build 1.0.015r (before the 1.0.033r update). First a versus match (2026-10-25), then from 2026-10-27 several
   co-op days on mod 0.10.0 to 0.12.x in the friend's save with the friend as host: taking mail orders,
   repairing, handing devices back, buying parts, cash from customers, ending the day. Both players' logs (`BepInEx/LogOutput.log`) came back after
