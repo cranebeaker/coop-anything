@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unity 6 (6000.3.21f1), IL2CPP x64, Windows |
 | Versions tested | Steam build 25664742, BepInEx 6.0.0-be.785 IL2CPP |
-| Projects | [Nestmates](https://github.com/skythebro/Nestmates) (MIT), see `data/directory.yaml` |
+| Projects | [Nestmates](https://github.com/skythebro/Nestmates) (MIT, [Nexus](https://www.nexusmods.com/ironnest/mods/90)), see `data/directory.yaml` |
 | QA level | automated |
 | Last updated | 2026-10-29 |
 
@@ -71,7 +71,7 @@ Fixes that might help other Unity IL2CPP games:
 
 ## How to play
 
-Download the release zip and follow its `README.txt`:
+Download the release zip from [Nexus Mods](https://www.nexusmods.com/ironnest/mods/90) and follow its `README.txt`:
 
 1. Install BepInEx 6.0.0-be.785 (IL2CPP x64).
 2. Copy the `BepInEx` folder from the zip into `<game dir>`.

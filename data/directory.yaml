@@ -8895,7 +8895,8 @@
   engine: Unity 6 (IL2CPP)
   project: Nestmates
   url: https://github.com/skythebro/Nestmates
-  other_urls: []
+  other_urls:
+  - https://www.nexusmods.com/ironnest/mods/90
   kind: mod
   status: playable
   coop_scope:
@@ -8918,5 +8919,6 @@
   sources:
   - https://github.com/skythebro/Nestmates
   - https://github.com/skythebro/Nestmates/blob/main/README.md
+  - https://www.nexusmods.com/ironnest/mods/90
   checked: '2026-10-29'
   made_with_coop_anything: true
