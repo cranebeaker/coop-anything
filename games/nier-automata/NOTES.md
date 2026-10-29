@@ -459,3 +459,49 @@ Derived:
 Unknown:
 - Which scripts call `SaveState.loadFromMemory`, and whether `+0x691314` really is the hero's death (needs a death in
   a fight).
+
+## 2026-10-23: a death in co-op, the real health, quest givers, Flight Unit angles
+
+Observed:
+- The owner played the client in the desert (`51_AB_MainDesert`, two test copies on one PC): 9S of the client died to
+  an enemy, and the host's game went to the death screen too, though 2B of the host was far away and alive. Both
+  games asked for the next phase from the same call, return address `+0x4ab627`; the host's 24 ms first.
+- The real health of a character is `[behavior+0x10668]`. The game copies it into `+0x858` every frame
+  (`+0x428b96`), which is why writing `+0x858` never sticks.
+- An NPC that gives a side quest before the quest is taken is placed by an action of a story graph
+  (`EntityLayoutArea` / `EntityLayoutAction`). The layout entry (lookup by id: `+0x3d8240`) points at
+  `EntityLayoutsMixin` at `[+0x38]`, which sits in the action at `+0x50`. Checked on 23 NPCs of the Resistance
+  Camp: all come from graphs named `オブジェ配置` ("object placement"); the giver of q210 has its own graph,
+  `依頼者_q210` ("requester_q210").
+- A `BehaviorFlightUnit` in flight keeps its euler angles (`+0x90`) and its quaternion (`+0x60`) at zero while it
+  turns. Its orientation is stored somewhere else (a candidate is the model's root bone).
+
+Derived:
+- The client's death reached the host's game through the puppet (see 2026-10-29).
+- A side quest's giver can be found by the name of the graph that placed it (`qNNN`). There is no need for a list
+  of NPCs.
+
+## 2026-10-29: the hero's death; shared death in co-op
+
+Observed:
+- The state of a character is `[Pl0000+0x670]`. The Pl0000 update switches on it (`+0x503968`, 0xd4 states).
+  `start_animation` (vfunc `+0x90`) sets it, so the "animations" AutomataMP sends are these states.
+- `0x33`, `0x34` and `0x35` are the ways to die. Each goes on to `0x36` (`+0x4aaf10`). `0x36` builds the Body
+  Report and, if vfunc `+0x350` returns true (player controlled), asks for the next phase at `+0x4ab622`: that is
+  the Game Over. The check of the 9S models (`0x10200`/`0x10203`) there only picks the report's text.
+- The game kills a character itself like this (`+0x47bf1a`, `+0x42a5a4`): `+0x10668` and `+0x858` = 0, then
+  `start_animation(0x35, 0, 0, 0 or 1)`. Doing the same from the mod gives the full death: the fall, the Body
+  Report, Continue and the reload. In the Bunker the Game Over loads at once, without the Body Report.
+- `[Pl0000+0x10364]` (float) is an invulnerability timer in frames. `setEventMuteki` (`+0x4eca50`) sets it to 300,
+  `changePlayer` to 60. The characters' damage handler (`+0x47a9c0`) compares it.
+
+Derived:
+- The 2026-10-23 double death: the client's `Die` state (`0x35`) went over as an animation, and the host's puppet
+  (marked player controlled for its input) died with it and called the host's Game Over.
+- The owner's fork now sends a death as its own packet. The puppet doesn't get the death states and keeps the
+  invulnerability timer up. The other game kills its own hero the game's way, and the client's Game Over waits for
+  the host's. The bot checks this in two copies (`coop_smoke.py --scenario death|death_world|death_host`).
+
+Unknown:
+- How enemy hits on a puppet with the timer up look (no damage, but a hit reaction?). Needs a fight.
+- `+0x691314`, the other caller of the phase request near `BGM_Player_Die`, is still not seen.
