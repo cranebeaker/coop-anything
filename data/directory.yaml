@@ -8890,3 +8890,39 @@
   sources:
   - https://github.com/vaiserYT/DeadCellsMultiplayerMod
   checked: '2026-10-23'
+- game: Superflight
+  year: 2017
+  engine: Unity
+  project: SFMF Multiplayer
+  url: https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer
+  other_urls:
+  - https://github.com/Phlarfl/SFMF/releases/tag/multiplayer.1.0.0
+  - https://steamcommunity.com/app/732430/discussions/0/1489992080516642412/
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: partial
+    items: 'no'
+  players: unknown
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: '2022-01'
+  qa: none
+  notes: >-
+    Plugin for the author's own SFMF mod loader (Unity UNet, direct IP, port 4444, host also plays).
+    Shows other players as coloured spheres with name and score, and sends the host's world seed so
+    everyone flies the same map; the game has no enemies, items or story. Source committed 2018-12,
+    DLL released 2022-01 with no play reports found; the author wrote in 2025-01 that it probably no
+    longer works and had released the source in 2018 for others to finish. No license stated. Loads only
+    under Phlarfl's launcher 1.2.0, not the maintained SFMF v2 (vicjohnson, MIT, no multiplayer mod).
+    Audit and revival plan in games/superflight.
+  sources:
+  - https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer
+  - https://github.com/Phlarfl/SFMF/releases/tag/multiplayer.1.0.0
+  - https://steamcommunity.com/app/732430/discussions/0/1489992080516642412/
+  - https://github.com/vicjohnson/Superflight-Mods/issues/21
+  checked: '2026-10-29'
+  up_for_adoption: true
