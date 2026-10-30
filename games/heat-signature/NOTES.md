@@ -85,6 +85,12 @@ Phase 0 (triage), 2026-10-30.
 - The lowest ids are globals or near-globals: `Mission` 2, `Player` 5, `PlayerShip` 7, `TimeScale` 10, `Controls` 3071.
   Derived (to check): the game keeps **one** player in `Player`/`PlayerShip` and one `TimeScale`, the same
   single-player-behind-one-variable pattern as Forager.
+- Globals (observed in decompiled oCamera/oControls/oMission events): GML globals live on one global instance whose
+  pointer is at `0x0493d610`; a global is read at `yyvars + slot*16` (`_DAT_0493d610[1] + 0x50` = `global.Player`,
+  `+ 0x20` = `global.Mission`), or through the vtable getter when `yyvars` is null. Same slot numbering as the
+  variable-name table. Confirmed: **the player is `global.Player`**, one instance.
+- Instance variables: `self->yyvars[slot]` (`param_1[1] + slot*16`), or `self->vtable[1](slot)` when `yyvars` is null.
+- YYC stack-trace list head at `0x049356e8` (each function links a frame holding its own name).
 - Time variables: `TimeScale`, `SlowMo`, `FastMo`, `SlowMoScale`, `FastMoScale`, `CanFastMo`, `PauseWithGame`,
   `PausedShips`, `PauseSecondsLeft`. The game has slow motion and fast forward, not only pause.
 
