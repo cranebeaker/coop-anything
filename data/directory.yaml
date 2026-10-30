@@ -94,6 +94,40 @@
   sources:
   - https://github.com/roman-dzieciol/ue-deus-ex-coop
   checked: '2026-10-16'
+- game: State of Decay
+  year: 2013
+  engine: CryEngine 3
+  project: State of Decay CryEngine coop mod
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/state-of-decay
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: 'no'
+    enemies: yes
+    world_state: partial
+    items: per-player
+  players: '4'
+  networking: lan
+  open_source: partial
+  last_activity: 2026-10
+  qa: none
+  notes: Prototype for the 2013 Steam release (app 241540, build 305948). Undead Labs cancelled official
+    co-op in 2013; no earlier published shared-world mod was found. Uses the build's dormant CryEngine
+    netcode on isolated test copies (never the Steam install). Up to four players on LAN can join, see
+    each other, walk, and fight zombies together; missions, community and journal stay host-only, and
+    joiners beyond the second player have limited survivor records. Results depend on runtime helpers
+    under gitignored local/ (host_boot_coop, join patches, coop_setup, etc.) and cannot be reproduced
+    from the write-up alone. No installable co-op build. Write-up in games/state-of-decay.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/state-of-decay
+  - https://www.gamesradar.com/state-decay-scraps-plans-co-op/
+  - https://www.eurogamer.net/heres-whats-new-in-state-of-decay-year-one-survival-edition
+  - https://steamcommunity.com/app/241540/discussions/0/810939351105827815
+  - https://www.moddb.com/games/state-of-decay/mods
+  checked: '2026-10-28'
+  made_with_coop_anything: true
 - game: System Shock 2
   year: 1999
   engine: Dark Engine (Thief engine fork)
