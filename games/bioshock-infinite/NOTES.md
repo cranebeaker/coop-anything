@@ -524,9 +524,34 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - Result (`outils/essai_arme.py`): copy 1 shows the pistol in the puppet's hand, a muzzle flash with light on copy 0's
   shot, then smoke. Pose packet version 4 adds `Arme` (hash of the model path) and `Tirs` (shot counter).
 
+### Aiming
+
+- Station soldiers' armed locomotion sets are loaded at TWN3:
+  - two-handed weapons: `GenMale_MachineGun_Animations.GenMale_MG_Locomotion_AnimSet` (80 sequences, including
+    IdleBase, WalkFwd and RunFwd) and `GenMale_MG_Weapon_AnimSet` (AimPoses, AimPoses_Locomotion, Fire, Reload,
+    Equip...);
+  - pistol: `GenMale_Pistol_Animations.GenMale_PI_Locomotion_AnimSet` (only IdleBase and runFwd_AlternateA) and
+    `GenMale_PI_Weapon_AnimSet`.
+
+  Sequence names repeat across sets, and lookup takes the last set in `AnimSets`. The module reorders the tail per
+  stance: unarmed is [UA]; two-handed is [UA, MG locomotion, MG weapon]; pistol is [UA, MG..., PI...], so the pistol
+  stance walks with the MG walk.
+- `AimPoses_untitled` (9 frames, 0.267 s, not flagged additive) looks wrong when played alone: arms over the head.
+  `Fire_untitled` is additive.
+- The weapon actor takes the hand position from R_Grip, but its rotation comes from the partner's view: the
+  controller's pitch, sent in `Rotation[0]` (the puppet itself stays upright), and the pawn's yaw. The barrel is the
+  model's +X axis, so no offset is needed.
+- The guard stances turn the shoulders relative to the actor's yaw: +63° with the pistol, +60° with two-handed
+  weapons, about +53° at the hips. These were measured from the `GenericHumanL/RUpperarm` and `L/RThigh` bone
+  positions. Soldiers' bodies stay within roughly ±50° of the pawn's yaw, and their aim offsets fix the rest. The
+  puppet has no aim offset, so its actor is turned back by the stance angle.
+  `essai_arme.py` measures shoulders 0 to 5° from the aim, for both weapons.
+- `Destroy` returns False on spawned `XWeaponModelThirdPerson` actors, and the old pistol kept floating. Instead,
+  each model is kept per weapon, hidden (actor and mesh) and reused.
+
 ### Not done yet
 
-- The arms hang, so the weapon points at the floor. No aiming pose, no tracer (`TracerEffect`), no vigors.
+- Only the weapon pitches; the arms stay in the guard pose. No tracer (`TracerEffect`), no vigors.
 - Enemies only see and shoot the local player, and enemy positions are not synced.
 - Not tested with real gunfire by a human, or between two PCs.
 
