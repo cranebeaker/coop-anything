@@ -299,6 +299,17 @@ Derived (design consequence):
   ship, and places the remote player's puppet pod at the same offset from its own instance (writing `x`, `y`,
   `xReal`, `yReal`, `image_angle` after the pod's step; unlike characters aboard ships, this holds). Test: host flying,
   guest's puppet pod within about 200 units of the received offset at about 20 000 units/s (about one frame).
+- **Boarding the shared ship** (observed): `DockWithAirlock(airlock id)` with `self` = the pod (`0x00ad4f90`, as
+  `CreateScenario` uses it) docks at an airlock of the shared ship; the player can then walk aboard. Ship-relative to
+  room coordinates: `GetX/GetY(Fore, Starboard, Parent)` (`0x00a24610` / `0x00a249c0`), checked against the player's
+  own x/y (equal). The remote player's packet says whether they are aboard the shared ship; the local puppet boards its
+  copy with `CopyTheLattersParentAndPosition(puppet, <an airlock of that ship>)` (`0x00853a40`: the first argument takes
+  the second's Parent and Fore/Starboard; the second must itself be aboard, the ship itself makes the game's code fail
+  and GameMaker opens its error dialog) and is then steered by `PlayerPathfindingTo(GetX/GetY(remote Fore, Starboard))`.
+  Result: puppet aboard the guest's copy (Parent = that ship), at Fore 1393 / Starboard 3370 for the host's
+  1408 / 3127. Likely held back by a door that opened for the host's player only (doors react to `global.Player`).
+- Pod sharing question (owner, 2026-10-30): one shared pod would only simplify the flight, which already works; it would
+  remove separate escapes (a core part of the game). Proposed instead: an optional "follow the host" autopilot.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
