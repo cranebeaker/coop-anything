@@ -145,6 +145,32 @@ Phase 0 (triage), 2026-10-30.
 - Not known: whether a longer run, or one that saves characters, would upload. Safer: turn off Steam Cloud for the game
   while testing, and back up the real saves first (done, kept in `local/`).
 
+## Input and time, confirmed with injected input (probe runs 9 and 10, 2026-10-30)
+Setup: test prefix with `Options.txt` changed to `WindowedMode = 1`, `CaptureCursor = 0`, `PauseInBackground = 0`,
+`MusicVolume = 0`, `SoundVolume = 0`, `SeasonalEvents = 0` (the "Space Halloween" pop-up otherwise covers character
+select). The probe reads `bot_cmd.txt` every 15 frames from an `oControls.Step_0` hook.
+
+Observed:
+- **Clicks:** `PostMessage(WM_MOUSEMOVE/WM_LBUTTONDOWN/WM_LBUTTONUP)` to the game's own window acts as a real click; the
+  OS cursor does not move. Character select picks with `ControlPressed(12 Menu Click, 1)` +
+  `CharacterIsChooseable(NearestCharacter)` -> `SelectThisCharacter(NearestCharacter, <id>)`. Afterwards
+  `global.Player` = the chosen character's instance id. (Before the pick it is `real 49`; meaning unknown.)
+- **Control indices confirmed:** one left click registered as `ControlDown` 2 (Attack), 5 (Thrust) and 12 (Menu Click),
+  the three controls bound to mouse button 1 in `DefaultControls.txt`. So the index is the file order.
+- **Injection works:** answering `ControlDown(7)` with real 1 for 2 s moved the controlled player from x -187 to -74;
+  `ControlDown(10)` moved it up (y -60 to -86). The player stops when the override ends.
+- **Time:** each source calls `gml_Script_SetTimeScale(scale, priority[, extra])` every frame it is active:
+  Inventory (Space, `ControlPressed(4)`) -> `SetTimeScale(0, 9)` until pressed again (pause);
+  Slow Mo held (`ControlDown(30)`) -> `SetTimeScale(0.2, 7, 0.3)`;
+  Fast Mo held (`ControlDown(31)`) -> `SetTimeScale(6, 8)`.
+  `global.TimeScale` follows (0, 0.2, 6) and goes back to 1 when no source calls.
+- Derived: the highest priority wins each frame (pause 9 > fast 8 > slow 7); this is not read from code yet.
+
+Derived design for co-op time (shared pause, owner's choice):
+- The host collects each player's time request per frame (pause, slow, fast or none) and calls `SetTimeScale` itself:
+  any pause -> `SetTimeScale(0, 9)`; else any slow -> slow; fast only when every player asks for fast.
+- Guests do not run their own time; they take the host's `global.TimeScale` and the name of whoever paused.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
