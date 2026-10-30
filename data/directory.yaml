@@ -9476,3 +9476,40 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/xcom-2/README.md
   checked: '2026-10-25'
   made_with_coop_anything: true
+- game: 'Rick and Morty: Virtual Rick-ality'
+  year: 2017
+  engine: Unity 5.4 (Mono)
+  project: Rick and Morty Together
+  url: https://github.com/multiplayereverything/rick-and-morty-coop
+  other_urls:
+  - https://github.com/multiplayereverything/rick-and-morty-coop/releases/tag/v0.7.0
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/rick-and-morty-virtual-rick-ality
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 5 plugin for the Steam VR build; two players, each a Morty-clone head and hands. The host's game is in
+    charge. Shared are grabbable items (host-granted ownership with epochs, hand-offs, throws), doors, levers, sliders,
+    buttons and pull cords, the story graph's events and stage, scene and mission-area changes, Rick's and Morty's lines
+    and animations (dice seeded the same), things the game makes or destroys, enemies (aim at the nearest player), and
+    the final boss. Each player dies and respawns on their own; only the host saves. Late joiners skip a scene's opening
+    lines. A flat-screen mode (`-vrmode None`, keyboard and mouse) can play with a headset player. Putting a part into
+    an attach point (the computer's RAM stick, crystal, fuse) stays on the player's own side in v0.7.0. Steam lobbies
+    and P2P through the game's own Steamworks, or LAN/direct TCP 27040. v0.7.0 pre-release. The lab runs two or three
+    minimized game copies without a headset through scripted tours (LAN, 120 ms lag, Steam lobby, all mission areas)
+    with error and desync checks, plus a mutation check per fix. Two Steam accounts and real headsets are not covered
+    by the lab. Source is public with no licence file yet.
+  sources:
+  - https://github.com/multiplayereverything/rick-and-morty-coop
+  - https://github.com/multiplayereverything/rick-and-morty-coop/releases/tag/v0.7.0
+  checked: '2026-10-30'
+  made_with_coop_anything: true
