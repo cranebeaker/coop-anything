@@ -17,8 +17,10 @@ field deaths, host deaths, boss-room deaths and boss kills. A native hook DLL (C
 two-PC sessions: a guest who dies for good stays in the host's world, spectates the host and respawns next to the host at the
 host's next Mistle rest (the partner cannot revive him after his revive window); a guest held in a boss fight lets the host's
 outro play after the kill; the host can rest at a Mistle with a guest connected; and the guest gets his own Mistle menu in the
-host's world and can level up there (both PCs show the new level and max HP); and a Mistle teleport by the host takes the guest
-along, also into another stage. Seamless story co-op for 3+ players is the goal;
+host's world and can level up there (both PCs show the new level and max HP); a Mistle teleport by the host takes the guest
+along, also into another stage, with the game's own teleport fade on the guest's screen; enemies respawn on the host's rest; and
+after a boss kill the guest stays and watches the outro, and the host's memory sequence plays with the guest connected.
+Seamless story co-op for 3+ players is the goal;
 it is not playable as a release today. Code: [eight8pac/codevein-coop](https://github.com/eight8pac/codevein-coop).
 
 ## Existing work
@@ -223,17 +225,38 @@ Not released. Install steps and settings are in the code repo's README
 the Lua mods, optionally Ultimate ASI Loader + CoopNative, and the same matchmaking password (the automatic search joins the first
 matching signal).
 
+## Findings 2026-10-30 (two-PC sessions)
+
+- **Host -> guest channel:** `PlayerController:ClientMessage(FString, FName, float)` is a client RPC every controller has. The
+  host calls it on the guest's controller with a marker string; the guest's Lua hooks `/Script/Engine.PlayerController:ClientMessage`
+  and acts. Used for the guest's teleport fade (`RequestTeleportFade(ctx, ctx, 48, 0)`, the same arguments as the vanilla
+  teleport, then `RequestUnfade(ctx, ctx, 48, 0, 0.5)` once he stands next to the host). Guest -> host: a server RPC on his own
+  component with a value no real call uses (`Server_AddExp(-2601)`), swallowed by the host's hook.
+- **Outro with a guest:** four `IsOnlineMultiplay` checks in the scenario manager wait for "partner ready / finished" flags
+  (+0x20C..+0x212). They are the game's own cutscene sync: once the guest's game runs the same flow (it starts the boss area's
+  `MulticastExecuteFlowDiagramWithCallback(3)` itself), the outro plays on both PCs and a skip on the host skips for the guest too.
+- **Memory hang:** characters wait for AppBeginPlay until a global counter `NumInCharacterSetupBeforeAppBeginPlay` reaches 0;
+  with a guest it stayed above 0 and the host's memory character never started. Resetting it 2 s into the memory fixes the host.
+  The guest cannot get control inside the memory while connected (the host's server owns his character); the plan is that he
+  leaves for the memory, plays it solo in his own world and rejoins.
+- **Home Base mode:** `CharacterHelper.SetRestrictedActionInBaseInfo` with `FCharacterRestrictedActionInBaseInfo` (weapon
+  visibility, attack, dash, step, item use, field menu, mask/blood veil visibility); Home Base is FieldID 0 and a separate map.
+- **UE4SS crash pattern:** `FindAllOf("SomeComponent")` plus `GetOwner()` on each crashed UE4SS (null read) after characters were
+  replaced: half-destroyed components are still listed. Take the component from the character's own property instead.
+- **Startup:** creating all MinHook hooks first and enabling them with one `MH_EnableHook(MH_ALL_HOOKS)` took about 0.2 s instead of
+  about 7 s (each single enable suspends all game threads).
+
 ## Known issues
 
 - Without a matchmaking password a guest's automatic search can join a stranger's signal.
 - A guest whose host stopped on purpose keeps searching every 25 s.
-- Vestige restoration is blocked in co-op (the Mistle menu entries can be enabled; the restoration screen still refuses).
-- Enemies reset only on the first co-op rest of a session; a guest's rest does not reset the host's world.
+- Vestige restoration in co-op: the entry checks are answered "not multiplayer" now; whether the screen opens and the memory plays is untested.
+- A guest's rest does not reset the host's world yet (the request reaches the host; the reset entry point is still to find).
+- Inside the host's memory the guest has no control; story progress (blood code, boss state) does not carry over to the guest yet.
 - A guest cannot open chests and does not see ground items in the host's world. Story NPCs follow each player's own story
   progress (one appeared twice on the guest's side).
 - While spectating, the low-health screen filter and heartbeat keep playing; a respawned guest flashes once before the appear effect.
-- A guest opening his Mistle menu while the host rests crashes; resting together crashes; enemies no longer reset after the first rest.
-- Teleporting the group to Home Base drops the host into a pit (separate map; its FieldID is to be added to `teleport_skip_fields`).
+- Home Base: a teleport there keeps the vanilla behaviour (`teleport_skip_fields=0`), which ends co-op; going there together is not done.
 - A guest joining while the host sits at a Mistle crashes.
 - If a distress signal "fails to go through", Steam lobby creation is timing out (`k_EResultTimeout` in the game log); restarting the
   Steam client fixed it once.
@@ -242,7 +265,6 @@ matching signal).
 
 1. Guest progression and shared boss rewards (CoopProgress by Rikka230, eight8pac/codevein-coop#1): two-PC test.
 2. Host death in a boss fight while the guest lives (the host spectates until everyone is dead).
-3. Gifts equip and chests for the guest (likely the same host-side handling as the level-up), enemy reset on every rest.
-4. Vestige restoration and memory sequences in co-op (one player goes through the memory, the other watches): answer "no session"
-   to the restoration screen only; find the outro wait that hangs with a guest present.
-5. Group teleport: a fade for the guest, Home Base, a vote. Then a 3-player cap (native: the Steam session's player count or join acceptance), Home Base together.
+3. Gifts equip and chests for the guest, enemy reset on the guest's rest.
+4. Memory for the guest: leave the session at the memory start, play it solo in his own world, rejoin; then vestige restoration.
+5. Group teleport vote, Home Base together (with the Home Base mode on the guest), a 3-player cap.
