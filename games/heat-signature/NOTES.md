@@ -225,6 +225,28 @@ Derived (design consequence):
 - What the single-machine tests still give us: spawning a puppet character + pod (`p2play`), driving a puppet's
   movement (`p2hold`), and the list of places that read `global.Player`.
 
+## Two copies on one PC, UDP on localhost (probe, 2026-10-30)
+Setup: copy B is a second game folder (hard links to copy A's files, its own `version.dll`, logs and command file) and a
+second Proton prefix. Both ran at the same time under one Steam account.
+
+Observed:
+- Each copy picked a character; another bar character became the "puppet" for the remote player. A hosted on
+  127.0.0.1:27715, B joined. About 60 packets per second each way, 0 bad packets (`netstat` counters).
+- Writing a puppet's `x`/`y` with the runtime setter `0x01098cb0` (`(self, var_id, ARRAY_NONE, RValue*)`) holds only until
+  the next frame: `gml_Script_ShipwiseEndBit` rebuilds `x`/`y` from `Fore`/`Starboard` (slots 0x262/0x263), the position
+  relative to the ship or station the character is aboard. Found by hooking the setter and logging the caller's return
+  address for writes to the puppet. So the network sends and applies `Fore`/`Starboard` (plus x/y).
+- The remaining puppet bug when testing stopped: at the start of each of its steps the puppet held the **local** player's
+  Fore/Starboard (traced, not yet explained).
+
+Blocker (unexplained, 2026-10-30 from about 14:40 local time):
+- Every new launch of either test copy runs GML for one or two frames, then no more steps. The main thread is in the
+  runner's `PeekMessage` loop (winedbg backtrace: `heat_signature+0xcf886b`), CPU about 1 %. The window shows a galaxy
+  view. The same happens with the previous probe DLL, with no DLL, with freshly deleted saves, with `GetForegroundWindow`
+  / `GetActiveWindow` / `GetFocus` hooked to the game window, with `WM_ACTIVATE*` posted every 0.5 s, and with vsync off
+  (`DXVK_CONFIG="d3d9.presentInterval = 0"`, `MESA_VK_WSI_PRESENT_MODE=immediate`). Proton was not updated.
+  The window was on screen. Next check: restart the Steam client (dozens of force-stopped launches in one session).
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
