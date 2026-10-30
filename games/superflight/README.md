@@ -6,7 +6,7 @@
 | Versions tested | Steam build 2304714 (2025-07-13); direct IP tested automatically, Steam lobby code built, two-account Steam run pending |
 | Projects | [SFMF Multiplayer by Phlarfl](https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer) (directory entry: Superflight / SFMF Multiplayer) |
 | QA level | automated (two real copies on one PC, direct IP; see QA) |
-| Last updated | 2026-10-29 |
+| Last updated | 2026-10-30 |
 
 ## Where things stand
 
@@ -120,8 +120,10 @@ Install BepInEx 5.4.23.6 (win_x64) into the game folder, run the game once, put
 `SuperflightCoop.dll` into `BepInEx\plugins\SuperflightCoop\`. Steam: click "Host for Steam
 friends", then "Invite friends" in the co-op window; friends accept in the overlay (Steam
 starts the game for them if needed), or paste the lobby code the host sees. Direct IP: pick
-a port, click Host, forward that UDP port or use a VPN; friends type `host:port`. Release
-repo and download: not published yet (see Next steps).
+a port, click Host, forward that UDP port or use a VPN; friends type `host:port`. Plugin
+repo: https://github.com/carlgoodtoseeyu/superflightmp (MIT, tag v0.2.0). The release zip
+`SuperflightCoop-0.2.0.zip` (SHA-256 `2e39331a727521211f2b128f864a92968bc40fff458f70aa1592d48fcfc40654`)
+is built; the GitHub release page is the owner's step (see Next steps).
 
 ## Known issues
 
@@ -137,6 +139,6 @@ repo and download: not published yet (see Next steps).
 1. Steam: a real two-account run over the internet (owner plus a friend through the overlay
    invite, or `tests/run_steam.py --join CODE` on a second PC with another account).
 2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
-3. Publish: the plugin repo is tagged v0.2.0 and `SuperflightCoop-0.2.0.zip` with its SHA-256
-   is packaged; the owner pushes the repo, uploads the release, then the directory entry gets
-   the link.
+3. Publish: the plugin repo is pushed (main and tag v0.2.0, 2026-10-30); the owner drafts the
+   GitHub release from the tag with `SuperflightCoop-0.2.0.zip` and its SHA-256, then the
+   directory entry gets the release link.

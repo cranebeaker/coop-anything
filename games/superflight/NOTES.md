@@ -385,3 +385,14 @@ head (embedded commit matches) and `tests/run_two.py` passed on it: `RESULT: PAS
 owner's own git config; flagged to them (GitHub's "block pushes that expose my email" setting would
 reject the push if it is on).
 
+## 2026-10-30: plugin repo published
+
+With the owner's OK and their empty repo URL, the plugin repo was pushed from the scrubbed
+history: `git remote add origin https://github.com/carlgoodtoseeyu/superflightmp.git`,
+`git push -u origin main --tags`. Verified after the push: `git ls-remote origin` shows `main` and
+`v0.2.0` at the same objects as local (head 014e00a, tag 2d59f1c), 26 tracked files (source,
+tests, build script, README, INSTALL, RELEASING, LICENSE; no DLL, PDB, logs or caches), the repo
+and the tag page answer HTTP 200 without sign-in, and `git grep` over every pushed revision finds
+no username, local path or e-mail. The GitHub release (tag v0.2.0, `SuperflightCoop-0.2.0.zip`,
+SHA-256 2e39331a...0654) is still the owner's step; the directory entry gets the release link once
+it exists.
