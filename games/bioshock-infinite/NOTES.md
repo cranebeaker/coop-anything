@@ -454,6 +454,50 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - Not checked: enemies that really spawn with shields, and the "shield broken" effect, which is not played on the
   receiving side because the value is written directly.
 
+### First hands-on test (owner plays copy 0, `outils/bot.py` plays copy 1)
+
+- **Kills not mirrored.** The game sometimes replaces live enemies in one copy only, for example when that player
+  respawns. The per-spawner rank ("#2" on one side, "#1" on the other) then broke the identity. The fix counts deaths
+  per spawner instead: each entry is (spawner hash, deaths, damage dealt to the live one), packet version 3.
+  `essai_ennemis.py` gained a clean-up test: player 0 dies, then copy 0 kills everything for 40 s, and nothing it
+  killed may stay alive in copy 1. One limit remains: a wave the game spawns on one side only (spawners 11 and 8 at the
+  station) does not exist on the other side.
+- **Purple "error" puppet.** The puppet kept the template's `Shared_Textures.CharacterWrong` mesh.
+  `Booker.Booker_MESH` lives only in `S_Light_Capsule`, `S_Light_Geo` and `S_Lut_LighthouseInf2_Geo`, so it is not
+  loaded at the station. Two loading routes fail:
+  - `DynamicLoadObject("S_Light_Capsule.Booker.Booker_MESH")` returns None, because it loads no packages in this
+    build.
+  - The `STREAMMAP S_Light_Capsule` console command loads the mesh but replaces the current levels, and the player
+    falls into the void.
+
+  What works is `PlayerController.ClientPrepareMapChange('S_Light_Capsule', true, true)`. It loads the 3 MB capsule
+  without showing it, and the mesh appears within 0.3 to 2 s. Master_P runs 39 `SeqAct_PrepareMapChange` and 39
+  `SeqAct_CommitMapChange` of its own, so the pending change must be cancelled, in this order:
+  1. Wait for `WorldInfo.IsMapChangeReady`.
+  2. Set `RF_RootSet` on every object the preload brought, except actors and components under a `TheWorld`
+     (284 objects).
+  3. Call `ClientCancelPendingMapChange`.
+
+  Object flags are 32 bits at +0x08 and `RF_RootSet` = 0x4000. This was checked against a class, a `Default__` object
+  and the Core package, which have it, and a controller, an archetype and the fresh mesh, which do not.
+  `_Linker` is at +0x0C and `_LinkerIndex` at +0x10. The objects the capsule shares with the station (first-person
+  hands, player camera rig) keep their object, linker and index, so they are not reloaded.
+- **Render-thread crash** (read at 0x200, instruction 00686CE1 in `FUN_00686c10`, called from render command
+  0066eed0). The function skins a chunk with 55 bones (EDI) against an empty reference-to-local array.
+  - Cause 1: cancelling without the root set. The next GC, about 60 s later, freed part of the load. It crashed 2 runs
+    out of 2, and did not crash in 200 s when the change was kept pending.
+  - Cause 2: using the mesh before `IsMapChangeReady`. The object exists before it is finished. It crashed 4 runs out
+    of 4 once the puppet's bones were updated while not rendered.
+  - With both fixes, 6 full runs in a row passed with no crash. The puppet now sets `bUpdateSkelWhenNotRendered`,
+    `bTickAnimNodesWhenNotRendered` and calls `ForceSkelUpdate` after `SetSkeletalMesh`.
+- **Floating puppet.** The pose sent is the pawn location, the centre of its collision cylinder (`CollisionHeight`
+  130). The body is drawn at `Mesh.Translation` (Z = -133 for the player, -138 for a station soldier), so the puppet
+  floated by that much. It is now lowered by the local pawn's `Mesh.Translation.Z`.
+- `sonde/journal_plantage.cpp` now names engine objects it finds in registers, one dereference from each register,
+  and on the stack.
+- `outils/copies.py` had a race. `bi_pilote.TUBE` is global, so two threads connecting at once could open the wrong
+  pipe. A lock fixes it.
+
 ### Not done yet
 
 - Enemies only see and shoot the local player, and enemy positions are not synced.
