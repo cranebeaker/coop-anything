@@ -19,8 +19,8 @@ joined and sends bad data, the `events` scenario sometimes fails, and map area e
 
 ## Existing work
 
-- **Nestmates** (this write-up): <https://github.com/skythebro/Nestmates>, MIT, 1.0.0 released 2026-10-29 and
-  1.0.1 on 2026-10-30. Download on [Nexus](https://www.nexusmods.com/ironnest/mods/90). Built with this playbook.
+- **Nestmates** (this write-up): <https://github.com/skythebro/Nestmates>, MIT, 1.0.0 released 2026-10-29,
+  1.0.1 and 1.0.2 on 2026-10-30. Download on [Nexus](https://www.nexusmods.com/ironnest/mods/90). Built with this playbook.
 - **Iron Nest Co-Op Mod** by Jager2251: [Nexus 20](https://www.nexusmods.com/ironnest/mods/20), issue tracker at
   <https://github.com/Jager2251/Iron-Nest-Co-Op-Mod> (no source there). It uses a Steam lobby code and takes up to 5
   players. Its README lists missions, aim, loading and firing, doors and hatches, cards, map drawings, the supply
