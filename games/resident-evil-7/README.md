@@ -12,9 +12,11 @@
 
 You can't play the story together yet. Each player plays their own world, and sees the other as a full-body
 Ethan who walks, jogs, crouches, sidesteps, backpedals and looks around where the other player does, over
-Steam relay. You can't walk through each other. Players connect from an in-game panel, and the ghost rebuilds
-itself after save loads and hides when the other player's data stops. Enemies, items, doors and story progress
-are not shared, and saving is blocked while the mod runs.
+Steam relay. You can't walk through each other. Players install with one script, connect from an in-game
+panel, and can meet up by jumping to the same chapter. The ghost rebuilds itself after save loads, hides when
+the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
+Enemies, items, doors and story progress are not shared. Saving is off by default and can be switched on, with
+automatic save backups.
 
 ## Existing work
 
@@ -36,9 +38,18 @@ are not shared, and saving is blocked while the mod runs.
   face rig), `ShadowHandL/R` and `ShadowLowerBody` with **DrawDefault=false, DrawShadowCast=true**. Ethan's
   motion bank is `Animation/Player/pl0000/pl0000.motbank` (29 banks, ~5,500 clips: Walk/Jog/WalkCrouch in
   F/B/L/R, turns, idles).
-- **Saves**: `app.SaveDataManager`. Every write goes through a few `save…Request` entry points
+- **Saves**: `app.SaveDataManager`. Normal saves go through six `save…Request` entry points
   (`saveFileAutoRequest`, `saveFileMenuRequest`, `saveFileSystemDataRequest`, `saveFileExpansionDataRequest`,
-  `saveFileBirthdayDataRequest`, `saveFileUniqueDataRequest`). Skipping them blocks saving cleanly.
+  `saveFileBirthdayDataRequest`, `saveFileUniqueDataRequest`), **but not all writes do**: a chapter jump
+  (`GameManager.chapterJumpRequest`) wrote the Steam save folder with all six skipped, through internal paths
+  (`chapterJumpEnemySave`, `chapterJumpEnemyStampSave`, `folderSave`, …). Block those too, and check a
+  before/after hash of `Steam\userdata\<id>\418370\remote` rather than trusting the hooks. Skipping only the
+  `via.storage.saveService.SaveService.saveSingle` disk write did **not** stop it either.
+- **Chapter jump**: `GameManager.getChapterJumpDataKey(ChapterNo)` names 33 targets; `chapterJumpRequest(key,
+  false, "")` jumps. Back-to-back jumps before the last one has loaded leave cutscenes invisible and the player
+  outside the map, so allow one at a time.
+- **Cutscenes**: `GameManager`'s static `_GameEventMan` (`app.GameEventManager`): `RunningEventControllers.Count`
+  > 0, or `GameManager.PlayingMovie` set. Some scenes are missed by this check.
 - **Steam**: the game's `steam_api64.dll` exports the modern flat API (`SteamNetworkingMessages_SteamAPI_v002`
   and friends), so a plugin can use Valve's relay through the game's own Steam session.
 
@@ -67,11 +78,20 @@ are not shared, and saving is blocked while the mod runs.
 - **Loads, deaths and area changes.** These recreate `PlayerObj` and unload the folder the ghost lives in. A
   watcher compares the player's address every 0.5 s and re-runs the whole spawn sequence when it changes, or
   when the ghost's objects stop answering. A load first passes through a temporary loading-scene player (no
-  Ethan meshes), so the ghost is only built for a player named `Pl0000…`.
+  Ethan meshes), so the ghost is only built for a player with a Shadow body. Other playable characters (the
+  videotapes) work the same way, with clips matched by suffix (`Hands_Walk_Loop`…). `Hands_Crouch_Loop` jams
+  the layer like `Stand_Loop`, so crouching still is the crouch-walk clip held on one frame.
 - **Disconnects.** The ghost is hidden when the newest sample is more than 2 s old and shown again when data
   resumes.
 - **Connecting.** An in-game panel shows your own SteamID (with Copy) and takes the friend's. The plugin reads a
   one-line command file, switches between Steam and the bot live, and saves the friend's ID for the next launch.
+- **Installer.** `Install.cmd` finds RE7 through Steam's library list, copies it to a separate folder, downloads
+  REFramework and csharp-api from the pinned release with SHA-256 checks, installs the mod and backs up saves.
+- **Saving.** Off by default (all request and internal save paths skipped). When switched on, the C# plugin
+  first copies the save folder (found with `ISteamUser_GetUserDataFolder`) and keeps the last 20 backups.
+- **On screen.** Connection, ping (an echo of the peer's send time in the packet), the friend's chapter and Steam
+  name, a version-mismatch warning, and a nameplate. The ghost is hidden during either player's cutscene
+  (a cutscene bit in the stance flags).
 
 ## QA
 
@@ -87,27 +107,30 @@ are not shared, and saving is blocked while the mod runs.
   80 s; the timeout is now 180 s and the test reports load time and rebuild time separately.
 - Steam path: self-loopback over `ISteamNetworkingMessages` (`relayStatus=100`, no loss). Two Steam accounts
   not tested together.
+- Save guard: a supervised chapter jump with saving off, 2026-10-30. The save files' SHA-256 were unchanged, and
+  the guard logged the jump's internal saves as blocked. An earlier build without the internal hooks failed
+  this check, and the owner's saves were restored from backup.
+- Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
+  (keeps the friend's ID).
 
 ## How to play
 
-Both players need the Steam build, REFramework nightly-01433 (`dinput8.dll` only) plus csharp-api, and the
-.NET 10 runtime. Copy the mod's `reframework` folder into a copy of the game and load Chapter 1. In the
-REFramework menu (Insert → Script Generated UI → coop_dummy → Connect), copy your SteamID to the other player,
-paste theirs and click **Connect to friend**. The ghost builds itself. Full steps are in the
-[coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
+Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
+[v0.3 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.3), unzip it and run **Install.cmd**.
+Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window copy your SteamID to the other player,
+paste theirs and click **Connect to friend**. To meet up, both jump to the same chapter with the chapter
+switcher. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
 - No world sync: enemies, items, doors and story are separate per player.
-- Saving is blocked while the mod runs.
+- Saving is off by default; with it off, nothing from a session is kept.
+- Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
-- Tested only in the Chapter 1 start area.
-- No ghost while playing as someone other than Ethan (for example Mia's sections).
 - The face doesn't animate.
 
 ## Next steps
 
-1. Optional saving with automatic save backups.
-2. A two-player test on two PCs (QA is still `none`).
-3. An on-screen connection indicator outside the REFramework menu.
-4. World sync, host-authoritative: story and area, doors, items, then enemies.
+1. A two-player test on two PCs (QA is still `none`).
+2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
+3. World sync, host-authoritative: story and area, doors, items, then enemies.
