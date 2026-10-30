@@ -4,15 +4,19 @@
 |---|---|
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
-| Projects | none yet; a from-zero mod is in progress (claim: issue 274) |
-| QA level | none |
-| Last updated | 2026-10-30 |
+| Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
+| QA level | none (bot-driven checks with two local copies, no automated suite yet) |
+| Last updated | 2026-10-30 (evening) |
 
 ## Where things stand
 
-Nobody can play Heat Signature together today. A co-op mod for up to 4 players is being built from zero. So far a
-probe DLL loads into the game, hooks its compiled GML functions and reads the player and time state while the game runs.
-There is no networking yet.
+Nobody can play Heat Signature together yet, but the core pieces of a co-op mod for up to 4 players run between two
+game copies on one PC (localhost UDP, headless test displays). Working and tested with bot input: each player sees the
+other as a puppet character or pod; shared pause, slow motion and fast-forward with a "paused by" banner; the host's
+mission and its ship are rebuilt identically on the guest from the mission text plus a seed; pods fly together in
+space (with an optional "follow the host" mode) and both players can board the shared ship; doors and guard positions
+are synced from the host, and the host's guards notice guests. Not done: guests' attacks reaching the host, guard
+animations on guests, keycards, alarms, loot, more than one guest, Steam lobbies, an installer.
 
 ## Existing work
 
@@ -42,7 +46,9 @@ There is no networking yet.
 
 ## What we changed
 
-Nothing in the game. A read-only probe DLL (MinHook) logs player, time and pause state.
+Nothing in the game files. The mod is two DLLs next to the exe: `version.dll`, a permanent loader (keeps the game
+running unfocused, logs and answers error dialogs in test copies, hosts the hot-reload core) and `coop_core.dll`,
+swapped while the game runs. Each mechanism, the evidence and the numbers are in [NOTES.md](NOTES.md).
 
 ## QA
 
@@ -58,7 +64,7 @@ Not applicable yet.
 
 ## Next steps
 
-- Map input (`ControlDown`, `ControlPressed`, `ControlReleased`, mouse aim) and drive it from the DLL. This gives both
-  remote players and a test bot.
-- Read the pause, slow-motion and fast-forward code in a mission and design the shared pause.
-- Netcode: the host runs the simulation, guests send input and get state, over Steam lobbies and P2P, up to 4 players.
+- Spotted pause/zoom on the spotted player's screen; guests' hits and knockouts sent to the host; guard states and
+  animations on guests; keycard clearance and alarms; loot.
+- Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
+- An automated QA suite (two or more headless copies, bots, assertions), then an installer.
