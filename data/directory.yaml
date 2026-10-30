@@ -7641,6 +7641,38 @@
   sources:
   - https://github.com/S1ii/Coop-Divers
   checked: '2026-10-19'
+- game: Dave the Diver
+  year: 2023
+  engine: Unity 6000.0 (IL2CPP)
+  project: Dave the Diver Multiplayer (Coop-Divers fork)
+  url: https://github.com/multiplayereverything/Dave-The-Divers-Coop
+  other_urls:
+  - https://github.com/S1ii/Coop-Divers
+  - https://www.multiplayereverything.com/#davethediver
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: 'yes'
+    items: partial
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Fork of S1ii's Coop-Divers (BepInEx 6 be.790, IL2CPP) with Steam online play (friends-only lobby plus
+    SteamNetworkingMessages through Valve's relay, called from steam_api64.dll directly) and LAN as the fallback, plus
+    fixes for Steam build 26209260. A two-copy lab suite (19 checks over LAN, the Steam path through a SteamMock, and
+    120 ms lag with 5% loss) passes, and every check has a mutant that must fail it. Diver HP, oxygen and weapons are
+    not synced and clients can't damage bosses. Releases are pre-releases (v0.19.3) until two Steam accounts have played
+    a full session. MIT. Write-up in games/dave-the-diver.
+  sources:
+  - https://github.com/multiplayereverything/Dave-The-Divers-Coop
+  - https://github.com/multiplayereverything/Dave-The-Divers-Coop/releases/tag/v0.19.3
+  checked: '2026-10-30'
+  made_with_coop_anything: true
 - game: Pacific Drive
   year: 2024
   engine: Unreal Engine 4
