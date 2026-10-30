@@ -498,8 +498,35 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - `outils/copies.py` had a race. `bi_pilote.TUBE` is global, so two threads connecting at once could open the wrong
   pipe. A lock fixes it.
 
+### Partner's weapon and shots
+
+- The weapon in hand is `XPawn.CurrentRHWeapon`. `CurrentLHWeapon` holds the vigor. Each player weapon has an outside
+  view model, `XWeapon.ThirdPersonModelDefinitionArchetype`; for example `PistolFounder` uses
+  `Arc_XPistol.Models_ThirdPerson.Pistol_TPModel`. A shot is detected when `XWeapon.LastFiredTime` changes.
+  `InvManager.EquippedWeaponIndex` is not an index into anything script-visible.
+- A station soldier's model (`XWeaponModelThirdPerson`) has `Base` set to the pawn, `BaseSkelComponent` set to its
+  body and `BaseBoneName` R_Grip, with zero relative offset. The model's pose equals the R_Grip bone's world pose.
+  Booker's mesh has R_Grip too (bone 49).
+- `SetBase` does nothing on a spawned model: not on the puppet, and not on a soldier either, whether called through
+  the pipe or through ProcessEvent. The module copies the bone pose every frame instead, with `GetBoneLocation` and
+  `GetBoneQuaternion` (Space 0), brought into the puppet's floating section.
+- The archetype's mesh component has `HiddenGame` true. The game unhides it on equip; the module calls `SetHidden(0)`
+  itself.
+- Effects: `MuzzleFlashPrimary` is an `Engine.XEffect.XEffectContainer`. For the pistol it pairs the visual
+  `Arc_HandCannonVisualFX.HandCannonThirdPersonMuzzleFX` (an `XEffectMultiple` containing an `XEffectParticle` that
+  plays `FX_MachineGun.Particles.MuzzleFlashThird_par` on socket `muzzle`) with the sound `Arc_Pistol_SFX.FireEffect`.
+  Script has no general play-effect function.
+  - What works: `XPlayerController.ClientScriptedPlayEffect(InActor, PlayEffectInterface)`, where the interface is an
+    `XRPCPlayEffectInterface`. `XSeqAct_PlayEffect` is one, and its `Effect` field is the container. The module
+    borrows a loaded `XSeqAct_PlayEffect`, swaps its visual and audio pointers for the call, and restores them.
+  - What fails: spawning `Engine.EmitterSpawnable` throws, and `EmitterPool.SpawnEmitter` is not in this build's
+    script.
+- Result (`outils/essai_arme.py`): copy 1 shows the pistol in the puppet's hand, a muzzle flash with light on copy 0's
+  shot, then smoke. Pose packet version 4 adds `Arme` (hash of the model path) and `Tirs` (shot counter).
+
 ### Not done yet
 
+- The arms hang, so the weapon points at the floor. No aiming pose, no tracer (`TracerEffect`), no vigors.
 - Enemies only see and shoot the local player, and enemy positions are not synced.
 - Not tested with real gunfire by a human, or between two PCs.
 
