@@ -147,6 +147,31 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   wall could not walk, and the level intro froze only player 1
   ([games/modern-warfare-2](../games/modern-warfare-2/README.md)).
 
+### Unity IL2CPP: Il2CppInterop traps
+
+Found while fixing the Dave the Diver online mod (Unity 6000.0, BepInEx 6 be.790,
+[games/dave-the-diver](../games/dave-the-diver/README.md)). Each one silently broke a
+synced feature:
+
+- **`GetType()` lies.** An Il2CppInterop wrapper is the type you asked for:
+  `FindObjectsByType<BossControllerBase>` returns `BossControllerBase` wrappers, so
+  `GetType().Name` and `is` never see the real subclass. Boss families were never
+  recognised and pickup ids differed between host and client. Use
+  `((Il2CppSystem.Object)x).GetIl2CppType().Name` and `TryCast<T>()`.
+- **Native exceptions don't reach your `catch`.** When the original method throws
+  inside a Harmony-patched IL2CPP method, Il2CppInterop logs "During invoking
+  native->managed trampoline" and swallows it. A `try/catch` around the call never
+  fires, and the caller carries on as if it worked. A client dialogue that never opened
+  stalled the shared story this way. Check the state after the call instead.
+- **Reading a singleton can create it.** The game's `Singleton<T>.Instance` builds the
+  manager when it is missing, and on the boot scene that throws. One unguarded read in
+  `Update` threw every frame and skipped everything after it. Read
+  `T.hasInstance ? T.Instance : null`.
+- **Big metadata.** Dumpers that cap their report size may refuse a large
+  `global-metadata.dat` (this one was over 64 MB). A small `System.Reflection.Metadata`
+  reader over BepInEx's generated `interop\*.dll` was enough for type names, members
+  and enum values.
+
 ## What to map for co-op
 
 - **Netcode, if any:** does the engine have replication (Unreal), a client/server split
