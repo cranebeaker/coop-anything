@@ -246,6 +246,7 @@ Derived (design consequence):
   **not** clear it while the owner was away. Earlier "fixes by restarting Steam" coincided with the owner being back at
   the PC. To confirm: launch with the display awake; long term, run test copies on a virtual display (gamescope
   headless or Xvfb) so they do not depend on the owner's monitors.
+  Confirmed in practice (18:15): under headless gamescope the copies start every time, while the owner is still away.
   Lesson for the playbook: when a Proton game seems frozen, list *all* its X windows (`xdotool search --class
   steam_app_<appid>` + `getwindowname`) before anything else, and hook `MessageBoxA/W` from the start.
 
@@ -273,7 +274,20 @@ Derived (design consequence):
   (type, faction, guard counts, alarms, sensors, segments, protocols, mercenaries, guard kits) to an open text file;
   `LoadMissionFromFile` (`0x009ed2d0`, 4 arguments when called from `CreateScenario`) reads them and creates the
   mission and its ship. Plan: host saves the chosen mission, sends the text and a seed; guest loads it.
-- GML strings from the DLL (found 2026-10-30, banner not yet seen on screen): `0x010ab350` is `YYCreateString(RValue* out,
+- **Mission transfer works** (2026-10-30, observed): the host opens a text file with the builtin `file_text_open_write`,
+  calls `SaveMissionToFile(mission id, file)`, closes it. The file (in the save folder: GameMaker sandboxes file
+  access) holds base64 lines of a `<Mission>` block (type, faction, target, description, difficulty), a `<Ship>` block
+  (guard and boss counts, segments, sentries, protocols, mercenaries) and `<GuardKit>` blocks; 45 lines, about 2 KB.
+  The guest needs a `<Header>` block with `Encoded = 1` in front (otherwise the game's `Crash` box says "No mission data
+  found in file for: <character>") and calls `LoadMissionFromFile("coop_mission.txt", <its player id>, 1, undefined)`
+  (the call `CreateScenario` makes). It returned a new mission; saving that mission again on the guest gave text
+  identical to the host's (45 of 45 lines). Next: the ship's interior from a shared seed.
+- Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
+  Screenshots come from the game itself (`screen_save` builtin, written to the save folder), clicks are window messages
+  inside the process. The loader answers message boxes automatically when `COOP_AUTO_DIALOGS=1` (set by `game.sh`).
+- Strings and banner (observed): `ShowUpdate(text, 3)` from the DLL showed "Paused by your partner" on the host and
+  "Paused by you" on the guest when the guest paused; both copies at `TimeScale` 0.
+- GML strings from the DLL: `0x010ab350` is `YYCreateString(RValue* out,
   const char* text)` (cdecl, about 5600 call sites with literals); `0x00401790` frees an RValue's payload (the game calls
   it when `((kind + 0xffffff) & 0xfffffc) == 0`). `ShowUpdate(text, 3)` (`0x00844290`) is the game's on-screen update line.
 
