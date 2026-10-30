@@ -60,6 +60,15 @@ Phase 0 (triage), 2026-10-30.
 - Derived: a guest's character is one small file, so a guest can bring their own character to the host's galaxy.
   The host keeps the galaxy and stations.
 
+## Possible multiplayer leftovers
+- Observed: scripts `PlayerOrItemIsLocal`, `PlayerRemoteControls`, `FindPlayerByName`, `PlayerParent` exist in the
+  compiled exe, and there is a `PlayerStateGhost`. Also `SetTimeScale`, `SlowMoControls`, `PauseMission`/`UnpauseMission`.
+- Observed: no `network_*`/`buffer_*` strings in STRG. That proves little, because YYC builtins are called through the
+  runtime's table, not by name.
+- Guess (not checked): these come from an early multiplayer prototype. "Client" in other names (`AssignClientsToStations`,
+  `oClientUnlockMessage`) means mission clients, not networking. To check: read the decompiled `PlayerOrItemIsLocal` and
+  `PlayerRemoteControls`.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
