@@ -199,6 +199,32 @@ Not done yet (derived from the code read so far):
   ignore P2 until those take a player argument or loop over players.
 - P2's Draw and HUD: on a real guest machine P2 is that machine's own player, so this matters only for the host.
 
+## Pods for a second player (probe, 2026-10-30)
+Observed:
+- `PlayAsCharacter(P2)` can build P2's pod without harming P1 if, for the duration of the call, `global.Player` is
+  set to `noone` (-4), `DestroyContents` is skipped (it ran on 15 `oPlayerShip`-family instances), and
+  `AddPlayerToCharacterSelect` is skipped (it reseats every other selectable character, P1 included). Then
+  `global.PlayerShip` holds P2's new pod (P1's pod is untouched) and both players stay `"Free"`.
+- Station layout (this test galaxy): the central hub at (0, -2) offers "Return to pod"; the green pad at (160, 0)
+  offers "Get a mission". Use prompts are HUD text for the current player, not world labels. Use = `ControlPressed(0)`
+  (a hold does not trigger it). `PathfindToCursor` = `ControlPressed(11)` + the mouse override works for P1 and P2.
+- P1 at the hub + Use -> `InteractWith(100225)` -> P1 is in its pod (camera zooms out to the station exterior).
+- P2 at the hub + Use -> `InteractWith(100222)` runs **inside** P2's window (`global.Player` = P2), but afterwards
+  **P1** is in state `"Controlling"` (in its pod) and P2 stays `"Free"`. The action is carried out later by another
+  object, which uses `global.Player` outside the window.
+
+Derived (design consequence):
+- Impersonating a second player on one machine breaks wherever the game defers work to another object that reads
+  `global.Player` (teleporter, doors, guards' reactions). Each case would need its own patch.
+- Better model: **each machine simulates its own player as the real `global.Player`** (pods, teleporters, inventory
+  and use actions work unmodified), and the **host owns the world** (ships, guards, doors, loot, time). Remote
+  players are puppets: an `oPlayer` (+ pod) per remote player whose position, animation and state come from the
+  network. Guests send their position and the world actions they cause (door opened, guard hit, item taken); the host
+  applies them and sends the world state back. On the host, guards must also see puppets (`EnemyCanSeePlayer`,
+  `ChasePlayer` loop over players, or the impersonation window is used only around guard logic).
+- What the single-machine tests still give us: spawning a puppet character + pod (`p2play`), driving a puppet's
+  movement (`p2hold`), and the list of places that read `global.Player`.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
