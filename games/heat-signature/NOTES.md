@@ -348,6 +348,20 @@ Derived (design consequence):
   3 copies with an event id); the host calls `SetDamageSignal` on its guard. Test (`hitguard 0 1` on the guest): event 1
   sent, applied on the host, and the host's guard went to state "Down". Not yet visible on the guest: the mirrored
   guard keeps its own `State` and animation (its AI step is skipped), so the knockdown must still be mirrored as a state.
+- **Knockouts visible on guests** (observed): mirrored guards now run their own step (for animations) blind, with
+  `EnemyCanSeePlayer` hooked to answer "no" during it, after taking the host's `State` via `ChangeStateTo` when that
+  state needs no extra data. Forcing other states fails: "Responding" raised a GameMaker runtime error in
+  `EnemyStateResponding` line 66 (found by walking the YYC GML call stack from the loader's dialog hook: each GML
+  function links `{previous, name, line}` into a list headed at `0x049356e8`). Running guards with `global.Player =
+  noone` failed the same way. Allowed: Down, Dead, Sentry, Static, Idle, PatrolPath, Patrolling. Test (`hitguard` on the
+  guest after `board.sh`): exactly one "Down" guard on host and guest; host guards then went "Fetching Body", "Leaving
+  Body", "Searching" (kept local on the guest, positions mirrored); no error dialogs on either copy.
+- **Puppet contents list**: a ship keeps a contents list; boarding the puppet with `CopyTheLattersParentAndPosition`
+  alone left it off the list, and an airlock forcefield ejecting it raised the game's "Trying to remove a oPlayer
+  from contents list, but couldn't find it in there". Boarding now calls `RemoveFromParentsContents(puppet)`
+  (`0x008606c0`), the copy, then `AddToParentsContents(puppet)` (`0x00852570`).
+- `local/scripts/board.sh` (test harness): starts both copies, shares a mission, undocks, moves and docks both pods,
+  checking each step and retrying (3 tries) before failing with the step's name.
 - Test-sequence note: in that run the host's `undock` did not take (`gotoship`: "need my pod"), so the host stayed at
   the station. The bot steps need checks (pod found, state "Controlling") before going on.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
