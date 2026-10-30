@@ -549,6 +549,41 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - `Destroy` returns False on spawned `XWeaponModelThirdPerson` actors, and the old pistol kept floating. Instead,
   each model is kept per weapon, hidden (actor and mesh) and reused.
 
+### Movement sync, measured (`outils/essai_synchro.py`)
+
+- Setup: owner's save `TC_PreLottery` (the open town center before the raffle, no enemies). Copy 0 moves with its
+  real inputs: `PlayerInput.aBaseY` / `aStrafe` rewritten every frame, `XPlayerController.StartSprint`, and the
+  controller rotation. `time.sleep(0.004)` between writes lasts about 15 ms on Windows, and the player then only
+  moved at 31 units/s. Real speeds are about 650 units/s forward, 480 backward and 560 strafing. Walking straight
+  for 3 s fell off the island, so the route returns to its start.
+- Before:
+  - The puppet was rendered 60 ms behind receive time, between the last two packets only. The target time almost
+    always fell before the older packet, so the puppet stood still for 11 to 54 % of moving samples.
+  - The body faced the movement direction: 180° wrong walking backward, 90° wrong strafing.
+- After (pose packet v5 adds `Temps`, the sender's clock):
+  - A 64-packet history is kept. The clock offset is the minimum (receive - send), and the jitter is the 90th
+    percentile minus that minimum.
+  - The render target is newest - max(jitter + 10 ms, 1.5 send periods), interpolated between the two packets
+    around it, and extrapolated by at most 100 ms when a packet is late.
+  - The body faces the view when standing and when walking backward. Backward plays the forward walk at a negative
+    rate unarmed, or `WalkBwd` / `RunBwd` from the MG set when armed. The body faces the movement direction going
+    forward, and turns 45° toward the step when strafing, since the game's male sets have no strafe animations.
+  - Results: stalls 0 to 4 %, delay 40 to 50 ms, lag-compensated position error 5 to 12 units on average. The body
+    is 0° off the view walking backward and 45° strafing, and 7° behind when turning on the spot at 120°/s.
+- Faster test launches: the three startup movies (21 s) were replaced by `LoopingMovieUntilStartupFinishes` in each
+  copy's own XEngine.ini.
+  - Leaving no startup movie, or naming a missing file, means the press-start screen never comes.
+  - `-nomovie` blanks the Scaleform menus.
+  - The press-start screen still ignores input for about 7 s while the game finishes starting up.
+  - Copies are now in game 44 s after launch, down from 65 to 70.
+- Lag found in hands-on testing: bi_sonde's `Resoudre` compares every object's path, costing 20 to 64 ms per
+  command that names an object, on the game thread. The module now rewrites queued pipe lines to `0x` addresses
+  through a cache that is re-validated on each use, and such a command costs 4.7 ms. With the bot running, both
+  copies hold 144 fps (before: 1 to 85).
+- Quit crash: a spawned `XWeaponModelThirdPerson` with no `WeaponObject` crashes in its destructor
+  (`FUN_00ac0330`, read at +0x8C) during level teardown, even with `bNoDelete`. The partner's weapon is now a plain
+  `XReactiveSkeletalMeshActor` carrying the template's mesh.
+
 ### Not done yet
 
 - Only the weapon pitches; the arms stay in the guard pose. No tracer (`TracerEffect`), no vigors.
