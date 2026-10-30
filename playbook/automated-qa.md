@@ -88,6 +88,8 @@ animation checker.
 
 - **Validate the checksum itself.** Exclude padding and inactive history only with native control-flow evidence; retain mutation checks for active fields ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Respect fixture boundaries.** Inject controls before the measured binding stage and end special assertions on schedule; keep general invariants running ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
+- **Let a bot play the story and compare quests.** Per-feature tours only cover what you thought of. A story autopilot on the host (answer choices, press whatever the story has armed, walk into and look at story triggers) with one check, "every client holds the host's active quests, every 30 s", found a desync in a chapter that every feature tour had passed. Report how far the bot got in each chapter: a chapter where it took 0 to 2 actions proves little ([MiSide](../games/miside/README.md)).
+- **Measure leaks with memory held after a full collection.** .NET's `GCMemoryInfo.HeapSizeBytes` includes garbage not yet collected, so it rises with the allocation rate and flagged long two-player runs as leaking. `GC.GetTotalMemory(true)` once a minute showed a flat 11 MB ([MiSide](../games/miside/README.md)).
 
 ## Testing online features on one PC
 

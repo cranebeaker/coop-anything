@@ -147,6 +147,29 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   wall could not walk, and the level intro froze only player 1
   ([games/modern-warfare-2](../games/modern-warfare-2/README.md)).
 
+## Unity IL2CPP: traps for Harmony hooks
+
+Learned on MiSide (Unity 2021.3, BepInEx 6, [games/miside](../games/miside/README.md)).
+
+- **One compiled body, many methods.** IL2CPP folds methods with identical machine code into
+  one native function, and a Harmony hook patches that function. So a hook on one game method
+  also runs for every method folded into it: a minigame's `StartGame` hook fired when a
+  tutorial hint faded, and a client claimed a minigame that was never on screen. Any hook that
+  acts on its instance checks `__instance.GetIl2CppType().Name` first.
+- **Find what arms a story object in its persistent UnityEvents.** Story in Unity games is
+  often wired in the editor: a click's `UnityEvent` switches on a trigger, whose event starts a
+  dialogue, whose end event arms the next objects. Dump every persistent call in a scene
+  (`UnityEventBase` persistent call groups: target, method name, argument), including events
+  held in arrays, lists and structs. Then search the dump for the object and walk backwards.
+  This found a gate in one run after tracing the game's timer scripts had changed their timing.
+- **Game methods called out of context throw.** Calling a game method directly from a
+  test or a relay, outside the state it expects, often throws part-way, and a Harmony postfix
+  on it then never runs. Relays that must not miss go in prefixes; tests drive the game's own
+  entry point (the object's click, not the function it ends up calling).
+- **Stripped members.** Code the game never called is often stripped (`Animator.parameters`,
+  `GUILayout`, `Texture2D.EncodeToPNG`). Read the data from the game's files at build time
+  (UnityPy) or fall back to the members that remain.
+
 ## What to map for co-op
 
 - **Netcode, if any:** does the engine have replication (Unreal), a client/server split
