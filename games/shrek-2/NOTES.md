@@ -669,3 +669,31 @@ the hero (the fairy still flies in and plays its animation; nothing stops the he
 4. Check `Engine.dll` for `UViewport`/splitscreen and `IpDrv.dll` listen-server code paths.
 5. Run the remaining research.md searches and open a "claim a game" issue.
 6. Try launching the copy and entering `open <map>?listen` style commands only on the copy.
+
+## Russian texture adaptation (comparison of the 1C install against the English baseline)
+
+Method (observation): for every `UTexture` in the 12 packages that differ between the Russian install
+and the English Level Editor set, the first mip's bytes (read by StorageOffset/StorageSize from the
+package file) were hashed and compared per object path. Only mips[0] was compared.
+
+Russian-adapted textures (pixel data differs), by package:
+
+- `storybookanimTX`: 15 shared textures differ (character pages: rumple, georgie, tom, hare, goldi,
+  emperor, Chicken, wolf, marge, humpty, knave, bopeep; In-Laws_1a, In-Laws_1b, Title_Page);
+  RU-only: piedpiper, giant, pinocchio.
+- `Shrek2_Univ_Tex.PickUps`: poster1..12_sm, herobar_tx, herocrate_tx.
+- `SH_Menu.Wanted_Posters`: poster1..12 (only 3 of 15 textures are identical).
+- `SH_Hud.Loading_Elements`: loading, loading_solid, saving, TimesUp.
+- `EnvAnimsTx`: tour_sign, Hero_Arm, FGM_Menu, flash, Yelcab_LoPoly_TPage_tx, PaddyWagon_Tpage_tx.
+- `10_Castle_Siege_Tex`: PaddyWagon_Tpage_tx, Yelcab_LoPoly_TPage_tx.
+- `4_FGM_PIB_Tex`: sign_4, sign_5, FGM_Banner.
+- `3_The_Hunt_Tex`: cauldron, signs (plus water_base / water_base_noleaves / water_sewer_clean,
+  which differ by name between sets, probably not localization).
+- `6_Hamlet_Tex`: sign_welcome2. `1_Shreks_Swamp_Tex`: sign_stayout.
+  `FGM_Potion_Menu.new_drivethru`: FGM_Drvthru_Main3.
+- `SH_Fonts`: the Russian set has the glyph pages SH*InkFont_Page* (13), English has `*_New` pages (9).
+  The font textures must be kept as they are.
+
+Everything else in these packages (hundreds of textures) is identical to English, so a pack of new
+textures only has to keep the ~65 textures above. Guess (unverified): a pack that replaces whole
+packages would overwrite them; replacing per texture by name avoids that.
