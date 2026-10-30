@@ -8836,9 +8836,9 @@
     phone shows in the holder's hand for the others. The handheld Tetris is each player's own. Steam P2P through
     the game's own steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.5
     pre-release (v0.3.2 is the last full release). The lab suite drives 2-4 game copies on one PC (34 tours,
-    including all of Scene 1 played to Scene 2, plus an every-chapter interaction run, 18 of 18 chapters); a
-    Steam stand-in covers the transport with one account, and no two-account Steam session has run yet. A
-    first playtest with two friends fed the 0.3.5 fixes. Source is public with no licence file yet.
+    including all of Scene 1 played to Scene 2, plus an every-chapter interaction run, 18 of 18 chapters). Three
+    players (the author and two friends) have played it together over Steam on separate PCs and accounts; their
+    19 reports fed the 0.3.5 fixes. Source is public with no licence file yet.
   sources:
   - https://github.com/multiplayereverything/miside-coop
   - https://github.com/multiplayereverything/miside-coop/blob/main/docs/SYNC.md
