@@ -149,12 +149,12 @@ Notes on this run:
 
 **Nestmates 1.0.2, 2026-10-30** (zip SHA-256 `1785c96e…`), Steam build 25664742. Release regression on BepInEx
 be.785: connect, mission, gunnery, requisition, items, markers, events, latejoin, rejoin, maprejoin, fixes101,
-mech1705, news, measurenotes, markers, rules and gametab all PASS. New in 1.0.2:
+mech1705, news, measurenotes, rules and gametab all PASS. New in 1.0.2:
 - `campaign`: the host plays five campaign missions (Hospital False Flag, ChallangeFDC, SiegeOfCartagena,
   DeadReckoning, PhantomBattery) for two minutes each, and every guest compares its world with the host's every 15
   s (scene state, units, area effects, statistics, clock, counter-battery). With one guest: PASS. With two guests
-  (`--guests=2`, three players): PASS on the final build. Two earlier runs flagged one blinking engine warning lamp
-  in PhantomBattery on one guest; that's still being looked at.
+  (`--guests=2`, three players): one PASS, then two runs where one guest's blinking engine warning lamp in
+  PhantomBattery differed (every other check passed); that's still being looked at.
 - `mech1705`: mission clock, counter-battery timer after added time, mission statistics and the medal records
   (kills, shells, custom values) match on the guest. Twins `nostatsync` and `nomedalsync` fail.
 - `news`: the guest's newspaper article queue becomes the host's (the mission's front page). Twin `nonewsqueue` fails.
@@ -163,7 +163,7 @@ mech1705, news, measurenotes, markers, rules and gametab all PASS. New in 1.0.2:
 
 **BepInEx be.788** (6.0.0-be.788+5b766a3), 2026-10-30, Nestmates 1.0.2 unchanged: 150/150 patch classes apply;
 connect, mission, controls, gunnery, items, markers, requisition, events, latejoin, rejoin, maprejoin, fixes101,
-mech1705, news and measurenotes PASS. `campaign` with two guests passes except for the same engine-lamp check.
+mech1705, news and measurenotes PASS. `campaign` with two guests: everything matches except the same engine-lamp check.
 
 **Manual tests with real players over Steam:**
 - 2026-10-28 and 2026-10-29: the owner's two PCs on two different Steam accounts. Hosting and joining through a
