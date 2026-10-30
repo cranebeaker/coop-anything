@@ -10762,6 +10762,7 @@
 - game: A Place for Every Potion
   engine: Unity 6 (6000.3.23f1) IL2CPP
   project: ApfepCoop
+  url: https://github.com/Nreel/apfep-coop
   other_urls:
   - https://github.com/cranebeaker/coop-anything/tree/main/games/a-place-for-every-potion
   kind: mod
@@ -10783,6 +10784,7 @@
     undo records. QA is 11 automated checks over two bot-driven game copies (pass 2026-10-31). Steam
     lobby playtest with two accounts and puppet-side potion actions are still open.'
   sources:
+  - https://github.com/Nreel/apfep-coop
   - https://github.com/cranebeaker/coop-anything/tree/main/games/a-place-for-every-potion
   checked: '2026-10-31'
   made_with_coop_anything: true

@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unity 6000.3.23f1, IL2CPP (`GameAssembly.dll`), Steamworks.NET + shipped `steam_api64.dll`, VContainer, Unity InputSystem, Addressables |
 | Versions tested | Steam appid 5189500, buildid 26252470, version 1.2.6, Windows x64; exe SHA-256 `BC7DDB918A534152BD44D06EAA5EE3F2EA5BC823893902ACC33DF98590EAEBF3` |
-| Projects | ApfepCoop (this write-up, workspace `apfep-coop/`, not published yet), directory entry "ApfepCoop" |
+| Projects | [ApfepCoop](https://github.com/Nreel/apfep-coop) (this write-up), directory entry "ApfepCoop" |
 | QA level | automated (two bot-driven game copies over localhost UDP, 11 checks incl. install/uninstall cycle) |
 | Last updated | 2026-10-31 |
 
@@ -78,7 +78,8 @@ Last suite: 11/11 PASS, 2026-10-31 (after an uninstall/install cycle on the clie
 
 Install with `install.bat <game dir>` (MelonLoader + injector + dll + appid). Host launches the
 game; the room code prints to `MelonLoader/Latest.log`. Client sets `APFEP_JOIN=<room code>`
-before launching. Both need the game and Steam. Release: not published yet (local workspace).
+before launching. Both need the game and Steam. Source: [Nreel/apfep-coop](https://github.com/Nreel/apfep-coop);
+no packaged release yet (run `install.bat` from a checkout with the MelonLoader files in place).
 
 ## Known issues
 
