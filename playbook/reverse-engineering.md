@@ -79,6 +79,9 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   physics body was found by its class (static vtable, check RTTI strings first) plus
   "nearest to the entity's position". An entity matrix that the engine recomputes each
   frame is a copy of the real source: look in the physics or controller object.
+  If you do keep pointer chains (no class or rule found yet), confirm them across separate
+  launches, start them at statics that code references, and read several with a vote.
+  Persona 5 Royal's battle actor works this way (games/persona-5-royal; lessons.md 84).
 - **Moving something that the engine owns.** Write the real source every frame (the main
   loop hook), not once; smooth towards the target; keep the puppet invincible; and read
   memory with `ReadProcessMemory` in chunks so a scan cannot crash the game. See

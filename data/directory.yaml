@@ -9618,3 +9618,31 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+- game: Persona 5 Royal
+  year: 2022
+  engine: Atlus in-house (GFD), closed native x64 binary with Denuvo
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found for the PC version (Steam 1.0.4.0). The game has no Remote Play Together on
+    Steam. A shared-screen prototype made with Co-op Anything (one game, each battle turn routed to the owning player's
+    XInput pad) works in an owner playtest but is not public yet; reverse-engineering findings (battle actor pointer
+    chains, input layer) are in games/persona-5-royal.
+  sources:
+  - https://shrinefox.com/blog/2022/10/22/modding-persona-5-royal-on-pc-switch/
+  - https://github.com/Sewer56/p5rpc.modloader
+  - https://store.steampowered.com/api/appdetails?appids=1687950&filters=categories
+  checked: '2026-10-30'
+  searched:
+  - 'WebSearch: Persona 5 Royal PC co-op multiplayer mod (2026-10-30, nothing found)'
+  - 'GitHub repository search: p5rpc, p5rpc battle, persona 5 royal reloaded (2026-10-30, no multiplayer project)'
+  - coop-anything directory, issues and PRs (2026-10-30, none)
+  - Nexus Mods, Reddit and the ShrineFox Discord not checked
