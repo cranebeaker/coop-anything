@@ -560,6 +560,29 @@ branch in `CheckReplacement` never fired).
   join itself could not be completed in that situation. Early joins still work. Cause unknown; it is on the
   client side, not in the host. The lobby design (connect before the game starts) avoids the situation.
 
+## Save rework: stage 4a done, world state loads from the record (2026-10-30)
+
+Load is started with the URL option `?CoopLoad=<slot>` (`CoopGame.InitGame` reads the record with
+`new(None, Slot) CoopSaveData` and checks the map). The saved pairs are put into the game's `PersistentStore`
+with `SaveValue` **by the mutator when it sees the store actor start** (`CheckReplacement` of
+`KWGame.PersistentStore`): the store does not exist yet in the game's `PostBeginPlay`, and in the mutator's
+call it exists and keeps the pairs. The game's own restore pass then reads them.
+
+Test (host alone, no input): run 1 marked `BreakableCrate2` as destroyed (`WasDestroyed=1`), took a
+checkpoint at t=20 s (`Keys=BreakableCrate2_WasDestroyed`, `Values=1`, other breakables `0`). Run 2 started with
+`?CoopLoad=test`: log `load: store had 0 pairs, now 13 (record 13)`; at t=6.4 s **crates=3** (baseline run:
+4), door blocks 8 and coins 23 unchanged, and the actor count is two lower. Zero `Critical`. So a level can be
+re-entered from a small record without the stock level dump.
+
+Findings and gaps:
+- The record file lands in `System\ShrekCoopSave.ini` (the config name decides the folder); in a player's
+  install that is the game folder. It needs a per-profile place before release.
+- Not yet applied on load: the players' positions, health, coins and potions (the record has them), and the
+  skip of the opening cutscene (the intro still plays after a load, because the level starts as a fresh
+  level; the stock game avoids it through its `bLoadFromSaveGame` path).
+- The record keys per breakable are `<Name>_WasDestroyed` without the level id (the game's own scheme): a
+  second level with an object of the same name would clash. To check when other levels are tested.
+
 **Still to do in stage 3:** the rule that both players must have reached a checkpoint before it counts
 (distance of each player to the fairy's place, kept by the mutator), re-capture the coins and potions
 (`coins=0` here), `MaterialTrigger` pairs, and replacing the fairy's visible "saving" sequence if it freezes
