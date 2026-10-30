@@ -319,6 +319,16 @@ Derived (design consequence):
   1500 units per frame toward a point 1500 units behind the host's pod, own `xSpeed`/`ySpeed` (0x18b/0x18d) zeroed.
   Result: closed 3.2 million units at about 79 000 units/s, then trailed 1900 units behind; when the host docked at
   the shared ship, the guest's pod went there and docked by itself ("Docked with your crew's ship").
+- **Doors** (observed): both copies list the same 17 active doors of the shared ship at the same `Fore`/`Starboard`.
+  A door's state is `Open` (0x438), `OpenSignal`, `Security` (0x374, lock level), `SecondsUntilClosing` (0x43a);
+  `OpenDoor(door)` / `CloseDoor(door)` (`0x00602830` / `0x006017b0`) toggle it. The core sends door messages every
+  15 frames: the host its door states with the seconds left, a guest the doors it opened itself; the receiver uses
+  `OpenDoor`/`CloseDoor`. Messages flowed (guest applied host states 9 times, host opened 4 doors for the guest), but a
+  door opened with nobody in it closes again within a few frames, usually before the next message. Walkers open doors
+  themselves through `AutoOpenDoors` (called from `PlayerStateFree`, i.e. inside the puppet's impersonated step, and from
+  the guards' states), which checks the door's `Security` against `SecurityLevel` (keycards). Derived: puppets already
+  open ordinary doors locally; keycard doors need the remote player's clearance, which a puppet does not have yet.
+  Door messages matter for lasting state (locks, hacks, crashed doors), not for walking through.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
