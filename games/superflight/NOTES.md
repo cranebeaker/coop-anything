@@ -412,5 +412,6 @@ winget) with the owner's OK; signed in by the owner in their own terminal. Forke
 cranebeaker/coop-anything to the owner's personal account (rule from the owner: never publish under
 their organisation), pushed `game/superflight` (head 20c43b5), opened draft PR
 https://github.com/cranebeaker/coop-anything/pull/268 with the template filled; the owner-review
-checkbox is left for the owner. The claim issue was not posted by the agent (tool permission
-denied); the body is prepared for the owner to post.
+checkbox is left for the owner. On the owner's instruction the claim issue was then posted
+(https://github.com/cranebeaker/coop-anything/issues/269), the review box ticked and the PR
+marked ready for review. Open: the two-account Steam play-test, when the owner has a friend.
