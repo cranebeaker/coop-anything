@@ -37,14 +37,18 @@ Working notes, written as I go. Observations, derived facts, guesses and unknown
   (2019-06-15) the NewDark team ships its own MP beta as `mp.zip` → `Thief2MP.exe`. The video and T2Fix use that one.
 - 1.28 and 1.29 release notes list MP fixes for server-list and readables crashes and centered name labels. Nothing about
   avatar/ghost movement (release_notes.txt in t2_v129.zip).
+- `mp_release_notes.txt` in 1.29's `mp.zip`: a beta, "do not expect a fully working game"; some missions have
+  completion conditions only the host player can perform; an alive player revives a dead one by frobbing them, and it's
+  game over only when all players are dead; no built-in chat.
 - The MP exe uses the original Looking Glass "ghost" system: RTTI `cGhostLocalHash`, `cGhostRemoteHash`; net message names
   `GhostFullHB`, `GhostNormHB`, `GhostMiniHB`, `GhostHBTerse`, `GhostRotHB`, `GhostObjHB`, `GhostAIHB`. The only config
   vars are `ghost_local_frame_rate`, `ghost_local_process_ms`, `ghost_spew`, so no knob for remote smoothing.
 - Figgis (2023) lists as unsolved: "Sometimes a remote player can get stuck on geometry and then warp to the proper
   position after a while." This matches the owner's bug report.
 - Figgis's player-cap byte "offset 0x2F440 in Thief2MP.exe": in the 1.27 exe from t2_v127.zip that file offset is a function
-  prologue (`6a ff 68 …`), not `04`. **Contradiction**, not resolved yet. The Google Drive patched exe from the video
-  description returns 404 (checked 2026-10-26).
+  prologue (`6a ff 68 …`), not `04`. Resolved: the constant is at file offset 0x2F4FF in 1.27 and 0x3813F in 1.29
+  (`mov [edi+0x136], 4`, see "Player cap" below); the offset is wrong, the finding (cap N+1) is right. The Google
+  Drive patched exe from the video description returns 404 (checked 2026-10-26).
 - YouTube transcript points: 4th player joining kicks two others (Figgis's patch fixes it); server browser crash in T2Fix
   1.27 (fixed in 1.29 per notes); teleports in FMs break sessions; items picked up by a client can vanish.
 
@@ -103,6 +107,49 @@ walking the remote ghost hash `0x8c5a80` around the ghost frame instead.
 3. `max_players` (`fix_players.c`): `SetMaxPlayers(N+1)` once the net manager exists (below).
 4. `damage_fix` (`fix_damage.c`): the damage filter hook, see "Lava does no damage" below.
 
+## Test results (2026-10-29, version 0.3, build `dinput.dll` `817cbee6…`)
+
+Build: reproducible (two clean builds byte-identical). Against `070f9688…` (the 8-player tests below) the DLL source
+differs only in the version string, comments and the QA-only `place` command (unused unless QA is on). Host tests: `make -C mod test` and `tools/qa/test_analyze.py` pass.
+
+`tools/qa/regress.sh`, ALL PASS, exit 0 (mission 1, 70 s per scenario):
+
+```
+PASS stock localhost (control)    travelled  285.8  path_dev p95 7.052 max 14.870  off>1  4346  jumps 2  lag p50 3.03  hb/s 1.3  fixed 0/7119
+PASS fixed localhost              travelled  286.1  path_dev p95 0.003 max 0.134  off>1     0  jumps 0  lag p50 0.30  hb/s 16.4  fixed 6802/7120
+PASS fixed 60+-30ms 2% loss       travelled  285.2  path_dev p95 0.005 max 0.209  off>1     0  jumps 0  lag p50 0.61  hb/s 15.6  fixed 6780/7112
+PASS fixed 150+-75ms 10% loss     travelled  285.2  path_dev p95 0.006 max 0.245  off>1     0  jumps 0  lag p50 0.98  hb/s 11.4  fixed 6710/7100
+PASS send_fix only                travelled  287.0  path_dev p95 9.764 max 11.877  off>1  4154  jumps 2  lag p50 2.13  hb/s 16.4  fixed 0/7119
+PASS recv_fix only                travelled  285.9  path_dev p95 2.676 max 3.658  off>1  2996  jumps 1  lag p50 1.13  hb/s 1.3  fixed 0/7122
+PASS steer_fix only               travelled  286.7  path_dev p95 2.626 max 3.509  off>1  2981  jumps 1  lag p50 1.12  hb/s 1.3  fixed 0/7126
+PASS mixed (mover without fix)    travelled  284.3  path_dev p95 2.578 max 3.424  off>1  2816  jumps 1  lag p50 1.09  hb/s 1.3  fixed 0/6891
+ALL PASS
+```
+
+- Stock's max depends on a few snaps and varies between runs: 7.65 (2026-10-28), 17.66, 14.34 and 14.87 (2026-10-29); p95
+  6.5–7.3. send_fix only stays no better than stock, usually a bit worse (p95 9.8 vs 7.1 here).
+- Scorer self-check: the same scorer with an impossible bar prints FAIL and exits 1; a crash dump written during the
+  run also fails it; with the real bars it exits 0.
+- `MAXP=8 players.sh 4` PASS (twice): cap 4 -> 9, each lane sees exactly 3 remote players in every second of 60 s.
+  `players.sh 3` PASS (cap 4 -> 4, each sees 2).
+- **`max_players=N` does not keep an extra player out unless N = 8.** `players.sh 3 client3` FAIL, then by hand: with
+  3 in the lobby (Host, Client1, Client2) and `max_players=3` (cap 4), Client3's join was accepted; the lobby then
+  showed "Host, Client3" and Client1 got "Network Connection Lost!". The stock bug, one player later. At 8 the 9th is
+  kept out by DirectPlay (below), which is why the shipped value is 8. Docs now say "keep 8".
+- `players.sh 8 client8` FAIL on 2026-10-29 at 04:00 with 189 MB of RAM free after launching 9 instances (the passing
+  run below had 1.2 GB): the host was back at the main menu when the lobby was checked. The host log was overwritten,
+  so "never got into the lobby" vs "was dropped" is unknown. A rerun needs about 5 GB of free RAM.
+- `lava.sh`: the first `lava.sh 1` FAILED because the timed walk stopped on the trough's rim (screenshot: player in
+  front of the lava), not in it; reruns PASS. The walk missed in 4 of 10 attempts. The script now checks the
+  player's last telemetry position (in the trough around (80, 29, -4.8), rim positions have z 1.5–3.0), retries up
+  to 3 times and fails as a setup error. Without that check a `damage_fix=0` run on the rim would have been a hollow
+  PASS. Then the walk was replaced by a QA command, `place x y z` (`obj_pos_update` on the local player, keeping its
+  facing): `lava.sh` places the player at (80, 29, -4) and still checks the position. Build `817cbee6…`: `lava.sh 1`
+  PASS (at 80.0 29.0 -5.6, damage applied 3 times, dies), `lava.sh 0` PASS (at 80.0 29.0 -3.9, standing in the lava
+  at full health), first try each.
+- Harness: `lanes.py kill` now stops only lane processes (no Thief2MP left after any run); suites refuse a locked
+  session (`check_unlocked`, also checked with a process name that is running: exit 1 with the reason).
+
 ## Test results (2026-10-28, modules, build `dinput.dll` `04d806c9…`, mission 1)
 
 `tools/qa/regress.sh`, ALL PASS (stock = steer function not hooked, i.e. the real game):
@@ -125,6 +172,15 @@ PASS mixed (mover without fix)    travelled  257.3  path_dev p95 2.438 max 3.124
 - Each fix alone, every other fix off:
   - `max_players=4`: 4 instances in mission 1 for 60+ s, the host sees 3 remote players every frame. Control with
     `max_players=0`: client1 "Network Connection Lost!" in the lobby, host and client3 stuck at "Waiting...".
+  - `tools/qa/players.sh` (2026-10-29, `070f9688…`, every other fix off): `players.sh 5` and `players.sh 8 client8`
+    PASS. The lobby lists 8; in mission 1 every lane sees exactly N-1 remote players in each second of 60 s; host log
+    `cap field 4 -> 9`. The 9th (client8) stays on "Joining Game..." (no error shown), never gets in, nobody drops.
+    About 480 MB of RAM per instance in the mission; 9 instances left 1.2 GB free of 15 GB.
+  - Without the clamp (= the v0.2 DLL `148633d5…`), `max_players=9`, 9 instances: cap field 4 -> 10, yet the lobby
+    stops at 8. The 9th sits on "Joining Game..." for 2+ minutes with no error (its loop still runs) while the 8 start
+    the mission and each sees exactly 7 remote players for 60 s. DirectPlay's 8 is the real limit; the clamp only
+    makes the log say so.
+  - Shipped default `max_players=8` with a usual group: `MAXP=8 players.sh 4` PASS (cap 4 -> 9, each lane sees 3).
   - `damage_fix=1` (`tools/qa/lava.sh 1`): host alone on Soulforge walks into the lava; log shows damage from obj 1739
     (`Water Flow Group`) to the player, "Host has died". `damage_fix=0`: standing in the lava at full health.
   - Startup log for all on, each one off, and all off: each off fix logs "off in T2MPFix.ini" and installs nothing;
@@ -150,13 +206,21 @@ other stands still; 65 s measured. path_dev = distance of the shown avatar from 
 | stock, 150±75 ms, 10% loss | 2.651 | 7.13 | 2328 | 1.291 | 1.3 |
 | T2MPFix, 150±75 ms, 10% loss | 0.011 | 0.249 | 0 | 1.059 | 16.3 |
 
-Network impairment is applied in the DLL in front of the heartbeat receiver (QA only; the exe imports no
-sendto/recvfrom/bind, so the transport is likely DirectPlay and the hub's UDP chaos relay doesn't fit). Visual check: screenshot of the host's view
+Network impairment is applied in the DLL in front of the heartbeat receiver (QA only; doing it there is simpler than putting
+the hub's UDP chaos relay in front of DirectPlay's ports). Visual check: screenshot of the host's view
 shows the client's avatar on the ground at the telemetry position (tools/qa shots, not committed).
+
+The game transport is DirectPlay: Windows offers to install DirectPlay on the game's first launch, and the exe has
+`Could not initialize DirectPlay` (0x683f60), `DPlay initialization error: %s (0x%X)`, `DPlayException` and
+`cCDPlayer` RTTI. The exe imports no sendto/recvfrom/bind; DirectPlay's own DLLs do the socket work.
 
 - Player cap: `cNetManager` field +0x136 (default 4 written at `0x438d39`), `SetMaxPlayers` = vtable slot 40
   (`0x43a230`, stdcall). Stock lobby with 4 instances: Client3 joining kicked Client1 and Client2 (reproduced).
   With the cap set to 5: all 4 stay and play.
+- Upper bound: the host's DirectPlay8 `DPN_APPLICATION_DESC` (built at `0x68424d`: dwSize 0x48, flags 0x40 NODPNSVR)
+  has `dwMaxPlayers = 8` (`mov [ebp+0x28],8` at `0x684254`, the only such write; no SetApplicationDesc later), so
+  DirectPlay refuses a 9th peer whatever the game cap is. `max_players` is clamped to 8. The join handler
+  (`0x437c20`) sends the joiner the other players' ids in a fixed `int[8]`, fine up to 10. 5 and 8 tested live (below).
 
 ## Stock steering reads uninitialized stack (fixed by `steer_fix`)
 
@@ -181,7 +245,8 @@ Measured (host observes, client1 walks with stock sending, 70 s, mission 1):
 | patch: read `d = pred - pos` instead ("correct only when > 1 unit off") | 5.63 | 8.11 | 1.15 |
 | patch: drop the branch (always correct), shipped as `steer_fix` | 2.37 | 3.04 | 1.09 |
 
-So the earlier "stock" rows (path_dev max ~3) were stock plus our hook's lucky stack; real stock is ~7.7. The
+So the earlier "stock" rows (path_dev max ~3) were stock plus our hook's lucky stack; real stock is ~7.7 here (later
+runs: p95 6.5–7.3, max up to 17.7, set by a few snaps). The
 `d` variant is the code's likely intent but is worse here, so `steer_fix` NOPs the `jp` at `0x553f35`
 (`0f 8a 82 00 00 00` -> `66 0f 1f 44 00 00`), after checking 52 bytes from `0x553f07`.
 
@@ -215,6 +280,10 @@ Verified: host and client each die within ~2 s in the Soulforge lava; the other 
 
 ## Lessons (candidates for playbook/lessons.md)
 
+Sent to coop-anything `playbook/lessons.md`: `ret N` and `-mstackrealign` = 60, the hook that changes stock steering =
+62 (61, the path-deviation metric, comes from the QA section), log each hop = 64, locked session = 65. The focus
+one is already covered by lesson 23 and `playbook/methods.md`.
+
 - `0x516c90` is `__stdcall` (`ret 4`) although Ghidra shows a plain one-argument function. Calling it as cdecl drifted
   ESP by 4 per call and crashed both games on the first in-mission frame. Check `ret N` of every engine function you
   call, not only the decompiler's signature.
@@ -234,7 +303,6 @@ Verified: host and client each die within ~2 s in the Soulforge lava; the other 
 
 ## Unknowns
 
-- The game transport: no sendto/recvfrom/bind imports, so likely DirectPlay (not verified).
 - Remote players on elevators and moving platforms (heartbeats relative to an object fall back to stock steering),
   ladders, rope arrows, mantling, swimming, saves/loads, mission changes, fan missions, a session over the
   Internet (network impairment was only simulated in the DLL): not tested.

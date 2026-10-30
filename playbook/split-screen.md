@@ -13,12 +13,13 @@ That means split screen is a **layer on top of multiplayer**:
 
 ## Starting points
 
-Both projects below have public source, so agents can read, fork and extend them.
+All projects below have public source, so agents can read, fork and extend them.
 
 | Project | Platform | License | Notes |
 |---|---|---|---|
 | [Nucleus Co-op](https://github.com/SplitScreen-Me/splitscreenme-nucleus) | Windows | GPL-3.0 | The most widely used tool, 700+ game "handlers" on [splitscreen.me](https://splitscreen.me/docs/games). Its [handler API](https://www.splitscreen.me/docs/handler-api/) is the best catalogue of multi-instance tricks there is. |
 | [PartyDeck](https://github.com/partydeck/partydeck) | Linux, SteamOS / Steam Deck | MIT | Newer launcher: Gamescope windows arranged in a KWin session, Bubblewrap so each instance only sees its own controller, Proton (via UMU) for Windows games, Goldberg for Steam-API multiplayer, up to 4 instances, multiple keyboards and mice since 0.5 ([GamingOnLinux](https://gamingonlinux.com/2025/05/partydeck-is-a-split-screen-game-launcher-for-linux-steamos), [AUR](https://aur.archlinux.org/packages/partydeck-bin)). |
+| [Couchlink](https://github.com/cranebeaker/couchlink) | Windows | MIT | Made at Co-op Anything. One copy per player as hardlinked folders, a hook the game loads as a stand-in system DLL so each copy sees only its own controller (XInput, DirectInput, Raw Input and HID) or its own keyboard and mouse, each player on their own Steam account or an emulated Steam identity, signed recipes, up to 8 players. For mod authors: the `couchlink` skill here and the `couchlink-sdk` skill in its repo. |
 
 Things to know before building on them:
 

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>CoopQA.Bot</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- dotnet build -p:ML=<instance>\MelonLoader  (needs Il2CppAssemblies, i.e. one game start with MelonLoader) -->
+    <ML Condition="'$(ML)' == ''">..\..\..\..\local\instances\sr2\0\MelonLoader</ML>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(ML)\net6\MelonLoader.dll" Private="false" />
+    <Reference Include="$(ML)\net6\0Harmony.dll" Private="false" />
+    <Reference Include="$(ML)\net6\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="$(ML)\net6\Il2CppInterop.Common.dll" Private="false" />
+    <Reference Include="$(ML)\Il2CppAssemblies\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(ML)\Il2CppAssemblies\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="$(ML)\Il2CppAssemblies\UnityEngine.CoreModule.dll" Private="false" />
+  </ItemGroup>
+</Project>
