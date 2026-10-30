@@ -252,6 +252,18 @@ Derived (design consequence):
   locally; only live state (guards, doors, loot, alarms) then needs syncing. Not yet tested for galaxy missions, whose
   ships exist before their interiors are generated and whose generation may interleave with other random consumers.
 
+## Galaxy missions: findings so far (2026-10-30, not yet tested end to end)
+- Ship interiors are generated over several frames: `oShip.Step_0` calls `GenerateShipInSteps` (`0x00bc55b0`) while
+  `Generated` (slot 0x2a0) is false, counting `ShipGenerationStep`. Other objects may draw random numbers in between.
+- RNG state (observed by diffing memory across `random_set_seed(1)` and `(2)`): 16 dwords at `0x04b5c3c8`..`0x04b5c404`
+  (WELL512-like), seed at `0x04b5c40c`; 72 bytes from `0x04b5c3c8` cover it. Plan: give each mission ship its own
+  saved RNG state and swap it in around every `GenerateShipInSteps` call.
+- `SaveMissionToFile(mission, file)` (`0x00a099d0`, called from `SaveCharacter`) writes the mission and ship parameters
+  (type, faction, guard counts, alarms, sensors, segments, protocols, mercenaries, guard kits) to an open text file;
+  `LoadMissionFromFile` (`0x009ed2d0`, 4 arguments when called from `CreateScenario`) reads them and creates the
+  mission and its ship. Plan: host saves the chosen mission, sends the text and a seed; guest loads it.
+- Needed first: creating GML string RValues from the DLL (file names; also the "paused by" banner).
+
 ## Two copies on one PC, UDP on localhost (probe, 2026-10-30)
 Setup: copy B is a second game folder (hard links to copy A's files, its own `version.dll`, logs and command file) and a
 second Proton prefix. Both ran at the same time under one Steam account.
