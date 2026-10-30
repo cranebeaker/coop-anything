@@ -396,6 +396,55 @@ to reuse the UE3 reflection, and replaces `Pilote::TickJeu`: the original tick, 
   (`XWorldInfo.ActiveHUDMarkers`). Quest markers (`XObjectiveMarker`, `XDynamicObjectiveMarker` in `S_TWN_Quests`)
   drive the N navigation guide, so they are not reused.
 
+## Milestone 4: shared enemies (2026-10-30)
+
+Design: "twin worlds". Each copy runs its own AI. The co-op module only exchanges damage and deaths. The other
+option, AI on one side only with the partner as a real pawn, is blocked: a second `XHuman` crashes the game
+(milestone 2).
+
+### Observed
+
+- Owner's save `TWN3-0_*` (Columbia station, "Ticketing") resumed in both copies through the menu. Both had the same 6
+  enemies (`Master_P.TheWorld.PersistentLevel.XHuman_1..6`, each with its own `XAIController_N`, archetypes
+  `Arc_XAIMelee.XAI_MeleeBeta_Pawn` and others).
+- A live AI pawn's `SpawnInfo` struct is `{NameOfSpawner, ContainingLevelName, AppearanceOverride, SpawnedDeadAI}`,
+  e.g. `XAIScriptedSpawner_3` / `S_TWN_Station_Game`. The spawners' `SpawnInfo` is a different, larger struct
+  (`PawnArch`, `Faction`, `LootList`...). The pair (level, spawner name) was the same in both copies for all
+  6 enemies, so it is the identity. The module adds a rank per spawner, for waves.
+- `WorldInfo.PawnList` / `Pawn.NextPawn` lists the pawns, including the player's. `XPawn.XHealth` / `XHealthMax` are
+  plain floats. Writing `XHealth` lowers health, and it stays lowered (no regeneration seen in 3 s).
+- `XPawn.XKilledBy(EventInstigator)` kills: health goes to 0, the controller is detached, and the body ragdolls
+  (captured in both copies). `EventInstigator = None` throws. The pawn itself as instigator works. The dead pawn
+  leaves `PawnList` within about 1 s, and the object is destroyed a little later.
+- A test player left standing among enemies is killed; the "door" death screen appears. Enemies regain health when
+  the player dies, so the test keeps both players' `XHealth` at max.
+
+### Implemented (sonde/coop.cpp, `SuivreEnnemis`)
+
+- Every frame, walk `PawnList`, skip player-controlled pawns, identify each new pawn once (cache keyed by pointer and
+  FName, because pointers are reused after GC).
+- Each copy sends, 10 times per second, the cumulative damage it dealt to each enemy plus a dead flag (packet magic
+  `BICE`, at most 100 entries, 922 bytes, under Steam's unreliable packet size). A lost packet loses nothing.
+- On receipt, the part of the partner's cumulative damage not yet applied is subtracted from `XHealth`. If that
+  reaches 0, or the partner says dead, the module calls `XKilledBy(self)`. An enemy the partner already killed dies as
+  soon as it spawns locally.
+- Pose and enemy packets share both transports (UDP and Steam P2P). Steam receive now accepts any size up to the max.
+
+### Test (`outils/essai_ennemis.py`, both copies on `TWN3`)
+
+- 6 to 7 enemies in each copy, all matched by spawner.
+- Damage 1→0 and 0→1 (write `XHealth - 100` in one copy): the twin lost exactly 100 in the other.
+- Death 1→0 and 0→1 (`XKilledBy` in one copy): the twin died in the other within 3 s (logs: "tué par le partenaire").
+- Owner's files unchanged. Result: OK over local UDP and over Steam P2P (same account, both copies launched fresh).
+- Enemies changed in the last 3 s go in every packet; the others take turns in the remaining slots, because the
+  list grows over the whole campaign (`Master_P` is one world).
+
+### Not done yet
+
+- Shields (`XShield`), only health is shared.
+- Enemies only see and shoot the local player, and enemy positions are not synced.
+- Not tested with real gunfire by a human, or between two PCs.
+
 ## Open questions
 
 ### Guesses (not yet checked)
