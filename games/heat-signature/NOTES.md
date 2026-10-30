@@ -4,7 +4,8 @@ Phase 0 (triage), 2026-10-30.
 
 ## Game identity (observed)
 - Title: Heat Signature (Suspicious Developments, 2017). Store: Steam, app id 268130, buildid 6124596.
-- In-game version (top entry of `ExtendedPatchNotes.txt`): 2018.12.19.1.
+- In-game version: **2021.1.20.1**, GameMaker engine 1.4.1804, build mode YYC (header line of the game's own
+  `Logs/Log.txt`). Correction: the top entry of `ExtendedPatchNotes.txt` (2018.12.19.1) is stale; it is not the version.
 - OS: Windows. Exe: `Heat_Signature.exe`, PE32 (i386), 73,653,760 bytes,
   SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2`.
 - Engine: GameMaker: Studio 1.x, YYC. Exe has the "Made with GameMaker: Studio" string, `c:\hudson\GMBase\GMGreen\...\VC_Runner` paths,
@@ -93,6 +94,18 @@ Phase 0 (triage), 2026-10-30.
 - YYC stack-trace list head at `0x049356e8` (each function links a frame holding its own name).
 - Time variables: `TimeScale`, `SlowMo`, `FastMo`, `SlowMoScale`, `FastMoScale`, `CanFastMo`, `PauseWithGame`,
   `PausedShips`, `PauseSecondsLeft`. The game has slow motion and fast forward, not only pause.
+
+## Phase 5 probe (2026-10-30)
+- Mod repo (local for now): `heat-signature-coop`, probe in `probe/` (MinHook v1.3.4, commit c3fcafdc, checked against the tag).
+- The game imports only `GetFileVersionInfoW`, `GetFileVersionInfoSizeW`, `VerQueryValueW` from `VERSION.dll`, so the
+  probe is a `version.dll` proxy. Under Proton it needs `WINEDLLOVERRIDES=version=n,b`.
+- The exe has ASLR enabled (DllCharacteristics 0x8140), but under Proton it loaded at 0x400000 (observed). The probe
+  rebases anyway.
+- Run 1 to 3 (Proton Experimental, fresh test prefix, `steam_appid.txt` = 268130, **Steam client not running**): the probe
+  loads, and all 9 hooks report `MH_OK`. But no GML ran in 45 to 75 s: no `DebugLog` calls, no `oMenu.Step`, no
+  `Log.txt`. Derived (not tested): the runner stops before the first room without Steam.
+- Lesson: `pkill -f Heat_Signature.exe` also kills Ghidra jobs that have the exe path in their command line. Stop the
+  game with the test prefix's `wineserver -k`.
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
