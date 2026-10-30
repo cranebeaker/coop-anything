@@ -839,3 +839,32 @@ likely applies it to simulated proxies only. Unknown until a run logs the client
 Installer: sets `Map=Book_FrontEnd.unr` in the install's `System\Default.ini` and in the player's `Game.ini` (the engine's
 fallback `HP-Test.unr` is not in the game), keeps `.enhanced-backup` copies, the uninstall restores them. Tested on a
 throwaway copy: install, check, uninstall, hashes of both files equal to the originals. New parameter `-DocsDir`.
+
+## Player two's camera, quiet tests, cutscene overlap (2026-10-30 night)
+
+Observed (logs of the scripted client, `[SDBG] c-view`, plus window pictures):
+- The joined client's controller `Rotation` was put back to a constant value on **every frame by something outside the script** (the
+  yaw before `UpdateRotation` was the same each frame, with the stock one the turn lasted one frame). The controller now keeps its own view
+  angles (`MyView`), turns them from `aTurn`/`aLookUp`, turns the pawn with them, takes `ClientSetRotation` from the server as the new angles,
+  and the camera and the walking direction (`GetRotationForPawnMove`) use `MyView`. Result in a scripted run: the arrow key turns a full
+  circle, the mouse turns and tilts (pitch limits +18000 / 49152 as in the stock controller), and after the turn the pawn walks the new way.
+- With `EnhancedInput` the vertical mouse looks instead of walking (see `GAME-STUDY.md`, input).
+- The client sees its own walk and its own attack animation (window pictures of a scripted run: running pose, both arms up for the attack).
+  The replicated `SimAnim` stays `Idle` while the pawn walks; the walk comes from the local pawn code. The earlier report "the client does
+  not see its own combat animations" was **not reproduced** with the bot (the attack runs through `ServerAction`); a run with a real keyboard
+  on the owner's side is still the final check.
+- Two swamp cutscene triggers (`SWAMPBOUNCY`, `SWAMPMOVE`) lay next to the spawn spot of player two. He touched both at once, the two scenes ran
+  over each other, `KWCutController.UnPossess` found no pawn, and the host stayed in a frozen camera with the Donkey's subtitle on the screen
+  (the owner saw this as "subtitles hung" and a looping Donkey). Fix: `EnhancedShrek.IsRelevantToTrigger` refuses `CutSceneTrigger`: only the
+  host's Shrek sets off cutscenes. Verified: no scene at the spawn, no stuck subtitle.
+- Hint cutscenes also repeated whenever any hero stepped on the trigger again: `ReTriggerDelay` of every `CutSceneTrigger` is raised to 40 s
+  (`EnhancedMutator`). The client keeps its `CommentaryManager` actors paused (`bAmPaused`), so the lines are not said a second time out of
+  step (the managers exist on every machine). Not verified by ear.
+
+Quiet test rig (all in `local/`, nothing in the owner's install): `run3.ps1` starts the sandbox host and client on the **second monitor** and
+takes no focus, mouse or keyboard from the person at the PC. `tools/quiet` is a `dinput8.dll` proxy that is only active with `SHREK2_QUIET`:
+windows are created `WS_EX_NOACTIVATE` at `SHREK2_POS`, the game is told it is the foreground window, `SetCursorPos`/`ClipCursor`/`SetCapture`
+are no-ops, `GetCursorPos` returns the window centre and every DirectInput device reads as idle; the script disables the windows for the
+person's input. The client plays a scripted input (`bTestBot` in its `User.ini`, run through the same `EnhancedInput` code). Sound is muted
+by volume 0 in the test profiles. **Do not use `-nosound`**: a cutscene waits for the end of the voice line, without sound the scene never
+ends and the subtitle hangs.
