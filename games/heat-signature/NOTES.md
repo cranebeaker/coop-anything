@@ -337,6 +337,11 @@ Derived (design consequence):
   guard was at (3456.0, 3456.0) on both copies at the same sample, sentries identical to 0.1 unit. Not mirrored yet:
   the `State` label and animation (the guest's skipped AI keeps its own label), guests' hits/knockouts going to the
   host, host guards seeing guest puppets (`EnemyCanSeePlayer` uses `global.Player`), keycard clearance for puppets.
+- **Host guards notice guests** (observed, first test): on the host, each shared-ship guard's step runs with
+  `global.Player` = the nearest player aboard the same ship (the host's own player or a guest's puppet). After the guest
+  walked toward guards, the host had 2 guards "Panicking" and 2 "Searching" (none in earlier runs), and the host's game
+  ran its "spotted" pause, which the shared time sent to the guest ("Paused by the host"). To do: the spotted pause and
+  zoom should happen on the spotted player's screen (a guest), not as the host's own pause.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
