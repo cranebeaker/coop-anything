@@ -9476,3 +9476,63 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/xcom-2/README.md
   checked: '2026-10-25'
   made_with_coop_anything: true
+- game: Cuphead
+  year: 2017
+  engine: Unity 2017.4 (Mono)
+  project: CupHeads
+  url: https://github.com/Germanized/CupHeads
+  other_urls:
+  - https://github.com/multiplayereverything/CupHeads
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Online version of the game's own two-player co-op, by Germanized (with Sh0kr). BepInEx 5 plugin with Steam lobby invites
+    and Steam P2P (ISteamNetworking with relay allowed, so no port forwarding). Host owns the world, scenes, save and bosses; the
+    guest plays Player Two on a mirror of the host's save. Last release v1.6.2 (2026-10-15). Source is public but the repo has no
+    license file. Continued in the Multiplayer Everything fork (separate entry).
+  sources:
+  - https://github.com/Germanized/CupHeads
+  - https://github.com/Germanized/CupHeads/releases/tag/v1.6.2
+  checked: '2026-10-30'
+- game: Cuphead
+  year: 2017
+  engine: Unity 2017.4 (Mono)
+  project: CupHeads (Multiplayer Everything fork)
+  url: https://github.com/multiplayereverything/CupHeads
+  other_urls:
+  - https://github.com/Germanized/CupHeads
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/cuphead
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Fork of Germanized's CupHeads, v1.7.0 pre-release (wire protocol 4). Adds a LAN/direct-IP TCP fallback (port 27140), a
+    mod-only BepInEx ZIP instead of the installer, and a fix that reconciles the partner's cup health and death or revive with its
+    owner. A same-PC lab with two game copies over the LAN fallback passes 15 checks (connect, world map, both cups moving, level
+    load, boss HP, guest hits and death, revive by heart and by parry, back to the map); 6 mutants that each drop one sync path
+    are all caught, and a 7th shows the health backup covers lost hit packets. Steam P2P between two real accounts is not yet tested. Write-up in games/cuphead.
+  sources:
+  - https://github.com/multiplayereverything/CupHeads
+  - https://github.com/multiplayereverything/CupHeads/releases/tag/v1.7.0
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/cuphead
+  checked: '2026-10-30'
+  made_with_coop_anything: true

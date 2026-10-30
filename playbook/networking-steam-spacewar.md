@@ -76,6 +76,20 @@ gives both a scriptable test stand-in (UDP over localhost, no second account, tw
 one PC) and the real Steam path from the same code. Evidence: Poppy Playtime,
 [games/poppy-playtime/NOTES.md](../games/poppy-playtime/NOTES.md) (Phase 6).
 
+### A game with its own old Steamworks: use ISteamNetworking
+
+A game that is already on Steam under its own app id doesn't need Spacewar, but its
+Steamworks may be too old for `ISteamNetworkingMessages` or `SteamNetworkingSockets`.
+Cuphead (Unity 2017.4) ships a Steamworks.NET in `Assembly-CSharp-firstpass.dll` and a
+`steam_api64.dll` that have neither. Replacing them means shipping game files. The old
+P2P API they do have is enough: `ISteamNetworking.SendP2PPacket` with reliable and
+unreliable send types, `AcceptP2PSessionWithUser` on `P2PSessionRequest_t`, and
+`AllowP2PPacketRelay(true)` so Steam falls back to Valve's relay when there's no direct
+route. Lobbies and invites work as above, under the game's own app id. Valve marks this
+API deprecated but it still works. The same-account limit still applies, so the lab
+needs a second transport: the CupHeads fork carries the same packets over TCP on
+localhost ([games/cuphead](../games/cuphead/README.md)).
+
 ## Design: no SDK headers, dynamic loading only
 
 `LoadLibrary("steam_api.dll")`, then `GetProcAddress` for each **flat C API**
