@@ -822,3 +822,20 @@ What worked (all in a copy of the game, the patch is a script that checks the or
    second level, no `?closed`, no missing-map errors, no crash; the host logged the client's login 5.5 s after its
    new level started.
 Not tested: slow networks, several clients, the real cutscenes of the second level.
+
+## Player two's mouse look and the default map (2026-10-30, not yet run in game)
+
+Cause of "the client's camera does not move in all directions" (derived from the decompiled input classes, see
+`GAME-STUDY.md` section 4): the joined client's controller is the stock Unreal `PlayerController`, whose `PlayerInput`
+sends the vertical mouse to `aForward` (walk) unless free look is held, and it has no `aArrowRight`/`aArrowUp` axes that
+the game binds to the arrow keys. Change: `EnhancedInput` (a `PlayerInput` within the client controller) always looks with
+the mouse and reads the arrow keys; the controller declares the two axes and names the class in `InputClass`. It compiles
+(0 errors, 0 warnings). **Not run in the game yet.**
+
+The client does not see its own attack animations: derived only. The engine's `Pawn.PossessedBy` sets `RemoteRole =
+ROLE_AutonomousProxy` on a networked player's pawn, `SimAnim` is replicated to every client but the native side most
+likely applies it to simulated proxies only. Unknown until a run logs the client's pawn animation while it attacks.
+
+Installer: sets `Map=Book_FrontEnd.unr` in the install's `System\Default.ini` and in the player's `Game.ini` (the engine's
+fallback `HP-Test.unr` is not in the game), keeps `.enhanced-backup` copies, the uninstall restores them. Tested on a
+throwaway copy: install, check, uninstall, hashes of both files equal to the originals. New parameter `-DocsDir`.
