@@ -530,9 +530,40 @@ seconds anyway). The file write is the part to move off the game thread later.
 - A tiny proxy `shfolder.dll` (source kept in `local/shrek2-tools/shfolder`) redirects the Documents folder of
   tools through `SHREK2_DOCS`; the same is done for the game by the `d3d8.dll` proxy.
 
-**Next (stage 3):** read the checkpoint logic of `SavePointFairy` and `SavePointFairycontroller` (what touches
-what, where `OnSaveGame` is reached), replace it through the mutator with a `CoopSavePoint` / fairy subclass that
-needs both players, calls `CaptureCheckpoint`, and never sets `bQueuedToSaveGame`.
+## Save rework: stage 3a done, the stock save is out of the loop (2026-10-30)
+
+**Finding: one choke point.** Every save trigger of the game ends in `ShHeroPawn.OnSaveGame()`: the fairy's
+`Touch`, the fairy controller's `HeroTouched`, `SHSmartStart`, `SaveTimer`, the wanted poster, the bonus-level
+timer, `SHSavePoint`, and `ShHeroController.SaveSlottedGame` (which also sets `LevelAction = 2`). That function
+fills the stock save-slot UI info (`SaveInfo`, written to the ini) and then calls
+`ShHeroController(Level.PlayerHeroActor.Controller).SaveGame()`, which sets `bQueuedToSaveGame = true`; the engine
+turns that into the native save. Level-start autosave also goes through `SaveSlottedGame` (slot 1 here, at the
+end of the intro).
+
+**What was built.** `CoopShrekController extends ShrekController` overrides `SaveGame()` and `SaveSlottedGame()`
+and calls `CoopGame.OnCheckpointRequest` instead of queuing the engine save (requests within one second are
+merged). The mutator sets `Shrek.DefaultPlayerControllerClass` to the new controller, so the game's own `Login`
+makes the host's controller from it (the level did not hold a placed hero controller at that time; the removal
+branch in `CheckReplacement` never fired).
+
+**Verified (host alone, 150 s, and a second run with a late client):**
+- `CoopShrekController0 got player WindowsViewport0`: the host plays with the mod's controller. HUD, health bar,
+  potion, coin bag, Shrek and Donkey in the frame (screenshot), the intro ends and Shrek gets his pawn.
+- At the end of the intro (t=110 s) the autosave request is intercepted: `checkpoint requested by
+  CoopShrekController0 (SaveSlottedGame 1)` and the record is written with `heroes=1`. **No** `Saving game`,
+  `Saving into slot` or `SetSaveGameImage` line in the log, no save file written by the engine.
+- The loader of the level package stays: the `obj linkers` probe shows the same list before and after the
+  autosave (in the stock flow it shrank at t=111.7 s and `1_Shreks_Swamp` disappeared). So the cause of the
+  host crash on a late join (`UPackageMap::Compute`) is gone. Zero `Critical` lines in both runs.
+- Open: a client started late (after about 110 s of host time) connects (`NetComeGo Open`, `HELLO` arrives) but
+  never finishes loading its own placeholder map (client log stops at `Initialising Karma for Level`), so the
+  join itself could not be completed in that situation. Early joins still work. Cause unknown; it is on the
+  client side, not in the host. The lobby design (connect before the game starts) avoids the situation.
+
+**Still to do in stage 3:** the rule that both players must have reached a checkpoint before it counts
+(distance of each player to the fairy's place, kept by the mutator), re-capture the coins and potions
+(`coins=0` here), `MaterialTrigger` pairs, and replacing the fairy's visible "saving" sequence if it freezes
+the hero (the fairy still flies in and plays its animation; nothing stops the hero in the log).
 
 ## Unknowns
 
