@@ -697,3 +697,22 @@ Russian-adapted textures (pixel data differs), by package:
 Everything else in these packages (hundreds of textures) is identical to English, so a pack of new
 textures only has to keep the ~65 textures above. Guess (unverified): a pack that replaces whole
 packages would overwrite them; replacing per texture by name avoids that.
+
+## ShrekHD.zip (owner's HD texture pack, downloaded from the owner's server)
+
+Identity: ShrekHD.zip, 706,482,733 bytes, SHA-256 `6d5bbd94d35320370d2e349794e33e0de6d11411bc2e959af0afcde85e720596`;
+unpacked in `local/shrek2-hd/x/Shrek2HD` (not committed). Source Nexus page: unknown (the owner did not name it).
+
+Observations:
+- Contents: `LocalMips_0.tfc` (1.7 GB), `Shrek 2.TFCMapping`, `GameProfile.xml` (`enableCustomTFCs="true"`,
+  package folders System/Animations/Maps/Sounds/Music/StaticMeshes/Textures), `GameProfile.IdRemappings.xml`,
+  `ObjectDescriptors.xml`, `PackageExtensions.xml`. No readme, no installer, no exe.
+- This is the "texture file cache" mod layout known from UE3 games (a `<Game>.TFCMapping` file plus `LocalMips_N.tfc`).
+  Stock UE2.5 packages (version 129) have no external mip storage, so the pack needs a tool or engine patch that is
+  not in the archive. How it is installed: `unknown`.
+- The mapping holds 1251 texture entries by object path without the package name. Each entry lists 9 mips; for
+  `signs\sign_welcome2` the top mip is 512x512 where the game has 256x256, so about 2x per axis.
+- Overlap with the Russian-adapted list above (matching by name only, so unverified): present are georgie, goldi,
+  emperor, marge, bopeep, Title_Page, In-Laws_1a/1b, PickUps herobar_tx / herocrate_tx, tour_sign, Hero_Arm,
+  flash, the two truck atlases, sign_4, sign_5, FGM_Banner, cauldron, signs, sign_welcome2, sign_stayout,
+  SH_Menu poster1/poster2. Not present: the SH_Hud loading/saving tiles, poster3..12, the *_sm posters, fonts.
