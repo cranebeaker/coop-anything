@@ -65,9 +65,24 @@ Phase 0 (triage), 2026-10-30.
   compiled exe, and there is a `PlayerStateGhost`. Also `SetTimeScale`, `SlowMoControls`, `PauseMission`/`UnpauseMission`.
 - Observed: no `network_*`/`buffer_*` strings in STRG. That proves little, because YYC builtins are called through the
   runtime's table, not by name.
-- Guess (not checked): these come from an early multiplayer prototype. "Client" in other names (`AssignClientsToStations`,
-  `oClientUnlockMessage`) means mission clients, not networking. To check: read the decompiled `PlayerOrItemIsLocal` and
-  `PlayerRemoteControls`.
+- Checked with objdump: `gml_Script_PlayerOrItemIsLocal` (the only function referencing its name string, VA `0xdc7f40`)
+  does `with (argument0)` and compares instance variable slot `0x2bd` = `OriginalOwner` with a string. There is also a
+  `RemoteControl` / `RemoteTriggerSignal` variable pair. Derived: "local" means "belongs to the player" and "remote"
+  is the remote-trigger gadget, so these are most likely **not** network leftovers. Decompiling them will settle it.
+
+## Runtime facts (observed, exe SHA-256 a5f8befe...)
+- Image base `0x400000`, PE32, sections `.text`, `.rdata`, `.data` (55 MB, holds the embedded data chunk), `.mydata`, `.rsrc`, `.reloc`.
+- YYC prologue: each GML function stores the VA of its own `gml_*` name string on its stack frame
+  (`mov [esp+0x64], <name VA>`) and links the frame into the YYC stack-trace list at `0x49356e8`.
+- Variable name table: `{const char* name; int id}` pairs at `.data` `0x14ba080` up to `0x14c0870`, 3200 unique ids.
+  Code reads instance variables by these ids (`0x2bd` = `OriginalOwner`).
+  Found by scanning `.data` for runs of 8-byte entries whose first field points to an identifier string.
+- Builtin function name table: `{name; id}` pairs at `0x14c3cb0` (337 entries, starts `instance_nearest`, `point_distance`).
+- The lowest ids are globals or near-globals: `Mission` 2, `Player` 5, `PlayerShip` 7, `TimeScale` 10, `Controls` 3071.
+  Derived (to check): the game keeps **one** player in `Player`/`PlayerShip` and one `TimeScale`, the same
+  single-player-behind-one-variable pattern as Forager.
+- Time variables: `TimeScale`, `SlowMo`, `FastMo`, `SlowMoScale`, `FastMoScale`, `CanFastMo`, `PauseWithGame`,
+  `PausedShips`, `PauseSecondsLeft`. The game has slow motion and fast forward, not only pause.
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
