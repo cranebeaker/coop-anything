@@ -8808,6 +8808,7 @@
   project: MiSide Together
   url: https://github.com/multiplayereverything/miside-coop
   other_urls:
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5
   - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
   - https://github.com/cranebeaker/coop-anything/tree/main/games/miside
   kind: mod
@@ -8829,16 +8830,21 @@
     Interactions that put an item in the hand are done by the presser only; the rest play the same animation on
     every player's own character. Mita and NPCs are host-driven; chasers hunt each player locally, and a death
     restarts everyone at the checkpoint. Shared key inventory, seeded randomness, room objects, minigame end events,
-    the Scene 18 visual novel; host migration; joins wait for the next chapter. Not shared yet - the Scene 13-15
-    computers (folders, phone chat, the Scene 14 PC game) and the handheld Tetris. Steam P2P through the game's own
-    steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.2 release. The lab suite
-    drives 2-4 game copies on one PC (21 tours plus an every-chapter interaction run, 17 of 18 chapters);
-    Steam was tested with one account only. Source is public with no licence file yet.
+    the Scene 18 visual novel; host migration; joins wait for the next chapter. The Scene 13/15 core computer and
+    the Scene 14 PC game are run by one operator and replayed on every copy; the Scene 14 phone character and the
+    Scene 1 phone app (dialogue, name, days, shop, cooking result, money) follow their holder or the host, and the
+    phone shows in the holder's hand for the others. The handheld Tetris is each player's own. Steam P2P through
+    the game's own steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.5
+    pre-release (v0.3.2 is the last full release). The lab suite drives 2-4 game copies on one PC (34 tours,
+    including all of Scene 1 played to Scene 2, plus an every-chapter interaction run, 18 of 18 chapters); a
+    Steam stand-in covers the transport with one account, and no two-account Steam session has run yet. A
+    first playtest with two friends fed the 0.3.5 fixes. Source is public with no licence file yet.
   sources:
   - https://github.com/multiplayereverything/miside-coop
   - https://github.com/multiplayereverything/miside-coop/blob/main/docs/SYNC.md
-  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
-  checked: '2026-10-27'
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5
+  checked: '2026-10-30'
+  made_with_coop_anything: true
 - game: "Spooky's Jump Scare Mansion: HD Renovation"
   year: 2017
   engine: Unity 2021.3 (Mono)
