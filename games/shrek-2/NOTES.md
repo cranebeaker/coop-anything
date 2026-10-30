@@ -774,3 +774,19 @@ the attack search skips pawns with `bIsAFriend` (true for heroes). The mod's paw
 through with the scale and without an instigator (so the stock check does not refuse it), and `bIsAFriend` of both
 Shreks is cleared. Test on a listen server with a second player: hit of 10 with the scale 0 -> health 100 -> 100;
 with 0.5 -> 95. Not tested: real attacks by input (player two has no combat input yet).
+
+## Player two's view: camera, animations, input (observations on a listen server plus one client)
+
+- The game sleeps while its window is not the foreground window; a test harness must find the game window (the
+  process's main window is its log console) and keep it in front.
+- A joined client had no camera during cutscenes (it spectated its own controller). The cutscene camera of the host is
+  computed by the game's `PlayerCalcView`; the server calls it every frame, moves a replicated invisible actor to that
+  pose and makes it the view target of the second player, who then watches the same shots. After the cutscene the view
+  goes back to his Shrek (a chase camera looking the way the host's does, a little from above: foliage has no collision
+  for the camera).
+- The other machine's pawn stood in the T pose: pawns of this single-player game do not send their animation state.
+  Setting `Actor.bReplicateAnimations` on every pawn (done in the mutator when a pawn is created) is enough: the
+  host's Shrek and the Donkey animate on the client.
+- Keys reach the client (movement works). The hero's attack/pick up/throw is one server call
+  (`ShHeroPawn.DoSomeAction`), sent from the client by an RPC.
+- Player two is placed 125 units from the host on a floor at the host's height in sight of the host.
