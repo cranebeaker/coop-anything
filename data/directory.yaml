@@ -614,6 +614,25 @@
   sources:
   - https://github.com/cranebeaker/stalker-soc-coop-fixes
   checked: '2026-10-16'
+- game: 'S.T.A.L.K.E.R.: Shadow of Chernobyl'
+  year: 2007
+  engine: X-Ray
+  project: OP-2.2 co-op prototype (coop-anything)
+  url: https://github.com/stilgal2003/coop-anything/tree/game/op-2-2-soc
+  other_urls:
+  - https://ap-pro.ru/forums/topic/3201-obaedinyonnyy-pak-22/
+  kind: gap
+  status: prototype
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: "Feasibility study and transport prototype for adding co-op to the OP-2.2 global mod (Narodnaya Solyanka line, patch 2023-03-15). Network stack is cut from the shipped build (xrNetServer.dll has no winsock imports, SendTo_LL both sides are DebugBreak stubs, IPureClient::Connect is a parser stub), but the session skeleton is intact: game_sv_Single / game_cl_Single, NET_Compressor, multipacket framing. Live prototype verified: synthetic IClient (ID 0x1001) registered via ID_to_client detour (xrNetServer+0x99E0, 11-byte prologue), UDP bridge feeding IPureServer::_Recieve (xrNetServer+0xAF40), SendPacket detour (xrNetServer+0x8920) for TX. Session starts as all/coop/alife/new with MaxPlayers=32. Remaining: remote-client liveness protocol, spawn flow, two-machine test. Key addresses and full log in games/op-2-2-soc/."
+  sources:
+  - https://github.com/stilgal2003/coop-anything/tree/game/op-2-2-soc
+  checked: '2026-10-24'
 - game: 'S.T.A.L.K.E.R.: Clear Sky'
   year: 2008
   engine: X-Ray (xrMPE)
