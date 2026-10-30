@@ -24,7 +24,8 @@ isn't hardened against a player who has already joined and sends bad data (see K
   <https://github.com/Jager2251/Iron-Nest-Co-Op-Mod> (no source there). It uses a Steam lobby code and takes up to 5
   players. Its README lists missions, aim, loading and firing, doors and hatches, cards, map drawings, the supply
   console and avatars as shared. Music and calculator inputs stay local on purpose, and joining a running mission is
-  unsupported. CC BY-NC-ND 4.0, binaries only, latest 2.5.0 (2026-10-28). Players file bug reports in its issues.
+  unsupported. CC BY-NC-ND 4.0, binaries only, latest 2.5.0 (2026-10-28, about 16k unique downloads on Nexus). Players
+  file bug reports in its issues.
 - **IronNestCoop** by Xeltor: <https://github.com/Xeltor/IronNestCoop>. A host-authoritative plugin over a Steam
   star topology, built with AI agents (stated in its README). The README lists mission flow, avatars, map,
   calculator, requisition, guns, turret, operations stations and the cat as synchronized, with ownership leases and
@@ -34,9 +35,11 @@ isn't hardened against a player who has already joined and sends bad data (see K
   lobbies with a password, and added LAN in its latest alpha. Its README marks turret, firing, reload, avatars,
   record player, objectives, impacts, counter-battery, engine and lights as done ("main paths"), plus mid-join
   snapshots and a custom mission framework. AGPL-3.0, latest v0.2.1-Alpha-2 (2026-09-12).
-- **Iron Nest VR & Co-Op**: [Nexus 17](https://www.nexusmods.com/ironnest/mods/17). A VR mod with up to four
-  players per nest in co-op, or two nests in PvP, with flatscreen crossplay. Author, version and sync details are
-  known only from the Nexus page and still need checking.
+- **VR. Co-op. PvP.** (Iron Nest VR & Co-Op) by Blah64: [Nexus 17](https://www.nexusmods.com/ironnest/mods/17). A VR
+  mod (OpenXR) with flatscreen crossplay: up to 4 players in one nest for co-op, or two nests for PvP, with a lobby
+  browser on F7. Its page says testing never completed a full co-op mission and that more than two players is
+  untested. Version 2.1, made for the game's demo, last updated 2026-07-02 (before the full release). Source isn't
+  linked.
 - Nestmates is its own clean-room code. Jager2251's and Xeltor's licenses don't allow reuse, so those two were used
   only to learn *what* players expect to be shared, never *how*. Open Nest Co-op and the VR mod weren't consulted.
   None of their code was read or decompiled.

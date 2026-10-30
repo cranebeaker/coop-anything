@@ -8947,9 +8947,12 @@
     deleting not), map drawings (host toggle), the supply console (ammo, charges, points, repositioning, recon plane),
     and soldier avatars with name tags. Not shared on purpose are music and artillery-computer inputs. Joining a running
     mission is unsupported (the late joiner desyncs). High Command and Field Report texts show in the host's language.
-    The GitHub repo is the issue tracker and holds no source; players file bug reports there. CC BY-NC-ND 4.0. Latest
-    release 2.5.0 on 2026-10-28.
+    Versions 2.0.0 and up are for the game's full release; built against BepInEx be.788, with a Proton note for Linux.
+    The GitHub repo is the issue tracker and holds no source; players file bug reports there. Enemy sync isn't mentioned
+    in the README or on the Nexus page. CC BY-NC-ND 4.0. Nexus first upload 2026-08-04; 2.5.0 on 2026-10-28, with
+    about 16k unique downloads and 83 endorsements on 2026-10-30.
   sources:
+  - https://www.nexusmods.com/ironnest/mods/20
   - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod
   - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod/issues
   - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod/blob/main/LICENSE
@@ -9018,25 +9021,27 @@
 - game: 'IRON NEST: Heavy Turret Simulator'
   year: 2026
   engine: Unity 6 (IL2CPP)
-  project: Iron Nest VR & Co-Op
+  project: VR. Co-op. PvP. (Iron Nest VR & Co-Op)
   url: https://www.nexusmods.com/ironnest/mods/17
   other_urls: []
   kind: mod
-  status: unknown
+  status: prototype
   coop_scope:
-    players_visible: unknown
-    story: unknown
+    players_visible: 'yes'
+    story: partial
     enemies: unknown
     world_state: unknown
     items: unknown
-  players: up to 4 per nest
+  players: 2-4 (co-op in one nest), or PvP across two nests
   networking: unknown
   open_source: unknown
-  last_activity: unknown
+  last_activity: 2026-07
   qa: none
-  notes: An unofficial VR mod with multiplayer. Up to four players share one nest in co-op, or two nests face off in
-    PvP, with crossplay for flatscreen players. F7 opens a co-op lobby browser. Known only from its Nexus page summary;
-    the author, version and sync details aren't checked yet.
+  notes: A VR mod with multiplayer by Blah64 (BepInEx 6 IL2CPP, developed against be.764, OpenXR, Silk.NET). Up to three
+    other players can join one nest for co-op, or split across two nests for PvP, with flatscreen crossplay. F7 opens a
+    lobby browser. The page says "Testing has never actually completed a full mission in co-op" and that more than two
+    players is untested. It was written against the game's demo (install steps refer to the demo). Version 2.1,
+    uploaded 2026-06-27, last updated 2026-07-02, so before the game's 2026-08-06 release.
   sources:
   - https://www.nexusmods.com/ironnest/mods/17
   checked: '2026-10-30'
