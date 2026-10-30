@@ -740,3 +740,25 @@ found by the text: a table text-hash -> speaker code is built from the game's ow
 several characters are left without a name on purpose (149 of 2650 in the Russian set).
 
 The mod was renamed to Shrek 2 Enhanced (package `Enhanced`); co-op is one of its features.
+
+## Russian-adapted textures on the HD pack: what worked
+
+Observation: 65 textures of the Russian install differ from the English ones. Compared per pixel at the original size:
+about 20 differ only by the lettering (under 12% of the pixels), about 30 differ in the picture itself (15-50%),
+8 are already drawn at twice the English size, 3 exist only in the Russian set.
+
+What worked (private tool, run on copies): for lettering-only textures take the HD English picture, find the
+English letters (by the Russian/English difference, or by the letters' own colour when the difference also
+catches artwork), rebuild the background (smooth tone from the surroundings plus the grain of a quilted patch fill, so
+no seams), then put the lettering on top and rebuild every mip level of the changed area.
+- Lettering traced from the Russian original (crisp edges from the low-resolution glyphs; paint look on wood: warm
+  off-white, grain showing through, rough edge) looks like the original and natural.
+- A system font set on top looked foreign; a text in a book font on a sign that locals painted looked wrong. For such
+  signs the lettering is drawn letter by letter, capitals with random size, tilt and baseline shift, rough paint edge,
+  the colour of the English original.
+Eight textures are done this way so far (well sign, cauldron, title page, two In-Laws pages, hero arm, two truck
+atlases of one package). Open: poster sets, the ~30 pictures that differ, loading tiles.
+
+Test harness note: the second Shrek must be placed on a floor at the host's height in sight of the host
+(a ring spot over a ledge killed it by a fall of 119 units); the client of the two-process test sometimes stalls while
+loading its local map (idle CPU), a restart or a repeat run joins.
