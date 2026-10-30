@@ -4,13 +4,13 @@
 |---|---|
 | Engine | Unity 2017.2.0, Mono scripting backend |
 | Versions tested | Steam build 2304714 (2025-07-13); direct IP tested automatically, Steam lobby code built, two-account Steam run pending |
-| Projects | [SFMF Multiplayer by Phlarfl](https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer) (directory entry: Superflight / SFMF Multiplayer) |
+| Projects | [SuperflightMP](https://github.com/carlgoodtoseeyu/superflightmp) (directory entry: Superflight / SuperflightMP, built here); [SFMF Multiplayer by Phlarfl](https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer) (directory entry: Superflight / SFMF Multiplayer) |
 | QA level | automated (two real copies on one PC, direct IP; see QA) |
 | Last updated | 2026-10-30 |
 
 ## Where things stand
 
-A new BepInEx plugin (superflight-coop, alpha) puts players in the same world over direct
+A new BepInEx plugin ([SuperflightMP](https://github.com/carlgoodtoseeyu/superflightmp), alpha, release 0.2.0) puts players in the same world over direct
 IP, each visible as a tinted copy of the wingsuit with name and score; two automated
 two-copy suites pass. Steam friend invites without port forwarding are built on the game's
 own Steamworks.NET (friends-only lobby, P2P with relay, overlay invite, `+connect_lobby`);
@@ -123,7 +123,7 @@ starts the game for them if needed), or paste the lobby code the host sees. Dire
 a port, click Host, forward that UDP port or use a VPN; friends type `host:port`. Plugin
 repo: https://github.com/carlgoodtoseeyu/superflightmp (MIT, tag v0.2.0). The release zip
 `SuperflightCoop-0.2.0.zip` (SHA-256 `2e39331a727521211f2b128f864a92968bc40fff458f70aa1592d48fcfc40654`)
-is built; the GitHub release page is the owner's step (see Next steps).
+is on the [v0.2.0 release page](https://github.com/carlgoodtoseeyu/superflightmp/releases/tag/v0.2.0).
 
 ## Known issues
 
@@ -139,6 +139,3 @@ is built; the GitHub release page is the owner's step (see Next steps).
 1. Steam: a real two-account run over the internet (owner plus a friend through the overlay
    invite, or `tests/run_steam.py --join CODE` on a second PC with another account).
 2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
-3. Publish: the plugin repo is pushed (main and tag v0.2.0, 2026-10-30); the owner drafts the
-   GitHub release from the tag with `SuperflightCoop-0.2.0.zip` and its SHA-256, then the
-   directory entry gets the release link.

@@ -8918,7 +8918,7 @@
     DLL released 2022-01 with no play reports found; the author wrote in 2025-01 that it probably no
     longer works and had released the source in 2018 for others to finish. No license stated. Loads only
     under Phlarfl's launcher 1.2.0, not the maintained SFMF v2 (vicjohnson, MIT, no multiplayer mod).
-    Audit and revival plan in games/superflight.
+    Audit in games/superflight; a new BepInEx plugin (SuperflightMP, own entry) replaces it.
   sources:
   - https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer
   - https://github.com/Phlarfl/SFMF/releases/tag/multiplayer.1.0.0
@@ -8926,3 +8926,37 @@
   - https://github.com/vicjohnson/Superflight-Mods/issues/21
   checked: '2026-10-29'
   up_for_adoption: true
+- game: Superflight
+  year: 2017
+  engine: Unity
+  project: SuperflightMP
+  url: https://github.com/carlgoodtoseeyu/superflightmp
+  other_urls:
+  - https://github.com/carlgoodtoseeyu/superflightmp/releases/tag/v0.2.0
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: partial
+    items: 'no'
+  players: '2-8'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: >-
+    BepInEx 5 plugin (MIT, release 0.2.0 from 2026-10-30) for the Steam build. Host-authoritative:
+    everyone flies the host's level (seed sync), remote players are tinted copies of the wingsuit
+    with name and score, and a host-decided choice screen with scoreboard at portals, fall-outs and
+    crashes keeps the group on one level. Direct IP over UDP (host forwards a port or uses a VPN) or
+    Steam friends-only lobby with overlay invites and +connect_lobby on the game's own Steamworks.NET
+    (no port forwarding). Automated two-copy suites (join, seed match, puppets rendered, portal
+    choice) and a one-copy Steam lobby test pass; a Steam game between two accounts has not been
+    played yet. Lobby max 8. No enemies, items or story in the game. Write-up in games/superflight.
+  sources:
+  - https://github.com/carlgoodtoseeyu/superflightmp
+  - https://github.com/carlgoodtoseeyu/superflightmp/releases/tag/v0.2.0
+  checked: '2026-10-30'
+  made_with_coop_anything: true
