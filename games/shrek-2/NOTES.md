@@ -605,6 +605,45 @@ Open: only the first hero line is applied (single player); potions and the other
 not recorded yet (only coins); `Health` is restored as text. The debug mutations (crate, hero) still run in
 every session of the test build (`bMutateTest` in `CoopDebug`) and must be switched off for any real use.
 
+## Both players and the checkpoint, the leash, the exits (2026-10-30)
+
+Owner's rules: a checkpoint counts only when **both players have passed it**; a partner must not run away
+from his friend: either he is brought back to the checkpoint, or the level change must not happen until the
+second player is at that point.
+
+**Checkpoint rule** (`CoopGame.OnCheckpointRequest`, `MarkPassed`, `AllPassed`, `Poll` from `CoopTicker`, every
+half second). A request (from `OnSaveGame`, i.e. the fairy, the autosave, ...) fixes the place of the
+checkpoint (the requester's position). A player has *passed* it once he has been within `CheckpointRadius`
+(1500 units) of that place, at any time; leaving again does not undo it. The record is taken when every
+player with a pawn has passed it. A second request at the same place is merged; a request at another place
+replaces the waiting one. Verified (host plus joined client): everybody there: counts at once (`heroes=2` in
+the record); partner far away: `checkpoint waits ... 1 of 2 have passed`; partner arrives later: counts.
+
+**Leash** (`CheckLeash`, same heartbeat). Two players farther apart than `LeashDistance` (5000) for longer
+than `LeashGrace` (6 s): the player who is ahead (farther from the last counted checkpoint, or from the level
+start) gets the message "Wait for your partner" and is then moved to the last checkpoint if his partner is within
+`LeashDistance` of it, otherwise next to his partner. Verified: `leash: ... CoopPlayerController0 is returned
+to the last checkpoint at -12557.52,1233.12,-247.40` and the waiting checkpoint counted in the same second.
+The "brought to his partner" branch was not exercised (the test positions were close to each other). Two players
+only; a third player is not considered.
+
+**Exits** (`RegisterExit`, `UpdateExits`). The mutator registers every `ChangeLevelTrigger` (two on the swamp
+level, both to `2_Carriage_Hijack`). An exit works only while every player is within `ExitRadius` (1500) of it;
+otherwise its collision is switched off, so the game's own trigger and level-change code never runs and nothing
+needs to be undone (calling `ServerTravel` and cancelling it would leave the game state advanced and a fade
+started). Verified: the host stood at an exit with the partner far away: nothing happened; when the partner
+arrived the exit opened and, because the host was standing inside, **the trigger fired at once**:
+`ProcessServerTravel: 2_Carriage_Hijack.unr`, then `LoadMap 2_Carriage_Hijack ...?Game=ShrekCoop.CoopGame?listen`
+(the URL keeps the mod's game class and options) and the mod registered the exits of the new level. Not covered:
+level changes that are not triggers (cutscene actions `KWACTION_ChangeLevel`, `KWCutScene` commands,
+`SHMovieManager`, `bonusLevelTransferTimer`), what the joined client does after the travel, and a third player.
+
+**Test stand**: `?CoopTest=1` (state mutations, test checkpoint, the rule/leash/exit sequence), `?CoopSkipIntro=1`,
+`?CoopLoad=<slot>`. `run2.ps1` starts a host and a client; the mod writes a `status` record (`joined`) when the
+client logs in, and the script restarts a client that does not join within 75 s (up to three tries): the client
+sometimes hangs while loading its own placeholder map (log ends at `Initialising Karma for Level`), early or
+late, about one run in three or four. Cause unknown.
+
 **Still to do in stage 3:** the rule that both players must have reached a checkpoint before it counts
 (distance of each player to the fairy's place, kept by the mutator), re-capture the coins and potions
 (`coins=0` here), `MaterialTrigger` pairs, and replacing the fairy's visible "saving" sequence if it freezes
