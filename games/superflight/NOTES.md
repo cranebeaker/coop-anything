@@ -405,3 +405,12 @@ Superflight / SuperflightMP (mod, alpha, direct-ip, qa automated, players 2-8 fr
 `made_with_coop_anything: true`); the SFMF Multiplayer entry now points at it. `build_directory.py`
 and `--check` pass (342 entries). The write-up's Projects row and release link updated. Next: the
 owner forks coop-anything, the branch goes to the fork, draft PR from the template, claim issue.
+
+### Fork, draft PR
+GitHub CLI 2.103.3 installed per-user through winget (official cli/cli release, hash verified by
+winget) with the owner's OK; signed in by the owner in their own terminal. Forked
+cranebeaker/coop-anything to the owner's personal account (rule from the owner: never publish under
+their organisation), pushed `game/superflight` (head 20c43b5), opened draft PR
+https://github.com/cranebeaker/coop-anything/pull/268 with the template filled; the owner-review
+checkbox is left for the owner. The claim issue was not posted by the agent (tool permission
+denied); the body is prepared for the owner to post.
