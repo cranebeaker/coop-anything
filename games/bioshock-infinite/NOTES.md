@@ -382,8 +382,14 @@ to reuse the UE3 reflection, and replaces `Pilote::TickJeu`: the original tick, 
   - walk: frame captures from a fixed camera show the puppet striding across the welcome center (`WalkFwd_untitled`);
   - regroup (F8, simulated by a file): the player went from 400 to 90.6 units from the partner;
   - no crash; the owner's files were unchanged.
-  - Defect: in copy 1 the puppet's anim tree had no nodes yet when it was created (still loading), so it stayed
-    idle. A retry was added but not tested yet.
+  - Defect: in copy 1 the puppet was created while the copy was still loading Columbia, before
+    `Arc_ActorBase.XIdleActor` existed, so it had no template and no anim nodes. Fix: look for the template every 2 s,
+    spawn without it only after 20 s, and never spawn in the menu world `XEntry_P`. Re-run: both puppets had their
+    template and 2 anim nodes with the locomotion set.
+- Endurance test (`--colombie --endurance=10`): both players wandered at the same time (about 140 units/s, random
+  heading within 300 units of their start) for 10 minutes, with an F8 every 2 minutes. Every 5 s, each player was
+  stopped for 1 s and compared with its puppet in the other copy: 162 measurements, maximum error 0.0 units, 4 F8,
+  no crash, both copies alive, owner's files unchanged.
 
 ## Open questions
 
