@@ -329,6 +329,14 @@ Derived (design consequence):
   the guards' states), which checks the door's `Security` against `SecurityLevel` (keycards). Derived: puppets already
   open ordinary doors locally; keycard doors need the remote player's clearance, which a puppet does not have yet.
   Door messages matter for lasting state (locks, hacks, crashed doors), not for walking through.
+- **Guards** (observed): guards carry `OriginalFore`/`OriginalStarboard` (0x4ff/0x500), their creation position, which
+  is identical on every copy of the shared ship, so it identifies a guard across copies. The host sends every 6 frames
+  each active guard of the shared ship: original position, `Fore`/`Starboard`, `MyImageAngle` (0x1b6), `Conscious`
+  (0x4c7), `Dead` (0x307), `State` text. On a guest the census hook on `oEnemy.Step_0` skips the AI of a guard the host
+  reported in the last 2 s and writes those values (x/y via `GetX/GetY`). Result: 38 of 38 guards matched; a patrolling
+  guard was at (3456.0, 3456.0) on both copies at the same sample, sentries identical to 0.1 unit. Not mirrored yet:
+  the `State` label and animation (the guest's skipped AI keeps its own label), guests' hits/knockouts going to the
+  host, host guards seeing guest puppets (`EnemyCanSeePlayer` uses `global.Player`), keycard clearance for puppets.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
