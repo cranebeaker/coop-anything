@@ -9100,3 +9100,53 @@
   - https://github.com/Cryswar/battletech-coop/releases/tag/v0.0.13
   checked: '2026-10-29'
   made_with_coop_anything: true
+- game: Balatro
+  year: 2024
+  engine: LÖVE 11 (Lua, LuaJIT)
+  project: Balatro Duo
+  url: https://github.com/dobrodeetel/balatro-duo
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/balatro
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: partial
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: lan
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: 'Two windows on one PC (TCP on 127.0.0.1), each player with their own run (money, jokers, deck, shop); the blind score is shared and the host picks blinds, skips and the boss. Options for shared hand levels, both skip tags to both, shared secret hands. Co-op state lives in the game save, so Continue works after a crash of either window. Lovely 0.9.0, no Steamodded; text in all 15 game languages. Bot suite of 9 scenarios with real game clients (restarts, tag stacks, out-of-hands), plus owner playtests to ante 8. MIT.'
+  sources:
+  - https://github.com/dobrodeetel/balatro-duo
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/balatro
+  checked: '2026-10-30'
+  made_with_coop_anything: true
+- game: Balatro
+  year: 2024
+  engine: LÖVE 11 (Lua, LuaJIT)
+  project: BalatroCoop
+  url: https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: partial
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: lan
+  open_source: unknown
+  last_activity: '2026-10'
+  qa: none
+  notes: 'Version 0.2.2 alpha (2026-10-13). Both players play the same run: combined blind score, synchronized progression, shared shop, separate decks. TCP port 22122; LAN or a TCP tunnel (IP:port); same PC with 127.0.0.1. Needs Steamodded and Lovely. No source repo or license listed on the package page.'
+  sources:
+  - https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/
+  - https://thunderstore.io/api/experimental/package/GUANZHUTAFEI/BalatroCoop/
+  checked: '2026-10-30'
