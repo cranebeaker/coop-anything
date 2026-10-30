@@ -8533,17 +8533,17 @@
   networking: unknown
   open_source: 'no'
   last_activity: 2026-10
-  qa: none
+  qa: automated
   notes: Local couch co-op on one PC for the PC game (TMNTGame.exe 1.0.0.188), two controllers, one shared midpoint camera,
-    one game process. Work in progress, not stable. An injected DLL spawns a second turtle with the game's own spawn function and splits input around
-    its update; enemies target it, it has a health bar and respawns. Player 2 lacks history-based moves (double jump,
-    combos, dodge) and team moves are off while it is present. Level loads untested. Not released; no structured testing yet.
+    one game process. Work in progress, not stable. An injected DLL spawns an idle brother (or clones player 1's turtle and unshares its skeleton in solo-turtle levels like Level 1)
+    and swaps the game's 584-byte pad and wrapper buffer around the input pipeline and player 2's AI tick when a second pad is connected; enemies target player 2, it has a health bar, and air leapfrog plus ground charged team attacks work with player 2 as partner.
+    The partner's single-player exit leap after a team move is cut at the release frame, so it lands where it stands instead of flying off and snapping back. Rough edges remain (the cloned turtle in solo levels misses its katana scabbards, looks identical to Leonardo and uses a slightly different attack combo index, and scripted self-tests only cover the start of Level 1). Not released.
   sources:
   - https://github.com/cranebeaker/coop-anything/tree/main/games/tmnt-2007
   - https://en.wikipedia.org/wiki/TMNT_(video_game)
   - https://github.com/xan1242/UbiTMNTHax
   - https://github.com/hogsy/jaded
-  checked: '2026-10-25'
+  checked: '2026-10-27'
   made_with_coop_anything: false
 - game: Tony Hawk's Underground 2
   year: 2004
