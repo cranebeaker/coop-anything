@@ -716,3 +716,27 @@ Observations:
   emperor, marge, bopeep, Title_Page, In-Laws_1a/1b, PickUps herobar_tx / herocrate_tx, tour_sign, Hero_Arm,
   flash, the two truck atlases, sign_4, sign_5, FGM_Banner, cauldron, signs, sign_welcome2, sign_stayout,
   SH_Menu poster1/poster2. Not present: the SH_Hud loading/saving tiles, poster3..12, the *_sm posters, fonts.
+
+## HD texture pack installed by our own tool; subtitles
+
+Texture pack (observations, run on a copy): the pack's `LocalMips_0.tfc` holds ready mips (DXT1, DXT5 or
+BGRA8) and `Shrek 2.TFCMapping` lists 1255 entries (object path without package, mip offsets and sizes). The
+TFC Installer from the same author targets UE3; stock UE2.5 packages (v129) cannot reference external mips.
+Our tool (private, `local/shrek2-hd/tool`) writes the HD mips into the texture exports of the `.utx` files
+instead: new export bytes are appended to the package, the export table is rewritten at the end and the header
+points to it. Result: 1277 textures patched in 33 packages, 25 Russian-adapted ones skipped (they stay Russian
+at original size). Verified in the game: the log shows `tree_5` 1024x1024, `water_base` 2048x2048 (DXT5); on
+screenshots at 1600x900 foliage and cliffs are visibly sharper than the original. At 640x480 the difference
+is hard to see.
+
+UE2 package facts used: a bool property carries its size byte when the info byte says so (size code 5); a
+texture export is properties, then the mip array with a lazy-array skip pointer that is an absolute file position.
+
+Subtitles (observation): the stock controller `KWCutTextController` draws a black bar and blue text. The mod
+replaces it with its own controller (white text, name of the speaker in a soft colour, light shadow, translucent
+dark band behind the lines). The game passes only the text to the HUD, not the dialog key, so the speaker is
+found by the text: a table text-hash -> speaker code is built from the game's own dialog files
+(`HpDialog.*`, `BumpDialog.*`, keys `pc_<speaker>_...`) and shipped as a localization file. Short lines said by
+several characters are left without a name on purpose (149 of 2650 in the Russian set).
+
+The mod was renamed to Shrek 2 Enhanced (package `Enhanced`); co-op is one of its features.
