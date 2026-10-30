@@ -235,6 +235,11 @@ Derived (design consequence):
   known live instance (`oPlayer` instances share one); the global instance has its own vtable and is exempt.
 - So the earlier conclusions about Steam state, ntsync, overlay or Xalia were wrong: restarting Steam only "helped"
   because the next run happened not to touch a stale pointer, and the "no DLL" run was the normal galaxy intro.
+  Correction (17:50): a *start-up* stall (GML stops after 1 to 3 frames, no error box, no dialog window) also exists.
+  It happened four launches in a row with the current loader, with the older loader from commit a6700e9, with the
+  loader but no core, and (judged by a static screen over 4 s, weaker evidence) with no DLL at all. Restarting Steam
+  cleared it twice before. So there are two problems: the R6025 box (the mod's bug, fixed) and this start-up stall
+  (unexplained, Steam-related). `game.sh start` now detects it (no frame 30 within 25 s) and relaunches up to 3 times.
   Lesson for the playbook: when a Proton game seems frozen, list *all* its X windows (`xdotool search --class
   steam_app_<appid>` + `getwindowname`) before anything else, and hook `MessageBoxA/W` from the start.
 
@@ -262,7 +267,9 @@ Derived (design consequence):
   (type, faction, guard counts, alarms, sensors, segments, protocols, mercenaries, guard kits) to an open text file;
   `LoadMissionFromFile` (`0x009ed2d0`, 4 arguments when called from `CreateScenario`) reads them and creates the
   mission and its ship. Plan: host saves the chosen mission, sends the text and a seed; guest loads it.
-- Needed first: creating GML string RValues from the DLL (file names; also the "paused by" banner).
+- GML strings from the DLL (found 2026-10-30, banner not yet seen on screen): `0x010ab350` is `YYCreateString(RValue* out,
+  const char* text)` (cdecl, about 5600 call sites with literals); `0x00401790` frees an RValue's payload (the game calls
+  it when `((kind + 0xffffff) & 0xfffffc) == 0`). `ShowUpdate(text, 3)` (`0x00844290`) is the game's on-screen update line.
 
 ## Two copies on one PC, UDP on localhost (probe, 2026-10-30)
 Setup: copy B is a second game folder (hard links to copy A's files, its own `version.dll`, logs and command file) and a
