@@ -107,6 +107,19 @@ Phase 0 (triage), 2026-10-30.
 - Lesson: `pkill -f Heat_Signature.exe` also kills Ghidra jobs that have the exe path in their command line. Stop the
   game with the test prefix's `wineserver -k`.
 
+- Run 4 (same setup, **Steam client running**): the game starts. Observed in `probe.log` (45 s at the title screen):
+  - Steam init OK (`Starting workshop, AppID: 268130 init: 1 logged on: 1`).
+  - `PlayerCreate` runs once at start. One `oPlayer` exists even on the title screen (the menu background flies it).
+  - `global.Player` is a **real holding the instance id** (`real 100495`), equal to the `oPlayer`'s builtin `id`.
+    It is not a pointer.
+  - Step events run at 60 per second (`oPlayer.Step` count +120 per 2 s).
+  - `global.TimeScale` = `real 1` at the menu. No `SetTimeScale`, `PauseFor` or `PauseMission` calls at the menu.
+  - `SlowMo`/`FastMo` are unset on `oPlayer` (kind 0xffffff), so they live on another object (to find).
+  - The probe reads strings from `DebugLog` arguments: a GMS1 string RValue's `ptr` points at a struct whose first field
+    is the `char*`.
+- Derived: Steam must be running for the game to reach its first room, so tests need a logged-in Steam client.
+  Steam lobbies and P2P networking under app id 268130 are therefore available to the mod (Forager did the same).
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
