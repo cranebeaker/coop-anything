@@ -3,18 +3,19 @@
 | | |
 |---|---|
 | Engine | Unity 6 (6000.3.21f1), IL2CPP x64, Windows |
-| Versions tested | Steam build 25664742, BepInEx 6.0.0-be.785 IL2CPP |
+| Versions tested | Steam build 25664742; BepInEx 6.0.0-be.785 and be.788 (IL2CPP) |
 | Projects | [Nestmates](https://github.com/skythebro/Nestmates) (MIT, [Nexus](https://www.nexusmods.com/ironnest/mods/90)); [Iron Nest Co-Op Mod](https://github.com/Jager2251/Iron-Nest-Co-Op-Mod); [IronNestCoop](https://github.com/Xeltor/IronNestCoop). All three are in `data/directory.yaml` |
 | QA level | automated |
-| Last updated | 2026-10-30 |
+| Last updated | 2026-10-30 (1.0.2) |
 
 ## Where things stand
 
-Two to five players can crew one turret in the host's missions over Steam lobbies with Nestmates (1.0.1). The
+Two to five players can crew one turret in the host's missions over Steam lobbies with Nestmates (1.0.2). The
 systems the bot suite covers (see QA) are shared, and players can join or rejoin mid-mission. A full campaign
-mission was played to the end by two real players. It isn't a verified campaign playthrough: a guest still sees its
-own newspaper issue and an empty end-of-mission stats screen, the `events` scenario fails now and then, and the mod
-isn't hardened against a player who has already joined and sends bad data (see Known issues).
+mission was played to the end by two real players, and a bot soak test ran five campaign missions with two guests
+(three players). It isn't a verified campaign playthrough: the mod isn't hardened against a player who has already
+joined and sends bad data, the `events` scenario sometimes fails, and map area effects aren't synced or tested
+(see Known issues).
 
 ## Existing work
 
@@ -146,6 +147,24 @@ Notes on this run:
 - Mutant twins of the 1.0.1 fixes, run 2026-10-29: `noreveal` fails as it should. `noscrollsync` still passes, so
   the teleprinter-paper fix isn't proven by a bot test (see Known issues).
 
+**Nestmates 1.0.2, 2026-10-30** (zip SHA-256 `1785c96e…`), Steam build 25664742. Release regression on BepInEx
+be.785: connect, mission, gunnery, requisition, items, markers, events, latejoin, rejoin, maprejoin, fixes101,
+mech1705, news, measurenotes, markers, rules and gametab all PASS. New in 1.0.2:
+- `campaign`: the host plays five campaign missions (Hospital False Flag, ChallangeFDC, SiegeOfCartagena,
+  DeadReckoning, PhantomBattery) for two minutes each, and every guest compares its world with the host's every 15
+  s (scene state, units, area effects, statistics, clock, counter-battery). With one guest: PASS. With two guests
+  (`--guests=2`, three players): PASS on the final build. Two earlier runs flagged one blinking engine warning lamp
+  in PhantomBattery on one guest; that's still being looked at.
+- `mech1705`: mission clock, counter-battery timer after added time, mission statistics and the medal records
+  (kills, shells, custom values) match on the guest. Twins `nostatsync` and `nomedalsync` fail.
+- `news`: the guest's newspaper article queue becomes the host's (the mission's front page). Twin `nonewsqueue` fails.
+- `measurenotes`: with the new host rule on, a guest's measurement line writes its note on the host's notepad.
+  Twin `nomeasurenotes` fails.
+
+**BepInEx be.788** (6.0.0-be.788+5b766a3), 2026-10-30, Nestmates 1.0.2 unchanged: 150/150 patch classes apply;
+connect, mission, controls, gunnery, items, markers, requisition, events, latejoin, rejoin, maprejoin, fixes101,
+mech1705, news and measurenotes PASS. `campaign` with two guests passes except for the same engine-lamp check.
+
 **Manual tests with real players over Steam:**
 - 2026-10-28 and 2026-10-29: the owner's two PCs on two different Steam accounts. Hosting and joining through a
   friends-only Steam lobby, a mission played together, and Discord's "Join" button on the host's status (needs the
@@ -168,10 +187,12 @@ Back up `%USERPROFILE%\AppData\LocalLow\Iron Nest\Iron Nest_ Heavy Turret Simula
 
 ## Known issues
 
-- A guest's newspaper between missions is a generic issue instead of the host's mission issue, and a guest's
-  end-of-mission screen lacks the host's stats and medals (both found in the 2026-10-29 two-player session).
-- The teleprinter-paper fix in 1.0.1 (host scrolls while a guest is paused) couldn't be reproduced by the bots;
-  it's confirmed by reasoning only.
+- Map area effects (the game's `WorldEffector`, made by mission steps) exist only on the host. Guests don't run unit
+  behaviours, so this matters only if an effect is visible; none of the eight missions the bots played made one.
+- A blinking red engine warning lamp in PhantomBattery differed on one guest in two of three two-guest soak runs.
+  It's unclear yet whether that's sampling at different blink phases or a lamp that doesn't blink for guests.
+- The `events` scenario sometimes fails on a ceiling-hatch spotlight after an alarm.
+- The teleprinter-paper fix (host scrolls while a guest is paused) is confirmed by reasoning only.
 - Things printed as finished text in the host's language can stay in that language for guests (teleprinters are
   re-rendered and fine).
 - The direct-connect (TCP) option is for trusted networks only; Steam lobbies are the normal way.

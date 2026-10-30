@@ -9639,9 +9639,9 @@
   last_activity: 2026-10
   qa: automated
   notes: BepInEx 6 (be.785) IL2CPP plugin, clean-room, MIT. Host-authoritative; guests' mission logic is switched off
-    and their presses run on the host. 1.0.1 (2026-10-30). A two-instance bot suite passed 37 of 38 scenarios on
-    1.0.1 (events fails on a ceiling-hatch spotlight mismatch). A full campaign mission was played to the end by two
-    real players over Steam on 2026-10-29. Open guest-side gaps are the newspaper issue and the end-of-mission stats.
+    and their presses run on the host. 1.0.2 (2026-10-30). The bot suite passed 37 of 38 scenarios on 1.0.1, and the
+    1.0.2 regression passed on BepInEx be.785 and be.788. A five-mission soak test ran with two guests (three
+    players). A full campaign mission was played to the end by two real players over Steam on 2026-10-29.
     Not hardened against a malicious player who already joined. Write-up in games/iron-nest-heavy-turret-simulator.
   sources:
   - https://github.com/skythebro/Nestmates
