@@ -258,6 +258,24 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   keeps going, but the frame function's timer check (it starts with `QueryPerformanceCounter` via `0x01132c80`) never lets
   a frame run. Not resolved. Mitigation: launch rarely (hot-reload the mod's logic instead of restarting the game).
 
+## Hot reload and working puppets (2026-10-30, after a Steam restart)
+- The mod is now two DLLs: `version.dll`, a permanent loader (VERSION forwarding, keep-running-unfocused hooks, a
+  watchdog that dumps the main thread's stack when frames stop, one per-frame hook on `oControls.Step_0`), and
+  `coop_core.dll`, the reloadable core. The loader runs the hot-reload host from `tools/hotreload` (`CoreHost`,
+  vendored). A swap is requested by creating `reload.txt` next to the exe (the control pipe is a Windows named pipe,
+  which a Linux client cannot reach under Proton). The core uses the plain C ABI (`abi.h`): `before_unload` saves its
+  state with `blob_put` (socket handle, peer, puppet and player instance pointers), takes every MinHook hook off
+  (`MH_DisableHook(MH_ALL_HOOKS)`, `MH_Uninitialize`) and returns 1; `init` restores it with `blob_get`.
+  Observed: generation 1 -> 2 in a running game, state restored (5 players), the game kept running and answering
+  commands. A swap takes about 1 s; this replaced most game restarts (and so the stalls).
+- **Puppets work** (observed, two copies, host A and guest B on localhost): the puppet's step is impersonated
+  (`global.Player`, `global.PlayerShip`, `oCamera.Object` = the puppet; every control reads 0) and, every 10 frames while
+  it is more than 6 units from the remote position, the core calls `gml_Script_PlayerPathfindingTo(x, y)`
+  (`0x00a4e5f0`) for it. Result after moving both players: host's puppet of B at (-163, -41) for B at (-163, -40); guest's
+  puppet of A at (160, -2) for A at (160, -1). The puppet walks with the normal animation and collides with walls.
+- What did not work: writing `x`/`y` and `Fore`/`Starboard` directly (reverted each frame, cause still unknown);
+  faking the cursor plus `ControlPressed(11)` only during the puppet's step (the route was never computed).
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
