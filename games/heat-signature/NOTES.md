@@ -31,6 +31,10 @@ Phase 0 (triage), 2026-10-30.
 
 ## Goal (from owner)
 - Online co-op for up to 4 players total (host + 3 guests).
+- Pause rule (owner's choice, 2026-10-30): **shared pause**. Anyone pausing pauses everyone, a banner shows who paused,
+  and anyone can unpause. Slow-mo and fast-forward still need a rule (to decide once the code is mapped).
+- Play style (owner's choice, 2026-10-30): **one shared mission**. All players fly pods together and board the same
+  mission ship; the host picks missions. Each guest brings their own character file.
 
 ## Phase 2: workspace (2026-10-30)
 - Test copy of the install in `local/game-test/` (exe SHA-256 matches the original).
