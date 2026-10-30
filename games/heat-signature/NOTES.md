@@ -171,6 +171,34 @@ Derived design for co-op time (shared pause, owner's choice):
   any pause -> `SetTimeScale(0, 9)`; else any slow -> slow; fast only when every player asks for fast.
 - Guests do not run their own time; they take the host's `global.TimeScale` and the name of whoever paused.
 
+## Second local player (probe, 2026-10-30)
+Goal: two players walking independently in one game, no networking yet.
+
+Observed:
+- Object indices from the `OBJT` chunk: `oCamera` 9, `oControls` 14, `oCursor` 17, `oMenu` 26, `oTime` 42, `oPerson` 52,
+  `oPlayer` 137, `oEnemy` 139, `oPlayerShip` 163. Script indices from `SCPT`: `PlayerStateFree` 1198 and the other
+  `PlayerState*` scripts 1192 to 1203.
+- `SelectThisCharacter(c)` -> `PlayAsCharacter(c)`. `PlayAsCharacter` first runs `with (oPlayerShip) DestroyContents(id)`
+  on **every** pod, sets `global.Player`, creates the character's pod (`global.PlayerShip`), docks it, clears
+  `Resting`, `CharSelectable` and `Highlighted`, and puts the previous character back in its seat
+  (`State = "CharacterSelect"`). So it cannot be reused as-is to add a second player.
+- `State` / `NewState` (slots 0x27f / 0x4d7) hold strings ("Free", "CharacterSelect"). `ChangeStateTo(<State RValue>)`
+  sets `NewState`.
+- Player input is read inside `oPlayer.Step_0` -> `PlayerStateFree` -> `PlayerMovementControls`. But
+  `PlayerMovementControls` returns early unless `oCamera.Object` (slot 0x1b4) equals `global.Player`.
+- **Two players work** with an impersonation window around player 2's `oPlayer.Step_0`. For that step only:
+  `global.Player` = P2's id, `global.PlayerShip` = P2's pod (if any), `oCamera.Object` = P2, and every
+  `ControlDown/Pressed` is answered from P2's input arrays (keyboard ignored). All values are restored afterwards.
+  To prepare P2: `ChangeStateTo(P1.State)` (makes it "Free") and `CharSelectable = 0`.
+  Result: P2 held Move Right for 2 s and moved from x -163 to 214 while P1 stayed at -163;
+  then P1 held Move Up and moved from y -39 to -118 while P2 stayed. The camera stays on P1.
+
+Not done yet (derived from the code read so far):
+- Pods: one per player, without `PlayAsCharacter` destroying the others.
+- Other code that asks "the player": guards' `EnemyCanSeePlayer`, `ChasePlayer` and doors use `global.Player`, so guards
+  ignore P2 until those take a player argument or loop over players.
+- P2's Draw and HUD: on a real guest machine P2 is that machine's own player, so this matters only for the host.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
