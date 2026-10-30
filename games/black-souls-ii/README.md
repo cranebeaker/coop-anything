@@ -99,7 +99,9 @@ counter); Shift lost because `GetKeyboardState` lags behind injected or fast key
   a joiner's defeat running the death event and respawning at the hub; menus and travel; both players
   choosing Attack through the real actor command window; real keyboard entry (only when the window has
   focus, otherwise SKIP so keys never go to another app).
-- Suite summary, 2026-10-30 (`run-all.ps1`, one run per build, two clients on one PC over localhost;
+- Command (in the private mod's folder, against a game copy with the mod installed):
+  `powershell -ExecutionPolicy Bypass -File tools\run-all.ps1 -Game <game copy>`
+- Suite summary, 2026-10-30 (one run per build, two clients on one PC over localhost;
   counts are checks passed / checks run, per client):
 
   | Scenario | What it asserts | Steam 1.0 (host / guest) | 1.4 + Spanish (host / guest) |
