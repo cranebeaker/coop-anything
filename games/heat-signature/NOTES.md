@@ -120,6 +120,31 @@ Phase 0 (triage), 2026-10-30.
 - Derived: Steam must be running for the game to reach its first room, so tests need a logged-in Steam client.
   Steam lobbies and P2P networking under app id 268130 are therefore available to the mod (Forager did the same).
 
+## Input (observed, probe run 5, title screen)
+- `ControlDown`, `ControlPressed`, `ControlReleased` take a **control index** (real) and sometimes a second real.
+  Indices at the title screen: 0, 5, 6, 7 to 10, 13, 17, 20 to 24, 31.
+- Derived: the index is the control's position in `<game dir>/DefaultControls.txt` (0 Use, 1 Loot, 2 Attack,
+  3 Secondary Attack, 4 Inventory (Space), 5 Thrust, 6 Brake, 7 to 10 Move Right/Left/Down/Up, 13 Menu, 17 Hide HUD,
+  20 to 24 Pan, 30 Slow Mo, 31 Fast Mo, 32 to 39 Item 1 to 8). The indices polled at the title screen fit this order;
+  injecting a control has not confirmed it yet.
+- A probe can answer these scripts itself (set the result RValue to real 1), which gives scripted input for a bot and,
+  later, remote players' input.
+
+## Bot attempt 1 (probe run 6)
+- The second launch of a fresh prefix opens character select: `PlayerCreate` ran 5 times and `global.Player` was `real 49`,
+  not the `oPlayer` id (unknown what 49 is).
+- `BeginPracticeMode(argument0 = practice terminal id, argument1 = scenario)` is only called from
+  `oPracticeTerminal.Step_0` (scenarios 14 and 15 seen). Calling it from the DLL with `noone` as the terminal **never
+  returned** (the game hung or crashed). Starting a practice scenario needs a real terminal, or the bot has to go
+  through the menus.
+
+## Steam Cloud and test runs
+- The test copy runs under the owner's Steam account, and the game has Steam Auto-Cloud. After probe run 6, Steam
+  rewrote `userdata/<id>/268130/remotecache.vdf`. Checked: all 34 cloud entries keep their old timestamps, and their
+  SHA-1s match the owner's real save files. Nothing from the test prefix was uploaded.
+- Not known: whether a longer run, or one that saves characters, would upload. Safer: turn off Steam Cloud for the game
+  while testing, and back up the real saves first (done, kept in `local/`).
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
