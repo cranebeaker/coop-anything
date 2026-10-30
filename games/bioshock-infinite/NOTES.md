@@ -390,6 +390,11 @@ to reuse the UE3 reflection, and replaces `Pilote::TickJeu`: the original tick, 
   heading within 300 units of their start) for 10 minutes, with an F8 every 2 minutes. Every 5 s, each player was
   stopped for 1 s and compared with its puppet in the other copy: 162 measurements, maximum error 0.0 units, 4 F8,
   no crash, both copies alive, owner's files unchanged.
+- Partner marker on the HUD, not solved: `XCore.XHudMarker` spawns (template
+  `Arc_SkyLineFX.LocalPlayer_TBarPointHUDMarker`, `MarkerTemplateName` `BasicHUDMarker`) and `MarkerEnabled` can be
+  set, but nothing is drawn, and `XOnToggle` throws. Markers probably have to be registered natively
+  (`XWorldInfo.ActiveHUDMarkers`). Quest markers (`XObjectiveMarker`, `XDynamicObjectiveMarker` in `S_TWN_Quests`)
+  drive the N navigation guide, so they are not reused.
 
 ## Open questions
 
