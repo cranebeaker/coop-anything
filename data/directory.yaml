@@ -9476,3 +9476,35 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/xcom-2/README.md
   checked: '2026-10-25'
   made_with_coop_anything: true
+- game: Zoo Tycoon
+  year: 2001
+  engine: Blue Fang proprietary (C++, DirectDraw); built on openzt
+  project: ZooTogether
+  url: https://github.com/multiplayereverything/zoo-tycoon-coop
+  other_urls:
+  - https://github.com/openzt1/openzt
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/zoo-tycoon
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Host-authoritative co-op as a patch on openzt (GPL-3.0). A friend joins by IP and receives the host's zoo; budget, date,
+    pause, admission price and research are shared, and everything either player builds, sells, fences in (exhibits with their
+    gate), lays as path, terraforms, adopts, hires, moves or fires appears on both copies; the host's animals and staff (positions,
+    births, deaths) are mirrored once a second; each player sees the other's map cursor. Guests and animal needs are per copy.
+    Tested with a two-copy lab (35 checks, 11 mutants) on the Complete Collection, zoo.exe 12.4.0.9; freeform only, scenarios
+    untested; no two-PC test yet. Write-up in games/zoo-tycoon.
+  sources:
+  - https://github.com/multiplayereverything/zoo-tycoon-coop
+  - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
+  checked: '2026-10-30'
+  made_with_coop_anything: true
