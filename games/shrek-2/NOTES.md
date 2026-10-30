@@ -801,3 +801,24 @@ joined at 31 s, released at 47 s, the first checkpoint after the cutscene passed
 The chase camera of player two is computed by the mod (eye of his Shrek, straight back along the controller's
 rotation, pulled in at geometry), the yaw after a cutscene comes from the host Shrek's facing, not from the host's
 controller (its rotation is arbitrary after a cutscene).
+
+## Level change with a client, without a fallback map or a waiting room (engine patch + script)
+
+Observations (listen server on one PC, client on the same PC; stock `Engine.dll` of the 1C edition, sha256 79eb368b...):
+- On `ServerTravel` the host closes the listening socket while it loads, the client's first join request is lost, and the
+  engine neither repeats it nor keeps the old level alive: `ULevel::TickNetClient` (Engine.dll RVA 0x136e50) puts the travel
+  `?closed` on the viewport when the old connection is closed, and that cancels the pending connection; the client then
+  browses to the default map from `[URL] Map=` (`HP-Test.unr`, which does not exist in this game), in an endless loop.
+- A second `Browse` while the old level still ticks crashes the client (`TickNetClient`, `UpdatePreNet`, `UpdateTime`): the
+  old level keeps a net driver pointer that the pending connection already replaced.
+
+What worked (all in a copy of the game, the patch is a script that checks the original bytes and never edits the input):
+1. `UGameEngine::Tick` (RVA 0x122cb0): the tick of the current level is skipped while `UGameEngine+0x13c` (the pending
+   level) is set; the old level stays on the screen as the last frame. The extra test sits in padding before the function.
+2. `ULevel::TickNetClient`: checks that the net driver and the server connection exist, and skips the `?closed` travel
+   while a pending level exists.
+3. A script on the client (a viewport `Interaction`, which is ticked in every state while the old level is not) repeats
+   `open <host>` every 3 s until the host answers. Result in one run: three requests, then "Welcomed by server" for the
+   second level, no `?closed`, no missing-map errors, no crash; the host logged the client's login 5.5 s after its
+   new level started.
+Not tested: slow networks, several clients, the real cutscenes of the second level.
