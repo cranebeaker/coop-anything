@@ -48,9 +48,18 @@ Phase 0 (triage), 2026-10-30.
   `BlockListContainsSteamID`.
 - Ghidra headless run started: name functions by the `gml_*` string each one references (same method as Forager), then
   decompile them. Script: `local/ghidra_scripts/YycNameAndDecompile.java` (to go into a game repo later).
-- Save folder: not at `compatdata/268130/.../AppData/Local/Heat_Signature` (checked). Location unknown.
+- Save folder (observed, Proton): `%APPDATA%\Heat_Signature` (Roaming, not Local), i.e.
+  `compatdata/268130/pfx/drive_c/users/steamuser/AppData/Roaming/Heat_Signature/`. Steam Cloud is on (`steam_autocloud.vdf`).
+  - `Galaxy N/Galaxy.txt`: plain `key = value` text (`VersionNumber = 20170822`, `LiberationProgress`, then `<Station>` blocks
+    with name, x, y, faction). About 55 KB.
+  - `Galaxy N/Characters/<Name>.dat`: one file per character, about 2 KB. A `<Header>` block, then every line is base64 of a
+    `key = value` line (`FileVersion = 7`, `Status`, `Forename`, `Skin`, ...). Shop files end with a `Checksum` line;
+    the exe has `GeneratePlayerChecksumV2`..`V7`.
+  - `Logs/Log.txt`: the game logs save and load steps with a ms timestamp (`[SaveSystem] Started saving character ...`).
+    Useful for the QA bot.
+- Derived: a guest's character is one small file, so a guest can bring their own character to the host's galaxy.
+  The host keeps the galaxy and stations.
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
-- Save format and location.
