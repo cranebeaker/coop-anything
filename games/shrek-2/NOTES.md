@@ -489,6 +489,51 @@ Risks to check first: whether the store exists when `InitGame` runs; whether swa
 keeps all hero code working; where to keep the files (the owner's `Documents\Shrek 2\Save` is for the stock
 format; the mod should use its own folder or name).
 
+## Save rework: stages 1 and 2 done (2026-10-30)
+
+**Stage 1, the mutator.** `CoopGame.InitGame` adds `CoopMutator` (`AddMutator("ShrekCoop.CoopMutator")`).
+`Actor.PreBeginPlay` calls `Level.Game.BaseMutator.CheckRelevance`, which reaches `CheckReplacement`. Observed
+on the swamp level: it sees **all 1,800 actors** (126 classes) when the level starts, including `ShGame.Shrek`,
+`ShGame.SavePointFairy`, `ShGame.ShrekController`, `ShGame.SHCompanionController`, `Engine.PlayerStart`,
+`KWGame.PersistentStore` (the store exists by then), `ShGame.SHHud`, 31 `CutSceneTrigger`, 23 `Coin`, 13
+`BriarPatch`. There is no `SHSavePoint` on this level; the checkpoint is a `SavePointFairy` placed directly, so the
+checkpoint logic has to be read from `SavePointFairy` and its controller, not from `SHSavePoint` only.
+
+**Stage 2, the record.** `CoopSaveData` (`PerObjectConfig`, file `ShrekCoopSave.ini`, one section per slot) and
+`CoopGame.CaptureCheckpoint(slot, name)` write: map, game state, checkpoint name, time, the key/value pairs, coins,
+one line per player. Verified: record written and read back (`keys=13 values=13`, map, state, stamp), no crash.
+The pairs are the live `PersistentStore` plus what the ten persistent classes would write, produced by typed
+`foreach` loops over `KWTrigger`, `KWPickup`, `KWMover`, `KWDecoration`, `KWGenericSpawner`, `BreakableObject`,
+`Counter`, `RoundRobin`, `PlayerStart` (the keys and value strings are the game's own, so its
+`RestorePersistentData` can read them back at load). `MaterialTrigger` (switch index per material) is not
+written yet. Heroes and coins stay empty while a cutscene owns the players (the capture ran during the intro).
+Cost: 20 captures without a file in one frame stayed under 50 ms (so about 2.5 ms each); one capture with the
+file write is inside the normal frame noise of this level (the log shows 50 to 150 ms frames every few
+seconds anyway). The file write is the part to move off the game thread later.
+
+**Toolchain limits found on the way (matter for every later stage)**
+- The Level Editor's UCC compiles against the *editor's* `Engine.u` and Master_64's rebuilt `KWGame`/`SHGame`,
+  not against the game's. Members that exist only in the game's engine do not compile:
+  `Actor.SavePersistentData`, `LevelInfo.PlayerHeroActor`, `LevelInfo.LevelAction` fields used as typed members,
+  `GameInfo.PersistentStore`, `LevelInfo.InventoryCarrierPawn`. Workarounds that work: `GetPropertyText` and
+  `SetPropertyText` for properties, finding objects by class (`foreach AllActors(Class'KWGame.PersistentStore', PS)`),
+  and reproducing small engine-side loops in the mod's own code.
+- UCC cannot be run against the game's real packages: the editor's `UCC.exe` with the game's `Core.dll` and
+  `Engine.dll` dies in an assertion (`UnObjBas.h:1789`), and with the editor's DLLs the game's `Core.u` fails to
+  bind native functions (`NeedSAPFont`). One import (`appSaveStringToFile`, signature differs) had to be patched
+  in a copy of `UCC.exe` to even start it. A native bridge would remove this class of problem: a DLL that
+  registers a native in the engine's native table can call any game function by name.
+- A string longer than a few KB passed to `Log` crashed the engine, and a string-parsing loop over a 9 KB
+  `ConsoleCommand("obj linkers")` result did too.
+- `return` inside a `foreach` and a typed `foreach` over a class unrelated to the out variable both break
+  (the first at runtime in this engine, the second at compile time).
+- A tiny proxy `shfolder.dll` (source kept in `local/shrek2-tools/shfolder`) redirects the Documents folder of
+  tools through `SHREK2_DOCS`; the same is done for the game by the `d3d8.dll` proxy.
+
+**Next (stage 3):** read the checkpoint logic of `SavePointFairy` and `SavePointFairycontroller` (what touches
+what, where `OnSaveGame` is reached), replace it through the mutator with a `CoopSavePoint` / fairy subclass that
+needs both players, calls `CaptureCheckpoint`, and never sets `bQueuedToSaveGame`.
+
 ## Unknowns
 
 - Whether this PC build has any multiplayer or split-screen mode at all.
