@@ -292,6 +292,13 @@ Derived (design consequence):
   mission (1152 bytes), sends it in 1 KB chunks with the seed (resent every 30 frames until acknowledged), and loads and
   accepts the same text itself. The guest received it, loaded and accepted it: both ships generated with RNG hash
   `7d88d413`, 17x17, 81 modules. Every copy shows "Mission shared with your crew".
+- **Pods in space** (observed): `UndockFromStation()` (`0x00b33fb0`, normally called by `oStationDockLift.Step_0`)
+  launches the player's pod; holding Thrust (control 5) with the cursor override flies it toward the cursor. In open
+  space the pod's `x`/`y` equal `xReal`/`yReal` and change smoothly (no origin shift seen at about 1 million units).
+  Galaxies differ between players, so each copy sends its pod's offset from its own instance of the shared mission
+  ship, and places the remote player's puppet pod at the same offset from its own instance (writing `x`, `y`,
+  `xReal`, `yReal`, `image_angle` after the pod's step; unlike characters aboard ships, this holds). Test: host flying,
+  guest's puppet pod within about 200 units of the received offset at about 20 000 units/s (about one frame).
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
