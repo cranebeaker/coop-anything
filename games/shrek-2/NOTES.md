@@ -760,5 +760,17 @@ Eight textures are done this way so far (well sign, cauldron, title page, two In
 atlases of one package). Open: poster sets, the ~30 pictures that differ, loading tiles.
 
 Test harness note: the second Shrek must be placed on a floor at the host's height in sight of the host
-(a ring spot over a ledge killed it by a fall of 119 units); the client of the two-process test sometimes stalls while
-loading its local map (idle CPU), a restart or a repeat run joins.
+(a ring spot over a ledge killed it by a fall of 119 units); the client of the two-process test stalled while
+loading its local map with idle CPU: the main thread sat in Sleep. The cause is that the game sleeps while its window
+is not the foreground window (and its connection then times out after 15 s). Windows refuses SetForegroundWindow
+from a background process; faking an Alt press and attaching to the foreground thread's input queue lets it through,
+and the test has to hold the client's window in front for the whole run.
+
+## Friendly fire (setting, off by default)
+
+The stock hero pawn refuses every hit from another hero (`ShHeroPawn.TakeDamage`: instigator is a hero -> return) and
+the attack search skips pawns with `bIsAFriend` (true for heroes). The mod's pawn for player two overrides both
+`TakeDamage` and `HitSHPawn`: with `FriendlyFire` > 0 (a damage scale, URL option `?FriendlyFire=0.5`) the hit goes
+through with the scale and without an instigator (so the stock check does not refuse it), and `bIsAFriend` of both
+Shreks is cleared. Test on a listen server with a second player: hit of 10 with the scale 0 -> health 100 -> 100;
+with 0.5 -> 95. Not tested: real attacks by input (player two has no combat input yet).
