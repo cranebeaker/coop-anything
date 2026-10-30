@@ -236,8 +236,13 @@ Observed:
   the next frame: `gml_Script_ShipwiseEndBit` rebuilds `x`/`y` from `Fore`/`Starboard` (slots 0x262/0x263), the position
   relative to the ship or station the character is aboard. Found by hooking the setter and logging the caller's return
   address for writes to the puppet. So the network sends and applies `Fore`/`Starboard` (plus x/y).
-- The remaining puppet bug when testing stopped: at the start of each of its steps the puppet held the **local** player's
-  Fore/Starboard (traced, not yet explained).
+- Puppet position kept snapping back between frames: to the local player's Fore/Starboard when the puppet's step ran
+  un-impersonated, to its own bar seat (Fore 1085) when it ran impersonated. Skipping `MovePersonOutOfWalls` for the
+  puppet did not change it. Hardware debug registers (DR0/DR7 via `SetThreadContext` or via an exception's context) are
+  not honoured under Proton; a page-protection watch (read-only page + VEH + trap flag) works (self-test counted its own
+  write) but saw no other write to the puppet's `Fore` in 2 s. Unexplained.
+- Changed approach (untested when launches stalled again): move the puppet with the game's own pathfinding during its
+  impersonated step (mouse override = remote position, `ControlPressed(11)` every 10 frames when more than 6 units away).
 
 Blocker (unexplained, 2026-10-30 from about 14:40 local time):
 - Every new launch of either test copy runs GML for one or two frames, then no more steps. The main thread is in the
@@ -247,6 +252,11 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   (`DXVK_CONFIG="d3d9.presentInterval = 0"`, `MESA_VK_WSI_PRESENT_MODE=immediate`). Proton was not updated.
   The window was on screen. **Fixed by restarting the Steam client** (15:10): the next launch ran normally. Cause
   (derived): Steam held stale state after dozens of force-stopped launches. Launch only after Steam has fully started.
+- **It came back** after about ten more launches (15:24). Same symptoms, also with `GamepadEnabled = 0` and with
+  `PROTON_NO_NTSYNC=1`. Observed from a stall dump (main thread stack, taken from a helper thread in the DLL): the
+  runner's main loop (`0x010f8e30`..`0x010f8e52`: `while (byte[0x0494d85c] == 1) { frame 0x011216e0; pump 0x010f8840 }`)
+  keeps going, but the frame function's timer check (it starts with `QueryPerformanceCounter` via `0x01132c80`) never lets
+  a frame run. Not resolved. Mitigation: launch rarely (hot-reload the mod's logic instead of restarting the game).
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
