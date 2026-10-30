@@ -225,6 +225,33 @@ Derived (design consequence):
 - What the single-machine tests still give us: spawning a puppet character + pod (`p2play`), driving a puppet's
   movement (`p2hold`), and the list of places that read `global.Player`.
 
+## RESOLVED: the "frame stalls" were an R6025 error box (2026-10-30, 16:20)
+- With `ptrace_scope` 0 (owner set it temporarily), gdb showed the game's main thread in `NtUserGetMessage`, a modal
+  message loop. Listing the game's X windows found a visible **"Microsoft Visual C++ Runtime Library"** box (190x128,
+  usually behind other windows): `R6025 - pure virtual function call`.
+- A `MessageBoxW` hook in the loader caught it during the probe's own `layout` command: the probe called the instance
+  variable getter (`vtable[1]`) on an instance that had been destroyed. Its destructor had reset the vtable to the
+  base class's pure-virtual stubs. Fix: every instance access first checks that `inst->vtable` equals the vtable of a
+  known live instance (`oPlayer` instances share one); the global instance has its own vtable and is exempt.
+- So the earlier conclusions about Steam state, ntsync, overlay or Xalia were wrong: restarting Steam only "helped"
+  because the next run happened not to touch a stale pointer, and the "no DLL" run was the normal galaxy intro.
+  Lesson for the playbook: when a Proton game seems frozen, list *all* its X windows (`xdotool search --class
+  steam_app_<appid>` + `getwindowname`) before anything else, and hook `MessageBoxA/W` from the start.
+
+## Deterministic mission ships (practice scenario, 2026-10-30)
+- Practice mode can be started from the DLL: `BeginPracticeMode(terminal id, scenario)` with `self` = the station's
+  `oPracticeTerminal` (as its `Step_0` does; with `noone` as the terminal it hangs). Scenario 14: a practice ship with
+  an airlock, 3 doors, 2 guards, 4 terminals and a practice terminal, all `Parent` = the ship.
+- The game shifts its coordinate origin with the player (the station moved to about 12 million, 15 million when the
+  practice ship was at the origin), so everything must be compared and synced ship-relative (`Fore`/`Starboard`).
+- `random_set_seed(N)` can be called from the DLL through the builtin dispatcher `0x010a7f30`
+  (`(self, other, RValue* result, argc, fn id, RValue** args)`, fn id read from `0x014c3fbc`).
+- Observed: same seed (12345) on both copies right before `BeginPracticeMode` -> the 11 ship parts have identical
+  `Fore`/`Starboard` (only a patrolling guard differs). Different seeds (1, 999) -> terminals at different places.
+- Derived: with the same mission parameters and the same seed at generation time, a guest can build the host's ship
+  locally; only live state (guards, doors, loot, alarms) then needs syncing. Not yet tested for galaxy missions, whose
+  ships exist before their interiors are generated and whose generation may interleave with other random consumers.
+
 ## Two copies on one PC, UDP on localhost (probe, 2026-10-30)
 Setup: copy B is a second game folder (hard links to copy A's files, its own `version.dll`, logs and command file) and a
 second Proton prefix. Both ran at the same time under one Steam account.
