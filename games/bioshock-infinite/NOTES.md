@@ -439,9 +439,23 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - Enemies changed in the last 3 s go in every packet; the others take turns in the remaining slots, because the
   list grows over the whole campaign (`Master_P` is one world).
 
+### Shields (added later the same day)
+
+- `XCore.XPawn.XShield` / `XShieldMax` are float properties (found by listing reflected properties whose name contains
+  "Shield"). The `TWN3` enemies (gunners, pistols, melee) all have 0 / 0, with `bIsShieldedVariant = False` and an
+  empty `PawnShields`. The player has 1240 / 1240.
+- An enemy's "points" are now shield + health. A drop in the sum is local damage, and a rise (shield recharge) is
+  ignored. Received damage comes off the shield first, then health. Death is still decided on health alone.
+  Packet version bumped to 2. A peer with another version is logged once and its packets are dropped.
+- Test: give two enemies a 300 shield in both copies (`XShieldMax` and `XShield` written over the pipe; the game kept
+  the value, no recharge seen). Copy 1 sets it to 200, and the twin dropped to 200 with health unchanged. Copy 0
+  removes 400 (shield 0, health −100), and the twin ended at shield 0 and health −100. OK over UDP and Steam, and the
+  pose test still passes.
+- Not checked: enemies that really spawn with shields, and the "shield broken" effect, which is not played on the
+  receiving side because the value is written directly.
+
 ### Not done yet
 
-- Shields (`XShield`), only health is shared.
 - Enemies only see and shoot the local player, and enemy positions are not synced.
 - Not tested with real gunfire by a human, or between two PCs.
 
