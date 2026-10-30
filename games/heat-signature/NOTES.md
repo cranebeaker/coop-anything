@@ -276,6 +276,27 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
 - What did not work: writing `x`/`y` and `Fore`/`Starboard` directly (reverted each frame, cause still unknown);
   faking the cursor plus `ControlPressed(11)` only during the puppet's step (the route was never computed).
 
+## Shared time (2026-10-30)
+- Each copy's core holds back every `SetTimeScale(scale, priority[, extra])` call and keeps the highest-priority request
+  of the frame. Once per frame (from the loader's per-frame hook) the host combines its request with the guest's:
+  pause (scale 0) from anyone wins, else slow motion (scale < 1) from anyone, else fast-forward (scale > 1) only when
+  both ask, else nothing. The host sends the result and who paused; each copy then calls the original `SetTimeScale`
+  once with that result.
+- Test (two copies, bot input, `global.TimeScale` read on both after 1.5 s), all observed:
+
+| Step | Host | Guest |
+|---|---|---|
+| guest presses Inventory (`ControlPressed(4)`) | 0 | 0 |
+| guest presses it again | 1 | 1 |
+| host presses Inventory | 0 | 0 |
+| host holds Fast Mo (31) alone | 1 | 1 |
+| both hold Fast Mo | 6 | 6 |
+| guest holds Slow Mo (30) | 0.2 | 0.2 |
+| everything released | 1 | 1 |
+
+- Not done: the "paused by" banner (needs a way to create GML strings from the DLL), and "anyone can unpause" (today a
+  pause lasts while the pauser's inventory is open; unpausing someone else's pause would mean closing their inventory).
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
