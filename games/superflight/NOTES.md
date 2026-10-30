@@ -396,3 +396,12 @@ and the tag page answer HTTP 200 without sign-in, and `git grep` over every push
 no username, local path or e-mail. The GitHub release (tag v0.2.0, `SuperflightCoop-0.2.0.zip`,
 SHA-256 2e39331a...0654) is still the owner's step; the directory entry gets the release link once
 it exists.
+
+### Release verified, directory updated
+The owner published GitHub release "SuperflightMP 0.2.0" from tag v0.2.0 with the zip as a release
+asset (not a notes attachment) and the checksum in the notes. Downloaded the asset through the API
+URL: 40063 bytes, SHA-256 2e39331a...0654, identical to the packaged file. Directory: new entry
+Superflight / SuperflightMP (mod, alpha, direct-ip, qa automated, players 2-8 from the lobby cap,
+`made_with_coop_anything: true`); the SFMF Multiplayer entry now points at it. `build_directory.py`
+and `--check` pass (342 entries). The write-up's Projects row and release link updated. Next: the
+owner forks coop-anything, the branch goes to the fork, draft PR from the template, claim issue.
