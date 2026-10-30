@@ -257,6 +257,21 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   runner's main loop (`0x010f8e30`..`0x010f8e52`: `while (byte[0x0494d85c] == 1) { frame 0x011216e0; pump 0x010f8840 }`)
   keeps going, but the frame function's timer check (it starts with `QueryPerformanceCounter` via `0x01132c80`) never lets
   a frame run. Not resolved. Mitigation: launch rarely (hot-reload the mod's logic instead of restarting the game).
+- Third occurrence (16:00, about four launches after a Steam restart). Narrowed down, all observed:
+  - The runner's frame function `0x011216e0` is **not called at all** during the stall: the timing globals it writes
+    first (`0x04947648`, "now") stay frozen between two dumps 5 s apart.
+  - The main thread is inside the **first** `PeekMessageW` of the pump `0x010f8840` (return address `0x010f886b` on top
+    of the stack, 20 of 20 samples at the same `win32u.dll` syscall return). Zero messages were dispatched
+    (`DispatchMessageA/W` hooked), so it is not a message flood.
+  - Linux side: the main thread sleeps in `do_select`; the prefix's wineserver idles in `do_epoll_wait`; game CPU ~4 %.
+    Native backtrace not possible (`kernel.yama.ptrace_scope = 1`).
+  - Ruled out: the probe/mod (also with no DLL), saves, gamepad option, focus, vsync, ntsync, the Steam overlay
+    Vulkan layer (`DISABLE_VK_LAYER_VALVE_steam_overlay_1=1`, layer verified absent), Xalia (`PROTON_USE_XALIA=0`).
+  - Derived (unverified): Wine's `PeekMessage` blocks while reading from the X connection; something Steam-side
+    (restarting Steam clears it) leaves the X/driver path wedged after several force-stopped launches.
+- Checked while investigating: Steam injects `STEAM_COMPAT_DATA_PATH=.../compatdata/268130` and the real install path
+  into the environment of test copies, but they run with `WINEPREFIX` = the test prefixes, and no file in the owner's
+  real save folder changed.
 
 ## Hot reload and working puppets (2026-10-30, after a Steam restart)
 - The mod is now two DLLs: `version.dll`, a permanent loader (VERSION forwarding, keep-running-unfocused hooks, a
