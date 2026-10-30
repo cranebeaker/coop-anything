@@ -240,6 +240,12 @@ Derived (design consequence):
   loader but no core, and (judged by a static screen over 4 s, weaker evidence) with no DLL at all. Restarting Steam
   cleared it twice before. So there are two problems: the R6025 box (the mod's bug, fixed) and this start-up stall
   (unexplained, Steam-related). `game.sh start` now detects it (no frame 30 within 25 s) and relaunches up to 3 times.
+  Best current explanation (18:10, derived, not yet confirmed): the desktop session was idle (`loginctl ... IdleHint=yes`,
+  idle since 16:53), so the monitors were probably asleep. The stall comes exactly when the game starts drawing
+  ("ModulesOnSurface set to -1 because we have no surfaces" is its last log line), and a Steam restart at 18:00 did
+  **not** clear it while the owner was away. Earlier "fixes by restarting Steam" coincided with the owner being back at
+  the PC. To confirm: launch with the display awake; long term, run test copies on a virtual display (gamescope
+  headless or Xvfb) so they do not depend on the owner's monitors.
   Lesson for the playbook: when a Proton game seems frozen, list *all* its X windows (`xdotool search --class
   steam_app_<appid>` + `getwindowname`) before anything else, and hook `MessageBoxA/W` from the start.
 
