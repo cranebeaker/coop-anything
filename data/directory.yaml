@@ -8925,27 +8925,33 @@
   year: 2026
   engine: Unity 6 (IL2CPP)
   project: Iron Nest Co-Op Mod
-  url: https://github.com/Jager2251/Iron-Nest-Co-Op-Mod
+  url: https://www.nexusmods.com/ironnest/mods/20
   other_urls:
-  - https://www.nexusmods.com/ironnest/mods/20
+  - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod
   kind: mod
   status: playable
   coop_scope:
-    players_visible: unknown
-    story: unknown
+    players_visible: 'yes'
+    story: 'yes'
     enemies: unknown
-    world_state: unknown
-    items: unknown
-  players: up to 5
+    world_state: partial
+    items: shared
+  players: 2-5
   networking: steam-relay
   open_source: 'no'
   last_activity: 2026-10
-  qa: none
-  notes: BepInEx 6 IL2CPP plugin by Jager2251. Hosts open a Steam lobby and share a short lobby code; every player
-    must run the same version (its README). License CC BY-NC-ND 4.0, binaries only. Latest release 2.5.0 on
-    2026-10-28. Scope fields are unknown because the README doesn't list what is synced.
+  qa: community-reports
+  notes: BepInEx 6 (be.785) IL2CPP plugin by Jager2251, also shipped as a standalone package with BepInEx. Steam lobby
+    with a hex lobby code, kick and ban, same-version check. Shares mission start and end, turret aim, gun loading and
+    firing (host-authoritative firing values), doors and hatches, shell paint, fire-mission cards (ticks shared,
+    deleting not), map drawings (host toggle), the supply console (ammo, charges, points, repositioning, recon plane),
+    and soldier avatars with name tags. Not shared on purpose are music and artillery-computer inputs. Joining a running
+    mission is unsupported (the late joiner desyncs). High Command and Field Report texts show in the host's language.
+    The GitHub repo is the issue tracker and holds no source; players file bug reports there. CC BY-NC-ND 4.0. Latest
+    release 2.5.0 on 2026-10-28.
   sources:
   - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod
+  - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod/issues
   - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod/blob/main/LICENSE
   checked: '2026-10-30'
 - game: 'IRON NEST: Heavy Turret Simulator'
@@ -8955,22 +8961,82 @@
   url: https://github.com/Xeltor/IronNestCoop
   other_urls: []
   kind: mod
-  status: unknown
+  status: playable
   coop_scope:
     players_visible: 'yes'
     story: 'yes'
     enemies: unknown
-    world_state: partial
-    items: unknown
-  players: unknown
+    world_state: 'yes'
+    items: partial
+  players: 2-5
   networking: steam-relay
   open_source: partial
   last_activity: 2026-08
   qa: none
-  notes: Host-authoritative BepInEx IL2CPP plugin over a Steam star topology. Its README lists mission flow, crew
-    avatars, the tactical map, ballistic calculator, requisition, gun loading, turret controls, station state and the
-    cat as synchronized. Source is visible but All Rights Reserved. Latest release v1.1.0 on 2026-08-14.
+  notes: Host-authoritative BepInEx IL2CPP plugin over a Steam star topology, built with AI coding agents (stated in its
+    README). The README lists as synchronized mission flow, crew avatars (station attachment, head look, locomotion),
+    the tactical map, ballistic calculator, requisition, gun loading, turret and fire control, operations stations
+    (radio, valves, engines, lights, teleprinter, counter-battery, doors), and the cat. It uses ownership leases for
+    controls and snapshots for late join. Ballistic cards stay private until dragged into the world. It targets a host
+    plus four guests; the README says most validation used fewer clients. Status is as stated by the README, and no
+    community reports were found. Source visible, All Rights Reserved. Standalone release v1.1.0 on 2026-08-14.
   sources:
   - https://github.com/Xeltor/IronNestCoop
-  - https://github.com/Xeltor/IronNestCoop/blob/main/LICENSE
+  - https://github.com/Xeltor/IronNestCoop/blob/master/LICENSE
+  - https://github.com/Xeltor/IronNestCoop/releases
+  checked: '2026-10-30'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: Open Nest Co-op
+  url: https://github.com/1499501762/OPEN_NEST_CO-OP
+  other_urls:
+  - https://www.nexusmods.com/ironnest/mods/36
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: none
+  notes: Cross-loader (BepInEx 6 IL2CPP or MelonLoader 0.7.3) host-authoritative co-op over Steam P2P lobbies, with a
+    room password and version check. A LAN TCP transport arrived in v0.2.1-Alpha-2. Its README marks as done turret
+    aim, firing, reload workflow, avatars, the record player, mission objectives, impacts, counter-battery, engine,
+    pressure and lights ("main paths done; remaining edge cases tracked"), punchcards by card id, and mid-join
+    snapshots. It also has a custom mission framework and a dual-instance loopback test mode. AGPL-3.0. Latest
+    v0.2.1-Alpha-2 on 2026-09-12.
+  sources:
+  - https://github.com/1499501762/OPEN_NEST_CO-OP
+  - https://github.com/1499501762/OPEN_NEST_CO-OP/releases
+  checked: '2026-10-30'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: Iron Nest VR & Co-Op
+  url: https://www.nexusmods.com/ironnest/mods/17
+  other_urls: []
+  kind: mod
+  status: unknown
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4 per nest
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: An unofficial VR mod with multiplayer. Up to four players share one nest in co-op, or two nests face off in
+    PvP, with crossplay for flatscreen players. F7 opens a co-op lobby browser. Known only from its Nexus page summary;
+    the author, version and sync details aren't checked yet.
+  sources:
+  - https://www.nexusmods.com/ironnest/mods/17
   checked: '2026-10-30'

@@ -20,14 +20,26 @@ isn't hardened against a player who has already joined and sends bad data (see K
 
 - **Nestmates** (this write-up): <https://github.com/skythebro/Nestmates>, MIT, 1.0.0 released 2026-10-29 and
   1.0.1 on 2026-10-30. Download on [Nexus](https://www.nexusmods.com/ironnest/mods/90). Built with this playbook.
-- **Iron Nest Co-Op Mod** by Jager2251: <https://github.com/Jager2251/Iron-Nest-Co-Op-Mod>, download on
-  [Nexus](https://www.nexusmods.com/ironnest/mods/20). Steam lobbies with a lobby code, up to 5 players (its README).
-  CC BY-NC-ND 4.0, binaries only. Latest release 2.5.0 (2026-10-28).
-- **IronNestCoop** by Xeltor: <https://github.com/Xeltor/IronNestCoop>. A host-authoritative BepInEx IL2CPP plugin
-  over a Steam star topology; its README lists mission flow, avatars, map, calculator, requisition, guns and
-  stations as synced. Source is visible but All Rights Reserved. Latest release v1.1.0 (2026-08-14).
-- Neither license allows reuse, so Nestmates used the two only to learn *what* players expect to be shared, never
-  *how*. None of their code was read or decompiled.
+- **Iron Nest Co-Op Mod** by Jager2251: [Nexus 20](https://www.nexusmods.com/ironnest/mods/20), issue tracker at
+  <https://github.com/Jager2251/Iron-Nest-Co-Op-Mod> (no source there). It uses a Steam lobby code and takes up to 5
+  players. Its README lists missions, aim, loading and firing, doors and hatches, cards, map drawings, the supply
+  console and avatars as shared. Music and calculator inputs stay local on purpose, and joining a running mission is
+  unsupported. CC BY-NC-ND 4.0, binaries only, latest 2.5.0 (2026-10-28). Players file bug reports in its issues.
+- **IronNestCoop** by Xeltor: <https://github.com/Xeltor/IronNestCoop>. A host-authoritative plugin over a Steam
+  star topology, built with AI agents (stated in its README). The README lists mission flow, avatars, map,
+  calculator, requisition, guns, turret, operations stations and the cat as synchronized, with ownership leases and
+  late-join snapshots. It targets 5 players. Source visible but All Rights Reserved, latest v1.1.0 (2026-08-14).
+- **Open Nest Co-op** by 1499501762: <https://github.com/1499501762/OPEN_NEST_CO-OP>,
+  [Nexus 36](https://www.nexusmods.com/ironnest/mods/36). It runs on BepInEx 6 or MelonLoader, uses Steam P2P
+  lobbies with a password, and added LAN in its latest alpha. Its README marks turret, firing, reload, avatars,
+  record player, objectives, impacts, counter-battery, engine and lights as done ("main paths"), plus mid-join
+  snapshots and a custom mission framework. AGPL-3.0, latest v0.2.1-Alpha-2 (2026-09-12).
+- **Iron Nest VR & Co-Op**: [Nexus 17](https://www.nexusmods.com/ironnest/mods/17). A VR mod with up to four
+  players per nest in co-op, or two nests in PvP, with flatscreen crossplay. Author, version and sync details are
+  known only from the Nexus page and still need checking.
+- Nestmates is its own clean-room code. Jager2251's and Xeltor's licenses don't allow reuse, so those two were used
+  only to learn *what* players expect to be shared, never *how*. Open Nest Co-op and the VR mod weren't consulted.
+  None of their code was read or decompiled.
 
 ## How the game works (for co-op)
 
