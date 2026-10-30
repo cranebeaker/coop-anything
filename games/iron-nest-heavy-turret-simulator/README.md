@@ -23,7 +23,8 @@ isn't hardened against a player who has already joined and sends bad data (see K
 - **Iron Nest Co-Op Mod** by Jager2251: [Nexus 20](https://www.nexusmods.com/ironnest/mods/20), issue tracker at
   <https://github.com/Jager2251/Iron-Nest-Co-Op-Mod> (no source there). It uses a Steam lobby code and takes up to 5
   players. Its README lists missions, aim, loading and firing, doors and hatches, cards, map drawings, the supply
-  console and avatars as shared. Music and calculator inputs stay local on purpose, and joining a running mission is
+  console and avatars as shared. Its 2.5.0 changelog adds units (damage, behaviours, movement), map area effects, a
+  shared random seed per mission, end-screen statistics and the mission clock. Music and calculator inputs stay local on purpose, and joining a running mission is
   unsupported. CC BY-NC-ND 4.0, binaries only, latest 2.5.0 (2026-10-28, about 16k unique downloads on Nexus). Players
   file bug reports in its issues.
 - **IronNestCoop** by Xeltor: <https://github.com/Xeltor/IronNestCoop>. A host-authoritative plugin over a Steam

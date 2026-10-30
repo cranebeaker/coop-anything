@@ -8933,7 +8933,7 @@
   coop_scope:
     players_visible: 'yes'
     story: 'yes'
-    enemies: unknown
+    enemies: 'yes'
     world_state: partial
     items: shared
   players: 2-5
@@ -8948,8 +8948,10 @@
     and soldier avatars with name tags. Not shared on purpose are music and artillery-computer inputs. Joining a running
     mission is unsupported (the late joiner desyncs). High Command and Field Report texts show in the host's language.
     Versions 2.0.0 and up are for the game's full release; built against BepInEx be.788, with a Proton note for Linux.
-    The GitHub repo is the issue tracker and holds no source; players file bug reports there. Enemy sync isn't mentioned
-    in the README or on the Nexus page. CC BY-NC-ND 4.0. Nexus first upload 2026-08-04; 2.5.0 on 2026-10-28, with
+    2.5.0 (for the game update that added unit behaviours, map area effects and per-shell hit tracking) syncs damaged
+    and destroyed units, unit behaviours and movement, map area effects, one random seed per mission (enemy fire, spawns,
+    targets, shell spread), mission statistics on the end screen, and the mission clock, with counter-battery fixes
+    (from its Nexus changelog). The GitHub repo is the issue tracker and holds no source; players file bug reports there. CC BY-NC-ND 4.0. Nexus first upload 2026-08-04; 2.5.0 on 2026-10-28, with
     about 16k unique downloads and 83 endorsements on 2026-10-30.
   sources:
   - https://www.nexusmods.com/ironnest/mods/20
