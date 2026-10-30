@@ -245,7 +245,8 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   view. The same happens with the previous probe DLL, with no DLL, with freshly deleted saves, with `GetForegroundWindow`
   / `GetActiveWindow` / `GetFocus` hooked to the game window, with `WM_ACTIVATE*` posted every 0.5 s, and with vsync off
   (`DXVK_CONFIG="d3d9.presentInterval = 0"`, `MESA_VK_WSI_PRESENT_MODE=immediate`). Proton was not updated.
-  The window was on screen. Next check: restart the Steam client (dozens of force-stopped launches in one session).
+  The window was on screen. **Fixed by restarting the Steam client** (15:10): the next launch ran normally. Cause
+  (derived): Steam held stale state after dozens of force-stopped launches. Launch only after Steam has fully started.
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
