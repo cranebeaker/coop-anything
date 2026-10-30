@@ -10759,3 +10759,30 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: A Place for Every Potion
+  engine: Unity 6 (6000.3.23f1) IL2CPP
+  project: ApfepCoop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/a-place-for-every-potion
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    world_state: partial
+    items: host-owned
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: '2026-10'
+  qa: automated
+  notes: 'Host-authoritative co-op for the potion lab: Steam lobby room codes plus a localhost UDP QA
+    transport, MelonLoader 0.7.3 Harmony patches on the state machine, saves and hero. The host drives
+    gameplay; the puppet follows the host state through its own level load, mirrors the host run in its
+    HUD from snapshots, and shows as an avatar in the host lab. Puppets write no saves and push no
+    undo records. QA is 11 automated checks over two bot-driven game copies (pass 2026-10-31). Steam
+    lobby playtest with two accounts and puppet-side potion actions are still open.'
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/a-place-for-every-potion
+  checked: '2026-10-31'
+  made_with_coop_anything: true
