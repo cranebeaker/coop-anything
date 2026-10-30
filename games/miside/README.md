@@ -10,7 +10,7 @@
 
 ## Where things stand
 
-MiSide Together lets 2 to 4 players play MiSide's story together. The host leads. Everyone loads the same chapter, sees the same dialogue, cutscenes and Mita, and sees the other players as the main character with their real pose. It is an alpha. Every chapter has been driven by automated tests with hidden game copies on one PC, and all of Scene 1 has been played through by two copies into Scene 2. The computers in Scenes 13 to 15 and the Scene 1 and Scene 14 phones are shared. Three players (the author and two friends) have played it together over Steam, on separate PCs with their own accounts. They reported 19 problems, and 0.3.5 fixes most of them.
+MiSide Together lets 2 to 4 players play MiSide's story together. The host leads. Everyone loads the same chapter, sees the same dialogue, cutscenes and Mita, and sees the other players as the main character with their real pose. It is an alpha. Every chapter has been driven by automated tests with hidden game copies on one PC, and all of Scene 1 has been played through by two copies into Scene 2. The computers in Scenes 13 to 15 and the Scene 1 and Scene 14 phones are shared. The mod's author has played it with two friends, three players together over Steam on separate PCs with their own accounts. They reported 19 problems, and 0.3.5 fixes most of them.
 
 ## Existing work
 
@@ -117,7 +117,7 @@ A one-player tour (`inventory`) loads every chapter. It lists each chapter's gam
 - Lab screenshots (`LabShot`, converted by `tools/shots_to_png.py`) let a tour compare what each player sees.
 - **v0.3.5 (2026-10-28):** the suite has 34 tours with 2 to 4 players, including host migration, a 120 ms lag run, the Steam stand-in (`steam`: 60 of 60 messages in order with 68 failed sends), the shared computers (`core`, `quest`, `mobile`), all of Scene 1 (`scene1`, `scene1end`) and Scene 3's opening (`scene3`). Last full run: 33 of 34; `scene19` stuck on the first splash screen and passed on its own rerun. `scripts\interactions-all.ps1` presses every interaction in every chapter with 2 players: 18 of 18 chapters pass.
 - **Story autopilot (after v0.3.5):** `scripts\storypilot-all.ps1` has the host play each chapter as far as simple actions go (answer choices, press armed objects, look at and walk into story triggers) while the client must hold the host's quests, checked every 30 s. First run: 17 of 18 chapters stayed together; Scene 1 did not, which led to the "own press" fix above, after which Scene 1 stays together too. In 9 chapters the autopilot gets only 0 to 2 actions in (they need chases, minigames or aiming), so those chapters prove little yet.
-- **Playtest with people (2026-10-28):** three players on separate PCs and Steam accounts, joined over Steam. Their 19 reports (with screenshots of errors) became the 0.3.5 work; most were reproduced in the lab first and given a tour.
+- **Hands-on playtest (2026-10-28):** the mod's author and two friends, three players on separate PCs and Steam accounts, joined over Steam. Their 19 reports (with screenshots of errors) became the 0.3.5 work; most were reproduced in the lab first and given a tour.
 - Not covered: four real players, and the dialogue-choice and NavMesh guards added for playtest errors that the lab could not reproduce.
 
 ## How to play
