@@ -281,7 +281,15 @@ Derived (design consequence):
   The guest needs a `<Header>` block with `Encoded = 1` in front (otherwise the game's `Crash` box says "No mission data
   found in file for: <character>") and calls `LoadMissionFromFile("coop_mission.txt", <its player id>, 1, undefined)`
   (the call `CreateScenario` makes). It returned a new mission; saving that mission again on the guest gave text
-  identical to the host's (45 of 45 lines). Next: the ship's interior from a shared seed.
+  identical to the host's (45 of 45 lines).
+- **Same ship from the same seed** (observed): a mission ship is generated when the mission is accepted
+  (`AcceptMission(mission, 1)` -> `GenerateShip` -> `GenerateShipInSteps`, all in one call). The core gives a seeded ship
+  its own 72-byte RNG state (seeded with `random_set_seed`, copied from `0x04b5c3c8`) and swaps it in around every
+  `GenerateShipInSteps` call. Both copies loaded the same mission text and accepted it with ship seed 777: identical
+  final RNG hash `0bd83e16`, 17x17 modules, 81 modules. A second round on both copies with seeds 777 and 778: 777 again
+  gave `0bd83e16` / 81 modules, 778 gave `f3760070` / 87 modules.
+- So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
+  with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
   Screenshots come from the game itself (`screen_save` builtin, written to the save folder), clicks are window messages
   inside the process. The loader answers message boxes automatically when `COOP_AUTO_DIALOGS=1` (set by `game.sh`).
