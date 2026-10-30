@@ -8661,7 +8661,7 @@
   project: Gedonia Co-op
   url: https://github.com/Zerbith/gedonia-coop
   other_urls:
-  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.7.1
+  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.8.1
   kind: mod
   status: alpha
   coop_scope:
@@ -8675,7 +8675,7 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one tester with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; shared combat XP; spell effects and transformations shown to others; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 35 scenarios, logged assertions and screenshots); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
+  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one tester with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; groups (combat XP and map markers per group); enemy scaling by group size near the enemy (host''s settings); trading as a two-phase commit with the host as coordinator; spell effects and transformations shown to others; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 38 scenarios, logged assertions and screenshots); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
   sources:
   - https://github.com/Zerbith/gedonia-coop
   - https://github.com/cranebeaker/coop-anything/issues/214
