@@ -342,6 +342,14 @@ Derived (design consequence):
   walked toward guards, the host had 2 guards "Panicking" and 2 "Searching" (none in earlier runs), and the host's game
   ran its "spotted" pause, which the shared time sent to the guest ("Paused by the host"). To do: the spotted pause and
   zoom should happen on the spotted player's screen (a guest), not as the host's own pause.
+- **Guests' hits reach the host** (observed): a hit is put on its target with `SetDamageSignal(target id, damage mask)`
+  (`0x005d0050`, sets `DamageSignal` 0x400 / `DamageMask` 0x401 inside `with(target)`); the guard handles it in its step
+  (`EnemyHandleDamageSignal`). On a guest the hooked function also sends the hit (guard's original position + mask,
+  3 copies with an event id); the host calls `SetDamageSignal` on its guard. Test (`hitguard 0 1` on the guest): event 1
+  sent, applied on the host, and the host's guard went to state "Down". Not yet visible on the guest: the mirrored
+  guard keeps its own `State` and animation (its AI step is skipped), so the knockdown must still be mirrored as a state.
+- Test-sequence note: in that run the host's `undock` did not take (`gotoship`: "need my pod"), so the host stayed at
+  the station. The bot steps need checks (pod found, state "Controlling") before going on.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
