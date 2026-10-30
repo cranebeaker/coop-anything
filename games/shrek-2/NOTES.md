@@ -583,6 +583,28 @@ Findings and gaps:
 - The record keys per breakable are `<Name>_WasDestroyed` without the level id (the game's own scheme): a
   second level with an object of the same name would clash. To check when other levels are tested.
 
+## Save rework: stage 4b done, hero state loads and the intro is skipped (2026-10-30)
+
+How the game starts the opening cutscene: the level's `PlayerStart` has an `Event` (here `Cut_NEWSwampIntro`)
+that the `CutFactory` plays when the player spawns. The game's "smart start" (arriving from another level)
+calls `ShHeroController.ClearPlayerStartEvents()`, which sets every `PlayerStart.Event` to `None`, and a stock
+load passes `bLoadFromSaveGame = true` into `OnEnginePreFirstTick`, which also skips the level-start autosave.
+
+`CoopShrekController` overrides `OnEnginePreFirstTick`: when the mod is loading a record (or the debug option
+`?CoopSkipIntro=1` is given) it clears the `PlayerStart` events itself, passes `true` to the game's code, and
+afterwards `CoopGame.ApplyHero` puts the saved hero state back (position, yaw, `Health`, coins through
+`AddToInventoryCollection(CoinCollection, difference)`).
+
+Test (host alone): run 1 with `?CoopSkipIntro=1`: no intro lines, the hero is free from t=0 (`pawn=Shrek0`,
+`PlayerWalking`), the test moved him 300 units, set `Health` 37, added 25 coins and took a checkpoint
+(`heroes=1 coins=25`). Run 2 with `?CoopLoad=test`: `hero Shrek0 placed at -12558.33,1234.32,-247.40 yaw 49352
+health 37.000000`, `coins were 0, record 25, now 25`, `crates=3`, and no `NEWSWAMPINTRO.MAIN` step in the log
+(the cutscene does not play). Zero `Critical`.
+
+Open: only the first hero line is applied (single player); potions and the other inventory collections are
+not recorded yet (only coins); `Health` is restored as text. The debug mutations (crate, hero) still run in
+every session of the test build (`bMutateTest` in `CoopDebug`) and must be switched off for any real use.
+
 **Still to do in stage 3:** the rule that both players must have reached a checkpoint before it counts
 (distance of each player to the fairy's place, kept by the mutator), re-capture the coins and potions
 (`coins=0` here), `MaterialTrigger` pairs, and replacing the fairy's visible "saving" sequence if it freezes
