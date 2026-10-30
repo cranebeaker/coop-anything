@@ -790,3 +790,14 @@ with 0.5 -> 95. Not tested: real attacks by input (player two has no combat inpu
 - Keys reach the client (movement works). The hero's attack/pick up/throw is one server call
   (`ShHeroPawn.DoSomeAction`), sent from the client by an RPC.
 - Player two is placed 125 units from the host on a floor at the host's height in sight of the host.
+
+## Waiting for player two before the opening cutscene (option `EnhWait`)
+
+The opening cutscene starts from the PlayerStart's event. With `?EnhWait=1` the mod takes the event off at the level
+start, shows "waiting for player two" on the host's screen and sends the event 3 s after player two has joined (the host's
+fire key starts the game alone). Player two's Shrek appears at once next to the host's, is hidden during the cutscene
+(his camera is the host's cutscene camera) and comes back after it. Observation, one run: held at 0 s, player two
+joined at 31 s, released at 47 s, the first checkpoint after the cutscene passed by both players at 157 s.
+The chase camera of player two is computed by the mod (eye of his Shrek, straight back along the controller's
+rotation, pulled in at geometry), the yaw after a cutscene comes from the host Shrek's facing, not from the host's
+controller (its rotation is arbitrary after a cutscene).
