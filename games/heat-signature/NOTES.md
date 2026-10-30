@@ -288,6 +288,10 @@ Derived (design consequence):
   `GenerateShipInSteps` call. Both copies loaded the same mission text and accepted it with ship seed 777: identical
   final RNG hash `0bd83e16`, 17x17 modules, 81 modules. A second round on both copies with seeds 777 and 778: 777 again
   gave `0bd83e16` / 81 modules, 778 gave `f3760070` / 87 modules.
+- **Over the network** (observed, two headless copies on localhost): `share <mission> <seed>` on the host saves the
+  mission (1152 bytes), sends it in 1 KB chunks with the seed (resent every 30 frames until acknowledged), and loads and
+  accepts the same text itself. The guest received it, loaded and accepted it: both ships generated with RNG hash
+  `7d88d413`, 17x17, 81 modules. Every copy shows "Mission shared with your crew".
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
