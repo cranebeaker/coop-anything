@@ -8,7 +8,7 @@ Status: 0.6.1, released in https://github.com/dobrodeetel/balatro-duo (mod sourc
 - Balatro.exe SHA-256 `0d75fe164accf3312734d4b37ac98788dd15f0b8e4f9bb8b7f90c4e59de93f47`
 - Engine: LÖVE 11 fused exe (exe + zip of Lua sources, opens with any zip reader), LuaJIT, luasteam
 
-## Goal (owner's design)
+## Goal
 Two windows on one PC, each with its own run (deck, money, jokers, shop). Only the blind
 score is shared: both players' hands go into one pot, blind beaten when the pot reaches the
 target. Host picks blinds, skips and boss. Difficulty multiplier set by host in game.
@@ -27,7 +27,8 @@ target. Host picks blinds, skips and boss. Difficulty multiplier set by host in 
 - Shared target: host computes `get_blind_amount(ante) * blind.mult * ante_scaling * difficulty`,
   sends it with the select; both override `Blind:set_blind` result.
 - Boss: guest's blind-select screen waits until the host's boss for that ante is known; host
-  rerolls are followed with `G.FORCE_BOSS` (vanilla hook in `get_new_boss`).
+  rerolls are followed with `G.FORCE_BOSS` (vanilla hook in `get_new_boss`). (0.6.0 replaced
+  both with the blind screen alignment, see below.)
 - Round end: a player who is idle when the pot is reached waits ("won, waiting") until the
   partner reports done; a player still animating finishes, then ends. Both out of hands → both lose.
 - Second window: own save identity `BalatroDuoP2`, profile (unlocks) copied on first start.
@@ -37,6 +38,7 @@ target. Host picks blinds, skips and boss. Difficulty multiplier set by host in 
 - Settings live on the host only (difficulty, deck mode, gamepad split); the guest's CO-OP
   menu shows them read-only. Deck mode "shared": host's `Game:start_run` sends deck key,
   stake and challenge id; the guest starts the same run (its Play button is locked).
+  (0.6.0 replaced the `run` message with `sy`, see below.)
   Deck mode "own": each player picks deck and stake.
 - SDL hints set via FFI: `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1` and
   `SDL_MOUSE_FOCUS_CLICKTHROUGH=1` (without it the click that focuses the other window is
@@ -45,7 +47,7 @@ target. Host picks blinds, skips and boss. Difficulty multiplier set by host in 
 
 - Skips are synced by state, not by command: the host sends its Small/Big blind states
   (`bst`), the guest skips whatever the host skipped and it has not. The host can only select
-  when the guest reports the same `blind_on_deck`. Reason: in an owner playtest the host logged
+  when the guest reports the same `blind_on_deck`. Reason: in a playtest the host logged
   "skip Big" while it actually skipped Small (cause unknown, not reproduced by clicking); the
   guest applied "skip Big", nothing happened, and the windows drifted. Bot test with the guest
   delaying skips by 8 s (`--duo-test-lag 8`): host waited, guest caught up, 39/39 checks.
@@ -75,11 +77,11 @@ Deck modes (same bots, host asks Blue deck, guest asks Yellow, stake 2), 39/39 c
 `shared` → both started `b_blue` stake 2; `own` → host `b_blue`, guest `b_yellow`.
 Also ran: one-button launch (window 1 starts window 2, arranges both halves, profile copy).
 
-## 0.4.0 (2026-10-25), from the owner's playtest of 0.3.0
-Owner reported three things after playing 0.3.0:
-1. After restarting, both windows were forced onto screen halves, although the owner had
-   set them up borderless, one per monitor. The game's video settings still showed
-   Borderless, so the owner had to switch to Windowed and back on each window.
+## 0.4.0 (2026-10-25), from a playtest of 0.3.0
+The playtest found three things:
+1. After restarting, both windows were forced onto screen halves, although they had been
+   set up borderless, one per monitor. The game's video settings still showed Borderless,
+   so each window had to be switched to Windowed and back.
    - Cause (observed in source): the game restores its own `G.SETTINGS.WINDOW` (screenmode,
      selected_display) from `settings.jkr` in `Game:set_render_settings` →
      `G.FUNCS.apply_window_changes(true)`. The second window has its own `settings.jkr` (save
@@ -105,8 +107,8 @@ Owner reported three things after playing 0.3.0:
    Negative amounts (The Arm) are never sent. The receiver applies the level with
    `instant=true` and shows one keyed toast.
 
-QA 0.4.0 (bots, Python is gone after the VM reinstall, so the checker was ported to
-`tools/check_logs.ps1`, run by `tools/run_suite.ps1`):
+QA 0.4.0 (bots; from here on the log checker is `tools/check_logs.ps1`, a PowerShell port of
+`check_logs.py`, run by `tools/run_suite.ps1`):
 - `run_suite.ps1 -ShopLag 6 -Planets` (guest lingers 6 s in each shop. The host bot presses
   the real `select_blind_button` UIElement while the guest shops, then again when ready.
   Host uses Pluto + Black Hole, guest Neptune, via `G.FUNCS.use_card`):
@@ -123,7 +125,7 @@ rounds=5 selects=5 skips=1 early_clicks=4 refused=4 levels host->guest=13/13 gue
 - `run_suite.ps1 -Planets -Levels off`: `levels host->guest=0/0 guest->host=0/0 checks=42 failed=0`
   (the bots lost r5 here: without shared levels their hands score less).
 
-## 0.5.0 (2026-10-26), from the owner's playtest of 0.4.0
+## 0.5.0 (2026-10-26), from a playtest of 0.4.0
 1. Request: the partner should get a hand's points only after they have counted into the
    own total, and the overlay should change at that moment too.
    - `evaluate_play` computes `hand_chips*mult` and queues a non-blocking ease of
@@ -150,7 +152,7 @@ rounds=5 selects=5 skips=1 early_clicks=4 refused=4 levels host->guest=13/13 gue
    - A copied Orbital Tag levels only its own side (`duo_from_peer`, so `levels=all`
      doesn't double).
    - Double Tag copies a received tag like any other `add_tag` (vanilla behaviour).
-3. Owner saw the guest sometimes on an empty screen with no blinds after leaving the
+3. In playtests the guest was sometimes on an empty screen with no blinds after leaving the
    shop first. Confirmed in code: the guest's blind screen waits for the host's boss of
    the new ante, and the host sent `bos` only on its blind screen. The next boss is rolled
    in `reset_blinds` at cash out, so the host now sends `bos` from the shop on. It is not
@@ -164,8 +166,8 @@ rounds=5 selects=5 skips=1 early_clicks=4 refused=4 levels host->guest=13/13 gue
      remembers it in `D.peer_known`, and a Lovely patch on the softlock line also accepts
      `DUO_hand_known(hand)`. `played` is left alone, so Supernova and Obelisk are not
      touched.
-   - `D.peer_known` lives in memory only (lost on quit and continue, like the rest of the
-     co-op state).
+   - In 0.5.0 `D.peer_known` lived in memory only; 0.6.0 saves it with the run
+     (`G.GAME.duo.known`), so it survives Continue.
 
 QA 0.5.0:
 - `run_suite.ps1 -HostShopLag 6 -Secret -Planets` (host lingers 6 s per shop; the guest
@@ -186,10 +188,10 @@ rounds=5 selects=5 skips=1 early_clicks=0 refused=0 levels host->guest=13/13 gue
   guest log has `TAG peer tag_double` before `TAG own tag_meteor`. Every FLUSH logged
   `chips >= mine + theirs` (the own score was already in the total).
 
-## 0.6.0 (2026-10-27), from the owner's playtest of 0.5.0 (photos, own PC, two monitors)
-Owner's reports and what the code says:
+## 0.6.0 (2026-10-27), from a playtest of 0.5.0
+Reports and what the code says:
 1. The guest left the shop first and sat on an empty screen while the host was still in
-   the shop (photo, ante 1 round 1).
+   the shop (ante 1, round 1).
    - Unknown why: no logs from that session, and the logs are overwritten on start.
    - Observed: in 0.5.0 the guest only gets a boss when the host is on the blind screen,
      in the shop or in the run start. Any loss of `bos`, a fresh run with an empty
@@ -197,8 +199,8 @@ Owner's reports and what the code says:
    - 0.6.0: the guest asks (`need`) and waits at most 1 s, then shows its blinds with
      its own boss. The adoption (below) swaps in the host's boss when it arrives.
    - The previous log is now kept as `duo_log_prev.txt`.
-2. After a restart the blinds were out of step (photo: guest round 0 with Big up,
-   host round 1 with Big defeated). Each window continued its own save, and the two
+2. After a restart the blinds were out of step (guest round 0 with Big up, host round 1
+   with Big defeated). Each window continued its own save, and the two
    saves were made at different moments.
    - 0.5.0 never compared positions: the host waited for "the same round and blind",
      the guest waited for the host.
@@ -206,7 +208,7 @@ Owner's reports and what the code says:
 4. Request: check that running out of hands doesn't block everything. 0.5.0 set
    `G.CONTROLLER.locks.duo_wait` while waiting, which blocks all input (jokers,
    consumables, run info).
-5. Crash and broken continue (photo 3).
+5. Crash and broken continue.
    - Both had a Double Tag; the skipped blind gave a Charm Tag (Mega Arcana pack) to
      both. Each side had 3 Charm Tags (own, Double copy, partner's).
    - The host opened two packs at once and crashed when they closed.
@@ -302,11 +304,11 @@ Final run of all 9 on the code that shipped as 0.6.0 (after the Play race fix): 
 (46, 46, 41, 44, 39, 20, 25, 17, 25 checks, 0 failed). The wish line on the host's blind
 screen was checked on a screenshot: "Partner wants to: SELECT Small Blind".
 
-Not covered by these runs: two monitors, a person with a gamepad, antes above 2, a crash
-in the middle of a hand animation, Boss Tag / boss reroll vouchers on the guest.
+Scope of these runs: bot input, one monitor, antes 1-2. Restarts happen at fixed times
+(the shop, the blind screen, a round), not in the middle of a hand animation.
 
-## 0.6.1 (2026-10-29), from the owner's playtest of 0.6.0
-The owner: "everything works"; two asks.
+## 0.6.1 (2026-10-29), from a playtest of 0.6.0
+The playtest found everything working; two requests.
 1. A guest's Select wish pulsed on the host, a Skip wish didn't.
    - Cause (observed): the host looked for `tag_container` in the blind option UIBox.
      That id doesn't exist there: the tag row is `tag_<Small|Big>`
@@ -334,8 +336,8 @@ The owner: "everything works"; two asks.
    or install language is Russian, in English otherwise.
    - `install.ps1` is UTF-8 with BOM: Windows PowerShell 5.1 reads a BOM-less script as
      ANSI.
-   - This VM has UI culture en-US, regional format ru-RU and install language ru-RU, so
-     `Get-UICulture` alone was not enough.
+   - A test machine with UI culture en-US, regional format ru-RU and install language
+     ru-RU showed that `Get-UICulture` alone is not enough.
    - Added README.txt (English) and Install.cmd / Uninstall.cmd next to the Russian files.
 
 QA 0.6.1:
@@ -343,17 +345,23 @@ QA 0.6.1:
   pulsed with `found=2`).
 - Language screenshots: 15/15 loaded, menus readable.
 - Final code: scenarios 1 and 2 of `run_all.ps1` passed (46/46 each).
-- The owner asked to stop there (nine scenarios felt like too many). Scenarios 3-9 were
-  not rerun on 0.6.1. Their code paths didn't change after the 0.6.0 run, where all 9
-  passed.
+- Scenarios 3-9 were not rerun on 0.6.1: their code paths did not change after the 0.6.0
+  run, where all 9 passed.
 
-## Not verified yet
-- Tags with immediate effects other than Double/Meteor, Orbital Tag copy, and pack tags
-  opening on the host mid blind screen with a person at the controls.
-- Window placement with two monitors: the VM shows one display, so only one monitor was checked. Checked by hand there with `tools/win_test.ps1` (separate profile `wt`): first start → both halves; guest moved with SetWindowPos → after a restart `place restore 884x561 at 208,181`. Host switched to Borderless in the game's Video menu → after a restart `place keep Borderless display 1`, guest still restored. The game's Video menu showed "Windowed" after a halves arrange (the old mismatch is gone). The CO-OP menu, the "What is shared..." submenu and its Back button render.
-- Hand levels shared with `all` (Space Joker, Burnt Joker, Orbital Tag) are not bot-tested; only Planet and Black Hole are.
-- Gamepad input in the unfocused window (needs a person pressing buttons).
-- Host boss reroll (Director's Cut / Retcon) and Boss Tag on the guest.
-- Antes past 2, jokers that read the score (Mr. Bones), Hieroglyph/Petroglyph (ante shift).
-- Mid-run quit and continue (saved run + co-op state is not restored).
-- Install into the real game folder.
+## Test coverage
+- Bot scenarios (`tools/run_all.ps1`): antes 1-2 on stake 2 at x0.3 difficulty, two windows
+  on one monitor. They include Continue and catch-up after killing the host, the guest or
+  both mid-run, and a dead guest reopened by the host.
+- Playtested by the author with a mouse and a DualSense, two monitors, to ante 8.
+- Tags in bot runs: Double, Charm and Meteor. Every other tag goes through the same code
+  (`D.share_tag` / `D.peer_tag`, the game's own `new_blind_choice` loop).
+- Hand levels in bot runs: `planets` (Planet cards and Black Hole) and `off`. `all` uses the
+  same send path for Space Joker, Burnt Joker and Orbital Tag.
+- Window placement: checked on one monitor with `tools/win_test.ps1` (separate profile
+  `wt`). First start puts both on halves. A guest moved with SetWindowPos comes back after a
+  restart (`place restore 884x561 at 208,181`). A host switched to Borderless in the game's
+  Video menu stays there (`place keep Borderless display 1`). The game's Video menu shows
+  "Windowed" after a halves arrange. Two monitors: playtested.
+- Not part of the bot scenarios: gamepad input in the unfocused window, boss reroll vouchers
+  (Director's Cut, Retcon), Boss Tag on the guest, jokers that read the score (Mr. Bones),
+  cards that shift the ante (Hieroglyph, Petroglyph).

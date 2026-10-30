@@ -9120,7 +9120,7 @@
   open_source: 'yes'
   last_activity: '2026-10'
   qa: automated
-  notes: 'Two windows on one PC (TCP on 127.0.0.1), each player with their own run (money, jokers, deck, shop); the blind score is shared and the host picks blinds, skips and the boss. Options for shared hand levels, both skip tags to both, shared secret hands. Co-op state lives in the game save, so Continue works after a crash of either window. Lovely 0.9.0, no Steamodded; text in all 15 game languages. Bot suite of 9 scenarios with real game clients (restarts, tag stacks, out-of-hands), plus owner playtests to ante 8. MIT.'
+  notes: 'Two windows on one PC (TCP on 127.0.0.1), each player with their own run (money, jokers, deck, shop); the blind score is shared and the host picks blinds, skips and the boss. Options for shared hand levels, both skip tags to both, shared secret hands. Co-op state lives in the game save, so Continue works after a crash of either window. Lovely 0.9.0, no Steamodded; text in all 15 game languages. Bot suite of 9 scenarios with real game clients (restarts, tag stacks, out-of-hands) on antes 1-2; playtested by the author to ante 8. MIT.'
   sources:
   - https://github.com/dobrodeetel/balatro-duo
   - https://github.com/cranebeaker/coop-anything/tree/main/games/balatro

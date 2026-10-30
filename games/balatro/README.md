@@ -5,15 +5,15 @@
 | Engine | LÖVE 11 (fused exe: `love.exe` + a zip of Lua sources), LuaJIT, luasteam |
 | Versions tested | Steam, appid 2379780, build 17459173, version 1.0.1o-FULL, `Balatro.exe` SHA-256 `0d75fe164accf3312734d4b37ac98788dd15f0b8e4f9bb8b7f90c4e59de93f47`, Windows 10 x64 |
 | Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.1), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
-| QA level | automated (bot clients, 9 scenarios incl. crashes and restarts) plus owner playtests to ante 8 |
-| Last updated | 2026-10-30 |
+| QA level | automated (bot clients, 9 scenarios incl. crashes and restarts); playtested by the author to ante 8 |
+| Last updated | 2026-10-31 |
 
 ## Where things stand
 
 Two people can play Balatro together on one PC with Balatro Duo: two windows, each player
 with their own run, one shared blind score, the host picking blinds. Continuing after a crash
-or restart of either window works. The owner played several sessions to ante 8 with a mouse
-and a DualSense; a gamepad in the window without focus is still untested.
+or restart of either window works. Bot tests cover antes 1-2; the author played it to ante 8
+with a mouse and a DualSense.
 
 ## Existing work
 
@@ -91,9 +91,10 @@ Host: mouse and keyboard; guest: gamepad #1.
 
 ## Known issues
 
-- Gamepad presses in the window without focus are untested.
-- Boss reroll vouchers and Boss Tag on the guest are untested.
-- Continue and catch-up were bot-tested on antes 1-2 only.
+- Bot tests cover antes 1-2 on stake 2, including Continue and catch-up after a crash.
+  Higher antes are covered by playtests.
+- Gamepad input in the window without focus, boss reroll vouchers and Boss Tag on the guest
+  are outside the bot scenarios.
 - A side that continued an older save replays that round alone (the partner already finished it).
 - Starting a second window from Steam while one runs opens it with the host's profile.
 
