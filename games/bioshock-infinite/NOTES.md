@@ -348,6 +348,43 @@ to reuse the UE3 reflection, and replaces `Pilote::TickJeu`: the original tick, 
 - Steam P2P between two real accounts; play over the internet in IP mode; a normal Steam launch of the player build
   (only `-nomovie -windowed` test launches were run).
 
+## Test copies in Columbia: loading a save without a human (2026-10-30, early morning)
+
+### Observed
+
+- With `-nomovie`, the front end is never built: only archetypes of `XPressStartScreen` / `XMainMenu` exist and the
+  title world stays black. **Without `-nomovie`**, the real menu shows. Live screens:
+  - `ScreenFlows_Mergeable.InWorldMenuFlow.XScreenFlow_PlayMovie_9.XPressStartScreen_0` ("press any key");
+  - then `..._PlayMovie_0.XMainMenu_0` ("Main game" selected);
+  - then `..._PlayMovie_4.XSinglePlayerMenu_0` ("Continue" selected).
+  Calling `AcceptOrSelect` on each, through the bridge, loads the most recent save of the copy's `SaveCloud`.
+  A copy of the owner's `TWN-0_*.bkm` (welcome center), duplicated as `.sav` (pairs are byte-identical), took copy 0
+  into Columbia in game.
+- Dead ends, for the record:
+  - `XGameViewportClient.StartTravel(URL, TravelType, CheckPointName)`: `TravelType` is UE3's `ETravelType`
+    (2 = relative crashes on a null base URL), not `EMainMenuLoadGameTypes`. `CheckPointName` (`const out name`,
+    flags `0x182`) set to `S_TWN_P` still starts a new game.
+  - `XGameEngine.CheckpointFilenameToLoad` (`+0x51c`, a string) can be written with the engine allocator
+    (`FUN_00482ab0` = `appRealloc` through `GMalloc` at `0x01371cc8`), after
+    `PopulateSavedGameInfoFromSelectedStorageDevice`. Neither `StartTravel("Master_P", 0)` nor `XRestartLevel`
+    uses it.
+  - Kismet: `Prep_TownCenter`, `Load_TownCenter` and `TownCenter_Ready` are remote events, and `GoToTownCenter` is a
+    console event (`XPlayerController.ServerCauseRemoteEvent` / `ServerCauseConsoleEvent` return true). Fired from the
+    lighthouse, they stream in all `S_TWN_*` levels but leave the player at (59600, -148492) behind a black screen.
+    Firing all four at once hung the loading screen.
+- In Columbia, the male locomotion set `GenMale_Unarmed_Animations.GenMale_UA_Locomotion_AnimSet` is loaded
+  (76 sequences, including `WalkFwd_untitled`, `RunFwd_untitled`, `SprintFwd_untitled` and `IdleBase_untitled`).
+  `SetAnim("WalkFwd_untitled")` on the puppet's `AnimNodeMorphemeSequence` nodes does nothing (`AnimSeq` stays None)
+  until the set is in the component's `AnimSets` array. The co-op module appends it with the engine allocator.
+- Two-copy test in Columbia (`essai_coop.py --colombie`):
+  - both copies resumed the save through the menu and spawned each other's puppet;
+  - circle: mean error 8.2 units, 0.0 after stopping;
+  - walk: frame captures from a fixed camera show the puppet striding across the welcome center (`WalkFwd_untitled`);
+  - regroup (F8, simulated by a file): the player went from 400 to 90.6 units from the partner;
+  - no crash; the owner's files were unchanged.
+  - Defect: in copy 1 the puppet's anim tree had no nodes yet when it was created (still loading), so it stayed
+    idle. A retry was added but not tested yet.
+
 ## Open questions
 
 ### Guesses (not yet checked)
