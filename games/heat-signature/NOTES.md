@@ -309,7 +309,16 @@ Derived (design consequence):
   Result: puppet aboard the guest's copy (Parent = that ship), at Fore 1393 / Starboard 3370 for the host's
   1408 / 3127. Likely held back by a door that opened for the host's player only (doors react to `global.Player`).
 - Pod sharing question (owner, 2026-10-30): one shared pod would only simplify the flight, which already works; it would
-  remove separate escapes (a core part of the game). Proposed instead: an optional "follow the host" autopilot.
+  remove separate escapes (a core part of the game). Owner chose an optional "follow the host" instead.
+- **"Follow the host" for guests' pods** (observed): the game's `AutopilotTo` does nothing for player pods (only
+  `oShip.Step_0` runs `AutopilotStep`; for the pod, `Autopilot` only changes the thrust display). Steering by cursor:
+  the pod thrusts toward the **`oCursor` instance** (`PlayerThrustTowardsCursor` reads `oCursor.x/y`, which
+  `oCursor.Step_1` copies from the mouse), not `mouse_x`; the cursor override now also moves `oCursor`. In open space
+  the player's own pod is the coordinate origin (stays at about (0, 0), the world moves). Steering a pod that keeps its
+  momentum toward a target millions of units away overshot, so the follow mode carries the guest's pod instead: up to
+  1500 units per frame toward a point 1500 units behind the host's pod, own `xSpeed`/`ySpeed` (0x18b/0x18d) zeroed.
+  Result: closed 3.2 million units at about 79 000 units/s, then trailed 1900 units behind; when the host docked at
+  the shared ship, the guest's pod went there and docked by itself ("Docked with your crew's ship").
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
 - Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
