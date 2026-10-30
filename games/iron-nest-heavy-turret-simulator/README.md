@@ -187,8 +187,11 @@ Back up `%USERPROFILE%\AppData\LocalLow\Iron Nest\Iron Nest_ Heavy Turret Simula
 
 ## Known issues
 
-- Map area effects (the game's `WorldEffector`, made by mission steps) exist only on the host. Guests don't run unit
-  behaviours, so this matters only if an effect is visible; none of the eight missions the bots played made one.
+- Map area effects (the game's `WorldEffector`: invisible zones with a radius and lifetime that mission steps place
+  and mission conditions check) exist only on the host. Guests don't run mission logic and get its results through
+  the normal sync, so this matters only if a mission makes a zone visible. None of the eight missions the bots played
+  made one, and one can't be made by hand outside a mission, so it's untested. Planned for a later version, once real
+  play or user reports show a mission where it makes a difference.
 - A blinking red engine warning lamp in PhantomBattery differed on one guest in two of three two-guest soak runs.
   It's unclear yet whether that's sampling at different blink phases or a lamp that doesn't blink for guests.
 - The `events` scenario sometimes fails on a ceiling-hatch spotlight after an alarm.
