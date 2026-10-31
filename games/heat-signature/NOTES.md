@@ -493,6 +493,44 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   mission fails and its failure screen holds `TimeScale` at 0, so every later time check reads 0 on both copies, the same
   pattern as the earlier `nohits` run.
 
+## Alarms, the target's escape, parking, and why time stuck (2026-10-31)
+
+- **Alarm** (observed in the decompile): `TriggerShipsAlarm(ship)` (`0x00cac330`, from `CanTriggerAlarm`, security cameras,
+  `DestroyModule`) sets the ship's `Alarm` (0x56b), counts the mission alarm, starts the escape protocol and makes the
+  mission target flee. It does nothing unless the ship's `Bridge` (0x7c4) exists and is `Manned` (0x3bf, kept by
+  `oControlModules.Step_0`): knocking out the guard flying the ship (state `"Controlling"`) disables alarms. The host's
+  game calls it every frame while an alarm is on.
+- **Sync:** host authority. A guest's own trigger on the shared ship is suppressed and sent as a request in its player
+  packets; the host sounds it with the game's function; every host packet carries "alarm on" and a guest sounds it the
+  same way (with its bridge counted as manned for that call: the host's copy decided). Observed: guest-side trigger ->
+  host sounded it 33 ms later -> guest 17 ms after that.
+- **Escape countdown** (observed): "N seconds until target escapes" is the target guard's `EscapeSecondsLeft` (0x504, set
+  in `EnemyStateEscaping` from `EnemyGetPathTimeRemaining`), not the ship's `AlarmSecondsLeft` (read -1). On a guest the
+  mirrored target's countdown stood still (14.44 while the host's went 12.5 -> 7.1): its position comes from the host, so
+  it never progresses. Guard packets now carry it; observed within 0.4 s of the host's.
+- **Escape** (observed in the decompile): on arrival `EnemyStateEscaping` reads the teleporter's 0x507 and either sets the
+  guard's `DestroyMe` (0x2e3) or calls `TeleportRandomlyOutsideShip(guard)` (`0x00869430`). A guest's mirrored target never
+  arrives (its countdown restarted at 14.08 after reaching 0). The host's `EnemyStateEscaping` hook notices a shared-ship
+  guard leaving and sends an event; a guest applies the same outcome. Observed: host "destroyed", guest 16 ms later;
+  both copies show "Personal mission failed / Objective lost", mission time 0:45 on both (witness counts differ: 4 on the
+  host, 0 on the guest; witnesses are counted where the guards see).
+- **Parking** (observed): both pods dock at the same airlock in their own copies, so a player standing in their docked pod
+  (about 15 units from the pod's centre) is, on the other copy, inside that copy's own pod; the puppet waited in the
+  airlock and the host's guards saw it, attacked it and sounded alarms within 30-60 s. Each player packet now says "in my
+  own docked pod" (player-to-pod distance < 150, both read in the same frame: right after docking the ship moves about
+  15 000 units/s and a position from earlier in the frame was off by more); the other copy hides that puppet, does not
+  walk it, and the host's guards do not target it. Observed: no alarm and no hits in 60 s (38 hits and an alarm before).
+- **Guest hits** (fixed): a guest's hit on a shared guard was applied on the guest's copy as well as forwarded; when the
+  host's guard was not knocked out (shield, angle), the guest's copy kept it down. Now only the host applies it, with
+  the guest's puppet as the attacker (shields and angles are judged from the attacker; it was the host's player).
+  `MeleeAttack` itself refuses shielded guards (`GuardHasShield` `0x006fa070`, `GuardShieldHacked`) before any hit.
+- **Time stuck at 0** (observed, explains the earlier mutation-run oddity): `oTime.Step_0` pauses at `MenuPriority` (9)
+  whenever `oMenu.GameRunning` (0x251) is 0, i.e. a menu screen is open; the stuck runs had `oMenu.Mode` = "Mission End
+  Screen" on both copies: the suite's own knockout had alerted guards, an alarm followed and the target escaped during
+  the time checks. The suite now runs the time checks before anything that alerts the ship.
+- **Start-up flake** (observed): sometimes a copy never took its character (`global.Player` stayed 49), so it had no pod;
+  `two.sh` now checks `SelectThisCharacter` ran and clicks again.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.

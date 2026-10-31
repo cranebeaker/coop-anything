@@ -16,8 +16,8 @@ other as a puppet character or pod; shared pause, slow motion and fast-forward w
 mission and its ship are rebuilt identically on the guest from the mission text plus a seed; pods fly together in
 space (with an optional "follow the host" mode) and both players can board the shared ship; doors and guard positions
 are synced from the host; the host's guards notice guests, a guest's hits reach the host's guards, and guards' hits on
-a guest's puppet reach the guest; a puppet has its player's keycard clearance. Not done: alarms, loot, guard animations
-on guests, more than one guest, Steam lobbies, an installer.
+a guest's puppet reach the guest; a puppet has its player's keycard clearance; alarms, the mission target's escape and the mission's end are the same
+on both copies. Not done: loot, guard animations on guests, more than one guest, Steam lobbies, an installer.
 
 ## Existing work
 
@@ -54,31 +54,33 @@ swapped while the game runs. Each mechanism, the evidence and the numbers are in
 ## QA
 
 `tools/suite.sh` in the mod repo starts host A and guest B (Proton, headless gamescope displays, UDP on localhost),
-shares a galaxy mission, docks both pods at the shared ship (`board.sh`, every step checked and retried) and drives
-both clients with the core's bot commands. It prints PASS/FAIL per check; exit code = failures. Checks: connect, share
-and dock; a guest's hit knocks a guard down on the host and the guest; identical shared ship (RNG hash and module
-counts); same doors; every host guard mirrored on the guest; guest pause, guest unpause, host pause, host unpause on
-both; host fast-forward alone refused; fast-forward when both ask; host's puppet aboard the guest's copy of the ship;
-no error dialogs; both copies still advancing; keycard clearance reaches the puppet; a hit on the guest's puppet hurts
-the guest's own player, not the puppet.
+shares a galaxy mission, docks both pods at the shared ship (`board.sh`, every step checked and retried; the suite stops
+if boarding fails) and drives both clients with the core's bot commands. It prints PASS/FAIL per check; exit code =
+failures. Checks, in order: connect, share and dock; identical shared ship; same doors; every host guard mirrored;
+puppets parked while their players stand in their pods; guest pause, guest unpause, host pause, host unpause on both;
+host fast-forward alone refused; fast-forward when both ask; the parked guest left alone by the host's guards; a guest's
+hit reaches the same guard on the host, which reacts, and a knockout shows on the guest; keycard clearance reaches the
+puppet; a hit on the guest's puppet hurts the guest, not the puppet; alarm on in both copies and passed between them;
+the target's escape on the host reaches the guest; the mission ends on both copies; the host's puppet aboard the guest's
+copy of the ship; no error dialogs; both copies still advancing. The time checks run before anything that alerts the
+ship: an alarm ends the mission (the target escapes), and the mission end screen holds time at 0.
 
-Last run (2026-10-31 03:30 UTC, core build of that time): **16 passed, 0 failed**.
+Last runs (2026-10-31, 05:27 to 05:41 UTC): **19 of 19 three times in a row, then 21 of 21** after two more checks.
 
-Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check:
+Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), all against the 05:41 build, each caught by its
+own check:
 
 | Mutation | Result | The check that catches it |
 |---|---|---|
-| `noseed` (shared ship not seeded) | 10 passed, 4 failed | identical shared ship: host 87 modules, guest 81 |
-| `notime` (guest ignores the host's time) | 13 passed, 1 failed | host pause: host 0, guest 1 |
-| `noguards` (guards not mirrored) | 12 passed, 2 failed | guards mirrored: guest 0 of 38 |
-| `nohits` (guest hits not forwarded) | 9 passed, 5 failed | guest's hit: host Down 0 -> 0 |
-| `noclearance` (puppet keeps clearance 0) | 15 passed, 1 failed | clearance: host's puppet 0 -> 0 |
-| `nopuppethits` (hits on a puppet stay on it) | 9 passed, 7 failed | guest injuries 0 -> 0, puppet 8 |
-
-Seen only in mutation runs: a pause that did not release (later time checks read 0 on both). Likely explanation
-(derived from `nopuppethits`): the host's mission fails when the guest's puppet is knocked out, and the failure screen
-holds time at 0. Under `noguards` and `nopuppethits` the door lists differed (which doors a copy has seen depends on
-activity). The `noclearance` and `nopuppethits` rows are from the 03:31 UTC build, the others from 00:04 UTC.
+| `noseed` (shared ship not seeded) | 16 passed, 5 failed | identical ship: 81 vs 87 modules (doors, hit, escape follow) |
+| `notime` (guest ignores the host's time) | 20 passed, 1 failed | host pause: host 0, guest 1 |
+| `noguards` (guards not mirrored) | 19 passed, 2 failed | guards mirrored: guest 0 of 38 |
+| `nohits` (guest hits not forwarded) | 20 passed, 1 failed | guest's hit: applied 0 on the host |
+| `noclearance` (puppet keeps clearance 0) | 20 passed, 1 failed | clearance: host's puppet 0 -> 0 |
+| `nopuppethits` (hits on a puppet stay on it) | 20 passed, 1 failed | guest injuries 0 -> 0, puppet 1 |
+| `noalarm` (alarm not synced) | 20 passed, 1 failed | alarm passed between copies: 0 and 0 |
+| `noescape` (escape not synced) | 19 passed, 2 failed | escape sent 1, applied 0; mission ends only on the host |
+| `noparking` (puppets not parked) | 19 passed, 2 failed | puppets parked: 0 on both |
 
 ## How to play
 
@@ -90,8 +92,7 @@ Not applicable yet.
 
 ## Next steps
 
-- Alarms synced from the host (an alarm fails the host's mission while the guest still counts down); a player's puppet
-  should not wait in the airlock while the player stands in their own pod; a puppet walking through a keycard door;
-  spotted pause/zoom on the spotted player's screen; guard states and animations on guests; loot.
+- A puppet walking through a keycard door (bot walking for players); mission success for everyone; spotted
+  pause/zoom on the spotted player's screen; guard states and animations on guests; witnesses counted for guests; loot.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.
