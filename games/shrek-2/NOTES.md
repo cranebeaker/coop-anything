@@ -953,3 +953,47 @@ one player: unchanged); money and health regeneration are not touched; the playe
 the enemies of a level are made. **Installer**: large-address-aware flag and DPI manifest for `Game.exe` (hash-checked, restored by the uninstall,
 checked on a throwaway copy: flag `0x10f` > `0x12f`, hash after uninstall equal to the original).
 Remaining stock warnings (one-off, no behavior): see `AUDIT.md` section 2. Not verified: the guest's waiting line (it uses the guest HUD), real input.
+
+## Hor+, resolutions, 4K, widescreen archive, HUD layout, up to four players, guest camera (2026-10-31, evening)
+
+**Hor+ field of view** (`EnhancedFov`, applied in both controllers). The stock `AdjustView` pulls `FovAngle` back to `DesiredFOV` every frame, so both are
+widened after the stock tick and put back before the next one: `tan(h'/2) = tan(h/2) * (aspect / (4/3))`, at most 160 degrees, from the viewport size
+(`ConsoleCommand("GetCurrentRes")`, once a second). Checked at 1280 x 720: the picture is much wider, the vertical view is the 4:3 one. Switch: `bHorPlus` in `User.ini`.
+The mouse sensitivity follows `DesiredFOV` in the stock input classes, so it is a little faster on a wide screen.
+
+**Resolutions and 4K.** The video tab of the Settings page offers three resolutions (the table `DisplayModes[4]` is fixed in the class, 640x480 to 1024x768 with
+Direct3D). The mod fills the three places at run time (largest the adapter supports, 1920x1080 and 1280x720; `SupportedResolution` is asked) by writing the class
+defaults; the resolution of the ini stays in the box. Subclassing `Tab_Options` does not work: the Level Editor's `AddTab` has a different signature. **4K is not
+verified**: in a 3840 x 2160 window on 1080p monitors the engine answers "Width 3840 is greater than MaxResWidth 1920, resetting" (it follows the desktop;
+`VideoCard.ini` entries for this PC's GPUs did not change it). On a real 4K desktop the cap should be 3840. The game's bitmap fonts do not grow, so text is small at 4K.
+Installer: the DPI manifest and the 4 GB flag for `Game.exe` (see above).
+
+**The widescreen archive from the owner** (`shrek_2_Widescreen_Fix_dgVoodoo2.7z`, extracted into `local/third-party`, nothing run): it holds dgVoodoo2 2.87.3
+(a Direct3D 8 to 11 wrapper: scaling, anti-aliasing, any resolution) and seven `Engine.dll` files for 16:10, 16:9, 21:9, 32:10, 32:9, 48:10, 48:9. Those
+`Engine.dll` are not byte patches of the 1C one: same size, but the code is shifted and 2.8 MB differ (a rebuilt file, probably of another edition), so they cannot be
+laid over the mod's patched `Engine.dll` (the level-change patch is made for the 1C build, hash-checked). The mod does the widescreen part in script instead (Hor+, HUD).
+dgVoodoo2 is a separate, optional step (it would sit behind the mod's own `d3d8.dll` proxy in the test copy); not tried.
+
+**HUD layout.** The health bar, the coin counter and the potion box are drawn by the mod for the host and the guests (`EnhancedHudKit`): one scale from the screen
+height, the health group at the left edge, the coins and the potion at the right edge; the stock items for these three are taken out of the list (the hit flash of the
+health bar is gone with them). The other stock items (timers, boss bar) are unchanged and still lay out by width. A guest's HUD shows his own health and the
+shared coins, shamrocks (bar length) and the host's selected potion (replicated by the game every half second).
+
+**Guest camera** (`EnhancedPlayerController.PlayerCalcView`): the stock hero camera's measures (look-at 75 above the feet, 170 behind) and its rule for the scenery
+(world, terrain, actors with `bBlocksCamera`; foliage with `bChangeOpacityForCamera` also stops it because it cannot be faded), the look-at point low-pass filtered,
+the distance moving steadily. An owner's video of four windows showed the guests' cameras pressed into foliage and shaking; after the change the first guest
+camera at the same spot was clear in a test run. Not re-checked on the owner's side.
+
+**Up to four players.** `LobbyMax` 4, `MaxPlayers` chosen on the Create page (2 to 4, `EnhancedLobbySettings.MaxPlayers`), the room page shows the places (the guests
+read the number from `GameReplicationInfo.GoalScore`). The game keeps the guests in arrays (`GPC`, `GPawn`, ...); the functions written for one second player run for each
+guest through select / run / store wrappers. The leash works for any number (anchor = the player nearest to the checkpoint, runaway = the farthest from him). Verified in a run
+with a host and three guests: all three joined and got their Shrek, the gate at the start waited for all four, no critical error. The guests appear on the ring around the
+host (right, left, then a free place; the start of the swamp is a ridge, so places straight behind him are slope or drop).
+
+**Not solved (reported by the owner on video, 4 windows):** the guests' Shreks look jerky, seem to want to turn, one pose with raised arms, and "all but the host
+died" (no death was logged by the game's death watch in those runs; the dying state only showed at shutdown). Measured: while a guest walks at the speed the game logs (550 units/s)
+the server-side position advances unevenly (speed between 0.1 s samples 325 to 767, mean about 550, normalized by the log's time stamps): the client's move packets are
+applied in bursts. Higher `NetServerMaxTickRate` / `LanServerMaxTickRate` / `MaxClientRate` did not change that. The guest's pawn is driven by the stock hero code through a
+controller that is not a hero controller (animations, turning), which is the likely root of the pose and turning problems; the likely fix is a hero controller class for
+the guests that works on a client (the stock one needs server-only actors) or a visual interpolation of remote pawns. An idle-animation watchdog is in (guest pawns whose
+animation channel is empty get the idle loop), not confirmed on screen.
