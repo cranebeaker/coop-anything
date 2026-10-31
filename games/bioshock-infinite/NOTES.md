@@ -604,9 +604,24 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - No third-person Booker without the bandaged hand exists (three identical `Booker_MESH` copies; a texture swap in
   video memory worked, but the knot is geometry, so it was reverted).
 
+### Projectiles, friendly fire, enemy positions (2026-10-31, night)
+
+- Projectiles (vigor fireballs, traps, homing Possession, rockets) are mirrored by streaming each local-instigator
+  `XProjectile`'s archetype, position and state; the partner moves a `DynamicSMActor` carrier and plays the archetype's
+  `FlyingEffect`, `StuckEffect`/`StuckStateEffect`, `ExplodedEffect`. Those effects are made for world view and show.
+- Friendly fire: aim ray vs puppet cylinder on the shooter, damage from the weapon's `XDamageType.DamageStimuli`,
+  cumulative value in the pose packet, applied to `XShield` then `XHealth` (clamped at 1) by the victim.
+- `XWeapon.LastTraceShotEndLocation` gives each shot's end point. Third-person tracers are Beam2 emitters whose target
+  is user-set (`SetBeamTargetPoint`, native, not exposed to script): no tracers yet.
+- Enemy positions: host streams positions per spawner; the other copy snaps an enemy that drifted beyond 250 units, at
+  most every 1.5 s. Both AIs keep running, so drift stays 2-10 m in combat (23 m without). Tight sync would need the
+  non-host AI disabled and its pawns driven like the puppet.
+- Debug tricks: `XWeapon` instances can be granted with Spawn (archetype template) + `AddInventory` +
+  `StartGivenTo` + `TryToEquip`; vigor energy is a native int at `XPlayerController+0x510`.
+
 ### Not done yet
 
-- Only the weapon pitches; the arms stay in the guard pose. No tracer (`TracerEffect`), no arm gesture for vigors.
+- Only the weapon pitches; the arms stay in the guard pose. No tracer, no world impact effect, no arm gesture for vigors.
 - Enemies only see and shoot the local player, and enemy positions are not synced.
 - Not tested with real gunfire by a human, or between two PCs.
 
