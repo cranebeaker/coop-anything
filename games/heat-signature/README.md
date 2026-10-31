@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | none (bot-driven checks with two local copies, no automated suite yet) |
+| QA level | automated: 14-check suite on two real game copies (host + 1 guest), with mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-30 (evening) |
 
 ## Where things stand
@@ -52,7 +52,27 @@ swapped while the game runs. Each mechanism, the evidence and the numbers are in
 
 ## QA
 
-None yet. The plan is an in-game bot that drives the player through the game's own control scripts.
+`tools/suite.sh` in the mod repo starts host A and guest B (Proton, headless gamescope displays, UDP on localhost),
+shares a galaxy mission, docks both pods at the shared ship (`board.sh`, every step checked and retried) and drives
+both clients with the core's bot commands. It prints PASS/FAIL per check; exit code = failures. Checks: connect, share
+and dock; a guest's hit knocks a guard down on the host and the guest; identical shared ship (RNG hash and module
+counts); same doors; every host guard mirrored on the guest; guest pause, guest unpause, host pause, host unpause on
+both; host fast-forward alone refused; fast-forward when both ask; host's puppet aboard the guest's copy of the ship;
+no error dialogs; both copies still advancing.
+
+Last run (2026-10-31 00:04 UTC, core build of that time): **14 passed, 0 failed**.
+
+Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check:
+
+| Mutation | Result | The check that catches it |
+|---|---|---|
+| `noseed` (shared ship not seeded) | 10 passed, 4 failed | identical shared ship: host 87 modules, guest 81 |
+| `notime` (guest ignores the host's time) | 13 passed, 1 failed | host pause: host 0, guest 1 |
+| `noguards` (guards not mirrored) | 12 passed, 2 failed | guards mirrored: guest 0 of 38 |
+| `nohits` (guest hits not forwarded) | 9 passed, 5 failed | guest's hit: host Down 0 -> 0 |
+
+Seen only in mutation runs, not explained yet: in 2 of 4 a pause did not release (later time checks read 0 on both),
+and under `noguards` the door lists differed (which doors a copy has seen depends on activity).
 
 ## How to play
 
