@@ -126,6 +126,76 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   receive-only side really applies the values: in Shadow of War a receiver that recorded
   nothing itself silently skipped them, and a test running sender and receiver in one
   process hid it.
+- **When the stand-in cannot reach a mode, match its root-motion speed.** In Shadow of War the
+  stand-in's graph, given the same inputs, moved it at no more than ~230 units/s while the
+  sender free-ran (600-750); both characters move by root motion, which a write breakpoint on the position
+  and then on the per-frame motion delta showed. Send the sender's root-motion speed and scale
+  the stand-in's motion just before its movement step reads it. To hook that step for one
+  object only, give the object a copy of its vtable with the one slot wrapped (keep `vt[-1]`,
+  the type information) instead of patching code or the class's table. Engage it only above
+  what the stand-in's own animation can do: scaling every speed made walks worse at every
+  start and corner. On flat free-run legs the gap fell from ~30 to ~10 units on average
+  ([NOTES](../games/shadow-of-war/NOTES.md), session ah). This fixes position only: the
+  stand-in kept playing its walk (watched live; `PrintWindow` stills from afar had suggested
+  a run), so check the animation by watching, not from distant stills.
+- **Carry the buttons too, the way the graph reads them.** A player's graph may take its
+  buttons from per-character input data rather than from named variables: in Shadow of War
+  the player's update fills lists of 377 game actions on the character every frame, and the
+  graph's input nodes read them only while two player flags on the character are set. An AI
+  character has empty lists and the flags off, so the stand-in never saw the A button and
+  never left its walk; with the sender's lists (kept full) and the two flags it entered the
+  free-run 80 ms after the sender (watched live, it sprints), and the speed workaround
+  above was no longer needed (session aj). To find such a path: read the graph's state names live (Shadow of War keeps
+  the last started one in each graph instance), see which input entries change on a button
+  press, watch who reads them, and log crashes with their call stack (setting the flags with
+  empty lists tripped a bounds check that pointed straight at the input node).
+- **In the air, place the stand-in by position, and do not use the game's teleport for it.**
+  A running jump moves the player by the jump itself (in Shadow of War 1,000+ units/s off a
+  ledge), not by root motion: the stand-in's graph played the same jump from the carried
+  buttons and stayed on the ledge. Send a "where is the player" signal: no animation input
+  said so, but diffing the player object standing, mid-fall and landed found a locomotion-mode
+  byte that reads "air" from takeoff to landing. While it does, set the stand-in's transform to
+  the sender's every frame and hand it back to its own animation with one put-back on landing.
+  Two traps: the game's teleport put the character on the ground below the point (it is meant
+  to place characters somewhere safe), and the character's movement component rewrote its
+  position from its own state every frame; skip that component's per-frame update too while
+  you place it (a write watch on the position names the writer). The stand-in then followed a
+  jump and a 5,700-unit fall ~60 ms behind ([NOTES](../games/shadow-of-war/NOTES.md),
+  session an). On a wall the mode changed four times during one climb while an on-ground
+  flag stayed 0: use "in the air or not on the ground", and the stand-in then followed
+  a climb up a tower wall too (session ao).
+- **Make the stand-in the local player's ally, and expect the game to remove it.** With both
+  copies sending, each player treated the other's stand-in as a stranger: within ~300 units
+  the player went into combat stance and walked differently, which the other copy cannot
+  mirror, so the stand-ins drifted 22-56 units apart instead of 5-8. The game's own combat log
+  (switch on its compiled-in debug channels and compare near and far) named the predicates
+  that changed. Find how the game marks friends (in Shadow of War a script binding,
+  `SetIsPlayerFollower`, led to one byte that its `IsPlayerAlly` check reads) and set it on the
+  stand-in: the combat stance went away and tracking was back to 5-8 units. The game also
+  freed a stand-in once the local player went ~3000 units away. Check that the stand-in is
+  still there and alive every frame, and spawn a new one rather than keep a stale pointer
+  ([NOTES](../games/shadow-of-war/NOTES.md), session al).
+- **Keep the stand-in out of attacks twice: where targets are chosen and where hits land.**
+  Being an ally did not stop the local player's strikes from killing the stand-in: Shadow of
+  War lets the player hit allies (an ally within an attack's own distance stays a valid
+  target, and a swing hits whatever its sword sweeps through), and the game's own
+  "targetable" and "can be damaged" flags did not help. A read watch on the stand-in's
+  health object during a strike led to the attack target check (one function every attack
+  asks about each candidate); a stub there that rejects the stand-in stopped the strikes
+  aiming at it. A swing without a target still killed it, by another route: a write watch on
+  its health caught both routes meeting in the function that applies a hit, and a second
+  stub that returns at once for the stand-in kept it untouched through 24 strikes (session
+  am). Check the arguments live before you rely on them: a probe trace that prints each
+  call's arguments showed the target was not in the register the static reading suggested.
+- **Carry the other player's attacks by name hash, and end them yourself.** Copied buttons do
+  not make a stand-in attack when the game reads attacks from command input. Find where
+  every attack starts (its log line names the attack) and start the sender's attack on the
+  stand-in through the same entry. Attack records sit at different addresses in each copy,
+  so send an id both copies share: in Shadow of War each record carries the game's hash of
+  its name, and all records are one table sorted by that hash. An AI-type stand-in may lack
+  whatever ends the player's attacks, so stop its attack when the sender's ends, under the
+  same conditions the game's own callers check (session aq).
+
 - **A fixed asset pool overflows when co-op loads more.** Loading an extra content pack (in
   Modern Warfare 2 the Spec Ops zone that holds the co-op player bodies) on a heavy level
   can hit an engine limit ("Exceeded limit of 1350 'loaded_sound' assets"). Find the message's

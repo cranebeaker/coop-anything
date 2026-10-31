@@ -98,6 +98,13 @@ your game's code or with a second probe run.
   either side. If your mod buffers more, set `--delay-ms`; do not raise the pose tolerance to hide it.
 - **Probe cost.** Sampling 16 actors with 16 bones should not change the frame time you are checking. Measure it.
 - **World scale.** Thresholds assume about 70 units per meter. Set `units_per_meter` in the profile.
+- **Your own corrections.** A loop of one animation on the puppet can come from the mod, not the game. A
+  teleport that snaps the puppet back to the sender may run the game's full teleport, which also resets the
+  animation; the restarted animation can step the puppet off again and trigger the next snap. Count the
+  loop's restarts next to the mod's own corrections over the same window, and run it once with the
+  corrections off. In Shadow of War each put-back restarted the stand-in's graph, which then sheathed its
+  sword, and the counts matched exactly ([games/shadow-of-war/NOTES.md](../games/shadow-of-war/NOTES.md),
+  session bd).
 
 ## Where it fits
 

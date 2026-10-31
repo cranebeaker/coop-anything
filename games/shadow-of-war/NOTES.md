@@ -1886,11 +1886,11 @@ A condensed view of sessions a to af above; the sessions keep the evidence and s
   caught as they are set, not read back.
 - Moved only by the inputs (follow `none` or `anim`, no teleports), the stand-in walks with
   a natural stride: alternating legs, heel strikes, feet on their shadows, cloak swinging
-  (strips of 9 captures 50 ms apart, side view). Its path matches A's (`root_match.py`, the
+  (strips of 9 captures 50 ms apart, side view). Its path matches A's (a script measuring the
   stand-in pinned to A, then left to the inputs while A walks): straight 0.90-0.96 of A's
   length, ends 18-20 apart; a turn (two stick directions) 1.00-1.01, ends 2-4 apart; walk,
   stop, walk back 0.98, ends 0.8 apart; half stick 0.97, ends 7.5 apart.
-- `anim` mode over steered walks (`drift.py`, gap to where A was 50 ms earlier): a 4.4 s
+- `anim` mode over steered walks (gap to where A was 50 ms earlier): a 4.4 s
   square, mean 4-5 units, max 7-12, no put-back; three squares (13 s, 12 sharp turns),
   mean 15-35, max 50-120 between runs, a put-back when past 150, settled within half a
   second of A stopping. B's own player standing on A's path made it much worse (mean 68):
@@ -1955,7 +1955,8 @@ A condensed view of sessions a to af above; the sessions keep the evidence and s
 #### Observations (live)
 
 - Free-run (A button held), captured from B: the stand-in runs with a long, fast stride,
-  so the inputs do carry the run animation. It still falls behind: over 0.7 s legs the gap
+  so the inputs do carry the run animation. (Wrong, see "Watched live" after session
+  ai: watched live, it plays the walk.) It still falls behind: over 0.7 s legs the gap
   reached 130-150 units (mean 32-65) and it was put back 1-3 times.
 - A call trace (new probe `trace`: an execute breakpoint on `176EFC`, which every message
   to a graph calls with the graph in `rcx`) on A's player's graph, 600 ms walking against
@@ -1973,3 +1974,1177 @@ A condensed view of sessions a to af above; the sessions keep the evidence and s
 - The free-run gap is speed, not pose: A's free-run speed comes from somewhere other than
   the run animation's root motion (likely the player's movement code), so the stand-in's
   stride matches but its speed does not. The 150-unit put-back hides it for now.
+  (Corrected in session ah: the speed is root motion for both; the stand-in's graph
+  produces a run's.)
+
+## Session 2026-10-22 ah: free-run speed
+
+Same build (3095001), copies A and B on one PC as in session ag.
+
+### Observations (live)
+
+- The A button's free-run from the test start: A's horizontal speed ~170 (walking) rises
+  to 600-750 units/s within ~0.7 s; running with the stick alone is ~215. In most
+  directions from the start A reaches a ledge within ~800 units and takes a running jump
+  (height +53, then falling), and pressing A from standing starts with a jump; the flat
+  test path is toward (0.71, -0.71) after 0.7 s of walking. Some earlier free-run numbers
+  (session ag: 305-419 units/s) included jumps and blocked legs.
+- Who writes A's position (new probe `wtrace`, a write breakpoint in debug register 2 on the
+  simulation thread): one site, ~60 times a second, walking or free-running: `145570` (in
+  `14554C`, the transform setter), from the movement component's update `301484` (slot
+  `0x100`, `2FFC1C`). The player's movement component is `[player+0x2F88]` (also `+0x24A0`;
+  vtable `22F7738`), the stand-in's `[character+0x2CD8]` (also `+0x24A0`; vtable `1DB73B0`).
+  Both run the same character-controller function `41C5C8`.
+- The per-frame move comes from root motion for both: the animation's motion delta is copied
+  each frame from the animation job's output to `[character+0x11D8]` (local space; `2FE700`
+  -> `250788`), and the movement component's step (slot `0x80`: the player's `4E572C` reads
+  `[character+0x11D8]`; an AI character's `191868` -> `119BAC` reads the AI movement
+  controller's copy at `[[character+0x2C78]+0x9C]`, made by `2FDF68`, scaled by
+  `[character+0xC8]`). During A's free-run `[player+0x11D8]` over the frame time is 600-740
+  units/s; the stand-in's, given the same inputs, levels off at ~225-230. (The flag at
+  `[player+0x2D19]`, which would add extra motion, stays 0.)
+- What the stand-in's graph gets (probe `trace 176D78 ... names`, keyed by variable name):
+  our 25 inputs plus `MountWarg_Yaw` and `EnemyDist` (-1) from its own code; no
+  `MovementSpeedScaler` or other AI variables per frame. A's graph during the free-run start
+  gets no extra message (`176EFC` traced across the button press) and no extra bool (only
+  the rare `TargetValid_ActivateRB`, on release too). The message `41C028` that only the
+  player's movement code sends carries a direction and two fields that stay 0.
+- The player's update `30BA10` also fills, for 377 game actions, a byte at `+0x5F8`, a byte
+  at `+0x778` and a float at `+0x8F8` of the character (`30C276` loop); free-run sets a few
+  more of them. The stand-in's stay 0, and nothing resets them: copying A's free-run values
+  into the stand-in once changed nothing (still ~230). A player-only dword at `+0x21C4` goes
+  1 -> 2 when the free-run starts (written by `43FC62`/`44115D`, list bookkeeping there; the
+  AI character has other data at that offset).
+- `PrintWindow` captures of B while A free-runs: the stand-in runs with a full stride and
+  cloak flying; whether its feet skate at the scaled speed was not judged from the stills.
+  (Wrong, see "Watched live" after session ai: it plays the walk.)
+
+### Change
+
+- Packets version 4 (168 bytes) add the sender's root-motion speed (`[player+0x11D8]` over
+  `[player+0x1118]`).
+- Anim mode, on unless `coop_anim_speed=off` (probe `puppet speed on|off`): the stand-in's
+  movement component gets a copy of its vtable (one object; the class's table is untouched)
+  with slot `0x80` (`191868`, bytes checked) wrapped. Before the step, while the sender is
+  over 300 units/s and 1.2 times the stand-in (and half a second after), the stand-in's
+  motion `[[character+0x2C78]+0x9C]` is scaled by the sender's speed (smoothed 0.1 s rising,
+  0.04 s falling) plus a catch-up (twice the gap along its own heading per second, at most
+  300) over its own (smoothed 0.25 s), between 0.5 and 4 times.
+- Probe `wtrace <addr> <ms> [len]` (a write watch) and `trace ... names` (calls of a
+  variable setter, by name).
+- Offline cases: `coop_puppet_recv` (a 200 units/s stand-in scaled to the sender's 600) and
+  `coop_puppet_walk` (left alone outside anim mode); the build without the vtable swap fails
+  the new check.
+
+### Measured (live, final build, 3 runs each, speed matching on against off)
+
+| Path | On | Off |
+|---|---|---|
+| Straight: 0.8 s run, 0.85 s free-run, fixed stick | path 0.87-1.00 of A's, 72-87 apart 0.4 s after | 0.47-0.48, 302-313 apart |
+| Steered: 0.7 s run, 0.9 s free-run | gap mean 10-12, max 34-43, no put-back besides the start's | 30-31, max 138-143, 2 more put-backs |
+| Free-run with a 90-degree turn | mean ~10, max ~41, none besides the start's | 35-36, max 147-149, 2 more |
+| Walking square, 4.4 s | mean 11-16 (scaling never engaged) | 10-53 |
+
+Earlier versions measured on the way: scaling at all speeds made the walking square worse
+(mean 9-31 against 7-11) because it engaged at every start and corner; a catch-up inside the
+smoothing lagged the free-run start.
+
+### Derived
+
+- Correction to session ag: the free-run speed is root motion for both characters; the
+  stand-in's graph produces a run's, not the free-run's (its speed, ~230; the animation it
+  plays is the walk, see "Watched live" after session ai). Whatever puts the player's graph into
+  the free-run is not a per-frame variable, bool or message from the simulation thread, nor
+  the action arrays alone.
+- Matching the stand-in's root-motion speed, only above what its own run can do, fixes the
+  free-run gap without touching walks.
+
+### Unknown / not done
+
+- What makes the player's graph free-run (some state outside the inputs, perhaps set on
+  another thread).
+- Vaults and running jumps during a free-run are not carried (the stand-in falls off ledges
+  A jumps from, and is put back).
+- Whether the stand-in's feet skate at the scaled speed.
+- Seen 4 times in ~35 walking squares, once with the scaling not engaged at all: the
+  stand-in ends 45-117 units from A and is not put back within 1.5 s of A stopping (the
+  settle rule should do it after half a second). Not investigated. (Explained and fixed in
+  session ai.)
+
+## Session 2026-10-22 ai: the missing put-back after a stop
+
+### Observations (live, copies A and B)
+
+- New readout in probe `remote`: what anim mode's per-frame check last saw (frames it ran,
+  frames it could not read the stand-in, refused put-backs, frames without an interpolated
+  sender, the gap, the turn, the sender's speed and how long it has counted as standing).
+- Reproduced on the first walking square (a script that repeats the run): 143 units off after the
+  stop, no put-back. The check ran every frame and nothing was refused; the sender's speed
+  read 8-15 units/s and the standing time kept going back to 0-62 ms. A's stick read
+  `RawMoveMag=0` the whole time while A crept on (a few units over half a second). Once A was
+  fully still the put-back came half a second later, about 2.3 s after the stop. A second
+  catch (run 8 of 8): 130 off, A creeping at 11-17 units/s with the stick at 0.
+- Why the stand-in was that far off in the first place, in the second catch: it had stopped
+  against B's own player, which the stand-in had bumped from where it was parked onto the
+  walking square (B's player found ~40 units from where the stand-in stood), while A walked on
+  ~100 units in its own world.
+
+### Derived
+
+- The settle rule counted the sender as moving above 10 units/s; a player creeps at 10-20
+  units/s with its stick let go for a second or more after stopping, so the half second kept
+  restarting.
+
+### Change
+
+- Standing is now under 10 units/s, or under 40 with the stick let go (`RawMoveMag` under
+  0.05). Probe `remote` shows the check's state (above).
+- Test `coop_puppet_recv`: after the earlier phases the sender lets go of the stick, moves 60
+  units and creeps at 20 units/s for 1.5 s; the stand-in must be put back meanwhile. The fake
+  teleport now moves the fake stand-in, as the game's does; before, every frame after the
+  test's 500-unit jump was a put-back, which hid the settle rule. The previous DLL fails the
+  new check (twice), this one passes (twice).
+- The measuring scripts park B's own player off the paths before every run.
+
+### Measured (live)
+
+- 15 walking squares: each ended either put back 1.1-1.2 s after the stop (A's glide after
+  the stick is let go, then the 0.2 s speed window and the half second) or within 15 units of
+  A (9-15 apart: inside the rule's margin). Before: 4 of ~35 still 45-117 off 1.5 s after the
+  stop.
+- Free-run paths afterwards: 6 of 7 straight runs normal (mean gap 10-14, max 34-46); one
+  had mean 40, max 160 and 2 extra put-backs, not reproduced in 5 more runs. Free-run with a
+  turn: 8-10 mean, max 35-41.
+
+### Unknown
+
+- The one straight free-run outlier above.
+- Why A sometimes glides ~100 units after the stick is let go while the stand-in stops at
+  once (in the catch above the stand-in was blocked by B's player; whether that is the only
+  cause is not known).
+
+## Watched live (2026-10-22, after session ai)
+
+- Seen while watching copy B live during these sessions: when A runs, the Talion
+  stand-in does not play a run animation; it plays the walking animation at running speed.
+- This contradicts what sessions ag and ah wrote from `PrintWindow` stills ("runs with a long,
+  fast stride", "runs with a full stride"); those are marked wrong above. Stills 40-60 ms apart
+  at that distance did not tell a walk from a run.
+- What was measured still stands: the stand-in's own root motion reaches ~225-230 units/s
+  (A's stick-only speed is ~215-230) and caps there while A free-runs (600-750). So its graph
+  moves it at about A's run speed while showing the walk (the walk played faster, or a blend
+  held at the walk; not known which). Since session ah the free-run speed match moves that
+  same walk at A's free-run speed, so during a free-run it is a walk at 600+ units/s.
+- Derived: the stand-in's graph is missing whatever selects the run (and the free-run) on the
+  player, not only the free-run as session ah assumed. Leads, none checked: the AI's own
+  locomotion variables the gait message sets (`191BAC`: `RawMoveMag`, `MovementSpeedScaler`,
+  `AIDestinationDist`, ... by id through `191FFC`, written straight into the graph's variable
+  table, not through `176D78`); state the player's graph reads outside the 25 inputs.
+- Unknown: whether "runs" here was A at full stick, A free-running, or both. (Session aj: A's full-stick locomotion is itself the walk,
+  `Idle_To_Walk_Forward`; its run is the A-button `Sprint`.)
+
+## Session 2026-10-22 aj: the stand-in free-runs (the sender's buttons)
+
+### Observations (live, copies A and B)
+
+- Each animation graph instance (the anim manager `[[26FFAA8]+0x6CB0]`, count `+0x6720`,
+  pointers `+0x6728`; instances 0xE2D0 bytes) keeps the name of the action it last started at
+  `+0x48` (`195988` copies it), and its owner at `+0x28` (whose `+0x40` is the character).
+  Sampled every ~40 ms, this shows the graph's state machine:
+  - A at full stick: `L_Stick_JustEngaged_Fwd` -> `Idle_To_Walk_Forward` (a walk; A's
+    full-stick speed ~215).
+  - A with the A button: `A_Button_JustPressed` -> `A_Button_WaitingForUnpress` -> `Sprint`
+    (600-750), and at ledges `RunningJump_Autopicker_*`, `WallStop_To_Idle`, `Edge_Pause`.
+  - The stand-in, with the sender's 25 inputs: the same stick states, never the A button
+    (stays in `Idle_To_Walk_Forward`).
+- `195988` is never called on the simulation thread: the graphs run on other threads.
+- The player's update fills three lists of 377 game actions on its character every frame
+  (`30C276`): `+0x5F8`, `+0x778`, `+0x8F8`, each a count then a byte (held), a byte (pressed)
+  or a float (value) per action. Read every ~0.3 ms around the press:
+  the A button sets `held[12]`, `held[110]` and their values to 1.0; the stick is in 3, 6,
+  121, 122; the pressed list stayed 0.
+- `1B1840`, called for every animated character right after its per-frame animation update,
+  copies the block from `character+0x5D0` (the three lists among it) into the character's
+  animation job (a read watch, `wtrace ... rw`, on `held[110]`). For the stand-in it copies its
+  lists too, but only `count` entries (none while its count is 0).
+- Holding actions 12 and 110 (and the stick ones) on the stand-in (`puppet hold`) changed
+  nothing. Comparing the copied flags `character+0x1128..0x113B`: four bytes are 1 on both
+  players and 0 on the stand-in (`0x1129`, `0x112B`, `0x1130`, `0x113A`; the player's update
+  writes them, `0x1129` and `0x113A` to 1 unconditionally).
+- With all four set, copy B crashed (`0xC0000005`). A new crash log (access violations in game
+  code with their call stack) caught it: `FA9C24`, a deliberate write to address 0 (the
+  bounds check of a list lookup, `FA9C20`), from `644AD8`, a graph input node: it reads a
+  button from the job's copy of the lists (`job+0x108` held, `job+0x408` values; the job's
+  input starts at `+0xE0`) when the copy of `0x113A` is set and the graph counts as
+  player-driven, and the stand-in's lists were empty at that moment.
+- Lists kept full and the flags set: the stand-in's graph went `A_Button_JustPressed` ->
+  `A_Button_WaitingForUnpress` -> `Sprint` one sample after A's, and back to idle on release.
+  The minimal flags are `0x113A` and `0x1129` (`0x113A` with `0x112B` or `0x1130` instead: no
+  reaction; `0x1130`, `0x112B`, `0x1129` without `0x113A`: no reaction).
+
+### Change
+
+- Packets version 5 (556 bytes): the sender's non-zero game actions (up to 48: index, held,
+  pressed, value).
+- The receiver gives the stand-in full lists (count 377) with them every frame and sets
+  `character+0x113A` and `+0x1129`; switched off (`coop_puppet_actions=off`, probe
+  `puppet actions on|off`) or without inputs, flags and lists go back together.
+- The root-motion speed match (session ah) now only runs without the buttons.
+- Probe: `puppet hold` (experiment), `wtrace ... rw` (reads too), a crash log with call stacks.
+- Offline cases: `coop_puppet_recv` (full lists with the sender's buttons and both flags) and
+  a new `coop_puppet_recv_nobuttons` (lists and flags stay an AI's, the speed match scales).
+
+### Measured (live, final build)
+
+- The stand-in's graph: `Walking` -> `A_Button_JustPressed` -> `Sprint` ->
+  `Idle_to_Sprint_Forward`, about 80 ms after A's (the 50 ms display delay and a frame).
+- Its own root motion now rises with A's through the free-run (424, 481, ... 606 units/s one
+  sample after A's), where it capped at ~230 before.
+- 3 runs each: straight run into a free-run, path 0.99-1.00 of A's and 2-3 units apart at the
+  end (session ah: 0.87-1.00 and 72-87 with the speed match, 0.47 without); steered free-run,
+  mean gap 5-7, max 16-24, no put-backs (session ah: 10-12, max 34-43); free-run with a turn,
+  4.9-8.4, max 12-24, no put-backs (session ah: ~10, max ~41); walking squares 10-11 as before.
+- With the buttons and the speed match both on, turns were worse (mean 7.7-10.3 against
+  3.7-7.1 with the match off), hence the match only without the buttons.
+- One walking square (of ~35 on these builds) again ended 134 units off without a put-back;
+  not reproduced in 15 repeated runs.
+
+### Derived
+
+- The player's graph takes its buttons from the per-character action lists, not from
+  variables; an AI character with the player's graph needs the lists and two player flags.
+  The stick also works through the float inputs, which is why the stand-in walked and turned
+  but never free-ran.
+
+### Unknown
+
+- Whether the stand-in's free-run looks right (not watched yet; the graph state says
+  `Sprint`). Answered below.
+- Vaults and running jumps with the buttons: the stand-in's graph entered
+  `RunningJump_Autopicker_Hold` once with A; whether it jumps where A jumps is not checked.
+- What else `0x1129` switches on for an AI character (no side effect seen in ~15 minutes).
+
+### Watched live (2026-10-23)
+
+- Both copies relaunched with the final build (`F196B506...`), B's player and camera turned
+  toward A's free-run path (`teleport 24000 43092.5 12420`, then the right stick), and A run
+  through 10 rounds of walk then free-run.
+  The stand-in's graph reached `Sprint` in all 10 rounds, after A's each time.
+- Watching copy B confirmed it: the stand-in sprints.
+
+## Session 2026-10-23 ak: two-way
+
+### Change
+
+- Test copies' ini settings mirrored: A also listens (`coop_listen=47012`, `coop_show=puppet`,
+  `coop_puppet_ai=off`, `coop_puppet_move=anim`, `coop_puppet_spawn=Talion`); B also sends
+  (`coop_send=127.0.0.1:47012`). No guard code change was needed: one copy already sends and
+  receives in the offline case `coop_puppet_walk`, and the input recorder only records the
+  local player's animation object, so the stand-in's applied inputs are not sent back.
+- The measuring scripts can run either direction (A sends and B shows the stand-in, or the
+  reverse).
+- `coop_puppet_walk` also checks that the receiving side never writes the local player's
+  action lists or flags.
+
+### Observations (live)
+
+- Both copies send and show the other's Talion stand-in (A received ~52 packets a second,
+  B ~58; both report the other player 40.5 units off at rest). Each stand-in gets the other's
+  inputs and buttons, and its graph reaches `Sprint` when the other free-runs, in both
+  directions. No crash in either copy.
+- Tracking is worse than one-way in both directions: free-run legs mean gap 22-56 (one-way:
+  5-8), straight free-runs 1.06-1.22 of the sender's path with a put-back (one-way: 1.00),
+  walking squares 29-56 (one-way: 10-11). The sender walks unevenly (45-250 units/s where it
+  held 215-230).
+- The sender's own graph is in `Hand_Holding` while it walks near its stand-in of the other
+  player (seen at 308 units; at 810 and 3,010 units it walks `Idle_To_Walk_Forward` ->
+  `Walking` as in one-way). The stand-in on the other side, given the same inputs, walks
+  normally, so it outpaces the sender.
+- Near the stand-in the sender's graph also gets `TargetValid_ActivateRB` (on change only),
+  set by `17B35A8`, which logs `[COMBAT|NATIVE]: '%s' %s = %s (TargetNativePredicate)`: the
+  combat targeting counts the stand-in as a valid target for the RB action.
+- Clearing the button flags on the sender's own stand-in changed nothing (gap 46): not the
+  cause.
+
+### Derived
+
+- In two-way play each player reacts to the other's stand-in as to a nearby character (most
+  likely as a combat target), which changes its own movement; the other copy cannot mirror
+  that, so the stand-ins drift. Not a sync error: the stand-in must stop being a target.
+
+### Unknown
+
+- Whether `Hand_Holding` comes from the RB target or another nearby-character check.
+  Session al: from the combat stance a stranger nearby causes; gone with the stand-in marked
+  as the player's follower.
+- What else the player can do to the stand-in (attack it, use RB on it). Session al: its
+  strikes kill it, follower or not.
+
+## Session 2026-10-23 al: the stand-in as the player's ally
+
+### How it was found
+
+- The game's own combat log: the debug print the guard already captures
+  (`<profile>\debugprint.log`) has per-channel switch bytes at rva `2A34D1A`..`2A34D98`;
+  a script turns them on for a 2 s walk of A and restores them. Near the stand-in
+  (283 units) A's log said `'Player_Character_DarkTalion' InCombat = TRUE`, `Sheathed = FALSE`
+  and `InStealth = TRUE` (`[COMBAT|NATIVE]`, `TargetNativePredicate`); far from it, FALSE,
+  TRUE, FALSE.
+- The game's friend marker: the script binding `SetIsPlayerFollower` leads to the setter
+  `102F0C`, which writes the byte `character+0x23B8` (`lea r15,[rcx+23B8h]`) and then tells
+  the faction, UI and squad systems; the getter is `1156AF0` (`cmp byte ptr [rcx+23B8h],0`).
+  `IsPlayerAlly` (`366B88`) is true when `+0x2700`, `+0x23B8` or `+0x2C04` is set.
+
+### Change
+
+- The guard sets the stand-in's `+0x23B8` to 1 every frame (`coop_puppet_follower`, on by
+  default; probe `puppet follower on|off`, off puts it back to 0; the getter's bytes are
+  checked first). `remote` shows `follower=on/<times set>`.
+- A stand-in the game frees (vtable or health back-pointer no longer match) or kills (current
+  health 0) is dropped and logged (`is gone` / `is dead`), so the guard spawns a new one at the
+  sender within 10 s. Before, anim mode kept the stale pointer and only counted `no_xform`.
+- Scripts: the game's combat log for a short walk of A, and a strike test (A walks 1 s along
+  the flat path, B's player is put 91 units ahead of it, A presses X four times; it prints the
+  stand-in's health before and after, and the combat lines).
+- New offline checks: the stand-in is marked, the byte stays 0 with `coop_puppet_follower=off`,
+  and a freed and a killed stand-in are dropped.
+
+### Observations (live)
+
+- With the byte set, near the stand-in A's log says `InCombat = FALSE`, `Sheathed = TRUE`,
+  `TargetValid_ActivateRB = FALSE`, and no `Hand_Holding` appears. `InStealth` still flips
+  TRUE and back beside it (no effect on movement seen).
+- Two-way tracking with both stand-ins marked (2 runs each, both directions):
+
+  | | sender A | sender B | session ak (two-way) | one-way (aj) |
+  |---|---|---|---|---|
+  | straight free-run, path ratio / end gap | 1.00-1.01 / 2-4 | 0.98-1.00 / 4-7 | 1.06-1.22, put-back | 1.00 / 2-3 |
+  | free-run legs, mean gap (max) | 5.1-6.9 (17-22) | 4.8-8.0 (14-23) | 22-56 | 5-8 |
+  | walking squares, mean gap (max) | 10.0-14.4 (20-122) | 13.0-15.1 (29-133) | 29-56 | 10-11 |
+
+  One square in each direction had a put-back (max 122 and 133). No new crash in either copy.
+- Copy B's stand-in was freed by the game about 16 s after B's own player was teleported
+  ~3,000 units away (to test "far"), at the moment the game autosaved. Anim mode kept the
+  pointer; a probe write of `01` to its `+0x23B8` then went into reused memory (B was
+  restarted). A's stand-in, put back 3,000 units from A's player, was not freed.
+- The player can still kill the stand-in. On flat ground, a fresh stand-in 91 units in front
+  of A: A's strikes picked it as their target and the first hit killed it (`DmgForm_Plyr_Melee`
+  295, clamped from 428 by `TargetMinHealth` 3, then `Float_CurrentHealth` 298 -> 0 and the
+  state `Player_Death`); its body dropped ~82 units. The log says
+  `PlayerKill_AnyKill_Enemy - Rejected - Target PlayerAlly` and
+  `PlayerKill_AnyKill_Ally_NotRecentDecimateFollwr - Accepted`: the game knows it hit an ally
+  and allows it. The same with the game's own setter `102F0C` called on the stand-in (byte
+  first cleared, the setter's notifications ran, no fault), and with the health object's
+  can-damage byte (`+0x444`, set by `659E74`, logged as `SetCanDamageScript`, which the game
+  clears on the player for `PlayerInvulnerable`) at 0: then no damage formula ran, but a
+  front kick still took it from 298 to 0.
+- The character's health object (`[character+0x26A8]`): max at `+0x428`, current at `+0x42C`,
+  their ratio at `+0x430` (a fresh stand-in 298, 298, 1.0; a killed one 298, 0, 0).
+- With the replacement on: A's strikes killed the stand-in, the guard dropped it and spawned a
+  new one at once (its 10 s wait had passed), A's next strike killed that one 0.7 s later, and
+  the third (10 s later) stayed alive and tracked.
+- The string `%s was hit by attack %s, but is set to CanTakeDamage = False` (`2C775C`) belongs
+  to destructible objects (`DynamicObjectGroupBrush`, byte `+0x1E1`), not characters.
+
+### Derived
+
+- The combat stance and the walk change came from the stand-in being a stranger to the local
+  player; as a player ally it no longer pulls the player into combat, and two-way tracking is
+  back to the one-way numbers.
+- Being an ally does not keep the player's own melee off it: the game allows killing allies.
+  Keeping it alive needs the melee target choice to skip it, or the hit to do nothing.
+
+### Unknown
+
+- How the player's melee picks its target, and whether a per-character flag keeps a character
+  out of it (data properties such as `TargetFriendlyOnly` and `MatchPlayerAllyTarget` exist).
+  Session am: the target check `18626C`; its `SetTargetable` flag did not keep the stand-in out.
+- Why the front kick killed the stand-in at full health with `+0x444` at 0 (no damage formula
+  was logged).
+- Whether enemies attack the stand-in (none did in these runs; not checked on purpose).
+- What `InStealth` flipping beside the stand-in means.
+
+## Session 2026-10-24 am: the player's attacks leave the stand-in alone
+
+### How it was found
+
+- The game has a `[COMBAT|TARGET]` log channel. Its strings sit in the attack target check
+  `18626C` ("'%s' Rejected (%s)- ..." for each rule), which every attack node calls for each
+  candidate target (rcx the node, rdx the attacker's context, r8 the candidate, `[r8+0x20]`
+  the candidate's health object). A read watch (probe `wtrace ... rw`) on the stand-in's
+  health object `+0x28` while A struck went through it: `2DE1EC` from `1862B1`, `IsPlayerAlly`
+  (`366B88`) from `186999`, and the "can be targeted" check `30CDB8` from `186BD1`.
+- Two of its rules explain why an ally gets struck. "MaxDistance-PlayerAlly" rejects a player
+  ally only beyond the attack node's own distance (`[node+0x188]`). "Target Cannot be
+  Targeted" (`30CDB8`) rejects a dead character (`190F1C`: health object `+0x4A0`, set in the
+  kill function next to the string "PlayerKiller") or one whose `character+0x2C16` is 0 (the
+  `CCharacter` script binding `SetTargetable`, `1BAF2E4`).
+- Static reading put the hit's target in rcx at `2C642C`. A new probe mode, `trace <addr> <ms>
+  args`, prints each call's arguments; it showed rcx is the attacker's component (A's) and r9
+  the target's health object, `[r9+0x28]` the stand-in.
+- Write watches on the stand-in's current health (`+0x42C` of its health object) caught two
+  routes. A targeted hit goes `4D0670` -> `2C642C` -> `2C658C` (logs `APPLYDAMAGE`) ->
+  `2C70C0`; a swing without a target (`PC_NT_...`) goes `1F6FE0` -> `2C966C` -> `2C99B5` ->
+  `2C9B6F` -> `2C923E` -> `2C8150` -> `2C70C0`. From `2C70C0` (rcx the attacker's component, rdx
+  the target's, `[rdx+0x28]` the target character) the hit goes on through `2EE394` ->
+  `EAA190` -> `2E4B34` -> `2E4BE8`, which writes the health.
+
+### Tried
+
+- `SetTargetable` byte (`character+0x2C16`) at 0 on the stand-in: it stayed 0, but A's strike
+  still lunged to it (translation scaling to 62 units) and the first hit killed it.
+- A stub on the target check alone: no attack aimed at the stand-in any more, but a swing
+  without a target swept through it and killed it (A's legendary Ringwraith gear revived it
+  once: `Resurrect_5Lgnd_Ringwraith_OnAllyDie`).
+- A stub on `2C642C` comparing rcx, then `[r9+0x28]`: it never fired on the untargeted route,
+  which does not pass there.
+
+### Change
+
+- Two stubs in a fifth code page reserved near the image, each reached by a 5-byte jump
+  written with one aligned 8-byte write, bytes checked first:
+  - at the target check's second instruction (`186271`; the first ends 4 bytes into an
+    aligned qword): if `[r8+0x20]` is the stand-in's health object, return false (rejected);
+    both callers then try the next candidate;
+  - at the entry of `2C70C0`: if `[rdx+0x28]` is the stand-in, return at once.
+- `coop_puppet_targetable` (off by default; probe `puppet targetable on|off`) turns both
+  off. `remote` shows `targetable=off/<candidates rejected>/<hits dropped>`. A dropped stand-in
+  is no longer skipped. The stubs apply to every attacker, enemies included.
+- Probe `trace ... args` (above).
+- Offline checks: fixtures with the game's prologues of both functions, aligned as in the
+  game, reject the stand-in and drop hits on it while accepting another character, accept it
+  again once it is dropped, and accept it with `coop_puppet_targetable=on`. The build without
+  the stubs fails the check.
+
+### Observations (live, final build)
+
+- The strike test three times (24 strikes, the stand-in 91 units in front of A): it stayed
+  at 298 of 298 and did not move; no player hit landed on a `PC_Stats` target; the hit stub
+  dropped 4 hits; the target check rejected it ~107,000 times (every frame, every node).
+  Baseline with `puppet targetable on`: dead after the first strikes.
+- Two-way tracking with both hooks on (2 runs each, both directions):
+
+  | | sender A | sender B | session al |
+  |---|---|---|---|
+  | straight free-run, path ratio / end gap | 0.94 / 53 (A ran 682 units), 1.00 / 1 | 1.00 / 0-9 | 0.98-1.01 / 2-7 |
+  | free-run legs, mean gap (max) | 4.6-8.1 (11-24) | 3.4-6.4 (8-26) | 4.8-8.0 (14-23) |
+  | walking squares, mean gap (max) | 9.2-10.9 (17-124) | 6.8 (49), 24.3 (131, 5 put-backs) | 10.0-15.1 (20-133) |
+
+  No crash in either copy.
+- Twice on 2026-10-23 (19:33 and 22:33), both copies quit at the same moment about 12 minutes
+  after launch, exit code 0, no crash lines. Not from the guard or the tools (cause unknown).
+
+### Derived
+
+- Shadow of War lets the player hurt allies by design: an ally near enough is a valid target,
+  and a swing hits whatever its sword sweeps through. A stand-in has to be taken out of both
+  the target choice and the hit itself.
+- The movement batch did not change with the hooks (they touch no movement); its two outliers
+  (a straight run where A ran 682 units, a square with five put-backs) look like the run, not
+  the stand-in.
+
+### Unknown
+
+- Whether enemies now leave the stand-in alone in a fight (the stubs apply to them too; not
+  checked).
+- Whether anything else still reacts to it as a target (no hit reaction was seen; it did not
+  move in 24 strikes).
+- What closed both copies at once about 12 minutes after launch.
+
+## Session 2026-10-24 an: the stand-in follows jumps and falls
+
+### Observations (live, before the change)
+
+- A running jump off the tower ledge (world direction (1, 0) from the test start: 0.7 s walk,
+  then the free-run): A's graph goes `Sprint` -> `RunningJump_Assisted_Wraith`, the stand-in's
+  `RunningJump_AutoPicker_3m` -> `RunningJump_Autopicker_Hold` -> `RunningJump_Assisted_Wraith`
+  about 80 ms later (graph state names). A takes off at 1,000-1,270 units/s, rises 53 units
+  and falls ~5,700 units to the valley floor; the stand-in stays at the ledge's height, is 150
+  units behind within 0.15 s and is then put back again and again.
+- A put-back never lifts it: the game's teleport (`19B7AC4` -> `658CBC`) places a character on
+  the ground below the given point. The stand-in "teleported" to A in the air landed 2,374
+  units down at the foot of the tower; a probe `teleport` of the player 3,000 units up left it
+  on the ground too.
+- No float input of the player's graph says "in the air". A diff of the player object (A standing, then
+  in the fall after the jump, then landed; two falls agree) and a sampler (through a
+  walk, free-run and jump) on the player object found:
+  - `player+0xEE0`, a locomotion mode: 1 walking or standing, 6 then 3 in a free-run, 2 from
+    the jump's takeoff (height +0) through the fall and the landing (it stayed 2 for ~1.4 s
+    on the ground after the 5,700-unit fall), then 1. Never 2 on the flat free-run path.
+  - `+0x112B` and `+0x1130` (1 on the ground) drop to 0 about 0.1 s after takeoff; `+0x2440`
+    goes to 1 just before the jump, `+0x2F81` at takeoff; a velocity vector near `+0x10B4`
+    (vertical part -770 to -1,930 units/s in the fall).
+
+### Tried
+
+- The teleport's last argument (`r9b`, 1 in the wrapper) at 0, by calling `658CBC` with the
+  wrapper's own manager pointer: the stand-in still landed at the foot of the tower.
+- Skipping the stand-in's movement step (slot `0x80`, `191868`) while A was in the air: no
+  change (113 of 113 steps skipped).
+- Writing its transform in place (`+0xAC`, as the transform setter `14554C` does, and `+0xB8`)
+  instead of the teleport: it rose with A for 0.1 s (+4, +16 units, within 0.7), then was back
+  on the ground. A write watch on its height found the other writer: its movement component's
+  frame update, slot `0x100` (`2FFC1C`, the same as the player's class), through `250C1C` ->
+  `14554C`, from `301484`.
+
+### Change
+
+- Packet version 6: the sender's locomotion mode byte (`player+0xEE0`) in the formerly
+  reserved field (still 556 bytes).
+- Anim mode, while the sender's mode is 2: the stand-in's movement step and frame update are
+  skipped (the vtable copy wraps slot `0x100` too, head bytes checked) and its transform is
+  set to the sender's every frame; on the first frame back on the ground, one teleport puts
+  it on the ground there and its own movement takes over. `coop_air_follow` (on; probe
+  `puppet air on|off`); `remote` shows `air=on/<frames>/<steps skipped>/<landings>`.
+- Offline check: the receive case flies the sender on a ~100-unit arc with mode 2; the fake
+  stand-in's own transform must rise past 50 although a fake frame update puts it back on the
+  ground every frame unless skipped; its steps are mostly skipped; on landing a teleport puts
+  it on the ground. With the update skip removed the check fails.
+- Scripts: heights and gap through a jump and fall (with A's mode and B's air counters), and
+  the two field searches above.
+
+### Observations (live, final build)
+
+- The same jump with air-follow: the stand-in follows the whole jump and fall about 60 ms
+  behind (150-220 units higher at full fall speed, ~37 units back horizontally), lands 0.0-0.1
+  units from A, one landing put-back. The same with B jumping and A showing the stand-in.
+  With `puppet air off` in the same jump: 118 put-backs, the stand-in bouncing between the
+  ledge, the foot of the tower and the valley floor.
+- Two-way flat batch (2 runs each, both directions): straight free-run 0.89-1.02 of the path,
+  11-62 apart at the end (A's path was 570-592 units, longer than earlier sessions' ~500);
+  free-run legs mean 4.0-8.4 (max 16-31); walking squares mean 12.0-18.6 (max 43-129, 1-2
+  put-backs); every run ended 0.0-0.1 apart. No crash. Both copies counted air frames during
+  this batch (about one landing per run), although the flat path never shows mode 2.
+
+### Derived
+
+- Jumps and falls are not root motion; the stand-in can play them from the buttons but has to
+  be placed by position while the sender is in the air, and handed back on landing.
+- The game's teleport is for putting characters somewhere safe, not for placing them; a
+  character's position is a plain field, and its movement component writes it every frame.
+
+### Unknown
+
+- Where the air frames in the flat batch came from (likely the teleport at each run's start,
+  after which the player settles in mode 2 for a moment; not checked).
+- Climbing, vaults and wall runs: their mode values, and whether the stand-in follows them.
+- Short hops that land on the same level (only the tower drop was measured).
+- Whether the stand-in shows its old position for a frame on landing, before the teleport
+  is applied (not watched).
+
+## Session 2026-10-27 ao: the stand-in follows climbs
+
+### Observations (live, before the change)
+
+- A climb: after the running jump off the tower ledge, A free-runs back at the foot of the
+  tower in world direction (-1, 0), scrambles ~300 units up its wall in 0.7 s, hangs, then
+  climbs another ~300 units to a ledge.
+- Through the climb the locomotion mode (`player+0xEE0`) reads 2 for the scramble, then 3, 1,
+  3, 4 and 1 while on the wall, so it cannot tell "on a wall" from walking. The on-ground flag
+  (`player+0x112B`) stays 0 from just after leaving the ground through the whole climb; on
+  flat ground it read 1 in every run so far.
+- With the session-an build the stand-in followed the scramble (mode 2), but once the mode
+  turned 3 on the wall the landing put-back dropped it to the ground below: it ended ~600
+  units under A.
+- Two directions blocked at the start gave no climb: (-1, 0) stood still, (0, -1) ran off a
+  ledge (the directions are relative to the camera, which differs between launches).
+
+### Change
+
+- Packet version 7 adds the on-ground flag. Anim mode places the stand-in by position while
+  the sender's mode is 2 or the flag is 0, and hands it back with one put-back once both say
+  "on the ground".
+- Offline check: the receive case's arc is now 30 ms in the air, then a climb (mode 3, flag
+  0); without the flag the check fails.
+
+### Observations (live, final build)
+
+- The same climb: the stand-in followed the scramble 0.3-8 units off horizontally and 20-40
+  lower (the 50 ms delay), hung where A hung (0.0 apart) and ended at the top 0.1 apart.
+- Flat two-way check (one run each, both directions): straight free-run 0.99-1.00 of the
+  path, free-run legs mean 6.5-8.1, walking squares 6.7-11.0; no crash.
+
+### Unknown
+
+- Whether the stand-in's graph plays the climbing animations (it is placed by position; not
+  watched).
+- Vaults and wall runs on their own (none happened in these runs), and whether the flag is 0
+  anywhere on normal ground (mounts, combat moves).
+
+## Session 2026-10-28 ap: enemies ignore the stand-in
+
+### Setup
+
+- Live characters come from the health objects (class vtable `1F995E0`, a read-only heap
+  search) whose owner (`+0x28`) points back (`character+0x26A8`). Right after loading, none
+  were within 4,000 units of the tower start; 17 were within 30,000, on the valley floor below
+  (a group of four with 180 health, several with 300, one with 11,165).
+- B's own player was put beside the group (so A's stand-in of it was put there in A's world)
+  and A's player ~1,500 units away; every 0.5 s for 20-25 s: the stand-in's health, the
+  characters within 1,500 units of it, the guard's target and hit counters, and A's combat log.
+
+### Observations
+
+- With the attack stubs on, 8 characters within 1,500 units, the nearest two ~130 units from
+  the stand-in all the time: none came closer, none attacked it, no hit landed on a player-type
+  target. The orcs fought each other meanwhile (infantry, a berserker, wargs; 50+ hits).
+- The same with the stand-in made targetable (stubs off), and again with the follower mark off
+  as well: nothing attacked it.
+- A's own player put beside the stand-in: the orcs attacked A at once (6 hits, A down to 3 of
+  708 health within 20 s), and the hit stub dropped one swing that reached the stand-in.
+
+### Derived
+
+- Enemy AI does not pick the stand-in as an opponent at all (an AI-off cutscene `Talion`), ally
+  or not, targetable or not; the attack stubs only matter for stray swings aimed at someone
+  else. So in a fight only the local player draws the enemies of its own copy, and the other
+  player's stand-in is a bystander there. Sharing enemies (one copy's AI fighting both players)
+  is part of the world-state work still ahead.
+
+### Unknown
+
+- Whether enemies notice the stand-in once it fights (attacks are not carried yet).
+- Whether other enemy kinds (captains, beasts) behave the same; only this group was watched.
+
+## Session 2026-10-28 aq: the stand-in plays the other player's attacks
+
+### Observations
+
+- With the combat debug channels on in B while A struck beside B's stand-in, B's log had no
+  attack input and no attack start for the stand-in: the player's strikes come from command
+  input (`[COMBAT|INPUT] OnCommandOn : 107 (CombatPrimary01)`), not from the action lists the
+  stand-in gets.
+- Every attack starts in `2E297C` (StartAttack, logs `Start Attack: <name>, Node: ..., Target:
+  ..., Anim: '<anim>'`): `rcx` the attacker's health object (`[character+0x26A8]`), `rdx` a
+  node or null, `r8` the attack record, `r9` the target or null, then on the stack a float
+  (1.0), two bytes and a pointer. The player's strikes (from `2C4161`) and the AI's attacks
+  (from `418794`) both call it through `2D6B3C`, which zeroes the health object's `+0xF0`,
+  `+0xF8`, `+0x108`, `+0x110` and jumps there.
+- The health object keeps the current attack's record at `+0xE0` (0 once it ends) and its
+  start time at `+0x470` (a millisecond clock). One strike of A: `PC_XHeld_HeavyAtk_Into_L`,
+  then `PC_NT_L1_D1_F_LL_RL_04` 156 ms later, which ended about 2 s after.
+- Attack records (type `0xA15` at `+0`, a 32-bit id at `+4`, name pointer at `+0x20`) sit at
+  different addresses in the two copies, but the id is the same: it is the game's name hash
+  (`423E70`). They are the 40-byte entries of one table held at `[27008F8]` (count `+0x28`,
+  array `+0x38`, sorted by the id; the game's own find-by-name `1B078DC` hashes the name and
+  searches it with `278540`). The table held 16,976 records; the 4,094 found through the
+  descriptor all had different ids.
+- Started on B's stand-in by hand (`2D6B3C` with no node, no target, scale 1), an attack
+  logged `Start Attack` with its animation and drew the stand-in's sword. It never ended:
+  the next start of the same attack logged `Duplicate attack`. The stand-in's health object
+  has no player links: `+0x40` and `+0x50` are 0, where the player's hold the player and an
+  object `StartAttack` hands the attack to (`573D34`).
+- The game's own callers stop an attack with `2EA790(health, 0)`, and only while `+0xE0` is
+  still their attack and `+0xD8` is 0.
+- While B's stand-in also got A's buttons and animation inputs from an idle A, the swing
+  was cut off by the sheathe and idle states: in B's window the sword showed in two of eight
+  frames. Without them it stayed out through the swing.
+
+### Change
+
+- Packet version 8 adds the sender's current attack id and start time. The receiver starts
+  each new one (id or start time changed) on the stand-in through `2D6B3C`, and when the
+  sender's attack ends it stops the stand-in's with `2EA790` under the game's own conditions.
+- Offline checks: fake start, stop and attack table; one copy's own player's attack reaches
+  its stand-in and is stopped; a received attack is started, stopped, and started again when
+  repeated.
+
+### Observations (live, final build)
+
+- A struck twice beside B's stand-in. B's log showed the stand-in's chain with A's timing:
+  `PC_XHeld_HeavyAtk_Into_L`, then `PC_NT_L1_D1_F_LL_RR_03` 141 ms later, then
+  `PC_NT_L1_D1_F_RR_RR_01` for the second press.
+- In B's window (frames of the game window ~110 ms apart) the stand-in swung with its sword
+  out, lunged the way A faced, and stood idle with the sword on its back a few seconds later.
+- B's own player 94 units from the stand-in through three of A's strikes: no damage. Three
+  strikes 1.2 s apart gave 6 starts and 1 stop (each press chained into the next attack
+  before the last ended, as on A).
+
+### Unknown
+
+- Attacks that need a partner (executions, sync attacks): started with no target here.
+- Whether the stand-in's swings hit B's enemies (not tried).
+- Non-combat actions are attack records too and are carried the same way; which ones (one
+  came through while B loaded) was not checked.
+
+## Session 2026-10-28 ar: what the attack sync carries, and the stand-in after a death
+
+### Observations
+
+- A's health object while A pressed each face button at the test start, with B's stand-in
+  sampled at the same time (every ~15 ms). `+0xD8` holds the current attack's node, not a
+  recoil:
+
+  | button | A's attacks (`+0xE0`) | node (`+0xD8`) | on B's stand-in |
+  |---|---|---|---|
+  | X | `PC_XHeld_HeavyAtk_Into_L`, then `PC_NT_L1_D1_F_LL_RR_03` | `PC_XHeld_HeavyAtk_Into`, `PC_PoolAttacks_XRelease` | both, ~60 ms later |
+  | Y | `PC_CounterAttempt_Fail` | `PC_Counter_Fail` | the same |
+  | B | `Activate_WorldPuzzleSeeingStone`, then `PC_HoG_Standing_Out` | `PC_Activate_...`, `PC_HoG_Standing_OutOfLoop` | both |
+  | A | `PC_QuickDash_Ringwraith` | `PC_Dash` | the same |
+
+- Hit reactions are attacks too: among enemies A got `PC_Recoil_Light_ST_F` (node
+  `PC_Recoil`) at each hit and `PC_InCombat_TurnToFace_R`; the stand-in got each ~60 ms later.
+- B at the test start activates a seeing stone (A's view turned grey). The stand-in got the
+  same attack in B's world; B's view did not change and the stand-in stood behind the stone.
+- When A died, the game showed the Nemesis screen that follows a death (the orc that killed
+  the player, the army), the world paused under it, and A's own stand-in of B was freed. The
+  guard dropped it but spawned no new one: it looked the spawn type up through an AI
+  character, and none was loaded around the tower where the game put A back.
+- The spawn-type table (type `0xA06`, 177 entries) is held at `[2702440]`; the game's
+  queued-spawn code reads that global (`1A9212F`).
+- A strike chain started next to a living enemy of B's world (600 health, 120 units straight
+  ahead of the stand-in; A's world had nothing there): the enemy kept 600, and B's combat
+  log had no damage line.
+
+### Change
+
+- The stand-in's spawn type is looked up through `[2702440]` first, through an AI character
+  only if that fails. After A died again, its stand-in of B was replaced 31 ms after the old
+  one was freed; at launch it now spawns on the first try.
+
+### Derived
+
+- One mechanism carries strikes, counters, dashes, interactions and hit reactions, since the
+  game runs all of them as attacks.
+
+### Unknown
+
+- Whether the stand-in's swings ever hurt the receiver's enemies (one enemy, one run). The
+  player's hits may come from the player-only object at `+0x50` that the stand-in lacks.
+- Which interactions change the receiver's world when the stand-in plays them; only the
+  seeing stone was watched.
+- What the receiver should show while the sender sits in the Nemesis screen after a death.
+
+## Session 2026-10-28 as: the test world after a death
+
+### Observations
+
+- After A's player had died twice, A's autosaved world had a large enemy (3,750 health)
+  about 1,360 units from the test start and ~170 units above it. In later runs at the start,
+  fire and thrown rocks took A's player from 708 to 0 and A's stand-in from 298 to 3. The
+  stand-in's damage got past the stub on `2C70C0` that drops every sword hit on it, so this
+  damage reaches health another way.
+- With A's test save restored from a backup taken before any co-op work, no living
+  character other than the players and stand-ins was within 2,000 units of the start in
+  either copy, and nobody lost health through repeated runs of every check.
+- Live checks in both directions (the sender's walk and free-run against its stand-in,
+  attacks, the follower mark, the receiver's own strikes beside the stand-in) each failed
+  as expected when the feature under test was switched off through the probe: the gap grew
+  to the whole path, no attack reached the stand-in, the follower byte stayed 0, and the
+  receiver's strikes took the stand-in to 3 health.
+
+### Unknown
+
+- Which function applies area damage (fire, thrown rocks), and so how to keep the stand-in
+  out of it.
+
+## Session 2026-10-28 at: area attacks and the stand-in
+
+### Observations
+
+- Every area tick (auras, fire, explosions) asks `2E5718` about each character near it: `rcx`
+  the tick, `rdx` the character. The function logs `AOETick = %s; %s Evaluating Object.` and
+  each reason it skips one (`MustBeAlive`, `MustBeAlly`, `CombatTree type can never be hit by
+  an AOE`, ...), adds the characters it accepts to the tick's hit list (`2E68A0` on tick
+  `+0x10`) and returns nothing. Callers: `4EA50A` and `4EA689` in the tick processor `4EA0A4`
+  (which logs `[COMBAT|AOE]`), and the wrapper `2E56FC`.
+- With the receiver's player standing 94 units from the stand-in for 6 s, the receiver's
+  combat log showed 150-300 area evaluations, 9 of them of the stand-in (`CoopPuppet`): the
+  player's own aura ticks.
+- Starting area attack records on a player by hand (`PC_Radiance_AOE_Fire`,
+  `PC_ExplodeBarrel_AOE_Tick`, ...) hurt nobody: the record alone does not make the area
+  effect.
+- A stand-in that died stayed in the world as a body still named `CoopPuppet` (area ticks
+  evaluated it), next to the replacement.
+
+### Change
+
+- A stub at `2E5718`'s entry (an aligned qword) returns at once when `rdx` is the stand-in.
+  With it, the same 6 s showed no evaluation of the stand-in in the log; with it off, 9.
+
+### Unknown
+
+- Whether this keeps out the large enemy's fire from session as (that enemy did not come
+  back in 4 minutes on the same save).
+- Why a stand-in once lost 19 health while its player walked, with nothing attacking it
+  (once in four runs of every check; teleports and landings were ruled out).
+
+## Session 2026-10-28 au: watched on copy B
+
+### Observations (a person watching copy B's window)
+
+- While A walked, sprinted, struck, countered and dashed, the stand-in mostly played the first
+  part of the sheathe animation over and over.
+- After a jump off the tower and a free-run back up the wall, the stand-in hung on the ledge
+  the way A did. The leap and the climb itself were not seen: B's camera was not facing them.
+
+## Session 2026-10-28 av: the stand-in's sheathe loop
+
+### Observations
+
+- The last started action of each animation graph (`graph+0x48`), sampled every ~15 ms after
+  one strike of A: A's graph went `IdleL`, then (with A's player in combat) `Hand_Holding`, and
+  about 5 s later `Null_R_Hand` once, then idle. The stand-in's graph cycled
+  `A_Button_NotPressed`, `WeaponSheathe_Low` (about 20 ms), `Null_R_Hand` (0.15 to 0.5 s),
+  then again: 2 to 35 sheathe starts in 5 s, still going 16 s after the strike. At idle and
+  while walking it did not do this.
+- The three game-action lists of A's player and of the stand-in were the same before, during
+  and after the strike (empty once X was let go, the same counts and player flags), so the
+  stand-in is not getting different buttons.
+- The loop went on with each of these switched off: the stand-in's copied buttons and player
+  flags (also with them only written while the sender had buttons down, and with X, Y and B
+  left out of them), its animation inputs, its follower mark, the attack sync, and with its AI
+  on.
+- After the strike A's graph got `InCombat = TRUE` and `Sheathed = FALSE` from the game's
+  native predicates; the stand-in's graph got none of these log lines.
+- Which entries each move uses in the player's action lists: walking 3, 6, 121, 122; a
+  free-run adds 12, 15, 110 (the A button), 270; X 107 and 375; Y 108; B 109.
+
+### Derived
+
+- The stand-in's graph keeps asking to sheathe a weapon that its right hand no longer holds:
+  whatever tells a player's graph that the sword is away again is not updated for the
+  stand-in.
+
+### Unknown
+
+- Where that state lives and what updates it for the player.
+- A second watch of the jump with B's camera aimed at the ledge: the stand-in played no leap
+  animation when A ran off it. The climb was again not seen (B's camera faced away after B's
+  player was moved to the foot of the tower).
+
+## Session 2026-10-28 aw: why the stand-in plays no leap
+
+### Observations
+
+- Both graphs' last started actions through A's running jump off the tower ledge: A's went
+  `Sprint`, `RunningJump_Assisted_Wraith` at the ledge, then the fall, then
+  `StandingJump_LandHard` on landing. The stand-in's went `Sprint`, then `WallStop_To_Idle`
+  (its own movement stopped at the edge), briefly `RunningJump_Autopicker_Hold` and
+  `Null_Null_Channel_JumpHold`, then walking and idle actions all through the fall (while it
+  was placed in the air by position), and no landing.
+- Writing A's values of `+0xEE0` onto the stand-in from outside during the jump made its graph
+  start `RunningJump_AutoPicker_FreeJmp`, but the game rewrote the field within the frame.
+- `+0xEE0` is not a mode byte: it is the count of a list at `character+0x5D0+0x910` (at most 8
+  pointers) that `176F28` rebuilds every frame from the combat object's vector at `+0x5A8`. Its
+  entries are the character's movement states, records of type `0xA07`: `Idling`,
+  `GroundMoving`, `Sprinting`, `CombatJumping_Running`, `Jumping`, `DisableRangedMode`. In the
+  air A had `Jumping` and `DisableRangedMode` (count 2); the values read as "modes" before (1
+  walking, 6 then 3 in a free-run, 2 in the air) are these counts. The state records are the
+  entries of one table held at `[27008A0]` (110 entries), sorted by the name hash at `+4`, the
+  same in both copies.
+- The block at `character+0x5D0` is filled every frame by `174E50` (from the movement component
+  `[character+0x24A0]`) and `176F28` (from `[character+0x26A8]`), both called from `175724`.
+  Sampled through the jump, no other field of it separated air from ground (only a position).
+- A trace of the named float and bool variables A's player got through the jump showed none
+  about the air; only the speeds grew.
+
+### Tried, not kept
+
+- A hook right after the rebuild (`1758F8`, `lea rbx,[rsi+958h]`, `rsi` the block) wrote the
+  sender's movement states (sent as name hashes) into the stand-in's list while the sender was
+  off the ground. The stand-in's list then held `Jumping` all through the fall, but its graph
+  still went `RunningJump_Autopicker_Hold`, `WallStop_To_Idle`, then walking and idle.
+
+### Derived
+
+- The jump is not started from that list or from graph variables: the player's own movement
+  (its traversal, the assisted running jump) drives the graph, and an AI's movement stops at
+  the ledge instead.
+
+### Unknown
+
+- How the player's movement starts the jump in its graph.
+
+## Session 2026-10-28 ax: starting graph actions on the stand-in
+
+### Observations
+
+- `664CA4(graph, action name, flag)` plays a named action on an animation graph: `665018` builds
+  the action from the name, `66538C` returns it if it already runs (then it is only marked),
+  else `195988` starts it. Its only caller, `664C6C` (a graph id, a name, a flag; the graph
+  found through `2FDA00`), has no direct callers: it is reached through a function table.
+- A character's graph is the entry of the animation manager's list (`[[26FFAA8]+0x6CB0]`, count
+  `+0x6720`, pointers `+0x6728`) whose owner (`+0x28`) points back to the character at
+  `+0x40`.
+- Called on the stand-in's graph from the simulation thread, `RunningJump_Assisted_Wraith` and
+  `StandingJump_LandHard` started (no fault); with the stand-in standing and its copied
+  buttons on, `A_Button_NotPressed` followed within 40 ms; with them off, nothing started.
+- Played on the stand-in when A took off from the tower ledge, it did not change the outcome:
+  the stand-in's graph went to `WallStop_To_Idle` 30 ms later.
+
+### Derived
+
+- The stand-in's own movement reaches the ledge and stops at about the moment A takes off,
+  before the receiver switches it to placement in the air (A's ground flag drops ~0.1 s after
+  takeoff, then 50 ms of interpolation delay); its graph follows the stop.
+
+### Unknown
+
+- Whether taking the stand-in off its own movement at the sender's takeoff (before the edge)
+  lets its graph's own running jump play.
+- Whether the stand-in plays the climbing animations: a capture of copy B's window from the
+  foot of the tower did not keep the stand-in in view.
+
+## Session 2026-10-29 ay: switching the stand-in to the air at takeoff
+
+### Observations
+
+- The receiver switched the stand-in to placement in the air as soon as the newest packet said
+  the sender had left the ground (its state count 2), not 50 ms later with the delayed
+  position (tried, not kept). Two jumps off the tower ledge: in one the stand-in's graph went
+  `RunningJump_Autopicker_Hold`, `RunningJump_AutoPicker_FreeJmp`, then `WallStop_To_Idle`
+  40 ms later; in the other straight to `WallStop_To_Idle`. Both then walked and idled through
+  the fall, as before.
+
+### Derived
+
+- The stand-in's graph begins its own running jump at the ledge, but ends it in a wall stop even
+  with its movement step skipped: the jump seems to need the character to fall under its own
+  movement, which placement by position does not give it.
+
+### Unknown
+
+- What the jump nodes of the graph check before they carry on (a fall reported by the movement
+  component, a ground probe, or something else).
+
+## Session 2026-10-29 az: the sheathe loop, continued
+
+### Observations
+
+- `Predicate_SelfIsSheathed` is not code to follow: `16B9CA8` registers it as a `Combat.Bool`
+  property of the combat predicates (a setting), not as the state itself.
+- A's character (0x3000 bytes) and combat object (`[character+0x26A8]`, 0x800 bytes) before a
+  strike, with the sword out 1 s after it, and after A had sheathed again: only two floats at
+  `character+0x1368` were equal before and after but different while drawn. No byte flag in
+  either object follows the sword.
+- Played on the stand-in's graph during its loop (`664CA4`): `IdleL`, `Hand_Holding`,
+  `Null_R_Hand` and `WeaponSheathe_Low`; none stopped the loop. Sheathe restarts in the 3 s
+  after a strike grew over consecutive runs (3, 2, 9, 9, 10).
+
+### Derived
+
+- The drawn or sheathed state the loop keeps acting on is held inside the stand-in's animation
+  graph, not in a character or combat field the guard could set.
+
+### Unknown
+
+- Which graph state or variable decides the sheathe, and what settles it for a player.
+
+
+## Session 2026-10-29 ba: watched again, every move
+
+### Observations (a person watching copy B's window, the stand-in in clear view)
+
+- Idle and the sprint looked good.
+- The strike did not really work: after it, the sheathe loop was very obvious and jarring.
+- The dash looked roughly right but turned into the sheathe loop quickly.
+
+## Session 2026-10-29 bb: the sheathe loop runs at two speeds
+
+### Observations
+
+- After one strike the stand-in restarted its sheathe either about 1 time a second or about 8
+  times a second, at random, with nothing changed: two runs without any intervention gave 5 and
+  56 restarts in 6 s, two others 4 and 59 in 5 s.
+- A's animation graph before a strike, with the sword out and after it sheathed: bytes at
+  `+0x154`, `+0x26C` and `+0x5DC` read 2 and 1. `+0x5D8` onwards holds pairs of a pointer and a
+  small state value, and which pair holds which state shifts: in a later run A's idle value at
+  `+0x5DC` was 1, with 2 in the next pair. Writing 2 to `+0x154` and `+0x26C` as well crashed
+  the game (`2FDDB5`, a bad pointer).
+- A guard change (tried, not kept) wrote "away" into the stand-in graph's `+0x5DC` whenever the
+  sender was not attacking: 7, 69 and 69 restarts in 8 s; off, 68 and 8. Copying the sender's
+  own value both ways ("out" for ~5 s after a strike): 68. Written into the graph of a stand-in
+  just spawned, it crashed the game 31 ms later (`37563F`, starting a graph action from
+  `195988`).
+- Giving the stand-in's graph its behavior resource again after a strike (`459474`): the same
+  graph object afterwards, and 4 or 60 restarts in 5 s, as without.
+- An earlier single comparison (session au, "buttons off: 1") and one here ("`+0x5DC` held at
+  2: 4 against 59") were the slow speed by chance.
+
+### Unknown
+
+- What picks the speed, and what sets the stand-in's graph back to "drawn" every cycle.
+
+## Session 2026-10-29 bc: who starts the stand-in's actions
+
+### Observations
+
+- A person watching copy B: the stand-in's swing itself does not show; after a strike it goes
+  straight into the sheathe loop.
+- Traced with the stand-in's or A's graph as `rcx`, the action start `195988` was not called on
+  the simulation thread in 3 s around a strike: the game starts graph actions on its animation
+  worker threads.
+- A recording stub at `195988`'s entry (any thread; one chosen graph; return address and action
+  into a ring) over 4 s after a strike: the stand-in's graph got the same 6 starts over and over,
+  3 from `192BDA` (in `192524`, the graph's state machine) and 3 from `FAA680` (once from
+  `FAA836`, twice from `FAA9D7`). A's graph got starts from `192BDA` and from `41735E` and
+  `4173B3` (in `41730C`, beside the attack code), none from `FAA680`.
+- `FAA680` takes the graph, builds a blend action itself (curves "Linear" and "EaseIn") and starts
+  it; it skips everything when byte `+0xC4D` of the graph's owner (`graph+0x28`) is set. A's byte
+  is 0 as well. Setting it on the stand-in did not change the loop: 45, 45 and 44 restarts in 6 s
+  against 45, 44 and 8 without, interleaved.
+
+### Derived
+
+- The loop is the stand-in's own state machine changing state again and again (with `FAA680`
+  blending each change), not something the guard starts.
+
+### Unknown
+
+- Which transition of the state machine fires each cycle, and the condition behind it.
+
+
+## Session 2026-10-29 bd: the sheathe loop was the put-back
+
+### Observations
+
+- The recording stub at `195988` also kept the caller's `r12` and `r15` and the action's target
+  (`[rdx+60h]`, read on entry: the state machine builds the action on its stack). In `192524`
+  these are the state being left and the transition that fired; both carry names (`+0x20`, when
+  bit 2 of byte 1 is set). In 4 s after a strike the stand-in's graph ran one cycle 24 times:
+  `FAA836` blends to `IdleL`, `FAA9D7` to `Prompt_Off` and `A_Button_NotPressed`, then the
+  transitions `IdleL.R_Hand_SwordHold` (to `Hand_Holding`), `IdleL.To_WeaponSheatheLow` (to
+  `WeaponSheathe_Low`) and `Hand_Holding.To_Null_Sheathing_Low` (to `Null_R_Hand`). A's graph
+  started `IdleL` once (from `41735E`) and took `IdleL.R_Hand_SwordHold`, not
+  `IdleL.To_WeaponSheatheLow`.
+- The blend to `IdleL` is queued: `FA7E10` resets a character's animation controller
+  (`[character+1970h]`) and queues the blend through `F5D0C0`, which stores the thunk `F5D750`
+  (it runs `FAA680` later). `FA7E10`'s only caller is `41BB78` (sets a character's position),
+  when its last argument and the byte `[character+19A8h]` are both set.
+- `41BB78` is called from the teleport handler `41B6B4`. The queued teleport (`19B7AC4` calls
+  `658CBC` with `r9b` 1) is handled at `4C4C45`, which passes the message's flag (`+0x58`) as
+  `41B6B4`'s last argument. With it set, `41B6B4` also logs "AI teleported." and resets the AI
+  (`77E0C0` on `[character+2C78h]`). The game's own mount code calls `41B6B4` with it clear.
+- `IdleL` restarts against the mod's put-backs (queued teleports) in 4 s after a strike,
+  alternated: put-backs and restarts 24/24, 23/23 and 25/25; with the stand-in not followed, 0/0
+  three times and one sheathe each time.
+- The queued teleport with the flag clear: no restarts in 3 runs, but once the sender stood still
+  the stand-in did not stay where it was put (24 units off, put back every frame).
+- A stub at `FA7E10`'s entry that returns for the stand-in's controller (the full teleport
+  without the animation reset): `IdleL` restarts 0, 0, 0 and 0 against 4, 3, 4 and 2 with the
+  game's reset, interleaved. The stand-in stays where it is put.
+- After some strikes a put-back does not hold, with or without the reset: the stand-in reaches the
+  sender's spot (gap 0.0) and the next frame is back where it was (21 to 24 units off, drifting
+  slowly). The put-backs then alternate every other frame.
+- Holding standing put-backs back once one has landed and the stand-in returns within 8 units of
+  its old spot inside 0.5 s (until the sender moves again): 2 to 4 put-backs per strike, 105 to
+  116 frames held back where it did not hold.
+- Once in about 20 strikes the stand-in froze: its graph started no action in 1 s and every
+  put-back was ignored, health unchanged. It began in a run with the game's reset on and stayed
+  with either setting. A new stand-in then ran 10 strikes with each setting without freezing.
+- Frames of both windows during one strike, reset skipped: A's player draws, winds up and slashes
+  for about 1.5 s with the sword out; the stand-in draws, holds the sword low while it moves and
+  sheathes it within about 0.6 s.
+- A person watching copy B, three strikes with the reset skipped, then three with it: the first
+  three looked better (one sheathe, no repeats). In both, the swing showed only the sheathe.
+
+### Derived
+
+- The sheathe loop was the mod's put-back, not the stand-in's own state machine (session bc's
+  "Derived" is wrong). Each full teleport reset the stand-in's animation controller, its graph
+  restarted at `IdleL`, and with the sword out its next transitions sheathed it.
+- The missing swing is a separate problem: the stand-in's graph does not play the slashes of the
+  attack it is given.
+
+### Guesses
+
+- The loop's two speeds (session bb) were the two put-back patterns: one put-back that holds now
+  and then (the sheathe's step takes the stand-in over 15 units off), or one that does not hold,
+  every few frames.
+
+### Unknown
+
+- What puts the stand-in back on its old spot when a put-back does not hold.
+- Why the stand-in froze once.
+- What plays a player's slashes, and why the stand-in's graph sheathes right after an attack
+  (`IdleL.To_WeaponSheatheLow`) while the player's keeps the sword out.
+
+## Session 2026-10-29 be: the missing swing is a controller move
+
+### Observations
+
+- A player's strike starts no graph action for its slash. During a strike, A's animation
+  controller (`[character+1970h]`) got 2 move requests from `2C614C` (via `41A1E0`), and the
+  stand-in's got none. Each request names the animation by string, for example
+  `Elf_Lt_L1_D1_F_LL_RL_L2R_2`.
+- `2C614C` is called from `2C545C(combat-move object, character, -, attack record, ...)`. The
+  name comes from `4CA9A0(record, override, 1)` (override 0: the record's own animation) and
+  the second argument from `2E17D8(record)`. The combat-move object is
+  `[character+2FA0h]+1A0h` on players. The stand-in, an AI character, has none.
+- Calling `2C614C(controller, 0, 4CA9A0(record, 0, 1), 2E17D8(record), 0, game time, 1, 1.0)`
+  on A's own player made it slash with no button pressed. On the stand-in alone it played the
+  body motion with the sword on its back. Together with the synced attack start, frames of
+  both windows showed the stand-in winding up and slashing in step with A. The same strike
+  without the call showed no slash.
+- A probe watch command blocks that copy's pipe, so a strike sent separately ran after the
+  window. Earlier zero counts measured with a strike sent that way were empty windows.
+
+### Unknown
+
+- Whether the stand-in keeps its sword out longer than A after a played move (it held it out
+  about 15 s after one strike).
+- Whether the record's own animation matches the sender's chosen variant (A's names carry
+  variant suffixes).
+- A person watching copy B with the move played: the swings looked the same as A's, but the
+  stand-in never put its sword away.
+- Sending the stand-in's graph to `IdleL` (`664CA4`, "puppet play IdleL") runs the same sheathe
+  chain as A's graph (`Hand_Holding`, `WeaponSheathe_Low`, `Null_R_Hand`, `IdleL`). Done once 1.2 s
+  after the sender's attack ends, the graph's actions in 8 s after a strike were that chain once
+  per strike (3 runs); the move is now on by default.
+
+### Watching the climb (session be)
+
+- B's camera at the foot of the tower: the probe's player rotation (`+0xB8` of the player object)
+  reads the same quaternion at every spot, so the camera yaw derived from it is wrong there (the
+  aim reported 1 degree off A while B's window showed its own character from behind, facing
+  rocks, for the whole climb, with or without aiming). The game also swings a still player's
+  camera back behind the player about 2 s after a push. Not solved: the demo waits for a person
+  to turn B's camera.
+- A menu left open on a copy (the pause menu or the Army screen) ignores the right stick, and a
+  B-button press closes it (two presses for the Army screen). A spot without ground killed B (a
+  fall), which opened the Army screen.
+
+## Session 2026-10-29 be (continued): the leap
+
+### Observations
+
+- A's running jump is a chain of graph states with no controller move: `Sprint`, then
+  `Runningjump_Autopicker_2M_POS` through `RunningJump_AutoPicker_3m`, then (transition
+  `To_JumpAssisted_55v_35d`) `RunningJump_Assisted_Wraith`, which lasts through the fall to
+  `RunningJump_Land_AutoPicker` and `StandingJump_LandHard`.
+- The stand-in's graph, given the sender's inputs, follows the chain to `3m`, then takes
+  `FreeJmp`, `CloseTap`, `Hold` and loops the chain from `Sprint` about six times in ~100 ms until
+  `Sprint.BlockMove_All_Edges_L00` ends it in `WallStop_To_Idle`.
+- Playing `RunningJump_Assisted_Wraith` on the stand-in's graph (`664CA4`) while it sat in the chain
+  gave the full jump and landing on the first jump after a launch, and `WallStop` on every later one,
+  with every variant tried (a once-only play, plays on every frame, holding its movement step).
+  The graph start from `664D27` appeared only on the first jump.
+- `664CA4` looks the action up first in the graph's list of running ones (`66538C`: ring at
+  `graph+0x260`, node action at `+0x10`, instance at `+0x38`, instance state at `+0x74`, 2 when ended)
+  and only marks it if found. Setting the state of a stale `RunningJump_Assisted_Wraith` instance to 2
+  before each play: 5 of 5 jumps played the assisted jump and the landing (against 1 of 5).
+
+### Unknown
+
+- Whether the stand-in's jump looks right in B's window; a person watching will say.
+
+### The leap: what is known (session be, end)
+
+- Playing the sender's own jump action, `RunningJump_Assisted_Wraith`, on the stand-in's graph gives
+  the whole jump and the hard landing, but the stand-in is not drawn while it plays. Frames of copy B
+  with the action off showed it in the air for about a second; with it on, it was gone from the frame
+  right after takeoff. `FreeJmp` and `Hold` kept it visible, but the graph left them about 0.1 s after
+  takeoff (`WallStop_To_Idle`), and replaying them every frame restarted the clip each frame and showed
+  no pose (the graph flipped between `FreeJmp`, `CloseTap` and `Wraith` within milliseconds).
+- A diff of the stand-in's object in mid-fall, Wraith on against off (two runs each, only fields that
+  agree within a mode): three floats at `+0x10AC` are 0 (1.0 off); bytes or dwords at `+0x1133`,
+  `+0x225A`, `+0x2440`, `+0x2C30`, `+0x2D5C` are 0 (1 off); `+0x218C` is 10000.0 (104.0 off). Forcing the
+  floats to 1.0 each frame did not bring it back, nor did forcing all of those flag fields (probe
+  `puppet vis 3F`, checked in B's window).
+- The assisted jump is off by default (probe `puppet assist <action>|off`).
+
+### Unknown
+
+- What hides the stand-in during the Wraith jump (an effect or fade started by the action, not a field of
+  its object), and so how to keep the jump pose visible through the fall.
