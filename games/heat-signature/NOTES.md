@@ -574,7 +574,7 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   - Guest: its own shared-ship sentries' calls are dropped.
   - Observed: the host's sentry fired 3-8 shots at the puppet, the guest's injuries went 0 -> 1 or 2, and the guest's copy
     dropped about 6500 tries of its own per suite run.
-  - The guest does not see the host's bullets yet: they exist on the host's copy only.
+  - The guest did not see these bullets at first (see the next section).
 - **Mission success** (observed): the mission type here is "Assassinate".
   - The target's own step (`EnemyCheckObjectiveDelivered`) calls `CompleteAssassination`, which sets the mission's
     `AssassinationCompleted` (0x788) and clears `global.Objective` to `oNoone` (object index 49). The game then shows
@@ -604,6 +604,28 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
     outright.
 - **Heartbeat** (observed, test tooling): the loader writes `heartbeat.txt` every 5 s, so a stall check must wait longer
   than that; `mission.sh` waited 4 s and reported a healthy host as stalled.
+
+## Bullets on every copy (2026-10-31)
+
+- **How a bullet flies** (observed in the decompile): guns call `GunFiresBulletInDirection(gun, direction)`
+  (`0x007e5c60`, from `oGun_Step_0`), which creates an `oBullet` (object index 57) with `CreateInstance(x, y, object)`
+  (`0x00db4370`) and copies values from the gun. Aboard a ship, `oBullet_Step_0` (`0x00ee2650`) moves it ship-wise:
+  `ForeSpeed`/`StarboardSpeed` = `BulletSpeed` along `MyImageAngle`. A hit is `SetDamageSignal` from the bullet's step.
+- **Sync**: each copy sends, once, every real bullet created aboard the shared ship, read at the start of the next frame
+  (its gun sets heading and speed after `Create`): object, sprite, fore/starboard, `MyImageAngle`, `BulletSpeed`,
+  `FirstStep`, the firer (the sender's player or a shared guard) and five values the step reads on a hit. The other copy
+  creates the same object, puts it aboard its copy of the ship (`CopyTheLattersParentAndPosition` + `AddToParentsContents`),
+  sets those values and lets it fly. During its step its `SetDamageSignal` calls are dropped: the real bullet's hit
+  already reaches the player as a hit message.
+- **Error found**: the first version copied only position, heading and speed; the look-alike's first hit raised a
+  GameMaker error (`GetDamageFlag` line 5, from `oBullet_Step_0` line 186) because its damage mask was undefined. Copying
+  `WeaponDamageMask` (0x641), `BulletDamageMask` (0x642), `BulletKnockbackSpeed` (0x643), `KnockbackSpeed` (0x644) and
+  `NormalBulletSpeed` (0x646) fixed it.
+- **Observed**: the host sent 28-81 bullets per suite run (sentries and guards), the guest showed all of them, none
+  failed, and their hits were dropped (53 in one run). No hit on the guest's player came from its own copy.
+- **Not done**: grenades. A grenade is an inventory item (`oGrenade`, thrown with `ThrowInventoryItem`), and
+  `ExplodeOnShip` can breach the hull, which is not synced, so a look-alike would breach only one copy. A guest's own
+  gunshots go through the same code but are not tested (the test bot cannot fire a gun).
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.

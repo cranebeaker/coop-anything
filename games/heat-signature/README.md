@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 26-check suite and a 7-check mission scenario on two real game copies (host + 1 guest), with 15 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 27-check suite and a 7-check mission scenario on two real game copies (host + 1 guest), with 17 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -18,8 +18,9 @@ space (with an optional "follow the host" mode) and both players can board the s
 are synced from the host; the host's guards notice guests, a guest's hits reach the host's guards, and guards' hits on
 a guest's puppet reach the guest; a puppet has its player's keycard clearance and walks through a keycard door on the
 other copy; the guest's copies of guards and sentry guns decide nothing (the host's shoot and notice every player);
-witnesses and other mission stats are counted for the right player; alarms, the target's death or escape and the
-mission's end are the same on both copies. Not done: guests seeing the host's bullets, loot, other mission types, guard
+witnesses and other mission stats are counted for the right player; bullets fired aboard the shared ship show on both
+copies (the other copy's are harmless look-alikes; hits travel separately); alarms, the target's death or escape and the
+mission's end are the same on both copies. Not done: grenades and hull damage on both copies, loot, other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
 ## Existing work
@@ -64,7 +65,8 @@ puppets parked while their players stand in their pods; guest pause, guest unpau
 host fast-forward alone refused; fast-forward when both ask; the parked guest left alone by the host's guards; the
 guest walks from its pod toward a room behind a security-2 door: with a level-1 card it and its puppet on the host stop
 at the door, with a level-2 card both go through; walking on into a sentry's view, the host's sentry shoots the
-guest's puppet and the guest is hurt while the guest's own sentries hold fire; the guest's witnesses and times seen
+guest's puppet and the guest is hurt while the guest's own sentries hold fire; the guest sees the host's bullets as
+look-alikes that hurt nobody (every hit on the guest came from the host); the guest's witnesses and times seen
 equal the host's count for its puppet, with none counted by the guest's copy; a guest's hit reaches the same guard on the host, which reacts, and a
 knockout shows on the guest; keycard clearance reaches the puppet; a hit on the guest's puppet hurts the guest, not the
 puppet; the guest's copies of guards asked for no alarm; alarm on in both copies and passed between them;
@@ -79,12 +81,12 @@ sentry and witness checks they see it again.
 an assassination runs on both, the guest's hit kills the target on the host, `AssassinationCompleted` is set on the
 host and on the guest's copy, no `FailMission` on either, no error dialogs, both advancing.
 
-Last runs (2026-10-31, final build): suite **26/26 three times in a row** (15:23, 15:25, 15:28 UTC); mission scenario
-7/7 (15:09 and 15:31).
+Last runs (2026-10-31, final build): suite **27/27 three times in a row** (17:29, 17:37, 17:39 UTC); mission scenario
+7/7 (17:40).
 
 Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check. The suite ones ran
-against the 14:32 build (one change since: guest-side witness counts from guards dropped; `nopuppethits` and
-`mirrorsees` were re-run on the final build with the same result):
+against the 14:32 build, before the 27th check (`nopuppethits` and `mirrorsees` were re-run on the 15:30 build with the
+same result; `noghosts` and `ghosthurts` ran on the final build):
 
 | Mutation | Result | The check that catches it |
 |---|---|---|
@@ -101,6 +103,8 @@ against the 14:32 build (one change since: guest-side witness counts from guards
 | `nosentrysync` (sentries not decided by the host) | 24 passed, 2 failed | host's sentry shots at the puppet 0 |
 | `nostats` (mission stats not sent) | 25 passed, 1 failed | host saw the puppet 11 times, guest shows 0 |
 | `mirrorsees` (guest's copies of guards may see the guest) | 25 passed, 1 failed | guest's copy counted 6 witnesses itself |
+| `noghosts` (bullets not sent) | 26 passed, 1 failed | host sent 0 bullets, guest shows 0 |
+| `ghosthurts` (shown bullets hurt) | 26 passed, 1 failed | 6 hits on the guest not from the host |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
@@ -117,7 +121,7 @@ Not applicable yet.
 
 ## Next steps
 
-- Guests seeing the host's bullets and grenades; other mission types and docking home; spotted pause/zoom on the
+- Grenades, explosions and hull damage on every copy; other mission types and docking home; spotted pause/zoom on the
   spotted player's screen; guard states and animations on guests; loot.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.
