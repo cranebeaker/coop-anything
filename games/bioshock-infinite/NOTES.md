@@ -584,9 +584,29 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
   (`FUN_00ac0330`, read at +0x8C) during level teardown, even with `bNoDelete`. The partner's weapon is now a plain
   `XReactiveSkeletalMeshActor` carrying the template's mesh.
 
+### Pause menu entry, partner collisions, vigors (2026-10-31)
+
+- The pause menu list is filled in C++: method at `0x00b43480` calls `FUN_00b68160(section, L"MenuSelection", 5,
+  list)`, labels come from `FUN_00b29050`, the choice from `FUN_00b44550(index)` (ignores index > 4), and
+  `FUN_00b403c0(index, enabled)` greys entries 1, 3, 4 every frame on the displayed widget. Hooking those four and
+  patching the `PUSH 5` byte to 6 adds a MULTIPLAYER entry (3rd position) with its own sub-page. The grey-out call can
+  run before the list is refilled: its index must be checked against the widget arrays (+0xd8, +0xb4), or it reads past
+  the end and crashes.
+- The puppet's cylinder already blocked the local player; `SetCollision` is ignored for it. Writing `bBlockActors` on
+  the actor and `BlockActors` on its `CollisionComponent` toggles it (menu setting, off by default).
+- Alt-tab: the game pauses on deactivation messages and re-installs its own window procedure after startup, so a
+  filter must re-insert itself. The bridge's "focus keep" mode also closes any pause menu, so test copies leave it.
+- Vigors: `CurrentLHWeapon`, `StartFirePlasmid` / `StopFirePlasmid`, `LastFiredTime`. Third-person vigor models carry
+  sound only; first-person effects are camera-lens particles, camera anims and hand material overlays, invisible (or
+  harmful) for an observer. A pooled `ParticleSystemComponent` (`EmitterPool.GetPooledComponent`) shows only once
+  attached to an actor (`AttachComponent`); kept absolute and moved to the hand bone each frame; looping systems need
+  `KillParticlesForced`. Visible from outside: `FX_Mesmerize.MesmerizeBurst_par` (Possession), `FX_Incinerate.Flame_par`.
+- No third-person Booker without the bandaged hand exists (three identical `Booker_MESH` copies; a texture swap in
+  video memory worked, but the knot is geometry, so it was reverted).
+
 ### Not done yet
 
-- Only the weapon pitches; the arms stay in the guard pose. No tracer (`TracerEffect`), no vigors.
+- Only the weapon pitches; the arms stay in the guard pose. No tracer (`TracerEffect`), no arm gesture for vigors.
 - Enemies only see and shoot the local player, and enemy positions are not synced.
 - Not tested with real gunfire by a human, or between two PCs.
 
