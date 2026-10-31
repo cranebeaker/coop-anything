@@ -462,6 +462,37 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
 - Not done: the "paused by" banner (needs a way to create GML strings from the DLL), and "anyone can unpause" (today a
   pause lasts while the pauser's inventory is open; unpausing someone else's pause would mean closing their inventory).
 
+## Keycards and hits on puppets (2026-10-31)
+
+- **Clearance** (observed in the decompile): `AutoOpenDoors` checks a door with `Security` > 0 only for the walker that
+  is `global.Player` (the puppet, inside its impersonated step): `SecurityLevel(walker, door.OriginalShip)` (`0x008bcc80`)
+  must reach `door.Security`. `SecurityLevel` walks the person's `PassiveInventory` for keycards; a puppet has none.
+  Pathfinding never asks it, so a puppet routes through a keycard door and then stops there. Callers: `AutoOpenDoors`,
+  `oAirlock.Step/Draw`, `oDoor.Draw`, `oTerminal.Step/Draw`, `oKeyCloner.Step`, `InteractWith`, `EnemyStateDown`.
+  `GiveThisPersonAKeycard(person, level)` (`0x00a59a60`) makes a keycard for the person's current `Parent` ship.
+- **Fix:** every player packet carries the sender's `SecurityLevel(own player, shared ship)` (from the game, every 15
+  frames); a `SecurityLevel` hook answers `(puppet, shared ship)` with that number. Observed: host given a level-3 card,
+  the guest's copy answered 3 for the host's puppet (0 before). Not yet seen: a puppet walking through a keycard door (the
+  bot cannot walk the players yet: `PlayerPathfindingTo` on the controlled player stores `DestinationFore/Starboard` but
+  the player does not move; injected movement keys are the next thing to try).
+- **Hits on puppets** (observed, the cause of "Personal mission failed" right after docking in every run): the host's
+  guards attack the guest's puppet (by design, they see guests). The hit lands on the puppet's own `DamageSignal`
+  (0x400) and `PlayerHandleDamageSignal` (`0x00ab90f0`, from `PlayerStateFree` line 71) handles it inside the puppet's
+  step, where `global.Player` is the puppet; when the puppet went down, the host's game took it as its player knocked
+  out: "UNCONSCIOUS", injuries 5, mission failed, while the guest on its own copy was unhurt. No `SetDamageSignal` call
+  targeted the host's player at all. Player attacks carry the damage mask as an int64 RValue (kind 10).
+- **Fix:** the `PlayerHandleDamageSignal` hook clears a puppet's signal and sends the hit (mask kind and 8 value bytes)
+  to the puppet's player, whose copy applies `SetDamageSignal(own player, mask)`. Observed: 44 guard hits on the guest's
+  puppet in 60 s, 44 applied to the guest's player, host injuries 0. The guard-hit forwarding now also keeps int64 masks
+  (it sent `undefined` for them before).
+- **Seen in the same runs, not fixed:** an alarm on the host's copy made the mission target escape and failed the
+  host's mission while the guest's copy still counted down (alarms are not synced). While a player stands inside their
+  own docked pod (fore/starboard about (1408, 3127)), their puppet on the other copy waits in the airlock at about
+  (1420, 3365), in the guards' view; that is what drew the guards in these tests.
+- **Likely explanation of a mutation-run oddity** (derived): with puppet hits not forwarded (`nopuppethits`), the host's
+  mission fails and its failure screen holds `TimeScale` at 0, so every later time check reads 0 on both copies, the same
+  pattern as the earlier `nohits` run.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.

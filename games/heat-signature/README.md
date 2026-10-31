@@ -6,7 +6,7 @@
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
 | QA level | automated: 14-check suite on two real game copies (host + 1 guest), with mutation runs; nothing tested with more than one guest or over Steam yet |
-| Last updated | 2026-10-30 (evening) |
+| Last updated | 2026-10-31 |
 
 ## Where things stand
 
@@ -15,8 +15,9 @@ game copies on one PC (localhost UDP, headless test displays). Working and teste
 other as a puppet character or pod; shared pause, slow motion and fast-forward with a "paused by" banner; the host's
 mission and its ship are rebuilt identically on the guest from the mission text plus a seed; pods fly together in
 space (with an optional "follow the host" mode) and both players can board the shared ship; doors and guard positions
-are synced from the host, and the host's guards notice guests. Not done: guests' attacks reaching the host, guard
-animations on guests, keycards, alarms, loot, more than one guest, Steam lobbies, an installer.
+are synced from the host; the host's guards notice guests, a guest's hits reach the host's guards, and guards' hits on
+a guest's puppet reach the guest; a puppet has its player's keycard clearance. Not done: alarms, loot, guard animations
+on guests, more than one guest, Steam lobbies, an installer.
 
 ## Existing work
 
@@ -58,9 +59,10 @@ both clients with the core's bot commands. It prints PASS/FAIL per check; exit c
 and dock; a guest's hit knocks a guard down on the host and the guest; identical shared ship (RNG hash and module
 counts); same doors; every host guard mirrored on the guest; guest pause, guest unpause, host pause, host unpause on
 both; host fast-forward alone refused; fast-forward when both ask; host's puppet aboard the guest's copy of the ship;
-no error dialogs; both copies still advancing.
+no error dialogs; both copies still advancing; keycard clearance reaches the puppet; a hit on the guest's puppet hurts
+the guest's own player, not the puppet.
 
-Last run (2026-10-31 00:04 UTC, core build of that time): **14 passed, 0 failed**.
+Last run (2026-10-31 03:30 UTC, core build of that time): **16 passed, 0 failed**.
 
 Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check:
 
@@ -70,9 +72,13 @@ Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caug
 | `notime` (guest ignores the host's time) | 13 passed, 1 failed | host pause: host 0, guest 1 |
 | `noguards` (guards not mirrored) | 12 passed, 2 failed | guards mirrored: guest 0 of 38 |
 | `nohits` (guest hits not forwarded) | 9 passed, 5 failed | guest's hit: host Down 0 -> 0 |
+| `noclearance` (puppet keeps clearance 0) | 15 passed, 1 failed | clearance: host's puppet 0 -> 0 |
+| `nopuppethits` (hits on a puppet stay on it) | 9 passed, 7 failed | guest injuries 0 -> 0, puppet 8 |
 
-Seen only in mutation runs, not explained yet: in 2 of 4 a pause did not release (later time checks read 0 on both),
-and under `noguards` the door lists differed (which doors a copy has seen depends on activity).
+Seen only in mutation runs: a pause that did not release (later time checks read 0 on both). Likely explanation
+(derived from `nopuppethits`): the host's mission fails when the guest's puppet is knocked out, and the failure screen
+holds time at 0. Under `noguards` and `nopuppethits` the door lists differed (which doors a copy has seen depends on
+activity). The `noclearance` and `nopuppethits` rows are from the 03:31 UTC build, the others from 00:04 UTC.
 
 ## How to play
 
@@ -84,7 +90,8 @@ Not applicable yet.
 
 ## Next steps
 
-- Spotted pause/zoom on the spotted player's screen; guests' hits and knockouts sent to the host; guard states and
-  animations on guests; keycard clearance and alarms; loot.
+- Alarms synced from the host (an alarm fails the host's mission while the guest still counts down); a player's puppet
+  should not wait in the airlock while the player stands in their own pod; a puppet walking through a keycard door;
+  spotted pause/zoom on the spotted player's screen; guard states and animations on guests; loot.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
-- An automated QA suite (two or more headless copies, bots, assertions), then an installer.
+- Suite with 3 and 4 copies, then an installer.
