@@ -868,3 +868,76 @@ are no-ops, `GetCursorPos` returns the window centre and every DirectInput devic
 person's input. The client plays a scripted input (`bTestBot` in its `User.ini`, run through the same `EnhancedInput` code). Sound is muted
 by volume 0 in the test profiles. **Do not use `-nosound`**: a cutscene waits for the end of the voice line, without sound the scene never
 ends and the subtitle hangs.
+
+## Co-op lobby, network search, UPnP, cutscene gates, HUD (2026-10-31)
+
+Observed / done (every item was run in the sandbox copy with two game windows; the real keyboard and mouse were not used):
+
+**Menu.** The main page of the book (`EnhancedFEPage`, opened in place of the stock page: `EnhancedHeroController.ClientOpenMenu` renames
+`SHGame.ShFEGUIPage`, and a stock page that shows up through `Controller.ReplaceMenu` is swapped in the next tick) has four buttons: Single player,
+Co-op mode, Settings, Exit. The six save slots moved to their own page (`EnhancedSavesPage`, the stock page with Settings and Exit hidden and a Back
+button). New buttons are made with `AddComponent("GUI.GUIButton")` and need `Style = Controller.GetStyle("SHBTNOptionsStyle")` set by hand (setting only
+`StyleName` after the page's `InitComponent` does nothing: the buttons come out grey). Pages open with the book's page turn
+(`SHMenuBook.NextMenuPage` + state `TurnPageForward` / `TurnPageBackward`, the same call the stock Settings and Exit pages use); a guest has no
+hero controller to drive the book, so his page is simply replaced. Pages of the previous level stay open across a level change (the GUI controller
+belongs to the viewport): every controller closes all pages in its first tick.
+
+**Co-op pages** (`EnhancedBookPage` base): `EnhancedLobbyPage` (nickname, find a game on the network, address + password, create a game),
+`EnhancedLanPage` (the list of games found, a click joins), `EnhancedHostPage` (name, password, friendly fire; UPnP is always on),
+`EnhancedRoomPage` (players, address, UPnP status, the save to load, Ready / Start). Settings the host chose are kept in `User.ini`
+(`EnhancedLobbySettings`: name, password, friendly fire, nickname, the list of co-op save slots). The nickname is required before find / connect /
+create and is set as the player's name after login (`ChangeName` for the host, `SetName` from the guest): the URL option `?Name=` cannot be used,
+the engine takes the **first** `Name=` of the merged URL. "Create a game" loads the front-end level again as a listen server (`?listen?Lobby=host`);
+the options of the old URL are merged into the new one (`EnhMenu` etc. carry over). The game answers the LAN question, the guest joins with the
+password in the URL (`?Pass=`), the host refuses a wrong one in `PreLogin`. A refused or failed join leaves a one-line note in `User.ini`
+(`JoinNote`) that the lobby page shows once. The start is gated: at least `LobbyMin` (2) players and every guest ready; `LobbyMax` is 2 for now.
+**Planned: 2 to 4 players.** The lobby and the room are written for a count (lines, `LobbyMax`), the game itself spawns one second Shrek, one
+camera mirror and a two-player leash; they need to be generalized before `LobbyMax` is raised.
+
+**Network without a script package.** The retail game ships `IpDrv.dll` (with the natives of `UdpLink` / `TcpLink`) but **no `IpDrv.u`**. The Level
+Editor has one; its class texts export with `UCC batchexport IpDrv.u Class uc <dir>` (`InternetLink`, `UdpLink`; `TcpLink` has its text in the
+package file but the exporter stops on it). The mod ships its own `IpDrv.u` (three classes, 10 KB, built in a scratch copy of the editor folder with
+a compile list of `Core`, `Engine`, `IpDrv`); natives bind by name. Verified: UDP broadcast search (`EnhancedLanBeacon`: question `ENH2?`, answer
+`ENH2!port|name|map|players|max|build|locked`), TCP to the router (UPnP). The search asks the limited broadcast, the broadcast of this PC's /24, the
+fixed ranges of Radmin VPN (26.x), Hamachi (25.x) and Tunngle (7.x), and `ExtraTargets` of `User.ini` (the installer writes the broadcast address of every
+adapter of the PC there). Radmin VPN is a virtual local network, so it needs no mode of its own. `GetLocalIP` returns one address only.
+**UPnP** (`EnhancedUpnp`): SSDP search (multicast, and straight to the first and last address of this PC's network, as the MW2 mod does: this PC has
+several adapters and the multicast leaves by the wrong one; routers answer a search sent to them), the description file, the control URL of
+`WANIPConnection`, `GetExternalIPAddress`, `AddPortMapping` (UDP 7777, lease 7200 s, a retry with lease 0 on error 725). Verified on the owner's router:
+found, external address read, the port opened. **Test incident:** the first lobby test had UPnP on by default and opened port 7777 on the owner's router
+without being asked; it was removed at once with `DeletePortMapping` (the router answered "no such entry" afterwards). Tests now run with
+`bUpnp=False` in the test profile.
+
+**Co-op saves.** A counted checkpoint of a co-op game (a session id travels in the URL, `?EnhSession=`) is written to the slot `coop_<id>`
+(`EnhancedSaveData` now also holds the lobby title, the players' nicknames and the session) and the slot is put first in the registry
+(`EnhancedLobbySettings.CoopSaves`, newest eight). The host picks a save in the room; Start travels to its map with `?EnhLoad=<slot>`. `PerObjectConfig`
+writes the section as `[<slot>]`, not `[<slot> EnhancedSaveData]`. Verified: a run created `coop_c20261031110044`; a second run loaded it from the room
+(13 keys, hero placed, both players in the level).
+
+**Cutscene gates** (`EnhancedGame.GateTick`, every frame). Each `CutSceneTrigger` is registered by the mutator; its collision is switched off (so it cannot
+fire by itself) and the game tests each player's position against its volume. A player who has passed waits; when every connected player (also one who has
+no Shrek yet) has passed, the game calls the trigger's own `Trigger`. The player who came first may not go farther than `GateLeash` (900 units) from
+the trigger: he is put back on the circle and a line on the screen asks him to wait (sent through the subtitle controller for the host, a replicated
+`GateNote` for a guest). After `GateTimeout` (90 s) the scene starts anyway, so a partner who skips an optional trigger cannot trap the first player.
+After a level change the guests come back a few seconds after the host: `?EnhPlayers=<n>` makes the gates wait for them. Verified with a scripted run
+(`?EnhGateTest=1`): host put into a gate, no scene; host thrown 1300 units away, clamped to 892; the second player put in, the scene starts at once.
+Start-of-level gate: both pass within a second of the second Shrek's spawn, the scene starts for both. Not verified: that the waiting line is visible on the
+screen (the HUD route worked in the log, the pictures did not show it), play with real input.
+This replaces the earlier `EnhancedShrek.IsRelevantToTrigger` workaround.
+
+**HUD.** In the first runs of the mod the HUD (health, potions, coins) was never drawn, also in the owner's install. Two causes (details in `AUDIT.md`,
+A1): the HUD class skipped the stock creation of the HUD items, and its `PostRender` override made its `Super` call bind to the engine's HUD instead of
+`KWHud`, because **the mod is compiled against the Level Editor's older copies of `KWGame` / `SHGame`**. Same family of bug: reading `Pawn.Health` as a
+variable crashed the client in `HUD.PostRender` (the type differs between the editor's `Engine.u` and the retail one); `GetPropertyText("Health")` works.
+Rule: in this mod read and call stock members of game classes through text properties or functions that exist in both versions, and check any
+override of a stock function. The guest's HUD (`EnhancedGuestHud`) draws a health bar with the stock pictures and the waiting line.
+
+**Installer** (`dist/install.ps1`, tested on a throwaway copy: install, check, uninstall): also copies `IpDrv.u`, sets `DefaultGame=Enhanced.EnhancedGame`
+next to `Map=Book_FrontEnd.unr` in the two ini files (backups), writes the `ExtraTargets` of this PC to `User.ini`, and the uninstall removes the mod's
+`[Enhanced.*]` sections of `User.ini`.
+
+Warnings in the game log: the menu level wrote ~11 000 `PlayerMove` warnings a minute (hero controller without a pawn); fixed. See `AUDIT.md`.
+
+Open / unknown: the waiting line on screen; real keyboard and mouse in the new pages; the lobby with 3 and 4 players; at a 1280 x 720 window one picture
+showed three Shrek models around the camera (not seen at 640 x 480; cause unknown); the sound desync report; Hor+ field of view, large-address-aware and
+DPI-awareness flags (see `AUDIT.md`).
