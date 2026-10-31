@@ -1087,3 +1087,31 @@ Observed (scripted runs with up to four game windows on one PC; pictures taken b
 
 Not done / not verified: the proxy library (`d3d8.dll`) is not in the installer (the sync, the font and the hardware tuning need it); a real keyboard for the leave question
 and the revive; names behind a trunk; the "pseudo lobby" the owner mentioned (which screen is meant is not known); real network; 4K.
+
+## Cutscene animations, camera sync, speed, MSAA (2026-10-31, late evening; sandbox, four game windows on one PC)
+
+Observed:
+- **Cutscenes play their animations on channels 20 and 21** (`KWCutController.PlayCutsceneAnim`: cross-faded full-body channels, locomotion switched off through
+  `bPhysicsAnimUpdate = false`). The engine replicates only channel 0 (`SimAnim`), so the scene's Donkey, Fiona and the rest were in their idle pose on a client.
+  `EnhancedAnimSync` now carries the players' Shreks, every pawn driven by a `KWCutController`, and the nearest other pawns (creatures of the surroundings) up to 16
+  slots (set chosen twice a second); the engine's own channel-0 replication is switched off for those pawns. Compared by pawn name and channel, host log against client log
+  with the wall clocks aligned (the log clock wraps every 60 s: align by whole minutes): 89-92% of the channel samples equal within 1.2 s; the rest are one pawn
+  (`DonkeyChair0`, not in the set while the others were) and two frogs. One-shot animations were restarted by the rate correction at every record (never came to
+  their end): the correction is made only when the animation is started (not yet checked by eye).
+- **Camera of a guest in a cutscene**: host and client camera poses logged with the wall clock: the same pose on both within one sample; cuts arrive 21-57 ms apart (one
+  of six 186 ms). The angles went as a replicated `Rotator` (steps of 256 units, 1.4 degrees), now as whole numbers.
+- **Speed.** Host frame rate with three guests (four game windows on one PC): DXVK 11 fps, the system's Direct3D 8 38 fps (host alone 128 and 85). GPU 3D engine load 20-45%
+  in total, the processes use 5-60% of one core each: neither is the limit; with DXVK each process has 36-39 threads, with the system's Direct3D 8 11-14.
+  With the mod's per-frame parts switched off (`EnhOff=sync,mirror,subs,trace,smooth`) the host with three guests runs at 41 fps instead of 38: the mod's own cost is
+  small, the load is the four game processes. The test copy now runs on the system's Direct3D 8 (DXVK files kept as `*.dxvk`, `*.off`).
+- **MSAA on the system's Direct3D 8 breaks `ReadPixels`** ("LockRect failed: D3DERR_INVALIDCALL" in the loading screen, `UD3DRenderDevice::ReadPixels`): a multisampled back
+  buffer cannot be read there. The proxy library now asks for multisampling only when `d3d8_real.dll` is DXVK's (it looks for the text DXVK in the file).
+- Test options added: `EnhOff`, `EnhSurvey` (kinds of actors of the level with RemoteRole, `[WS]` lines), `EnhHostTurn`, `EnhLeaveTest`, `EnhFps`; `run3.ps1 -GuestShots -ClientQuit`,
+  `runmulti.ps1 -GuestShots`, `perf.ps1` (load samples).
+
+Survey of the swamp level (`[WS]`, 138 kinds): not replicated (RemoteRole none) and not static: `AmbientCreatures.Gnat`/`Dragonfly` (animated, 8 and 6), `Env_Torch`, `Pollen_Ambient`,
+`Small_Fire`, `Coin_Twirl` (34 effect emitters); replicated as simulated proxies: `AmbientLily` (13, animated), `BriarPatch`, `BreakableDoorBlock`, `BreakableCrate`, `BounceLili`, `frog`, `slug`.
+Whether the creatures and the effects animate on a client by themselves was not compared yet (the list is the starting point for the world sync).
+
+Not done: world synchronisation (doors, platforms, pickups, breakables, effects) and the environment animations on a client; the join points ("dead" checkpoints) for guests who connect
+during the game, per level; names over the heads that are hidden by scenery without collision (idea: a sprite with a `ScriptedTexture` in the world, depth-tested); the proxy library in the installer.
