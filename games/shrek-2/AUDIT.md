@@ -15,6 +15,11 @@ and test runs of the mod in a copy of the game. Every item says whether it was s
 | A4 | Menu pages of the previous level stayed open over the next one (the book was still opening and the "Create a game" page was already on top of it). | Observed on a screenshot sent by the owner. | Every hero controller and every guest controller closes all pages in its first tick; every page of the mod is opened on a clean stack. |
 | A5 | The engine's `NumPlayers` does not count the second player (the mod's own `Login` does not call the stock one). The LAN list showed 0 players, a gate would have counted one player. | Observed in the LAN answer (`...|0|2|...`). | The mod counts its player controllers itself (`PlayerCount`). |
 
+| A6 | In a network game a hero who dies stays dead: the stock death state ends in `stop` unless the game is single-player (`NM_Standalone`). Player two's pawn also lost its controller there (warnings in `stateHeroDying`). | Observed in the logs of a run in which player two died (stock code read in `ShHeroPawn.stateHeroDying`). | `EnhancedGame.DeathWatch`: player two is brought back after 4 s next to the host with full health; when the host dies the level is loaded again after 5 s from the last co-op checkpoint of the session (or from its start) and everybody follows. Verified in a scripted run (kill player two, kill the host). |
+| A7 | A subtitle could stay on the screen for minutes (the owner's "texts hung"; seen again in the gate runs: the Donkey's hint stayed over 30 s). | Observed. | `EnhancedCutText` clears a line that has stayed longer than 6 s + 0.12 s per letter. |
+| A8 | `KWGame.PostLogin` read the pawn of player two, which does not exist yet (2 warnings, and the start location from nothing). | Observed in the log. | The mod does what the stock one does for player two, without the pawn. |
+| A9 | The host's lobby mode survived into the game level (the options of the old URL are merged into the new one), so a second LAN beacon tried to bind the same port (`BindPort: bind failed`). | Observed. | A game level is never a lobby. |
+
 ## 2. Script warnings that remain (stock game, one-off or per object)
 
 Observed in a plain swamp run (30 warnings in 40 s, none repeating per frame): `ShHeroPawn.IsFighting` reads a controller that is not there (2),
@@ -27,8 +32,8 @@ None is a mod defect and none costs time. They can be silenced by overriding the
 
 | # | Area | Finding | Status |
 |---|---|---|---|
-| C1 | Memory | `Game.exe` is a 32-bit program without the large-address-aware flag (PE characteristics `0x10f`): at most 2 GB of address space on 64-bit Windows. The planned HD texture pack and the mod's data compete for it. Observed. | Proposed: set the flag (one bit in the PE header; the installer already patches `Engine.dll` with a checked hash, the same approach). |
-| C2 | High-DPI | No DPI-awareness in the manifest of `Game.exe` (observed). At 125 to 200 % Windows scaling the window is bitmap-scaled by the system (blurry, wrong size). Derived. | Proposed: a manifest, or `SetProcessDPIAware` from the mod's proxy library. |
+| C1 | Memory | `Game.exe` is a 32-bit program without the large-address-aware flag (PE characteristics `0x10f`): at most 2 GB of address space on 64-bit Windows. The planned HD texture pack and the mod's data compete for it. Observed. | Done in the installer (hash-checked, backup, the uninstall restores it): characteristics `0x12f`. The patched test copy ran the swamp without error. Stability above 2 GB of use is not tested. |
+| C2 | High-DPI | No DPI-awareness in the manifest of `Game.exe` (observed). At 125 to 200 % Windows scaling the window is bitmap-scaled by the system (blurry, wrong size). Derived. | Done in the installer: an external `Game.exe.manifest` (the exe has no manifest of its own), removed by the uninstall. Looks of the window at 125 to 200 % scaling not checked on such a screen. |
 | C3 | HUD on wide screens | The stock HUD is laid out for 1024 x 768 and scaled by width and by height separately (`CalculateScaleX` = width / 1024, `CalculateScaleY` = height / 768). On 16:9 the icons and numbers are stretched sideways by 33 %, on 21:9 by 75 %. Derived from the script. | Done in the mod's HUD: one scale from the height; items keep their place (they are placed by fractions of the width). To check on a real wide window. |
 | C4 | Field of view | Unreal Engine 2 keeps the horizontal field of view fixed, so a wide screen sees less above and below than a 4:3 one (Vert-). Derived. | Proposed: compute the horizontal FOV from the aspect ratio ("Hor+") for the gameplay cameras. The cutscenes set their own FOV (269 `FOV` verbs in the scripts) and need to be left alone or scaled the same way. |
 | C5 | Menus | The book is a 3D mesh, the buttons are GUI fractions of the screen; on a non-4:3 screen the buttons no longer sit on the printed buttons of the book. Derived; observed only at 4:3 so far. | To test at 16:9; the pages of the mod use the same fractions as the stock ones, so they behave the same. |
@@ -45,6 +50,11 @@ None is a mod defect and none costs time. They can be silenced by overriding the
 - D3. The checkpoint record walks the actors of nine classes once per counted checkpoint (measured earlier, `NOTES.md`); no per-frame cost.
 - D4. The 10 940-warning loop (A2) was the largest cost found: every warning is a log write.
 - D5. The `[SDBG]` log lines are always on. Proposed: a config switch for the release, they are useful only in test runs.
+
+## 4b. Seen once, not reproduced
+
+At a 1280 x 720 window one picture of the first swamp seconds showed three Shrek models around the camera. A second and third run at that size showed one
+model. Cause unknown; most likely the start cutscene's stand-ins. Not treated as a defect.
 
 ## 5. Build environment (the main risk)
 

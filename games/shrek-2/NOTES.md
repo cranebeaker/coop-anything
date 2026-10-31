@@ -941,3 +941,15 @@ Warnings in the game log: the menu level wrote ~11 000 `PlayerMove` warnings a m
 Open / unknown: the waiting line on screen; real keyboard and mouse in the new pages; the lobby with 3 and 4 players; at a 1280 x 720 window one picture
 showed three Shrek models around the camera (not seen at 640 x 480; cause unknown); the sound desync report; Hor+ field of view, large-address-aware and
 DPI-awareness flags (see `AUDIT.md`).
+
+## Errors pass 2, death in co-op, enemy scaling, installer flags (2026-10-31, later)
+
+Done and run (scripted two-window runs): **the waiting line is visible** ("wait for your partner", as a subtitle line, sent from the game's per-frame tick:
+the HUD actor itself gets no tick, and a `PostRender` override must not be used, see the HUD entry above). **Subtitle watchdog** in `EnhancedCutText`.
+**Death in co-op** (`DeathWatch`): the stock death state does nothing in a network game; player two returns after 4 s, the host's death reloads the level
+from the last co-op checkpoint of the session. **Enemy scaling**: every additional player adds `EnemyHealthPerPlayer` (0.6) to the health factor and
+`EnemyDamagePerPlayer` (0.25) to the damage factor of every `ShEnemy` as it is made (`3_The_Hunt_Part1`, two players: health 4 > 6.4, damage 5 > 6.25;
+one player: unchanged); money and health regeneration are not touched; the player count is `max(connected, EnhPlayers)` because the guests come back after
+the enemies of a level are made. **Installer**: large-address-aware flag and DPI manifest for `Game.exe` (hash-checked, restored by the uninstall,
+checked on a throwaway copy: flag `0x10f` > `0x12f`, hash after uninstall equal to the original).
+Remaining stock warnings (one-off, no behavior): see `AUDIT.md` section 2. Not verified: the guest's waiting line (it uses the guest HUD), real input.
