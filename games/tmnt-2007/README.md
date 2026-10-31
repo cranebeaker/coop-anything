@@ -1,83 +1,100 @@
-# TMNT (2007, PC)
+# TMNT (2007, PC) Local Co-Op Mod
 
-> **Work in progress, not stable.** This is an experimental prototype under active development. It is not
-> released and not ready to play; expect missing moves, disabled features and occasional crashes.
+> **Experimental Prototype Notice:** This is an in-progress reverse-engineering project implementing local 2-player co-op for the 2007 PC release of TMNT. The campaign, scripted boss battles, and level transitions have not been universally tested. Expect visual quirks, edge-case desynchronizations, and limitations in untested levels.
 
-| | |
+| Attribute | Specification |
 |---|---|
-| Engine | Ubisoft Jade ("Engine v428-42" in the game's log; gameplay scripts compiled into the exe) |
-| Versions tested | Retail PC, `TMNTGame.exe` 1.0.0.188 (UPX-packed, SecuROM traces), SHA-256 `701d9f00f8c1edf790466f2ecfeb72a64fe7ccdc491f7c370ae11c1942740589`; store/edition unknown |
-| Projects | Local couch co-op by DLL injection (private, in progress; no public repo yet) |
-| QA level | none (no structured or automated testing yet) |
-| Last updated | 2026-10-25 |
+| Engine | Ubisoft Jade ("Engine v428-42" in engine telemetry; gameplay AI compiled into exe) |
+| Versions tested | Retail PC, `TMNTGame.exe` 1.0.0.188 (DirectX 9, 32-bit x86, SHA-256 `701d9f00f8c1edf790466f2ecfeb72a64fe7ccdc491f7c370ae11c1942740589`) |
+| Architecture | Dual-DLL injection (`coophost.dll` runtime injector + `coopmod.dll` hot-reloadable gameplay logic) |
+| Tested Environments | Level 1 (*Mystical Jungle*), Map 5 (*Ninja Tag Time* - Multi-Turtle Rooftop) |
+| Status | In active development (Mod 127). Not a final commercial-grade release. |
+| Last Updated | 2026-10-29 |
 
-## Where things stand
+---
 
-A second player can play a second turtle on screen at the same time as player 1, in one game process on one PC with
-two controllers. Movement, jump, both attacks, health, enemy targeting, respawn and a shared midpoint camera were seen
-working in manual runs during development, not in a structured test. Player 2 does not yet have full move parity (double jump, combos, dodge, moves that need a run-up),
-and team moves are switched off while player 2 is present. Not released.
+## 1. Overview and Current State
 
-## Existing work
+The mod enables two players to play concurrently on a single PC screen within the same game process using two separate controllers (Xbox / XInput, PlayStation DualSense via direct HID, or Nintendo Switch Pro / Switch 2 Pro Controllers via WinUSB) or keyboard/controller combinations.
 
-- No co-op mod for the PC game was found (GitHub, Nucleus Co-op handler hub, web search; 2026-10-12). Only the PSP and
-  DS versions had multiplayer.
-- [xan1242/UbiTMNTHax](https://github.com/xan1242/UbiTMNTHax): ASI plugin for the same exe (windowed, skip launcher,
-  multiple instances). Not co-op, but a reference for hooking this build.
-- [hogsy/jaded](https://github.com/hogsy/jaded): community fork of the 2006 Jade engine source; useful for structures,
-  does not load TMNT data.
+### Key Implemented Capabilities
+- **Independent Player 2 Control & Input Pipeline:** The game's 584-byte active pad structure (`[0x01502198]`) is isolated and swapped across per-frame input updates and Player 2 AI ticks, eliminating the default engine behavior of merging all connected gamepads into Player 1.
+- **Physical 3D Body Rendering:**
+  - In multi-turtle levels (such as Map 5: *Ninja Tag Time*), Player 2 can be spawned as Raphael with complete 3D green mesh, shell, red head bandana, red belt, and twin Sai daggers, or as Leonardo with twin katanas, preserving all 31 body skin and shell materials.
+  - In single-turtle solo levels (such as Level 1: *Mystical Jungle*), the Jade Engine loads only the designated story turtle into RAM. Player 2 is created via an unshared skeleton duplicate (`0x00491C40` + `0x006AC230`), retaining full 3D body visibility as a visual duplicate of the active character.
+- **Two-Way Mutual Revive System:** When either turtle drops in combat (`state 18`), the standing teammate can revive them by remaining within proximity (2.8m) for 1.2 seconds, restoring 100 HP and returning them to playable ground state (`state 2`).
+- **Dynamic Combat Aggro Distribution:** Enemy AI target evaluations dynamically re-route threat. If one player is downed, 100% of enemies attack the active player; when both are alive, aggro splits dynamically based on Euclidean proximity.
+- **Direct3D 9 HUD and Visual Features:**
+  - Player 2 slanted health HUD rendered via D3D9 EndScene hooks, tracking memory health (`AI + 0x174`).
+  - Ground-projected tactical foot rings (emerald green for P1, crimson red for P2) conforming to uneven terrain.
+  - Off-screen radar arrow and distance indicator pointing toward the partner when separated.
+- **Team Moves Execution:** Air leapfrog (`state 11`) and ground charged team attacks (`state 25` -> `state 14`) trigger with Player 2 as the partner, with exit-leap animation clipping preventing unwanted partner ejection.
+- **Mutual Body Collision & Boundary Clamping:** Physical cylindrical barrier (1.05m radius) prevents players from walking through each other during navigation.
+- **Abyss / Pit-Fall Auto-Recovery:** Automatic safe repositioning when a player falls into out-of-bounds voids (`dz < -12.0m`).
 
-## How the game works (for co-op)
+---
 
-Details and addresses (for the build above) are in [NOTES.md](NOTES.md).
+## 2. Controls and Keybindings
 
-- Normally only one turtle is on screen; a brother appears briefly for team moves (Brother Throw, Super Family
-  Attack). Turtle Swap only changes which turtle object is "main actor 0"; the other turtle objects stay alive.
-- The engine has two main-actor slots (the second is empty in solo play) and per-turtle "IO ports", but a port is only
-  an on/off gate: every present turtle reads the same shared input object.
-- Input goes through Ubisoft's Gear input library (DirectInput 8 and XInput 1.3). The game merges all pads into one
-  input state, so a second physical pad simply also controls player 1.
-- The launcher's mutex blocks a second instance, so multi-instance split screen is not an easy route.
+The mod exposes a range of gameplay toggles, spawning triggers, and diagnostics via keyboard and controller shortcuts.
 
-## What we changed
+### Keyboard Shortcuts
+- `INSERT`: Spawn Player 2 into the level or manually teleport Player 2 beside Player 1.
+- `DELETE`: Unspawn / remove Player 2 from the active world.
+- `F4`: Toggle off-screen radar pointer and distance beacon (ON / OFF).
+- `F5`: Toggle 3D tactical ground foot rings (ON / OFF).
+- `F6`: Toggle retro arcade synthesized audio cues (ON / OFF).
+- `F7`: Toggle co-op combo meter (ON / OFF).
+- `F8`: Toggle Player 2 slanted health HUD (ON / OFF).
+- `F9`: Master Preset Toggle (Instant switch between **Arcade Enhanced** and **Purist Vanilla**).
+- `F10`: Toggle controller vibration and force-feedback dispatch (ON / OFF).
 
-All in an injected DLL (a host DLL injected once, plus a hot-reloadable mod DLL swapped while the game runs). No game
-files are modified.
+### Controller Shortcuts (Player 2 Gamepad)
+- `START` or `A`: Drop-in / join the game when Player 2 is not currently spawned.
+- `LB + RB` (simultaneous press): Cycle Player 2 character identity (Leonardo, Raphael, Donatello, Michelangelo).
+- `BACK + START` (simultaneous press): Toggle in-game co-op diagnostics menu.
+- Hold `BACK` (1.2 seconds): Trigger instant tactical regroup / teleport Player 2 to Player 1.
 
-- **A second turtle:** the game's own turtle spawn function places an idle brother next to player 1 with its port open.
-- **Its own input:** around player 2's turtle update, the shared stick and action reads are answered from player 2's
-  pad; camera-relative movement. Player 2's DualSense is read over HID directly and hidden from the game's
-  DirectInput list (otherwise the game picks it as pad 1 or merges it into player 1).
-- **Enemies target player 2:** in the enemy AI tick, main actor 0 is swapped to player 2 when that enemy is closer to
-  it, and restored after.
-- **Health bar** for player 2 (D3D9 EndScene hook on the game's real device), bound to the turtle's 0-100 health.
-- **Camera:** looks at the horizontal midpoint of both turtles; player 2 is leashed to player 1 and brought back if it
-  falls into a pit; auto-respawn after death.
-- **Team moves off** while player 2 is present: after a team move the game turns the partner into a scripted helper
-  (inside the obfuscated code) that flies it away and marks it absent.
+---
 
-## QA
+## 3. Known Limitations and Objective Failure Modes
 
-No automated suite yet. The results above come from manual runs during development, not a test. Next step is a pad-2 input script and a log that compares
-player 1's and player 2's move states for the same input (see the playbook's automated QA page and the Two Towers
-write-up).
+Because TMNT (2007) was designed from the ground up strictly as a single-player experience with hardcoded single-actor assumptions, users should be aware of the following technical boundaries:
 
-## How to play
+### A. Level Asset Boundaries
+- **Solo Campaign Levels:** Story missions like Level 1 only stream a single turtle's assets (models, textures, weapon skeletons) into memory. In these levels, switching Player 2 to an unstreamed turtle (e.g. attempting to force Raphael in Level 1) cannot load missing models from unmounted packages without causing asset stalls or fallbacks. In solo levels, Player 2 remains a visual duplicate of the active story turtle.
+- **Multi-Turtle Levels:** Levels designed with tag mechanics (like *Ninja Tag Time*) contain all four turtles in memory, allowing full model and identity switching between Leonardo, Raphael, Donatello, and Michelangelo.
 
-Not released.
+### B. Untested Campaign Scope
+- **Broad Campaign Coverage:** Automated testing and verification have been executed primarily in Level 1 (*Mystical Jungle*) and Map 5 (*Ninja Tag Time*). The remainder of the retail campaign—including later city chapters, vehicular chase sequences, underground sectors, and multi-phase boss encounters—has **not** been exhaustively tested.
+- **Scripted Checkpoints & Cutscenes:** Scripted in-game cinematic triggers, pre-rendered video handoffs, and checkpoint reloads may occasionally fail to account for the second player actor, resulting in temporary camera misalignments, partner despawns, or state freezes until manual repositioning (`INSERT` or hold `BACK`) is used.
 
-## Known issues
+### C. Controls and State Triggers Not Guaranteed in All States
+- Shortcut keys (such as `INSERT`, identity switches, or revive channels) interact directly with Jade Engine internal finite state machines (`AI state`).
+- Activating spawn, teleport, or character swap shortcuts while a character is in non-ground states (such as wall-running, pole-swinging, mid-air ledge grabbing, or inside cutscenes) may fail to transition smoothly or cause brief physical snapping.
+- Controller hot-plugging requires controllers to be recognized by the OS prior to game launch; disconnecting and reconnecting non-XInput controllers during heavy combat may require a controller reset.
 
-- Player 2 lacks some moves that depend on input history (double jump, combos, dodge, run-up moves).
-- Team moves are disabled while player 2 is in the level.
-- Brothers still unlock mid-level as in the base game.
-- Level loads and checkpoint reloads with player 2 are untested; player 2 may not survive them.
-- The game crashed once while a new mod build was hot-loaded during play; mod builds change often.
+---
 
-## Next steps
+## 4. Architecture and Engine Hooks
 
-- Input parity the way [The Two Towers](../lotr-two-towers/NOTES.md) did it: give player 2 its own copy of the
-  game's input object (a virtual second pad record), let the game's own poll fill it, and run player 2's control step
-  with that copy swapped in.
-- A pad-2 replay test that asserts player 2 reaches the same move states as player 1.
-- Team moves with player 2 as the partner.
+The modification does not alter any original game files on disk (`TMNTGame.exe` and `turtles.bf` remain untouched). All functionality is dynamically injected at runtime:
+
+- **Input Pipeline Detour (`0x00418E0B` -> `0x00639C80`):** Swaps pad buffers twice per engine frame to feed independent input history buffers.
+- **Movement Input Hook (`0x004E07D9` -> `0x004F9910`):** Injects Player 2 movement vectors while enforcing camera leash boundaries and mutual body collision.
+- **Team Move Interceptors:** Detours on `0x005759D0` (`GetCoopPartner`), `0x005C1DF0` (`CheckCoopLock`), and `0x005C17C0` (`Turtle_LockCoop`) to route cooperative attacks to Player 2.
+- **Actor State Wrapper (`0x00585C50`):** Traps engine eviction signals (`state 0`) during team move exits to keep Player 2 active in the world sector.
+- **Direct3D 9 EndScene (`vtable + 0xA8`):** Renders UI primitives, tactical foot rings, off-screen radar pointers, and health bars directly onto the backbuffer before presentation.
+
+---
+
+## 5. Verification Status
+
+| Test Suite | Scope | Result | Evidence |
+|---|---|---|---|
+| Level 1 Solo Isolation & Input Test | Verification of zero input bleed between P1 and P2 | PASS | Backbuffer video capture |
+| Level 1 Fixed Team Moves | Verification of air leapfrog and ground charged attacks | PASS | Backbuffer video capture |
+| Map 5 Ninja Tag Time Multi-Turtle | Verification of full 3D Raphael model, red bandana, and twin Sais | PASS | Direct3D 9 full-res capture |
+| Two-Way Mutual Revive Machine | Bidirectional revive of P1 by P2 and P2 by P1 | PASS | Automated testlane verification |
+| Multi-Level Cycling & Abyss Recovery | Pit-fall auto recovery and Z-axis depth clamping | PASS | Automated testlane verification |
+| Rest of Campaign (Levels 3..16, Bosses) | Campaign progression, boss scripts, vehicular levels | **UNTESTED** | Ongoing development |
