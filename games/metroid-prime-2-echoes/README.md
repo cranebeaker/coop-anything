@@ -6,7 +6,7 @@
 | Versions tested | Metroid Prime Trilogy NTSC-U `R3ME01` rev 0 (extracted disc); `rs5mp2_p.dol` SHA-256 `5b68271fd75ff1bd48986874d6f9112fc8299a1c93c6ce459fa1a83b8ebeb2b2` (SHA-1 `2375606f4e9429a699cfa02728b0bb1176421226`); Dolphin 2609a, Windows 10 |
 | Projects | [Echoes co-op](https://github.com/FarrenB939/metroid-prime-2-echoes-coop) (Gecko + Dolphin patch codes, split screen, 2-4 players), directory entry "Echoes co-op" |
 | QA level | community-reports (playtests with two Xbox controllers, opening hours up to the item loss; scripted checks against the running game for each feature; no automated suite) |
-| Last updated | 2026-10-30 |
+| Last updated | 2026-10-31 |
 
 ## Where things stand
 
@@ -63,12 +63,16 @@ Codes, as named in the ini:
   only on a session's first spawn.
 - **B, campaign session:** no match timer or kill limit; choosing Sidehopper Station starts the
   campaign (or continues the co-op save file) with every joined player; a respawned player
-  appears next to a teammate with the screen faded back in.
-- **C, shared rooms:** any player crossing a door switches the room. The others can walk through while
-  the door is open; when it closes, anyone still in the room behind it is placed beside the leader (right,
-  else left, else behind, each spot checked with a collision ray; morph ball camera reset).
+  appears beside a teammate (placed as in code C) with the screen faded back in.
+- **C, shared rooms:** any player crossing a door switches the room (crossing = past the door's plane and
+  within 6 units of its opening, whatever the door's size). The others can walk through while the door is
+  open; when it closes, anyone still in the room behind it is placed beside the leader: right, else left,
+  else behind, else in front, else away from the door, then the same at 1.6 units. Each spot needs a clear
+  collision ray, floor below it, and must not be back through the closed door. A Morph Ball leader gets an
+  upright frame (the ball's own transform rolls with it) and ball-height checks, so two balls fit a tunnel.
 - **D, cutscenes:** play full screen from player 1's camera, every player held as in single
-  player; message boxes and the Data Network take the whole screen too.
+  player; message boxes and the Data Network take the whole screen too. Start (Wii 2) skips a cutscene
+  the game marks skippable on a replay, on the first viewing too (the game refuses skips in multiplayer).
 - **E, Scan Visor and no friendly fire:** scanning works for every player (fallback target picker
   for players 2-4), scan text shows and any player can page it; players can't hurt each other.
 - **F, enemies and bosses:** each enemy's think and messages see the nearest player as player 1;
@@ -86,6 +90,16 @@ Codes, as named in the ini:
 - No automated suite. Each feature was checked against the running game with Python scripts that
   read and write Dolphin's memory, call game functions through a small hook, and press keys (the
   scripts aren't published; the project repo has the code generator); results are logged per session in [NOTES.md](NOTES.md).
+- 2026-10-30, after a playtest past the item loss (fresh boots of the test build):
+  - Hive Chamber C's door to Hive Transport Area is 15 x 10; its old crossing "centre" sat 6.7 units above
+    the floor, so walking through never switched the room and the room unloaded when the door closed. With
+    the fix, a crossing at foot level switched it at once, and the lift console scanned ("Elevator unit
+    online"). Playtest confirmed.
+  - Morph Ball tunnel between Hive Chamber B and C: reproduced two balls in one spot (no placement passed),
+    then after the fix the follower landed 1.6 units beside the leader (C to B) and 2.25 units (B to C), no
+    overlap. Playtest confirmed both ways. Respawn placement: 2.25 units away, on the floor.
+  - Cutscene skip: the opening of a new game skipped part-way through; both players kept the start items.
+    Playtest confirmed.
 - 2026-10-24, second round (fresh boots with the release codes):
   - Exit crash reproduced (quit multiplayer to the main menu), then gone after the gate change: main menu,
     no warning, and the front end's code at the old hook sites untouched.

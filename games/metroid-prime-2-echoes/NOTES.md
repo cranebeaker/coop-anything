@@ -318,7 +318,7 @@ black and the respawn point is often in another room.
 | 0x800764bc | 0x41800040 `blt +0x40` | `b 0x800764fc`: kill limit never reached |
 | 0x8022da4c (hook) | 0x9421ffe0 `stwu r1,-0x20(r1)` | WorldTeleporter aimed at Sidehopper Station (a50a80cc / 02690de1) is re-aimed at Temple Grounds / Landing Site (3bfa3eff / 62b0d67d) |
 | 0x800ba7d0 (hook) | 0x396100e0 `addi r11,r1,0xe0` | load the co-op save (below) |
-| 0x8010d478 (hook) | 0x4bfff5d9 `bl 0x8010ca50` | after the notify: DisableFilter(0.5 s) on pass 1 of every viewport; teleport the respawned player (r27) onto the first other player's transform, morph ball camera reset |
+| 0x8010d478 (hook) | 0x4bfff5d9 `bl 0x8010ca50` | after the notify: DisableFilter(0.5 s) on pass 1 of every viewport; place the respawned player (r27) beside the first other player (code C's placement), morph ball camera reset |
 
 Co-op save load, when the current world is Temple Grounds (the re-aimed arena): keep the rules object (clear
 gs+0x144 so the old state's destructor does not delete it), the MP settings (+0x14c, 0x64 bytes), the
@@ -334,7 +334,9 @@ boot: both players resume in the save room with Dark Beam and 33/40. A single-pl
 file in the Trilogy menu gives a byte-identical GMST record and resumes in co-op. Death: screen stays lit,
 respawn next to the partner. Placing the player 2.5 units behind the partner instead fell through the floor
 (facing 135 and 180 deg at a Landing Site door: z -56.5 vs -38.2); on the partner's spot the player always
-ends at the partner's height, about 1.1 units away. Both dying at once: both respawn where they died.
+ends at the partner's height, about 1.1 units away, but two Morph Balls on one spot stick together, so
+respawns now use code C's placement (checked walls and floor): placed 2.25 units away, on the floor. Both
+dying at once: both respawn where they died.
 
 ### C. Shared rooms
 
@@ -347,17 +349,28 @@ unchanged, the dock disarms, and player 2 falls into an unrendered room.
 | 0x801e6a5c (hook) | 0x4bfff93d `bl 0x801e6398` | on door close, bring players still behind it |
 | 0x801db1f8 (hook) | 0x807f1514 `lwz r3,0x1514(r31)` | camera "stop" from a non-player sender checks every player's manager, then continues at 0x801db25c |
 
-- Crossing: the original FUN_801e6cec test per player, plus within 6 units of the door centre (mean of the
-  dock's plane points). The dock tests once, when the door reports someone passing; a player waiting in the
+- Crossing: the original FUN_801e6cec test per player, plus distance^2 from the door centre (mean of the
+  dock's four plane points, +0x10 count, +0x14..+0x38) at most farthest corner^2 + 6^2, i.e. within 6 units of
+  the opening. A fixed 6 from the mean of three points failed at big doors: Hive Chamber C's door to Hive
+  Transport Area is 15 x 10 and that point sat 6.7 above the floor, so walking through never switched the room
+  and the room unloaded when the door closed (its lift console then dropped every scan). The dock tests once, when the door reports someone passing; a player waiting in the
   old room is past the plane too, and plane-only made the room flip back and forth. Players in the old or new
   room are left alone; players in neither (two or more rooms back) are placed beside the crosser at once.
   In-room test: position within 1 unit of the area's bounds.
 - Door close: on DECR (r3 == 0) with 2+ players, take this dock's plane from its own area's list (the room
   behind is beyond it when the dock's area is current). Leader = first player not on that side; every player on
   that side and inside that room is placed beside the leader. r3-r5 are saved (clobbering r5 crashed).
-- Placement: 2.25 units to the leader's right (transform column 0), else left, else behind (-column 1), each
-  spot ray-checked from the leader's chest (+1 z) to 0.5 past it; all blocked: the leader's spot. Lift 1 unit,
-  leader's facing, FUN_80160cc4 with the morph ball camera reset.
+- Placement (also used by respawns): right (transform column 0), left, behind, front, and (door close) away
+  from the door along its normal, at 2.25 units, then all again at 1.6; a loop over a direction table in the
+  frame (unrolled, it added about 1,700 words of hook body). A spot needs: a clear static ray (RAY_CLEAR
+  0x800a2ac8) from the leader at ray height to 0.5 past it; a ray straight down from it hitting floor within 4;
+  and (door close) not on the closing room's side of the plane, since the door is not static collision. All
+  fail: the leader's spot. Standing leader: ray height = lift = 1, leader's facing. Morph Ball leader (CPlayer
+  +0x374 != 0; 2 = ball): the CPlayer transform rolls with the ball (forward (0.01, 0.59, -0.81) in a test), so
+  the frame is upright, facing away from the door (or +y for respawns); ray at 0.7 (the position is the ball's
+  bottom), spot 0.15 up (1 unit put the ball's top into a 1.8-unit tunnel's ceiling), checks at ray height (a
+  floor probe from 0.15 up started under a gently rising tunnel floor and found nothing). The follower gets the
+  frame's facing; FUN_80160cc4 with the morph ball camera reset.
 - Camera stop: a save room's arrival camera is started with player 2 as sender and stopped by a timer, so only
   player 1's manager was cleared and player 2 kept cinematic uid 0x44f (frozen view, no control).
 
@@ -366,6 +379,12 @@ Verified: player 2 opens a Hive Access Tunnel door and walks through, player 1 w
 Player 1 waiting 3 units back (in the door trigger): no teleport for 5 s, then walks through, room stays 0.
 With the earlier crossing-time teleport: a morph-ball follower moved 57.5 units, ball camera 6.4 units away on
 the next sample, no launch; four players all followed. The door-close version was tested with two players.
+Big door (Hive Chamber C -> Hive Transport Area): player 2 at foot level 5 past the plane (old rule 8.32 > 6,
+new 6.73 < 10.83): room switch at once; door closed: player 1 placed 2.27 units to player 2's side; the lift
+console then scanned in 1.5 s. Morph Ball tunnel between Hive Chamber B and C (about 1.7 wide and tall): before
+the ball fixes, rolling from C's part into B's put player 1 exactly on player 2 (no spot passed); after, player 1
+landed 1.6 to the side (balls resting 1.40 apart, touching) and, B to C, 2.25 to the side. Playtests confirmed
+the big door and the tunnel both ways.
 
 ### D. Cutscenes and full-screen message boxes
 
@@ -381,6 +400,9 @@ drawn in player 1's half and long texts did not fit.
 | 0x8024b584 (hook) | 0x4be10c69 `bl 0x8005c1ec` | same, full-screen layout |
 | 0x800e8654 (hook) | 0x2c040000 `cmpwi r4,0` | run the HUD pass in message mode |
 | 0x800e870c (hook) | 0x800314f0 `lwz r0,0x14f0(r3)` | only HUD 0 in message mode |
+| 0x800e8014, 0x800e7324 | 0x4bf7c769, 0x4bf7d459 `bl 0x8006477c` | `li r3,1`: a skip-after-viewing cinematic counts as seen |
+| 0x800e8090 | 0x38a00053 `li r5,0x53` | `li r5,0x43`: the pause button (Wii 2, Start on the Xbox layout) skips |
+| 0x800e80a8 | 0x48163455 `bl 0x8024b4fc` | `li r3,0`: skipping allowed in multiplayer |
 
 Message mode = pause state 4 or 6, 2+ players, world not the front end (0xdaea74a3). 0x800e8654 follows
 `mfspr r0,LR`, so its body may use only r11/r12 (a version using r0 corrupted the saved LR and stalled every
@@ -390,6 +412,16 @@ Verified: opening cinematic full screen, split screen returns after; player 2 al
 0x454 on manager 0 only and a full-screen prompt; a cinematic triggered by player 2 alone (Temple Grounds area
 2, trigger 046f) played full screen and moved both players. The gunship save loop (ship spawn point ZERO put a
 player who walked off back on the save trigger, endlessly) is gone with everyone held: one prompt only.
+
+Skipping (game flow update, cinematic branch 0x800e7fc4-0x800e8108): a cinematic camera with +0x208 bit 0x800 is
+always skippable, bit 0x8 only once seen (FUN_8006477c, system options). The skip special function (type 15,
+handler 0x8020ece4) stores its uid at mgr+0x2bec on INCR and clears it on DECR; SkipCinematic is 0x8024a90c.
+The skip also needs a hold timer (+0x28 of the flow object) at 2.0, mgr+0x3121 bit 0x8, the skip action, and
+FUN_8024b4fc(mgr) == 0, which is IsMultiplayer (1 unless the mode is 'SNGL' or 'FRND'): skips were off in
+versus. During a cinematic the pause press does nothing else (0x800e7f04). Hit counters on each step found the
+multiplayer check as the last block. Verified: the opening of a new game skipped part-way through, both players
+kept the start items (Missile 5/5); playtest confirmed. Player 2's Start: the press check reports any controller
+and code K removed the controller-0 test; not tried separately.
 
 ### E. Scan Visor and no friendly fire
 
