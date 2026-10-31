@@ -9618,3 +9618,32 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+- game: "Crash Bandicoot 4: It's About Time"
+  year: 2020
+  engine: Unreal Engine 4
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No online or simultaneous co-op mod found; the game ships only local hotseat Pass N. Play and Bandicoot
+    Battle. Groundwork in games/crash-bandicoot-4 (Steam build, UE 4.24.2) - UE4SS v3.0.1 runs when injected after
+    SteamStub unpacks and with HookLoadMap = 0; the game ships unused multiplayer classes (LavaMPGameMode Lobby/Match,
+    MPLavaPlayerController) and a replicated combat framework; a listen server starts, but a second copy on one PC
+    crashes after about 56 s.
+  sources:
+  - https://www.techradar.com/how-to/crash-bandicoot-4-multiplayer-is-it-online-and-co-op
+  - https://en.wikipedia.org/wiki/Crash_Bandicoot_4:_It%27s_About_Time
+  - https://github.com/UE4SS-RE/RE-UE4SS/issues/720
+  checked: '2026-10-30'
+  searched:
+  - 'WebSearch: Crash Bandicoot 4 co-op mod PC; Crash 4 online multiplayer mod; Crash Bandicoot 4 UE4SS; Nucleus
+    Co-op handler Crash Bandicoot 4 (2026-10-30, nothing found)'
+  - 'coop-anything DIRECTORY.md and games/ (2026-10-30, nothing)'
+  - 'Not checked: Nexus Mods and GameBanana file lists directly, Reddit, Discord servers'
