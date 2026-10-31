@@ -16,8 +16,9 @@ footstep sounds, over Steam relay. You can't walk through each other. Players in
 Steam friends list in an in-game window (the other player gets an invite to accept), and can jump to the
 other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
-Enemies, items, doors and story progress are not shared. Saving is off by default and can be switched on, with
-automatic save backups.
+Enemy damage and deaths are shared (an enemy hurt or killed in one game is hurt or killed in the other), but
+each game still moves its own enemies. Items, doors and story progress are not shared. Saving is off by default
+and can be switched on, with automatic save backups.
 
 ## Existing work
 
@@ -59,6 +60,19 @@ automatic save backups.
   > 0, or `GameManager.PlayingMovie` set. Some scenes are missed by this check.
 - **Steam**: the game's `steam_api64.dll` exports the modern flat API (`SteamNetworkingMessages_SteamAPI_v002`
   and friends), so a plugin can use Valve's relay through the game's own Steam session.
+- **Enemies**: `app.ObjectManager.ManagedObjects` is a list of lists; one of them holds the area's enemies
+  (`EmNNNN` GameObjects, index 1 in Chapter3; the indices don't match the `ListType` enum, so find it by
+  contents). Em3000 is Jack Baker; the Molded are Em4000, Em4100 and Em4200. Regular enemies and Jack carry
+  `app.EnemySave.SaveGUID` (read the Guid's `mData1..3`/`mData4_0..7` fields), saved in the level, so it
+  identifies the same enemy on both PCs; story characters without one can use folder path + name. Health is
+  on `app.DamageController` (`get_health`, `get_maxHealth`, `get_isDead`, `setHealth(health, max)`).
+- **Killing an enemy from script**: `setHealth(0, max)` marks it dead but it keeps walking. The real death
+  (or Jack's knock-down) needs damage: static `DamageController.newFakeDamageInfo(damage, attacker, target)`
+  then `addManualDamage(info)`. Damage is scaled (health + 1000 left Jack on 2300/10000), so overkill.
+- **Test enemies**: an inactive enemy in a loaded folder wakes with `GameObject.set_UpdateSelf(true)` +
+  `set_DrawSelf(true)`, and `app.MovementController.warp` places it. Only chapter-jump keys ending in
+  `_Start` load into gameplay (`Chapter8` went to the title); Chapter4_Start has nine sleeping Molded but
+  loaded an empty level from the title.
 
 ## What we changed
 
@@ -112,6 +126,13 @@ automatic save backups.
   `callSE(SETriggerTypeEnum, via.vec3, UInt32 material)`, which plays Ethan's footstep at any position.
   Setting its `SETarget` field (Player=0, PlayerJog=1, PlayerCrouch=2) for the call picks the walk, jog or
   crouch set. coop-re7 calls it once per stride the ghost travels, with the local ground material.
+- **Enemy damage and deaths.** Each game scans the area's enemies 4 times a second. A health drop sends
+  `dmg <id> <chapter> <amount>` (the health actually lost); the other game applies it with `setHealth`
+  (not another hit, which would be scaled again), never below 1. A death sends `kill <id> <chapter>`, applied
+  as an overkill hit so the real animation plays. Applied events are remembered so they aren't echoed back.
+  A Molded killed where the other player hasn't been yet is remembered and killed when it wakes there; Jack
+  and bosses get back up in RE7, so their kills are only applied if they're awake. Events go reliably
+  (`k_nSteamNetworkingSend_Reliable`) as a separate packet type next to the 30 Hz movement packets.
 
 ## QA
 
@@ -134,19 +155,24 @@ automatic save backups.
   playable. The friend list was read on one PC (15 online friends); invites and Accept need two accounts and
   are not tested.
 - Footsteps, 2026-10-31: heard at the bot's position, changing with its stance. Checked by ear on one PC.
+- Enemy sync, 2026-10-31, on Jack in Chapter3 with the bot sending events: the bot's kill knocked Jack down
+  (seen in game); a kill sent while Jack slept (labelled as a Molded) was applied the moment he woke; the
+  bot's 2500 hit took him from 10000 to 7500 exactly; a local hit of 1000 (700 after scaling) went out as 700.
+  No echoes. A real Molded is not tested.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.5 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.5), unzip it and run **Install.cmd**.
+[v0.6 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.6), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
-- No world sync: enemies, items, doors and story are separate per player.
+- Enemies move separately in each game (only damage and deaths are shared), and hits don't make them flinch
+  on the other screen. Items, doors and story are separate per player.
 - Saving is off by default; with it off, nothing from a session is kept.
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
@@ -159,4 +185,5 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 
 1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
 2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
-3. World sync, host-authoritative: story and area, doors, items, then enemies.
+3. Enemy movement: one game controls each enemy and the other's copy follows it (driven like the ghost).
+4. The rest of world sync: story and area, doors, items.
