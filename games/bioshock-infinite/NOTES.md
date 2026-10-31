@@ -622,8 +622,8 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 ### Not done yet
 
 - Only the weapon pitches; the arms stay in the guard pose. No tracer, no world impact effect, no arm gesture for vigors.
-- Enemies only see and shoot the local player, and enemy positions are not synced.
-- Not tested with real gunfire by a human, or between two PCs.
+- Enemies only see and shoot the local player; enemy positions are synced loosely (2-10 m in combat).
+- Not tested between two PCs or two Steam accounts.
 
 ## Open questions
 
@@ -631,23 +631,28 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 
 - A second copy that travels to `127.0.0.1` may get through the control-channel handshake, but no actors
   would replicate (see the static check).
-- Script classes may have lost their `replication` blocks or `CPF_Net` flags in cooking.
-- Floating sections (the boat, the islands: per-section local-to-world matrices) are BioShock-specific
-  and probably not handled by the stock UE3 movement replication.
+- `SetBeamTargetPoint` (third-person tracers) can be reached by calling the native at its address, as the
+  pause-menu hooks do.
+
+### Answered since
+
+- A second copy runs on the same PC and Steam account: yes, with `-AllowMultipleInstances` (see "Two copies
+  on one PC").
+- `CPF_Net` did not survive cooking: set on 0 of 36,042 properties (static check above).
 
 ### Unknown
 
-- Whether a second copy can run on the same PC and Steam account.
 - Whether `XGameInfoSPChallenge` (DLC challenge mode) or a leftover MP GameInfo class can be the server's game type.
-- How Elizabeth, Songbird and the scripted sequences behave with two player controllers.
+- How Elizabeth, Songbird and the scripted sequences behave with two players in the same world.
+- Whether enemies can target the partner without a second `XHuman` (which crashes the game).
 
 ## Next steps
 
-1. Option 1 (own sync layer). Start from the `RepNotify` list above: player pose (with the floating
-   section index), weapon fire, health, skyline state. Check whether writing a `RepNotify` property and
-   calling the actor's `ReplicatedEvent(<name>)` through `bi_sonde` plays the effect on the remote copy.
-2. Client connection test (lower priority now: it can only show the handshake). A second running copy needs a separate install copy (the bridge's pipe
-   name `\\.\pipe\bi_sonde` is fixed, and the playbook wants isolated test installs) and probably a
-   per-instance pipe name in `bi_sonde`. Owner's OK first: about 46 GB, or a smaller copy with links to the
-   big read-only packages.
-3. Open a "claim a game" issue (owner's GitHub account, owner's OK first).
+Status overview: [README.md](README.md).
+
+1. Test between two PCs and two Steam accounts, with network loss and latency (`playbook/network-chaos-testing.md`).
+2. Tight enemy sync: disable the AI on the non-host copy and drive its pawns like the puppet.
+3. Shared story state: doors, scripted events (`ServerCauseEvent`/`ServerRemoteEvent` names show what the
+   cut co-op synced), level changes, then Elizabeth.
+4. Publish the mod repo (it builds on the owner's private bridge sources: ask first), then the directory
+   entry and a "claim a game" issue (owner's GitHub account, owner's OK first).
