@@ -9619,3 +9619,32 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+
+- game: Obscure II / The Aftermath
+  year: 2007
+  engine: Hydravision in-house
+  project: obscure2-coop
+  url: https://github.com/Gyurooo/obscure2-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: partial
+  players: "2"
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Release 2.0; online co-op over Steam P2P, each copy simulates its own player and drives the partner's character with the game's own movement code; shared doors, level changes, menus, pickups, item use, breakables and cutscenes; installer imports Steam saves. Enemies and combat not covered by tests yet. See games/obscure-2/README.md.
+  sources:
+  - https://github.com/Gyurooo/obscure2-coop
+  - https://github.com/Gyurooo/obscure2-coop/releases/tag/v2.0
+  - https://github.com/cranebeaker/coop-anything/issues/203
+  checked: 2026-10-30
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, playbook and GitHub issues/PRs for Obscure II; web search for co-op mods (Nexus, ModDB, Reddit, Discord not checked in depth), 2026-10-25/26'
