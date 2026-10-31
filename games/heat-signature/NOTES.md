@@ -565,6 +565,46 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   `0x00ee1c50`, `oGrenade_Create_0` `0x00f53a40`) and when a guard gets `SetRespondingSignal` (`0x00a6d7f0`) or
   `ChangeStateToResponding` (`0x00a67370`).
 
+## Sentries, the mission's success and witnesses (2026-10-31)
+
+- **Sentries decided by the host** (observed in the decompile, then tested): `oSentryGun_Step_0` calls
+  `SentryTriesToShootAt(global.Player, SentryDamageMask)` (`0x00866c20`), which checks angle, stealth shield and line of
+  sight, fires (`SentryFiresBulletInDirection`) and asks for the spotted slow-down (`SetTimeScale`).
+  - Host: a hook calls it a second time with the guest's puppet as the target (not when the puppet is parked).
+  - Guest: its own shared-ship sentries' calls are dropped.
+  - Observed: the host's sentry fired 3-8 shots at the puppet, the guest's injuries went 0 -> 1 or 2, and the guest's copy
+    dropped about 6500 tries of its own per suite run.
+  - The guest does not see the host's bullets yet: they exist on the host's copy only.
+- **Mission success** (observed): the mission type here is "Assassinate".
+  - The target's own step (`EnemyCheckObjectiveDelivered`) calls `CompleteAssassination`, which sets the mission's
+    `AssassinationCompleted` (0x788) and clears `global.Objective` to `oNoone` (object index 49). The game then shows
+    "Return to pod".
+  - The mission itself completes later: `CheckIfAssassinationMissionCompleted` (from `PlayerStateFree`) calls
+    `CompleteMission` once the player is aboard a station, i.e. on each player's own copy when they fly home.
+  - Observed (`tools/mission.sh`): the guest's hit on the unaware target (forwarded, applied by the host) killed it.
+    `AssassinationCompleted` became 1 on the host, and on the guest's copy too, whose target is the host's dead one
+    mirrored. There was no `FailMission` on either copy.
+  - Not tested: docking at a station. A direct `DockAtStation(home station)` from the pod closed the game, as did
+    `KillEnemy` called with the killer as its argument (its argument is the victim: `with (argument0)`).
+- **Witnesses** (observed): the end screen's numbers are fields of the player instance: `Kills` 0x2c2, `Knockouts` 0x2c3,
+  `TimesInjured` 0x2c4, `Alarms` 0x2c9, `LivingWitnesses` 0x2ca, `TimesSeen` 0x2cb.
+  - `IncreaseMissionLivingWitnesses` (`0x009e8ff0`, from `EnemyBecomeWitness`) adds to `global.Player`. On the host,
+    during a guard's step aimed at a guest, that is the guest's puppet, so the host counted the guest's witnesses on the
+    puppet (3), while the guest's copy counted its own (1).
+  - The guest's copies of guards still saw the guest through `SeeingPlayersBody` (`0x00a6b5c0`), a second vision path
+    besides `EnemyCanSeePlayer`: `EnemyBecomeWitness:6 < SeeingPlayersBody:27 < EnemyStateErrand:39`. It now answers "no"
+    for them (about 37 000-74 000 calls per run).
+  - Every host packet carries what the host counted on the guest's puppet since the shared mission was accepted (kills,
+    knockouts, living witnesses, times seen). The guest's copy shows its own baseline from that moment plus those.
+  - Observed: host saw the puppet 3-6 times; the guest's copy showed the same, and counted none itself. Alarms stay per
+    copy (both sound the same alarms); injuries per player.
+  - A third path (observed in a mutation run): a guard's ordinary step on the guest's copy (not mirrored at that moment),
+    Chasing or Confronting, recognized the guest: `EnemyBecomeWitness:6 < UpdateRecognizingPlayer:16 <
+    EnemyStateChasing:31`. On a guest, `IncreaseMissionLivingWitnesses` caused by a shared-ship guard is now dropped
+    outright.
+- **Heartbeat** (observed, test tooling): the loader writes `heartbeat.txt` every 5 s, so a stall check must wait longer
+  than that; `mission.sh` waited 4 s and reported a healthy host as stalled.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
