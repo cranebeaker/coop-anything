@@ -472,9 +472,8 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   `GiveThisPersonAKeycard(person, level)` (`0x00a59a60`) makes a keycard for the person's current `Parent` ship.
 - **Fix:** every player packet carries the sender's `SecurityLevel(own player, shared ship)` (from the game, every 15
   frames); a `SecurityLevel` hook answers `(puppet, shared ship)` with that number. Observed: host given a level-3 card,
-  the guest's copy answered 3 for the host's puppet (0 before). Not yet seen: a puppet walking through a keycard door (the
-  bot cannot walk the players yet: `PlayerPathfindingTo` on the controlled player stores `DestinationFore/Starboard` but
-  the player does not move; injected movement keys are the next thing to try).
+  the guest's copy answered 3 for the host's puppet (0 before). (Correction, see the next section: the bot can walk the
+  players; the targets tried here were outside the ship.)
 - **Hits on puppets** (observed, the cause of "Personal mission failed" right after docking in every run): the host's
   guards attack the guest's puppet (by design, they see guests). The hit lands on the puppet's own `DamageSignal`
   (0x400) and `PlayerHandleDamageSignal` (`0x00ab90f0`, from `PlayerStateFree` line 71) handles it inside the puppet's
@@ -530,6 +529,41 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   the time checks. The suite now runs the time checks before anything that alerts the ship.
 - **Start-up flake** (observed): sometimes a copy never took its character (`global.Player` stayed 49), so it had no pod;
   `two.sh` now checks `SelectThisCharacter` ran and clicks again.
+
+## Walking through a keycard door, and guards on guests that acted by themselves (2026-10-31)
+
+- **Bot walking** (observed; corrects the note above): `PlayerPathfindingTo(x, y)` on the controlled player works when
+  the target is reachable. It always returns 0; it stores `DestinationFore/Starboard` (0x523/0x524) and calls
+  `SetPathToShipwisePoint`, which puts a path in `MyPath` (0x3e5), or -4 when it finds none. `PlayerMovementControls`
+  then calls `MoveTowardsDestination` while `path_exists(MyPath)`, and `EndRoute` when a movement key is pressed. The
+  earlier targets were outside the hull (the docked player stands in the pod, outside the airlock): `MyPath` -4, no move.
+- **Keycard door** (observed, ship seed 4242): door 4 at (2544, 3456) has `Security` 2. The guest, holding a level-1
+  card, walked from its pod toward fore 2650: it stopped at fore 2518 on its copy, and its puppet on the host's copy
+  stopped at 2517. With a level-2 card both went through (2650 and 2649). With the `noclearance` mutation the host's
+  puppet stopped at the first keycard door already (door 3, `Security` 1, fore 1749) while the guest walked on.
+- **Guests' copies of guards acted by themselves** (observed, fixed):
+  - The guest's copy of a guard still ran parts of its AI. During its mirrored step it is blind to the local player,
+    but after the suite's guard hit it went to "Responding", and when the host has not reported it lately its ordinary
+    step runs ("FetchingBody"). Both reached `CanTriggerAlarm` -> `TriggerShipsAlarm`, which became a request to the
+    host, and the host sounded the alarm (stacks: `CanTriggerAlarm:9 < EnemyStateResponding:61 < oEnemy_Step_0:82`,
+    `< EnemyStateFetchingBody:30`).
+  - Fix: on a guest, an alarm, a damage signal, a gun's bullet or grenade, or a thrown item is dropped when a
+    shared-ship guard causes it (its mirrored step, or the guard is `self`). The host's copy of the guard does these
+    for real, and its hits on a guest's puppet already go to the guest. Observed: 1600-6500 such alarms dropped per
+    suite run, and the guest's copy asked the host for none; with the `mirroralarm` mutation it asked.
+  - Not seen yet: a guest-side guard's own shot or throw (counted, 0 so far).
+- **Sentry guns are not synced** (observed): `oSentryGun_Step_0` -> `SentryTriesToShootAt` ->
+  `SentryFiresBulletInDirection` runs on every copy and shoots that copy's own player (`global.Player`). The guest's
+  sentry shot the guest walking past door 4. Its bullet also hit a guard, and that hit went to the host as if the guest
+  had made it. The host's sentry ignores the guest's puppet. To do: sentries decided by the host, like guards. The suite
+  makes the guest's sentries hold fire for its walk (`nosentry`, test only).
+- **The host's own alarm** (observed, the game's rule): the suite's guard hit once killed a guard (`KillEnemy` from
+  `EnemyHandleDamageSignal`), which dropped a grenade (`CreateContentsOnTopOf`). It exploded
+  (`AlertAllGuardsInShipwiseRadius < ExplodeOnShip`), and a guard reacting to the body (`ReactToBodies`) sounded the
+  alarm. The suite no longer requires "no alarm at all" before its own alarm, only that the guest's copy asked for none.
+- **Who fires** (diagnostic): the core logs the GML stack when a bullet or grenade is created (`oBullet_Create_0`
+  `0x00ee1c50`, `oGrenade_Create_0` `0x00f53a40`) and when a guard gets `SetRespondingSignal` (`0x00a6d7f0`) or
+  `ChangeStateToResponding` (`0x00a67370`).
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
