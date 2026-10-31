@@ -9619,3 +9619,34 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+- game: BLACK SOULS II
+  year: 2018
+  engine: RPG Maker VX Ace
+  project: BS2 Coop
+  url: ''
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: partial
+    world_state: 'yes'
+    items: per-player
+  players: "2-4"
+  networking: vpn-needed
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: automated
+  notes: Private build; the code is not public. Each player runs their own copy (Steam 1.0, or the 1.4 patch plus
+    the Spanish fan translation) through a loader that adds the mod to the game's RGSS3 scripts. Shared switches
+    and variables chosen by a census of the event data, joinable battles with shared enemy damage and deaths,
+    players drawn on the map. Direct TCP over a VPN or a forwarded port. The co-op claims come from real-client
+    bot suites (two clients on one PC over localhost); scenario list and PASS counts per build are in
+    games/black-souls-ii/README.md. The sources back the game, year, engine and the two builds tested.
+  sources:
+  - https://en.wikipedia.org/wiki/Black_Souls_(video_game_series)
+  - https://store.steampowered.com/app/3855540/
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
+  checked: '2026-10-30'
+  made_with_coop_anything: true
