@@ -997,3 +997,62 @@ applied in bursts. Higher `NetServerMaxTickRate` / `LanServerMaxTickRate` / `Max
 controller that is not a hero controller (animations, turning), which is the likely root of the pose and turning problems; the likely fix is a hero controller class for
 the guests that works on a client (the stock one needs server-only actors) or a visual interpolation of remote pawns. An idle-animation watchdog is in (guest pawns whose
 animation channel is empty get the idle loop), not confirmed on screen.
+
+## Native engine layer, animation sync, hardware (2026-10-31, long session)
+
+Engine-dependent problems are fixed in the engine now (owner's rule); menus, lobby, gates and HUD stay script. Source of the layer: `local/shrek2-native/enhnative.c`
+(git-ignored, extends the test proxy `shfolder`/`mutexfix`), a 32-bit proxy `d3d8.dll` that forwards the five d3d8 exports and is loaded by `Game.exe` itself
+(`Game.exe` imports `d3d8.dll`, so it runs before `Game.ini` is read). Build: `i686-w64-mingw32-clang -shared -O2 -o d3d8.dll enhnative.c d3d8.def -Wl,--kill-at`
+(llvm-mingw). Log: `System/enhnative.log`.
+
+**Observations (measured or read in Ghidra on this build of `Engine.dll`)**
+- `Engine.dll` exports 6615 C++ symbols; it is linked incrementally, so every export is a 5-byte `jmp rel32` thunk and a hook is a patch of the rel32.
+- `GNatives` (Core.dll export) is a plain table; a native written as `void __thiscall f(UObject*, FFrame&, void*)` placed in a free slot (3500 and up) is callable
+  from script with `native(N) final function ...`. FFrame: code pointer at +0xc. Parameters are read with `FFrame::Step(Context, &var)`, then `Code++`.
+- The engine's locomotion plays on animation channels 4-11 (`run`, `runbackward`, `StrafeLeft`, `StrafeRight`) from `APawn::TickSpecial` when
+  `bPhysicsAnimUpdate` is set; it works for a guest's pawn on the host without any script.
+- Only channel 0 is replicated (`SimAnim`: sequence name, loop bit, rate byte `(rate+4)*31`, frame byte, tween byte). On a client the host's Idle arrived with
+  `loop = 0`, so it froze after one pass ("hangs on an animation", "cut halfway").
+- A pawn's `DesiredRotation` (also `Controller.DesiredRotation`) was left stale by attacks/cutscenes and the native code turned the pawn to it every frame
+  (`bRotateToDesired` is switched on again each frame): pawn and camera of a guest disagreed by up to 10000 units and jittered. Setting both to the camera yaw every
+  tick (client and server), plus sending the camera yaw by `ServerSetView`, made pawn yaw equal camera yaw within 1 unit (test `an10`).
+- Intermittent "the client's Shrek vanishes": the engine resets `bBehindView` on the guest's controller (`Restart`/`ClientReStart`: `bBehindView = Pawn.PointOfView()`)
+  and `Pawn.bOwnerNoSee` is true, so the pawn is not drawn for its owner. Reproduced (test `vis1`, flag False for a whole run), fixed by forcing it true around
+  `PlayerTick` (`vis2`: Shrek in 12 of 12 shots).
+- The guest's look-up pitch of up to 99 degrees hung the chase camera under the ground; now limited to 4500 units (about 25 degrees).
+- `PrePivot` is replicated (reliable) and is applied in world axes with a plus sign (bone origin = Location + PrePivot). Writing it every frame to smooth the guest
+  on the host cost the host 37 -> 12 fps in the test: the smoothing is off by default (URL option `EnhSmooth`).
+- The mod's subtitle drawing recomputed the word wrap on every frame: 29 fps while a subtitle was up, 110+ after. The layout is cached (recomputed for the first
+  10 frames and at frame 120, because the font is not loaded in the first frames and gives too small sizes).
+- Host frame time is smooth at 1 ms resolution (6-11 ms in play), so the Windows timer granularity is not a problem. Steady state with a guest is 110-125 fps on
+  the test PC; slow phases are level loading and a second game process starting on the same PC.
+
+**Hardware (done)** The layer reads CPU brand (CPUID), logical processors, RAM (`GlobalMemoryStatusEx`), display mode and the primary adapter's PCI vendor inside
+`DllMain`, and GPU name and video memory from DXGI in a thread (DXGI must not run under the loader lock). On the first start it changes `Game.ini` only where
+a value is still stock: `LevelOfAnisotropy` 1 -> 16 (NVIDIA/AMD, else 4), `DesiredRefreshRate` 60 -> the monitor's, `CacheSizeMegs` 32 -> 128/256 by RAM,
+`MaxResWidth/Height` -> the monitor's when it is larger than 1920x1080. Backup `Game.ini.before-enhanced-tune`; `AutoTune=False` switches it off. Verified:
+`get D3DDrv.D3DRenderDevice LevelOfAnisotropy` is 16 in the very first run from a stock ini. A prefetch of 370 MB of data files by 4 background threads
+(`Prefetch=False` switches it off) is in; its benefit on a cold file cache is **not measured**.
+
+**Animation sync (done, partly verified)** `Enhanced.EnhancedAnimSync` (replicated actor): the server samples channels 0-3 and 12-37 of every hero pawn
+(`GetAnimParams` plus native `EnhAnimExtra` for loop and blend alpha), the clients apply them; the engine's own `SimAnim` replay is skipped for heroes by a hook on
+`AActor::PlayReplicatedAnim`. Verified for Idle only (client plays the host's Idle with the server's rate and a steady frame). **Not verified:** the host's attacks,
+jumps, pick-ups and face channels on a client; the guest's own animations on the host's screen.
+
+**Unknown / open**
+- Lag of a guest on the host's screen on a real network (in the two-process test the steps of the server-side position are 0-46 units a frame at 18 expected; the
+  client sends moves at most about 66 times a second).
+- Multithreading: the game and render loop are one thread by design; only the prefetch runs in other threads. Candidates: an asynchronous file write of the checkpoint
+  record (the record costs about 2.5 ms plus the write), an asynchronous log writer (tests only). No measured need for either.
+- dgVoodoo2 2.87.3 (the owner's archive, SHA-256 of the zip `6fb954be...f867f`, not checked against the author's site) was tried behind the proxy as `d3d8_real.dll`: the game crashed in `CreateDirect3D` (`Direct3DCreate8` crashes even in a stand-alone 32-bit test program, with `bestavailable`, `d3d11_fl11_0` and `d3d11_fl10_0`, on Windows 10.0.26300 with a hybrid AMD/NVIDIA laptop). Reverted; the wrapper also does not export `Direct3D8EnableMaximizedWindowedModeShim`. A multithreaded Direct3D back end would come from a different wrapper (DXVK's D3D8 layer), not tried: it needs a download.
+- DXVK 3.1.1 (official release `doitsujin/dxvk` v3.1.1 of 2026-09-15, `dxvk-3.1.1.tar.gz`, SHA-256 `40565b4a724aadc4433fa4e010b4b23916d9b1f1baeee64e17186db94f54e608` checked against the GitHub asset digest; kept in `local/third-party/dxvk-3.1.1`) works: its 32-bit `d3d8.dll` is the proxy's `d3d8_real.dll`, with its `d3d9.dll` and `dxgi.dll` beside it (the original is `d3d8_real.dll.ms-original`). Measured in the test copy: 38 threads instead of 13, Vulkan on the RTX 3060 (5.85 GiB), no crash in a two-process run, picture identical; `dxvk.conf` with `d3d9.forceSwapchainMSAA = 4` and `d3d9.samplerAnisotropy = 16` gives smoother edges. The frame rate is not higher (translation costs CPU): about 120-140 fps in the open, 85-105 with a guest and two instances on one PC. **Off:** delete `d3d9.dll`, `dxgi.dll`, `dxvk.conf` from `System` and copy `d3d8_real.dll.ms-original` over `d3d8_real.dll`. The owner's installed game is untouched; the installer does not ship DXVK yet.
+- Anti-aliasing (needs a D3D8 wrapper or dgVoodoo2 from the owner's archive, not tried), 4K on a real 4K desktop, the installer does not install the layer.
+
+## Check of the guest's Shrek on the host's screen (2026-10-31, test `v2`)
+
+Observed (one run, host plus a scripted guest, 90 s, nine pictures taken by the game's own `shot`; I looked at two of them, both at the lily pad where the guest
+had jumped): the guest's Shrek stood in a normal idle pose, no T pose. The server log of his pawn (`[JIT]`, every 0.1 s) shows `bRotateToDesired=False` and
+pawn yaw = controller yaw = view yaw = `DesiredRotation` in every sampled line, `bAnimLoop=True` for Idle, the idle variants (`bored1`, `lookaround1/3`), the
+climb animation `stepup2` and the state `stateAttack1` (the scripted attack ran). No guest death was logged. Not checked: the guest's own window (no picture of
+it in this run), a real keyboard, a real network. The earlier reports (T pose, jerky turning, "all died") were not reproduced after the native layer and the
+rotation fix; they may still occur in a longer or real session.
