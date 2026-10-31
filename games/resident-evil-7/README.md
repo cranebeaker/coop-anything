@@ -16,9 +16,9 @@ footstep sounds, over Steam relay. You can't walk through each other. Players in
 Steam friends list in an in-game window (the other player gets an invite to accept), and can jump to the
 other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
-Enemy damage and deaths are shared (an enemy hurt or killed in one game is hurt or killed in the other), but
-each game still moves its own enemies. Items, doors and story progress are not shared. Saving is off by default
-and can be switched on, with automatic save backups.
+Enemies are shared in an early form: each enemy is run by the game of the player nearest to it and copied in the
+other game, and damage and deaths go both ways. Items, doors and story progress are not shared. Saving is off by
+default and can be switched on, with automatic save backups.
 
 ## Existing work
 
@@ -73,6 +73,17 @@ and can be switched on, with automatic save backups.
   `set_DrawSelf(true)`, and `app.MovementController.warp` places it. Only chapter-jump keys ending in
   `_Start` load into gameplay (`Chapter8` went to the title); Chapter4_Start has nine sleeping Molded but
   loaded an empty level from the title.
+- **Enemy animation by hand**: enemies animate through `via.motion.Motion` (8 TreeLayers, state readable as
+  `MotionBankID`, `MotionID`, `Frame`, `Speed`), driven by `via.motion.MotionFsm`. With the FSM disabled
+  (`set_Enabled(false)`) and the AI off (`app.EnemyOrder.requestThinkOff(owner)`), `TreeLayer.changeMotion(bank,
+  id, frame, interp, 2, 0)` plays any clip and `MovementController.warp` places the enemy: a fully driven copy.
+  The held weapon (Jack's) isn't drawn that way; it's managed by the AI side.
+- **Enemy targeting**: `app.EnemyThinkBase` has `_Target`, `setTarget(GameObject, ReasonType)` and
+  `updateTarget()`. A target set to a non-player object (the ghost) is accepted but dropped within a second,
+  because `updateTarget` re-picks from the vision/hearing sensors and the ghost isn't a valid target. Enemies
+  only ever chase their own game's player.
+- **Cutscenes can't be skipped by API** (no skip method on `app.GameEventController`), but
+  `via.Scene.set_TimeScale(8)` on the current scene while one plays fast-forwards it with every step intact.
 
 ## What we changed
 
@@ -133,6 +144,16 @@ and can be switched on, with automatic save backups.
   A Molded killed where the other player hasn't been yet is remembered and killed when it wakes there; Jack
   and bosses get back up in RE7, so their kills are only applied if they're awake. Events go reliably
   (`k_nSteamNetworkingSend_Reliable`) as a separate packet type next to the 30 Hz movement packets.
+- **Enemy movement and ownership.** Since enemies only chase their own game's player, each enemy is *owned* by
+  one game: by default the game it's awake in (if both are, the lower SteamID keeps it). The owner sends its
+  enemies 10 times a second (position, yaw, layer-0 bank/clip/frame/speed; unreliable, newest wins); the other
+  game turns that enemy's FSM and AI off and drives it 0.15 s behind. When the other player is 3 m+ closer to
+  an enemy, the owner hands it over (reliable `own <id>`), so the enemy's real AI always chases a real local
+  player and its hits land in the right game. A game that hears nothing about an enemy it gave away for 3 s
+  takes it back.
+- **Clock offsets must reset.** The receiver maps the sender's clock with the smallest `now - senderTime` seen.
+  When the sender's clock restarts (their game or plugin restarted), every sample then looks minutes old and
+  the other player stays hidden; reset the offset when a sample looks 5 s+ older than expected.
 
 ## QA
 
@@ -159,20 +180,27 @@ and can be switched on, with automatic save backups.
   (seen in game); a kill sent while Jack slept (labelled as a Molded) was applied the moment he woke; the
   bot's 2500 hit took him from 10000 to 7500 exactly; a local hit of 1000 (700 after scaling) went out as 700.
   No echoes. A real Molded is not tested.
+- Enemy movement, 2026-10-31, on Jack: recorded 6 s under his own AI (59 samples), then replayed with his FSM
+  and AI off: same path, same two clips, switch within 0.3 s of the recording; looked "mostly natural" to the
+  owner, but his hands were posed around a weapon that wasn't drawn. Ownership: handed to the bot (which never
+  sends) → frozen, taken back after 3 s; bot's `own` event → released at once. Real two-game handovers untested.
+- Bot "follow me" mode (replays the local player's own path, timed by the sample clock, skipping idle stretches,
+  stopping 2.5 m away with 1 m hysteresis) stays on walkable ground; an early version skipped idle time in
+  0.1 s steps and made 52 visible jumps in 75 s.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.6 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.6), unzip it and run **Install.cmd**.
+[v0.7 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.7), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
-- Enemies move separately in each game (only damage and deaths are shared), and hits don't make them flinch
-  on the other screen. Items, doors and story are separate per player.
+- Enemy copies don't show held weapons and don't flinch from the other player's hits; ownership handovers
+  between two real games are untested. Items, doors and story are separate per player.
 - Saving is off by default; with it off, nothing from a session is kept.
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
@@ -185,5 +213,5 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 
 1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
 2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
-3. Enemy movement: one game controls each enemy and the other's copy follows it (driven like the ghost).
+3. Enemy copies: held weapons and hit reactions; a real Molded test.
 4. The rest of world sync: story and area, doors, items.
