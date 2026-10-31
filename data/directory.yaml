@@ -9633,7 +9633,8 @@
   last_activity: unknown
   qa: none
   notes: Single-player only; the Steam page says players are never in the same world. A from-zero co-op mod (up to 4
-    players, version.dll + MinHook, Steam P2P) is in progress, see games/heat-signature and issue 274.
+    players, version.dll + MinHook) is in progress, see games/heat-signature and issue 274; host + 1 guest pass a
+    14-check automated suite on localhost, not released.
   sources:
   - https://store.steampowered.com/app/268130/Heat_Signature/
   - https://steamcommunity.com/app/268130/discussions/0/144512526678821083/
