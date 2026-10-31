@@ -6,14 +6,15 @@
 | Versions tested | Steam, app 418370, buildid 22773795 (RT/DX12 build); REFramework nightly-01433 (d4611ae) with csharp-api |
 | Projects | [coop-re7](https://github.com/xXCroissantXx/coop-re7) (directory entry "Resident Evil 7 biohazard") |
 | QA level | none (single-PC bot tests only; two real players not tested together) |
-| Last updated | 2026-10-29 |
+| Last updated | 2026-10-31 |
 
 ## Where things stand
 
 You can't play the story together yet. Each player plays their own world, and sees the other as a full-body
 Ethan who walks, jogs, crouches, sidesteps, backpedals and looks around where the other player does, over
-Steam relay. You can't walk through each other. Players install with one script, connect from an in-game
-panel, and can meet up by jumping to the same chapter. The ghost rebuilds itself after save loads, hides when
+Steam relay. You can't walk through each other. Players install with one script, pick each other from a
+Steam friends list in an in-game window (the other player gets an invite to accept), and can jump to the
+other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
 Enemies, items, doors and story progress are not shared. Saving is off by default and can be switched on, with
 automatic save backups.
@@ -26,6 +27,10 @@ automatic save backups.
 - Same engine: the RE4 (2023) multiplayer mod (claybtv, closed beta, reports lag spikes and enemy desync) and
   RE2 (2019) Local Couch Co-op (local only). Neither has netcode to reuse.
 - alphaZomega's EMV Engine (REFramework Lua) was the most useful reference for spawning and animation.
+- RE2 (2019) got an online multiplayer mod on 2026-10-30 (Nexus RE2 mod 3118, by Kenjiro; closed source,
+  REFramework plus a native plugin): a lobby in the game's menu, joining by Steam invite, IP or LAN. Its
+  comments show the usual install problems (wrong REFramework version, files in the wrong folder) and
+  unreliable sound for the second player. Its joining flow inspired coop-re7 v0.4.
 
 ## How the game works (for co-op)
 
@@ -46,8 +51,10 @@ automatic save backups.
   before/after hash of `Steam\userdata\<id>\418370\remote` rather than trusting the hooks. Skipping only the
   `via.storage.saveService.SaveService.saveSingle` disk write did **not** stop it either.
 - **Chapter jump**: `GameManager.getChapterJumpDataKey(ChapterNo)` names 33 targets; `chapterJumpRequest(key,
-  false, "")` jumps. Back-to-back jumps before the last one has loaded leave cutscenes invisible and the player
-  outside the map, so allow one at a time.
+  false, "")` jumps. `_CurrentChapter` uses the same `ChapterNo` values (Chapter0=2, Chapter1=4, Chapter3=5,
+  Chapter4=6, Chapter8=35, Chapter9=37). Back-to-back jumps before the last one has loaded leave cutscenes
+  invisible and the player outside the map, so allow one at a time. About ten jumps in one session broke the
+  game again (black screen) even with that rule; a restart fixes it.
 - **Cutscenes**: `GameManager`'s static `_GameEventMan` (`app.GameEventManager`): `RunningEventControllers.Count`
   > 0, or `GameManager.PlayingMovie` set. Some scenes are missed by this check.
 - **Steam**: the game's `steam_api64.dll` exports the modern flat API (`SteamNetworkingMessages_SteamAPI_v002`
@@ -83,8 +90,16 @@ automatic save backups.
   the layer like `Stand_Loop`, so crouching still is the crouch-walk clip held on one frame.
 - **Disconnects.** The ghost is hidden when the newest sample is more than 2 s old and shown again when data
   resumes.
-- **Connecting.** An in-game panel shows your own SteamID (with Copy) and takes the friend's. The plugin reads a
-  one-line command file, switches between Steam and the bot live, and saves the friend's ID for the next launch.
+- **Connecting.** The in-game window lists online Steam friends (`ISteamFriends` `GetFriendCount`/
+  `GetFriendByIndex`, `GetFriendGamePlayed` for "in RE7"). Invites need no Steam callbacks: each player sets
+  **rich presence** (`coop_re7` = mod version, `coop_re7_to` = the SteamID they connected to), which Steam
+  shares between friends in the same game. A friend whose `coop_re7_to` is your ID shows as an invite with an
+  Accept button. Connecting by SteamID still works. The plugin reads a one-line command file, switches
+  between Steam and the bot live, and saves the friend's ID for the next launch.
+- **Meeting up.** `_CurrentChapter` goes in every packet; "Go to my friend's chapter" jumps to the start of
+  it. An automatic teleport after the jump was dropped: it fired before the new chapter's player existed,
+  and onto positions that weren't loaded ground (outside the map). RE7 streams areas in around the player,
+  so teleporting is manual and limited to 40 m, onto the friend's position about a second earlier.
 - **Installer.** `Install.cmd` finds RE7 through Steam's library list, copies it to a separate folder, downloads
   REFramework and csharp-api from the pinned release with SHA-256 checks, installs the mod and backs up saves.
 - **Saving.** Off by default (all request and internal save paths skipped). When switched on, the C# plugin
@@ -110,16 +125,18 @@ automatic save backups.
 - Save guard: a supervised chapter jump with saving off, 2026-10-30. The save files' SHA-256 were unchanged, and
   the guard logged the jump's internal saves as blocked. An earlier build without the internal hooks failed
   this check, and the owner's saves were restored from backup.
+- Go to my friend's chapter, 2026-10-31: the bot claims another chapter, one click, arrived at its start and
+  playable. The friend list was read on one PC (15 online friends); invites and Accept need two accounts and
+  are not tested.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.3 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.3), unzip it and run **Install.cmd**.
-Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window copy your SteamID to the other player,
-paste theirs and click **Connect to friend**. To meet up, both jump to the same chapter with the chapter
-switcher. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
+[v0.4 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.4), unzip it and run **Install.cmd**.
+Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
+player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
@@ -131,6 +148,6 @@ switcher. Full steps are in the [coop-re7 README](https://github.com/xXCroissant
 
 ## Next steps
 
-1. A two-player test on two PCs (QA is still `none`).
+1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
 2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
 3. World sync, host-authoritative: story and area, doors, items, then enemies.

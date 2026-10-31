@@ -3554,7 +3554,7 @@
     look. Position, rotation, look direction and crouch/walk flags go over Steam relay
     (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
     extrapolation. Local player cannot walk through the other player. No world sync yet; each player plays
-    their own world (no shared enemies, items, doors or story). Saving is optional (off by default, with automatic backups). One-click installer, in-game connect panel and chapter switcher.
+    their own world (no shared enemies, items, doors or story). Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
     Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
     two real players not tested together. Write-up in games/resident-evil-7.
   sources:
