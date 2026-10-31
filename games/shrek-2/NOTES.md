@@ -1056,3 +1056,34 @@ pawn yaw = controller yaw = view yaw = `DesiredRotation` in every sampled line, 
 climb animation `stepup2` and the state `stateAttack1` (the scripted attack ran). No guest death was logged. Not checked: the guest's own window (no picture of
 it in this run), a real keyboard, a real network. The earlier reports (T pose, jerky turning, "all died") were not reproduced after the native layer and the
 rotation fix; they may still occur in a longer or real session.
+
+## Co-op session flow, revive, cutscene for guests, names (2026-10-31, evening; sandbox runs, one PC)
+
+Observed (scripted runs with up to four game windows on one PC; pictures taken by the game's own `shot`; nothing run with a real keyboard or over a network):
+- **Revive.** A downed player (`stateHeroDying`) stays down; a standing player within 170 units for 1.5 s helps him up (not before 2 s down), health 10% of the full
+  bar (100 per shamrock + 100). Log of a run: guest killed at 43.8 s, up at 48.2 s; host killed at 71.8 s, up at 76.2 s. The level is loaded again from the last co-op
+  checkpoint only when everybody is down for 5 s. A hint goes to the downed one and to the others (host: subtitle line; guest: overlay).
+- **Leaving.** The Shrek of a player who leaves falls (the controller's `Destroyed` kills the pawn); kept. When the last guest leaves, the host gets a question
+  (subtitle line + keys: Enter = close and keep the progress, Esc = go on alone). Yes = a co-op save and back to the main menu. The URL of the level change must
+  empty the session options (`EnhSkipIntro=` `EnhWait=` `EnhPlayers=` `EnhSession=` `EnhLoad=` ...), otherwise they are merged into the menu level's URL and the
+  menu comes up as a black level with a Shrek (seen once).
+- **Guests and the opening cutscene.** The guests' Shreks are not made while the opening cutscene is held or playing (`bHold`, 4 s after the release); a guest watches
+  it through the host's camera. The camera did not reach the client with the engine's own `SetViewTarget` (client's view target stayed its controller for 70 s,
+  a still picture); the pose and the angle of the host's camera are now replicated values of the guest's controller (`bCutView`, `CutLoc`, `CutRot`, `CutFov`) and
+  followed smoothly (jumps of more than 300 units or 9000 angle units are cuts). Subtitles: Cyrillic letters are lost when a string crosses the network (the client
+  got `!  !`), so notes and subtitles are sent as hexadecimal character codes (`EnhancedText`); drawn with a Windows font (Tahoma) made by native 3520 of the proxy
+  library (`UCanvas::execCreateNativeFont`, the compile environment's Canvas has no such member); the HUD of a guest is not drawn in every state, so subtitle and notes
+  are drawn by a viewport interaction (`EnhancedGuestOverlay`). Our notes use the host's subtitle line: they wait while a cutscene's own subtitle is up.
+- **Waiting after a room start.** No "press Enter to start alone" any more: the host sees "waiting for players: N of M", the scene starts 3 s after the last one is
+  back, or 90 s after the level began.
+- **Names over the heads** of the other players (not over one's own Shrek), hidden behind collision geometry. A name can still show over a Shrek that is hidden by
+  scenery without collision (a trunk): not solved.
+- **T pose of other guests.** The animation sync took only four hero pawns and compared only the text of the record: a pawn that took over a slot with an equal
+  record (all idle) was never given it. Now eight slots, only `Shrek` pawns, applied again when the pawn changes and every 2 s. Client logs of the last run: every
+  Shrek on every client plays a channel 0 animation (`Idle`, `bored1`, `lookaround*`); in the pictures the others stand in a normal idle pose.
+- **Place of a guest's Shrek:** a flat floor (normal Z 0.9) at the host's floor height (+-30), ground on the four sides at +-50 and half way from the host; after 40 failed
+  tries the old rules. With four players the third and fourth took attempts 5 and 16 (125 and 190 units from the host).
+- **Speed:** with four game processes on one PC the host runs at 20-26 fps (one guest: 110-125 fps measured earlier); this says nothing about one game per PC.
+
+Not done / not verified: the proxy library (`d3d8.dll`) is not in the installer (the sync, the font and the hardware tuning need it); a real keyboard for the leave question
+and the revive; names behind a trunk; the "pseudo lobby" the owner mentioned (which screen is meant is not known); real network; 4K.
