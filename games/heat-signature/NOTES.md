@@ -627,6 +627,40 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   `ExplodeOnShip` can breach the hull, which is not synced, so a look-alike would breach only one copy. A guest's own
   gunshots go through the same code but are not tested (the test bot cannot fire a gun).
 
+## Reinforcements and jammers after an alarm (2026-10-31)
+
+- **What an alarm does** (observed in the decompile): `TriggerShipsAlarm` sets the ship's `Alarm` (0x56b), counts it,
+  and with `EscapeProtocol` (0x74b) makes the mission target flee. A ship with `ReinforcementProtocol` (0x796, from the
+  mission text) has an `oTeleporterModule`; its step calls `TeleportInReinforcementsAtIntervals` (`0x00ca8c90`), which
+  now and then calls `CreateMercenaryOnShip(parent, fore, starboard, type)` (`0x00709b70`): a random mercenary (name,
+  type, kit) at the teleporter.
+- **Test ship** (observed): the default test mission had `ReinforcementProtocol = 0`, so its alarm brought no
+  reinforcements. The test galaxy is new every run, so the security scenario changes the shared mission's text (base64
+  lines `Key = value`) to `ReinforcementProtocol = 2` and `EscapeProtocol = 0` before sharing; both copies build the
+  ship from that text.
+- **Before the fix** (observed): both copies beamed in their own guards (38 -> 46 in 85 s on each), with different
+  names. All reinforcements share an original position (the teleporter's), the key guests use to match guards to the
+  host's, so on the guest every one of them followed the same host guard.
+- **Fix**: each call runs on a fixed random stream (seed from the reinforcement's number; the game's RNG state saved and
+  restored around it). A guest's own calls are dropped (about 4 200 per run); when the host reports reinforcement n, the
+  guest sets its teleporter's `SecondsUntilReinforcements` (0x9bb) to 0 and calls it once. Both copies add 0.01 * n to the
+  new guard's `OriginalStarboard`; guard matching now uses 0.004 instead of 1. The game sets `OriginalFore/Starboard`
+  a few frames after the guard appears (-1 first), so the tag is re-applied when the game changes it.
+  Observed: the same names and types in the same order on both copies (e.g. "Defender Cherry" 4, "Jammer Jones" 2,
+  "Tracker Quintana" 3).
+- **Jammers** (observed): Jammer mercenaries place `oJammerDevice` (object 64) items (`EnemyStatePlacingJammers` ->
+  `CreateContentsOnTopOf`); `PositionIsScrambled(fore, starboard, ship, 1)` (`0x0070eb80`, 1 = a player, 2 = guards and
+  sentries) checks them, and `UpdateScrambled` stores the result in the player's `Scrambled` (0x855). The guest's copies
+  of the guards placed none (host 7, guest 0). Now the host sends its devices' positions every 15 frames; the guest
+  creates `oJammerDevice` there (`CreateInstance`, then aboard the ship like a bullet), adopts or removes any other, and
+  when one of its copies is destroyed it asks the host to destroy the real one (`DestroyMe`).
+  Observed: the same devices on both copies and the same answer from `PositionIsScrambled` at every device; a new
+  device jams at once.
+- **Test tooling** (observed): the game's log lines end in `\r`; a check comparing a value with `= 1` failed until the
+  `\r` was stripped.
+- **Not done**: Trackers' `RebootPredatorSensor`, `SecurityProtocol` and `AlarmTime` ships; the guest's player was
+  knocked out by the host's guards while walking during the alarm (not investigated).
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.

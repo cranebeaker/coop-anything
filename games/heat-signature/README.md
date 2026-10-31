@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 27-check suite and a 7-check mission scenario on two real game copies (host + 1 guest), with 17 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 27-check suite, a 7-check mission scenario and a 9-check security scenario on two real game copies (host + 1 guest), with 19 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -19,7 +19,8 @@ are synced from the host; the host's guards notice guests, a guest's hits reach 
 a guest's puppet reach the guest; a puppet has its player's keycard clearance and walks through a keycard door on the
 other copy; the guest's copies of guards and sentry guns decide nothing (the host's shoot and notice every player);
 witnesses and other mission stats are counted for the right player; bullets fired aboard the shared ship show on both
-copies (the other copy's are harmless look-alikes; hits travel separately); alarms, the target's death or escape and the
+copies (the other copy's are harmless look-alikes; hits travel separately); after an alarm, reinforcements and their
+jammer devices are the same on both copies; alarms, the target's death or escape and the
 mission's end are the same on both copies. Not done: grenades and hull damage on both copies, loot, other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
@@ -81,8 +82,15 @@ sentry and witness checks they see it again.
 an assassination runs on both, the guest's hit kills the target on the host, `AssassinationCompleted` is set on the
 host and on the guest's copy, no `FailMission` on either, no error dialogs, both advancing.
 
-Last runs (2026-10-31, final build): suite **27/27 three times in a row** (17:29, 17:37, 17:39 UTC); mission scenario
-7/7 (17:40).
+`tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
+none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
+helper `MISSION_SET`). Checks: dock; the protocol on both copies; the guest beams in exactly the host's reinforcements;
+the same reinforcements (tag, name, mercenary type), all mirrored on the guest; the same jammer devices; jammed at the
+same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
+too; no error dialogs; both advancing.
+
+Last runs (2026-10-31, final build): suite **27/27 three times in a row** (18:50, 18:52, 18:55 UTC); mission scenario
+7/7 (18:56); security scenario **9/9 three times in a row** (18:39, 18:58, 19:00).
 
 Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check. The suite ones ran
 against the 14:32 build, before the 27th check (`nopuppethits` and `mirrorsees` were re-run on the 15:30 build with the
@@ -105,6 +113,8 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `mirrorsees` (guest's copies of guards may see the guest) | 25 passed, 1 failed | guest's copy counted 6 witnesses itself |
 | `noghosts` (bullets not sent) | 26 passed, 1 failed | host sent 0 bullets, guest shows 0 |
 | `ghosthurts` (shown bullets hurt) | 26 passed, 1 failed | 6 hits on the guest not from the host |
+| `noreinforcements` (each copy beams in its own), security scenario | 7 passed, 2 failed | the guest's reinforcements differ from the host's |
+| `nojammers` (devices not synced), security scenario | 6 passed, 3 failed | host 3 devices, guest 0; jammed at 3 places on the host only |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
