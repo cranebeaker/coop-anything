@@ -11,8 +11,8 @@
 ## Where things stand
 
 You can't play the story together yet. Each player plays their own world, and sees the other as a full-body
-Ethan who walks, jogs, crouches, sidesteps, backpedals and looks around where the other player does, over
-Steam relay. You can't walk through each other. Players install with one script, pick each other from a
+Ethan who walks, jogs, crouches, sidesteps, backpedals and looks around where the other player does, with
+footstep sounds, over Steam relay. You can't walk through each other. Players install with one script, pick each other from a
 Steam friends list in an in-game window (the other player gets an invite to accept), and can jump to the
 other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
@@ -106,7 +106,12 @@ automatic save backups.
   first copies the save folder (found with `ISteamUser_GetUserDataFolder`) and keeps the last 20 backups.
 - **On screen.** Connection, ping (an echo of the peer's send time in the packet), the friend's chapter and Steam
   name, a version-mismatch warning, and a nameplate. The ghost is hidden during either player's cutscene
-  (a cutscene bit in the stance flags).
+  (a cutscene bit in the stance flags). REFramework's default font (ImGui 1.92 with Windows fallbacks)
+  already draws Cyrillic, Chinese, Japanese and Korean names; loading Microsoft YaHei instead lost Korean.
+- **Footsteps.** The ghost has no sound components, but the player's `app.FootEffectController` has
+  `callSE(SETriggerTypeEnum, via.vec3, UInt32 material)`, which plays Ethan's footstep at any position.
+  Setting its `SETarget` field (Player=0, PlayerJog=1, PlayerCrouch=2) for the call picks the walk, jog or
+  crouch set. coop-re7 calls it once per stride the ghost travels, with the local ground material.
 
 ## QA
 
@@ -128,13 +133,14 @@ automatic save backups.
 - Go to my friend's chapter, 2026-10-31: the bot claims another chapter, one click, arrived at its start and
   playable. The friend list was read on one PC (15 online friends); invites and Accept need two accounts and
   are not tested.
+- Footsteps, 2026-10-31: heard at the bot's position, changing with its stance. Checked by ear on one PC.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.4 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.4), unzip it and run **Install.cmd**.
+[v0.5 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.5), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
@@ -145,6 +151,9 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
 - The face doesn't animate.
+- Only footsteps are heard from the other player (no voice, weapon or door sounds).
+- Tested on the current ray-tracing build only; the older non-RT build (Steam beta `dx11_non-rt`) is untried.
+  The installer warns about it (it reads `BetaKey` from `appmanifest_418370.acf`).
 
 ## Next steps
 
