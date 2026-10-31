@@ -9618,3 +9618,29 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+- game: Heat Signature
+  year: 2017
+  engine: GameMaker Studio 1 (YYC)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Single-player only; the Steam page says players are never in the same world. A from-zero co-op mod (up to 4
+    players, version.dll + MinHook) is in progress, see games/heat-signature and issue 274; host + 1 guest pass a
+    14-check automated suite on localhost, not released.
+  sources:
+  - https://store.steampowered.com/app/268130/Heat_Signature/
+  - https://steamcommunity.com/app/268130/discussions/0/144512526678821083/
+  - https://steamcommunity.com/app/268130/discussions/0/1520386297686058374/
+  checked: '2026-10-30'
+  searched:
+  - 'WebSearch: Heat Signature co-op multiplayer mod; Heat Signature multiplayer mod github / nexusmods / steam workshop
+    (nothing found)'
+  - 'Not checked: Nexus Mods pages directly (403 to the fetch tool), Reddit, Discord'
