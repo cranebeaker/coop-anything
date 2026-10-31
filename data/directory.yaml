@@ -9619,3 +9619,160 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: Nestmates
+  url: https://github.com/skythebro/Nestmates
+  other_urls:
+  - https://www.nexusmods.com/ironnest/mods/90
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: 2-5
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 6 (be.785) IL2CPP plugin, clean-room, MIT. Host-authoritative; guests' mission logic is switched off
+    and their presses run on the host. 1.0.2 (2026-10-30). The bot suite passed 37 of 38 scenarios on 1.0.1, and the
+    1.0.2 regression passed on BepInEx be.785 and be.788. A five-mission soak test ran with two guests (three
+    players). A full campaign mission was played to the end by two real players over Steam on 2026-10-29.
+    Not hardened against a malicious player who already joined. Write-up in games/iron-nest-heavy-turret-simulator.
+  sources:
+  - https://github.com/skythebro/Nestmates
+  - https://github.com/skythebro/Nestmates/blob/main/README.md
+  - https://www.nexusmods.com/ironnest/mods/90
+  checked: '2026-10-30'
+  made_with_coop_anything: true
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: Iron Nest Co-Op Mod
+  url: https://www.nexusmods.com/ironnest/mods/20
+  other_urls:
+  - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: 2-5
+  networking: steam-relay
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: community-reports
+  notes: BepInEx 6 (be.785) IL2CPP plugin by Jager2251, also shipped as a standalone package with BepInEx. Steam lobby
+    with a hex lobby code, kick and ban, same-version check. Shares mission start and end, turret aim, gun loading and
+    firing (host-authoritative firing values), doors and hatches, shell paint, fire-mission cards (ticks shared,
+    deleting not), map drawings (host toggle), the supply console (ammo, charges, points, repositioning, recon plane),
+    and soldier avatars with name tags. Not shared on purpose are music and artillery-computer inputs. Joining a running
+    mission is unsupported (the late joiner desyncs). High Command and Field Report texts show in the host's language.
+    Versions 2.0.0 and up are for the game's full release; built against BepInEx be.788, with a Proton note for Linux.
+    2.5.0 (for the game update that added unit behaviours, map area effects and per-shell hit tracking) syncs damaged
+    and destroyed units, unit behaviours and movement, map area effects, one random seed per mission (enemy fire, spawns,
+    targets, shell spread), mission statistics on the end screen, and the mission clock, with counter-battery fixes
+    (from its Nexus changelog). The GitHub repo is the issue tracker and holds no source; players file bug reports there. CC BY-NC-ND 4.0. Nexus first upload 2026-08-04; 2.5.0 on 2026-10-28, with
+    about 16k unique downloads and 83 endorsements on 2026-10-30.
+  sources:
+  - https://www.nexusmods.com/ironnest/mods/20
+  - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod
+  - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod/issues
+  - https://github.com/Jager2251/Iron-Nest-Co-Op-Mod/blob/main/LICENSE
+  checked: '2026-10-30'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: IronNestCoop
+  url: https://github.com/Xeltor/IronNestCoop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: partial
+  players: 2-5
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-08
+  qa: none
+  notes: Host-authoritative BepInEx IL2CPP plugin over a Steam star topology, built with AI coding agents (stated in its
+    README). The README lists as synchronized mission flow, crew avatars (station attachment, head look, locomotion),
+    the tactical map, ballistic calculator, requisition, gun loading, turret and fire control, operations stations
+    (radio, valves, engines, lights, teleprinter, counter-battery, doors), and the cat. It uses ownership leases for
+    controls and snapshots for late join. Ballistic cards stay private until dragged into the world. It targets a host
+    plus four guests; the README says most validation used fewer clients. Status is as stated by the README, and no
+    community reports were found. Source visible, All Rights Reserved. Standalone release v1.1.0 on 2026-08-14.
+  sources:
+  - https://github.com/Xeltor/IronNestCoop
+  - https://github.com/Xeltor/IronNestCoop/blob/master/LICENSE
+  - https://github.com/Xeltor/IronNestCoop/releases
+  checked: '2026-10-30'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: Open Nest Co-op
+  url: https://github.com/1499501762/OPEN_NEST_CO-OP
+  other_urls:
+  - https://www.nexusmods.com/ironnest/mods/36
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: none
+  notes: Cross-loader (BepInEx 6 IL2CPP or MelonLoader 0.7.3) host-authoritative co-op over Steam P2P lobbies, with a
+    room password and version check. A LAN TCP transport arrived in v0.2.1-Alpha-2. Its README marks as done turret
+    aim, firing, reload workflow, avatars, the record player, mission objectives, impacts, counter-battery, engine,
+    pressure and lights ("main paths done; remaining edge cases tracked"), punchcards by card id, and mid-join
+    snapshots. It also has a custom mission framework and a dual-instance loopback test mode. AGPL-3.0. Latest
+    v0.2.1-Alpha-2 on 2026-09-12.
+  sources:
+  - https://github.com/1499501762/OPEN_NEST_CO-OP
+  - https://github.com/1499501762/OPEN_NEST_CO-OP/releases
+  checked: '2026-10-30'
+- game: 'IRON NEST: Heavy Turret Simulator'
+  year: 2026
+  engine: Unity 6 (IL2CPP)
+  project: VR. Co-op. PvP. (Iron Nest VR & Co-Op)
+  url: https://www.nexusmods.com/ironnest/mods/17
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2-4 (co-op in one nest), or PvP across two nests
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-07
+  qa: none
+  notes: A VR mod with multiplayer by Blah64 (BepInEx 6 IL2CPP, developed against be.764, OpenXR, Silk.NET). Up to three
+    other players can join one nest for co-op, or split across two nests for PvP, with flatscreen crossplay. F7 opens a
+    lobby browser. The page says "Testing has never actually completed a full mission in co-op" and that more than two
+    players is untested. It was written against the game's demo (install steps refer to the demo). Version 2.1,
+    uploaded 2026-06-27, last updated 2026-07-02, so before the game's 2026-08-06 release.
+  sources:
+  - https://www.nexusmods.com/ironnest/mods/17
+  checked: '2026-10-30'
