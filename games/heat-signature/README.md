@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 27-check suite, a 7-check mission scenario and a 9-check security scenario on two real game copies (host + 1 guest), with 19 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 27-check suite, a 9-check mission scenario and a 9-check security scenario on two real game copies (host + 1 guest), with 21 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -20,7 +20,8 @@ a guest's puppet reach the guest; a puppet has its player's keycard clearance an
 other copy; the guest's copies of guards and sentry guns decide nothing (the host's shoot and notice every player);
 witnesses and other mission stats are counted for the right player; bullets fired aboard the shared ship show on both
 copies (the other copy's are harmless look-alikes; hits travel separately); after an alarm, reinforcements and their
-jammer devices are the same on both copies; alarms, the target's death or escape and the
+jammer devices are the same on both copies; guards carry the same gear and drop the same items, and an item or loot
+taken off the ship on one copy is gone on the other; alarms, the target's death or escape and the
 mission's end are the same on both copies. Not done: grenades and hull damage on both copies, loot, other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
@@ -78,9 +79,11 @@ ship: an alarm ends the mission (the target escapes), and the mission end screen
 For the keycard walk the host's guards and sentries ignore the guest's puppet (`unseen`, a test-only switch); for the
 sentry and witness checks they see it again.
 
-`tools/mission.sh` (7 checks) tests the kill, which the suite cannot (its target must live to escape): both copies dock,
+`tools/mission.sh` (9 checks) tests the kill, which the suite cannot (its target must live to escape): both copies dock,
 an assassination runs on both, the guest's hit kills the target on the host, `AssassinationCompleted` is set on the
-host and on the guest's copy, no `FailMission` on either, no error dialogs, both advancing.
+host and on the guest's copy, the target's drops lie at the same places on both, an item and the money the guest takes
+are gone on the host too, no `FailMission` on either, no error dialogs, both advancing. It uses another draw of the
+guards' gear (`GEAR_SALT=1`): with the default one this ship's target has a shield, which stops the guest's punch.
 
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
@@ -89,8 +92,11 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs (2026-10-31, final build): suite **27/27 three times in a row** (18:50, 18:52, 18:55 UTC); mission scenario
-7/7 (18:56); security scenario **9/9 three times in a row** (18:39, 18:58, 19:00).
+Last runs (2026-10-31, final build): suite **27/27 four times in a row** (20:26-20:34 UTC); mission scenario **9/9
+three times in a row** (19:52, 20:35, 20:36); security scenario 9/9 (20:04; three in a row at 18:39-19:00 on the build
+before the gear change). Earlier suite runs on this build failed once each: the host's guards raised the alarm during
+the sentry walk (exposure since cut from 3 s to 1 s), and once one hit on the guest came from its own copy (not seen
+again in 8 runs; cause unknown).
 
 Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check. The suite ones ran
 against the 14:32 build, before the 27th check (`nopuppethits` and `mirrorsees` were re-run on the 15:30 build with the
@@ -115,6 +121,8 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `ghosthurts` (shown bullets hurt) | 26 passed, 1 failed | 6 hits on the guest not from the host |
 | `noreinforcements` (each copy beams in its own), security scenario | 7 passed, 2 failed | the guest's reinforcements differ from the host's |
 | `nojammers` (devices not synced), security scenario | 6 passed, 3 failed | host 3 devices, guest 0; jammed at 3 places on the host only |
+| `nogearseed` (gear not seeded), mission scenario | 7 passed, 2 failed | the target's drops differ (4 lines); a taken item not found on the host |
+| `notaken` (taking not sent), mission scenario | 8 passed, 1 failed | guest sent 0; host contents 77, guest 75 |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 

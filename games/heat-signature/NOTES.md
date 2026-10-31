@@ -661,6 +661,36 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
 - **Not done**: Trackers' `RebootPredatorSensor`, `SecurityProtocol` and `AlarmTime` ships; the guest's player was
   knocked out by the host's guards while walking during the alarm (not investigated).
 
+## Guards' gear, loot and items (2026-10-31)
+
+- **Gear differed between copies** (observed): a guard gets its kit and gun in its first step (`GiveGuardEquipment`,
+  `0x006f53b0`, from `oEnemy_Step_0`), from the game's random numbers at that moment; one guard was armed differently
+  on the two copies, and the mission target got a different extra item at `AcceptMission` (line 86). A guard that goes
+  down drops its gear (`EnemyDropLoot`, `0x00693f60`), so drops would differ too.
+- **Fix**: both scripts run on a random stream seeded from the guard's original position (the game's random state saved
+  and restored; both scripts end with `randomize()` anyway), and the shared mission's accept on one seeded from the
+  ship seed. Observed: all 38 guards' inventories identical on both copies (`guardlist`), and the target's 2 drops at
+  the same places on both after the guest's kill.
+- **Side effect found by the kill test** (observed): with fixed gear this ship's target (the mission's boss, whose kit in
+  the mission text lists a shield) has a shield (`GuardHasShield` 1), which stopped the guest's punch; before, the boss
+  kit was random and often had none. Correct game behaviour; the kill test uses another draw of the gear (test helper
+  `GEAR_SALT=1`), where the target has no shield.
+- **Ship contents** (observed): a ship keeps `Contents` (0x32f, an array) and `ContentsCount` (0x32e); the runtime's
+  get-variable-by-id functions (`0x01099410` instance variables, `0x01099210` built-ins, with an array index) read it.
+  The test ship holds 17 doors, 35 terminals, 4 fuel barrels, 3 loot boxes (and lids), 1 money, 1 ammo, people and AI
+  markers (`oErrandBuddyPosition`, which differ between copies and are left out of comparisons).
+- **Taking things** (observed in the decompile): items go into an inventory with `AddToInventory(item, person)`
+  (`0x00872040`; by hand or `PickUpLootAutomatically` when walking over); money and other loot are used (`UpdateUseHandle`)
+  and then `CollectLoot` (`0x00a72330`) runs. Now whatever the local player takes off the shared ship is sent (object,
+  ship-wise position, 3 times) and the other copy removes the same object with `DestroyContents(id)` (`0x00c3a220`). The
+  host's puppet never picks anything up. Observed: the guest took one of the target's drops and the money; the host
+  removed both, and the contents matched (75 and 75).
+- **Test tooling**: suite check 7 counted a hit on the guest as an injury; with more gunfire since the gear change the
+  guest was already knocked out (`Unconscious`, no more injuries counted), so the check now also accepts the hit
+  arriving at a knocked-out guest.
+- **Not done**: items dropped or thrown by a player, loot boxes, what a puppet holds; the pickups are tested with the
+  test helper `takeitem`, which calls `AddToInventory` (or sends and removes loot as `CollectLoot` would), not by walking.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
