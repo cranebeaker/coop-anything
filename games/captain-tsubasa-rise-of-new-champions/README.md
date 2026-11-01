@@ -21,7 +21,7 @@ There is no tested local story co-op mod from this investigation yet. The [Steam
 
 ## How the game works for co-op
 
-The installed PC executable contains `TamEngine`/`Tamlib` RTTI names and separate `binary/Story` and `binary/CasualMatch` data. The story mode, local match controller assignment, save loading, and anti-cheat behavior still need mapping. The PC release has [Easy Anti-Cheat listed](https://www.pcgamingwiki.com/wiki/Captain_Tsubasa:_Rise_of_New_Champions); this must be confirmed on the exact build. No online services or anti-cheat code will be modified.
+The investigated PC executable contains `TamEngine`/`Tamlib` RTTI names and separate `binary/Story` and `binary/CasualMatch` data. Its entry point is in `.bind`, and `.text` entropy is near 8.0; representative method pointers decompile as invalid instructions. This matches the hub's [SteamStub-wrapped executable guidance](../../playbook/reverse-engineering.md), so the on-disk code does not yet reveal the story controller path. The PC release has [Easy Anti-Cheat listed](https://www.pcgamingwiki.com/wiki/Captain_Tsubasa:_Rise_of_New_Champions); behavior on this exact build remains untested. No online services or anti-cheat code will be modified.
 
 ## What we changed
 
@@ -42,4 +42,4 @@ No playable story co-op package is available from this investigation.
 
 ## Next steps
 
-Map the story match setup and controller allocation against Versus. Establish save isolation before any live test, then test a local-only patch and package only original mod code, never game files.
+Establish save isolation and verify test-copy integrity, then observe story and Versus controller assignment in an authorized offline runtime session without unpacking or disabling the executable's protection. If a local-only patch becomes feasible, test it through a complete story match and package only original mod code, never game files.

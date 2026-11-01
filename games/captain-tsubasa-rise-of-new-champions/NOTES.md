@@ -23,11 +23,14 @@ Enable two or more people on one PC to play the story campaign matches together,
 - SteamDB lists `10135064` as the current public branch build ID, matching the local Steam manifest. Source: https://steamdb.info/app/1163550/depots/
 - Bandai Namco describes Episode: Tsubasa and Episode: New Hero as the two story modes. Source: https://en.bandainamcoent.eu/captain-tsubasa/news/captain-tsubasa-rise-of-new-champions-out-now
 - Public game documentation lists Easy Anti-Cheat for the PC release. This is secondary evidence and must be checked against the installed build; no anti-cheat workaround has been attempted. Source: https://www.pcgamingwiki.com/wiki/Captain_Tsubasa:_Rise_of_New_Champions
+- The investigated executable's PE entry point is at RVA `0x28fe310` in its `.bind` section. Its `.text` section has measured Shannon entropy `8.000` bits/byte. Ghidra 12.2 completed autoanalysis, but selected RTTI-linked functions decompiled to invalid instructions and `halt_baddata`. These are static observations from the executable identified above.
+- The isolated game files had no unwrapped sibling game executable; the other executable found was a 32-bit utility. This is an inventory result for this copy, not a claim about every distribution.
 
 ## Derived
 
 - Reusing the game's existing local player and controller allocation in story matches may be less work than implementing a new network protocol. This is a hypothesis that needs binary and in-game checks, not an observed capability.
 - Steam Remote Play Together could let distant friends join a supported local co-op mode, but cannot by itself enable a second story player.
+- The `.bind` entry point and high-entropy `.text` match the SteamStub-wrapped pattern described in this hub's [reverse-engineering playbook](../../playbook/reverse-engineering.md). The on-disk code is unsuitable for normal static function analysis; the RTTI vtables are leads only, not a verified control-flow map.
 
 ## Guesses
 
@@ -39,6 +42,7 @@ Enable two or more people on one PC to play the story campaign matches together,
 - Whether any existing story co-op mod exists; public search did not find one, but absence is unproven.
 - Whether Episode: Tsubasa and Episode: New Hero use the same match setup path.
 - Whether the Steam build allows an offline story-only mod without interfering with Easy Anti-Cheat or online services.
+- The actual story match controller path inside the runtime code; it cannot be established from the wrapped on-disk `.text`.
 
 ## Checks performed
 
@@ -47,7 +51,8 @@ Enable two or more people on one PC to play the story campaign matches together,
 - Searched GitHub repositories, code-indexed web results, [Nexus's game mod index](https://www.nexusmods.com/captaintsubasariseofnewchampions/mods/top), Steam discussions, and Japanese, Spanish, and French web queries for an existing story co-op mod; none surfaced in those searches. This is not proof that none exists.
 - Prepared an isolated test copy and confirmed its executable hash matches the source. No mod or in-game test has run.
 - The executable includes `SHGetSpecialFolderPathA` and `Savedata` strings. Changing only `APPDATA` is not enough to guarantee save isolation; a separate Windows profile or confirmed path redirection is needed before a game launch.
+- Ghidra 12.2 autoanalysis completed on the executable. Its Python post-script did not run in ordinary headless mode; a Java script did run and found no direct references to selected strings. Manual MSVC RTTI parsing found vtable candidates for `CVersusMenuTask`, `GameSoccerPad`, `TGameSoccer`, `TFirstPlayGameSoccer`, and `TCasualMatch`, but decompilation of representative method pointers returned bad instruction data. No claim about their behavior follows from those candidates.
 
 ## Next check
 
-Finish static analysis of story and Versus controller setup. Establish save isolation and verify the test copy's integrity before any in-game test. Do not change the original install or saves.
+Follow the [playbook's wrapped-executable guidance](../../playbook/reverse-engineering.md): observe an authorized offline client only at runtime, without unpacking or disabling protection. Establish save isolation and verify the test copy's integrity before launch. Compare story and Versus controller behavior through logs or a noninvasive runtime probe; do not change the original install or saves.
