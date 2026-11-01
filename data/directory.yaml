@@ -2921,6 +2921,28 @@
   - https://github.com/Hyjarion/Witcher3-MP
   - https://github.com/Hyjarion/Witcher3-MP/releases/tag/v0.0.1
   checked: 2026-10-18
+- game: 'Captain Tsubasa: Rise of New Champions'
+  year: 2020
+  engine: unknown
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No playable local story co-op mod surfaced in the searches below. Bandai Namco documents up to four offline players in Versus; its PC story controller setup remains untested. Research and exact build details are in games/captain-tsubasa-rise-of-new-champions.
+  sources:
+  - https://captaintsubasa-csgame.bn-ent.net/mode/index62.html
+  - https://store.steampowered.com/app/1163550/
+  - https://github.com/cranebeaker/coop-anything/issues/286
+  checked: '2026-11-01'
+  searched:
+  - 'GitHub repositories and code search, Nexus Mods, Steam discussions, and web searches in English, Japanese, Spanish and French on 2026-11-01; no playable story co-op project surfaced.'
 - game: Cyberpunk 2077
   year: 2020
   engine: REDengine 4
