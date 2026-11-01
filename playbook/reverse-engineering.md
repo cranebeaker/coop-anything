@@ -60,7 +60,15 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   with the game. A thread waits for the engine module, then patches its import table
   entries (Winsock, file, `PeekMessage`, `PostQuitMessage`) with logging wrappers. Patch your own
   copy only; the log shows the first facts (which hosts the client dials, which file it
-  opens) that no desktop capture can.
+  opens) that no desktop capture can. **Pin your proxy's exports with a `.def` file.** MSVC
+  exports `__stdcall` names decorated (`_DirectInput8Create@20`), but the game imports the
+  undecorated name, so the loader fails with `The procedure entry point DirectInput8Create
+  could not be located in the dynamic link library ...\game.exe` — naming the game exe, not
+  your DLL, which sends you looking in the wrong place. Searching the DLL for the string
+  `DirectInput8Create` says "found" and proves nothing; only the export **name table**
+  shows the decoration (`dumpbin /exports <dll>`). Add a test that loads the built DLL and
+  resolves the symbol by name. From: Resident Evil Revelations
+  ([games/resident-evil-revelations](../games/resident-evil-revelations/README.md)).
 - **Reach the script language.** If the engine embeds Lua, find the base-library
   registration table (name pointer, function pointer pairs: `dostring` is easy to locate by
   string) and read the neighbours' code to get `lua_dobuffer`, `lua_getglobal`, `lua_settop`.

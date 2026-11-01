@@ -3618,6 +3618,38 @@
   checked: 2026-10-18
   searched:
   - search Nexus, ModDB, GitHub, Discord and YouTube via web search, 2026-10-18, only the unreleased YouTube project
+- game: Resident Evil Revelations
+  year: 2012
+  engine: MT Framework
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: 'CORRECTED 2026-10-22. No campaign co-op: the only two-player mode
+    is Raid Mode in the main menu, the campaign pause menu has no invite
+    path, and the mode field at *(sGameSystems+0x24)+0x20 reads 0 at the
+    menus and 1 in Raid, so the earlier note here about a dormant campaign
+    co-op was wrong. The binary does carry a host-authoritative network layer and
+    an extensible type registry that Raid uses today, but building campaign
+    co-op on them from scratch is unproven - no peer has ever been
+    connected.'
+  sources:
+  - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
+  - https://steamcommunity.com/app/222480/discussions/
+  - https://www.nexusmods.com/games/residentevilrevelations
+  - https://www.moddb.com/games/resident-evil-revelations/mods
+  checked: '2026-10-22'
+  searched:
+  - search GitHub, Steam community and general web for a co-op mod of the PC release, 2026-10-22, nothing found
+  - Nexus Mods and ModDB answered 403 to the fetcher, so the search there is only partly covered
+  - Reddit and YouTube not checked
 - game: Hogwarts Legacy
   year: 2023
   engine: Unreal Engine 4
