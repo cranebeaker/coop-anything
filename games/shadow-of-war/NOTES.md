@@ -3459,3 +3459,30 @@ smoothing lagged the free-run start.
 ### Unknown
 
 - Anything between two PCs over a real network; slow motion is still not off in co-op; the client's own fast travel.
+
+## Session 2026-11-01 br: slow motion off in co-op
+
+### Observations
+
+- Every slow-motion record (`[SLOWMO] Start: <record>`) runs as an instance whose per-frame update (RVA `5CF6C4`)
+  walks five global timers (indices 0..4: slots `2702598`, `2702548`, `2702570`, `2702558`, `2702578`). For a timer
+  whose wanted byte (`[slot-4]`) is set it applies the record's scale (`5CF8CC` turns a float into numerator / 65535,
+  `5CF834` stores numerator, denominator and the ratio float at `+0x30` of the timer's rate object); for one whose
+  byte is clear it sets the timer back to 1/1. The `jne` after that byte test (`75 42` at `5CF709`) is the whole
+  difference: two nops make the update reset every timer to 1/1 each frame.
+- `SlowMO.Start <record>` in this build only looks the record up (`7CE80C(name)`: a binary search of the record table
+  by name hash); `.Stop`, `.Pause` and `.Resume` are `ret`. The world UI's setter `5D09E0(unused, record)` ("SetWorldUISlowMo
+  = ...") does start one: called with the record found by `7CE80C`, `HitCounterSlowMo` took timers 0 (player) and 1
+  (simulation) to 0.142855 (7x), the others stayed 1.
+- With the two bytes patched (probe `slowmo off`, or by itself when a `coop_role` is set): `HitCounterSlowMo` and
+  `Instakill_01_SM` start in the log and all five timers stay at 1 for the whole record. A slow motion already running
+  went back to 1 within a second of the patch.
+- `coop_slowmo=on` keeps the game's slow motion. Offline suite after the change: `test_guard` 56/56 (the hook cases
+  now also check the patch and its refusal without `probe_write`), mutant 21/21.
+
+### Unknown
+
+- Whether anything but the slow-motion records uses these five timers (pauses and cinematics have their own paths in
+  the callers of `5CF834`: `177421C`, `19CE44D`, `19CFC95`, `1D6DB8A`, `1D85B61`); nothing odd was seen, but only
+  seconds of play were watched with the patch on.
+- How the game looks and sounds with the records running but not slowing (sound keys still start).
