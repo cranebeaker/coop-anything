@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario and an 11-check knocked-out scenario on two real game copies (host + 1 guest), with 35 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario and an 8-check rescue scenario on two real game copies (host + 1 guest), with 36 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
@@ -26,7 +26,7 @@ taken off the ship on one copy is gone on the other; a loot box opened on one co
 opener's); an item a player drops or throws aboard is the same item on the other copy (name, traits, every value) and
 rests at the same place; a player who has left the ship in their pod is gone from it on the other copy, and each player's
 mission completes when they dock at home (the end screen pauses only that player); a guest knocked out aboard is
-carried off by the host's guards and thrown out of an airlock on both copies, then floats until it is lost, as the
+carried off by the host's guards and thrown out of an airlock on both copies, then floats until it is lost or its own pod picks it up, as the
 game does with its own player, and a death no longer crashes the game; alarms, the target's death or escape and the
 mission's end are the same on both copies. Not done: grenades and hull damage on both copies, a thrown item's hit on a guard (untested), other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
@@ -114,6 +114,11 @@ the puppet out of the airlock and the guest floats in space; the guards did not 
 is told the guest was thrown out (not that it left); the guest's oxygen runs out and it is lost (character select,
 no error dialog); the host is told; the host's mission goes on; no error dialogs; both advancing.
 
+`tools/rescue.sh` (8 checks): dock; the guest is knocked out, carried off and thrown out (as in `fail.sh`); while it
+floats, its pod flies free (put 2000 units away by the test helper `podtome`) and the host shows it where it is; the pod
+picks the guest up (put beside it); the guest flies home and its mission completes, and the host is told (not that the
+guest was lost); no error dialogs; both advancing.
+
 `tools/early.sh` (9 checks): dock; the guest leaves at once and flies home with the target alive: it docks and its
 mission stays open (not failed: the game's own rule); the host is told it left, nothing more; the host's mission goes
 on, unpaused; the host kills the target alone, which completes the guest's mission at home, and the host is told; the
@@ -171,6 +176,7 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `nobody` (the guest's copy does not follow its body), fail scenario | 5 passed, 6 failed | the host threw the puppet out 10 times; the guest stayed aboard |
 | `noeject` (the host does not throw the puppet out), fail scenario | 7 passed, 4 failed | the puppet lay in the airlock until it got up |
 | `nonewlife` (no stale building removed at a new life), fail scenario | 10 passed, 1 failed | "no chooseable players exist" dialog on the guest |
+| `nofreepod` (a pod flying free is not sent), rescue scenario | 7 passed, 1 failed | nothing sent; the host's copy of the pod 884 394 units away |
 | `noguestsave`, `nodownpod`, fail scenario | 11 passed each | not caught: the scenario does not reach those cases (see NOTES.md) |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
@@ -188,6 +194,6 @@ Not applicable yet.
 
 ## Next steps
 
-- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; rescuing a floating player, a new character after a death, a pod destroyed.
+- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a new character after a death, a pod destroyed.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.

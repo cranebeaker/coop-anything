@@ -919,5 +919,20 @@ Observed, unless marked:
   `PlayerStateUnconscious` handles no damage); two suite checks were changed to accept that. A hit on the guest made it
   drop a grenade (`PlayerHandleDamageSignal` -> `CreateContentsOnTopOf`) whose blast hurt it on its own copy; grenades
   are not synced yet, so such blasts are counted apart from hits not from the host.
-- Not done: rescuing a floating player (its own pod, or the other player's), picking a new character after a death
-  and joining again, a pod destroyed; a test that reaches the cases of `noguestsave` and `nodownpod`.
+- Not done: picking a new character after a death and joining again, a pod destroyed; a test that reaches the cases of
+  `noguestsave` and `nodownpod`.
+
+## Rescued by your own pod (2026-11-01)
+
+- **Only your own pod** (decompiled): `PlayerStateFloating` calls `CanBeScoopedUp`, which looks at `global.PlayerShip`
+  (needs fuel, `PlayerShipHasFuel`); while floating, the player steers its pod from outside (`PlayerRemoteControls`).
+  The other player's pod cannot pick you up in the game; that would be a new feature, not a sync.
+- **The pod flying free** (fixed): a player's pod was sent to the other copy only while the player sat at its controls
+  ("Controlling"); a pod steered from outside by a floating player stayed docked at the shared ship on the other copy
+  (observed with the change switched off, mutation `nofreepod`: nothing sent, the host's copy of the pod 884 000 units
+  away). It is now sent whenever it is free in space too. Observed: the host showed it 125 units from where the guest's
+  copy had it, while it drifted fast from the throw.
+- **Observed** (`tools/rescue.sh`): thrown out, the guest's own pod picked it up (test helper `podtome`: the pod
+  undocks and is put beside the player, instead of the flight), it flew home and its mission completed; the host was
+  told "mission complete", not "lost". In 2 of about 10 runs the guest, thrown out beside the airlock its pod was
+  docked at, was picked up at once without the helper.
