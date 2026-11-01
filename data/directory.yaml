@@ -3555,7 +3555,7 @@
     (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
     extrapolation. Local player cannot walk through the other player. Enemies are
     shared (early); each runs in the nearest player's game and is copied in the other, with damage and deaths
-    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
+    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). A fatal hit downs a player until the other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
     Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
     two real players not tested together. Write-up in games/resident-evil-7.
   sources:

@@ -19,8 +19,9 @@ the other player's data stops or during cutscenes, and shows the friend's name, 
 Enemies are shared in an early form: each enemy is run by the game of the player nearest to it and copied in the
 other game, and damage and deaths go both ways. Door unlocks and openings are shared, and supplies picked up by
 one player vanish for the other (keys, files and maps stay for both). Story cutscenes are shared by name and
-story progress is copied forward (early). Item boxes are not shared. Saving is off by default and can be switched
-on, with automatic save backups.
+story progress is copied forward (early). A fatal hit puts a player down until the other stands next to them for
+3 seconds. Item boxes are not shared. Saving is off by default and can be switched on, with automatic save
+backups.
 
 ## Existing work
 
@@ -190,6 +191,15 @@ on, with automatic save backups.
   once per side; progress numbers and ended events are copied, only ever forward. The list of played
   cutscenes is kept per chapter in a file, because replaying a finished one hangs it. A "Share story" switch
   turns it off.
+- **Downed and revive.** The player's death goes through `app.PlayerDamageController`
+  (`isEnableDieByDamageInfo`, `doDie`, `add_DieHandler`, `playDeadMotion`) and the base
+  `DamageController.canDie(DamageInfo)`, then `GameManager.setGameOverFlag` and `app.GameOverScreen`.
+  coop-re7 pre-hooks `isEnableDieByDamageInfo` and `canDie` (only for the player's controller, by address) and
+  returns false (SKIP_ORIGINAL, return value 0) while the friend is connected: the player stays alive on 1
+  health. The downed look: `PlayerMovement.set_isCrouch(true)` (the view drops; the friend's ghost crouches),
+  `PlayerOrder.switchPlayerOperatable(false, OperationLayer.Base)` and `PlayerOrder.setDamageGUIMonochrome(true)`;
+  `PlayerOrder.setReserveProne()` did nothing visible. The friend within 2.8 m for 3 s revives (35% health).
+  Both down, or 90 s alone, lets a real death through (a self-hit via `newFakeDamageInfo`).
 
 ## QA
 
@@ -231,13 +241,16 @@ on, with automatic save backups.
   C03_1 from 500 to 600 and a later lower value was ignored; the owner's own cutscenes (c03e00_01, c03e00_02)
   and progress were sent. Replaying the already-finished dinner (after a script reset had cleared the played
   list) hung it; fixed by keeping the list on disk.
+- Downed and revive, 2026-10-31: with the bot standing still ~5 m away, a fatal self-hit left the player crouched,
+  locked and monochrome on 1 health (no game over); switched to follow, the bot walked over, stopped 2.6 m away
+  and the player was up again 3 s later. Both-down and the 90 s timeout are untested.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.9 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.9), unzip it and run **Install.cmd**.
+[v0.10 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.10), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
@@ -246,6 +259,7 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 - Enemy copies don't show held weapons and don't flinch from the other player's hits; ownership handovers
   between two real games are untested. Item boxes are separate per player.
 - Shared story is early: a cutscene that hangs locks the player until the game restarts.
+- Being downed has no fall or kneel animation (a forced crouch stands in for it).
 - Saving is off by default; with it off, nothing from a session is kept.
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
