@@ -1155,8 +1155,8 @@
   notes: "Story layer (xNVSE plugin plus game-free sync core): the host captures the effects of a quest script as one
     transaction and the clients apply it without re-running the script. Alpha player releases since 2026-10-28 (0.1.8-alpha
     on 2026-10-31): a zip with installer and launcher that needs Python 3 and xNVSE 6.3.0+. The host listens on UDP 27960,
-    2-4 players, with direct IP or the Steam Spacewar relay. Direct IP also works over a VPN such as Radmin (the launcher's
-    port probe answered on the Radmin address; no two-PC session was run). The installer accepts the Russian/PCR Steam
+    2-4 players, with direct IP or the Steam Spacewar relay. Direct IP also works with a VPN address such as Radmin's: two
+    copies on one PC joined that way and synced quest stages both ways, but no two-PC session was run. The installer accepts the Russian/PCR Steam
     release (appid 22490) and the GOG Russian release as well as the English one, all at exe 1.4.0.525. The join check
     compares the active plugin list, so players need the same language release and DLC. The release notes say the
     features pass automated tests but most have not been played through in game. MIT licensed."

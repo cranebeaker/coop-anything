@@ -97,8 +97,11 @@ servers, not for a private local session.
 **fnv-coop 0.1.8-alpha (player release).** Every player installs Python 3 and xNVSE 6.3.0 or newer, unzips
 `FNV-CoOp-0.1.8-alpha.zip` and runs `Install.cmd`. Then `Launcher.cmd`: the host picks HOST A GAME with CONNECTION set to IP,
 and friends pick JOIN A FRIEND with `<host address>:27960`. Over Radmin VPN the host address is the host's 26.x.x.x
-address and nothing is forwarded. On one host the launcher's own port probe answered on that address, but no session
-between two PCs was run. The release's guide covers Steam (Spacewar relay) and port forwarding, not VPNs.
+address and nothing is forwarded. Two copies on one PC (GOG Russian, release build) ran a session this way: the guest
+joined `<radmin address>:27960`, the intro started for both, and VCG02 stages set on either side showed up on the
+other (NOTES 7b). The guest saw the host's avatar, but the host did not show the guest's avatar before character
+creation. No session between two PCs was run. The release's guide covers Steam (Spacewar relay) and port forwarding,
+not VPNs.
 
 **fnv-coop from source.** Build it like this: Python 3.11+, CMake >= 3.20, VS
 2022 with `-A Win32`, an xNVSE checkout in `third_party/NVSE`, then
@@ -122,12 +125,13 @@ story.
 - Windows and New Vegas `1.4.0.525` only, Steam or GOG. DLC questlines are not covered yet.
 - The Russian/PCR release works with the fnv-coop installer, but the NV:MP wiki only mentions
   the Steam and GOG releases; the PCR release was not tested with NV:MP here.
-- fnv-coop's join check compares the active plugin names in load order. Russian releases (Steam PCR, GOG Russian) load
-  a `*_lang.esp` next to each master and the English release does not, so a Russian host and an English guest should
-  be refused with "mod list differs". This comes from reading the source (`MakeHandshake()`), not from a run. Everyone needs the same
-  language release and the same DLC.
-- A copy of the game that was never launched has no `plugins.txt`, so DLC and `*_lang.esp` are not loaded. Start the
-  game once from GOG Galaxy, Steam or `FalloutNVLauncher.exe` before the first co-op session.
+- fnv-coop's join check compares the active plugin names in load order (`MakeHandshake()` in the source). The GOG
+  Russian install loads `FalloutNV_lang.esp` after the masters (its `Fallout_default.ini` sets `STestFile2`), and the
+  English release has no such file. So a Russian host and an English guest should be refused with "mod list differs",
+  though no such pair was run. Everyone needs the same language release and the same DLC.
+- A copy of the game that was never launched has no `FalloutPrefs.ini`, and then `FalloutNV.exe` opens its own
+  launcher instead of the game. Start the game once from GOG Galaxy, Steam or `FalloutNVLauncher.exe` before the first
+  co-op session. Its DLC and `FalloutNV_lang.esp` loaded even without a `plugins.txt` (NOTES 7b).
 
 ## Next steps
 

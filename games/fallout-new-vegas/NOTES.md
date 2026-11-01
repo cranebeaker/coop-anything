@@ -168,20 +168,69 @@ Player request: co-op with friends, explicitly not over Steam, over Radmin VPN. 
    network as **Private**. This only proves the host binds and answers on the Radmin interface. No packet came from a second PC.
 4. The launcher (`fnv_terminal.py --no-window`) starts on Python 3.13.16 and serves its UI on 127.0.0.1.
 
+### Two-copy stand on the same PC (in game, 2026-11-01)
+
+Two copies of the GOG Russian install as fnv-coop's own hardlinked instances (`tools/runner/instances.py provision`,
+`modes=("hardlink",)`, `appid=None`, `FNV_GAME_DIR` set to the GOG folder; own `Fallout.ini`/`FalloutPrefs.ini` with
+`bUseMyGamesDirectory=0`, own `Saves`). The plugin was the **release** split build (`payload/nvcoop.dll` +
+`payload/nvcoop_mod.dll`, `[loader] core`) plus `nvcoop_start.fos`. Each `nvcoop.ini` was the release's default ini
+merged with what the release launcher writes (`fnv_launcher_core.build_plan`): host = HOST A GAME, IP, port 27960,
+2 players, `autostart=start`, `party=2`; guest = JOIN A FRIEND with `<host Radmin address>:27960`, `autostart=start`.
+The owner's game folder, `Documents\My Games` and `%LOCALAPPDATA%\FalloutNV` were only read: no `plugins.txt` or My Games
+folder existed before or after. Started with `run.py up --n 2` (xNVSE `nvse_loader.exe` works on the GOG exe). The
+copies were muted in the Windows mixer while they ran.
+
+Observed (bridge calls and `nvcoop.log`, script in the session, results file per run):
+
+| Check | Result |
+|---|---|
+| Both bridges answer | pass |
+| Host and guest in one session: host sees slot 1 joined, guest `joined`, transport `enet` connected | pass (host `lastSeq` 1553, guest applied 1553, acked 1551) |
+| Guest connects to the Radmin address (`coop: enable=1 role=client ... host=26.x.x.x port=27960`) | pass |
+| Host listens on `0.0.0.0` | pass |
+| Same active plugin list on both copies (`plugins`) | pass |
+| Lobby start: `party of 2, 2 here -> intro for everybody`, intro started on host and guest | pass |
+| VCG02 stage 10 set on the host (console `setstage 10A214 10`) shows up on the guest | pass |
+| VCG02 stage 20 set on the guest reaches the host and holds on both; stage 10 stays done | pass |
+| Guest sees the host's avatar (`avatar.status`: phase Driving, position confirmed, equipment converged) | pass |
+| Host sees the guest's avatar | **not shown**: puppet `Absent` (`intents: ... this slot's puppet does not exist yet`) |
+
+Both copies then waited in the character-creation name menu (VCG01 stage 3, `intro scene: STALLED ... menu 1051
+(name) is open and waits for the player`): a person types the name, so nothing after the intro was exercised.
+
+Limits of this run: host and guest were on one PC, so the guest's packets to the host's own Radmin address went over
+the local stack, not through the Radmin tunnel. It proves the addressing and binding on the Radmin interface, not the
+link between two PCs. The bridge's `screenshot` is not available in this build ("the D3D9 device lookup is
+experimental"), so there are no screenshots.
+
+Two notes for the stand tools, not for players:
+- `lab_core.connected()` demands `host.allSynced`, the state where every peer acked `lastSeq` at the instant of the
+  call. In the intro the host commits all the time, so it stayed false for 4 minutes while the lag was 1 to 2
+  transactions. The run accepted "joined + transport up + lag <= 20".
+- A bridge call that times out while a copy loads leaves its late reply in the pipe. Every later call on that
+  connection then fails with `reply id N does not match request id N+k`. Reopening the pipe after a failed call fixes it.
+
 ### Derived (from source, not from a run)
 
 - The join handshake compares the **active plugin names in load order** (`plugin/coop/coop_module.cpp`,
-  `MakeHandshake()`: `DataHandler::GetNthModName` for every active mod; reject reason `kRejectModList`). The
-  Russian/PCR and GOG Russian releases load `*_lang.esp` next to each master, while the English release does not. So **a
-  Russian host and an English guest are refused**, even though form IDs match. All players need the same language
-  release and the same DLC set, or the host must turn the `_lang.esp` files off. Neither the player guide nor the
-  write-up says this.
-- A game that has never been launched has no `plugins.txt`, so DLC and `_lang.esp` are not loaded and the mod list
-  is wrong. One normal launch (GOG Galaxy or `FalloutNVLauncher.exe`) is needed before the first co-op session.
+  `MakeHandshake()`: `DataHandler::GetNthModName` for every active mod; reject reason `kRejectModList`). On the GOG
+  Russian install the active list was `FalloutNV.esm`, the nine DLC masters and `FalloutNV_lang.esp` (observed above).
+  The GOG Russian `Fallout_default.ini` itself sets `STestFile2=FalloutNV_lang.esp`. An English install has no
+  `FalloutNV_lang.esp`, so **a Russian host and an English guest should be refused**, even though form IDs match. All
+  players need the same language release and the same DLC set. Neither the player guide nor the write-up said this.
+
+### Correction
+
+- An earlier version of this section said a never-launched game loads no DLC and no `_lang.esp` because it has no
+  `plugins.txt`. The stand contradicts that: with no `plugins.txt` the copies loaded every DLC master and
+  `FalloutNV_lang.esp`. Why the DLC load without `plugins.txt` is unknown. The first normal launch is still needed for
+  another reason: without a `FalloutPrefs.ini` that has `sD3DDevice`, `FalloutNV.exe` 1.4.0.525 opens its launcher
+  instead of the game (`tools/runner/instances.py` `default_prefs`, checked in game by fnv-coop on 2026-10-21).
 
 ### Unknown
 
-- Whether a full session over Radmin (two PCs, in game) holds up: not run here, no second PC.
+- Whether a full session over Radmin between two PCs holds up: not run here, no second PC.
+- Whether the host shows the guest's avatar once both are past character creation.
 - Whether NV:MP and fnv-coop 0.1.8 can run together: the 0.1.x player guide does not mention NV:MP any more.
 
 ## 8. Proposed follow-up (not done in this session)
