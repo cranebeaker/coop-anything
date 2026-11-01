@@ -7649,32 +7649,35 @@
 - game: 'Middle-earth: Shadow of War'
   year: 2017
   engine: Firebird (LithTech derivative)
-  project: (none found)
-  url: ''
-  other_urls: []
-  kind: gap
-  status: none
-  coop_scope: {}
-  players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
-  qa: none
-  notes: No co-op or multiplayer mod found; the game's online features (Vendettas, Online Conquest) are asynchronous only.
-    JustAddMP/ShadowOfWar is a placeholder repo ("planned", README only, 2026-10-17). Research and reverse-engineering
-    notes for Steam build 3095001 (test-copy isolation, debug-print capture, Nemesis event, death, promotion and RNG
-    functions with signatures) are in games/shadow-of-war; claim issue cranebeaker/coop-anything#93.
-  sources:
+  project: shadow-of-war-coop
+  url: https://github.com/Santonus-not-bot/shadow-of-war-coop
+  other_urls:
   - https://github.com/JustAddMP/ShadowOfWar
-  - https://twinfinite.net/?p=305996
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: vpn-needed
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: One host and one client, UDP, direct address over an overlay VPN. The host's world is the real one; the client
+    joins the host's save (SHA-256 checked), sees the host's enemies (up to 16 near either player), hurts them and is hurt
+    by them, and follows the host's fast travel. MIT, Steam build 3095001 only; runs in a separate copy of the game
+    folder with saves and Steam cloud redirected and the game itself offline. Tested only with two game copies on one PC
+    (loopback and a simulated bad network, scripted checks plus an offline suite); never on two PCs. Slow motion is not
+    off in co-op yet, captains and Nemesis events are the host's only, the client cannot fast-travel by itself. Research
+    and reverse-engineering notes are in games/shadow-of-war; claim issue cranebeaker/coop-anything#93.
+  sources:
+  - https://github.com/Santonus-not-bot/shadow-of-war-coop
   - https://github.com/cranebeaker/coop-anything/issues/93
-  checked: '2026-10-20'
-  searched:
-  - 'Web search (several phrasings: co-op mod, multiplayer mod, coop campaign) for Shadow of War and Shadow of Mordor,
-    2026-10-20'
-  - GitHub repository search "shadow of war" (first 30 results read), 2026-10-20
-  - Nexus mod pages (automated fetch blocked, 403; search-result text only), Steam forum threads via search, 2026-10-20
-  - Not searched yet; Reddit, ModDB, the game's modding Discord, non-English sources
+  checked: '2026-11-01'
+  made_with_coop_anything: true
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)
