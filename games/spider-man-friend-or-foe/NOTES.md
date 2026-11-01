@@ -49,3 +49,8 @@ Sources: [released v1.1.0-beta](https://github.com/IlkinQafarov/spider-man-frien
 ### Unknown / still pending
 
 Shared save/Continue recovery; real controllers; a new two-PC Steam admission gate for in-place mission joining; broader later-mission and long-history coverage; native-speaker review of all translations; Windows scaling/mixed-monitor review for the newest fixed launcher. Relationship to the separate Discord listing remains unknown. No game files, raw logs, personal paths or account identifiers are included here.
+
+
+### v1.2.0-beta published later on 1 November
+
+The launcher/menu update above now ships in [v1.2.0-beta](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.2.0-beta), tagged to [09b36a3](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/commit/09b36a3). One EXE plus an optional checksum file is provided. Fresh player smoke passed startup/normal close and bot refusal before attach. The release EXE and its thirteen extracted payload entries passed integrity/privacy/data-preservation checks, and the uploaded/downloaded EXE matched SHA-256 `1f02769240c99b43312df694c9b03ff8c0b6a8dabff8dc51d9efa9bf66c79a52` (13,690,880 bytes). This supersedes only the earlier source-only packaging status; it adds no new two-PC Steam or full-playthrough evidence.
