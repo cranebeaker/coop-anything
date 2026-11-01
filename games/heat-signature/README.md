@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario and an 8-check rescue scenario on two real game copies (host + 1 guest), with 36 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario and a 9-check new-life scenario (flaky in the test's own docking) on two real game copies (host + 1 guest), with 38 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
@@ -27,7 +27,7 @@ opener's); an item a player drops or throws aboard is the same item on the other
 rests at the same place; a player who has left the ship in their pod is gone from it on the other copy, and each player's
 mission completes when they dock at home (the end screen pauses only that player); a guest knocked out aboard is
 carried off by the host's guards and thrown out of an airlock on both copies, then floats until it is lost or its own pod picks it up, as the
-game does with its own player, and a death no longer crashes the game; alarms, the target's death or escape and the
+game does with its own player, a death no longer crashes the game, and after one the player picks a new character and plays the next shared mission; alarms, the target's death or escape and the
 mission's end are the same on both copies. Not done: grenades and hull damage on both copies, a thrown item's hit on a guard (untested), other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
@@ -119,6 +119,12 @@ floats, its pod flies free (put 2000 units away by the test helper `podtome`) an
 picks the guest up (put beside it); the guest flies home and its mission completes, and the host is told (not that the
 guest was lost); no error dialogs; both advancing.
 
+`tools/life.sh` (9 checks): dock; the guest is knocked out, thrown out and lost (its pod's fuel emptied first, so it
+cannot pick it up); it picks a new character and plays on; the host's copy knows the new name; the host flies home and
+its mission completes; the host shares a new mission and both dock at its ship; each copy shows the other player aboard
+it (a new puppet made where the old one went with the last ship); no error dialogs; both advancing. It passed 4 of
+9 runs on the final build: the failures were all in the test's own re-docking of the new character (see NOTES.md).
+
 `tools/early.sh` (9 checks): dock; the guest leaves at once and flies home with the target alive: it docks and its
 mission stays open (not failed: the game's own rule); the host is told it left, nothing more; the host's mission goes
 on, unpaused; the host kills the target alone, which completes the guest's mission at home, and the host is told; the
@@ -131,12 +137,9 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs, on the knockout build (2026-11-01, core 86c9d6a7): suite **28/28 twice** (16:04, 16:07 UTC), knocked-out
-scenario 11/11 (16:10), home 13/13, early 9/9, mission 10/10, items 7/7, security 9/9 (16:12-16:18). On the builds
-just before: knocked-out scenario 11/11 in 6 of 7 runs (the other: the guest was picked up by its own pod at once, now an
-accepted ending), suite check 4d2 failed in 3 of 5 runs (one hit on the guest from its own copy: once a blast of the
-guest's own grenade, now counted apart; once a bullet, cause unknown; once not examined), suite check 5 failed once (a
-patrolling guard that did not react to the guest's hit, a known flake). Earlier
+Last runs, on the new-life build (2026-11-01, core e496cfaa): knocked-out 11/11, rescue 8/8, home 13/13, early 9/9
+(18:02-18:07 UTC), suite 27/28 (18:09; check 5, the known flake); new life 9/9 in 4 of 9 runs (see above). On the
+knockout build (86c9d6a7): suite 28/28 twice, mission 10/10, items 7/7, security 9/9 (15:29-16:18). Earlier
 runs are in the history of this file.
 
 Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check unless marked. The suite ones ran
@@ -194,6 +197,6 @@ Not applicable yet.
 
 ## Next steps
 
-- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a new character after a death, a pod destroyed.
+- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a pod destroyed; the puppet is one of our own roster characters, so (derived, not checked) it looks like that character, not like the other player's.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.

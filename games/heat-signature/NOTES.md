@@ -919,8 +919,7 @@ Observed, unless marked:
   `PlayerStateUnconscious` handles no damage); two suite checks were changed to accept that. A hit on the guest made it
   drop a grenade (`PlayerHandleDamageSignal` -> `CreateContentsOnTopOf`) whose blast hurt it on its own copy; grenades
   are not synced yet, so such blasts are counted apart from hits not from the host.
-- Not done: picking a new character after a death and joining again, a pod destroyed; a test that reaches the cases of
-  `noguestsave` and `nodownpod`.
+- Not done: a pod destroyed; a test that reaches the cases of `noguestsave` and `nodownpod`.
 
 ## Rescued by your own pod (2026-11-01)
 
@@ -936,3 +935,27 @@ Observed, unless marked:
   undocks and is put beside the player, instead of the flight), it flew home and its mission completed; the host was
   told "mission complete", not "lost". In 2 of about 10 runs the guest, thrown out beside the airlock its pod was
   docked at, was picked up at once without the helper.
+
+## A new life, and the next shared mission (2026-11-01)
+
+Observed (`tools/life.sh`), unless marked:
+- **A new character**: after the guest was lost, a click on the first seat of the character select (as at the start)
+  gave it a new character at its station, state "Free"; the next player packet carried the new name and the host's copy
+  used it. Nothing in the mod had to change for this.
+- **The other player's puppet was lost with the mission ship**: `EndLife` cancels the dead player's mission and
+  destroys its mission ship with all aboard (decompile: `CancelMission`, `DestroyShip`), and a new shared mission
+  replaces the old ship the same way; the other player's puppet, aboard it, went with it (on the guest's copy the host
+  was invisible from then on; not live already before `EndLife`, so the ship had gone with the mission end before).
+  Fix: once both players are aboard the next shared ship and the puppet has been gone for 2 s, another roster
+  character becomes the puppet (as `two.sh` does at the start; the next life has one choice fewer). Mutation `norenew`.
+- **A GameMaker error after the next mission was shared** (on the host, then on the guest): "GetFore" in
+  `PlayerPathfindingTo`, called by the mod for a puppet left in space by the throw-out (Parent = itself) or on a ship
+  that was gone. Such a puppet now waits out of sight, its step skipped, until its player boards the shared ship;
+  boarded again, it is stood up ("Free") if its player is. Mutation `nospacewait`.
+- **Test notes**: the pod picked up its thrown-out pilot even when free in space 5000 units away (whether the game
+  flies a free pod to its floating pilot by itself: unknown), so `life.sh` empties the pod's `Fuel` and `EmergencyFuel`
+  first (`CanBeScoopedUp` needs fuel). The test's walk from the pod found no path on the second ship (another layout), so
+  the last check takes the puppets parked in the pods (aboard, hidden). `life.sh` passed 4 of 9 runs on the final build: every failure
+  was the test re-docking the new character with its jump-and-dock helpers (the body stayed in the station's building,
+  Parent = the building, state "Controlling", while its pod docked; two or three times a GameMaker error in
+  `DockWithAirlock`, called by the helper `dockship`). Causes unknown; a real player flies the pod instead.
