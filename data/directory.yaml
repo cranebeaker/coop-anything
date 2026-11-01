@@ -7083,6 +7083,40 @@
   - https://github.com/dolbaras/jericho-coop/releases
   - https://github.com/cranebeaker/coop-anything/issues/27
   checked: '2026-10-23'
+- game: TimeShift
+  year: 2007
+  engine: Saber3D (Saber Interactive), Direct3D 9, Havok, FMOD, Bink; own event-driven level script language
+  project: TimeShift Co-op
+  url: https://github.com/dolbaras/timeshift-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: "2-4"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Whole story campaign over the game's own netcode (host plays the story, clients replay it), 2 to 4 players on a LAN or by
+    direct IP (the Internet list is revived through OpenSpy, not yet tested between two homes), and two players on one PC
+    in split screen. Version 0.1.1; a dinput8.dll proxy plus data built at install time from the player's own archives
+    (no game files in the repo); needs patch 1.2, Steam copies (patch 1.0) are brought to 1.2 only with the player's
+    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse, AI on
+    clients (deaths, corpses, shots and their sound), levers, mounted guns and quad on clients, Regroup, gate hints, Continue with
+    the real loadout of the host and each client. One-file setup exe, installer in six languages and a shortcut that
+    installs newer releases from GitHub before each start. A bot runs a host and a client through all 24 levels with the
+    level changes; a whole campaign played by people, Internet play and sound judged by ear are still to come. Soldiers'
+    voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
+  sources:
+  - https://github.com/dolbaras/timeshift-coop
+  - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.1
+  - https://github.com/cranebeaker/coop-anything/issues/191
+  checked: '2026-11-01'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
