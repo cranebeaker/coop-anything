@@ -10038,3 +10038,31 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: Star Wars Outlaws
+  year: 2024
+  engine: Snowdrop (closed native x64 binary with Denuvo)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found (Ubisoft Connect build, exe SHA-256 371BE3E5...1D2F). The exe contains an
+    unreleased 2-4 player co-op heist mode (CoopHeistMode, CanStartCoopMatch, team lives, reinforcement waves, ping
+    points), and a runtime read confirmed all seven co-op and heist settings files ship and load. Snowdrop's session
+    layer (reliable UDP, hot-join, host migration) is linked; matchmaking goes through Ubisoft services. Not playable;
+    findings and tools in games/star-wars-outlaws.
+  sources:
+  - https://nexusmods.com/starwarsoutlaws/mods/24
+  - https://github.com/patrickmollohan/Ultimate-SWO-ModLoader
+  - https://steamcommunity.com/app/2842040/discussions/0/4625854988055223265
+  checked: '2026-11-01'

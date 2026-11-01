@@ -66,3 +66,10 @@ co-op campaign. No shared framework or reusable campaign-replication layer has b
 confirmed. See [the Godfather II research notes](../games/the-godfather-ii/NOTES.md),
 [PCGamingWiki: The Godfather II](https://www.pcgamingwiki.com/wiki/The_Godfather_II), and
 [PCGamingWiki: Dead Space 3](https://www.pcgamingwiki.com/wiki/Dead_Space_3).
+
+**Snowdrop caveat (Star Wars Outlaws, 2024):** "Single-player" Snowdrop games can still link
+the engine's online framework. Outlaws' exe carries a reliable-UDP transport, hot-join and
+host-migration session states, `Coop/Replicated Variables` script nodes, and an unreleased
+2-4 player co-op heist mode whose settings data ships and loads. Matchmaking goes through Ubisoft
+services, so a mod needs a direct path under the session layer. See
+[the Star Wars Outlaws write-up](../games/star-wars-outlaws/README.md).
