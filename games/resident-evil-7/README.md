@@ -253,13 +253,16 @@ backups.
 - Downed and revive, 2026-10-31: with the bot standing still ~5 m away, a fatal self-hit left the player crouched,
   locked and monochrome on 1 health (no game over); switched to follow, the bot walked over, stopped 2.6 m away
   and the player was up again 3 s later. Both-down and the 90 s timeout are untested.
+- Saving together, 2026-10-31: the bot's `saved menu` event showed "Your friend saved at a tape recorder (your
+  saving is off ...)". A real save wasn't tested (no recorder loaded, the nearby autosave had already fired);
+  the save files' SHA-256 were unchanged while saving was briefly on.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.10 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.10), unzip it and run **Install.cmd**.
+[v0.11 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.11), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
