@@ -1,4 +1,3 @@
-<<<<<<< games/heat-signature/README.md
 # Heat Signature (2017)
 
 | | |
@@ -218,5 +217,3 @@ Not applicable yet.
 - Grenades and their explosions shown on every copy (what they break, windows and modules, is synced); other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a pod destroyed; the puppet is one of our own roster characters, so (derived, not checked) it looks like that character, not like the other player's.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.
-=======
->>>>>>> /proc/self/fd/11
