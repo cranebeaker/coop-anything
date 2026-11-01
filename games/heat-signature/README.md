@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario and a 9-check new-life scenario (flaky in the test's own docking) on two real game copies (host + 1 guest), with 38 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) and an 8-check window-breach scenario on two real game copies (host + 1 guest), with 40 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
@@ -130,6 +130,12 @@ mission stays open (not failed: the game's own rule); the host is told it left, 
 on, unpaused; the host kills the target alone, which completes the guest's mission at home, and the host is told; the
 host flies home and its mission completes; the guest is told; no error dialogs; both advancing.
 
+`tools/breach.sh` (8 checks): dock; both copies see the same whole windows; a window the guest's copy breaks breaks
+on the host, and one the host's copy breaks breaks on the guest, with the same objects in its place (an airlock and a
+forcefield); the guest stands at a third window, the host's copy breaks it, and the guest is blown out into space on its
+own copy; the host is told it was blown out; no error dialogs; both advancing. The test breaks windows with the glass's
+`BurstOverride` (helper `breakwin`), not with a shot or a blast.
+
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
 helper `MISSION_SET`). Checks: dock; the protocol on both copies; the guest beams in exactly the host's reinforcements;
@@ -137,9 +143,9 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs, on the new-life build (2026-11-01, core e496cfaa): knocked-out 11/11, rescue 8/8, home 13/13, early 9/9
-(18:02-18:07 UTC), suite 27/28 (18:09; check 5, the known flake); new life 9/9 in 4 of 9 runs (see above). On the
-knockout build (86c9d6a7): suite 28/28 twice, mission 10/10, items 7/7, security 9/9 (15:29-16:18). Earlier
+Last runs, on the window-breach build (2026-11-01, core f28155a0): breach 8/8 twice (20:30, 20:35 UTC), suite 28/28,
+knocked-out 11/11, home 13/13, early 9/9, items 7/7, security 9/9, mission 10/10, rescue 8/8 (20:37-20:50). On the
+new-life build (e496cfaa): new life 9/9 in 4 of 9 runs (see above). Earlier
 runs are in the history of this file.
 
 Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check unless marked. The suite ones ran
@@ -180,6 +186,8 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `noeject` (the host does not throw the puppet out), fail scenario | 7 passed, 4 failed | the puppet lay in the airlock until it got up |
 | `nonewlife` (no stale building removed at a new life), fail scenario | 10 passed, 1 failed | "no chooseable players exist" dialog on the guest |
 | `nofreepod` (a pod flying free is not sent), rescue scenario | 7 passed, 1 failed | nothing sent; the host's copy of the pod 884 394 units away |
+| `nobreach` (broken windows not sent), breach scenario | 4 passed, 4 failed | a window broken on one copy stayed whole on the other; the guest was not blown out |
+| `noblownnews` (no "blown out" banner), breach scenario | 7 passed, 1 failed | the host was told only that the guest left the ship |
 | `noguestsave`, `nodownpod`, fail scenario | 11 passed each | not caught: the scenario does not reach those cases (see NOTES.md) |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
@@ -197,6 +205,6 @@ Not applicable yet.
 
 ## Next steps
 
-- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a pod destroyed; the puppet is one of our own roster characters, so (derived, not checked) it looks like that character, not like the other player's.
+- Grenades, explosions and modules destroyed by them on every copy (broken windows are synced); other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a pod destroyed; the puppet is one of our own roster characters, so (derived, not checked) it looks like that character, not like the other player's.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.

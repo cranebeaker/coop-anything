@@ -959,3 +959,30 @@ Observed (`tools/life.sh`), unless marked:
   was the test re-docking the new character with its jump-and-dock helpers (the body stayed in the station's building,
   Parent = the building, state "Controlling", while its pod docked; two or three times a GameMaker error in
   `DockWithAirlock`, called by the helper `dockship`). Causes unknown; a real player flies the pod instead.
+
+## Windows broken: hull breaches (2026-11-01)
+
+Derived from the decompile (`oWindowGlass_Step_0`):
+- A window is an `oWindowModule` with an `oWindowGlass` (`MyModule` = the module). The glass breaks when its
+  `DamageSignal` carries a damage flag that breaks glass, or when its `BurstOverride` is set: a sound,
+  `WindowChangesCollisionGrid`, `GiveModuleAForcefieldInDirection`, `CreateAirlock`, `DestroyContents`, and the glass is
+  gone. Explosions break windows through `DamageWindowsInRadius` (`ExplodeOnShip`).
+
+Observed:
+- **Before the fix a broken window broke on one copy only**: a shown bullet's hit is dropped (`ghost:` lines), and the
+  test break on the guest left the host's glass whole. On the guest an airlock (object 116) and a forcefield (61)
+  stood where the glass was; on the host the "Window" (83) was still there.
+- `oWindowModule.Burst`, which the glass's step looks to set, read 0 on the module after a break (why: unknown). The
+  mod sees a break as the glass going away while its ship lives on.
+- **Fix**: each copy remembers the shared ship's windows by their module's ship-wise position (the same on every copy,
+  instance ids differ), and sends every window broken there (both directions, every 15 frames; breaking is one-way, so
+  the union is enough). The other copy sets that window's `BurstOverride`, and the glass breaks the game's own way at
+  its next step: the same objects in its place on both copies. Mutation `nobreach`.
+- **Blown out**: the guest standing next to a window the host's copy broke was pulled out through it on its own copy
+  (state "Floating", flying off fast), as the game does to anyone at a broken window. The host's banner said "left the
+  ship"; now "... was blown out of a broken window" when the other player starts floating within 3 s of a window
+  breaking. Mutation `noblownnews`.
+- **Test** (`tools/breach.sh`, 8 checks): windows are broken with `BurstOverride` (helper `breakwin`), because the
+  bot cannot aim a gun or throw a grenade yet; a break by a real shot or blast is not tested.
+- Not covered: a copy that was not running when the glass broke (a hot reload) never reports it; modules destroyed by
+  explosions (`DestroyModule`, `SplitShip`) are not synced yet, and grenades wait for them.
