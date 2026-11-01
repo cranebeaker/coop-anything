@@ -18,8 +18,9 @@ other player's chapter with one click. The ghost rebuilds itself after save load
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
 Enemies are shared in an early form: each enemy is run by the game of the player nearest to it and copied in the
 other game, and damage and deaths go both ways. Door unlocks and openings are shared, and supplies picked up by
-one player vanish for the other (keys, files and maps stay for both). Story progress, cutscenes and item boxes
-are not shared. Saving is off by default and can be switched on, with automatic save backups.
+one player vanish for the other (keys, files and maps stay for both). Story cutscenes are shared by name and
+story progress is copied forward (early). Item boxes are not shared. Saving is off by default and can be switched
+on, with automatic save backups.
 
 ## Existing work
 
@@ -85,6 +86,21 @@ are not shared. Saving is off by default and can be switched on, with automatic 
   only ever chase their own game's player.
 - **Cutscenes can't be skipped by API** (no skip method on `app.GameEventController`), but
   `via.Scene.set_TimeScale(8)` on the current scene while one plays fast-forwards it with every step intact.
+- **Story progress** lives in `app.GameFlowFsmManager` (singleton): `CurrentMainGameFlow`
+  (`GameFlowKindEnum`: C00_Main, C01_Main, C03_1..C03_5_Main, C04_1..C04_3_Main, FF000..FF050_Main,
+  C07_1..C07_4_Main, C08_Main, C03_IMD_Main, C09_Main), and per stage a progress number keyed by a uint32 hash
+  (`getProgressiveNo(hash)` → `via.userdata.Variable`, `get_S32`; `setProgressiveNo(hash, int)`,
+  `jumpProgressiveNo`), plus `sendEventEnded(hash)` / `isEventEnded(hash)`. In Chapter3 the progress of
+  stage C03_1 went 100 → 200 → 300 → 400 as the player followed the objective. **The numbers only record the
+  story**: `jumpProgressiveNo` to the next value changed nothing in the world. Chapter jumps keep a session's
+  progress, and a dinner cutscene started with progress already past it hung (player locked); a full game
+  restart clears it.
+- **Cutscenes by name**: each has an `app.GameEventSetting` whose `get_eventName` is like `c03e01_00`
+  (chapter 03, event 01, part 00); the area's settings are in `GameManager._GameEventMan.EventSettings` (41 in
+  the Chapter3 main house, including Jack's scripted `em3000_*` moves). `app.GameEventManager.requestEvent(name,
+  nil, false)` starts one at once. Replaying one the game had already finished hung it at `Process` 3; ending
+  it with `RunningEventControllers[i].EventTask:doTerminate()` cleared the event but left the player locked
+  until the chapter reloaded.
 
 ## What we changed
 
@@ -168,6 +184,12 @@ are not shared. Saving is off by default and can be switched on, with automatic 
   0 → 6 without touching any inventory. coop-re7 watches world supplies for 0 → 6 and sends `took <id>`; the
   other game hides that item (or remembers it until the area loads). Categories 4, 5, 6, 9 and 10 are never
   removed, so both players can progress.
+- **Story.** Since progress numbers don't drive the story, coop-re7 shares the triggers' results: whoever
+  starts a story cutscene (hook on `GameEventController.requestSetup`, names matching `cNNeNN_NN`) sends
+  its name and the other game plays it with `requestEvent` (the player is pulled in wherever they are),
+  once per side; progress numbers and ended events are copied, only ever forward. The list of played
+  cutscenes is kept per chapter in a file, because replaying a finished one hangs it. A "Share story" switch
+  turns it off.
 
 ## QA
 
@@ -205,20 +227,25 @@ are not shared. Saving is off by default and can be switched on, with automatic 
   `unlock` unlocked one half of a key-locked hall door, its `took` hid a Herb; none were echoed back. The
   owner's own door push and handgun-ammo pickup were sent. The "remembered until the area loads" path is
   untested.
+- Story, 2026-10-31, Chapter3: the bot's `story c03e00_00` played in the owner's game; its `prog` raised stage
+  C03_1 from 500 to 600 and a later lower value was ignored; the owner's own cutscenes (c03e00_01, c03e00_02)
+  and progress were sent. Replaying the already-finished dinner (after a script reset had cleared the played
+  list) hung it; fixed by keeping the list on disk.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.8 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.8), unzip it and run **Install.cmd**.
+[v0.9 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.9), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
 - Enemy copies don't show held weapons and don't flinch from the other player's hits; ownership handovers
-  between two real games are untested. Story progress, cutscenes and item boxes are separate per player.
+  between two real games are untested. Item boxes are separate per player.
+- Shared story is early: a cutscene that hangs locks the player until the game restarts.
 - Saving is off by default; with it off, nothing from a session is kept.
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
@@ -232,4 +259,4 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
 2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
 3. Enemy copies: held weapons and hit reactions; a real Molded test.
-4. The rest of world sync: story progress and cutscenes, item boxes.
+4. Shared story in real play (area changes between stages, cutscenes far from the other player); item boxes.
