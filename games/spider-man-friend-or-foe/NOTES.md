@@ -24,3 +24,33 @@ Retail New Game/Continue, hub and mission selection, native save/resume, localiz
 - [Contemporary PC review](https://www.swiftworld.net/2007/10/13/pc-spider-man-friend-or-foe-review/) and [GameSpot review](https://www.gamespot.com/reviews/spider-man-friend-or-foe-review/1900-6180451/): local co-op and lack of online support.
 - [Valve networking documentation](https://partner.steamgames.com/doc/features/multiplayer/networking): intended transport API, not evidence of this mod's delivery.
 - [Existing Discord listing](https://discord.com/channels/1561411702082510879/1562185850777772152): retained project reference; no account access or build verification performed here.
+
+
+## 2026-11-01 — beta campaign, in-place joining and launcher update
+
+Sources: [released v1.1.0-beta](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.1.0-beta), [source revision](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/commit/9ff4f6a), [status and failed attempts](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/9ff4f6a/docs/STATUS.md), [harness](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/9ff4f6a/launcher/play_lifecycle.py), [launcher documentation](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/9ff4f6a/docs/LAUNCHER.md).
+
+### Observed
+
+- Exact Windows 1.0.0.111 executable SHA-256 `ebd30047d7e58c95bf7dc4bd1fb4a5780e16aa472b61c25a8c421632662083db`; engine/storefront provenance remain unknown. Tests use coherent English/Russian packs and isolated redirected test state.
+- Real-client bots covered all 20 mission endings and seven bosses in a shortened campaign, host-only tutorial dialogs and native host slot/overwrite choices. This does not prove full-mission playthroughs or shared campaign save recovery.
+- Protocol 6 / scenario 13 is published in v1.1.0-beta. Verified input-journal catch-up admits a guest into the current mission without resetting the host. Cancellation/history-refusal preserve host play. Poor-network first arrival 532 and swapped reconnect 535 matched 1,904 / 1,898 post-admission frames; Doc Ock 548 matched 2,074 replay ticks plus 1,887 subsequent frames. All listed passes closed normally; earlier failures remain failed in project status.
+- New source-only WPF/single-EXE launcher changes passed eleven-language/five-state layout, native fixed-size/no-maximize, accessible-mode/notification and digest/data-preserving upgrade gates. Cross-volume discovery retained Valve signature/export checks and found compatible non-system-drive components without loading them or using an account.
+- Native joiner-menu 005 passed 601 matching frames in English/Russian, with guest row 0/1 hide markers, host no hide markers, automatic host-selected NewGame and game/launcher exits 0. Runs 001/002 failed pre-game under restricted process launching. Run 003 passed 601 frames but did not prove hiding because it intercepted a base renderer.004failed when a temporary cursor relocation entered Options; that change was removed before 005. Options/Quit keep unchanged indices/render paths, with no separate post-hide click test.
+- Owner-reported evidence: first Tokyo mission played with a friend on two PCs over real Steam. Do not promote this to an independently verified WAN/full-campaign gate.
+
+### Derived
+
+- Presentational hiding should preserve native menu indices. The actual derived main menu calls a generic row renderer; filtering the base renderer can appear safe while never affecting the target. Calling the native row routine with a null draw object preserves its cleanup and calling convention. The filter is restricted to the exact main-menu list, row count 4, guest role and waiting/start mode.
+- A cursor relocation can change the meaning of an already-latched accept and break automatic startup. Test the hidden-menu state and host-driven startup together, not only a direct together-mode fixture.
+- Native cutscene/loading/control-release readiness belongs in replay validation. Matching world position/RNG alone can miss local controls becoming active early.
+- Single-file distribution still needs managed runtime/player-data storage. Hash/allowlist checks and synthetic upgrade sentinels are separate from game/network QA.
+
+### Unknown / still pending
+
+Shared save/Continue recovery; real controllers; a new two-PC Steam admission gate for in-place mission joining; broader later-mission and long-history coverage; native-speaker review of all translations; Windows scaling/mixed-monitor review for the newest fixed launcher. Relationship to the separate Discord listing remains unknown. No game files, raw logs, personal paths or account identifiers are included here.
+
+
+### v1.2.0-beta published later on 1 November
+
+The launcher/menu update above now ships in [v1.2.0-beta](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.2.0-beta), tagged to [09b36a3](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/commit/09b36a3). One EXE plus an optional checksum file is provided. Fresh player smoke passed startup/normal close and bot refusal before attach. The release EXE and its thirteen extracted payload entries passed integrity/privacy/data-preservation checks, and the uploaded/downloaded EXE matched SHA-256 `1f02769240c99b43312df694c9b03ff8c0b6a8dabff8dc51d9efa9bf66c79a52` (13,690,880 bytes). This supersedes only the earlier source-only packaging status; it adds no new two-PC Steam or full-playthrough evidence.

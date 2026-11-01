@@ -8090,35 +8090,39 @@
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
   engine: unknown
-  project: Friend or Foe Online (native Windows research)
+  project: Friend or Foe Online (native Windows)
   url: https://github.com/IlkinQafarov/spider-man-friend-or-foe-online
   other_urls:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases
   - https://github.com/cranebeaker/coop-anything/issues/71
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
-    players_visible: unknown
-    story: unknown
-    enemies: unknown
-    world_state: unknown
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
     items: unknown
-  players: '2 (target)'
-  networking: unknown
+  players: '2'
+  networking: steam-relay
   open_source: 'yes'
-  last_activity: '2026-10'
-  qa: none
-  notes: >-
-    Source-only Windows prototype targeting two independent clients. English/Russian
-    bot checks used two processes on one PC and mock transport; Steam delivery and
-    complete co-op remain unverified. No playable release.
-  sources:
-  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online
-  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/main/docs/STATUS.md
-  - https://github.com/cranebeaker/coop-anything/issues/71
-  - https://partner.steamgames.com/doc/features/multiplayer/networking
-  checked: '2026-10-21'
-  up_for_adoption: false
+  last_activity: '2026-11'
+  qa: automated
   made_with_coop_anything: true
+  notes: >-
+    Exact-build Windows beta with independent English/Russian clients. Automated
+    real-client campaign-ending, boss and in-place mission-join gates; first Tokyo
+    mission over two-PC Steam is owner-reported. Shared save recovery, controllers
+    and a new two-PC admission gate remain unverified. The WPF launcher and single-EXE bundle ship in v1.2.0-beta; game
+    files and Valve libraries remain external.
+  sources:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.2.0-beta
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/09b36a3/docs/STATUS.md
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/09b36a3/docs/TESTING.md
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/09b36a3/docs/LAUNCHER.md
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  checked: '2026-11-01'
+
 - game: Ghostrunner
   year: 2020
   engine: Unreal Engine 4
