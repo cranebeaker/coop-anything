@@ -13,6 +13,7 @@ Claim: https://github.com/cranebeaker/coop-anything/issues/294
 - Cpp2IL `2022.1.0-pre-release.21` was run against an isolated copy. It detected Unity 2022.3.62f3, parsed metadata version 31.1, processed 46,804 method definitions, and generated dummy assemblies and Diffable C# output successfully. This confirms the tool can parse this build; it does not establish that the output is complete or that a mod can run.
 - BepInEx Unity IL2CPP Windows x64 build `6.0.0-be.791+b782da4` was extracted into the isolated copy. The game was not launched with it, so startup compatibility is unknown.
 - The game appears to use Adventure Creator, based on generated type names including `AC.Player`, `AC.PlayerInput`, `AC.PlayerData` and `AC.SaveSystem`. Only a small number of game-specific managed script types appeared in `Assembly-CSharp`, including `CustomMainMenuHandler`, `SavingUIManager` and `ScriptedVariableApplier`. This is a static inspection of generated output; gameplay logic may also be in serialized assets.
+- Adventure Creator's official manual says the framework supports single-player only; its Player-switching feature swaps the currently controlled Player, leaving the previous one inactive. `AC.PlayerData` in this game's dump has split-screen fields, but their presence alone does not show that this game enables simultaneous Players or wires cameras/input for them: https://adventurecreator.org/tutorials/switching-between-multiple-player-characters · https://adventurecreator.org/scripting-guide/struct_a_c_1_1_player_data.html
 - Steam describes the game as single-player: https://store.steampowered.com/app/541570/Sally_Face__Episode_One/
 - No Sally Face entry was present in Co-op Anything's directory when checked: https://github.com/cranebeaker/coop-anything/blob/main/DIRECTORY.md
 - Sally Face searches of Co-op Anything issues and pull requests were checked. The current claim is issue #294; no earlier game implementation was found in those searches.
@@ -30,7 +31,7 @@ Claim: https://github.com/cranebeaker/coop-anything/issues/294
 - The starting route appears to be building from zero, based on the searches above. Searches are not exhaustive.
 - Same-PC split screen is a later layer: the split-screen playbook says a single-player game needs co-op support first: https://github.com/cranebeaker/coop-anything/blob/main/playbook/split-screen.md
 - Use the installed Steam build as the target identity; the older publisher release note does not establish the engine version of this newer Steam build.
-- Adventure Creator may provide reusable player and save systems, but the second-player and story-state design cannot be chosen from type names alone.
+- Adventure Creator provides player, save, and camera systems that may be reusable, but built-in Player switching is not co-op. Simultaneous local players will need additional game-specific logic; the exact runtime feasibility remains untested.
 
 ## Guesses
 
