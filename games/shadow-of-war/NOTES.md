@@ -3486,3 +3486,23 @@ smoothing lagged the free-run start.
   the callers of `5CF834`: `177421C`, `19CE44D`, `19CFC95`, `1D6DB8A`, `1D85B61`); nothing odd was seen, but only
   seconds of play were watched with the patch on.
 - How the game looks and sounds with the records running but not slowing (sound keys still start).
+
+## Session 2026-11-01 bs: a client that travels alone is taken back
+
+### Observations
+
+- The game's fast travel was not located as a single call (the `FastTravel` strings found are load-reason enum tables
+  and UI schema), so the client's own travel is handled by its effect: the client watches its own player's position
+  each frame; a jump above 2,500 units that the host did not cause (the client's own teleport is ignored for 5 s) starts
+  a 3 s timer, after which the client's player is teleported beside the host's current position. This also covers a
+  respawn far from the host.
+- Live (host and client copies on one PC, release-like settings): the client teleported 9,000 units away at once
+  (log "this player travelled alone (9012 units); back to the host in 3 s"), and was beside the host again about 3 s
+  later (`24088,43093,12790` against the host at `23988,43093,12790`, the 100-unit offset the follow uses).
+- The offline suite is unchanged (56/56, mutant 21/21; the public export 53/53, 20/20): the test harness has no fake
+  for a second long jump, so this path is checked live only.
+
+### Unknown
+
+- What the player sees during a map fast travel that is undone (the load happens twice); whether blocking the travel in the
+  UI would be better; the same path for a client that dies and respawns at a tower was not played.
