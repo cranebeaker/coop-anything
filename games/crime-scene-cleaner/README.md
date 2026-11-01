@@ -6,7 +6,7 @@
 | Versions tested | Steam build 26046462 |
 | Projects | [Crime Scene Cleaner Co-op](https://github.com/gogoigor51-tech/crime-scene-cleaner-coop) (directory entry "Crime Scene Cleaner Co-op") |
 | QA level | automated (plus two players through chapters 1-6) |
-| Last updated | 2026-10-27 |
+| Last updated | 2026-11-01 |
 
 ## Where things stand
 
@@ -19,9 +19,11 @@ job and by the bot suites. 3-4 players, Nightmare mode and the last chapters are
 
 - [Crime Scene Cleaner Co-op](https://github.com/gogoigor51-tech/crime-scene-cleaner-coop), 0.4.2, 2026-10:
   this write-up. Built from scratch.
-- [coop-anything#176](https://github.com/cranebeaker/coop-anything/pull/176) by KolesovD (open PR, 2026-10): a
-  prototype write-up and directory entry for the same game. It touches this same file; the two write-ups should
-  be merged into one when either lands.
+- An earlier prototype for the same game (unpublished) went on as contributions to this mod: its findings are in
+  [NOTES.md](NOTES.md), its fixes in
+  [crime-scene-cleaner-coop#1](https://github.com/gogoigor51-tech/crime-scene-cleaner-coop/pull/1) (open PR,
+  2026-11, not in a release yet; summary in NOTES.md). No other co-op mod was found (one web search, 2026-10-23;
+  GitHub, Nexus, Steam Workshop and Discord not searched).
 
 ## How the game works (for co-op)
 
@@ -81,16 +83,25 @@ slot and the host. F8 shows status and ping, F9 saves a bug report for both play
 
 ## Known issues
 
-- Deleting the CCTV recordings has to be done by each player; the hack itself is shared.
+- Deleting the CCTV recordings has to be done by each player; the hack itself is shared (fixed in the open PR
+  above, with a bot suite; not in a release yet).
 - Objective maximums can differ between players (the game raises the furniture maximum when a piece that already
   stood in place is moved and put back).
 - An upgraded tool may show as the basic one on the other player's screen.
 - The Spa walkie-talkie and the job restart are shared in code but not checked by players.
 - After the sped-up intro cutscene the pizza box can hang next to the player in the apartment.
+- Seen by a tester on Developers' Hell (not fixed): the elevator moves every player, also those outside it; heavy
+  furniture lifted by two players at once stays down on one screen; two merging trash bags make duplicates for a
+  while; the Super Stacker arcade machine opens the minigame for everyone and breaks the session; other players'
+  flashlights are not shown; the report's score animations play twice. The open PR fixes the other problems found
+  there (resting items acting as walls, other players' buckets and lamps, doors drifting apart, footprints, bucket
+  products, lamps), each with a bot suite.
 
 ## Next steps
 
-- CCTV recordings: the recordings exist only once the laptop's folder opens in the UI; share the deletion at the
-  presenter level (`HackableComputerPresenter.HandleFileDelete`) and test it with a UI-driving bot.
+- CCTV recordings: done in the open PR (the recordings exist from the job's start, but Unity's `== null` is true
+  for them; the UI deletes through `HackableComputerPresenter.HandleFileDelete`).
 - 3-4 players, Nightmare mode, the last chapters.
-- Re-dirtying (power washer splashes on cleaned stains) is not shared; stains only sync towards clean.
+- Re-dirtying a cleaned stain is not a gap: the game never raises an existing stain, every new blood is a new
+  decal, which is shared (probe in NOTES.md).
+- The Developers' Hell issues above.
