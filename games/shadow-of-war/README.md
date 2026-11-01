@@ -11,7 +11,8 @@
 ## Where things stand
 
 The co-op mod is in its own repo, [shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop): one host and one
-client, the client joins the host's save, sees and fights the host's enemies, and follows the host's fast travel. Alpha, tested
+client, the client joins the host's save, sees and fights the host's enemies, follows the host's fast travel, and runs the
+host's Nemesis events (captain fights, kills, promotions) on its own copy of the Nemesis world. Alpha, tested
 only on one PC. This folder holds the research and reverse-engineering behind it,
 for a from-scratch, host-authoritative co-op: a safe way to run and instrument a test copy,
 a map of the engine's console commands, the Nemesis system's live log output, and the

@@ -3556,3 +3556,55 @@ smoothing lagged the free-run start.
 
 - The death screen itself (does the host's state stream stop there as it does for a suspended process; the earlier
   sessions say the simulation thread pauses); a host that comes back after a checkpoint reload.
+
+## Session 2026-11-01 bv: captains and Nemesis events (host to client)
+
+### Observations
+
+- **A captain is an ordinary character.** The 11,165-health unique at the tower start (`OlogHai_Infantry`, spawn type and
+  appearance both the generic kind) is the captain "Ur-Gram": nothing in the character names him; the Nemesis world holds his
+  identity. A proxy made from the type name alone is a generic orc of that kind.
+- **`Faction.Ambush.Enable` is a byte at RVA `267D598`** (1: on). The ambush start functions (`6DDCB8`, `6DD92C`, `1C5EE60`) test
+  it with a small leaf (`C28440`: `sete` of "is zero") and log `... Faction.Ambush.Enable is False (ignorning)`. Set to 0 in a
+  running copy, the next attempt logged exactly that.
+- **The event handler is hookable on its second instruction.** `HandleFactionEventAction` (`40C304`) cannot take a 5-byte jump
+  at its entry (alignment), but its first instruction only stores `rbx` in the shadow space, so a stub at `40C309` (`rcx` =
+  region object, `rdx` = event) can look at the event and `ret` to drop it. The handler reads only the two member references
+  (+0x00, +0x10), the event record (+0x20) and two flag bytes (+0x56, +0x57) of the 0x60-byte action.
+- **References and records.** A member reference is `{faction record pointer (8), member id (4), extra (4)}`; the id is what
+  `LookupFactionMember` (`18DDCC`) uses (`this+0x20` table). Records are 40-byte entries (`type u32`, `name hash u32` at +4,
+  name pointer at +0x20, table object at +0x18) in per-type tables reached from globals at RVA `2701000`..: events (type
+  `0xA4D`, 2,039 entries) at `2701A20`, faction (region) records (`0xA51`, 38) at `2701AD8`; the same RVAs in both test copies.
+  The same save gives the same member ids and hashes in two copies (the host's `Ur-Gram` reference resolved to `Ur-Gram` in the
+  client's world).
+- **The handler's `this` is a region object**, not one manager: 38 objects of vtable `1FDDF78`, 0x290 bytes apart, each holding
+  its own faction record at +0xD8 (`Faction_MtnPass` for Ur-Gram). A scan of the heap for that vtable finds all 38 (about 0.5-2.7
+  s).
+- **Live (host and client copy on one PC, same save, host's player taken to Ur-Gram):** the host's game applied
+  `DatalLevelChanged`, `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat` (Ur-Gram) and `ActiveAmbush_RangedShot`
+  (Ogbur); each was sent as a 171-byte reliable message (hashes and ids, not pointers), and the client's game, with its own
+  events dropped, logged the same four in the same order from the handler (debug channels on in both copies; the client
+  produced no event of its own). Client counters: `nemesis_got=4 nemesis_applied=4 nemesis_failed=0`.
+  An earlier run, before the region object was found by hash, applied 14 of 14 events (a duel, a death with `other`, a
+  promotion) but only because the client had first seen an event of its own; a run without one failed 4 of 4 ("no manager
+  seen"), which led to the region search.
+- In the first of these runs the host's player was killed in Ur-Gram's fight: the host's game fired `ActiveKillPlayer_grunt` and the
+  `PromoteDeadPlayerKiller_*` / `Promote` events, which the client applied. The host's death screen itself was still not watched.
+- Offline: `enemy_test` 47 of 47 (new: the message, size, op, empty name, unterminated name, load-time events not shared);
+  `test_guard run` 56 of 56.
+
+### Derived
+
+- Sharing the Nemesis world needs no random rolls on the client: the host's events carry the result (who is promoted, who
+  dies), and the client's own stream is dropped, so the two worlds stay the same as long as both start from the same save
+  and the client sees no event the host did not.
+- Load-time events (role selection for every member, follower set-up, DLC set-up) are not sent: the client loads the same save
+  and fires its own before the hook is in.
+
+### Unknown
+
+- Whether dropping all of the client's own Nemesis events can leave one of its quest state machines waiting (no hang seen in
+  runs of a few minutes); the Nemesis screen after a death on the client; a host that reloads a checkpoint (the client keeps
+  the promotions it applied); a captain's looks, name and level on the client (the proxy is a generic orc); captains' own
+  fights and duels away from both players (they are events of the host's simulation, so they are sent, but not watched).
+- Two PCs, as before.
