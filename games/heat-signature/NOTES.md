@@ -1,3 +1,4 @@
+<<<<<<< games/heat-signature/NOTES.md
 # Heat Signature: working notes
 
 Phase 0 (triage), 2026-10-30.
@@ -30,11 +31,11 @@ Phase 0 (triage), 2026-10-30.
 - Design problem: the player can pause time whenever they want (Steam forum threads above). Co-op needs a rule for
   this, such as pausing only when everyone pauses, or slow-mo instead of pause.
 
-## Goal (from tester)
+## Goal (from owner)
 - Online co-op for up to 4 players total (host + 3 guests).
-- Pause rule (tester's choice, 2026-10-30): **shared pause**. Anyone pausing pauses everyone, a banner shows who paused,
+- Pause rule (owner's choice, 2026-10-30): **shared pause**. Anyone pausing pauses everyone, a banner shows who paused,
   and anyone can unpause. Slow-mo and fast-forward still need a rule (to decide once the code is mapped).
-- Play style (tester's choice, 2026-10-30): **one shared mission**. All players fly pods together and board the same
+- Play style (owner's choice, 2026-10-30): **one shared mission**. All players fly pods together and board the same
   mission ship; the host picks missions. Each guest brings their own character file.
 
 ## Phase 2: workspace (2026-10-30)
@@ -139,9 +140,9 @@ Phase 0 (triage), 2026-10-30.
   through the menus.
 
 ## Steam Cloud and test runs
-- The test copy runs under the tester's Steam account, and the game has Steam Auto-Cloud. After probe run 6, Steam
+- The test copy runs under the owner's Steam account, and the game has Steam Auto-Cloud. After probe run 6, Steam
   rewrote `userdata/<id>/268130/remotecache.vdf`. Checked: all 34 cloud entries keep their old timestamps, and their
-  SHA-1s match the tester's real save files. Nothing from the test prefix was uploaded.
+  SHA-1s match the owner's real save files. Nothing from the test prefix was uploaded.
 - Not known: whether a longer run, or one that saves characters, would upload. Safer: turn off Steam Cloud for the game
   while testing, and back up the real saves first (done, kept in `local/`).
 
@@ -166,7 +167,7 @@ Observed:
   `global.TimeScale` follows (0, 0.2, 6) and goes back to 1 when no source calls.
 - Derived: the highest priority wins each frame (pause 9 > fast 8 > slow 7); this is not read from code yet.
 
-Derived design for co-op time (shared pause, tester's choice):
+Derived design for co-op time (shared pause, owner's choice):
 - The host collects each player's time request per frame (pause, slow, fast or none) and calls `SetTimeScale` itself:
   any pause -> `SetTimeScale(0, 9)`; else any slow -> slow; fast only when every player asks for fast.
 - Guests do not run their own time; they take the host's `global.TimeScale` and the name of whoever paused.
@@ -226,7 +227,7 @@ Derived (design consequence):
   movement (`p2hold`), and the list of places that read `global.Player`.
 
 ## RESOLVED: the "frame stalls" were an R6025 error box (2026-10-30, 16:20)
-- With `ptrace_scope` 0 (tester set it temporarily), gdb showed the game's main thread in `NtUserGetMessage`, a modal
+- With `ptrace_scope` 0 (owner set it temporarily), gdb showed the game's main thread in `NtUserGetMessage`, a modal
   message loop. Listing the game's X windows found a visible **"Microsoft Visual C++ Runtime Library"** box (190x128,
   usually behind other windows): `R6025 - pure virtual function call`.
 - A `MessageBoxW` hook in the loader caught it during the probe's own `layout` command: the probe called the instance
@@ -243,10 +244,10 @@ Derived (design consequence):
   Best current explanation (18:10, derived, not yet confirmed): the desktop session was idle (`loginctl ... IdleHint=yes`,
   idle since 16:53), so the monitors were probably asleep. The stall comes exactly when the game starts drawing
   ("ModulesOnSurface set to -1 because we have no surfaces" is its last log line), and a Steam restart at 18:00 did
-  **not** clear it while the tester was away. Earlier "fixes by restarting Steam" coincided with the tester being back at
+  **not** clear it while the owner was away. Earlier "fixes by restarting Steam" coincided with the owner being back at
   the PC. To confirm: launch with the display awake; long term, run test copies on a virtual display (gamescope
-  headless or Xvfb) so they do not depend on the tester's monitors.
-  Confirmed in practice (18:15): under headless gamescope the copies start every time, while the tester is still away.
+  headless or Xvfb) so they do not depend on the owner's monitors.
+  Confirmed in practice (18:15): under headless gamescope the copies start every time, while the owner is still away.
   Lesson for the playbook: when a Proton game seems frozen, list *all* its X windows (`xdotool search --class
   steam_app_<appid>` + `getwindowname`) before anything else, and hook `MessageBoxA/W` from the start.
 
@@ -308,8 +309,8 @@ Derived (design consequence):
   and GameMaker opens its error dialog) and is then steered by `PlayerPathfindingTo(GetX/GetY(remote Fore, Starboard))`.
   Result: puppet aboard the guest's copy (Parent = that ship), at Fore 1393 / Starboard 3370 for the host's
   1408 / 3127. Likely held back by a door that opened for the host's player only (doors react to `global.Player`).
-- Pod sharing question (tester, 2026-10-30): one shared pod would only simplify the flight, which already works; it would
-  remove separate escapes (a core part of the game). Tester chose an optional "follow the host" instead.
+- Pod sharing question (owner, 2026-10-30): one shared pod would only simplify the flight, which already works; it would
+  remove separate escapes (a core part of the game). Owner chose an optional "follow the host" instead.
 - **"Follow the host" for guests' pods** (observed): the game's `AutopilotTo` does nothing for player pods (only
   `oShip.Step_0` runs `AutopilotStep`; for the pod, `Autopilot` only changes the thrust display). Steering by cursor:
   the pod thrusts toward the **`oCursor` instance** (`PlayerThrustTowardsCursor` reads `oCursor.x/y`, which
@@ -366,7 +367,7 @@ Derived (design consequence):
   the station. The bot steps need checks (pod found, state "Controlling") before going on.
 - So the shared-mission plan holds: the host sends the mission text and a ship seed, every copy loads and accepts it
   with that seed, and only live state (guards, doors, loot, alarms) is synced afterwards.
-- Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the tester).
+- Headless test displays (2026-10-30): test copies now run in `gamescope --backend headless` (installed by the owner).
   Screenshots come from the game itself (`screen_save` builtin, written to the save folder), clicks are window messages
   inside the process. The loader answers message boxes automatically when `COOP_AUTO_DIALOGS=1` (set by `game.sh`).
 - Strings and banner (observed): `ShowUpdate(text, 3)` from the DLL showed "Paused by your partner" on the host and
@@ -420,7 +421,7 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   - Derived (unverified): Wine's `PeekMessage` blocks while reading from the X connection; something Steam-side
     (restarting Steam clears it) leaves the X/driver path wedged after several force-stopped launches.
 - Checked while investigating: Steam injects `STEAM_COMPAT_DATA_PATH=.../compatdata/268130` and the real install path
-  into the environment of test copies, but they run with `WINEPREFIX` = the test prefixes, and no file in the tester's
+  into the environment of test copies, but they run with `WINEPREFIX` = the test prefixes, and no file in the owner's
   real save folder changed.
 
 ## Hot reload and working puppets (2026-10-30, after a Steam restart)
@@ -980,9 +981,39 @@ Observed:
   its next step: the same objects in its place on both copies. Mutation `nobreach`.
 - **Blown out**: the guest standing next to a window the host's copy broke was pulled out through it on its own copy
   (state "Floating", flying off fast), as the game does to anyone at a broken window. The host's banner said "left the
-  ship"; now "... was blown out of a broken window" when the other player starts floating within 3 s of a window
-  breaking. Mutation `noblownnews`.
+  ship"; now "... was blown out into space" when the other player starts floating within 3 s of a window breaking (or,
+  since the next section, a module going). Mutation `noblownnews`.
 - **Test** (`tools/breach.sh`, 8 checks): windows are broken with `BurstOverride` (helper `breakwin`), because the
   bot cannot aim a gun or throw a grenade yet; a break by a real shot or blast is not tested.
-- Not covered: a copy that was not running when the glass broke (a hot reload) never reports it; modules destroyed by
-  explosions (`DestroyModule`, `SplitShip`) are not synced yet, and grenades wait for them.
+- Not covered: a copy that was not running when the glass broke (a hot reload) never reports it.
+
+## Modules destroyed by explosions (2026-11-01)
+
+Derived from the decompile:
+- `DestroyModule(module, name)` (called by `ExplodeOnShip`, missiles, `BlastDestroyModule`,
+  `DestroyAllModulesInBlastRadius`) works `with (module.Parent)`, skips a station, and then: alarm, screen shake, an
+  explosion in space, the ship's `ModuleGrid` and `DestroyedModule`, turrets and thrusters, `CreateBreachForcefield`,
+  the player's pod undocked if its airlock went (`UndockAtSpeedAndAngle`, `PlayerReturnToShip`), `SplitShip`, and the
+  module destroyed. `DestroyMultipleModules` has its own copy of that code (it does not call `DestroyModule`).
+- `ModuleAt(fore, starboard, ship)` finds a module from the ship's grid (`ModulesLong`, `ModulesWide`, `ModuleLength`,
+  `ModuleWidth`).
+
+Observed:
+- The mod first called `DestroyModule` and nothing happened: the game's own `Exists` said no for a module that was
+  there. Modules and contents away from the players are deactivated; `ExplodeOnShip` calls `ActivateMyModules` and
+  `ActivateMyContents` first, and with those calls it worked.
+- **Fix**, as for windows: each copy tracks the shared ship's modules (its `ModuleList`) by ship-wise position and sends
+  every one it has seen destroyed (both directions); the other copy activates the ship's modules and contents and runs
+  `DestroyModule` on its module at that position. A part cut off from the ship splits off the same way on both copies
+  (the end module of an arm, held only by the destroyed one, went on both). Mutation `nomodloss`.
+- A guest standing in a module whose neighbour the host's copy destroyed was blown out on its own copy ("Floating"), and
+  the host was told "... was blown out into space".
+- Game rules seen on the way (the same on both copies, nothing to sync): a test blast that took the assassination
+  target with it failed the mission at once (`MissionCheckEarlyFailure`: the target no longer exists); destroying the
+  module whose airlock held the guest's pod undocked the pod with the guest at its controls.
+- **Test** (`tools/modloss.sh`, 9 checks): modules are destroyed by the helper `blastmod` (the game's `DestroyModule`),
+  not by a real explosion; positions are those of the fixed test ship. Its walk to the window module found no path once
+  other modules were gone, so the blow-out check runs first.
+- Not covered: grenades themselves (the explosion, damage to people) are still not shown on the other copy.
+=======
+>>>>>>> /proc/self/fd/11
