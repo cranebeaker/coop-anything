@@ -3148,3 +3148,463 @@ smoothing lagged the free-run start.
 
 - What hides the stand-in during the Wraith jump (an effect or fade started by the action, not a field of
   its object), and so how to keep the jump pose visible through the fall.
+
+## Session 2026-10-31 bf: are the two copies' enemies the same?
+
+### Observations
+
+- Two copies started from the same save, 1.5 to 2 minutes after load, both in the world at the tower start:
+  18 and 19 living characters (health objects of class vtable `1F995E0` whose owner points back). Paired by
+  maximum health and position within 50 units: 4 to 5 of 18. The groups differ in size and place (a group of
+  five 300-health characters near z 6,600 in one copy has no counterpart within 2,000 units in the other).
+- The qword at character `+0x2338` is unique per character in each copy (18 and 19 distinct values) and equal in
+  both copies for exactly one: the 11,165-health unique. The other values differ (they look like runtime handles).
+- Comparing the first 0x2C00 bytes of that unique in both copies: equal non-pointer values are mostly floats; the
+  string `Active_Sheath` at `+0x2100`; no other id-like field was found.
+
+### Derived
+
+- Ambient enemies are generated per copy and drift apart at once, so a character cannot be matched across copies
+  by a stored id (saved uniques excepted). A shared fight needs one copy's enemies shown as stand-ins in the other
+  and the other's own population kept away, or independent fights with only the players shared.
+
+### Unknown
+
+- Whether the populations are equal right at load (the comparison was made after about a minute and a half).
+- What controls ambient spawning.
+
+## Session 2026-10-31 bg: can an enemy be driven like the stand-in? (first look)
+
+### Observations
+
+- The animation-variable setter `176D78` (the one that carries the player's stick, speed and camera) was traced
+  for 2 s on the animation object (`character+0x120`) of a 300-health infantry character fighting in a group:
+  119 calls each of two names only, `MountWarg_Yaw` (0.0) and `EnemyDist` (-1.0), from `2FEF2A` and `2F7AD6`. The
+  character's locomotion variables are not set through this function.
+- `spawn Orc_Infantry x y z` creates a working infantry orc next to the player. With its AI running it attacked
+  the player at once (health 708 to 599 within a few seconds).
+- Made the stand-in (`puppet abs:<it>`, AI off): the AI tree is skipped (2,773 skips) and `puppet walk` registers
+  move requests (3 of them), but the orc did not move in 6 s (23832.5,43098.8,12839.1 throughout). The Talion
+  stand-in, which has the player's behavior resource, does walk this way.
+- The autosave of the test copy replaced the test world (a different hash than before the session); it was
+  restored from the earlier backup.
+
+### Derived
+
+- An enemy proxy cannot be driven by replaying the player's input names. Its position can be set by teleports; what
+  moves its legs, and whether its AI tree is needed to carry out a move request, is not yet known.
+
+### Unknown
+
+- Which function sets an AI character's locomotion variables, and what a teleported, AI-off orc looks like.
+- Whether an AI-on orc can be given a goal and no opponent.
+
+## Session 2026-10-31 bh: a teleported, AI-off orc walks
+
+### Observations
+
+- A running orc's graph (watched on a spawned `Orc_Infantry` walking to the player, `graphwatch`) goes
+  `StartState_Orc` -> `StartState_PostureSelect` -> `Idle` -> `IdleToWalk` -> `WalkForward` (graph state
+  names; a `Run` state also exists). Its graph transitions read thresholds (`WalkThreshold`, `RunThreshold`) from
+  variables that are not set through the player's input setter (session bg).
+- A spawned `Orc_Infantry` made the stand-in with AI off, moved by a teleport every 100 ms (20 units a step,
+  200 units/s, facing set to its direction) and started once with the graph action `WalkForward` by name
+  (the existing play-by-name call): in 8 frames of the window (330 ms apart) it crosses the view with a walking
+  gait, legs in stride and the weapon arm swinging. Placed and left alone, it stands in an idle pose; the
+  AI-off orc ignores move requests but honours teleports.
+- `spawn` only works near the loaded area (at the tower start it worked; 1,400 units away in z it created
+  nothing, 30 tries).
+- The test copy's startup failed once with `0xC0DE0006` (no remote-storage interface after Steam init) and
+  worked on the next launch.
+
+### Derived
+
+- An enemy proxy can be moved by teleports and animated by starting its graph's locomotion states by name
+  (Idle, WalkForward, Run), plus attacks by record id (as for the player stand-in). That needs the host to send
+  the enemy's current locomotion state name (or hash) with its position; no variable names are needed.
+
+### Unknown
+
+- Whether `Run`, turns and the combat states (strafe, block, flee) can be driven the same way, and how the
+  root motion fights the teleports (the stand-in code skips the mover step for that).
+- How many proxies at once (the stand-in globals are for one).
+
+## Session 2026-10-31 bi: stopping new ambient characters
+
+### Observations
+
+- The game logs ambient spawn candidates (`[AI|SPAWNAMBIENT|REJECT]`, 30,095 lines in one test copy's debug
+  log). Their strings (`%s rejected - LOS Predicate failure (%s[%d])`, `... Offscreen Predicate failure ...`,
+  `%s No Entry for current distance %f, reverting to GetCanSpawnWithoutEntry value (%s)`, found with a
+  string-reference scan of the exe) are used by one function, `166DF8`..`167116`, which returns `al` = 1
+  (spawn) or 0 (reject). Callers: `165C40`, `35BB1E`, `10CE70D`, `1AC7FEC`. The candidates have names such as
+  `StatOrc_105` and `AmbTraining_22`.
+- A stub on its entry (the first 7 bytes copied, a jump back) that returns 0 while a flag is set: the game
+  ran normally with it. In steady state at the tower start the function is not called (0 rejections in 20 s);
+  after a teleport 9,700 units away it rejected 36,009 candidates in under 5 s.
+- Arriving at the same place (22600,37290,5000) with the gate on and off: with it on, one other character
+  within 6,000 units (the 11,165-health unique, which is saved with the world); with it off, ten within 6,000
+  (600- and 300-health infantry, 1,000 to 2,600 units away).
+
+### Derived
+
+- Rejecting every candidate keeps new ambient characters away, which is what a client needs so that only the
+  host's enemies show. Characters that already stand in the world (saved uniques, the ones spawned at load before
+  the gate went in) are not touched: the gate has to be in from the start for a client (not done yet), and the
+  rest removed some other way.
+
+### Unknown
+
+- Whether captains, ambushes and event spawns come through this function too (`[FACTION|AMBUSH]` exists).
+- How to remove characters that already stand in the world.
+
+## Session 2026-10-31 bj: removing enemies that already stand in the world
+
+### Observations
+
+- Strings `AI told to despawn offscreen.` (function `1A8BB74`, callers `E8DBB9`, `19D8084`, `1A8BC35`) and
+  `AI told to despawn away from player.` (`1A8BA4C`) belong to two AI commands. `1A8BB74(character, int, other)`
+  writes the despawn request into the AI data at `character+0x2CE8` (`+0x910` = 1, `+0x912` = 1 for offscreen,
+  `+0x914` = the int), makes two small calls, logs the string and returns; nothing else is done at once.
+- Called on the simulation thread with `(character, 0, null)` on 5 of 11 other characters (alternating, chosen
+  without looking at them) in one test copy; 25 s later 3 of the 5 were gone and all 6 not asked were still there
+  (one of the two that stayed is the saved 11,165-health unique, the other a 300-health infantry character).
+  An earlier run with 4 requests had 3 of 4 gone, but 9 others had also left (a group fighting).
+
+### Derived
+
+- An ordinary AI character can be told to go: it despawns once it is out of sight. A client can ask every
+  ambient character that is not one of the host's proxies to despawn, together with the spawn gate. Uniques may
+  stay, and characters in view stay until they are not.
+
+### Unknown
+
+- Why two of five stayed; whether `1A8BA4C` (away from the player) removes characters in view when they are far
+  enough.
+
+## Session 2026-10-31 bk: what an AI character's whole behavior is made of
+
+### Observations
+
+- Reading the health object's current attack record (`+0xE0`, type `0xA15`, id at `+4`) of 25 characters every
+  ~20 ms for 20 s caught 16 different records: `AI_Bip_Sentry_Loop_Low`, `Bip_Vandalize_Loop`,
+  `AI_Bip_DrinkGrog_Loop`, `AI_Bip_Idle_Loop_Low_Unsheathed_Core` and `..._Fidget`, `AI_Bip_ReactToSusp_...`,
+  `AI_Bip_ReactToAlert`, `AI_Bip_Entry_Unsheathe`, `AI_Infantry_Melee_Front_1_RR`, `AI_Bip_L100_R2L_B`,
+  `AI_Bip_CC_Avoid_Right` and `..._Forward`. Idle loops, reactions, dodges and melee are all attack records.
+- `puppet attack <id>` on an AI-off spawned `Orc_Infantry` started `AI_Infantry_Melee_Front_1_RR` and then
+  `AI_Bip_L100_R2L_B` ("started on the puppet", the record shows in `+0xE0`); as for the stand-in, a started
+  record stays in `+0xE0` until it is stopped. A set of 8 window frames next to a second, AI-driven orc did not
+  show the animation clearly; the animation itself was not checked.
+
+### Derived
+
+- A proxy's whole action layer can be one stream of the host enemy's current record id and start time, plus the
+  locomotion state by name for walking and running.
+
+## Session 2026-10-31 bl: the host's enemies as proxies on the client (first live run)
+
+### Observations
+
+- Host (A) and client (B), same save, `coop_enemies=on`, both players placed at (23500,37400,5200) among the host's
+  enemies: the host announced up to 10 enemies at a time (33 NEW/GONE events in a minute); the client spawned
+  proxies (`Orc_Infantry`, `Orc_Berserker`, `Warg_Tamed`, `Orc_Spearman`, `Orc_Prisoner`; one
+  `Orc_Infantry` spawn failed with "the game created nothing") and held 16 of 16. Paired by position, 14 to 15
+  of 15 to 16 living characters on each side were within 800 units, median gap 0 to 37, worst about 220 over 25 s.
+- The client's ambient gate rejected 80,955 candidates in the first minutes; its own despawn requests ran 1,139 times.
+- Spawning from the frame callback and from the net thread at once broke the Talion stand-in's spawn: the net
+  thread waits for the simulation thread while holding the transport lock, and the simulation thread took that lock
+  every frame (a 2 s timeout every time, "queued; the simulation thread has not run it yet"); with the frame code
+  never waiting for it the stand-in spawned again.
+- The despawn request faults for some characters (`[character+0x2D10]` holding -1: 8 first-chance access
+  violations in `361548` under `1A8BBA8`), caught; it is now skipped for them.
+- The host's player died among the enemies (teleported into a camp): the Nemesis screen paused the host's world.
+
+### Unknown
+
+- Whether a proxy's animation follows its host enemy's; what a proxy does when the host's enemy dies; other types'
+  locomotion state names; spawning far from the client's player.
+
+## Session 2026-10-31 bm: the client's strikes on the host's enemies
+
+### Observations
+
+- Every hit goes through `2C70C0(attacker's health object, victim's health object, float[3] position, attack record,
+  5th, 6th)`: traced during a strike of the player on a spawned orc, `rcx` was the player's health object (`+0x28` the
+  player), `rdx` a health object (vtable `1F995E0`; `+0x28` the orc), `r8` the hit position, `r9` the attack record
+  (type `0xA15`). The AI's own calls (from `2C6B8C`) pass 0 and 0 as the fifth and sixth (stack) arguments; the
+  player's strike (from `2C82EA`) a pointer and a byte.
+- Called with four arguments only (the stack ones left to chance), with the host's stand-in of the client as the
+  attacker, the hit faulted in `42A9FE` under `2EE960` (reading small addresses such as `+0x14C` and `+0x383C` of a
+  null pointer). Called with six arguments (0, 0) and the host's own player as the attacker it ran.
+- Client B struck proxies of host A's enemies (the face button, 140 units away): each strike was dropped on B (a stub on
+  the hit calls a filter), reported, sent to A as a reliable event and applied there with the call above. 7 of 7 hits
+  sent were applied (none failed or stale); the proxies' health, which follows the host's, went 180 -> 83.8 -> 0 (two
+  hits, a kill), 300 -> 264.9 -> 133.6 and 300 -> 168.7 -> 0.
+
+### Derived
+
+- A client can hurt and kill the host's enemies: its strike becomes a message and the host applies it as a hit of its own
+  player. The damage seen (35 to 131 per hit) is what the host's player does with that attack record.
+
+### Unknown
+
+- What a killed proxy looks like on the client; the damage when the host's player is far from the enemy; the hits
+  of the client's area attacks, executions and thrown weapons (only the face button was tried); whether the
+  host's enemies turn on the host's player after a hit that is the client's.
+
+## Session 2026-10-31 bn: damage to the client, and a join that stalled
+
+### Observations
+
+- An AI-off orc started on a melee attack record, with or without the player's health object as its target (the AI's
+  own start passes the opponent's health object in `r9`: traced from `418799`), did not hurt the player in 4 s (708
+  throughout): the damage comes from the AI tick, which the proxy skips.
+- Comparing the first 0x3400 bytes of four orc types and the AI data (`[character+0x2CE8]`, 0x1400 bytes) with two allied
+  types (`Gondorian_Soldier`, `GP_Ranger`): no qword equal within each class and different between them: the allegiance is
+  not stored there directly. An allied soldier spawned beside orcs lost 51 of 300 health in 3 s.
+- Enemy swings reach the stand-in by their area (the filter `2E5718` that was told to skip it): on the host, with the area
+  skip off and a filter on the hit reporting hits on the stand-in instead of dropping them, one swing in 40 s (A's
+  player and B's stand-in side by side at a camp) was reported (`dmg_sent=1`) and B applied it (`dmg_applied=1`).
+- Applied on B with the proxy as the attacker, the hit did nothing while the proxy carried the player's-follower mark (a
+  follower's swing does not hurt the player); with the mark off for the length of the call it took 90 to 136 health a hit.
+- End to end with a probe command making a host enemy swing at the stand-in (`standinhit`): 3 swings, B's health
+  708 -> 572 -> 437 -> 301; the host counted 3 damage messages sent, B 3 applied, none failed or stale.
+- **Join stall (reported: B's game closed with "the host's save did not arrive in time")**: the net thread called the
+  stand-in's spawn from inside the transport's lock and waited up to 2 s for the simulation thread each time a state
+  arrived. With the host's simulation thread paused (a death screen) the transport starved, the host dropped the
+  joining client after 5 s and the client's 20 s join timer ended the game. The spawn is now requested by the net thread
+  and made by the simulation thread; B then joined while A sat in its death screen (3 s from syncing to connected).
+
+### Derived
+
+- The client can take an enemy's swing that reaches the stand-in; making enemies choose the client as a target is not done
+  (enemy AI does not attack the stand-in and its allegiance is not in the fields compared).
+
+## Session 2026-10-31 bo: can enemies be sent after the stand-in? (not achieved)
+
+### Observations
+
+- An AI character's current target is kept in its AI data (`[character+0x2CE8]`) in one of six goal slots (`+0x118`,
+  `+0x170`, `+0x1C8`, `+0x220`, `+0x2D0`, `+0x328`; a non-zero byte at the slot's start marks the active one, `11B60C`
+  returns it): the slot's `+0x30` holds the target character. The same character and its health object are also at
+  AI data `+0x28`, `+0x90`, `+0x358`, `+0x498`, `+0x6C0`, `+0x700`, character `+0x2CA8` and health `+0xA8` (found by
+  searching a fighting orc's structs for the player's character and health object); the writes to `+0x2CA8` come from
+  `18D8C3` under `11AEB8`, a mode switch called by the AI tick at `2F7AE4`.
+- Writing a Talion (the stand-in's type) into the slot and the other places every frame did not make an orc attack it
+  (its health stayed 298/298 for 12 s; the orc kept fighting the player; the slot's target returned to the player within
+  a second each time). The slot sometimes read 0 for 2 to 3 s after a write (the orc disengaged).
+- Candidate team fields (Talion 1; soldiers and orcs 2: character `+0x58C`, `+0x195C`, `+0x1964`, `+0x1974`,
+  `+0x1AAC`, `+0x1AB4`, `+0x1AC4`) set to 2 on the Talion: no change. Also setting `+0x2344` made the game crash
+  (access violation at `309C74`).
+- An AI-off orc started on a melee record with the player as its target did not hurt the player; allied soldiers
+  (`Gondorian_Soldier`) do lose health beside orcs.
+
+### Unknown
+
+- What makes the AI take a character as an enemy: probably its perception list, built from a faction or relationship
+  test the Talion type fails. Whether an allied type spawned as a decoy would draw enemy attacks while the stand-in is
+  Talion-shaped.
+
+## Session 2026-10-31 bp: a decoy ally draws the enemies; the 60-second join stall
+
+### Observations
+
+- A `Gondorian_Soldier` made a proxy (its behavior tree skipped, 0.0 units moved in 5 s) beside an `Orc_Infantry`
+  with the player 1,500 units away was attacked and killed by the orc: 300 -> 227 -> 155 -> 82 -> 10 -> 0 in 13 s
+  (about 73 per hit). Allied soldiers are enemies for the AI where the Talion type is not.
+- On the host, `coop_decoy=on` spawns such a soldier where the client's stand-in stands, keeps it there with full health,
+  and treats hits on it as hits on the stand-in (reported, dropped, sent to the client as damage). With the host's
+  player at the tower and the client standing 110 units from a group of enemies: 14 enemy swings in 42 s were carried
+  and applied on the client, whose health went 594 -> 217; the host's player was not touched (708). Standing 500 units
+  from the group, 2 swings in 60 s.
+- Hiding it: writing its scale (`+0x10AC`) to zero is undone by the game within a frame; a window frame of the host
+  with the client's stand-in beside the player shows one figure (the stand-in): whether the decoy shows through
+  was not settled.
+- **Join stall, the real cause of "the host's save did not arrive in time"**: when the host forgot its client (the
+  60 s rule in `tick`) it only cleared the session id; the reliable ids, the window and `ready_` of the old session
+  stayed (seen: `next_out=2362 next_in=2 ready=1` with `session=0`), so the next client's ids 0 and 1 counted as
+  duplicates and its save never started. Reproduced live (a client killed during a join, a new one 75 s later), fixed
+  by a full reset when a client is forgotten and when a new session opens; the simulator test (a client lost for 70 s,
+  a new one gets the whole save) is in `net_test`. The earlier cause fixed in session bn (the stand-in spawn waiting
+  inside the transport's lock) was real as well.
+- Windows reports an ICMP reset of a datagram sent to a gone peer as an error of the next `recvfrom`; the transport's
+  socket now has `SIO_UDP_CONNRESET` off and counts such errors (0 seen in the runs).
+- The test copy's startup failed with `0xC0DE0006` (no remote-storage interface after Steam init) in about a third of
+  the launches that came within a minute of killing the previous copy.
+
+### Unknown
+
+- Whether the decoy is visible next to the stand-in; what it does when it stands where the stand-in is off the ground;
+  whether enemies with ranged attacks pick it.
+
+## Session 2026-10-31 bq: fast travel follow, release scripts, the release ini hid the stand-in
+
+### Observations
+
+- Fast travel follow (`coop_follow_travel`, client): a host position jump above 2,500 units between two consecutive
+  states starts a 1.5 s timer after which the client's player is teleported beside the host. A 300-unit hop was
+  ignored; a jump of 11,400 units left the client beside the host within 2 s. At join a client more than 1,500 units
+  from the host is taken next to it once.
+- Release scripts (`release/setup-copy.ps1`, `launch.ps1`, `README-PLAYERS.md`, `make_public.py` in the private mod
+  repo): the copy script refuses a folder inside Steam or the game folder, a wrong exe SHA-256 and too little disk,
+  has `-DryRun`, and was run against a fake game folder (dry run creates nothing, the original stays unchanged).
+- **A release-style ini (`probe_write=0`) showed no stand-in on either side**: the debug-print hook that feeds the
+  stand-in was installed only with `probe_write=1` (log: "hook_debug_print=1 needs probe_write=1, not hooked"), so
+  no player state was sent (`packets=0`). A `coop_role` now allows the hook; the probe's write commands stay off.
+  With the fixed build and the release ini (host + client on one PC, loopback): `net=connected` both ways, a
+  stand-in on both sides, 4 of the host's enemies standing as proxies on the client.
+- Test suite after the change: `test_guard` 56/56, mutant 21/21, `net_test` 36/36, `enemy_test` 39/39. The public
+  export (without the single-instance mutex rename and its three tests) builds and gives 53/53, 20/20, 36/36, 39/39.
+
+### Unknown
+
+- Anything between two PCs over a real network; slow motion is still not off in co-op; the client's own fast travel.
+
+## Session 2026-11-01 br: slow motion off in co-op
+
+### Observations
+
+- Every slow-motion record (`[SLOWMO] Start: <record>`) runs as an instance whose per-frame update (RVA `5CF6C4`)
+  walks five global timers (indices 0..4: slots `2702598`, `2702548`, `2702570`, `2702558`, `2702578`). For a timer
+  whose wanted byte (`[slot-4]`) is set it applies the record's scale (`5CF8CC` turns a float into numerator / 65535,
+  `5CF834` stores numerator, denominator and the ratio float at `+0x30` of the timer's rate object); for one whose
+  byte is clear it sets the timer back to 1/1. The `jne` after that byte test (`75 42` at `5CF709`) is the whole
+  difference: two nops make the update reset every timer to 1/1 each frame.
+- `SlowMO.Start <record>` in this build only looks the record up (`7CE80C(name)`: a binary search of the record table
+  by name hash); `.Stop`, `.Pause` and `.Resume` are `ret`. The world UI's setter `5D09E0(unused, record)` ("SetWorldUISlowMo
+  = ...") does start one: called with the record found by `7CE80C`, `HitCounterSlowMo` took timers 0 (player) and 1
+  (simulation) to 0.142855 (7x), the others stayed 1.
+- With the two bytes patched (probe `slowmo off`, or by itself when a `coop_role` is set): `HitCounterSlowMo` and
+  `Instakill_01_SM` start in the log and all five timers stay at 1 for the whole record. A slow motion already running
+  went back to 1 within a second of the patch.
+- `coop_slowmo=on` keeps the game's slow motion. Offline suite after the change: `test_guard` 56/56 (the hook cases
+  now also check the patch and its refusal without `probe_write`), mutant 21/21.
+
+### Unknown
+
+- Whether anything but the slow-motion records uses these five timers (pauses and cinematics have their own paths in
+  the callers of `5CF834`: `177421C`, `19CE44D`, `19CFC95`, `1D6DB8A`, `1D85B61`); nothing odd was seen, but only
+  seconds of play were watched with the patch on.
+- How the game looks and sounds with the records running but not slowing (sound keys still start).
+
+## Session 2026-11-01 bs: a client that travels alone is taken back
+
+### Observations
+
+- The game's fast travel was not located as a single call (the `FastTravel` strings found are load-reason enum tables
+  and UI schema), so the client's own travel is handled by its effect: the client watches its own player's position
+  each frame; a jump above 2,500 units that the host did not cause (the client's own teleport is ignored for 5 s) starts
+  a 3 s timer, after which the client's player is teleported beside the host's current position. This also covers a
+  respawn far from the host.
+- Live (host and client copies on one PC, release-like settings): the client teleported 9,000 units away at once
+  (log "this player travelled alone (9012 units); back to the host in 3 s"), and was beside the host again about 3 s
+  later (`24088,43093,12790` against the host at `23988,43093,12790`, the 100-unit offset the follow uses).
+- The offline suite is unchanged (56/56, mutant 21/21; the public export 53/53, 20/20): the test harness has no fake
+  for a second long jump, so this path is checked live only.
+
+### Unknown
+
+- What the player sees during a map fast travel that is undone (the load happens twice); whether blocking the travel in the
+  UI would be better; the same path for a client that dies and respawns at a tower was not played.
+
+## Session 2026-11-01 bt: host death, not reproduced on demand
+
+### Observations
+
+- Goal: see what the host's death screen does to the stream to the client (earlier sessions: the world pauses under the
+  Nemesis screen after a death, the host's simulation thread stops, the transport starved). Two ways of making the host
+  player die in the test pair were tried, neither produced the death flow:
+  - writing 0 to the player's current health (`+0x42C` of the object at `[player+0x26A8]`): health read 0 for ~25 s,
+    then 708 again by itself, no death screen, the host's states kept arriving on the client at 29.3 per second
+    (age 0..47 ms, no gap);
+  - ten `Orc_Infantry` spawned 120-260 units around the player on the tower top (an ambush-disabled area): the player
+    was not hurt; the probe's `damage` command (hit function with a spawned orc as attacker) applied to the host's own
+    player did nothing either (40 tries, health 708).
+- So the pause on death is still known only from the earlier real deaths (sessions ar and as); not measured here.
+
+### Derived
+
+- What a client could do without touching the host's pause: treat a host stream that stops (no state for 3 s) as "the
+  host is away", hide its proxies and stand-in until states return. Not built: it needs a way to resync proxies after
+  the stop (the host's NEW events are sent once), and the pause itself was not reproduced to test it against.
+
+### Unknown
+
+- A reliable way to kill the host player in a test (a lethal environment hazard, a stronger enemy, the game's own death
+  call); whether the world really stops for the client's copy or only for the host's.
+
+## Session 2026-11-01 bu: the client stops showing the host's enemies while the host is away
+
+### Observations
+
+- A fallback for a stopped host (death screen, loading screen, its pause menu), built without having reproduced a death:
+  the client takes the host's enemies away (their proxies die and despawn, the records stay known but marked "no
+  position") once no state has arrived for 5 s, and respawns them from the host's next snapshot. No new message type:
+  the tracker keeps the host's ids, so the host does not have to announce anything again.
+- The transport reports the host lost after a short silence, and the client's enemy code returned at that point, before
+  the check: the first build never saw the stall. The check now comes first.
+- Live (host and client copies on one PC, two `Orc_Infantry` on the host near the tower): the host process was suspended
+  for 9-10 s (`NtSuspendProcess`; the client's `age_ms` grew to 6,000 as for a stopped sim thread). Client: 2 proxies
+  standing, at 5 s `standing=0` (log "no state from the host for 5 s: its enemies are taken away until it is back"),
+  after the resume `standing=2` again within a second (log "the host is back"). Counter `away=1`.
+- Spawning orcs next to the idle host player in the test pair sometimes kills it (health 59 seen, then 708 after the
+  game's own respawn, and the host no longer listed enemies until restarted): the death itself is possible to provoke
+  this way, but it was not watched.
+- A restarted test game failed to start with `0xC0DE0006` again on 3 of 6 launches, as before.
+
+### Unknown
+
+- The death screen itself (does the host's state stream stop there as it does for a suspended process; the earlier
+  sessions say the simulation thread pauses); a host that comes back after a checkpoint reload.
+
+## Session 2026-11-01 bv: captains and Nemesis events (host to client)
+
+### Observations
+
+- **A captain is an ordinary character.** The 11,165-health unique at the tower start (`OlogHai_Infantry`, spawn type and
+  appearance both the generic kind) is the captain "Ur-Gram": nothing in the character names him; the Nemesis world holds his
+  identity. A proxy made from the type name alone is a generic orc of that kind.
+- **`Faction.Ambush.Enable` is a byte at RVA `267D598`** (1: on). The ambush start functions (`6DDCB8`, `6DD92C`, `1C5EE60`) test
+  it with a small leaf (`C28440`: `sete` of "is zero") and log `... Faction.Ambush.Enable is False (ignorning)`. Set to 0 in a
+  running copy, the next attempt logged exactly that.
+- **The event handler is hookable on its second instruction.** `HandleFactionEventAction` (`40C304`) cannot take a 5-byte jump
+  at its entry (alignment), but its first instruction only stores `rbx` in the shadow space, so a stub at `40C309` (`rcx` =
+  region object, `rdx` = event) can look at the event and `ret` to drop it. The handler reads only the two member references
+  (+0x00, +0x10), the event record (+0x20) and two flag bytes (+0x56, +0x57) of the 0x60-byte action.
+- **References and records.** A member reference is `{faction record pointer (8), member id (4), extra (4)}`; the id is what
+  `LookupFactionMember` (`18DDCC`) uses (`this+0x20` table). Records are 40-byte entries (`type u32`, `name hash u32` at +4,
+  name pointer at +0x20, table object at +0x18) in per-type tables reached from globals at RVA `2701000`..: events (type
+  `0xA4D`, 2,039 entries) at `2701A20`, faction (region) records (`0xA51`, 38) at `2701AD8`; the same RVAs in both test copies.
+  The same save gives the same member ids and hashes in two copies (the host's `Ur-Gram` reference resolved to `Ur-Gram` in the
+  client's world).
+- **The handler's `this` is a region object**, not one manager: 38 objects of vtable `1FDDF78`, 0x290 bytes apart, each holding
+  its own faction record at +0xD8 (`Faction_MtnPass` for Ur-Gram). A scan of the heap for that vtable finds all 38 (about 0.5-2.7
+  s).
+- **Live (host and client copy on one PC, same save, host's player taken to Ur-Gram):** the host's game applied
+  `DatalLevelChanged`, `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat` (Ur-Gram) and `ActiveAmbush_RangedShot`
+  (Ogbur); each was sent as a 171-byte reliable message (hashes and ids, not pointers), and the client's game, with its own
+  events dropped, logged the same four in the same order from the handler (debug channels on in both copies; the client
+  produced no event of its own). Client counters: `nemesis_got=4 nemesis_applied=4 nemesis_failed=0`.
+  An earlier run, before the region object was found by hash, applied 14 of 14 events (a duel, a death with `other`, a
+  promotion) but only because the client had first seen an event of its own; a run without one failed 4 of 4 ("no manager
+  seen"), which led to the region search.
+- In the first of these runs the host's player was killed in Ur-Gram's fight: the host's game fired `ActiveKillPlayer_grunt` and the
+  `PromoteDeadPlayerKiller_*` / `Promote` events, which the client applied. The host's death screen itself was still not watched.
+- Offline: `enemy_test` 47 of 47 (new: the message, size, op, empty name, unterminated name, load-time events not shared);
+  `test_guard run` 56 of 56.
+
+### Derived
+
+- Sharing the Nemesis world needs no random rolls on the client: the host's events carry the result (who is promoted, who
+  dies), and the client's own stream is dropped, so the two worlds stay the same as long as both start from the same save
+  and the client sees no event the host did not.
+- Load-time events (role selection for every member, follower set-up, DLC set-up) are not sent: the client loads the same save
+  and fires its own before the hook is in.
+
+### Unknown
+
+- Whether dropping all of the client's own Nemesis events can leave one of its quest state machines waiting (no hang seen in
+  runs of a few minutes); the Nemesis screen after a death on the client; a host that reloads a checkpoint (the client keeps
+  the promotions it applied); a captain's looks, name and level on the client (the proxy is a generic orc); captains' own
+  fights and duels away from both players (they are events of the host's simulation, so they are sent, but not watched).
+- Two PCs, as before.
