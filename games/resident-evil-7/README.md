@@ -17,8 +17,9 @@ Steam friends list in an in-game window (the other player gets an invite to acce
 other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
 Enemies are shared in an early form: each enemy is run by the game of the player nearest to it and copied in the
-other game, and damage and deaths go both ways. Items, doors and story progress are not shared. Saving is off by
-default and can be switched on, with automatic save backups.
+other game, and damage and deaths go both ways. Door unlocks and openings are shared, and supplies picked up by
+one player vanish for the other (keys, files and maps stay for both). Story progress, cutscenes and item boxes
+are not shared. Saving is off by default and can be switched on, with automatic save backups.
 
 ## Existing work
 
@@ -154,6 +155,19 @@ default and can be switched on, with automatic save backups.
 - **Clock offsets must reset.** The receiver maps the sender's clock with the smallest `now - senderTime` seen.
   When the sender's clock restarts (their game or plugin restarted), every sample then looks minutes old and
   the other player stays hidden; reset the offset when a sample looks 5 s+ older than expected.
+- **Doors.** `app.DoorPush` (an `app.Door`; find them with `scene:findComponents(app.DoorPush)`) has a
+  `SaveGUID`, `get_isLocked`, `get_doorState` (0 closed, 1 locked, 2 little open as the player approaches,
+  3 pushed, 4 auto-opening, 5 opened, 6 auto-closing), `unlockDoor()` and `requestAutoOpen(OpenSide)` (Auto =
+  2 swings it to 90°). Key doors are pairs (left and right halves). coop-re7 polls them 4 times a second and
+  sends `unlock <id>` and `open <id>` (states 3-5 only, not the approach creak); the other game applies them.
+- **Items.** `app.Item` has a `SaveGUID`, `ItemDataID` ("ShotgunBullet", "Herb", "3CrestKeyA"...) and
+  `get_ItemData().Category` (`ItemCategoryType`: 0 Other, 1 Weapon, 2 Shell, 3 Drug, 4 KeyItem, 5 File, 6 Map,
+  7 Material, 8 StackWeapon, 9 UsableKeyItem, 10 DiscardableKeyItem such as coins and lockpicks, 11 SupplyBox).
+  A pickup does **not** go through `Item.changeStateInventoryIn` (a hook there never fired): the world item's
+  `getItemState` goes 0 → 6 and a separate inventory Item is created. `disableFromScene()` produces the same
+  0 → 6 without touching any inventory. coop-re7 watches world supplies for 0 → 6 and sends `took <id>`; the
+  other game hides that item (or remembers it until the area loads). Categories 4, 5, 6, 9 and 10 are never
+  removed, so both players can progress.
 
 ## QA
 
@@ -187,20 +201,24 @@ default and can be switched on, with automatic save backups.
 - Bot "follow me" mode (replays the local player's own path, timed by the sample clock, skipping idle stretches,
   stopping 2.5 m away with 1 m hysteresis) stays on walkable ground; an early version skipped idle time in
   0.1 s steps and made 52 visible jumps in 75 s.
+- Doors and items, 2026-10-31, Chapter3 main house: the bot's `open` swung a closed door open (state 5), its
+  `unlock` unlocked one half of a key-locked hall door, its `took` hid a Herb; none were echoed back. The
+  owner's own door push and handgun-ammo pickup were sent. The "remembered until the area loads" path is
+  untested.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.7 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.7), unzip it and run **Install.cmd**.
+[v0.8 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.8), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
 - Enemy copies don't show held weapons and don't flinch from the other player's hits; ownership handovers
-  between two real games are untested. Items, doors and story are separate per player.
+  between two real games are untested. Story progress, cutscenes and item boxes are separate per player.
 - Saving is off by default; with it off, nothing from a session is kept.
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
@@ -214,4 +232,4 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
 2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
 3. Enemy copies: held weapons and hit reactions; a real Molded test.
-4. The rest of world sync: story and area, doors, items.
+4. The rest of world sync: story progress and cutscenes, item boxes.
