@@ -3532,3 +3532,27 @@ smoothing lagged the free-run start.
 
 - A reliable way to kill the host player in a test (a lethal environment hazard, a stronger enemy, the game's own death
   call); whether the world really stops for the client's copy or only for the host's.
+
+## Session 2026-11-01 bu: the client stops showing the host's enemies while the host is away
+
+### Observations
+
+- A fallback for a stopped host (death screen, loading screen, its pause menu), built without having reproduced a death:
+  the client takes the host's enemies away (their proxies die and despawn, the records stay known but marked "no
+  position") once no state has arrived for 5 s, and respawns them from the host's next snapshot. No new message type:
+  the tracker keeps the host's ids, so the host does not have to announce anything again.
+- The transport reports the host lost after a short silence, and the client's enemy code returned at that point, before
+  the check: the first build never saw the stall. The check now comes first.
+- Live (host and client copies on one PC, two `Orc_Infantry` on the host near the tower): the host process was suspended
+  for 9-10 s (`NtSuspendProcess`; the client's `age_ms` grew to 6,000 as for a stopped sim thread). Client: 2 proxies
+  standing, at 5 s `standing=0` (log "no state from the host for 5 s: its enemies are taken away until it is back"),
+  after the resume `standing=2` again within a second (log "the host is back"). Counter `away=1`.
+- Spawning orcs next to the idle host player in the test pair sometimes kills it (health 59 seen, then 708 after the
+  game's own respawn, and the host no longer listed enemies until restarted): the death itself is possible to provoke
+  this way, but it was not watched.
+- A restarted test game failed to start with `0xC0DE0006` again on 3 of 6 launches, as before.
+
+### Unknown
+
+- The death screen itself (does the host's state stream stop there as it does for a suspended process; the earlier
+  sessions say the simulation thread pauses); a host that comes back after a checkpoint reload.
