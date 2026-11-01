@@ -147,6 +147,15 @@ backups.
   REFramework and csharp-api from the pinned release with SHA-256 checks, installs the mod and backs up saves.
 - **Saving.** Off by default (all request and internal save paths skipped). When switched on, the C# plugin
   first copies the save folder (found with `ISteamUser_GetUserDataFolder`) and keeps the last 20 backups.
+  Each player saves their own game; when one really saves (hooks on `SaveDataManager.saveFileMenuRequestExecute`
+  and `saveFileAutoRequestExecute`), the other is told, so both can save at the same point. What a save
+  stores matters for co-op: the ghost has no folder or save component, so it's never saved; doors and items
+  keep their shared state; but an enemy's save data (`EnemyStatus.EnemySaveDataClass`: IsUpdate, IsDraw,
+  Health, Position, Rotation, ThinkState, CommonThinkState) would store a followed enemy's AI-off state, so a
+  pre-hook on `app.EnemySave.prepareToSave` gives followed enemies their AI back for a few seconds.
+  Autosave points are `app.TriggerInAction` zones under `LevelFsm_cNN/.../AutoSave/<flow>_<progress>`; they
+  fire once (`TriggerInSuccessCount`, IsLoop false), even when the save itself was blocked, and don't fire on a
+  warp into them. `SaveDataManager.saveFileMenuRequest(player)` doesn't open the save menu without a recorder.
 - **On screen.** Connection, ping (an echo of the peer's send time in the packet), the friend's chapter and Steam
   name, a version-mismatch warning, and a nameplate. The ghost is hidden during either player's cutscene
   (a cutscene bit in the stance flags). REFramework's default font (ImGui 1.92 with Windows fallbacks)
