@@ -1042,3 +1042,22 @@ Observed:
   fires it with `firegun` (the game's `GunFiresBulletInDirection`), not through the controls: the bot's injected item
   keys (controls 32 and 33) and attack did not select or fire (unknown why). Grenades thrown by hand (an `oGrenade` from
   the inventory via `ThrowInventoryItem`) go the way of thrown items (earlier section) and are not tested armed yet.
+
+## A guest's gunshots, and aiming for the test bot (2026-11-01)
+
+Observed:
+- **A gun's direction is ship-wise**: traced bullets (helper `tracebullets`) fired at 0 went towards +fore, at 90 towards
+  -starboard (`MyImageAngle` = the direction given); the helper `fireat` aims at a ship-wise point with that rule.
+- **A guest's bullet is shown on the host**: the guest's gun fired a bullet at an inner wall; the host showed it heading
+  the same way, one step (50 units) further on (sent the frame after it was made), fired by the guest's puppet
+  (`grenade.sh` check 2; mutation `noghosts` on it).
+- A guest's bullet hitting a guard was not reached: the bot's shots across the ship stopped at walls, and two broke
+  windows that blew the guest out into space (then `walkto` from space raised a GameMaker error in `GetFore`; the
+  helper now refuses unless the player is aboard). A guest's hit on a guard goes to the host through the same
+  `SetDamageSignal` hook as before (suite check 5).
+- Guards moving on an errand were at the same place on both copies (within 12 units for all 38 of a ship); only the
+  state names differed (the host's "Errand" shown as "Sentry" or "Responding" on the guest: states that need extra
+  data, an open item).
+- Found in review: the grenade packet had the same id as the guards' packet ("HSG1"), and the destroyed-modules packet
+  the same as the mission message ("HSM1"); their sizes kept them apart (the receiving checks compare sizes), so nothing
+  was misread. Both have their own ids now ("HSN1", "HSL1").
