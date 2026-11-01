@@ -10038,3 +10038,32 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: 'Dynasty Warriors 3: Complete Edition Remastered'
+  year: 2026
+  engine: Unreal Engine 5
+  project: Official split-screen co-op (shipped) and online co-op (free update announced)
+  url: https://store.steampowered.com/app/3841510/DYNASTY_WARRIORS_3_Complete_Edition_Remastered/
+  other_urls:
+  - https://noisypixel.net/dynasty-warriors-3-remastered-demo-online-co-op/
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'no'
+  last_activity: 2026-09
+  qa: none
+  notes: Ships with 2-player local split-screen co-op and versus only; Steam does not list Remote Play Together.
+    Koei Tecmo announced at TGS 2026 a free update adding online 2-player co-op, due by January 2027 (not released
+    as of 2026-11-01). No community online mod found. Research only, see games/dynasty-warriors-3-remastered.
+  sources:
+  - https://store.steampowered.com/app/3841510/DYNASTY_WARRIORS_3_Complete_Edition_Remastered/
+  - https://www.co-optimus.com/game/18377/pc/dynasty-warriors-3-complete-edition-remastered.html
+  - https://noisypixel.net/dynasty-warriors-3-remastered-demo-online-co-op/
+  - https://www.thesixthaxis.com/2026/09/24/dynasty-warriors-3-remaster-demo-out-now-online-co-op-announced/
+  checked: '2026-11-01'
