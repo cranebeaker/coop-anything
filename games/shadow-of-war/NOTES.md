@@ -3506,3 +3506,29 @@ smoothing lagged the free-run start.
 
 - What the player sees during a map fast travel that is undone (the load happens twice); whether blocking the travel in the
   UI would be better; the same path for a client that dies and respawns at a tower was not played.
+
+## Session 2026-11-01 bt: host death, not reproduced on demand
+
+### Observations
+
+- Goal: see what the host's death screen does to the stream to the client (earlier sessions: the world pauses under the
+  Nemesis screen after a death, the host's simulation thread stops, the transport starved). Two ways of making the host
+  player die in the test pair were tried, neither produced the death flow:
+  - writing 0 to the player's current health (`+0x42C` of the object at `[player+0x26A8]`): health read 0 for ~25 s,
+    then 708 again by itself, no death screen, the host's states kept arriving on the client at 29.3 per second
+    (age 0..47 ms, no gap);
+  - ten `Orc_Infantry` spawned 120-260 units around the player on the tower top (an ambush-disabled area): the player
+    was not hurt; the probe's `damage` command (hit function with a spawned orc as attacker) applied to the host's own
+    player did nothing either (40 tries, health 708).
+- So the pause on death is still known only from the earlier real deaths (sessions ar and as); not measured here.
+
+### Derived
+
+- What a client could do without touching the host's pause: treat a host stream that stops (no state for 3 s) as "the
+  host is away", hide its proxies and stand-in until states return. Not built: it needs a way to resync proxies after
+  the stop (the host's NEW events are sent once), and the pause itself was not reproduced to test it against.
+
+### Unknown
+
+- A reliable way to kill the host player in a test (a lethal environment hazard, a stronger enemy, the game's own death
+  call); whether the world really stops for the client's copy or only for the host's.
