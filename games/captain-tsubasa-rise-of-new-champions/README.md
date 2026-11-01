@@ -29,7 +29,7 @@ No game code has been changed. An isolated install copy and static analysis work
 
 ## QA
 
-No in-game checks have run. One restricted-account launch of the isolated copy exited with code `53` before the game UI appeared; the cause remains unconfirmed. A valid result will need two independent controllers through a story match, cutscenes, result screen, and saved progression in both Episode: Tsubasa and Episode: New Hero.
+No in-game checks have run. One restricted-account launch of the isolated copy exited with code `53` before the game UI appeared; a later Steam-authenticated launch reached a responsive game window, but the UI automation bridge was unavailable, so no menu or controller action was performed. A valid result will need two independent controllers through a story match, cutscenes, result screen, and saved progression in both Episode: Tsubasa and Episode: New Hero.
 
 ## How to play
 
@@ -42,4 +42,4 @@ No playable story co-op package is available from this investigation.
 
 ## Next steps
 
-Establish a working Steam session in an isolated Windows profile, then observe story and Versus controller assignment in an authorized offline runtime session without unpacking or disabling the executable's protection. If a local-only patch becomes feasible, test it through a complete story match and package only original mod code, never game files.
+With UI control available, observe story and Versus controller assignment in an authorized offline runtime session using the isolated game copy, without unpacking or disabling the executable's protection. If a local-only patch becomes feasible, test it through a complete story match and package only original mod code, never game files.
