@@ -1013,4 +1013,32 @@ Observed:
 - **Test** (`tools/modloss.sh`, 9 checks): modules are destroyed by the helper `blastmod` (the game's `DestroyModule`),
   not by a real explosion; positions are those of the fixed test ship. Its walk to the window module found no path once
   other modules were gone, so the blow-out check runs first.
-- Not covered: grenades themselves (the explosion, damage to people) are still not shown on the other copy.
+- Not covered here: grenades themselves (next section).
+
+## Grenades (2026-11-01)
+
+Derived from the decompile:
+- `oGrenade` is an item (name, `Armed`, `Trigger` "Timed", `TimerSeconds`, `SecondsUntilDetonation`, `Sticky`,
+  `StuckTo`, `BlastRadius`, `GrenadeDamageMask`). A gun fires one through `GunFiresBulletInDirection(gun, direction)`
+  (self = the gun), which passes an `oGrenadeGun` (object 100) on to `GunFiresGrenadeInDirection`; its step counts the
+  fuse down and calls `ExplodeOnShip` (damage, windows, modules, knockback, guards alerted).
+- `SelectInventoryIndex` is a stub that calls the game's `Crash` (it raised an error dialog when the mod called it);
+  `SelectInventoryItem(item)` reactivates the item and selects it. A held gun's own step does not run (setting its
+  `Fire` did nothing).
+
+Observed:
+- **Before**: a grenade existed on the copy that fired it only (`projectile: grenade #1 created` there, nothing on the
+  other copy).
+- **Fix**, as for bullets: a grenade fired aboard the shared ship is sent the frame after it was made, with every
+  variable (164, about 1.9 KB: fuse, speeds, blast); the other copy makes a look-alike `oGrenade` at the same ship-wise
+  place and copies them in. Its step runs with hits dropped (its blast's hits on guards and players come from the real
+  one's copy as hits) and a module it would destroy dropped (the real copy sends its destroyed modules; mutation
+  `ghostblasts` lets them through). Mutation `nogrenades`.
+- In the test both grenades exploded on both copies at the same place (0 and 3 units apart), and the host's look-alike
+  next to the guest's puppet sent no hit for it (the guest was hurt once, by its own copy's real blast).
+- A real grenade blast that took the assassination target with it failed the mission on both copies; a failed
+  mission's end screen paused the game, and grenades fired afterwards lay with their fuse stopped (on both copies).
+- **Test** (`tools/grenade.sh`, 8 checks): each player gets a grenade gun (helpers `giveitem 100`, `selectitem`) and
+  fires it with `firegun` (the game's `GunFiresBulletInDirection`), not through the controls: the bot's injected item
+  keys (controls 32 and 33) and attack did not select or fire (unknown why). Grenades thrown by hand (an `oGrenade` from
+  the inventory via `ThrowInventoryItem`) go the way of thrown items (earlier section) and are not tested armed yet.
