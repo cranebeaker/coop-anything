@@ -1137,9 +1137,10 @@
   engine: Gamebryo
   project: fnv-coop
   url: https://github.com/cranebeaker/fnv-coop
-  other_urls: []
+  other_urls:
+  - https://github.com/cranebeaker/fnv-coop/releases
   kind: framework
-  status: prototype
+  status: alpha
   coop_scope:
     players_visible: partial
     story: partial
@@ -1151,17 +1152,19 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: "Developer preview of a story layer (xNVSE plugin plus game-free sync core) meant to run next to NV:MP: the host
-    captures the effects of a quest script as one transaction and the clients apply it without re-running the script.
-    No player release yet, but the installer, launcher and player guide are in the tree; the host listens on UDP 27960
-    and the launcher caps the party at 4. The installer accepts the Russian/PCR Steam release (appid 22490, folder
-    \"Fallout New Vegas enplczru\") as well as the English one, both at exe 1.4.0.525. Enemy sync in the real game is
-    claimed by another contributor; the avatar, combat, loot and world layers are written but untested in game. MIT
-    licensed."
+  notes: "Story layer (xNVSE plugin plus game-free sync core): the host captures the effects of a quest script as one
+    transaction and the clients apply it without re-running the script. Alpha player releases since 2026-10-28 (0.1.8-alpha
+    on 2026-10-31): a zip with installer and launcher that needs Python 3 and xNVSE 6.3.0+. The host listens on UDP 27960,
+    2-4 players, with direct IP or the Steam Spacewar relay. Direct IP also works over a VPN such as Radmin (the launcher's
+    port probe answered on the Radmin address; no two-PC session was run). The installer accepts the Russian/PCR Steam
+    release (appid 22490) and the GOG Russian release as well as the English one, all at exe 1.4.0.525. The join check
+    compares the active plugin list, so players need the same language release and DLC. The release notes say the
+    features pass automated tests but most have not been played through in game. MIT licensed."
   sources:
   - https://github.com/cranebeaker/fnv-coop
   - https://github.com/cranebeaker/fnv-coop/blob/main/docs/05-nvmp-intel.md
-  checked: '2026-10-22'
+  - https://github.com/cranebeaker/fnv-coop/releases
+  checked: '2026-11-01'
 - game: 'Vampire: The Masquerade - Bloodlines'
   year: 2004
   engine: Source (2004)

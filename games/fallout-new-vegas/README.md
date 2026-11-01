@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | Engine | Gamebryo (xNVSE plugins for native hooks) |
-| Versions tested | Steam **PCR / Russian-Polish-Czech release**, appid `22490`, exe `1.4.0.525`, SHA-256 `40d5a7c967a1ec5df1dc19c25f8df3ca74480aa95e8755171567f1129a3001fa`; Steam English release appid `22380`, same exe build |
+| Versions tested | Steam **PCR / Russian-Polish-Czech release**, appid `22490`, exe `1.4.0.525`, SHA-256 `40d5a7c967a1ec5df1dc19c25f8df3ca74480aa95e8755171567f1129a3001fa`; Steam English release appid `22380`, same exe build; **GOG Russian** Ultimate Edition (gameId `1454587428`), exe `1.4.0.525`, SHA-256 `89e7020487e80f20ddc92ea641c4433b2c6839a82f45a076e414d167d11dd0fe` (fnv-coop 0.1.8-alpha install only, see NOTES 7b) |
 | Projects | NV:MP (multiplayer: players, NPC motion, combat; closed netcode); [fnv-coop](https://github.com/cranebeaker/fnv-coop) (story sync layer) |
-| Release | NV:MP client 9.4 (2026-10-09); fnv-coop: no GitHub release yet, but the installer, launcher and player guide are in the tree |
+| Release | NV:MP client 9.43 (2026-10-24); fnv-coop [0.1.8-alpha](https://github.com/cranebeaker/fnv-coop/releases/tag/v0.1.8-alpha) (2026-10-31, pre-release zip with installer and launcher) |
 | QA level | automated (fnv-coop) / community-reports (NV:MP) |
-| Last updated | 2026-10-22 |
+| Last updated | 2026-11-01 |
 
 ## Where things stand
 
@@ -94,7 +94,13 @@ pick "Connect via IP" and enter `<host>:27015`. Forward UDP+TCP 27015, or use a 
 Radmin. A Discord account is only needed for the official ATK server and some public SDK
 servers, not for a private local session.
 
-**fnv-coop, when a release exists.** Build it from source today: Python 3.11+, CMake >= 3.20, VS
+**fnv-coop 0.1.8-alpha (player release).** Every player installs Python 3 and xNVSE 6.3.0 or newer, unzips
+`FNV-CoOp-0.1.8-alpha.zip` and runs `Install.cmd`. Then `Launcher.cmd`: the host picks HOST A GAME with CONNECTION set to IP,
+and friends pick JOIN A FRIEND with `<host address>:27960`. Over Radmin VPN the host address is the host's 26.x.x.x
+address and nothing is forwarded. On one host the launcher's own port probe answered on that address, but no session
+between two PCs was run. The release's guide covers Steam (Spacewar relay) and port forwarding, not VPNs.
+
+**fnv-coop from source.** Build it like this: Python 3.11+, CMake >= 3.20, VS
 2022 with `-A Win32`, an xNVSE checkout in `third_party/NVSE`, then
 `cmake -S plugin -B build/L1 -G "Visual Studio 17 2022" -A Win32`. The repository's installer
 (`tools/installer/fnv_install.py`) finds the game, checks it is `1.4.0.525` with xNVSE present,
@@ -116,6 +122,12 @@ story.
 - Windows and New Vegas `1.4.0.525` only, Steam or GOG. DLC questlines are not covered yet.
 - The Russian/PCR release works with the fnv-coop installer, but the NV:MP wiki only mentions
   the Steam and GOG releases; the PCR release was not tested with NV:MP here.
+- fnv-coop's join check compares the active plugin names in load order. Russian releases (Steam PCR, GOG Russian) load
+  a `*_lang.esp` next to each master and the English release does not, so a Russian host and an English guest should
+  be refused with "mod list differs". This comes from reading the source (`MakeHandshake()`), not from a run. Everyone needs the same
+  language release and the same DLC.
+- A copy of the game that was never launched has no `plugins.txt`, so DLC and `*_lang.esp` are not loaded. Start the
+  game once from GOG Galaxy, Steam or `FalloutNVLauncher.exe` before the first co-op session.
 
 ## Next steps
 

@@ -142,6 +142,48 @@ Recorded so the next agent does not rediscover them (no private paths, no person
   flow, so one human action (start a new game and save it in the copy) unblocks the in-game tests.
 * No DLC is installed, so the DLC questline sweeps (roadmap step 9) cannot be run here.
 
+## 7b. Session 2026-11-01: GOG Russian release, fnv-coop 0.1.8-alpha, Radmin VPN
+
+Player request: co-op with friends, explicitly not over Steam, over Radmin VPN. The owner picked fnv-coop
+(shared story) over NV:MP and asked for the install to go into the real game folder (with backups).
+
+### Observations (checked on the machine)
+
+| Field | Value |
+|---|---|
+| Store | GOG, gameId `1454587428` (Ultimate Edition), `goggame-1454587428.info` language `Russian` |
+| Exe | `FalloutNV.exe` **1.4.0.525** |
+| SHA-256 (exe) | `89e7020487e80f20ddc92ea641c4433b2c6839a82f45a076e414d167d11dd0fe` (GOG, DRM-free; differs from the Steam PCR exe above) |
+| Data | `FalloutNV.esm` + `FalloutNV_lang.esp`, all four story DLC, GRA and the four packs, each with its own `*_lang.esp` |
+| Registry | `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games\1454587428` `path` set; no Bethesda `Installed Path` key before the first launch |
+
+1. Downloads, pinned against the GitHub API asset digest: xNVSE `nvse_6_4_9.7z` (sha256 `81fb0638...2eb88`) and
+   `FNV-CoOp-0.1.8-alpha.zip` (sha256 `513b8eba...2914f`). The zip's own `SHA256SUMS.txt` matched every file.
+2. `fnv_install.py check` on the GOG Russian install: version 1.4.0.525 accepted, xNVSE 6.4.9 read, no problems.
+   The installer found the GOG install through the registry; `install` put 13 files into `Data\NVSE\Plugins`.
+   It backed up 0 files, because none existed yet: no `Fallout.ini` and no `My Games\FalloutNV` folder (the game had never been launched).
+3. Radmin path: the launcher's own `fnv_portcheck` (TestListener on `0.0.0.0:27960` + `probe`) answered on
+   127.0.0.1 and on the host's Radmin address (26.x.x.x). `host_report` lists the Radmin address among the "home network"
+   addresses, so a guest can type `<radmin ip>:27960` in JOIN with CONNECTION=IP. Windows marked the Radmin
+   network as **Private**. This only proves the host binds and answers on the Radmin interface. No packet came from a second PC.
+4. The launcher (`fnv_terminal.py --no-window`) starts on Python 3.13.16 and serves its UI on 127.0.0.1.
+
+### Derived (from source, not from a run)
+
+- The join handshake compares the **active plugin names in load order** (`plugin/coop/coop_module.cpp`,
+  `MakeHandshake()`: `DataHandler::GetNthModName` for every active mod; reject reason `kRejectModList`). The
+  Russian/PCR and GOG Russian releases load `*_lang.esp` next to each master, while the English release does not. So **a
+  Russian host and an English guest are refused**, even though form IDs match. All players need the same language
+  release and the same DLC set, or the host must turn the `_lang.esp` files off. Neither the player guide nor the
+  write-up says this.
+- A game that has never been launched has no `plugins.txt`, so DLC and `_lang.esp` are not loaded and the mod list
+  is wrong. One normal launch (GOG Galaxy or `FalloutNVLauncher.exe`) is needed before the first co-op session.
+
+### Unknown
+
+- Whether a full session over Radmin (two PCs, in game) holds up: not run here, no second PC.
+- Whether NV:MP and fnv-coop 0.1.8 can run together: the 0.1.x player guide does not mention NV:MP any more.
+
 ## 8. Proposed follow-up (not done in this session)
 
 1. Add the PCR / Russian release to the FNV write-up and to `data/directory.yaml` notes, so the
