@@ -4414,6 +4414,32 @@
   - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
   - https://steamcommunity.com/app/214490/discussions/0/598198356181958694/
   checked: 2026-10-16
+- game: 'Alien: Isolation'
+  year: 2014
+  engine: Cathode (Creative Assembly proprietary)
+  project: alien-isolation-coop (steamwrap foundation)
+  url: https://github.com/phoenixd123/alien-isolation-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'no'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Foundation only, with no co-op gameplay yet. A steam_api.dll wrapper forwards Steam calls to the real DLL,
+    keeps saves local per profile, blocks achievement writes, and lets two copies run on one PC with no exe patch.
+    Offline test 40/40; two instances reached the menu on Steam build 4940658. MIT. Write-up in games/alien-isolation.
+  sources:
+  - https://github.com/phoenixd123/alien-isolation-coop
+  checked: 2026-11-01
+  made_with_coop_anything: true
 - game: Outlast
   year: 2013
   engine: Unreal Engine 3
