@@ -53,8 +53,15 @@ inline std::string& slot() {
 inline const std::string& current() { return slot(); }
 inline void set(const std::string& value) { slot() = value; }
 inline bool any() { return !slot().empty() && slot() != "0"; }
-inline bool is(const char* name) { return any() && slot() == name; }
-inline bool is(int number) { return any() && slot() == std::to_string(number); }
+// noinline: without it, newer MSVC folds the twin-name literal into the compare as immediate
+// loads (add_wron|g_operat|or), so the name no longer exists as contiguous bytes in the binary.
+#if defined(_MSC_VER)
+# define COOP_MUT_NOINLINE __declspec(noinline)
+#else
+# define COOP_MUT_NOINLINE __attribute__((noinline))
+#endif
+COOP_MUT_NOINLINE inline bool is(const char* name) { return any() && slot() == name; }
+COOP_MUT_NOINLINE inline bool is(int number) { return any() && slot() == std::to_string(number); }
 
 // Optional: let a test main accept `--mut NAME` or `--mut=NAME`. The pair is blanked out in argv so a positional argument parser
 // does not see it. Returns the active twin.

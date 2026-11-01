@@ -66,7 +66,8 @@ open during travel, a forced conversation silently dropped.
 
 ## 6. Make it easy to play
 
-- An installer that finds the game, copies files and edits the INI.
+- An installer that finds the game, copies files and edits the INI: one file per OS, see
+  [shipping-to-players.md](shipping-to-players.md).
 - Host and Join launchers. Better: Steam relay so nobody types an IP, see
   [networking-steam-spacewar.md](networking-steam-spacewar.md).
 - A README with the three steps, and the known issues in plain words.

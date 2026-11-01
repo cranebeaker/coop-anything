@@ -79,6 +79,9 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   physics body was found by its class (static vtable, check RTTI strings first) plus
   "nearest to the entity's position". An entity matrix that the engine recomputes each
   frame is a copy of the real source: look in the physics or controller object.
+  If you do keep pointer chains (no class or rule found yet), confirm them across separate
+  launches, start them at statics that code references, and read several with a vote.
+  Persona 5 Royal's battle actor works this way (games/persona-5-royal; lessons.md 84).
 - **Moving something that the engine owns.** Write the real source every frame (the main
   loop hook), not once; smooth towards the target; keep the puppet invincible; and read
   memory with `ReadProcessMemory` in chunks so a scan cannot crash the game. See
@@ -216,6 +219,54 @@ you a log, a script channel and native commands in one step. Worked out on Far C
   it. With real input the bots found what script moves had hidden: a player placed inside a
   wall could not walk, and the level intro froze only player 1
   ([games/modern-warfare-2](../games/modern-warfare-2/README.md)).
+
+## Unity IL2CPP: traps for Harmony hooks
+
+Learned on MiSide (Unity 2021.3, BepInEx 6, [games/miside](../games/miside/README.md)).
+
+- **One compiled body, many methods.** IL2CPP folds methods with identical machine code into
+  one native function, and a Harmony hook patches that function. So a hook on one game method
+  also runs for every method folded into it: a minigame's `StartGame` hook fired when a
+  tutorial hint faded, and a client claimed a minigame that was never on screen. Any hook that
+  acts on its instance checks `__instance.GetIl2CppType().Name` first.
+- **Find what arms a story object in its persistent UnityEvents.** Story in Unity games is
+  often wired in the editor: a click's `UnityEvent` switches on a trigger, whose event starts a
+  dialogue, whose end event arms the next objects. Dump every persistent call in a scene
+  (`UnityEventBase` persistent call groups: target, method name, argument), including events
+  held in arrays, lists and structs. Then search the dump for the object and walk backwards.
+  This found a gate in one run after tracing the game's timer scripts had changed their timing.
+- **Game methods called out of context throw.** Calling a game method directly from a
+  test or a relay, outside the state it expects, often throws part-way, and a Harmony postfix
+  on it then never runs. Relays that must not miss go in prefixes; tests drive the game's own
+  entry point (the object's click, not the function it ends up calling).
+- **Stripped members.** Code the game never called is often stripped (`Animator.parameters`,
+  `GUILayout`, `Texture2D.EncodeToPNG`). Read the data from the game's files at build time
+  (UnityPy) or fall back to the members that remain.
+
+### Unity IL2CPP: Il2CppInterop traps
+
+Found while fixing the Dave the Diver online mod (Unity 6000.0, BepInEx 6 be.790,
+[games/dave-the-diver](../games/dave-the-diver/README.md)). Each one silently broke a
+synced feature:
+
+- **`GetType()` lies.** An Il2CppInterop wrapper is the type you asked for:
+  `FindObjectsByType<BossControllerBase>` returns `BossControllerBase` wrappers, so
+  `GetType().Name` and `is` never see the real subclass. Boss families were never
+  recognised and pickup ids differed between host and client. Use
+  `((Il2CppSystem.Object)x).GetIl2CppType().Name` and `TryCast<T>()`.
+- **Native exceptions don't reach your `catch`.** When the original method throws
+  inside a Harmony-patched IL2CPP method, Il2CppInterop logs "During invoking
+  native->managed trampoline" and swallows it. A `try/catch` around the call never
+  fires, and the caller carries on as if it worked. A client dialogue that never opened
+  stalled the shared story this way. Check the state after the call instead.
+- **Reading a singleton can create it.** The game's `Singleton<T>.Instance` builds the
+  manager when it is missing, and on the boot scene that throws. One unguarded read in
+  `Update` threw every frame and skipped everything after it. Read
+  `T.hasInstance ? T.Instance : null`.
+- **Big metadata.** Dumpers that cap their report size may refuse a large
+  `global-metadata.dat` (this one was over 64 MB). A small `System.Reflection.Metadata`
+  reader over BepInEx's generated `interop\*.dll` was enough for type names, members
+  and enum values.
 
 ## What to map for co-op
 
