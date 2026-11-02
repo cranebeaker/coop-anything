@@ -700,3 +700,16 @@ was no "puppet gone".
   exe+0xDF5A10). The removal worked ("cache removal 1"), yet the next level entry still crashed at exe+0x768E00. The
   game logged the pack as "coco:Hero_Crash_data_92", so Coco seems attached to hero chunk 92 itself. Next idea: a
   chunk of its own for the puppet's hero, instead of pool 92's chunk.
+
+### Crash 2 and Crash 3, and loading any level from a script (2026-11-02)
+
+- Console command found: the game builds "loadmap <level>" strings and runs them through a console object
+  (exe+0x117F30() returns it; vtable+0x30(console, char*) executes, as exe+0x4C030 does). Sent once on the game
+  thread (probe loadmap.c, DR0 on exe+0x511480), "loadmap crash3/l301_toadvillage/l301_toadvillage" and
+  "loadmap crash2/l201_turtlewoods/l201_turtlewoods" load those levels straight from the hub or the main menu.
+  Level names come from memory strings (crash3/l301_toadvillage, L201_TurtleWoods_zoneInfo...).
+- The suite now enters the level with loadmap and takes the level and crate positions as parameters. Its level-change
+  check reloads the level with loadmap. Results with the v18 mod: Crash 1 N. Sanity Beach 15/15, Crash 2 Turtle Woods
+  15/15, Crash 3 Toad Village 15/15. So crates, fruit, the fall guard and the puppet work the same in all three games.
+- Fruit counter lock: one pickup can leave two candidates (in Toad Village a crate gave 1 fruit while another game
+  variable also went 0 -> 1). The counter is found at the next change; until then the friend's fruit waits.
