@@ -59,8 +59,56 @@ Observed, from the wrapper logs and window screenshots:
 - Closing with WM_CLOSE (CloseMainWindow) worked. Both logs end with `detach`. On exit, p2 wrote CHSV00.ais (2 MiB)
   and MSSV01.ais (1 MiB) locally.
 - No stat or achievement writes were attempted during the menu-only run.
-- The owner's Steam `userdata\<id>\214490` folder does not exist, so the game has no cloud save there and nothing was written.
+- ~~The owner's Steam `userdata\<id>\214490` folder does not exist~~ **WRONG, corrected 2026-11-01:**
+  the folder exists (an earlier glob check missed it). It holds the owner's real saves in `remote\`, dated
+  2026-04/05. Their sizes and the SHA-1s in `remotecache.vdf` are unchanged after the test. Only
+  `remotecache.vdf` itself was rewritten (at 17:38:25), by the Steam client's session-end bookkeeping. No save data changed.
+
+## coopnet v1 (presence layer), 2026-11-01
+- Windowed mode in the test copy: in `DATA\ENGINE_SETTINGS.XML`, removed the FullScreen/WindowedFullScreen options and
+  all windowed resolutions except 1280x720 (original backed up). Observed: the game opened as a 1280x720 window.
+- Display settings are not in %APPDATA%\SEGA (that folder holds other SEGA games). They are probably inside the
+  cloud save files. Unknown.
+- Test profiles p1/p2 were seeded with read-only **copies** of the owner's Steam saves (originals untouched,
+  SHA-1 equal), so Continue can skip the intro.
+- `coopnet.dll`, loaded by steamwrap: reads the camera record (`blk+0x78C`), checks it against the signature
+  rec[7..9]=47/0.05/1000, sends pos+quat over UDP at 20 Hz (60-byte packet with an FNV checksum), and draws
+  the peer on a click-through, color-keyed overlay. Logs a CSV of all 16 record floats at 10 Hz.
+- Offline protocol test: **12 passed, 0 failed** (476/476 packets over real UDP, 5% loss and 10% reorder
+  simulated, garbage rejected, receiver ends on the newest packet).
+- In game (p1 alone, at the main menu): the DLL loaded, bound UDP 45500, and found the 1280x720 game window.
+  The camera record **passed the signature at the menu** with |q|≈1 and position (0,0,0) (menu camera).
+- Hypothesis (unverified): rec[0..3] is the rotation quaternion (x,y,z,w), and #85's "facing 0x790" is its y component.
+  This explains "about 90 degrees off and lags". The axis convention (+Z forward?) still needs telemetry while walking.
+- **Incident:** the first overlay build drew on top of every app, and the screen-copy screenshot captured the owner's other
+  windows (a video call). The test was stopped and the screenshot deleted. Fixes: the overlay only shows while the game is
+  the foreground window, and winshot.ps1 now uses PrintWindow (game window contents only).
+  **Lesson for the playbook:** never screen-copy for QA, and check the owner isn't using the PC before driving input.
 - A fullscreen window minimizes when it loses focus (seen when the terminal took focus). Next: windowed mode in the test copy.
+
+## In-game presence test, 2026-11-01 (owner away, PC left to the bot)
+Observed:
+- Bot (focus + scancode keys, mouse deltas) drove both copies title -> Play Game -> Alien: Isolation -> Continue Game
+  into the level from the copied saves (the save station at the start of the "hit the power at the same time as Axel" objective).
+- Camera telemetry in the level: rec[0..3] stays a unit quaternion (x,y,z,w). Mouse right turns raised y:
+  q=(0,0.3079,0,0.9514), which is a 35.9 deg yaw. With yaw -72 deg the player walked 2.6 m along atan2(dx,dz) = -72.2 deg.
+  Looking up adds x/z components, and forward tilts to +Y. **Convention: identity looks along +Z, +Y up, +X right**
+  (the "about 90 degrees off" in #85 came from reading a single component). rec[4..6] is the camera position (eye height
+  about 5.08 in this room). rec[10..15] repeats rec[0..5] (a second copy, possibly the previous frame). Unknown which.
+- Two copies in the level at once. The peer marker was checked with an offscreen overlay render composited on a
+  PrintWindow capture (no screen copy). p2 5.7 m down the corridor appeared on p1 at camera (-1.26, -0.01, 5.60),
+  matching the geometry. Reverse: behind -> edge arrow, after turning around -> marker at (-1.27, 0, 5.85).
+- Host/join mode: the host learned the joiner's address from its first packet. tx 1874 / rx 1872 at the end.
+- PrintWindow on `MainWindowHandle` returned the overlay window, not the game. Tools must skip the overlay's window class.
+- SetForegroundWindow on the second copy failed until an Alt tap plus AttachThreadInput was used.
+Offline: steamwrap 40/40, protocol 12/12, projection 10/10 (cases from the measurements above). Installer round trip on
+a fake folder 6/6 (refuses the wrong build, backs up, reinstall keeps the backup, uninstall restores).
+Mod repo commit 355cfbb (phoenixd123/alien-isolation-coop).
+
+Not done / unknown:
+- Two PCs over the internet: untested.
+- A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.
+- Alien / NPC / doors / items / story sync: not started.
 
 ## Taken from PR #156 / fork NOTES.md (not yet verified here)
 - 32-bit x86 PE, ASLR, no SteamStub. Base 0x400000.

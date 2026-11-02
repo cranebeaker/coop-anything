@@ -4,16 +4,16 @@
 |---|---|
 | Engine | Cathode (Creative Assembly proprietary), 32-bit x86 |
 | Versions tested | Steam build 4940658, AI.exe SHA-256 `DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90` |
-| Projects | Dropper7894 Survivor Mode co-op (unreleased); Joshiloveyou presence prototype ([#85](https://github.com/cranebeaker/coop-anything/issues/85), PRs #156/#164); [alien-isolation-coop](https://github.com/phoenixd123/alien-isolation-coop) steamwrap foundation (this write-up) |
-| QA level | none (for co-op); the foundation has an offline test plus a boot test |
+| Projects | Dropper7894 Survivor Mode co-op (unreleased); Joshiloveyou presence prototype ([#85](https://github.com/cranebeaker/coop-anything/issues/85), PRs #156/#164); [alien-isolation-coop](https://github.com/phoenixd123/alien-isolation-coop) presence prototype (this write-up) |
+| QA level | automated, for presence only (bot drives two real clients and checks marker placement) |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
 
-Nobody can play the story together today. Two from-zero efforts exist: a presence prototype
-where players see a marker for each other but the alien, doors and story are separate, and the
-foundation described here (safe test copies, two instances on one PC, local saves). Nothing
-shares the world yet.
+Nobody can play the story together today. Two from-zero efforts reach **presence**: each player
+runs their own campaign and sees the partner as an on-screen marker. This one (alien-isolation-coop)
+adds host/join over UDP and an installer. Nothing shares the world yet: no 3D partner
+character, and the alien, doors, items and story are separate.
 
 ## Existing work
 
@@ -22,8 +22,8 @@ shares the world yet.
   No public build or source.
 - **Joshiloveyou presence prototype**, claim [#85](https://github.com/cranebeaker/coop-anything/issues/85).
   The UDP position avatar is drawn by an overlay window. Code is not published; notes are on their fork.
-- **steamwrap foundation (this write-up)**: an independent rebuild of the loading layer, which the
-  owner chose instead of waiting for #85's code.
+- **alien-isolation-coop (this write-up)**: an independent rebuild guided by #85's notes, which the
+  owner chose instead of waiting for #85's code. steamwrap loading layer plus the coopnet presence layer.
 - Echo Protocol (2025): a post title only, with no activity since.
 
 ## How the game works (for co-op)
@@ -45,7 +45,12 @@ Observed on the build above:
 - It relaunches through Steam unless `RestartAppIfNecessary` returns false.
   `steam_appid.txt` makes `SteamAPI_Init` work without a Steam launch.
 
-The memory layout (player transform, camera buffer) is in #85's notes. It was not re-verified here.
+Camera record (pointer chain from #85, re-verified here): `mgr=[exe+0x12F0C88]`, `blk=[mgr+0x58]`,
+record at `blk+0x78C`, signature `rec[7..9] = 47 / 0.05 / 1000`. Measured in a level:
+- `rec[0..3]` is the view quaternion (x,y,z,w). Identity looks along world **+Z**, **+Y** is up and
+  **+X** is right. A yaw of -72 deg (from the quaternion) matched a walk direction of -72.2 deg.
+  Looking up adds x/z components. #85's "facing is about 90 degrees off" came from reading one component.
+- `rec[4..6]` is the camera position. `rec[10..15]` repeats `rec[0..5]`; why is unknown.
 
 ## What we changed
 
@@ -61,27 +66,37 @@ steamwrap is a replacement `steam_api.dll` for a copy of the game:
 
 ## QA
 
+- In game (2026-11-01, two copies on one PC, owner away). A bot (focus, scancode keys, mouse) drove both
+  copies from the title to Continue Game, into the level. One player walked 5.7 m down a corridor. The
+  other's overlay placed the marker at camera (-1.26, -0.01, 5.60), matching the geometry. The reverse
+  direction gave an edge arrow when behind and a marker after turning around. Host/join: the host
+  learned the joiner's address from the first packet; tx 1874 / rx 1872.
+  The overlay was checked by an offscreen render of it composited on a PrintWindow capture. **Never
+  screen-copy for QA**: an earlier screen copy caught the owner's other windows.
+- Offline: protocol over real UDP 12/12, projection 10/10 (cases from in-game measurements), installer
+  round trip on a fake folder 6/6.
 - Offline: `build.ps1` builds a fake `steam_api_real.dll` and a harness that calls the wrapper
   with MSVC thiscall and measures the bytes each callee pops. **40 passed, 0 failed** (2026-11-01).
 - Boot test (2026-11-01, real Steam client): p1 reached the main menu; p2 started alongside it and
   reached the first-run calibration screen. Both responded and closed cleanly. All save files were in
   `coop_saves\p1` and `coop_saves\p2`.
-- No co-op gameplay test exists yet, because there is no co-op gameplay.
+- Untested: two PCs over the internet.
 
 ## How to play
 
-You can't yet. Developer instructions are in the mod repo's README.
+Only presence works: you see your partner's marker, and each of you plays your own campaign.
+Install and host/join steps are in the mod repo's README (`install.ps1`, `play-coop.bat`).
 
 ## Known issues
 
+- The marker is an overlay, so it shows through walls.
 - Fullscreen copies minimize when they lose focus. Use windowed mode for two instances.
 - A new profile starts at the brightness calibration screen.
 
 ## Next steps
 
-1. Windowed mode in the test copy, plus a menu bot that gets into a level.
-2. `coopnet.dll` (loaded by steamwrap): read the player transform from #85's pointer chain,
-   then send it over UDP between two instances.
+1. Test across two PCs. Then Steam networking (ISteamNetworking005), so no port forwarding is needed.
+2. A 3D partner character: find how Cathode spawns or moves a human NPC, and drive one from the network.
 3. Coordinate with #85 so the two efforts merge rather than duplicate.
 4. The unsolved part: alien and NPC ownership (playbook/actor-ownership.md), doors, and story via
    `EntityManager::call_method`.
