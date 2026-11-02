@@ -10759,3 +10759,28 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: 'Star Wars: The Force Unleashed - Ultimate Sith Edition'
+  year: 2009
+  engine: LucasArts Ronin (Lua 5.1 scripting, Havok/DMM/Euphoria physics; PC port by Aspyr)
+  project: tfu-coop
+  url: ''
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/star-wars-the-force-unleashed
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: 2-4
+  networking: direct-ip
+  open_source: unknown
+  last_activity: '2026-11'
+  qa: automated
+  notes: Online co-op for the Steam build 6522 (exe unpacked with Steamless), each player on their own PC with their own camera; one host owns enemies, deaths, health, level changes and cinematics. A dinput8.dll proxy patches the engine (device reset, per-controller objects for players 3-4, multiplayer respawn) and runs Lua modules over a UDP link with a session key. Automated multi-instance tests on one PC cover 2-4 players, enemy kills and fights, deaths without world reload, level and cinematic following, later waves, simulated 150 ms / 5% loss, and forged-packet rejection; not yet played between two PCs. Owner playtests with two copies on one PC (2026-10-28/29) confirmed that enemies attack remote players and that Force Grip works for them; enemies on clients and level progress for clients (only the host's character triggers gates and encounters) are still open. Experimental fixes (enemy shots on clients, level triggers for every player, more enemies and tougher bosses for more players) pass automated tests in the game (2026-11-02) but are off by default and not yet played. Code repository not yet published.
+  sources:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/star-wars-the-force-unleashed
+  checked: '2026-11-02'
+  made_with_coop_anything: true
