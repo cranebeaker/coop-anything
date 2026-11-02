@@ -134,6 +134,30 @@ Mod repo commit 355cfbb (phoenixd123/alien-isolation-coop).
   Next: decompile a message vtable's slots to find a name or ShortGuid accessor, or read the command
   graph from the level data (CathodeLib / OpenCAGE know the COMMANDS.PAK format) and match entity IDs.
 
+### Level scripts via CathodeLib (2026-11-01, owner approved .NET 8 SDK 8.0.427, SHA-512 checked)
+- **The engine's property atoms are CathodeLib ShortGuids** (SHA1 → reorder → uppercase hex → SHA1 → first 4 bytes).
+  #156's bbox atoms resolve exactly: 0xA652ED66 = `origin_offset`, 0xF0088922 = `origin`, 0x5E1AEC47 = `target_offset`,
+  0xC8DE9852 = `target`. Hashing about 322k strings (CathodeLib info.dat plus AI.exe) and matching aligned dwords in a
+  runtime dump of AI.exe's data section named **10,370 atom globals**: function types (e.g. CHR_SetHealth at RVA
+  0x1350BEC) and parameter names.
+- CathodeLib `Commands` needs the level's REDS / COLLISION.MAP / ENVIRONMENT_ANIMATION: passing nulls gives
+  NullReferenceException. Load through `new Level(levelDir, new Global(DATA\ENV\GLOBAL))` instead (about 3 s per level).
+- The save used for testing (objective "hit the power at the same time as Axel") is in **SOLACE**.
+- Character display models across all levels: AXEL, CONNOR, MARLOW, PLAYER_FP (the player, first-person), RICARDO,
+  **RIPLEY** (third-person, archetype `Archetypes\Cutscene_Actors\Ripley_3P_v4`, only in ENG_REACTORCORE,
+  HAB_SHOPPINGCENTRE, SCI_HUB, TECH_COMMS), SAMUELS, SPACESUIT_*, TAYLOR, VERLAINE, WAIT, WORKER.
+- How scripts move an NPC (seen in SOLACE M27_Pt03): `TriggerBindCharacter` (characters -> npc_reference of the actor,
+  bound_trigger -> apply_start of a `CMD_GoTo`), `CMD_GoTo` (Waypoint -> reference of a `PositionMarker`).
+  Actor instances are composites of an archetype with a `position` transform parameter.
+- Experiment 1 (test copy, original backed up and restored afterwards): added to SOLACE's root composite a Taylor actor
+  (spawn_on_reset), a PositionMarker at a magic position, CMD_GoTo, TriggerBindCharacter and a self-retriggering
+  LogicDelay (start_on_reset). Observed: the modded level loads without errors, but **no actor appeared**. The magic
+  float3 is in the file but **nowhere in the game's memory** (full 1.5 GB scan). A shipped marker's position
+  (PositionMarker_12) isn't in memory as a float3 either.
+  Derived (unverified): script positions aren't kept as plain float3 after load, and/or `*_on_reset` triggers don't
+  fire when a save is loaded (a save restores entity state). Next: start the level fresh (new game or a level-start
+  checkpoint) instead of Continue, and drive the waypoint through a script-visible variable rather than memory.
+
 Not done / unknown:
 - Two PCs over the internet: untested.
 - A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.
