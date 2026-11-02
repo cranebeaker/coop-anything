@@ -26,7 +26,7 @@ Retail New Game/Continue, hub and mission selection, native save/resume, localiz
 - [Existing Discord listing](https://discord.com/channels/1561411702082510879/1562185850777772152): retained project reference; no account access or build verification performed here.
 
 
-## 2026-11-01 — beta campaign, in-place joining and launcher update
+## 2026-11-01: beta campaign, in-place joining and launcher update
 
 Sources: [released v1.1.0-beta](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.1.0-beta), [source revision](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/commit/9ff4f6a), [status and failed attempts](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/9ff4f6a/docs/STATUS.md), [harness](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/9ff4f6a/launcher/play_lifecycle.py), [launcher documentation](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/9ff4f6a/docs/LAUNCHER.md).
 
