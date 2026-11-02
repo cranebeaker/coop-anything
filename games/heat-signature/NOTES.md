@@ -1139,4 +1139,56 @@ Co-op:
   completes from `EnemyCheckObjectiveDelivered`); the guest's mission completes with it and the guest is told; no
   mission failed; no error dialogs; both advancing.
 - Not tested yet: a guest capturing (it would carry a guard its copy only mirrors; the host's copy of the body would
-  stay where it was), Rescue, Hijack.
+  stay where it was).
+
+## Rescue and Hijack (2026-11-02)
+
+Observed:
+- **Rescue**: the objective is a guard-like prisoner lying "Down" (`ObjectiveType` Rescue). Carried into the pod, flown
+  home and put down at the agent drop, it completes the mission the same way as a capture
+  (`EnemyCheckObjectiveDelivered`). `tools/rescue_mission.sh` (`capture.sh` with `TYPE=Rescue`, no knockout): 10/10,
+  and the guest's mission completes with the host's (mutation `nosharedcomplete` leaves it open).
+- **Hijack**: the objective is the ship's bridge (`oBridgeModule`, object 117), its pilot a guard in state
+  "Controlling". Knocked out (helper `knockguard`), the bridge taken (`interact` with the bridge: the player is put at
+  its controls, "Controlling"). The mission completes in `DockAtStation`, called from a ship's step when it docks;
+  for a ship that needs its autopilot's `Intent`/`DestinationObject` or a player docking it, which the bot cannot do.
+  Moving the ship next to the station (helper `gotohome ... ship`) did not dock it.
+- **A ship's flight is not synced**: moving the guest's copy of the shared ship left the host's where it was. A
+  hijacked ship flown by one player stays put on the other's copy (both stay aboard and see each other, as positions
+  are ship-wise). Open.
+- **A puppet with no route to its player**: the guest put at the bridge from afar; the host's puppet walked toward it
+  and stopped at 1 967 units (no route it may take: the bridge is behind keycard doors the guest did not pass, and
+  a player can also jump, e.g. with a teleporter item). Now a puppet more than 400 units from its player that has not
+  got 30 closer in 3 s is put where its player is. Mutation `nosnap`.
+- **Test** (`tools/hijack.sh`, 8 checks): the bridge is the objective on both; the host knocks the pilot out (down on the
+  guest too); the guest takes the bridge and the host's copy shows it there; the guest's mission completes (stand-in
+  for the docking: helper `completemission`, the path the other player's completion takes) and the host's completes
+  with it, and it is told; no error dialogs; both advancing.
+- Test mistake, recorded: the setup command `puppet` run without an id made the host's copy call `PlayAsCharacter` on
+  nothing (GameMaker error in `PlayerShipDockAtStation`); it now refuses without an id.
+
+## A guest captures (2026-11-02)
+
+Observed:
+- On a guest the shared ship's guards are mirrors the host places every step, so a guard the guest carried would be
+  put back where the host has it, and on the host the body lay where it was.
+- **Fix**: the guest does not place a guard it carries (or put down in the last 10 s, or its pod took), and tells the
+  host which one it carries (player packet: the guard's original position); the host's puppet carries the host's copy
+  (`InteractWith` as the puppet, with `global.Player` set to it for the call) and puts it down when the guest does (its
+  `Carrier` and the puppet's `CarriedObject` cleared, states "Down" and "Free"). Once the guest's pod has the guard (its
+  Parent the pod, after the undock took it), the host's copy is out of play: hidden, its step skipped. Mutation
+  `nocarry`.
+- **Test** (`tools/guestcapture.sh`, 9 checks): the host knocks the target out; the guest carries it, and the host's
+  puppet carries the host's copy (the puppet is parked beside the guest's pod, so the host's copy is where the puppet
+  is); the guest puts it down in its pod and takes the controls: the pod leaves with it and the host's copy is out of
+  play; the guest flies home and delivers it (`EnemyCheckObjectiveDelivered` on the guest's copy) and the host's mission
+  completes with it; no mission failed; no error dialogs; both advancing.
+
+## A box's item for both players: tried, not kept (2026-11-02)
+
+Tried: the opener's item (the box's `MyLoot`) sent like a dropped item, so the other copy shows it on the box and either
+player can take it. Observed: the host showed object 113 under another name ("Teleporter", where the guest's was "Long
+Range Sidewinder": names are made from the item's traits on each copy, derived), and when the host took it, the guest's
+copy raised a GameMaker error in `DrawInventoryListText` (its inventory menu, opened by the box for the opener, still
+showed the item). Reverted: the item stays the opener's, as before. Doing it would need the opener's menu closed first
+and the name rebuilt.
