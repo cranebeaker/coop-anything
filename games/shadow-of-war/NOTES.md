@@ -3608,3 +3608,40 @@ smoothing lagged the free-run start.
   the promotions it applied); a captain's looks, name and level on the client (the proxy is a generic orc); captains' own
   fights and duels away from both players (they are events of the host's simulation, so they are sent, but not watched).
 - Two PCs, as before.
+
+## Session 2026-11-01 bw: soak test of the Nemesis sharing, and what a captain is made of
+
+### Observations
+
+- **Soak (host and client copy on one PC, same save, 25 minutes, `tools/soak_nemesis.py`):** the host's player was moved
+  between the captains' spot and the start every 40 s and both players were kept at full health; every 10 s both probes
+  answered, both games stayed up, the client's counters ended at `nemesis_got=50 nemesis_applied=50 nemesis_failed=0`. All 50
+  events came in the first 6 minutes; the next 19 minutes had none and the client had 0 proxies (the host's fight was over),
+  so this is a test of the stream's stability, not of a long fight.
+- **The two games' event lists agree for events about members that existed in the save and differ for new ones.** Compared
+  in order from the client's first event (the games' own debug logs): the first five (Ur-Gram: `DatalLevelChanged`,
+  `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`, `ActiveKillPlayer_AlreadyNamed`, `ActiveGotPlayerInLastChance`)
+  are the same on both; then, in one burst on the host (four `TimePassed`, then `PromoteEmpty_BuilderWC_*` /
+  `PromoteEmpty_BuilderTransform_*` with `Promote` and `Clear` for 11 newly named captains, then `PromoteDead_*`), the host's
+  subject has a name and the client's is `None` in 33 of the 50 lines: the client's world has no member with that id, so the
+  handler ran on nothing. The burst came about 40 s after the host's player was killed by Ur-Gram; whether the death caused it
+  was not tested. Events whose subjects existed in the save (Ur-Gram, `Skon`) were applied by name on both.
+- **A captain is a FactionMember object** (vtable `1FD5EA0`, name inline at +0x498, about 0x800 bytes). It holds pointers to
+  records by type: faction `0xA51` (+0x178, +0x180, +0x298, +0x2C8, +0x718), appearance `0xA66` (+0x278), spawn type `0xA06`
+  (+0x338), many `0xA08` (+0x558..+0x5C0) and `0xA0C` (+0x610..+0x650), also `0xA29`, `0xA03`, `0xA01`, `0xA00`, `0xA1D`,
+  `0xA0D`, `0xA30`, `0xA1E`, `0xA4B`, `0xA1B`. Two objects with this vtable carried the name "Ur-Gram" (one with the
+  full set, one with fewer records; which one the game treats as the live member was not worked out).
+- Found with: a heap search for the 8-byte name (`findq`, the name is exactly 8 bytes with its end), then the object start
+  at the hit minus 0x498.
+
+### Derived
+
+- A client that should show a captain as himself, and apply events about captains made after the join, needs the member's
+  data, not only a name: its records (appearance, traits, level, faction), or a member created by the same call with the same
+  inputs on both sides. The game has `FactionMember.Save` / `.Load` console programs; whether they carry a single member is
+  unknown.
+
+### Unknown
+
+- How a spawned character points to its member (and back); how a new member is made (the call that the promotion burst
+  makes before `PromoteEmpty_*`); whether the burst follows the player's death or time passing in general.
