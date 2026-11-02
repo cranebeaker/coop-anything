@@ -969,9 +969,26 @@ Observed (Ghidra, unpacked exe):
 - Level scripts are state machines: `sm = StateMachine(); sm.renID = renID; sm.X = State();
   sm.X.OnMsg = function(state, sm, msg) ... end; sm:Change(sm.X)`. `msg.name` is compared with
   `messages.MsgNotifyEnterVolume` and similar; `msg.owner` is the ren that caused it.
-- Death volumes: `game.FallToDeath(msg.owner, sm.renID)`, then `camera.DeathVolumeEnter` if the owner is player 0,
-  else `ai.RecycleRen(owner)`. So today a host's puppet that falls into one is probably recycled (unknown: not
-  seen in play).
+- The state library is Lua too, in every level pack (the `ronin` table: `DeliverMsg`, `Update`, `SendMsg`,
+  `BroadcastMsg`, `InstanceSM`). `ronin.DeliverMsg` runs
+  `if not OnStateMsg(sm.STATE.OnMsg, sm.STATE, sm, msg) then OnSMMsg(sm.OnMsg, sm, msg) end`, and `ronin.Update`
+  delivers the queued `ronin._MSGS` whose delay ran out, then calls `OnSMUpdate(sm.Update, sm, dt)` for each
+  machine. All three are GETGLOBAL on each call (bytecode, `re/level_lua_scan.py --fn OnStateMsg`), so replacing
+  the globals reaches the level scripts, as long as they share the console's global table (not yet confirmed).
+- FUN_004d2940 has one caller, FUN_0041e2b0, and the chain above it has one caller per step: FUN_00424010,
+  FUN_00401210, FUN_00401000. Derived: game start-up, so the C helpers are registered once and a level load does
+  not put the originals back. Not checked at run time.
+- Death volumes (bytecode): `game.FallToDeath(msg.owner, sm.renID)`; then
+  `if msg.owner == ren.GetPlayer(0) then camera.DeathVolumeEnter(ren.GetPlayer(0)) else ai.RecycleRen(msg.owner) end`.
+  - `ai.RecycleRen` = FUN_00844350 (help text "Recycle a AI Ren"): recycles the ren only if it is in the AI
+    component map (`[0x01306fd0]+0x10`, FUN_0041ff80, the lookup `coop_aicomp` uses). Whether player characters
+    are in that map: unknown. On every PC the owner can be another player's character, so tfu-coop
+    `lua/m7_respawn.lua` now keeps the four players' characters from `ai.RecycleRen` (logs
+    "m7 kept player character"). `tools/m82-fall-run.sh` is the test (not yet run).
+  - `game.FallToDeath` = FUN_00835db0: kills the ren with falling damage. On the host that is the puppet; the
+    client fell in its own game too, and its m6 death check ignores a host death within 150 frames of a local one.
+  - `camera.DeathVolumeEnter` = FUN_0083be90: switches to the death camera only when the ren is the local player 0.
+    With shared triggers the host calls it with the puppet, which leaves the host's camera alone.
 
 Built (tfu-coop `lua/m81_shared_triggers.lua`, host only, off by default, `shared_triggers=1|2` in coop.ini):
 - The Lua globals `OnStateMsg` / `OnSMMsg` are replaced with wrappers. When the message's `owner` or
@@ -980,8 +997,8 @@ Built (tfu-coop `lua/m81_shared_triggers.lua`, host only, off by default, `share
 - `volume.IsInside(volume, player 0)` is true when any player is inside.
 - Mode 2 (`"nearest"`) also wraps `OnSMUpdate`: during a state machine's per-frame update, player 0 is the player
   nearest the machine's ren.
-- Unknown until run: whether the state library looks the globals up on each call (if it keeps its own reference
-  the wrappers never run). `coop_shared_triggers_stats()` returns msgs, asked, insides to tell.
+- Unknown until run: whether the level scripts' global table is the console's (see above for the per-call
+  lookup). `coop_shared_triggers_stats()` returns msgs, asked, insides to tell.
 - `tools/m81-triggers-run.sh` walks the client through the prologue's checkpoint volumes and passes only when a
   level-script message ran as the puppet and asked for player 0. Whether the gate opens for a client that charges
   in its volume is a manual check.

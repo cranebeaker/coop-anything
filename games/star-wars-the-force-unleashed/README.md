@@ -141,8 +141,8 @@ See `PLAYING.md` in the tfu-coop package:
 
 ## Next steps
 
-- Run the new automated tests in the game: `m80-shot-run.sh` (enemy shots) and `m81-triggers-run.sh`
-  (level triggers).
+- Run the new automated tests in the game: `m80-shot-run.sh` (enemy shots), `m81-triggers-run.sh`
+  (level triggers) and `m82-fall-run.sh` (a client falling into a death volume keeps its character on the host).
 - A real two-PC session over the internet.
 - A full-level playthrough, checking doors and objectives on clients with the world diff.
 - Force powers for remote players: Push and Grip work on the host (Grip: m13-grip-run, a puppet lifted a
