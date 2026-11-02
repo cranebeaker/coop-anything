@@ -228,8 +228,8 @@ def t_get_game(slug):
 
 
 def t_validate_entry(entry_yaml):
-    from build_directory import errors_for
-    e = yaml.safe_load(entry_yaml)
+    from build_directory import errors_for, normalize_yaml
+    e = normalize_yaml(yaml.safe_load(entry_yaml))
     if isinstance(e, list):
         e = e[0]
     errs = errors_for(0, e)

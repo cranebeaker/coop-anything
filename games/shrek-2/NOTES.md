@@ -1115,3 +1115,71 @@ Whether the creatures and the effects animate on a client by themselves was not 
 
 Not done: world synchronisation (doors, platforms, pickups, breakables, effects) and the environment animations on a client; the join points ("dead" checkpoints) for guests who connect
 during the game, per level; names over the heads that are hidden by scenery without collision (idea: a sprite with a `ScriptedTexture` in the world, depth-tested); the proxy library in the installer.
+
+## Shrek 2.2, MPak and the Shrek2-Multiplayer forks (review of 2026-11-01)
+
+Method: GitHub API only (tree, text files, commits, issues); the 2 GB repository was not cloned. `SH22Game.u` (142 KB) and three small ini files were downloaded to a scratch folder and decompiled with UELib for reading. Nothing was copied into this project.
+
+**Observations**
+- `Master-64/Shrek-2.2` (alpha, 186 builds, last push 2025-07-03) is a full copy of the game (movies, textures, sounds, Activision's `license.txt`) plus the modder's packages. It is not a source repository. Its game binaries (`Engine.dll`, `GUI.dll`, `KWGame.dll`, `game.exe`) have the same sizes as the 1C edition; `SHGame.u` and `KWGame.u` differ (the base is the English edition), so its compiled packages cannot be loaded by the 1C edition.
+- Its own code is 13 classes in `SH22Game.u` on top of the library `MPak`: a game class (`MPak.MShrek`, `MPak.MController`), difficulty modes (Relaxed with regeneration and automatic jump magnets, Classic, Knight with 3x damage taken, "I Need A Hero" with 6.4x and potion kegs/shamrocks replaced by energy bars/money bags), field of view (horizontal FOV converted), shadow detail (switches `bUseBlobShadow` / `bActorShadows` per class with console `Set`), view distance (multiplies zone fog), a fix for peasants with missing skins, an options page and a custom-adventures page. The "Online P2P Multiplayer" is still only a promise in its README.
+- `Master-64/MPak` (source, no license file, header says "may be modified but not without proper credit"): `MPatcher` patches stock levels at start: pressure volumes push potions, shimmy pipes by tag, `Steed` double jump height 128 (`SetJumpVars`), PIB dies from a fall of 1000 in the factory, swinging stone / spiked ball hitboxes set to a 100x100 cylinder, projectors re-attached after a load, emitter default opacities, material types of stock materials (footsteps), actors outside the current game state destroyed, health kept across a load. `MHeroPawn` is a configurable copy of the hero (attack damage, jump counts, fall damage). `MBenchmarker` logs fps averages. Net: `RemoteRole=AutonomousProxy` for the local player, `NetPriority=3`, `NetUpdateFrequency=100`; nothing else about networking.
+- `Master-64/Shrek2-Multiplayer` (7 builds, 2025-02) is a chat and menu skeleton: lobby page, chat HUD (T key, word filter), a data aggregator that sends the local hero's position every tick as text and moves ghost pawns. Its header lists the author's own open tasks (shared inventory, level transfer, saves, enemy targeting, spectating).
+- Fork `Michiocre/Shrek2-Multiplayer` (branch `rewrite`, last push 2026-08-17, issues disabled): switches the transport to the author's own TCP text link and adds `RoomServer` (Node.js): a relay with room codes so players need no port forwarding; the host sends `create`, clients `connect:<name>:<room>`, the relay forwards every message.
+
+**What may be worth taking (ideas, to be re-done and tested here; credit the author where code is reused)**
+1. Level fixes: Steed/Donkey double jump height, PIB factory fall, swinging ball hitboxes, peasant skins.
+2. Performance options as player settings: shadow detail and view distance.
+3. Comfort options: camera auto-level off (`SaveCameraNoSnapRotation`, `CameraNoSnapRotation`), `bLookUpStairs`, `bSnapToLevel`.
+4. Difficulty presets for the host (regeneration, damage multiplier).
+5. Co-op chat (a T-key line with a HUD list), missing in the mod.
+6. A UDP relay with room codes for players who cannot use UPnP (needs a hosted server: the owner's decision).
+7. Net priorities: hero pawns and the sync actors get an explicit `NetPriority`; ours are default.
+
+**Do not take:** the repository's game files, maps, music, movies; `MPak.u` / `Hiver.u` binaries (built against the English packages).
+Sources: https://github.com/Master-64/Shrek-2.2 , https://github.com/Master-64/MPak , https://github.com/Master-64/Shrek2-Multiplayer , https://github.com/Michiocre/Shrek2-Multiplayer
+
+## UE2/2.5 replication review and stop point (2026-11-01, late evening)
+
+**Status: stopped by the owner to conserve usage. Not committed, not pushed, not a finished release.** The mod source has three modified files: `EnhancedAnimSync.uc`, `EnhancedGame.uc`, `EnhancedPlayerController.uc`. The same sources were mirrored to the sandbox and the final reduced patch compiled with **0 errors, 0 warnings**. No native or installer files changed.
+
+### Comparison with established UE2 co-op
+
+Primary reference: [Everything you ever wanted to know about replication](https://www.unrealarchive.org/wikis/unreal-wiki/Everything_you_ever_wanted_to_know_about_replication_(but_were_afraid_to_ask).html). Actual UE2.5 co-op source reviewed: [Killing Floor](https://github.com/InsultingPros/KillingFloor), especially `KFMonster.uc`, `KFPawn.uc`, `KFGameType.uc` (Tripwire code; no permissive license found). UT2004 v3369 repository: https://github.com/Deaod/UT2004 (identified, but guessed class paths were 404 and are not used as evidence).
+
+- UE2 variable replication sends a value when it differs from what the server believes the client knows. `reliable` / `unreliable` on a variable does **not** retransmit an unchanged value after loss. Reliable RPCs are for discrete transitions; unreliable values suit continuously replaced pose/input state.
+- Killing Floor follows server-authoritative AI/damage, typed replicated properties and structs, reliable discrete RPCs, native movement/animation replication, and selective relevance/update throttling.
+- Shrek correctly keeps engine movement prediction and server authority. Its extra animation/world layers use strings, so they need explicit loss recovery. The old client-side two-second `ForceClock` reapplied local data but could not make the host resend a lost transition.
+
+### Implemented in the reduced patch
+
+1. **Animation loss recovery:** each nonempty `Data` record gets a staggered two-second `#counter` heartbeat. On the client the suffix is stripped before comparison/application, so a heartbeat-only delivery does not re-blend an unchanged pose; a genuinely missed transition differs from the last applied records and is applied. The existing epoch and 25 Hz sampling remain.
+2. **Cutscene mode delivery:** `bCutView` is no longer an unreliable variable. A reliable owner RPC `ClientCutView(bool)` carries only entry/exit transitions and resets camera smoothing. Location, integer angles and FOV remain unreliable. The server tracks the last desired mode and calls the RPC only on changes.
+3. **Client CPU:** `HideUnposed` checks animation channels at 10 Hz instead of every frame. Age/deletion checks and the 1.5-second unhide fallback remain.
+
+### Measurements and rejected experiment
+
+All runs used the isolated sandbox and redirected Documents. Baseline (`ue2base`): clean guest **42 fps**, 18.3 movement snaps/min; 3% loss + 50 ms lag + 30 ms jitter guest **29 fps**, 25.4 snaps/min. Host outflow averaged 1027 B/s clean and 1426 B/s lossy. Both clients joined and stayed alive; `owner Documents changed: 0`.
+
+The first patch also replaced `VSize` with scripted dot-product distance calculations. Matched patched runs fell to **17 fps clean / 19 fps lossy**. This was not accepted as optimization: **all distance changes were reverted and `EnhancedWorldSync.uc` has no remaining diff**. The first patch's host outflow was 1225 B/s clean and 1596 B/s lossy; heartbeat traffic is a real cost, not free reliability.
+
+The reduced patch (`ue2fix2`) completed only its clean run before the owner stopped testing: guest **32 fps**, **12.9 snaps/min**, frame dt p95 50 ms, host outflow 1202 B/s. Client joined and stayed alive; `owner Documents changed: 0`. This is better than the rejected 17 fps run but still below the 42 fps baseline, so **no performance improvement is claimed**. Its lossy run was terminated before producing a result.
+
+### Cutscene check and owner-reported symptoms
+
+`ue2cut` held the intro until the guest joined and applied the same loss/lag/jitter profile. `[CUTSYNC] mode=True` arrived, both processes stayed alive, and Documents stayed unchanged. The scene did not end during the 80-second observation, so **`mode=False` / return to gameplay was not tested**. No four-player run was made in this pass.
+
+While watching the first patched tests, the owner reported momentary stuttering and periodic T-poses on client heroes. The distance rewrite was reverted and heartbeat-only re-blending removed afterward. **The T-pose is not confirmed fixed.** Do not claim it is fixed without a visual/client-channel regression run. A transient empty-record/last-valid-pose audit is the next animation check, not an already implemented fix.
+
+### Resume here
+
+1. Run the reduced patch's lossy benchmark and compare with `ue2base-bad`; investigate the remaining clean-FPS gap before calling the patch an optimization.
+2. Watch client heroes and compare host/client channel logs for periodic T-poses; inspect transient empty records and selection/slot changes. Preserve the last valid pose only if the evidence supports it.
+3. Run a longer held-intro test that observes both `CUTSYNC True` and `False` under loss, then a four-player smoke test.
+4. Keep the current three-file diff uncommitted until those checks pass. No real Internet/human session, per-map coverage, or long-session stability was verified in this pass.
+
+### Outcome of the review of that patch (2026-11-02)
+
+- **Dropped:** the animation heartbeat (`#counter` suffix) and the `HideUnposed` change: no evidence they help (clean guest 42 -> 32 fps in the one run, no lossy run, runs not comparable: 247 vs 146 moving frames), and they add string work for 32 slots per tick. `EnhancedAnimSync.uc` is back to the committed version.
+- **Kept:** the reliable `ClientCutView(bool)` for cutscene on/off (pose stays unreliable). Checked with 3 % loss + 50 ms lag + 30 ms jitter, held intro until the guest joined: `[CUTSYNC] mode=True` and later `mode=False` both arrived (run `cutrpc2`), host and guest alive, owner Documents unchanged. Benchmarks with this change only (one run each, prefix `ue2rpc`): clean guest 43 fps, lossy 49 fps (baseline 42 / 29), no regression.
+- Not verified: a long session, four players, a real internet session. The T-pose and stutter reports are still open.

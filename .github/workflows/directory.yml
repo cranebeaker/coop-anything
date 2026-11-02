@@ -12,4 +12,5 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pyyaml
+      - run: python -m unittest discover -v
       - run: python tools/build_directory.py --check
