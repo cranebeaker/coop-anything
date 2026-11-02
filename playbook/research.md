@@ -38,6 +38,11 @@ build on its author's own build server. Say "not found by search X" and keep goi
 - Where the bug reports live (issue tracker, Discord channel, forum thread).
 - The newest build and how you verified it (hash, version string inside the files).
 
+- **Steam Workshop banners are not evidence.** Every Workshop page carries hidden `bannedNotification` and
+  `incompatibleNotification` blocks (`display: none`), so a text fetch reads "removed from the community" on healthy
+  items. Check the style attribute, or compare with an unrelated item, before reporting a takedown. From: Tale of
+  Immortal, where two research agents reported a removal that a control item disproved.
+
 ## Mining bug reports
 
 - Issue trackers and forum threads first.

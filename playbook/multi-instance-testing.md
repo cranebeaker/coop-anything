@@ -61,6 +61,11 @@ analytics files; add `-logFile <instance>\Player.log` for the log. Verified on S
 real folder hashed unchanged across runs: [games/slime-rancher-2/qa/SaveIsolation](../games/slime-rancher-2/qa/SaveIsolation).
 A `steam_appid.txt` in the copy stops the Steam relaunch of the store install.
 
+Unity keys both `persistentDataPath` and PlayerPrefs on the company name in `<Game>_Data/globalgamemanagers`, not on `app.info`. A same-length patch of that
+field in a private copy of the file gives each instance its own save folder and registry key with no plugin. Tale of Immortal (Unity 2020.3) used this for two
+copies, hashing the real saves and PlayerPrefs around every run. Read the game's log as well: its own `RetrieveSavedPrefs` still opened the real key by a hard-coded name,
+so the copies read it while writing nothing there. `tools/gamepool` window values are `minimized`, `hidden` and `normal`, and any other value means hidden.
+
 ## 2. Single-instance checks: named mutex and FindWindow
 
 Many games refuse to start a second copy. Two mechanisms are common:

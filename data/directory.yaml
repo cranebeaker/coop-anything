@@ -10038,3 +10038,81 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: Tale of Immortal
+  year: 2021
+  engine: Unity 2020.3 (IL2CPP)
+  project: Tale of Immortal Multiplayer
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=3811631543
+  other_urls:
+  - https://www.nexusmods.com/taleofimmortal/mods/87
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: 2+ (author tested 5)
+  networking: vpn-needed
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: automated
+  notes: "By Akulia. MelonLoader mod (TOI_MP_MenuMod.dll) from the Steam Workshop or Nexus. One shared world and save, group fights, PvP, trade and sect sync; the month waits for every player. Needs a VPN LAN or real LAN on port 47813. Automated test by Co-op Anything, not by the mod author: two real clients on one PC, 24 of 25 checks on 1.1.10 (host, join, merge, world and position sync, NPC death, two months, client crash). The failing check: 1 to 6 of about 1,555 NPCs differ after a month until the next month. Write-up in games/tale-of-immortal."
+  sources:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3811631543
+  - https://steamcommunity.com/sharedfiles/filedetails/changelog/3811631543
+  - https://steamcommunity.com/app/1468810/discussions/0/567048876338484973/
+  checked: '2026-11-02'
+  made_with_coop_anything: false
+- game: Tale of Immortal
+  year: 2021
+  engine: Unity 2020.3 (IL2CPP)
+  project: Immortal Co-op
+  url: https://github.com/JosephCarmichael/ImmortalCoop
+  other_urls:
+  - https://josephcarmichael.github.io/ImmortalCoop/
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: 2-4
+  networking: steam-relay
+  open_source: 'no'
+  last_activity: 2026-10
+  qa: none
+  notes: "Early test build for Steam build 21758240. A shared start, then each player keeps their own world and calendar; player-caused NPC deaths and joined battles are shared. Its guide says it has run as copies on one computer and has not yet been tested across separate computers. Unsigned installer, source not public. Write-up in games/tale-of-immortal."
+  sources:
+  - https://github.com/JosephCarmichael/ImmortalCoop
+  - https://github.com/JosephCarmichael/ImmortalCoop/releases/tag/v0.5.1
+  - https://josephcarmichael.github.io/ImmortalCoop/
+  checked: '2026-11-02'
+  made_with_coop_anything: false
+- game: Tale of Immortal
+  year: 2021
+  engine: Unity 2020.3 (IL2CPP)
+  project: 诸天万界（联机mod）
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=2958503186
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'no'
+    story: 'no'
+    enemies: partial
+    world_state: 'no'
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2023-06
+  qa: none
+  notes: "By SolidStateLight. Chat across separate games with assist copies, invasions and duels. No shared world. Last updated June 2023."
+  sources:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=2958503186
+  checked: '2026-11-02'
+  made_with_coop_anything: false
