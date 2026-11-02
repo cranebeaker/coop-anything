@@ -13,12 +13,13 @@ That means split screen is a **layer on top of multiplayer**:
 
 ## Starting points
 
-Both projects below have public source, so agents can read, fork and extend them.
+All projects below have public source, so agents can read, fork and extend them.
 
 | Project | Platform | License | Notes |
 |---|---|---|---|
 | [Nucleus Co-op](https://github.com/SplitScreen-Me/splitscreenme-nucleus) | Windows | GPL-3.0 | The most widely used tool, 700+ game "handlers" on [splitscreen.me](https://splitscreen.me/docs/games). Its [handler API](https://www.splitscreen.me/docs/handler-api/) is the best catalogue of multi-instance tricks there is. |
 | [PartyDeck](https://github.com/partydeck/partydeck) | Linux, SteamOS / Steam Deck | MIT | Newer launcher: Gamescope windows arranged in a KWin session, Bubblewrap so each instance only sees its own controller, Proton (via UMU) for Windows games, Goldberg for Steam-API multiplayer, up to 4 instances, multiple keyboards and mice since 0.5 ([GamingOnLinux](https://gamingonlinux.com/2025/05/partydeck-is-a-split-screen-game-launcher-for-linux-steamos), [AUR](https://aur.archlinux.org/packages/partydeck-bin)). |
+| [Couchlink](https://github.com/cranebeaker/couchlink) | Windows | MIT | Made at Co-op Anything. One copy per player as hardlinked folders, a hook the game loads as a stand-in system DLL so each copy sees only its own controller (XInput, DirectInput, Raw Input and HID) or its own keyboard and mouse, each player on their own Steam account or an emulated Steam identity, signed recipes, up to 8 players. For mod authors: the `couchlink` skill here and the `couchlink-sdk` skill in its repo. |
 
 Things to know before building on them:
 
@@ -76,6 +77,15 @@ networking and no second window. Learned on Dave the Diver (Unity IL2CPP, BepInE
   modal locks player 1, drive player 1's character directly from player 1's own bindings until it closes.
 - **Limit:** one camera. Follow the midpoint and keep both players in view, and give player 2 their own
   HUD by copying and tinting the game's.
+- **Second example: Dead Cells** (HashLink, DCCM; [games/dead-cells](../games/dead-cells/README.md)). The game has a
+  real second-controller layer, so player 2 gets their own controller object pinned to pad 2. Game menus take an
+  *exclusive* input lock on player 1's controller: when a menu is handed to player 2, release that lock first or
+  player 1 stays frozen. A second HUD instance must share nothing with the first (sharing the minimap or counters
+  crashed on area changes); find every function that writes to "the HUD" with a bytecode scan and run each with the
+  owner's HUD. Look for state the game keeps once per profile or run rather than per character (outfit, a skill's
+  charge counter, the kill counter, keys counted in "the hero's" inventory): each needs its own per-player copy or a
+  shared rule. A pick that opens a confirm screen can still be declined, so give the partner their copy of an item
+  only once the pick is done.
 
 ## Split screen inside one copy: three ways mods do it
 

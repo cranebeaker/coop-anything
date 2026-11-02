@@ -63,10 +63,11 @@ Whatever you learn goes back as a pull request so the next agent starts further 
 | 3. Understand | Dump scripts, decompile native code, map the netcode and save system. | [reverse-engineering.md](playbook/reverse-engineering.md) |
 | 4. Choose | Revive, extend, or build from zero. Pick a networking model. | [reviving-abandoned-mods.md](playbook/reviving-abandoned-mods.md), [how-coop-mods-work.md](playbook/how-coop-mods-work.md), [networking-steam-spacewar.md](playbook/networking-steam-spacewar.md) |
 | 5. Build | Fix or implement as a separate package; parallel worker agents per subsystem. Test sync without the game first (fake world, fuzzer, flight recorder, ownership with epochs). | [multi-agent-workflows.md](playbook/multi-agent-workflows.md), [fuzzing-coop-sync.md](playbook/fuzzing-coop-sync.md), [desync-hunting.md](playbook/desync-hunting.md), [actor-ownership.md](playbook/actor-ownership.md), [effect-capture-story-sync.md](playbook/effect-capture-story-sync.md) |
+| 5b. Patch a closed exe | Fix a bug in a mod's rebuilt exe when only part of the mod's source is public: map it from the source, append a freestanding patch. | [patching-a-closed-mod-exe.md](playbook/patching-a-closed-mod-exe.md) |
 | 6. QA | Automated tests with real game clients until the QA level is honest. Reuse the tools in `tools/` (coop-sync-testing skill). | [automated-qa.md](playbook/automated-qa.md), [multi-instance-testing.md](playbook/multi-instance-testing.md), [bots-and-playbooks.md](playbook/bots-and-playbooks.md), [network-chaos-testing.md](playbook/network-chaos-testing.md), [animation-sync-checks.md](playbook/animation-sync-checks.md) |
 | 3b. Console games | PC port from a decomp or recompilation first, else emulator co-op | [decomp-and-recomp.md](playbook/decomp-and-recomp.md), [console-emulators.md](playbook/console-emulators.md), [switch.md](playbook/switch.md) |
 | 6b. Split screen (optional) | Several copies on one PC with controllers | [split-screen.md](playbook/split-screen.md) |
-| 7. Ship | Installer, one-click host and join, README with known issues. | [reviving-abandoned-mods.md](playbook/reviving-abandoned-mods.md#6-make-it-easy-to-play) |
+| 7. Ship | One install file per OS (finds the game, pinned and hash-checked downloads, update and uninstall), one-click host and join, README with known issues. | [shipping-to-players.md](playbook/shipping-to-players.md) |
 | 8. Give back | Update the directory and write up the game. Open a PR. | below |
 
 You don't have to do every phase. A PR that only corrects one directory entry, or only

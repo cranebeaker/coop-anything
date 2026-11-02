@@ -225,6 +225,126 @@
 - More downloads: ffmpeg (BtbN master-latest win64 gpl) SHA-256
   `4c967363c4f369172cfec1336d8364814c181c749cb34f654d522af1542fd29e`.
 
+## Session 2026-10-22: first human session, 0.2.2
+
+- `Game.UsrEntity(n)` reads the engine's table of local users with no bounds check (0x427470).
+  The game's own scripts call `Game.UsrEntity(fp.id)` on first-person models; a model whose
+  id is not a local user (-1, or 3 used to hide a model from one split screen view) made it
+  read a bad pointer and crash (0x427489, the crash handler then calls ExitProcess with
+  0xC0000005). Wrapping it in Lua to return nil for absent users fixed it; those scripts take
+  nil without an error. A vectored exception handler in the proxy (tests only) gave the
+  faulting address; the game's own handler only shows its exit path.
+- A body placed by the network (collision off) is not kept on the floor by the engine: leaving
+  height to it under a threshold left remote players up to 40 units in or above the floor on
+  slopes and stairs. Follow the owner's height every frame.
+- `InCtrl_Crouch` crouches an AI-off body standing still, but not one that is moved by setting
+  `Pos` every frame: play the owner's `Duck*` action on it (`ForceAction`), `Relax` when it ends.
+- Invisible walls only a joining player met: levels switch `InvisibleBlocker` entities
+  (`bMapCollision`) off at the end of a team talk or of an AI walk of "the player"; on a
+  client that end may never come. Sync blockers from the host.
+- The engine refuses to start without a mouse (`Input\PcMouse.cpp` line 176), even for
+  gamepad play: a test PC without monitor and keyboard works, without a mouse it does not.
+
+## Session 2026-10-23: 0.2.3 (squad leaders, objects, splits, updates)
+
+### Observations (checked)
+- The engine's `AreaManager` and the squad's "follow me" use only local user 0; its areas are
+  too coarse to tell which player a squad member is near (large shared areas). The squad's
+  own chase behaviour (`CHASE_WITHOUT_ACTION_CHAR`) follows any named entity, which is what
+  a non-host leader needs.
+- Breakable props are named by the level, not by a prefix: the map's own list
+  (`MapPhysicObjects`) plus `DM_Physic_`/`OB_` names covers them; `BoE_` parts belong to
+  character scripts and must be left alone.
+- A legionary's `OnDamage` (`chars/legionary.lua`) gives the damage back when its last hit was
+  on the shield. Setting `Life = 0` from a script on one whose last hit was the shield did not
+  stay (life read back unchanged), so a test that "kills the wave" has to bypass that
+  callback; a player shooting past the shield is unaffected.
+- Windows PowerShell 5.1 started from a PowerShell 7 session inherits its `PSModulePath` and
+  then cannot load its own modules (`Get-FileHash` not found). A launcher run from a shortcut
+  should clean that variable or avoid script-module cmdlets (.NET `SHA256`, `ZipFile`).
+
+## Session 2026-10-23: 0.2.4 (player souls, display settings)
+
+### Observations (checked)
+- Many engine menu fields (for example a squad menu entry's `<id>OnSelect`) can be written
+  from Lua but not read: a read logs "BaseType ... can't read" in game.log and returns nil. A
+  wrapper that read the field to decide whether to grey an entry never greyed anything, and a
+  mock test that allowed reads passed anyway; the mock now errors on reads. Recompute the
+  condition instead (the game's own test is `Team.IsPlayerAvaliable(name)`).
+- The last boss's fire spirit (EvilAbabanili) steers in `0x4fc9b0`: object +0x68 is its
+  owner, +0x64 its prey; when the prey is gone it takes a new one and reads it unchecked
+  (`mov eax,[edx]` at `0x4fcd47`). With every player near it down or bound by the rune, EDX is
+  0 and the game crashes (a co-op story split test; the single-player game never gets there).
+  The function's own "no target" path at `0x4fcd2a` has the same stack and an empty x87
+  stack, so a vectored handler can resume there for that one read.
+- D3D9 `Reset` with `FullScreen_RefreshRateInHz = 0` keeps the rate in use rather than the
+  monitor's default; going back to "Auto" while the game runs needs the rate the device got
+  at `CreateDevice`.
+- The game's message hints (`Scorer.SetMsgText`) are not drawn in menus; the menus' own
+  message box is `Menu.AcceptMenuMultiline(text, nextFunc)`. Saving the configuration rebuilds
+  the main menu from a callback after the save, so a box shown at once is replaced.
+
+## Session 2026-10-23: 0.2.5 (0.2.4 completed)
+
+### Observations (checked)
+- "Mouse not found" (PcMouse.cpp) comes from the game's own check inside SecuROM-obfuscated
+  code: it fires when DirectInput `CreateDevice(GUID_SysMouse)` fails, not on
+  `GetSystemMetrics(SM_MOUSEPRESENT)` or device enumeration (a diagnostic DLL failed each
+  of the three in turn; only `CreateDevice` reproduced it). A stub `IDirectInputDevice8A`
+  (32 methods, `GetCapabilities` filled as a 3-axis 3-button mouse, `GetDeviceState`
+  zeroed) is enough for the game to start and play on a gamepad.
+- Lua's `dofile` opens paths through the ANSI code page. `GetShortPathNameW` gives a usable
+  path only where the volume keeps 8.3 names (the test PC's D: does not); a path relative to
+  the working folder works on every volume when the game was started in its own folder.
+- The last boss's rune (`EvilFirstBorn` scheduled every 0.1 s) sets
+  `Team.UnavaliablePlayers`, but so do the tutorials (`wwii_biggates`, pillboxes) while the
+  locked character's AI keeps working; only the rune's schedule says a body is really held.
+- The agony animation turns a downed character's AI off (`bAI_bEnable=0` event) and the
+  revive turns it back on, for an AI squad member as for a body a player left.
+- The game's "Press [ENTER] or START" screen (`MainMenu.PressStartMsg`, called from
+  `MainMenu.Init2` on PC) is a one-item `Menu.VerticalMenu` with its item moved to Y 380 of
+  480, low on the screen; SMOD skips it.
+- Starting the main menu loads the configuration's `PhysicalAspectRatio` back for a moment, so
+  anything laid out right then from `Game.Get("PhysicalAspectRatio")` uses the monitor's ratio,
+  not the window's. Lay out by the ratio the mod enforces instead.
+- `PrintWindow(PW_RENDERFULLCONTENT)` of the D3D9 window sometimes returns an empty frame: retry
+  a few times. Never fall back to copying the screen: other windows on top end up in it.
+- `@(f)` around a PowerShell function that returns `, @($list)` gives a one-element array
+  holding the list: its items join with spaces when written as a string, and an empty list
+  becomes one empty string.
+
+## Session 2026-10-24: 0.2.6-0.2.7 (clean exit, any version updated, split screen)
+
+### Observations (checked)
+- The D3D9 warning on exit is the debug-style check in the engine's own final device
+  `Release`: a static system-memory surface in the proxy (F11 clip, capture) kept a reference.
+  Reading the count with `AddRef`+`Release` in a `Release` hook and freeing the proxy's
+  objects at 16 or fewer references lets the engine's last `Release` reach zero.
+- Installers up to 0.2.2 refuse while any `Jericho.exe` runs on the PC (0.2.3+ only for
+  their own folder): an old-version test beside a running game test installs nothing.
+- The published 0.2.4 installer stops over a 0.2.3 record with an empty `shortcut=` line;
+  0.2.5+ reads it.
+- In the souls test, Rawlings' AI on the host sometimes does not come for a downed puppet
+  within 12 s (1 of 3 with 0.2.5's DLL, 2 of 6 with 0.2.6's): the revive is not sent at all.
+  The AI's choice is in the engine; the game's own heal (`WeaponsRawlings.Cure(me, tgt)`:
+  `Team.RevivePlayer`, the light and sound, Rawlings' life cost) can be called for him.
+- `Team.TravelCam` / `Team.EndTravelCam`: the switch's soul flight relies on the game's
+  `SetTimeSpeed(0.005)`; without it the path ends in the same frame and `EndTravelCam`
+  deletes the camera (`cam:Del()` before `SetCam(0, MainCam)`) the engine already took for that
+  frame: "Check failed: GetActiveCamera() != this" (`ScrapEngCamera.cpp` line 48).
+- `Scorer.SetMsgText` is one message line for all users; each user's "Msg" widget shows it.
+  Scorer items' `Visible` takes 1/0; writing a boolean is silently ignored.
+- The game's default `R_LimitFPS` is 0 (no cap); `VSync` is the menu's option.
+- The engine's 2D batcher draws a batch when the texture changes, not when the viewport does:
+  in a split screen view whose HUD pass skipped the batch rule, each player's message line was
+  drawn in the other half on alternate frames (it looked like blinking text in two styles).
+- Unreliable state messages sent just before a level change are delivered after the new level
+  has loaded (the host dropped one from the client at nearly every level start). The host
+  relays clients' states to all peers, the sender included.
+- The game's appear/disappear events of `PsichicCommander`, `EvilFirstBorn`, `SummerianNANNA`
+  and `SummerianUTU` call `oAI:OnAfterAppear/OnAfterDisappear`; the call sets the AI's mode
+  (vtable +0x3a4 -> `005035f0` with 3) and reads AI state that a disabled AI does not keep.
+
 ## Tools and downloads
 - unluac 2025-12-23, https://sourceforge.net/projects/unluac/files/Unstable/unluac_2025_12_23.jar/download
   SHA-256 `98be0fa84ac73ca66dce2842a2e4512226f4c611b6500dc96415571fc5538fcc`
