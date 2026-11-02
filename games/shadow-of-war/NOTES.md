@@ -3869,3 +3869,31 @@ smoothing lagged the free-run start.
 
 - Why the client's identify pause ran 73 s (it probably waits for an end that the proxy captain's missing AI never sends); whether
   the cap ends it cleanly; how long the host's intro really holds the world.
+
+## Session 2026-11-02 cc: enemies after the host switch to the nearer player
+
+### Observations
+
+- The owner's report (client B among the host's enemies while host A stays at the spawn): B is ignored, the enemies slide toward A and do not
+  attack B. What I had measured before (a few damage messages) came from enemies that were already fighting A.
+- Measured data from that session: B stood at the fort among 16 shown enemies for over 70 s without losing health (236 throughout) while
+  A was 5,500 units away; the `damage` counters moved only while B was next to enemies that were fighting A. 49 characters with
+  health 0 stood on B afterwards (see session ca/cb notes: a dead host enemy's proxy is only given health 0 and is never removed).
+- An AI character's current target is the pointer at `[char+0x2CE8]+0x28` (the function at `11B258` logs "Target just changed." when it
+  changes); the goal slots (`+0x118`...) hold a target character at `+0x30`. Idle enemies have no goal at all.
+- **New: `HuntFrame` (host, every 100 ms).** Every enemy whose target is the host's own player or the decoy gets the nearer of the two
+  (with 150 units of hysteresis) as its target, through the existing `SimRetarget`. Live (A idle at the fort with 100,000 health, B 600
+  units away with normal health, defaults, `coop_enemies=on`): the engaged enemies went from 11 to 18 and B lost health from about 45 s
+  on: 22 damage messages sent by the host and applied by B in 80 s (before the change: 4 in 40 s); window frames of B show orcs next to it
+  with raised weapons. Health 708 to 256 in 80 s.
+
+### Derived
+
+- Enemies that are not after anyone are not touched: they wake when something hits them (the host's player, or the client's strikes, which
+  the host applies with its own player as the attacker, so they turn on the host's player first and are then switched to the decoy when B is
+  nearer). An idle camp that nobody strikes stays idle; B alone near it does not wake it. Not solved.
+
+### Unknown
+
+- Waking idle enemies for B (what the AI's perception needs); the 45 s before B was attacked in the run above; the dead-enemy proxies; the
+  client's animation as the owner sees it.
