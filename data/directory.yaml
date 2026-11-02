@@ -191,7 +191,7 @@
     items: unknown
   players: 2-8
   networking: direct-ip
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: automated
   notes: >-
@@ -475,7 +475,7 @@
     items: unknown
   players: 2-4
   networking: lan
-  open_source: partial
+  open_source: yes
   last_activity: unknown
   qa: none
   notes: EDuke32-based mod adding 2-4 player local split-screen co-op with co-op save and load. EDuke32 itself documents
@@ -606,7 +606,7 @@
     items: unknown
   players: '4'
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: automated
   notes: Unofficial fix patch on top of Shadow of COOP 8.0 (an extra .db appended to coop.addon). Fixes crashes and
@@ -922,7 +922,7 @@
     items: unknown
   players: unknown
   networking: unknown
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Multiplayer framework that currently supports Skyrim Special Edition. 1,186 stars, last push 2026-10-15.
@@ -944,7 +944,7 @@
     items: unknown
   players: unknown
   networking: unknown
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Multiplayer mod and TypeScript SDK for Skyrim SE, last push 2026-10-11. Server-scripted rather than a drop-in
@@ -1116,7 +1116,7 @@
     items: unknown
   players: 4
   networking: direct-ip
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: community-reports
   notes: "Closed-netcode co-op (ENet, UDP 27015): players, NPC motion and combat. Client 9.4 released 2026-10-09; the
@@ -1228,7 +1228,7 @@
     items: unknown
   players: unknown
   networking: hosted-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-03
   qa: community-reports
   notes: Final mod files, not buildable code, 39 stars, last push 2026-03. Needs the wiltOS Mod Launcher and Advanced
@@ -1646,7 +1646,7 @@
     items: unknown
   players: unknown
   networking: dedicated-server
-  open_source: partial
+  open_source: yes
   last_activity: 2016-10
   qa: none
   notes: Server-based multiplayer mods; IV-Network last pushed 2016-10 and the IV:MP repo 2012-12. They offer custom
@@ -1748,7 +1748,7 @@
     items: 'yes'
   players: '2'
   networking: direct-ip
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Two players share one Keeper faction with equal control of rooms, creatures and gold; the page labels the
@@ -1894,7 +1894,7 @@
     items: unknown
   players: '2'
   networking: vpn-needed
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: community-reports
   notes: The game ships a two-player co-op campaign, but Ubisoft's servers are gone so PC players use virtual LAN
@@ -2695,7 +2695,7 @@
     items: unknown
   players: unknown
   networking: unknown
-  open_source: partial
+  open_source: yes
   last_activity: unknown
   qa: none
   notes: Cosideci reportedly ported about 70 percent of Skyrim Together code then cancelled; coverage says the code
@@ -3153,7 +3153,7 @@
     items: unknown
   players: unknown
   networking: dedicated-server
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Dedicated-server multiplayer platform (alpha access), not story co-op. Native client module + custom
@@ -3658,7 +3658,7 @@
     items: unknown
   players: up to 8 planned
   networking: dedicated-server
-  open_source: partial
+  open_source: yes
   last_activity: 2023-07
   qa: none
   notes: By the Skyrim Together team; Nexus build 0.8.0-beta2 is about 1,200 days old and needs Discord auth. The
@@ -4431,7 +4431,7 @@
     items: unknown
   players: unknown
   networking: hosted-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-08
   qa: automated
   notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
@@ -4463,7 +4463,7 @@
     items: unknown
   players: unknown
   networking: hosted-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: automated
   notes: A fork of OpenOL with its own work in tools/outlast-coop (the upstream has no license, the folder is MIT). A native patch
@@ -4912,7 +4912,7 @@
     items: unknown
   players: unknown
   networking: direct-ip
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: One DLL plus launcher for Steam build 16502642. The author says chapter, checkpoint, objectives and cutscenes
@@ -5531,7 +5531,7 @@
     items: shared
   players: unknown
   networking: hosted-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: community-reports
   notes: Multiworld randomizer whose worlds folder includes oot, tloz, tww, sm, smz3, alttp, sm64ex, smw, pokemon_rb,
@@ -7287,7 +7287,7 @@
     items: unknown
   players: unknown
   networking: vpn-needed
-  open_source: partial
+  open_source: yes
   last_activity: '2026-09'
   qa: automated
   notes: 'Yevh v0.35.0-beta.1, tested on Steam CP 1.75.14 with shipped settings. Automated suite with two real
@@ -7380,7 +7380,7 @@
     items: unknown
   players: '2'
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: '2026-07'
   qa: none
   notes: >-
@@ -7463,7 +7463,7 @@
     items: unknown
   players: 2
   networking: direct-ip
-  open_source: partial
+  open_source: yes
   last_activity: 2021-10
   qa: community-reports
   notes: COD-MOD 3.223 DLL (open source, no license, momo5502, re-enables the Spec Ops co-op netcode
@@ -8025,7 +8025,7 @@
     world_state: 'yes'
     items: per-player
   players: '2'
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Local split-screen only, for the 2006 GOTY Steam build with xOBSE 22. A C++ xOBSE plugin draws the world twice,
@@ -8510,7 +8510,7 @@
     items: unknown
   players: '2'
   networking: lan
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Two-PC story co-op where player 2 takes the chapter companion. v0.1.0 (2026-10-17) has a tested network layer,
@@ -8564,7 +8564,7 @@
     items: no
   players: '2'
   networking: lan
-  open_source: partial
+  open_source: yes
   last_activity: 2026-08
   qa: none
   notes: One-commit experiment. Injects a DLL, syncs position between two instances over local UDP and spawns a visual
@@ -8860,7 +8860,7 @@
     items: shared
   players: '2-4'
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: automated
   notes: BepInEx 6 (be.790, Unity.IL2CPP) plugin for the Steam build. The host leads the story and clients follow;
@@ -8902,7 +8902,7 @@
     items: shared
   players: '2-4'
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: automated
   notes: BepInEx 5 and MelonLoader 0.7 builds that play together, for the Steam build. The host picks every room
@@ -9677,7 +9677,7 @@
     items: shared
   players: '2'
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: automated
   notes: BepInEx 5 plugin for the Steam VR build; two players, each a Morty-clone head and hands. The host's game is in
@@ -10181,7 +10181,7 @@
     items: per-player
   players: '4'
   networking: lan
-  open_source: partial
+  open_source: yes
   last_activity: 2026-10
   qa: none
   notes: Prototype for the 2013 Steam release (app 241540, build 305948). Undead Labs cancelled official
@@ -10498,7 +10498,7 @@
     items: partial
   players: 2-5
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-08
   qa: none
   notes: Host-authoritative BepInEx IL2CPP plugin over a Steam star topology, built with AI coding agents (stated in its
@@ -10776,13 +10776,13 @@
     items: partial
   players: "2"
   networking: steam-relay
-  open_source: partial
+  open_source: yes
   last_activity: 2026-11
   qa: none
   notes: Each player runs their own game; an injected DLL shows the friend as a puppet Crash (or Coco) with replayed
     Havok behavior events, and syncs broken crates and the wumpa counter over Steam P2P. Steam build 2964270 only.
     Tested by the author in real two-player Steam sessions (presence, animations) and with two game copies on one PC
-    (crates, fruit, Coco); no automated suite. Source is public, no license yet. Write-up in
+    (crates, fruit, Coco); no automated suite. MIT license. Write-up in
     games/crash-bandicoot-n-sane-trilogy.
   sources:
   - https://github.com/MaegIins/CrashNSaneCoop
