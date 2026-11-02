@@ -1059,7 +1059,7 @@ Built (the owner chose "more enemies" over "tougher enemies"; bosses not multipl
   tradeoff, kept: with many AIs, one rotation takes several packets, so shots and animation starts of AIs outside
   the current packet can be dropped.
 
-### Faster test start (2026-11-02, from logs; not yet run)
+### Faster test start (2026-11-02)
 
 The owner asked for a test setup without cutscenes that loads straight to where the tests take place.
 
@@ -1084,6 +1084,17 @@ Built (tfu-coop `tools/fast-start.sh`; the test scripts now start with it, `STAR
   not into game data.
 - Unknown until run: whether the menu takes A that early, which checkpoint Continue resumes (the template was made
   by prologue runs), and whether an intro plays there (`skip_cutscenes` presses through it).
+
+Run fs1 (2026-11-02, `tools/fast-start.sh fs1`, host and client on one PC):
+- `FAST START READY in 35 s`, both in Kashyyyk_Prologue. Launch 16:37:49.8; level scripts on both at 16:38:16.0
+  (26 s); co-op running 16:38:16.9; client tracking the host at 16:38:18.4 and receiving the host's enemies at
+  16:38:20.4. 19 A presses per copy; the DLL's own skip press fired 6 times per copy while no Lua ran.
+- Lua ran from the first second in the level on both: no intro played.
+- Start spot: client `[-558.44 16.98 -378.39]`, the same spot as the client in menu run m75play
+  (`[-558.47 16.98 -378.32]`). So the tests start where they did before.
+- Only A was pressed. Derived: the menu took Continue Game, since New Game needs Left first. The same start spot
+  in m75play suggests the menu runs also resumed the save (unverified).
+- Both games were closed afterwards with `tools/stop-test.ps1`.
 
 ## Derived (not yet verified)
 
