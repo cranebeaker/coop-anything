@@ -78,8 +78,8 @@ RESULT: PASS
 
 The suite found one real bug (a crate broken for the friend was sent back as ours, fixed in v18). Earlier runs
 failed for reasons in the test itself (a crate with no fruit, a menu click during a respawn), which were fixed. The
-copy of the suite in the repository (paths made relative) has passed setup and the first checks; its full run was
-stopped by the PC running low on memory.
+copy of the suite published in the mod repository (relative paths) was then run against the v18 release build:
+15/15, RESULT: PASS.
 Also played over Steam by two people: presence, animations, spins breaking crates.
 Not covered: checkpoints, Crash 2 and Crash 3, a friend on another hero, play over Steam for crates and fruit.
 
