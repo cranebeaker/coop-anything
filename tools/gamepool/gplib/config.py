@@ -35,7 +35,10 @@ DEFAULTS: Dict[str, Any] = {
     "lowcost": {"rows": [], "post_checks": []},
     "adapter": "",
     "pool": {"recycle_after": 25, "ws_growth_mb": 1200, "ws_max_mb": 3300, "slot_ttl_s": 3600, "tick_s": 5.0},
+    "pairs": {"port_base": 27960, "copy_gb": 2.0, "reserve_gb": 2.0, "proto": "both", "edits": {}},
 }
+PAIRS_KEYS = ("port_base", "copy_gb", "reserve_gb", "proto", "edits")
+PAIRS_PROTOS = ("udp", "tcp", "both")
 WINDOW_MODES = ("minimized", "normal", "hidden")
 LINK_MODES = ("hardlink", "symlink", "copy")
 READY_TYPES = ("process", "window", "file", "log_line", "tcp_port", "named_pipe")
@@ -123,6 +126,29 @@ class Config:
         for name in {row["file"] for row in r["lowcost"]["rows"]}:
             if norm_rel(name) not in per:
                 raise ConfigError(f"lowcost file {name!r} must be listed in link.per_instance_files")
+        self._validate_pairs(per)
+
+    def _validate_pairs(self, per) -> None:
+        p = self.raw["pairs"]
+        unknown = [k for k in p if k not in PAIRS_KEYS and not k.startswith("_")]
+        if unknown:
+            raise ConfigError(f"unknown keys in pairs: {unknown}")
+        try:
+            base, copy_gb, reserve = int(p["port_base"]), float(p["copy_gb"]), float(p["reserve_gb"])
+        except (TypeError, ValueError) as e:
+            raise ConfigError(f"pairs.port_base, copy_gb and reserve_gb must be numbers: {e}") from e
+        if not 1024 <= base <= 65535:
+            raise ConfigError(f"pairs.port_base must be within 1024..65535, got {base}")
+        if copy_gb <= 0 or reserve < 0:
+            raise ConfigError("pairs.copy_gb must be above 0 and pairs.reserve_gb must not be negative")
+        if p["proto"] not in PAIRS_PROTOS:
+            raise ConfigError(f"pairs.proto must be one of {PAIRS_PROTOS}")
+        for name, edits in p["edits"].items():
+            if norm_rel(name) not in per:
+                # an edit of a file that is not private per copy would be written through a hard link into the original install
+                raise ConfigError(f"pairs.edits file {name!r} must also be listed in link.per_instance_files")
+            if not all(isinstance(e, (list, tuple)) and len(e) == 3 for e in edits):
+                raise ConfigError(f"pairs.edits[{name!r}] must be a list of [section, key, value]")
 
     def require_dirs(self) -> None:
         """Commands that touch disk call this: refuse placeholders and missing folders."""
@@ -165,6 +191,10 @@ class Config:
     @property
     def process_name(self) -> str:
         return self.raw["process_name"].lower()
+
+    @property
+    def pairs(self) -> Dict[str, Any]:
+        return self.raw["pairs"]
 
     @property
     def protected_paths(self) -> List[Path]:

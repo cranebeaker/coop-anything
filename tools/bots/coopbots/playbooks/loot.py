@@ -1,7 +1,7 @@
 """Loot playbooks: loot_race, container_share."""
 from typing import Optional, Set, Tuple
 
-from ..core import Ctx, Machine, Playbook
+from ..core import Ctx, Machine, Playbook, StepFailure
 from ..fakecoop import FakeCoop
 from .common import total_held
 
@@ -15,14 +15,31 @@ class LootRacePlaybook(Playbook):
     needs_refs = ("item", "item_base")
     requires = ("goto_ref", "pickup", "inventory_count", "ref_enabled", "drop")
     ROUNDS = 3
+    resumable = True
 
     def run(self, ctx: Ctx) -> None:
         item, base = ctx.refs["item"], ctx.refs["item_base"]
-        with ctx.step("everyone stands at the item"):
+
+        def walk_to_item():
             for n, r in ctx.on_all(lambda m: m.bot.goto_ref(item, 150)).items():
                 ctx.must(r, "%s walks to the item" % n)
-        before = total_held(ctx, base)
-        with ctx.step("all grab at the same instant"):
+
+        def arrange_race():
+            """Everyone at the item. Idempotent."""
+            walk_to_item()
+
+        def arrange_round():
+            """Someone holds the item, as after round 1: everyone at the item, and if nobody has it yet the host picks it up."""
+            walk_to_item()
+            if total_held(ctx, base) == 0 and ctx.host.bot.ref_enabled(item):
+                ctx.must(ctx.host.bot.pickup(item), "host picks up the item")
+            ctx.settle()
+            if total_held(ctx, base) == 0:
+                raise StepFailure("nobody holds %s and the item is gone from the world, so a drop round cannot be arranged: run the whole "
+                                  "playbook (or reload the scenario) first" % base, "arrange")
+
+        def grab():
+            before = total_held(ctx, base)
             res = ctx.on_all(lambda m: m.bot.pickup(item))
             winners = [n for n, r in res.items() if r]
             ctx.expect(len(winners) == 1, "expected exactly one winner, got %s; results: %s"
@@ -35,9 +52,10 @@ class LootRacePlaybook(Playbook):
             for m in ctx.machines:
                 if m.name not in winners:
                     ctx.expect(m.bot.inventory_count(base) == 0, "%s lost the race but still holds the item" % m.name)
-        for rd in range(2, self.ROUNDS + 1):
-            winner = next(m for m in ctx.machines if m.bot.inventory_count(base) > 0)
-            with ctx.step("round %d: the winner drops it, everyone races again" % rd):
+
+        def drop_round(rd):
+            def body():
+                winner = next(m for m in ctx.machines if m.bot.inventory_count(base) > 0)
                 d = winner.bot.drop(base, 1)
                 ctx.must(d, "%s drops the item" % winner.name)
                 dropped = (getattr(d, "data", None) or {}).get("ref")
@@ -51,6 +69,12 @@ class LootRacePlaybook(Playbook):
                 ctx.settle()
                 ctx.expect(total_held(ctx, base) == total0 + 1,
                            "round %d: item count in the party is wrong (%d after, %d before the race)" % (rd, total_held(ctx, base), total0))
+            return body
+
+        ctx.run_step("everyone stands at the item", walk_to_item, arrange=arrange_race)
+        ctx.run_step("all grab at the same instant", grab, arrange=arrange_race)
+        for rd in range(2, self.ROUNDS + 1):
+            ctx.run_step("round %d: the winner drops it, everyone races again" % rd, drop_round(rd), arrange=arrange_round)
 
 
 class ContainerSharePlaybook(Playbook):

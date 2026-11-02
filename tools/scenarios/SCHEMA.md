@@ -16,6 +16,7 @@ The file name is the scenario name: `fight.json` holds `"name": "fight"`.
 | `players` | 1 to 4 game instances sharing one world. Player 0 is the host |
 | `tags` | free list of strings |
 | `start.save` | name of the save the scenario starts from. `start.reload: true` forces a reload even when the loaded save is the same |
+| `start.prepared` | optional boolean. `false` always loads the plain `start.save`, never a prepared copy of it (see README, "Prepared saves"). Default `true`: a prepared copy is used when the adapter has one |
 | `reset.keys` | `$alias` list of state objects (quests, flags, script variables) that the jump resets in place. Every `set_state` key is added automatically |
 | `objects` | the glossary, see below |
 | `refs` | optional names for the bots tool (`tools/bots`): ref name to `$alias`, list, or nested object. Aliases become ids |
@@ -145,3 +146,9 @@ unknown ops and check kinds, missing or unexpected fields, wrong types, duplicat
 
 `hooks` are functions `f(scenario) -> [error strings]`. Use one to check ids against your game's data, for example "this
 editor id exists in the dump and has the right record type". The shipped example scenarios need none.
+
+For the common check "does every id exist, as the kind the scenario says", use `scenlib.index_hook(index)`, where `index` is
+`{"<id>": "<kind>"}` (or a `scenlib.DataIndex`). `Runner.run` adds it by itself when the adapter's `data_index()` returns an index.
+It checks the `id` and the `base` of every object in `objects`, names the steps that use it (setup steps included), and
+names the nearest known id. `scen.py validate --index FILE` and `--adapter pkg.mod:factory` run it without a game. Also
+rejected: a `start.prepared` that is not a boolean.

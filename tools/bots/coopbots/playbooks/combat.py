@@ -1,7 +1,7 @@
 """Combat playbooks: fight, ownership_handoff."""
 from typing import Dict, List, Optional, Set, Tuple
 
-from ..core import Ctx, Playbook
+from ..core import Ctx, Playbook, StepFailure
 from ..fakecoop import FakeCoop
 from .common import gather, volley, walk_to
 
@@ -14,35 +14,63 @@ class FightPlaybook(Playbook):
     summary = "Everyone shoots the same enemies; deaths and counts match on every machine, each dies exactly once."
     needs_refs = ("raiders",)
     requires = ("goto_ref", "aim_at", "fire", "target_alive")
+    resumable = True
 
     def run(self, ctx: Ctx) -> None:
         raiders: List[str] = list(ctx.refs["raiders"])
         base = ctx.refs.get("raider_base")
         if base and ctx.optional("duplicate-enemy checks", lambda: ctx.host.bot.ref_count(base)) is None:
             base = None                 # this adapter cannot count objects: skip those checks (a note is recorded)
-        with ctx.step("everyone walks to the enemies"):
+
+        def arrange_before(kills: int):
+            """The world the next step expects: everyone at the enemies, armed, and the first `kills` enemies dead."""
+            def arrange():
+                gather(ctx, raiders[0])
+                ctx.equip_all()
+                ctx.settle()
+                for r in raiders[:kills]:
+                    if ctx.host.bot.target_alive(r):
+                        volley(ctx, r)
+                for r in raiders[kills:]:
+                    if not ctx.host.bot.target_alive(r):
+                        raise StepFailure("%s is already dead, so this step cannot be arranged: run the whole playbook (or reload the "
+                                          "scenario) first" % r, "arrange")
+                ctx.settle()
+            return arrange
+
+        def walk():
             gather(ctx, raiders[0])
             for r in raiders:
                 ctx.same_everywhere("%s alive" % r, lambda m, r=r: m.bot.target_alive(r))
                 ctx.expect(ctx.host.bot.target_alive(r), "%s should start alive" % r)
-        if base:
-            with ctx.step("enemy count before the fight", compare=False):
-                n0 = ctx.same_everywhere("enemy count", lambda m: m.bot.ref_count(base))
-                ctx.expect(n0 == len(raiders), "expected %d enemies, every machine sees %s" % (len(raiders), n0))
-        for i, r in enumerate(raiders):
-            with ctx.step("everyone kills enemy %d" % (i + 1)):
+
+        def count_before():
+            n0 = ctx.same_everywhere("enemy count", lambda m: m.bot.ref_count(base))
+            ctx.expect(n0 == len(raiders), "expected %d enemies, every machine sees %s" % (len(raiders), n0))
+
+        def kill(i: int, r: str):
+            def body():
                 volley(ctx, r)
                 ctx.settle()
                 ctx.same_everywhere("%s alive" % r, lambda m, r=r: m.bot.target_alive(r))
                 if ctx.host.bot.supports("death_count"):
                     for m in ctx.machines:
                         ctx.expect(m.bot.death_count(r) == 1, "%s died %s times on %s (must be exactly once)" % (r, m.bot.death_count(r), m.name))
-        with ctx.step("final state"):
+            return body
+
+        def final():
             for r in raiders:
                 ctx.expect(not any(m.bot.target_alive(r) for m in ctx.machines), "%s is alive somewhere" % r)
             if base:
                 n1 = ctx.same_everywhere("live enemy count", lambda m: m.bot.ref_count(base))
                 ctx.expect(n1 == 0, "%s enemies still exist after the fight (duplicates or revived)" % n1)
+
+        ctx.run_step("everyone walks to the enemies", walk, arrange=arrange_before(0))
+        if base:
+            ctx.run_step("enemy count before the fight", count_before, arrange=arrange_before(0), compare=False)
+        for i, r in enumerate(raiders):
+            ctx.run_step("everyone kills enemy %d" % (i + 1), kill(i, r), arrange=arrange_before(i))
+        ctx.run_step("final state", final, arrange=arrange_before(len(raiders)))
 
 
 class OwnershipHandoffPlaybook(Playbook):

@@ -98,6 +98,22 @@ your game's code or with a second probe run.
   either side. If your mod buffers more, set `--delay-ms`; do not raise the pose tolerance to hide it.
 - **Probe cost.** Sampling 16 actors with 16 bones should not change the frame time you are checking. Measure it.
 - **World scale.** Thresholds assume about 70 units per meter. Set `units_per_meter` in the profile.
+- **Your own corrections.** A loop of one animation on the puppet can come from the mod, not the game. A
+  teleport that snaps the puppet back to the sender may run the game's full teleport, which also resets the
+  animation; the restarted animation can step the puppet off again and trigger the next snap. Count the
+  loop's restarts next to the mod's own corrections over the same window, and run it once with the
+  corrections off. In Shadow of War each put-back restarted the stand-in's graph, which then sheathed its
+  sword, and the counts matched exactly ([games/shadow-of-war/NOTES.md](../games/shadow-of-war/NOTES.md),
+  session bd).
+- **A wind-up that needs the trigger held.** An attack action can start with a long wind-up and fire only if the
+  trigger input is still down at its end. A human press lasts 0.1-0.5 s, so the puppet raises the weapon and lowers
+  it without a shot while the owner's body fired. Count shots on both machines per press (short and long), not only
+  "the action name played"; fix it by holding the trigger on the puppet through the wind-up or cutting the wind-up
+  short there. In Clive Barker's Jericho the Raging Bull's third-person shot (1.4-1.7 s wind-up): short press 1 shot
+  for the owner, 0 for the copy, 1 of 1 after the fix ([games/clive-barkers-jericho/README.md](../games/clive-barkers-jericho/README.md), 0.3.0).
+- **Weapons that fire on a switch.** Some weapons use a second trigger input and a magazine that a puppet never
+  refills, so the second volley (grenade launcher with one round) shows only a reload. Send the second trigger and
+  refill the puppet's magazine, then compare volleys, not action names.
 
 ## Where it fits
 

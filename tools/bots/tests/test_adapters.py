@@ -64,12 +64,16 @@ class Console:
         self.items = {("player", "stimpak"): 0, ("chest", "stimpak"): 5}
         self.stage = {"quest1": 0}
         self.out = ""
+        self.ui = {"menu": "", "messageBoxes": 0, "weaponDrawn": True}
 
     def exec(self, line):
         self.lines.append(line)
         if self.out:
             return {"ok": True, "output": self.out}
         m = re.match(r"^(\S+)\.(\w+)\s*(.*)$", line)
+        if line.startswith("sgtm"):
+            self.speed = float(line.split()[1])
+            return {"ok": True, "output": ""}
         if line.startswith("setstage"):
             _, q, n = line.split()
             if "setstage" not in self.noop:
@@ -116,6 +120,8 @@ class Console:
         if method == "coop.status":
             return {"lastSeq": 7, "host": {"allSynced": False, "badMessages": 2}, "desyncs": {"digests": {"mismatch": 3, "repairs": 1}},
                     "client": {"rebases": 4}, "counters": {"applyFailed": 5}}
+        if method == "ui.status":
+            return dict(self.ui)
         if method == "state":
             return {"shared": {"stage": dict(self.stage)}, "per_player": {}}
         if method == "events":
@@ -192,6 +198,42 @@ class FnvAdapter(unittest.TestCase):
         self.assertEqual(res.status, "skip")
         self.assertIn("fast_travel", res.reason)
 
+    def test_an_open_menu_stops_a_walk_before_any_console_line_and_says_so(self):
+        b, c = self.bot()
+        c.ui["menu"] = "inventory"
+        r = b.goto_ref("chest", 150)
+        self.assertEqual((r.ok, r.code, r.data["phase"]), (False, "menu", "pre"))
+        self.assertIn("inventory menu is open", r.reason)
+        self.assertEqual(c.lines, [])
+
+    def test_a_message_box_and_a_holstered_weapon_are_named_in_failures(self):
+        b, c = self.bot()
+        c.ui.update(messageBoxes=2, weaponDrawn=False)
+        c.disabled.add("gold_pile")
+        r = b.pickup("gold_pile")
+        self.assertEqual(r.code, "already taken")
+        self.assertIn("2 message box(es) are up", r.reason)
+        self.assertIn("weapon is holstered", r.reason)
+
+    def test_a_holstered_weapon_does_not_stop_a_walk(self):
+        b, c = self.bot()
+        c.ui["weaponDrawn"] = False
+        self.assertTrue(b.goto_ref("chest", 150))
+
+    def test_a_bridge_without_ui_status_changes_nothing(self):
+        b, c = self.bot()
+        c.call = lambda method, params=None: (_ for _ in ()).throw(AssertionError(method))
+        c.disabled.add("gold_pile")
+        self.assertEqual(b.pickup("gold_pile").reason, "already taken")
+
+    def test_set_timescale_is_one_console_line(self):
+        b, c = self.bot()
+        self.assertTrue(b.supports("set_timescale"))
+        self.assertTrue(b.set_timescale(3))
+        self.assertEqual(c.lines, ["sgtm 3"])
+        self.assertEqual(c.speed, 3.0)
+        self.assertFalse(b.supports("timescale"))
+
     # ---- twins: a console that lies must be noticed by the postconditions ----
     def test_twin_transfer_that_moves_nothing_is_caught(self):
         b, _ = self.bot(noop={"removeitemtarget"})
@@ -210,7 +252,9 @@ class FnvAdapter(unittest.TestCase):
         b, c = self.bot(noop={"moveto"})
         r = b.goto_ref("far_thing", 100)
         self.assertFalse(r)
-        self.assertIn("units from far_thing", r.reason)
+        self.assertEqual(r.code, "stuck")
+        self.assertIn("units left", r.reason)
+        self.assertIn("far_thing", r.reason)
 
     def test_twin_unlock_that_does_nothing_is_caught(self):
         b, _ = self.bot(noop={"unlock"})

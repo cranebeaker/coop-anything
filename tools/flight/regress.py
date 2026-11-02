@@ -1,8 +1,9 @@
 """Run every generated regression fixture in a directory through the replay hook.
 
-Usage: python -I tools/flight/regress.py DIR --replay-cmd "build/replay_tool {fixture}"
+Usage: python -I tools/flight/regress.py DIR [--replay-cmd "build/replay_tool {fixture}" | --replay-py module:function]
 Prints one line per fixture and ALL OK when every fixture converges (exit 0). A fixture that diverges is a
 reproduced bug. A fixture whose "expect" says converges=false is expected to diverge (a known open bug).
+Fixtures of format "cofr-trace-1" (written by from_failure.py) replay in process, so no replay hook is needed for them.
 """
 import argparse
 import glob
@@ -12,6 +13,18 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shrink as S  # noqa: E402
+import trace_replay as TR  # noqa: E402
+
+
+def _replay(fx, oracle):
+    if fx.get("format") == TR.FORMAT:
+        try:
+            return TR.oracle(fx)
+        except TR.BadFixture as e:
+            raise S.OracleError(str(e))
+    if oracle is None:
+        raise S.OracleError("no replay hook given (--replay-cmd or --replay-py) for a fixture that is not a %s case" % TR.FORMAT)
+    return oracle(fx)
 
 
 def run_dir(d, oracle):
@@ -22,7 +35,7 @@ def run_dir(d, oracle):
             fx = json.load(f)
         want = (fx.get("expect") or {}).get("converges", True)
         try:
-            r = oracle(fx)
+            r = _replay(fx, oracle)
         except S.OracleError as e:
             print("ERROR %s: %s" % (os.path.basename(p), e))
             bad += 1
@@ -44,13 +57,12 @@ def main(argv=None):
     ap.add_argument("--replay-path")
     ap.add_argument("--tmpdir")
     args = ap.parse_args(argv)
+    oracle = None
     try:
         if args.replay_py:
             oracle = S.PyOracle(args.replay_py, args.replay_path)
         elif args.replay_cmd:
             oracle = S.CommandOracle(args.replay_cmd, tmpdir=args.tmpdir)
-        else:
-            ap.error("give --replay-cmd or --replay-py")
     except S.OracleError as e:
         print("cannot set up the replay hook: %s" % e)
         return 2

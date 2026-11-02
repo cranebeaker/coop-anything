@@ -106,35 +106,58 @@ class QuestSyncPlaybook(Playbook):
     needs_refs = ("quest", "stages")
     requires = ("set_stage", "stage_done", "quest_stage", "start_quest", "quest_running", "objective_displayed", "objective_completed")
 
+    resumable = True
+
     def run(self, ctx: Ctx) -> None:
         q = ctx.refs["quest"]
         stages = ctx.refs["stages"]            # [(stage, [(objective, "displayed" | "completed", value), ...]), ...]
         stage_s = ctx.opts.get("stage_s", 15.0)
-        if ctx.refs.get("start", True):
-            with ctx.step("host starts the quest"):
-                ctx.must(ctx.host.bot.start_quest(q), "host starts the quest")
-                ctx.wait_until("running everywhere", lambda: all(m.bot.quest_running(q) for m in ctx.machines), timeout_s=stage_s)
-        last = 0
-        for n, effs in stages:
-            with ctx.step("stage %s" % n):
+        start = ctx.refs.get("start", True)
+
+        def arrange_before(k: int):
+            """The quest as it stands before step k of the stage list: started, and every earlier stage set (idempotent)."""
+            def arrange():
+                if start and not ctx.host.bot.quest_running(q):
+                    ctx.must(ctx.host.bot.start_quest(q), "host starts the quest")
+                for n, _ in stages[:k]:
+                    if not ctx.host.bot.stage_done(q, n):
+                        ctx.must(ctx.host.bot.set_stage(q, n), "host sets stage %s" % n)
+                ctx.wait_until("the quest at its earlier stages everywhere",
+                               lambda: all(all(all_stage_done(ctx, q, n).values()) for n, _ in stages[:k]), timeout_s=stage_s)
+                ctx.settle()
+            return arrange
+
+        def begin():
+            ctx.must(ctx.host.bot.start_quest(q), "host starts the quest")
+            ctx.wait_until("running everywhere", lambda: all(m.bot.quest_running(q) for m in ctx.machines), timeout_s=stage_s)
+
+        def do_stage(n, effs):
+            def body():
                 ctx.must(ctx.host.bot.set_stage(q, n), "host sets stage %s" % n)
                 ctx.wait_until("stage %s on every machine" % n, lambda: all(all_stage_done(ctx, q, n).values()), timeout_s=stage_s)
                 ctx.settle()
                 cur = ctx.same_everywhere("current stage", lambda m: m.bot.quest_stage(q))
-                ctx.expect(cur >= max(n, last), "current stage %s is behind stage %s" % (cur, n))
-                last = cur
+                ctx.expect(cur >= n, "current stage %s is behind stage %s" % (cur, n))
                 for obj, kind, val in effs:
                     ask = "objective_displayed" if kind == "displayed" else "objective_completed"
                     ctx.same_everywhere("objective %s %s" % (obj, kind), lambda m, o=obj, a=ask: getattr(m.bot, a)(q, o))
                     for m in ctx.machines:
                         ctx.expect(getattr(m.bot, ask)(q, obj) == bool(val), "%s: objective %s %s should be %s" % (m.name, obj, kind, bool(val)))
-        with ctx.step("repeating a stage changes nothing"):
+            return body
+
+        def repeat():
             n = stages[-1][0]
             snap = {m.name: m.bot.quest_stage(q) for m in ctx.machines}
             ctx.must(ctx.host.bot.set_stage(q, n), "host repeats the stage")
             ctx.pause(0.5)
             ctx.settle()
             ctx.expect({m.name: m.bot.quest_stage(q) for m in ctx.machines} == snap, "repeating a stage moved the quest")
+
+        if start:
+            ctx.run_step("host starts the quest", begin, arrange=lambda: None)
+        for k, (n, effs) in enumerate(stages):
+            ctx.run_step("stage %s" % n, do_stage(n, effs), arrange=arrange_before(k))
+        ctx.run_step("repeating a stage changes nothing", repeat, arrange=arrange_before(len(stages)))
 
 
 # ---------------------------------------------------------------------------------------------

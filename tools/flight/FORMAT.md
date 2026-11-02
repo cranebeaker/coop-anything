@@ -244,6 +244,15 @@ The shrinker (`shrink.py`) reduces a list of independent steps and keeps a small
   `{"diverged": bool, "violations": [...]}`. It may raise on a bad fixture.
 * `toy_replay.py` implements both as a complete example.
 
+* **Trace fixture** (`"format": "cofr-trace-1"`, written by `from_failure.py`, replayed in process by `trace_replay.py`): the raw records
+  of every machine's `.cofr` file, so no replay program is needed. Each step is one whole record and is independent:
+  `{"op": "rec", "slot": 0, "ty": "TxnApplied", "at_ms": 123.4, "hex": "<the 16-byte record header and its payload>"}`. `ty` and `at_ms`
+  (aligned time) are for people and for the shrinker. `"headers": {"<slot>": "<hex of that machine's 64-byte header>"}` gives each machine's
+  header (its record count is rewritten to the steps kept), and the optional `"schema"` is schema JSON text that replaces the one stored in
+  the records. The replay aligns the machines and classifies what the analyzer finds: `digest-mismatch`, `divergence`, `stuck-sync`
+  (a txn applied on one machine and never on another, with nothing restating that machine's state afterwards), `desync-marker`, and
+  `transient-gap` (not a failure). It reports the earliest finding that is not a machine's own desync marker.
+
 `gentest` writes the shrunk fixture as `<name>.json` with `"expect": {"converges": true}` and `<name>.cmake` with one `add_test`
 line for your replay program. `regress.py DIR` runs every fixture in a folder through the hook and prints ALL OK when each matches its
-expectation (`"converges": false` marks a known open bug).
+expectation (`"converges": false` marks a known open bug). A trace fixture gets no `.cmake` file and needs no hook: `regress.py` replays it itself.

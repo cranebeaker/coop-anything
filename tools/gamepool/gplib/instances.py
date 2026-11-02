@@ -21,6 +21,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from . import pairs as pairs_mod
 from .config import Config, ConfigError, _inside, check_roots, expand, has_placeholder, norm_rel
 from .inifile import ini_set
 
@@ -193,19 +194,39 @@ def base_text(cfg: Config, name: str) -> str:
     return ""
 
 
-def render_config_files(cfg: Config, i: int, role: str = "") -> Dict[str, str]:
+def render_config_files(cfg: Config, i: int, role: str = "", ctx: Optional[Dict] = None) -> Dict[str, str]:
     out: Dict[str, str] = {}
+    extra = dict(ctx or {})
+    extra["role"] = role or extra.get("role", "")
     for name, spec in cfg["config_files"].items():
         text = base_text(cfg, name)
         for section, key, value in spec.get("edits", []):
-            text = ini_set(text, section, key, cfg.fmt(value, i, role=role))
+            text = ini_set(text, section, key, cfg.fmt(value, i, **extra))
         out[name] = text
     return out
 
 
+def apply_pair_edits(cfg: Config, i: int, ctx: Dict) -> List[str]:
+    """Write the pairs.edits of the config into instance i's private files, with the pair's port and role filled in.
+    Returns the files changed. Every write goes through guard_write, so a file that is a link into the install is refused."""
+    changed = []
+    d = cfg.instance_dir(i)
+    for name, edits in cfg.pairs["edits"].items():
+        p = d / name
+        guard_write(cfg, p)
+        enc = cfg["config_files"].get(name, {}).get("encoding", "latin-1")
+        text = p.read_text(encoding=enc) if p.exists() else ""
+        for section, key, value in edits:
+            text = ini_set(text, section, key, cfg.fmt(value, i, **ctx))
+        _replace_text(p, text, enc)
+        changed.append(name)
+    return changed
+
+
 def provision(cfg: Config, i: int, *, role: str = "", modes: Optional[Sequence[str]] = None,
-              copies: Optional[Dict[str, Path]] = None) -> Dict:
-    """Build instance i. copies maps a path relative to the instance to a file to copy in (a mod, a plugin)."""
+              copies: Optional[Dict[str, Path]] = None, pair: Optional[Dict] = None) -> Dict:
+    """Build instance i. copies maps a path relative to the instance to a file to copy in (a mod, a plugin).
+    pair is the placeholder dict of pairs.context_for() when the instance is part of a host/client pair."""
     cfg.require_dirs()
     g = cfg.game_dir
     d = cfg.instance_dir(i)
@@ -216,15 +237,18 @@ def provision(cfg: Config, i: int, *, role: str = "", modes: Optional[Sequence[s
         if p.is_symlink():
             raise UnsafeTarget(f"{p} is a symlink; refusing to write into the game install")
         p.mkdir(parents=True, exist_ok=True)
-    for name, text in render_config_files(cfg, i, role).items():
+    for name, text in render_config_files(cfg, i, role, pair).items():
         _replace_text(d / name, text, cfg["config_files"][name].get("encoding", "latin-1"))
     for name, text in cfg["write_files"].items():
-        _replace_text(d / name, cfg.fmt(text, i, role=role), "utf-8")
+        _replace_text(d / name, cfg.fmt(text, i, **dict(pair or {}, role=role or (pair or {}).get("role", ""))), "utf-8")
+    if pair:
+        apply_pair_edits(cfg, i, pair)
     installed: List[str] = []
     for rel, src in (copies or {}).items():
         _replace_file(Path(src), d / rel)
         installed.append(rel)
-    meta = {"instance": i, "role": role, "dir": str(d), "link_counts": counts, "installed": installed,
+    meta = {"instance": i, "role": role or (pair or {}).get("role", ""), "pair": (pair or {}).get("pair"), "port": (pair or {}).get("port"),
+            "dir": str(d), "link_counts": counts, "installed": installed,
             "game_dir": str(g),
             "pinned": {p: sha256_file(d / p) for p in cfg["link"]["pinned_files"] if (d / p).exists()}}
     (d / "instance.json").write_text(json.dumps(meta, indent=1))
@@ -275,11 +299,26 @@ def main(cfg: Config, argv: List[str]) -> int:
     import argparse
     ap = argparse.ArgumentParser(prog="gamepool provision|show|destroy")
     ap.add_argument("cmd", choices=["provision", "show", "destroy"])
-    ap.add_argument("--n", type=int, default=2)
+    ap.add_argument("--n", type=int, default=None, help="number of instances (default 2)")
+    ap.add_argument("--pairs", type=int, default=0, help="N host/client pairs: instances 2k (host) and 2k+1 (client), each pair on its own port")
+    ap.add_argument("--first-pair", type=int, default=0, help="with --pairs: start at this pair number (add more pairs to an existing set)")
     ap.add_argument("--modes", default="", help="comma list of hardlink,symlink,copy (default: the config)")
     ap.add_argument("--copy", action="append", default=[], metavar="SRC=REL",
                     help="copy file SRC into every instance at REL (a mod or plugin); repeatable")
     a = ap.parse_args(argv)
+    plan = None
+    if a.pairs:
+        if a.n is not None and a.n != 2 * a.pairs:
+            ap.error(f"--n {a.n} does not match --pairs {a.pairs} (that is {2 * a.pairs} instances); give only one")
+        try:
+            plan = pairs_mod.aligned_plan(a.pairs, int(cfg.pairs["port_base"]), a.first_pair)
+        except ValueError as e:
+            ap.error(str(e))
+        ids = pairs_mod.aligned_ids(a.pairs, a.first_pair)
+    else:
+        if a.first_pair:
+            ap.error("--first-pair needs --pairs")
+        ids = list(range(2 if a.n is None else a.n))
     if a.cmd == "provision":
         cfg.require_dirs()
         modes = tuple(a.modes.split(",")) if a.modes else tuple(cfg["link"]["modes"])
@@ -291,15 +330,17 @@ def main(cfg: Config, argv: List[str]) -> int:
             if not rel:
                 ap.error("--copy needs SRC=REL")
             copies[rel] = Path(src)
-        for i in range(a.n):
-            m = provision(cfg, i, role="host" if i == 0 else "client", modes=modes, copies=copies)
-            print(f"instance {i}: {m['dir']} links={m['link_counts']}")
+        for i in ids:
+            ctx = pairs_mod.context_for(plan, i) if plan else None
+            m = provision(cfg, i, role=(ctx["role"] if ctx else ("host" if i == 0 else "client")), modes=modes, copies=copies, pair=ctx)
+            extra = f" pair={ctx['pair']} {ctx['role']} port={ctx['port']}" if ctx else ""
+            print(f"instance {i}: {m['dir']} links={m['link_counts']}{extra}")
     elif a.cmd == "show":
-        for i in range(a.n):
+        for i in ids:
             print(json.dumps(load_meta(cfg, i), indent=1))
     else:
         cfg.require_dirs()
-        for i in range(a.n):
+        for i in ids:
             destroy(cfg, i)
             print("destroyed", i)
     return 0

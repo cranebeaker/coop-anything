@@ -10,6 +10,9 @@ It can behave like the games the tools must cope with:
   --ready-file FILE       write FILE (relative to the working folder) once started, after --ready-delay seconds
   --log FILE              append progress lines to FILE
   --port-base P           listen on 127.0.0.1:(P + --i), so a tcp_port readiness probe has something to find
+  --role host|client      with --bind-port: the host listens on that port (exit 6 if it cannot), the client connects to it
+                          (exit 5 if no host answers); logs "role=<role> port=<P>"
+  --bind-port P           the port of the pair this copy belongs to (see --role)
   --crash-after S         write "CRASH code=1" to the log after S seconds and exit with code 1
   --spawn-child           act as a loader: start a second copy of this script (without this flag) and exit
   --lifetime S            exit by itself after S seconds (default 90) so a forgotten stand-in never lingers
@@ -71,6 +74,8 @@ def main():
     ap.add_argument("--ready-delay", type=float, default=0.0)
     ap.add_argument("--log")
     ap.add_argument("--port-base", type=int, default=0)
+    ap.add_argument("--role", default="")
+    ap.add_argument("--bind-port", type=int, default=0)
     ap.add_argument("--crash-after", type=float, default=0.0)
     ap.add_argument("--spawn-child", action="store_true")
     ap.add_argument("--lifetime", type=float, default=90.0)
@@ -109,6 +114,23 @@ def main():
         srv.bind(("127.0.0.1", a.port_base + a.i))
         srv.listen(5)
         keep.append(srv)
+    if a.bind_port and a.role == "host":
+        srv = socket.socket()
+        try:
+            srv.bind(("127.0.0.1", a.bind_port))
+        except OSError:
+            log(a.log, f"pid {pid}: cannot listen on port {a.bind_port}")
+            return 6
+        srv.listen(5)
+        keep.append(srv)
+    elif a.bind_port and a.role == "client":
+        try:
+            socket.create_connection(("127.0.0.1", a.bind_port), timeout=2).close()
+        except OSError:
+            log(a.log, f"pid {pid}: no host on port {a.bind_port}")
+            return 5
+    if a.role:
+        log(a.log, f"role={a.role} port={a.bind_port}")
     log(a.log, f"pid {pid}: started instance {a.i}")
     t0 = time.time()
     ready_done = False

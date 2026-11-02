@@ -4,10 +4,12 @@
     python -I tools/gamepool/gamepool.py [--config game.json] COMMAND [options]
 
 Copies (see README.md, "Quick start")
-    provision --n 2        build n hard-linked, isolated installs
+    provision --n 2        build n hard-linked, isolated installs (--pairs N: N host/client pairs)
     show / destroy         describe or remove them
     up --n 2               take game slots, start the copies one by one, wait until ready
-    status                 which copies exist and which run
+    up --pairs 3           3 host/client pairs, each on its own port (refuses when the free RAM is too small)
+    status [--pairs]       which copies exist and which run; --pairs: one row per host/client pair
+    swap --instances 0,1   ask the adapter to swap new code into running copies (hot reload hook)
     down                   kill only the copies `up` started, free the slots
     job --id X --n 2 -- CMD     run CMD with GAMEPOOL_INSTANCES=0,1 and collect logs
     smoke --n 2 --minutes 10    start copies and check them for a while
@@ -39,7 +41,7 @@ CONFIGLESS_POOL = {"status", "lease", "release", "down"}
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config")
-    ap.add_argument("command", choices=["provision", "show", "destroy", "up", "down", "status", "job", "smoke", "probe",
+    ap.add_argument("command", choices=["provision", "show", "destroy", "up", "down", "status", "swap", "job", "smoke", "probe",
                                         "pool", "daemon", "lowcost", "crashlog", "measure"])
     ap.add_argument("rest", nargs=argparse.REMAINDER)
     a = ap.parse_args(argv)
@@ -56,7 +58,7 @@ def main(argv=None) -> int:
         if a.command in ("provision", "show", "destroy"):
             from gplib import instances
             return instances.main(cfg, [a.command] + rest)
-        if a.command in ("up", "down", "status", "job"):
+        if a.command in ("up", "down", "status", "swap", "job"):
             from gplib import launcher
             return launcher.main(cfg, [a.command] + rest)
         if a.command in ("smoke", "probe"):

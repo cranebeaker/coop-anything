@@ -38,13 +38,16 @@ TWINS = [
     ("dialogue_spectator", "spectator_stuck"), ("dialogue_spectator", "dialogue_not_bridged"),
     ("consent_vote", "barrier_early"), ("consent_vote", "veto_ignored"), ("consent_vote", "no_stage_sync"),
     ("consent_vote_guest_declines", "veto_ignored"),
-    ("quest_sync", "no_stage_sync"), ("quest_sync", "no_objective_sync"),
+    ("quest_sync", "no_stage_sync"), ("quest_sync", "no_objective_sync"), ("quest_sync", "client_frozen"),
     ("save_load_rejoin", "no_rebase"), ("save_load_rejoin", "reward_dup_on_rejoin"), ("save_load_rejoin", "no_stage_sync"),
     ("spawn_once", "double_spawn"),
 ]
 # Bugs that are not tied to one playbook: counter_noise must be caught by every playbook (the desync counters rose);
-# the other three are impaired-link bugs, exercised by the link tests.
-UNIVERSAL = {"counter_noise", "no_retransmit", "repair_after_quiet", "repairs_in_flight"}
+# the next three are impaired-link bugs, exercised by the link tests, and the last two are game speed bugs, exercised by the
+# --timescale tests (tests/test_resume.py).
+UNIVERSAL = {"counter_noise", "no_retransmit", "repair_after_quiet", "repairs_in_flight", "timescale_ignored", "speed_not_reset"}
+# Playbooks whose steps all run through ctx.run_step with an arrange part: --from-step and --only-step work on them.
+RESUMABLE = ("fight", "quest_sync", "loot_race")
 
 
 def make(name: str) -> Playbook:

@@ -71,6 +71,12 @@ class Signatures(unittest.TestCase):
                          "Volition (.vpp_pc archives, engine family unresolved)")
         self.assertIsNone(best({"Data00.packed": b"PK\x03\x04", "gui.txd": b"text"}))
 
+    def test_genome_needs_sharedbase_next_to_engine(self):
+        g3 = {"SharedBase.dll": b"", "Engine.dll": b"", "Script.dll": b"", "Data/Projects_compiled.pak": b""}
+        self.assertEqual(best(g3), "Genome (Piranha Bytes)")
+        self.assertIsNone(best({"bin/engine.dll": b"", "Script.dll": b""}))
+        self.assertIsNone(best({"SharedBase.dll": b""}))
+
 
 def utf16(s):
     return (s + "\0").encode("utf-16-le")

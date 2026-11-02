@@ -10,6 +10,7 @@ in the game's data dump") plug in as hooks: see `validate(..., hooks=[...])`.
 This module is pure: no game, no network, standard library only. The game-facing part is runner.py plus your own
 GameAdapter (see README.md).
 """
+import difflib
 import json
 import os
 import re
@@ -18,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SCEN_DIR = HERE / "examples"
 SCHEMA = 1
-MUTANT = os.environ.get("SCEN_MUTANT", "")   # test-only twin switch, see run_tests.py
+MUTANT = os.environ.get("SCEN_MUTANT", "")   # test-only twin switch, see run_tests.py (here: noindex | nonearest | anykind)
 
 NAME_RE = re.compile(r"^[a-z0-9_]+$")
 ALIAS_RE = re.compile(r"^\$([A-Za-z][A-Za-z0-9_]*)$")
@@ -224,6 +225,8 @@ def validate(sc, name=None, hooks=()):
         e("start.save is required (the name of the save the scenario starts from)")
     elif not SAVE_RE.match(str(start["save"])):
         e("start.save has odd characters")
+    if "prepared" in start and not isinstance(start["prepared"], bool):
+        e("start.prepared must be true or false (false = always load the plain start.save, never a prepared copy)")
 
     objs = sc.get("objects") or {}
     if not isinstance(objs, dict):
@@ -373,6 +376,110 @@ def validate_file(path, hooks=()):
     except Exception as ex:   # noqa: BLE001
         return ["cannot read %s: %s" % (p.name, ex)]
     return validate(sc, name=p.stem, hooks=hooks)
+
+
+# ---------------------------------------------------------------------------------------------------- game data index
+class DataIndex:
+    """The ids a game's data knows, so a scenario can be checked without a game.
+
+    entries: {id: kind}. kind is one of KINDS, a list or set of kinds (an id that can be used as two kinds, for example an
+    item that is also spawnable), or None for "exists, any kind". kinds: the object kinds this index can speak for (None =
+    all of them); objects of other kinds are not checked. case_sensitive=False matches ids the way a game that ignores case does.
+    label: how error messages call the data ("the game data", "the item dump")."""
+
+    def __init__(self, entries, kinds=None, case_sensitive=True, label="the game data"):
+        self.case_sensitive, self.label = bool(case_sensitive), label
+        self.kinds = None if kinds is None else frozenset(kinds)
+        self._by_key = {}
+        for ident, k in dict(entries).items():
+            ks = None if k is None else frozenset([k] if isinstance(k, str) else k)
+            self._by_key[self._key(ident)] = (str(ident), ks)
+
+    def _key(self, ident):
+        return str(ident) if self.case_sensitive else str(ident).lower()
+
+    def __len__(self):
+        return len(self._by_key)
+
+    def lookup(self, ident):
+        """-> (spelling in the data, kinds or None), or None when the id is unknown."""
+        return self._by_key.get(self._key(ident))
+
+    def nearest(self, ident, n=3):
+        """Up to n known ids that look most like `ident`, best first, in the spelling of the data."""
+        want = self._key(ident)
+        pool = [k for k in self._by_key if abs(len(k) - len(want)) <= max(3, len(want) // 2)]
+        scored = []
+        for k in difflib.get_close_matches(want, pool, n=max(n, 20), cutoff=0.6):
+            prefix = len(os.path.commonprefix([want, k]))
+            scored.append((-round(difflib.SequenceMatcher(None, want, k).ratio(), 6), -prefix, k))   # ties: longer shared start, then A to Z
+        return [self._by_key[k][0] for _, _, k in sorted(scored)[:n]]
+
+
+def as_index(obj):
+    """What an adapter's data_index() may return -> a DataIndex or None. A dict {id: kind}, a list of ids (any kind) or a DataIndex."""
+    if obj is None or isinstance(obj, DataIndex):
+        return obj
+    if isinstance(obj, dict):
+        return DataIndex(obj)
+    return DataIndex({i: None for i in obj})
+
+
+def _uses(sc):
+    """alias -> ["setup step <id> (<op>)", "step <id> (<op>)"]: where each glossary object is named, in order."""
+    out = {}
+    setup_ids = {s.get("id") for s in sc.get("setup") or []}
+
+    def add(v, where):
+        m = ALIAS_RE.match(v) if isinstance(v, str) else None
+        if m and where not in out.setdefault(m.group(1), []):
+            out[m.group(1)].append(where)
+    for st in all_steps(sc):
+        where = "%s %s (%s)" % ("setup step" if st.get("id") in setup_ids else "step", st.get("id"), st.get("op"))
+        for k in OBJECT_FIELDS:
+            add(st.get(k), where)
+        if isinstance(st.get("args"), dict):
+            for b in st["args"].values():
+                add(b, where)
+    return out
+
+
+def index_errors(sc, index):
+    """Errors for every object of the scenario whose id is not in the game data index, or is there with another kind.
+    An unknown id names the nearest known ids. A `base` of an object is checked as an item or spawnable type."""
+    if MUTANT == "noindex":
+        return []
+    index = as_index(index)
+    if index is None:
+        return []
+    errs, uses = [], _uses(sc)
+    for alias, d in (sc.get("objects") or {}).items():
+        if not isinstance(d, dict) or not isinstance(d.get("id"), str) or d.get("kind") not in KINDS:
+            continue   # the format check reports those
+        where = "used by %s" % ", ".join(uses[alias][:3]) if uses.get(alias) else "not used by any step"
+        checks = [("id", d["id"], {d["kind"]})]
+        if isinstance(d.get("base"), str):
+            checks.append(("base", d["base"], {"item", "base"}))
+        for field, ident, want in checks:
+            if index.kinds is not None and not (want & index.kinds):
+                continue
+            hit = index.lookup(ident)
+            if hit is None:
+                near = [] if MUTANT == "nonearest" else index.nearest(ident)
+                errs.append("objects.%s: %s %r is not in %s (%s)%s" % (
+                    alias, field, ident, index.label, where,
+                    "; nearest known id: %r%s" % (near[0], " (also close: %s)" % ", ".join(repr(x) for x in near[1:]) if near[1:] else "")
+                    if near else ""))
+            elif hit[1] is not None and not (want & hit[1]) and MUTANT != "anykind":
+                errs.append("objects.%s: %s %r is a %s in %s but the scenario uses it as %s (%s)" % (
+                    alias, field, hit[0], "/".join(sorted(hit[1])), index.label, "/".join(sorted(want)), where))
+    return errs
+
+
+def index_hook(index):
+    """A validate() hook that checks a scenario against `index` (a DataIndex, a dict, or a list of ids)."""
+    idx = as_index(index)
+    return lambda sc: index_errors(sc, idx)
 
 
 # ---------------------------------------------------------------------------------------------------- capabilities

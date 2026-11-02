@@ -70,7 +70,7 @@ This is what makes a playbook better than an assert at the end: a bug is caught 
 - **A scenario step the adapter cannot do is `blocked`,** and so is every step after it. The scenario ends `partial`, never `pass`.
 - **Compare per machine.** A check runs on every player it targets. A bug that shows only on the guest is the point.
 - **Races use `parallel`.** `"parallel": true` runs a step on all players at the same moment, one thread each.
-- **Every playbook has twins.** A twin is the same playbook against a world with one deliberately wrong behaviour. If a twin passes, the playbook was testing nothing. The tools ship 26 playbook twins, 5 scenario twins and 4 runner twins, and their test commands print `ALL OK` only when every twin is caught.
+- **Every playbook has twins.** A twin is the same playbook against a world with one deliberately wrong behaviour. If a twin passes, the playbook was testing nothing. The tools ship 27 playbook twins, 20 scenario twins and 15 runner twins, and their test commands print `ALL OK` only when every twin is caught.
 - **No fake input.** The bot calls the game's scripting or code, the way a player's action would arrive. No simulated keyboard or mouse, no desktop capture, see [automated QA](automated-qa.md).
 - **Own the game processes you start,** and stop only those. Run test-heavy instances one session at a time on a normal PC ([multi-agent workflows](multi-agent-workflows.md)).
 
@@ -87,3 +87,27 @@ action adapter. They are examples of the shape, not a claim that the game is sol
 - The adapter's `SKIP` list: the actions your game still lacks.
 - Whether a lossy link run (`--link`) passed, and which profile.
 - The suite commands and their last output.
+
+## Fast rounds: resumable steps, fail-fast waits, game speed, parallel pairs, action results
+
+A fix round on a real game is slow because of what you repeat, not what you test. These pieces from the Fallout: New Vegas work are in the tools
+now ([`tools/bots/README.md`](../tools/bots/README.md) has the commands):
+
+- **Resumable steps.** Write each playbook step so its first lines can be skipped: give every step an `arrange` function that puts the world
+  into the state the step expects (players in place and armed, earlier quest stages set, earlier enemies dead). It must be idempotent and may only
+  use bot actions. Then `--from-step N` and `--only-step N` rerun a failing step 4 without steps 1 to 3 and without reloading the save. A full run never
+  arranges, and a pass from a partial run is not a pass of the playbook: run it whole before you call a fix done. If a step cannot be arranged
+  (the enemy it needs alive is already dead) it must fail and say "reload the scenario", not guess.
+- **Fail-fast settle.** A wait for sync that sees no progress for a few seconds is not going to succeed. Stop when no machine's update number and no
+  acknowledgement has moved for the stall window, and say who is behind and by how much, instead of burning the full budget and printing a
+  bare timeout. Do not count repairs as progress: a repair that repeats the same mismatch is a loop.
+- **Game speed.** Add one adapter hook for the game's time multiplier and a `--timescale X` option. Set it after the scenario setup, put it back to
+  1 at the end, on failure and on Ctrl-C, stop before any step if one copy refuses (one copy at another speed is its own desync), and shrink only the
+  fixed sleeps by X. Check the speed by reading it back when the game lets you.
+- **Parallel pairs.** Each host/client pair is its own session on its own port, so several pairs can run at once on one PC when the RAM allows.
+  One runner per pair as a subprocess, a prefix on every log line, one combined PASS/FAIL table and a distinct exit code for "blocked" and "setup
+  problem". Refuse to start when two pairs share an instance, a port or an output folder. It adds throughput; it does not shorten one round.
+- **Action results.** Every bot action returns `ok`, a `reason` and some `data`, checks a precondition before it acts and a postcondition after, and fails
+  with `code: what the bot saw`: units left of a stuck walk, the menu or message box in the way, the weapon state, a target too close or too steep to aim
+  at. Let the adapter list what blocks input (`blockers()`) and append it to every failure. A reason like "failed" costs a diagnosis round every time.
+  Keep the last actions of each machine in the failure folder.

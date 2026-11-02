@@ -1,4 +1,4 @@
-# Hotline Miami 2: Wrong Number — identity (owner's install, read-only)
+# Hotline Miami 2: Wrong Number - identity (owner's install, read-only)
 - Store: Steam (app 274170), Windows
 - Install: <game dir> (Steam library)
 - Main exe: HotlineMiami2.exe, 26,086,400 bytes, PE32 x86 (32-bit), link timestamp 2017-10-20 13:21:32 UTC

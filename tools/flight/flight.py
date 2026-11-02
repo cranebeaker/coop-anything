@@ -9,6 +9,7 @@
   gentest shrunk.json --name NAME [--out DIR]      emit a regression test (JSON fixture + cmake add_test)
   regress DIR (--replay-cmd "exe {fixture}" | --replay-py module:function)   run every generated regression fixture
   schema [FILE]                                    print the default schema, or check a schema file and print it
+  from-failure [PATH ...] [options]                in-game failure -> offline repro, shrink, regression case (see from_failure.py)
 
 print, align, diverge, report and fixture take --schema FILE to use that schema instead of the one stored in the traces.
 """
@@ -74,6 +75,10 @@ def _oracle(a):
 
 
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv and argv[0] == "from-failure":
+        import from_failure  # noqa: E402
+        return from_failure.main(argv[1:])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("print"); p.add_argument("file"); p.add_argument("--type"); p.add_argument("--limit", type=int); p.add_argument("--schema")

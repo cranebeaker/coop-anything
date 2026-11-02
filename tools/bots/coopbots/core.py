@@ -11,6 +11,12 @@ and on any failure it writes everything a human or an analyzer needs to <outdir>
 
 What the runner needs from each machine's adapter (adapter.ActionAdapter): status(), snapshot(), optionally capture(),
 plus whatever actions the playbook calls. Nothing else about the game.
+
+Also in here:
+  * resumable steps: a playbook that runs its steps through `ctx.run_step(name, body, arrange=...)` can be started at step N
+    (`from_step`) or run for one step only (`only_step`). `arrange` puts the world into the state that step expects.
+  * fail-fast settle: settle() stops early, with the reason, when no machine has made progress for the stall window.
+  * timescale: run_playbook asks every adapter for `set_timescale(x)` before the first step and puts it back to 1 at the end.
 """
 import contextlib
 import fnmatch
@@ -25,7 +31,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from .adapter import MissingAction
 
-MUTANT = os.environ.get("COOPBOTS_MUTANT", "")   # test-only twin switch: nosettle | nosnapshot | nocounters | skipispass
+MUTANT = os.environ.get("COOPBOTS_MUTANT", "")   # test-only twin switch: nosettle | nosnapshot | nocounters | skipispass | nostall | allsteps | noarrange | notimescale (adapter.py: nowhy | nopost)
 
 
 class StepFailure(Exception):
@@ -34,7 +40,7 @@ class StepFailure(Exception):
     def __init__(self, reason: str, kind: str = "check"):
         super().__init__(reason)
         self.reason = reason
-        self.kind = kind          # check | action | settle | snapshot | counters | quiescence | budget | bridge | exception
+        self.kind = kind          # check | action | settle | snapshot | counters | quiescence | budget | bridge | exception | arrange | timescale
 
 
 class PlaybookAbort(Exception):
@@ -61,6 +67,7 @@ class StepRecord:
     kind: str = ""
     seconds: float = 0.0
     snapshot: str = "skipped"         # equal | different | invalid | skipped
+    number: int = 0                   # the step's number in the playbook (what --from-step and --only-step count)
     counters_delta: Dict[str, Dict[str, int]] = field(default_factory=dict)
     fail_dir: str = ""
 
@@ -137,7 +144,10 @@ class Ctx:
     """What a playbook sees. Create with Ctx(machines, comparer, outdir, refs, opts)."""
 
     DEFAULTS = {"settle_s": 20.0, "settle_poll_s": 0.1, "compare": True, "strict_counters": True, "snapdiff_ignore": [],
-                "save_snapshots": True, "chaos": None, "quiesce_s": None, "repair_budget_per_min": None, "fast": False}
+                "save_snapshots": True, "chaos": None, "quiesce_s": None, "repair_budget_per_min": None, "fast": False,
+                "settle_stall_s": None,        # settle(): give up when nothing moved for this long; None: max(6, budget / 4), 0: never
+                "timescale": 1.0,              # the game's speed multiplier (run_playbook sets it through the adapter); pauses shrink by it
+                "from_step": 0, "only_step": 0}  # run only some steps (Ctx.run_step); 0: no limit
 
     def __init__(self, machines: List[Machine], comparer: Optional[Comparer], outdir: str, refs: Optional[dict] = None,
                  opts: Optional[dict] = None, playbook: str = "", log: Optional[Callable[[str], None]] = None):
@@ -158,6 +168,12 @@ class Ctx:
         self._t_start = time.monotonic()
         self._repairs_at_start = 0
         self._pool: Optional[ThreadPoolExecutor] = None
+        self.timescale = max(float(self.opts.get("timescale") or 1.0), 1e-3)
+        self.from_step = int(self.opts.get("from_step") or 0)
+        self.only_step = int(self.opts.get("only_step") or 0)
+        self.skipped: List[str] = []    # steps left out by from_step / only_step
+        self.ran_selected = 0
+        self._arranged = False          # the first step that really runs in a partial run gets its arrange() once
 
     # ---- who ----
     @property
@@ -251,12 +267,13 @@ class Ctx:
                 time.sleep(poll_s)
 
     def pause(self, seconds: float) -> None:
-        """Let the game run for a while (fake worlds: a few ticks instead of real time)."""
+        """Let the game run for a while (fake worlds: a few ticks instead of real time). A game running X times faster
+        (--timescale X) needs only 1/X of the wall time for the same game seconds."""
         if self.opts.get("fast"):
             for _ in range(3):
                 self._tick()
             return
-        end = time.monotonic() + seconds
+        end = time.monotonic() + seconds / self.timescale
         while time.monotonic() < end:
             self._tick()
             time.sleep(0.1)
@@ -270,19 +287,49 @@ class Ctx:
     def statuses(self) -> Dict[str, dict]:
         return {m.name: m.bot.status() for m in self.present}
 
+    def _stall_window(self, nominal_s: float) -> float:
+        """How long nothing may move before settle() gives up early (0: never)."""
+        w = self.opts.get("settle_stall_s")
+        w = max(6.0, nominal_s / 4.0) if w is None else float(w)
+        return 0.0 if (w <= 0 or MUTANT == "nostall") else w
+
+    @staticmethod
+    def _progress(st: Dict[str, dict], host_name: str) -> tuple:
+        """Everything that moves while machines catch up: each machine's update number and what the host says each client has
+        acknowledged. Repair counters are left out on purpose: a repair that keeps repeating the same mismatch is a loop, not progress."""
+        acks = (st[host_name] or {}).get("acks")
+        return (tuple((n, last_seq(s)) for n, s in sorted(st.items())), json.dumps(acks, sort_keys=True, default=str))
+
+    def _stuck_detail(self, st: Dict[str, dict], seqs: Dict[str, int], host_ok: bool, mismatch0: int) -> str:
+        out = "last update number per machine %s, host synced=%s" % (seqs, host_ok)
+        acks = (st[self.host.name] or {}).get("acks")
+        if acks:
+            out += ", client acks %s" % (acks,)
+        rose = read_counters(st[self.host.name])["mismatches"] - mismatch0
+        if rose > 0:
+            out += ", the host's mismatch counter rose by %d while nothing moved (the same mismatch keeps coming back)" % rose
+        return out
+
     def settle(self, timeout_s: Optional[float] = None) -> None:
-        """Wait until every client has applied the host's last update number and stays equal for 2 polls."""
+        """Wait until every client has applied the host's last update number and stays equal for 2 polls. Fails early, with the
+        reason, when nothing has moved (every machine's update number, the host's view of the acks) for the stall window while
+        the machines are still out of step: waiting the whole budget would only repeat the same answer."""
         if MUTANT == "nosettle":
             return
         timeout_s = self.opts["settle_s"] if timeout_s is None else timeout_s
-        end = time.monotonic() + timeout_s
+        window = self._stall_window(float(timeout_s))
+        t_begin = time.monotonic()
+        end = t_begin + timeout_s
         stable, last = 0, {}
+        sig, moved_at, mismatch0 = None, t_begin, None
         while True:
             st = self.statuses()
             host_seq = last_seq(st[self.host.name])
             seqs = {m.name: last_seq(st[m.name]) for m in self.present}
             synced = all(seqs[m.name] == host_seq for m in self.present[1:])
             host_ok = st[self.host.name].get("synced", True)
+            if mismatch0 is None:
+                mismatch0 = read_counters(st[self.host.name])["mismatches"]
             if synced and host_ok and seqs == last:
                 stable += 1
                 if stable >= 2:
@@ -290,9 +337,16 @@ class Ctx:
             else:
                 stable = 0
             last = seqs
-            if time.monotonic() >= end:
+            now = time.monotonic()
+            p = self._progress(st, self.host.name)
+            if p != sig:
+                sig, moved_at = p, now
+            if now >= end:
                 raise StepFailure("machines did not converge within %gs: last update number per machine %s, host synced=%s"
                                   % (timeout_s, seqs, host_ok), "settle")
+            if window and window < timeout_s and not (synced and host_ok) and now - moved_at >= window:
+                raise StepFailure("machines did not converge: no progress for %.1fs (stopped early, the budget was %gs): %s"
+                                  % (now - moved_at, timeout_s, self._stuck_detail(st, seqs, host_ok, mismatch0)), "settle")
             if self.opts["settle_poll_s"] > 0:
                 time.sleep(self.opts["settle_poll_s"])
 
@@ -375,7 +429,7 @@ class Ctx:
         Any failure aborts the playbook after the evidence is saved."""
         self._step_n += 1
         t0 = time.monotonic()
-        rec = StepRecord(name=name, ok=False)
+        rec = StepRecord(name=name, ok=False, number=self._step_n)
         label = "%02d-%s" % (self._step_n, name)
         self.log("step " + label)
         try:
@@ -412,6 +466,41 @@ class Ctx:
             self.log("FAIL %s: %s" % (label, rec.reason))
             raise PlaybookAbort(rec.reason)
 
+    # ---- resumable steps: --from-step N / --only-step N ----
+    @property
+    def partial(self) -> bool:
+        """True when only some of the playbook's steps run (a failing step 4 is rerun without steps 1 to 3)."""
+        return self.only_step > 0 or self.from_step > 1
+
+    def selected(self, n: int) -> bool:
+        if MUTANT == "allsteps":
+            return True
+        if self.only_step > 0:
+            return n == self.only_step
+        return n >= max(self.from_step, 1)
+
+    def run_step(self, name: str, body: Callable[[], Any], *, arrange: Optional[Callable[[], Any]] = None, **step_kw) -> None:
+        """A step a partial run can skip or start from: `with ctx.step(name, **step_kw): body()`, except that the step is left out
+        when its number is not selected. `arrange` puts the world into the state the step expects. It must be idempotent and may
+        only use bot actions and scenario operations. It runs inside the step, once, for the first step that really runs of a
+        partial run, and never in a full run, which behaves exactly as without it. Steps that follow run on what the earlier
+        ones did. If arrange cannot do its job it raises StepFailure(reason, "arrange") and says what to do (reload the scenario)."""
+        n = self._step_n + 1
+        if not self.selected(n):
+            self._step_n = n
+            self.skipped.append("%02d-%s" % (n, name))
+            self.log("skip step %02d-%s" % (n, name))
+            return
+        first = self.partial and not self._arranged
+        self.ran_selected += 1
+        with self.step(name, **step_kw):
+            if first:
+                self._arranged = True
+                if arrange is not None and MUTANT != "noarrange":
+                    self.log("arranging the world for step %02d-%s" % (n, name))
+                    arrange()
+            body()
+
     # ---- failure artifacts ----
     def save_failure(self, label: str, rec: StepRecord) -> str:
         self._fail_n += 1
@@ -429,6 +518,10 @@ class Ctx:
                 info["capture"] = m.bot.capture(os.path.join(d, m.name))
             except Exception as e:  # noqa: BLE001
                 info["capture_error"] = str(e)
+            try:
+                info["recent_actions"] = m.bot.recent_actions(8)      # the last actions with their reasons
+            except Exception:  # noqa: BLE001  an adapter without the action log
+                pass
             try:
                 if self.comparer and self.opts["save_snapshots"]:
                     sp = os.path.join(d, m.name + ".snapshot.json")
@@ -457,6 +550,7 @@ class Playbook:
     requires: Tuple[str, ...] = ()            # adapter methods every machine must implement, else the playbook is skipped
     snapdiff_ignore: Tuple[str, ...] = ()     # fnmatch patterns for snapshot lines that may differ
     allow_repairs = False
+    resumable = False                         # True: every step goes through ctx.run_step with an arrange(), so --from-step / --only-step work
 
     def run(self, ctx: Ctx) -> None:
         raise NotImplementedError
@@ -469,14 +563,47 @@ class RunResult:
     steps: List[StepRecord]
     outdir: str
     reason: str = ""
+    skipped: List[str] = field(default_factory=list)     # steps left out by --from-step / --only-step
+    from_step: int = 0
+    only_step: int = 0
+    timescale: Optional[dict] = None   # {"requested": X, "set": {machine: why not or ""}, "reset": {...}} when X != 1
 
     @property
     def ok(self) -> bool:
         return self.status == "pass"
 
     def to_json(self) -> dict:
-        return {"playbook": self.playbook, "status": self.status, "ok": self.ok, "reason": self.reason, "outdir": self.outdir,
-                "steps": [s.__dict__ for s in self.steps]}
+        out = {"playbook": self.playbook, "status": self.status, "ok": self.ok, "reason": self.reason, "outdir": self.outdir,
+               "steps": [s.__dict__ for s in self.steps]}
+        if self.skipped or self.from_step or self.only_step:
+            out.update({"skipped": self.skipped, "from_step": self.from_step, "only_step": self.only_step})
+        if self.timescale is not None:
+            out["timescale"] = self.timescale
+        return out
+
+
+def format_timescale(x: float) -> str:
+    return "%g" % x
+
+
+def _set_timescale(machines: List[Machine], x: float, verify: bool = True) -> Dict[str, str]:
+    """Ask every machine for speed x. -> {machine name: "" when it took, else why not}. When the adapter can read its speed back
+    (`timescale()`), a copy that accepted the call but runs at another speed is reported too."""
+    out: Dict[str, str] = {}
+    for m in machines:
+        try:
+            r = m.bot.set_timescale(x)
+            if not r:
+                out[m.name] = "refused: %s" % (r.reason or "no reason given")
+                continue
+            out[m.name] = ""
+            if verify and m.bot.supports("timescale"):
+                got = float(m.bot.timescale())
+                if abs(got - x) > 1e-6 * max(1.0, abs(x)):
+                    out[m.name] = "accepted the speed but reports %s instead of %s" % (format_timescale(got), format_timescale(x))
+        except Exception as e:  # noqa: BLE001
+            out[m.name] = "%s: %s" % (type(e).__name__, e)
+    return out
 
 
 def run_playbook(pb: Playbook, machines: List[Machine], comparer: Optional[Comparer], outdir: str,
@@ -490,27 +617,57 @@ def run_playbook(pb: Playbook, machines: List[Machine], comparer: Optional[Compa
     lacking = sorted({r for r in pb.requires for m in machines if not m.bot.supports(r)})
     if lacking:
         return RunResult(pb.name, "pass" if MUTANT == "skipispass" else "skip", [], outdir, "adapter does not implement: %s" % ", ".join(lacking))
-    os.makedirs(outdir, exist_ok=True)
     o = dict(opts or {})
+    scale = max(float(o.get("timescale") or 1.0), 1e-3)
+    if scale != 1.0:
+        no_scale = [m.name for m in machines if not m.bot.supports("set_timescale")]
+        if no_scale:
+            return RunResult(pb.name, "fail", [], outdir, "--timescale %s needs the adapter action set_timescale; missing on %s"
+                             % (format_timescale(scale), ", ".join(no_scale)))
+    os.makedirs(outdir, exist_ok=True)
     o["snapdiff_ignore"] = list(o.get("snapdiff_ignore", [])) + list(pb.snapdiff_ignore)
     ctx = Ctx(machines, comparer, outdir, refs, o, pb.name, log)
+    if ctx.partial and not pb.resumable:
+        return RunResult(pb.name, "fail", [], outdir, "%s cannot run from a later step (--from-step / --only-step): its steps have no "
+                         "arrange part yet; run it whole" % pb.name, from_step=ctx.from_step, only_step=ctx.only_step)
     reason = ""
+    scale_info: Optional[dict] = None
     try:
-        pb.run(ctx)
-        ok = all(r.ok for r in ctx.records) and bool(ctx.records)
-        if not ctx.records:
-            reason = "playbook ran no steps"
-    except PlaybookAbort as e:
-        ok, reason = False, str(e)
-    except Exception as e:  # noqa: BLE001  a failure outside a step block
-        kind = e.kind if isinstance(e, StepFailure) else "exception"
-        text = e.reason if isinstance(e, StepFailure) else "%s: %s" % (type(e).__name__, e)
-        rec = StepRecord("(outside step)", False, text, kind)
-        rec.fail_dir = ctx.save_failure("outside-step", rec)
-        ctx.records.append(rec)
-        ok, reason = False, text
-    ctx.close()
-    res = RunResult(pb.name, "pass" if ok else "fail", ctx.records, outdir, reason)
+        try:
+            if ctx.timescale != 1.0:
+                # After the scenario setup (the caller did that): from here on the game runs ctx.timescale times faster. One copy at
+                # another speed than the rest would be a desync of its own, so a copy that refuses stops the run before any step.
+                scale_info = {"requested": ctx.timescale, "set": {}, "reset": {}}
+                if MUTANT != "notimescale":
+                    scale_info["set"] = _set_timescale(machines, ctx.timescale)
+                refused = {k: v for k, v in scale_info["set"].items() if v}
+                if refused:
+                    raise StepFailure("could not set the game speed (set_timescale %s): %s" % (format_timescale(ctx.timescale), refused), "timescale")
+            pb.run(ctx)
+            if ctx.partial and ctx.ran_selected == 0:
+                raise StepFailure("no step was selected: %s has %d steps, --from-step %s --only-step %s"
+                                  % (pb.name, ctx._step_n, ctx.from_step or "-", ctx.only_step or "-"), "check")
+            ok = all(r.ok for r in ctx.records) and bool(ctx.records)
+            if not ctx.records:
+                reason = "playbook ran no steps"
+        except PlaybookAbort as e:
+            ok, reason = False, str(e)
+        except Exception as e:  # noqa: BLE001  a failure outside a step block
+            kind = e.kind if isinstance(e, StepFailure) else "exception"
+            text = e.reason if isinstance(e, StepFailure) else "%s: %s" % (type(e).__name__, e)
+            rec = StepRecord("(outside step)", False, text, kind)
+            rec.fail_dir = ctx.save_failure("outside-step", rec)
+            ctx.records.append(rec)
+            ok, reason = False, text
+    finally:
+        ctx.close()
+        if scale_info is not None:        # also after a failed step and after Ctrl-C: never leave a copy running at another speed
+            scale_info["reset"] = _set_timescale(machines, 1.0)
+    stuck = {k: v for k, v in (scale_info or {}).get("reset", {}).items() if v}
+    if stuck:
+        ok = False
+        reason = (reason + "; " if reason else "") + "could not put the game speed back to 1: %s" % stuck
+    res = RunResult(pb.name, "pass" if ok else "fail", ctx.records, outdir, reason, ctx.skipped, ctx.from_step, ctx.only_step, scale_info)
     with open(os.path.join(outdir, "result.json"), "w", encoding="utf-8") as f:
         json.dump(res.to_json(), f, indent=1, default=str)
     return res

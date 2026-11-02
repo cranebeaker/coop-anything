@@ -15,6 +15,20 @@ Two halves, one file format:
 
 The playbook page [Desync hunting with traces and shrinking](../../playbook/desync-hunting.md) shows the whole workflow.
 
+### Host portability
+
+On Windows, the test runner tries Visual Studio 2026, Visual Studio 2022, then
+Ninja when creating a fresh CMake build. Ninja requires a configured C++17 compiler
+on PATH. An existing CMake cache keeps its generator; compiler installation paths
+containing "Visual Studio" do not make a Ninja build an MSBuild build.
+
+Replay commands may be argument lists (preferred for API callers) or strings.
+Windows strings use CRT-style argument quoting, including paths with spaces,
+backslashes before quotes and doubled quotes inside quoted arguments. POSIX
+strings retain POSIX `shlex` parsing. Neither path enables shell execution.
+The `PortabilityTests` group checks both parsers and generator/cache selection
+without needing a game or all supported Visual Studio versions installed.
+
 ## Try it in one minute
 
 The repo ships two pairs of sample traces made by the C++ recorder ([golden/](golden)). In `desync_*` a script on the client
@@ -109,6 +123,7 @@ All commands run as `python -I tools/flight/flight.py <command> ...`. Add `--sch
 | `gentest shrunk.json --name stale_echo [--out DIR]` | Write the regression test: the shrunk fixture plus a CMake `add_test` line. |
 | `regress DIR --replay-cmd "prog {fixture}"` | Run every fixture in a folder through the hook; prints ALL OK when each matches its expectation. |
 | `schema [FILE]` | Print the default schema, or check a schema file and print it back. |
+| `from-failure [PATH ...]` | A failed bot run to an offline repro and a regression case, see the next section. Same as `from_failure.py`. |
 
 ### The replay hook
 
@@ -124,6 +139,48 @@ python -I tools/flight/flight.py shrink fixture.json --replay-py toy_replay:repl
 Steps must be independent (any subset is a valid fixture), and a step marked `"pin": true` is never removed. The reduction is the ddmin
 algorithm of Zeller and Hildebrandt; a smaller list only counts if the failure keeps the same signature, so a shrink that turns your bug into a different one is rejected.
 
+## From a failed game run to a regression case
+
+When a bot run (`tools/bots`) fails a step, the runner saves a `failure.json` and each copy's evidence in a `FAIL-*` folder. With both
+copies still up, this reads files only and takes a few seconds:
+
+```
+python -I tools/flight/from_failure.py                         # the newest failure under ./coop-bots-out
+python -I tools/flight/from_failure.py coop-bots-out/RUN       # every failure.json below that run folder
+python -I tools/flight/from_failure.py host.cofr client.cofr   # two recordings given directly
+python -I tools/flight/from_failure.py FAIL-DIR --instances DIR --report failure.html
+```
+
+It finds the host and client recordings the failure names, replays them through the analyzer, prints **REPRODUCED** or **NOT REPRODUCED**,
+cross-checks that with what the bots saw in the live status (the `counters`, `seq` and `synced` of each machine's status, see
+[tools/bots](../bots/README.md)), shrinks the recordings to the few records that still show the same failure, and writes a regression case
+`tools/flight/regress/<name>.json`. `--no-write` gives only the verdict, `--report FILE.html` the full flight report (with the minimal
+reproduction), `--json` the raw result. Exit 0 means every failure reproduced, 1 at least one did not, 2 recordings were missing or unreadable.
+
+* **Where the recordings are looked for.** A machine entry of `failure.json` names its recording in `flight_dump` (a path, or `{"path": ...}`),
+  or in `flight`, `recording`, `cofr` or `trace`, at the top of the entry or in the `capture` dict that the adapter's `capture()` returned
+  (any value there whose file name matches `--pattern`, default `*.cofr`, counts too). A relative path is tried under `<root>/<instance>/`,
+  `<root>/`, the failure folder's `<machine name>/` and the failure folder, then as written. `<root>` is `--instances DIR` or the environment variable
+  `COOP_INSTANCES_ROOT`: the folder that holds one sub folder per game copy. With no recorded path, the newest matching file written in the
+  10 minutes before the failure in the machine's failure sub folder or game copy is used.
+* **The case.** The case holds the shrunk records as a `cofr-trace-1` fixture ([FORMAT.md](FORMAT.md) section 7), so
+  `python -I tools/flight/regress.py tools/flight/regress` replays it in a second with no game and no replay program. It pins the recorded evidence:
+  it passes while the recording still shows the failure. A recording cannot change when you fix the mod, so the proof of a fix is a fresh run:
+  run the fight again and run `from_failure.py` on the new failure folder, and NOT REPRODUCED (exit 1) is the sign it worked.
+  `--expect-converges` writes the case the other way round (it fails until the analyzer stops seeing the failure). `--schema FILE` reads the
+  recordings with another schema, and the case keeps it. Machine paths are removed from the case.
+* **Your own recording format.** The generic part only reads `.cofr`. If your game writes something else, give `--converter module:function`
+  (the module is found on `--converter-path DIR`, or write `path/to/file.py:function`) and, if the files are not named `*.cofr`, `--pattern GLOB`.
+  The hook is one function:
+
+  ```python
+  def convert(path: str, info: dict) -> bytes:
+      """path: the recording as found. info: {"name": ..., "role": ..., "instance": ...} of the machine (a value may be None).
+      Return the bytes of a version 1 .cofr file (FORMAT.md). Raise any exception to report that the file cannot be converted."""
+  ```
+
+  The default converter returns the file unchanged. The written case keeps the converted records, so it replays without your converter.
+
 ## How it is tested
 
 One command from the repo root runs everything and prints `ALL OK`:
@@ -135,13 +192,13 @@ python -I tools/flight/run_tests.py
 | Part | What runs |
 |---|---|
 | C++ (cmake, Visual Studio 2022 on Windows, `--parallel 1`) | `cofr_tests`: 40 tests (recorder behaviour, ring wrap, truncation, threads, bucketed digests, the schema record, custom records, golden files, overhead benchmark), 12 of them mutation twins; plus the example program. Built in a folder in the system temp dir (`COFR_BUILD_DIR` changes it), so nothing is written into the repo. |
-| Python | 67 tests: format round trips, schema rules, alignment of 2 to 4 machines, every divergence kind, narrowing, the shrinker with a command hook and a Python hook, regression generation, the HTML report, the CLI end to end. |
+| Python | 115 tests: format round trips, schema rules, alignment of 2 to 4 machines, every divergence kind, narrowing, the shrinker with a command hook and a Python hook, regression generation, the HTML report, the CLI end to end, and the failure-to-case tools (48 of them: finding recordings, the converter hook, status cross-check, shrink stages, cases and their replay, exit codes), all on fake recordings built with the `cofr.py` writer and fake failure folders. |
 | C++ writes, Python reads | The C++ tests write the golden traces and a trace that uses every record type and option; Python must read them field by field, recompute the bucketed digest from the detail records and get the C++ bytes, and write the exact same bytes back. The other way round, Python writes a file and a C++ test parses it. A drift test fails if the writer's bytes differ from `golden/`. |
-| Mutation twins | A **twin** breaks one thing on purpose and the suite must fail. 12 C++ twins re-introduce recorder bugs (a full ring drops the newest record, received datagrams not recorded, a cut datagram not flagged, a changed value invisible in the buckets, ...). 61 Python twins edit the sources (latest instead of earliest divergence, repairs counted as divergence, pinned steps removed, report not escaped, ...) and each must make the suite fail. |
+| Mutation twins | A **twin** breaks one thing on purpose and the suite must fail. 12 C++ twins re-introduce recorder bugs (a full ring drops the newest record, received datagrams not recorded, a cut datagram not flagged, a changed value invisible in the buckets, ...). 140 Python twins edit the sources (latest instead of earliest divergence, repairs counted as divergence, pinned steps removed, report not escaped, the converter ignored, the oldest recording guessed, ...) and each must make the suite fail. |
 
 It needs Python 3, cmake 3.20 or newer (for `ctest --test-dir`) and a C++17 compiler. It was run with Python 3.11, cmake 4.1 and Visual Studio 2022. The full run takes a few minutes, most of it the Python mutation twin.
 Options: `--quick` runs only the fast Python tests (a few seconds, prints `QUICK OK`), `--no-cpp` skips the C++ phase, `--no-twin` skips the Python
-mutation twin. Only the full run prints `ALL OK`. Regenerating the golden files after a deliberate format change: run the C++ `cofr_tests` with `COFR_WRITE_GOLDEN=1` and `COFR_GOLDEN_DIR=tools/flight/golden`, then rerun the suite.
+mutation twin, `--only A,B` runs just the Python test classes A and B (the twins of the failure-to-case tools use it). Only the full run prints `ALL OK`. Regenerating the golden files after a deliberate format change: run the C++ `cofr_tests` with `COFR_WRITE_GOLDEN=1` and `COFR_GOLDEN_DIR=tools/flight/golden`, then rerun the suite.
 
 ### Recording overhead
 
@@ -161,6 +218,8 @@ A bucketed digest of 20000 entries costs about 0.1 ms. After one changed entry i
 Ported from fnv-coop commit f57aa78 ([github.com/cranebeaker/fnv-coop](https://github.com/cranebeaker/fnv-coop)), where it was built for a Fallout: New Vegas
 co-op mod. This version is game-agnostic: a neutral `.cofr` format with a configurable schema, a recorder with its own tiny observer interface and no
 dependency on that project's sync core, and an analyzer that reads everything game-specific from the schema. What stayed in the fnv-coop repository: the decoder for its own wire protocol, the wrappers around its transport and effect sink, the adapter for its engine model, the plugin service (crash filter, bridge commands) and its game-state digest cache.
+
+Updated from fnv-coop commit e85460f
 
 Ideas from open work: record and replay as in [rr](https://rr-project.org/); deterministic simulation, snapshot and desync-detection thinking from
 [Gaffer on Games](https://gafferongames.com/); delta debugging (ddmin) by Andreas Zeller and Ralf Hildebrandt, "Simplifying and Isolating Failure-Inducing Input" (2002).

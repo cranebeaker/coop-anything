@@ -16,6 +16,11 @@ Rules this file keeps (each has a test):
   * A copy that exits within watch_s seconds of launch is reported with its exit code. That is how a
     single-instance check ("already running") shows up. See playbook/multi-instance-testing.md.
   * A copy is started from a long-lived detached process group, so it is not killed when this command ends.
+
+Pairs and swap (see README.md, "Pairs" and "Swap"):
+    gamepool.py --config game.json up --pairs 3            3 host/client pairs, each on its own port; refuses when the PC lacks the RAM
+    gamepool.py --config game.json status --pairs          one row per pair: ports, both copies, up / partial / down
+    gamepool.py --config game.json swap --instances 0,1    ask the adapter to swap new code into running copies
 """
 from __future__ import annotations
 
@@ -30,7 +35,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import instances, jobqueue, winproc
+from . import instances, jobqueue, pairs as pairs_mod, winproc
 from .adapter import Adapter, load_adapter
 from .config import HUB, Config, ConfigError, state_dir
 
@@ -152,20 +157,25 @@ def spawn_detached(cmd, cwd, env, startupinfo=None) -> subprocess.Popen:
         return subprocess.Popen(cmd, creationflags=DETACH_FLAGS & ~0x01000000, **kw)
 
 
-def launch_command(cfg: Config, i: int) -> Tuple[List[str], str, Dict[str, str]]:
-    """(argv, cwd, env) for instance i. The copy starts in its own folder with its own number in the env."""
+def launch_command(cfg: Config, i: int, ctx: Optional[Dict] = None) -> Tuple[List[str], str, Dict[str, str]]:
+    """(argv, cwd, env) for instance i. The copy starts in its own folder with its own number in the env.
+    ctx is the pair placeholders (port, pair, role, host, client) of pairs.context_for(); they fill {port} {pair} {role}
+    {host} {client} in launch.args and launch.env and are also set as GAMEPOOL_PORT, GAMEPOOL_PAIR and GAMEPOOL_ROLE."""
     launch = cfg["launch"]
     if not launch["exe"]:
         raise ConfigError("launch.exe is not set")
+    ctx = dict(ctx or {})
     d = cfg.instance_dir(i)
-    exe = Path(cfg.fmt(launch["exe"], i))
+    exe = Path(cfg.fmt(launch["exe"], i, **ctx))
     if not exe.is_absolute():
         exe = d / exe
     env = dict(os.environ)
-    env.update({k: cfg.fmt(v, i) for k, v in launch["env"].items()})
+    env.update({k: cfg.fmt(v, i, **ctx) for k, v in launch["env"].items()})
     env["GAMEPOOL_INSTANCE"] = str(i)
     env["GAMEPOOL_INSTANCE_DIR"] = str(d)
-    return [str(exe)] + [cfg.fmt(a, i) for a in launch["args"]], str(d), env
+    if ctx:
+        env["GAMEPOOL_PAIR"], env["GAMEPOOL_ROLE"], env["GAMEPOOL_PORT"] = str(ctx["pair"]), str(ctx["role"]), str(ctx["port"])
+    return [str(exe)] + [cfg.fmt(a, i, **ctx) for a in launch["args"]], str(d), env
 
 
 def find_game_child(cfg: Config, loader_pid: int, skip: List[int]) -> int:
@@ -181,10 +191,11 @@ def find_game_child(cfg: Config, loader_pid: int, skip: List[int]) -> int:
     raise LaunchError(f"loader pid {loader_pid} started no {cfg.process_name} within {cfg['launch']['child_wait_s']} s")
 
 
-def launch_instance_ex(cfg: Config, i: int, owner: Optional[str] = DEFAULT_OWNER) -> Tuple[int, subprocess.Popen]:
+def launch_instance_ex(cfg: Config, i: int, owner: Optional[str] = DEFAULT_OWNER,
+                       ctx: Optional[Dict] = None) -> Tuple[int, subprocess.Popen]:
     """Start instance i. Returns (game pid, the Popen of the launched exe). The pid is recorded under owner
     (state file and game slot) so only this tool can kill it later."""
-    argv, cwd, env = launch_command(cfg, i)
+    argv, cwd, env = launch_command(cfg, i, ctx)
     p = spawn_detached(argv, cwd, env, winproc.startup_info(cfg["launch"]["window"]))
     pid = p.pid
     if cfg["launch"]["spawns_game"]:
@@ -212,8 +223,11 @@ def wait_alive(pid: int, seconds: float) -> bool:
 
 
 # ------------------------------------------------------------------------------------------ up / down / status
-def start_instances(cfg: Config, ids: List[int], owner: str, adapter: Adapter, stagger_s: float, wait_ready_each: float) -> int:
-    """Start the copies in `ids` one after the other. Returns 0, 2 (not provisioned) or 3 (a copy exited or never became ready)."""
+def start_instances(cfg: Config, ids: List[int], owner: str, adapter: Adapter, stagger_s: float, wait_ready_each: float,
+                    pair_ctx: Optional[Dict[int, Dict]] = None) -> int:
+    """Start the copies in `ids` one after the other. Returns 0, 2 (not provisioned) or 3 (a copy exited or never became ready).
+    pair_ctx maps an instance number to its pair placeholders: the pairs.edits of the config are written into the instance's
+    private files first, and the placeholders reach the launch arguments."""
     st = load_state(cfg, owner)
     for i in ids:
         if not instances.provisioned(cfg, i):
@@ -224,7 +238,10 @@ def start_instances(cfg: Config, ids: List[int], owner: str, adapter: Adapter, s
             print(f"instance {i} already up (pid {rec['pid']})")
             continue
         adapter.prepare(i)
-        pid, popen = launch_instance_ex(cfg, i, owner)
+        ctx = (pair_ctx or {}).get(i)
+        if ctx:
+            instances.apply_pair_edits(cfg, i, ctx)
+        pid, popen = launch_instance_ex(cfg, i, owner, ctx)
         time.sleep(stagger_s)
         if not wait_alive(pid, float(cfg["launch"]["watch_s"])):
             code = popen.poll()
@@ -256,16 +273,101 @@ def stop_owner(cfg: Config, owner: str) -> List[int]:
             killed.append(rec["pid"])
             print(f"killed instance {i} (pid {rec['pid']})")
         st["procs"].pop(i)
+    st.pop("pairs", None)
     save_state(cfg, st, owner)
     return killed
+
+
+def up_copies_of(cfg: Config, owner: str) -> int:
+    """How many copies of this owner are running right now."""
+    return sum(1 for rec in load_state(cfg, owner)["procs"].values() if is_recorded_process_rec(rec))
+
+
+def pair_ram_report(cfg: Config, pairs: int, owner: str, free_ram_gb: Optional[float], check: bool = True) -> Tuple[Dict, Optional[str]]:
+    """(numbers, refusal reason or None) for starting `pairs` pairs. RAM per copy comes from pairs.copy_gb in the config."""
+    pc = cfg.pairs
+    up = up_copies_of(cfg, owner)
+    free = int(free_ram_gb * pairs_mod.GIB) if free_ram_gb is not None else pairs_mod.free_ram_bytes()
+    copy_gb, reserve_gb = float(pc["copy_gb"]), float(pc["reserve_gb"])
+    reason = pairs_mod.ram_problem(pairs, up, free, copy_gb, reserve_gb) if check else None
+    return ({"free_gb": round(free / pairs_mod.GIB, 2), "copy_gb": copy_gb, "reserve_gb": reserve_gb, "copies_up": up,
+             "max_pairs": pairs_mod.max_pairs_by_ram(free, up, copy_gb, reserve_gb), "checked": check, "ok": reason is None}, reason)
+
+
+def running_pairs(cfg: Config, plan: List[Dict], owner: str) -> List[int]:
+    """Pairs of the plan whose host copy is already running (a second `up` must not complain about its own port)."""
+    st = load_state(cfg, owner)
+    out = []
+    for p in plan:
+        rec = st["procs"].get(str(p["host"]))
+        if rec and is_recorded_process_rec(rec):
+            out.append(p["pair"])
+    return out
+
+
+def cmd_up_pairs(cfg: Config, a, adapter: Adapter) -> int:
+    n = 2 * a.pairs
+    if a.n is not None and a.n != n:
+        print(f"--n {a.n} does not match --pairs {a.pairs} (that is {n} instances); give only one", file=sys.stderr)
+        return 2
+    proto = cfg.pairs["proto"]
+    ram, ram_reason = pair_ram_report(cfg, a.pairs, a.owner, a.free_ram_gb, not a.no_ram_check)
+    if a.dry_run:
+        ids = pairs_mod.aligned_ids(a.pairs)
+        plan = pairs_mod.plan_pairs(ids, int(cfg.pairs["port_base"]))
+        probs = [] if a.no_port_check else pairs_mod.port_problems(plan, proto, running_pairs(cfg, plan, a.owner))
+        print(json.dumps({"dry_run": True, "assumed_instances": ids, "pairs": plan, "ram": ram, "port_problems": probs}, indent=1))
+        for msg in ([ram_reason] if ram_reason else []) + probs:
+            print(msg, file=sys.stderr)
+        return 4 if (ram_reason or probs) else 0
+    if ram_reason:
+        print(ram_reason, file=sys.stderr)
+        return 4
+    try:
+        ids = slot_acquire(a.owner, ttl=a.ttl, wait=a.slot_wait, slots=n)
+    except SlotBusy as e:
+        print(f"game slot busy: {e}", file=sys.stderr)
+        return 3
+
+    def give_back() -> None:
+        if not load_state(cfg, a.owner)["procs"]:       # keep the slots while copies of ours are running
+            slot_release(a.owner)
+    try:
+        plan = pairs_mod.plan_pairs(sorted(ids), int(cfg.pairs["port_base"]))
+    except ValueError as e:
+        print(f"cannot form pairs: {e}", file=sys.stderr)
+        give_back()
+        return 4
+    if not a.no_port_check:
+        probs = pairs_mod.port_problems(plan, proto, running_pairs(cfg, plan, a.owner))
+        if probs:
+            for msg in probs:
+                print(msg + "; nothing was started (--no-port-check to start anyway)", file=sys.stderr)
+            give_back()
+            return 4
+    foreign = foreign_pids(cfg)
+    if foreign and not a.allow_foreign:
+        print(f"{cfg.process_name} already running (pids {foreign}) and not ours. It may be the owner's own game; "
+              "nothing was started. Use --allow-foreign to start copies next to it.", file=sys.stderr)
+        give_back()
+        return 2
+    st = load_state(cfg, a.owner)
+    st["pairs"] = plan
+    save_state(cfg, st, a.owner)
+    for p in plan:
+        print(f"pair {p['pair']}: host instance {p['host']}, client instance {p['client']}, port {p['port']}")
+    ctx = {i: pairs_mod.context_for(plan, i) for i in sorted(ids)}
+    return start_instances(cfg, sorted(ids), a.owner, adapter, a.stagger, a.wait_ready_each, ctx)
 
 
 def cmd_up(cfg: Config, a, adapter: Optional[Adapter] = None) -> int:
     cfg.require_dirs()
     cfg.require_process_name()
     adapter = adapter or load_adapter(cfg)
+    if a.pairs:
+        return cmd_up_pairs(cfg, a, adapter)
     try:
-        ids = slot_acquire(a.owner, ttl=a.ttl, wait=a.slot_wait, slots=a.n)
+        ids = slot_acquire(a.owner, ttl=a.ttl, wait=a.slot_wait, slots=2 if a.n is None else a.n)
     except SlotBusy as e:
         print(f"game slot busy: {e}", file=sys.stderr)
         return 3
@@ -286,22 +388,214 @@ def cmd_down(cfg: Config, a) -> int:
     return 0
 
 
-def cmd_status(cfg: Config, a) -> int:
+def recorded_everywhere(cfg: Config) -> Dict[str, Dict]:
+    """instance number (as text) -> its record plus the owner, over every owner's state file."""
     root = cfg.instances_root
     recorded: Dict[str, Dict] = {}
     if root.exists():
         for f in root.glob("state-*.json"):
-            for i, rec in load_state(cfg, f.stem[len("state-"):])["procs"].items():
-                recorded[i] = dict(rec, owner=f.stem[len("state-"):])
+            owner = f.stem[len("state-"):]
+            for i, rec in load_state(cfg, owner)["procs"].items():
+                recorded[i] = dict(rec, owner=owner)
+    return recorded
+
+
+def pair_rows(cfg: Config, adapter: Optional[Adapter] = None) -> List[Dict]:
+    """One row per pair that `up --pairs` started (and `down` has not yet stopped): port, both copies, state."""
+    root = cfg.instances_root
+    rows: List[Dict] = []
+    if not root.exists():
+        return rows
+
+    def side(st: Dict, i: int) -> Dict:
+        rec = st["procs"].get(str(i))
+        alive = bool(rec and is_recorded_process_rec(rec))
+        ready = False
+        if alive and adapter is not None:
+            try:
+                ready = bool(adapter.probe(i, rec["pid"]))
+            except Exception:  # noqa: BLE001  (a probe that fails is "not ready", not a crash of the status command)
+                ready = False
+        return {"instance": i, "pid": rec["pid"] if rec else None, "alive": alive, "ready": ready}
+
+    for f in sorted(root.glob("state-*.json")):
+        owner = f.stem[len("state-"):]
+        st = load_state(cfg, owner)
+        for p in st.get("pairs", []):
+            h, c = side(st, p["host"]), side(st, p["client"])
+            rows.append({"pair": p["pair"], "owner": owner, "port": p["port"], "host": h, "client": c,
+                         "state": pairs_mod.pair_state(h["alive"], c["alive"])})
+    return sorted(rows, key=lambda r: (r["owner"], r["pair"]))
+
+
+def cmd_status(cfg: Config, a) -> int:
+    root = cfg.instances_root
+    if getattr(a, "pairs", False):
+        print(json.dumps(pair_rows(cfg, load_adapter(cfg)), indent=1))
+        return 0
+    recorded = recorded_everywhere(cfg)
+    roles: Dict[int, Dict] = {}
+    for r in pair_rows(cfg):
+        roles[r["host"]["instance"]] = {"pair": r["pair"], "role": "host", "port": r["port"]}
+        roles[r["client"]["instance"]] = {"pair": r["pair"], "role": "client", "port": r["port"]}
     rows = []
     for dd in sorted(p for p in root.glob("*") if p.name.isdigit()) if root.exists() else []:
         i = dd.name
         rec = recorded.get(i)
-        rows.append({"instance": int(i), "dir": str(dd), "provisioned": (dd / "instance.json").exists(),
-                     "pid": rec["pid"] if rec else None, "owner": rec["owner"] if rec else None,
-                     "alive": bool(rec and is_recorded_process_rec(rec)), "lock": jobqueue.holder(root, int(i))})
+        row = {"instance": int(i), "dir": str(dd), "provisioned": (dd / "instance.json").exists(),
+               "pid": rec["pid"] if rec else None, "owner": rec["owner"] if rec else None,
+               "alive": bool(rec and is_recorded_process_rec(rec)), "lock": jobqueue.holder(root, int(i))}
+        if int(i) in roles:
+            row.update(roles[int(i)])
+        rows.append(row)
     print(json.dumps(rows, indent=1))
     return 0
+
+
+# ------------------------------------------------------------------------------------------ swap
+def parse_ids(spec: str) -> List[int]:
+    out = []
+    for part in spec.split(","):
+        part = part.strip()
+        if part:
+            out.append(int(part))
+    return out
+
+
+def swap_targets(cfg: Config, a) -> Tuple[List[Dict], Optional[str]]:
+    """The running copies a swap applies to. Returns (targets, error). A copy that `up` did not start for this owner,
+    or that is no longer running, is an error, so a swap never reaches a process it does not own."""
+    st = load_state(cfg, a.owner)
+    pair_of: Dict[int, Tuple[int, str]] = {}
+    for p in st.get("pairs", []):
+        pair_of[p["host"]], pair_of[p["client"]] = (p["pair"], "host"), (p["pair"], "client")
+    if a.instances:
+        try:
+            ids = parse_ids(a.instances)
+        except ValueError:
+            return [], f"--instances must be numbers separated by commas, got {a.instances!r}"
+    elif a.pair:
+        ids = []
+        for k in a.pair:
+            match = [p for p in st.get("pairs", []) if p["pair"] == k]
+            if not match:
+                return [], f"pair {k} is not running (nothing recorded by `up --pairs` for owner {a.owner})"
+            ids += [match[0]["host"], match[0]["client"]]
+    else:
+        ids = sorted(int(i) for i in st["procs"])
+    if not ids:
+        return [], f"no running copies recorded for owner {a.owner}; start some with `up` first"
+    targets = []
+    for i in ids:
+        rec = st["procs"].get(str(i))
+        if not rec or not is_recorded_process_rec(rec):
+            return [], f"instance {i} is not running (not started by `up` for owner {a.owner}, or it has exited)"
+        pr = pair_of.get(i)
+        targets.append({"instance": i, "pid": rec["pid"], "rec": rec, "pair": pr[0] if pr else None, "role": pr[1] if pr else None})
+    return targets, None
+
+
+def swap_refusals(adapter: Adapter, targets: List[Dict], payload: Dict[str, str]) -> List[Dict]:
+    """Copies that cannot be swapped, with the adapter's reason. Asked for every copy before any copy is touched."""
+    out = []
+    for t in targets:
+        try:
+            reason = adapter.can_swap(t["instance"], t["pid"], payload)
+        except Exception as e:  # noqa: BLE001
+            reason = f"can_swap raised {type(e).__name__}: {e}"
+        if reason:
+            out.append({"instance": t["instance"], "reason": str(reason)})
+    return out
+
+
+def swap_verify(cfg: Config, adapter: Adapter, t: Dict, settle_s: float) -> Optional[str]:
+    """None when the copy is still the same process and healthy, else why not. A swap that restarted the copy is a failure:
+    `up`, `down` and the pool know the copy by its recorded process."""
+    if not is_recorded_process_rec(t["rec"]):
+        return "the copy's process is gone or was replaced during the swap"
+    end = time.monotonic() + max(0.0, settle_s)
+    while True:
+        try:
+            ok = bool(adapter.probe(t["instance"], t["pid"]))
+        except Exception:  # noqa: BLE001
+            ok = False
+        if ok:
+            return None
+        if time.monotonic() >= end:
+            return f"the copy is not healthy {settle_s:g} s after the swap"
+        time.sleep(min(0.2, max(0.01, end - time.monotonic())))
+
+
+def run_swap(cfg: Config, adapter: Adapter, targets: List[Dict], payload: Dict[str, str], settle_s: float, say=None,
+             stop_on_failure: bool = True) -> Dict:
+    """Swap the copies one after the other, in the order given. Stops at the first failure; the rest are reported as skipped."""
+    say = say or (lambda s: None)
+    results = []
+    failed = False
+    for t in targets:
+        row = {"instance": t["instance"], "pair": t["pair"], "role": t["role"], "pid": t["pid"], "status": "skipped", "detail": ""}
+        results.append(row)
+        if failed and stop_on_failure:
+            continue
+        t0 = time.monotonic()
+        say(f"swapping instance {t['instance']} (pid {t['pid']})")
+        try:
+            res = adapter.swap(t["instance"], t["pid"], payload)
+        except Exception as e:  # noqa: BLE001
+            row.update(status="failed", detail=f"swap raised {type(e).__name__}: {e}")
+            failed = True
+            continue
+        if isinstance(res, dict) and res.get("ok") is False:
+            row.update(status="failed", detail=str(res.get("detail") or "the adapter reported a failure"))
+            failed = True
+            continue
+        problem = swap_verify(cfg, adapter, t, settle_s)
+        if problem:
+            row.update(status="failed", detail=problem)
+            failed = True
+            continue
+        row.update(status="swapped", detail=str(res.get("detail", "")) if isinstance(res, dict) else "")
+        row["seconds"] = round(time.monotonic() - t0, 2)
+    return {"ok": not failed, "swapped": sum(1 for r in results if r["status"] == "swapped"), "results": results}
+
+
+def cmd_swap(cfg: Config, a, adapter: Optional[Adapter] = None) -> int:
+    """Exit 0 swapped (or dry run ok), 1 a copy failed, 2 refused before touching anything."""
+    cfg.require_dirs()
+    adapter = adapter or load_adapter(cfg)
+    payload: Dict[str, str] = {}
+    for kv in a.arg:
+        k, sep, v = kv.partition("=")
+        if not sep or not k:
+            print(f"--arg needs KEY=VALUE, got {kv!r}", file=sys.stderr)
+            return 2
+        payload[k] = v
+    targets, err = swap_targets(cfg, a)
+    if err:
+        print(err, file=sys.stderr)
+        return 2
+    refused = swap_refusals(adapter, targets, payload)
+    report: Dict
+    if refused:
+        for r in refused:
+            print(f"instance {r['instance']} cannot be swapped: {r['reason']}", file=sys.stderr)
+        print("nothing was swapped", file=sys.stderr)
+        report = {"ok": False, "refused": refused, "swapped": 0, "results": []}
+        rc = 2
+    elif a.dry_run:
+        report = {"ok": True, "dry_run": True, "swapped": 0,
+                  "results": [{"instance": t["instance"], "pair": t["pair"], "role": t["role"], "pid": t["pid"], "status": "can_swap"}
+                              for t in targets]}
+        rc = 0
+    else:
+        report = run_swap(cfg, adapter, targets, payload, a.settle_s, lambda s: print(s, file=sys.stderr, flush=True))
+        rc = 0 if report["ok"] else 1
+    report["payload"] = payload
+    text = json.dumps(report, indent=1)
+    if a.out:
+        Path(a.out).write_text(text, encoding="utf-8")
+    print(text)
+    return rc
 
 
 # ------------------------------------------------------------------------------------------ jobs
@@ -382,10 +676,15 @@ def run_job(cfg: Config, job_id: str, n: int, cmd: List[str], *, timeout_s: floa
 
 def main(cfg: Config, argv: List[str]) -> int:
     import argparse
-    ap = argparse.ArgumentParser(prog="gamepool up|down|status|job")
+    ap = argparse.ArgumentParser(prog="gamepool up|down|status|swap|job")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("up")
-    p.add_argument("--n", type=int, default=2)
+    p.add_argument("--n", type=int, default=None, help="number of copies (default 2)")
+    p.add_argument("--pairs", type=int, default=0, help="N host/client pairs (2N copies), each pair on its own port")
+    p.add_argument("--no-ram-check", action="store_true", help="with --pairs: start even when the free RAM looks too small")
+    p.add_argument("--no-port-check", action="store_true", help="with --pairs: do not check that each pair's port is free")
+    p.add_argument("--dry-run", action="store_true", help="with --pairs: print the plan (ports, RAM) and start nothing")
+    p.add_argument("--free-ram-gb", type=float, default=None, help="with --pairs: use this as the free RAM instead of reading the PC")
     p.add_argument("--stagger", type=float, default=cfg["launch"]["stagger_s"])
     p.add_argument("--ttl", type=int, default=1800, help="game slot lease in seconds (released by `down`)")
     p.add_argument("--slot-wait", type=int, default=3600)
@@ -396,6 +695,15 @@ def main(cfg: Config, argv: List[str]) -> int:
     p.add_argument("--owner", default=DEFAULT_OWNER)
     p = sub.add_parser("status")
     p.add_argument("--owner", default=DEFAULT_OWNER)
+    p.add_argument("--pairs", action="store_true", help="one row per host/client pair instead of one per instance")
+    p = sub.add_parser("swap", help="ask the adapter to swap new code into running copies")
+    p.add_argument("--owner", default=DEFAULT_OWNER)
+    p.add_argument("--instances", default="", help="comma list of instance numbers (default: every copy this owner started)")
+    p.add_argument("--pair", type=int, action="append", default=[], help="swap both copies of this pair; repeatable")
+    p.add_argument("--arg", action="append", default=[], metavar="KEY=VALUE", help="passed to the adapter as the payload; repeatable")
+    p.add_argument("--settle-s", type=float, default=20.0, help="how long a copy may take to be healthy again after its swap")
+    p.add_argument("--dry-run", action="store_true", help="only ask every copy whether it can be swapped")
+    p.add_argument("--out", default="", help="also write the JSON report to this file")
     p = sub.add_parser("job")
     p.add_argument("--id", required=True)
     p.add_argument("--n", type=int, default=2)
@@ -413,6 +721,8 @@ def main(cfg: Config, argv: List[str]) -> int:
         return cmd_down(cfg, a)
     if a.cmd == "status":
         return cmd_status(cfg, a)
+    if a.cmd == "swap":
+        return cmd_swap(cfg, a)
     cmd = [c for c in a.cmd_ if c != "--"]
     if not cmd:
         ap.error("job needs a command after --")

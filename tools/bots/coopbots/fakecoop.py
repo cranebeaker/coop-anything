@@ -16,7 +16,7 @@ import os
 import threading
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from .adapter import ActionAdapter, Result
+from .adapter import ActionAdapter, Result, Why, ensure
 from .core import DictComparer, Machine
 
 BUGS = {
@@ -47,6 +47,9 @@ BUGS = {
     "repair_after_quiet": "a late repair fires after the world has been quiet",
     "no_rebase": "clients keep their old world when the host loads an older save",
     "reward_dup_on_rejoin": "a client that rejoins gets every reward in the ledger again",
+    "client_frozen": "clients stop applying host updates without disconnecting (sync makes no progress)",
+    "timescale_ignored": "a client accepts the game speed but keeps running at normal speed",
+    "speed_not_reset": "a client that was sped up ignores the request to go back to normal speed",
 }
 
 
@@ -89,7 +92,14 @@ class FakeCoop:
         self.pending: List[List[Tuple[int, int, dict]]] = [[] for _ in range(n_players)]
         self.applied = [0] * n_players
         self.players = [{"pos": (0.0, 0.0, 0.0), "cell": "start", "inv": {"WEAPON": 1}, "aim": None, "equipped": None,
-                         "dialogue": None, "spectating": False, "consent": {}} for _ in range(n_players)]
+                         "dialogue": None, "spectating": False, "consent": {}, "menu": None, "box": "", "drawn": True}
+                        for _ in range(n_players)]
+        # Conditions a test can switch on to make an action fail for a reason the bot must say (not bugs: the world is correct).
+        self.walk_limit: Optional[float] = None     # a walk covers at most this many units, then the player is stuck
+        self.aim_min_dist: Optional[float] = None   # aiming at something closer than this is refused
+        self.max_pitch: Optional[float] = None      # aiming steeper than this many degrees is refused
+        self.speed = [1.0] * n_players              # the game speed of each machine (set_timescale)
+        self.speed_log: List[List[float]] = [[] for _ in range(n_players)]
         self.deferred: Dict[Tuple[str, int], dict] = {}     # barrier or ready check waiting for players
         self.early: Dict[str, Set[int]] = {}
         self.stats = {"mismatch": [0] * n_players, "repairs": [0] * n_players}
@@ -147,7 +157,7 @@ class FakeCoop:
         with self._lock:
             self.tick_n += 1
             for i in range(1, self.n):
-                if not self.connected[i]:
+                if not self.connected[i] or "client_frozen" in self.bugs:
                     continue
                 keep: List[Tuple[int, int, dict]] = []
                 blocked = False
@@ -350,7 +360,8 @@ class FakeAdapter(ActionAdapter):
         counters = {"bad_messages": 0, "apply_failures": 0, "repaired_effects": 0}
         if self.idx == 0:
             counters.update(mismatches=sum(w.stats["mismatch"]), repairs=sum(w.stats["repairs"]), rebases=0)
-            return {"seq": w.seq, "synced": all(not p for i, p in enumerate(w.pending) if w.connected[i]), "counters": counters}
+            return {"seq": w.seq, "synced": all(not p for i, p in enumerate(w.pending) if w.connected[i]), "counters": counters,
+                    "acks": {w.bots[i].name: w.applied[i] for i in range(1, w.n)}}
         counters.update(mismatches=0, repairs=0, rebases=w.rebases[self.idx])
         return {"seq": w.applied[self.idx], "counters": counters}
 
@@ -367,6 +378,19 @@ class FakeAdapter(ActionAdapter):
             json.dump([[n, [str(x) for x in a]] for n, a in self.actions], f, indent=1)
         return {"actions": p, "count": len(self.actions)}
 
+    # --- say why: what blocks input right now (the base class adds this text to every failed action) ---
+    def blockers(self):
+        out = []
+        if self.me["menu"]:
+            out.append(("menu", "the %s menu is open" % self.me["menu"]))
+        if self.me["box"]:
+            out.append(("message_box", "a message box is up (%s)" % self.me["box"]))
+        elif self.idx in self.world.boxes:
+            out.append(("message_box", "a confirm box is up"))
+        if self.me["equipped"] and not self.me["drawn"]:
+            out.append(("holstered", "the weapon %s is holstered" % self.me["equipped"]))
+        return out
+
     # --- movement ---
     def goto_ref(self, ref, dist=150):
         self._log("goto_ref", ref)
@@ -374,10 +398,18 @@ class FakeAdapter(ActionAdapter):
         if r is None:
             return Result(False, "%s is not loaded on %s" % (ref, self.name))
         off = dist * (0.5 + 0.1 * self.idx)     # players stop short of the object, each a bit differently
-        return self._move((r["pos"][0] + off, r["pos"][1], r["pos"][2]), r["cell"])
+        return self.act(lambda: self._move((r["pos"][0] + off, r["pos"][1], r["pos"][2]), r["cell"]), free=True, ignore=("holstered",),
+                        post=[lambda d: self._arrived(r["pos"], r["cell"], dist)])
 
     def goto_pos(self, x, y, z, cell=None):
-        return self._move((x, y, z), cell or self.me["cell"])
+        return self.act(lambda: self._move((x, y, z), cell or self.me["cell"]), free=True, ignore=("holstered",),
+                        post=[lambda d: self._arrived((x, y, z), cell or self.me["cell"], 50.0)])
+
+    def _arrived(self, target, cell, wanted) -> None:
+        """Postcondition of a walk: really within `wanted` of the target (the world may have stopped the player halfway)."""
+        left = self.world.dist(self.me["pos"], target)
+        if self.me["cell"] == cell and left > wanted * 1.5 + 100:
+            raise Why.stuck(left, wanted, "the player stopped %.0f units short" % (left - wanted))
 
     def _move(self, pos, cell) -> Result:
         w = self.world
@@ -385,6 +417,11 @@ class FakeAdapter(ActionAdapter):
             a = w.t(w.tether["anchor"])
             if a and w.dist(pos, a["pos"]) > w.tether["radius"]:
                 return Result(False, "tethered: %s units around the anchor" % w.tether["radius"])
+        if w.walk_limit is not None and cell == self.me["cell"]:      # a walk that cannot cover the whole way
+            d = w.dist(self.me["pos"], pos)
+            if d > w.walk_limit:
+                f = w.walk_limit / d
+                pos = tuple(a + (b - a) * f for a, b in zip(self.me["pos"], pos))
         self.me["pos"], self.me["cell"] = tuple(pos), cell
         w.rebalance_owners()
         return Result(True)
@@ -394,16 +431,33 @@ class FakeAdapter(ActionAdapter):
         if self.me["inv"].get(item, 0) <= 0:
             return Result(False, "%s is not in the inventory" % item)
         self.me["equipped"] = item
+        self.me["drawn"] = True
         return Result(True)
 
     def aim_at(self, ref):
         r = self._ref(ref)
         if r is None:
             return Result(False, "%s is not loaded on %s" % (ref, self.name))
-        if r["cell"] != self.me["cell"] or self.world.dist(r["pos"], self.me["pos"]) > 4000:
+        w = self.world
+        if r["cell"] != self.me["cell"] or w.dist(r["pos"], self.me["pos"]) > 4000:
             return Result(False, "target is out of range")
-        self.me["aim"] = norm(ref)
-        return Result(True)
+
+        def check_geometry():
+            d = w.dist(r["pos"], self.me["pos"])
+            if w.aim_min_dist is not None and d < w.aim_min_dist:
+                raise Why.too_close(d, w.aim_min_dist)
+            if w.max_pitch is not None:
+                flat = math.hypot(r["pos"][0] - self.me["pos"][0], r["pos"][1] - self.me["pos"][1])
+                pitch = math.degrees(math.atan2(abs(r["pos"][2] - self.me["pos"][2]), max(flat, 1e-6)))
+                if pitch > w.max_pitch:
+                    raise Why.too_steep(pitch, w.max_pitch, d)
+
+        def do():
+            self.me["aim"] = norm(ref)
+
+        def aimed(data):
+            ensure(self.me["aim"] == norm(ref), "postcondition", "the aim did not change to %s" % ref)
+        return self.act(do, free=True, ignore=("holstered",), pre=[check_geometry], post=[aimed])
 
     def fire(self, n=1):
         w, k = self.world, self.me["aim"]
@@ -411,6 +465,7 @@ class FakeAdapter(ActionAdapter):
             return Result(False, "nothing aimed at")
         if not self.me["equipped"]:
             return Result(False, "no weapon equipped")
+        self.require_free()           # a menu, a message box or a holstered weapon: fail with that reason, not with a silent miss
         hits = 0
         for _ in range(n):
             r = w.t(k)
@@ -699,7 +754,22 @@ class FakeAdapter(ActionAdapter):
                 inv[eff["item"]] = inv.get(eff["item"], 0) + eff["count"]
         return Result(True)
 
+    def set_timescale(self, x):
+        w = self.world
+        if x <= 0:
+            return Result(False, "refused: the game speed must be above 0, got %g" % x)
+        w.speed_log[self.idx].append(x)
+        if self.idx and "timescale_ignored" in w.bugs:
+            return Result(True)                                      # accepted, but nothing changed
+        if self.idx and "speed_not_reset" in w.bugs and x == 1.0 and w.speed[self.idx] != 1.0:
+            return Result(True)
+        w.speed[self.idx] = float(x)
+        return Result(True)
+
     # --- queries ---
+    def timescale(self):
+        return self.world.speed[self.idx]
+
     def cell(self):
         return self.me["cell"]
 

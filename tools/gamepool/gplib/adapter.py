@@ -23,13 +23,21 @@ rights, like any script you run.
             my_bridge_load_save(i, "base")
         def on_release(self, i):            # a lease ended; drop any game side lock
             my_bridge_unlock(i)
+
+A game with a hot reload tool (swap new code into a running copy, no restart) adds two more hooks. `gamepool.py swap` calls
+them and does nothing else game specific:
+
+        def can_swap(self, i, pid, payload):   # None when copy i can be swapped, else the reason it cannot
+            return None if my_tool_can_reload(i) else "no reload pipe"
+        def swap(self, i, pid, payload):       # do the swap; raise or return {"ok": False, "detail": ...} on failure
+            return my_tool_reload(i, **payload)
 """
 from __future__ import annotations
 
 import importlib.util
 import time
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Dict, Optional
 
 from . import winproc
 from .config import Config, ConfigError
@@ -56,6 +64,16 @@ class Adapter:
 
     def on_release(self, i: int) -> None:
         """A lease on instance i ended."""
+
+    def can_swap(self, i: int, pid: int, payload: Dict[str, str]) -> Optional[str]:
+        """None when copy i can have new code swapped in while it runs, else the reason it cannot. The default says it cannot,
+        so `swap` refuses before touching any copy unless an adapter provides the hook."""
+        return "this adapter has no swap hook (override can_swap and swap in your adapter)"
+
+    def swap(self, i: int, pid: int, payload: Dict[str, str]) -> Optional[Dict]:
+        """Swap new code into the running copy i. payload holds the --arg KEY=VALUE pairs of the command line. Raise an exception,
+        or return a dict with "ok": False and a "detail", to report a failure. A returned dict is shown in the report."""
+        raise NotImplementedError("this adapter has no swap hook")
 
     # ---- driven by the backend
     def wait_ready(self, i: int, pid: int, alive: Callable[[int], bool], timeout_s: float = 0.0) -> bool:

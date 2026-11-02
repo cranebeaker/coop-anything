@@ -40,7 +40,7 @@ if os.name != "nt":
     sys.exit(2)
 
 from gplib import adapter as adapter_mod, client, config, crashlog, daemon, fakes, inifile, instances, jobqueue  # noqa: E402
-from gplib import launcher, lowcost, poolcore as core, smoke, winproc  # noqa: E402
+from gplib import launcher, lowcost, pairs as pairs_mod, poolcore as core, smoke, winproc  # noqa: E402
 from gplib.backend import RealBackend, RealSlots  # noqa: E402
 from gplib.config import Config, ConfigError  # noqa: E402
 
@@ -1034,6 +1034,479 @@ def check_command_line(mut):
             sweep(cfg, ("clitest", "pool"))
 
 
+# ---------------------------------------------------------------------------------------------- pairs and swap
+def free_port_base(span=10):
+    """A port base such that base .. base+span are free for TCP and UDP right now. Chosen below the range Windows hands out for
+    outgoing connections (from 49152), so another program does not grab one of the ports a moment later."""
+    import random
+    for _ in range(300):
+        base = random.randint(20000, 45000)
+        if all(pairs_mod.port_free(base + k) for k in range(span)):
+            return base
+    raise RuntimeError("no free port range found")
+
+
+def pair_world(copy_gb=0.5, reserve_gb=0.0, base=None, adapter=None, edits=True):
+    """A fake world whose copies are one half of a host/client pair: the host listens on {port}, the client connects to it."""
+    base = base or free_port_base()
+    pc = {"port_base": base, "copy_gb": copy_gb, "reserve_gb": reserve_gb}
+    if edits:
+        pc["edits"] = {"Game.ini": [["Net", "iPort", "{port}"], ["Net", "sRole", "{role}"], ["Net", "iPair", "{pair}"]]}
+    extra = {"pairs": pc}
+    if adapter:
+        extra["adapter"] = adapter
+    cfg, tmp = make_world(game_args=["--role", "{role}", "--bind-port", "{port}"], extra=extra)
+    return cfg, tmp, base
+
+
+def lmain(cfg, args):
+    """launcher.main(cfg, args) in this process. Returns (exit code, stdout, stderr)."""
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        try:
+            rc = launcher.main(cfg, args)
+        except SystemExit as e:
+            rc = e.code
+    return rc, out.getvalue(), err.getvalue()
+
+
+def imain(cfg, args):
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        try:
+            rc = instances.main(cfg, args)
+        except SystemExit as e:
+            rc = e.code
+    return rc, out.getvalue(), err.getvalue()
+
+
+def ini_value(cfg, i, section, key):
+    return inifile.ini_get((cfg.instance_dir(i) / "Game.ini").read_text(encoding="latin-1"), section, key)
+
+
+def game_log(cfg, i):
+    p = cfg.instance_dir(i) / "game.log"
+    return p.read_text() if p.exists() else ""
+
+
+def check_pair_layout_math(mut):
+    hook(mut)
+    check(pairs_mod.aligned_ids(2, 1) == [2, 3, 4, 5], "pairs 1 and 2 are instances 2..5")
+    plan = pairs_mod.plan_pairs([0, 1, 2, 3], 30000)
+    check([(p["host"], p["client"], p["port"]) for p in plan] == [(0, 1, 30000), (2, 3, 30002)], f"two pairs, two ports: {plan}")
+    plan = pairs_mod.plan_pairs([1, 2, 3, 4], 30000)
+    check([(p["host"], p["client"], p["port"]) for p in plan] == [(1, 2, 30001), (3, 4, 30003)],
+          f"instance numbers that do not start at 0 still give each pair its own port: {plan}")
+    check(len({p["port"] for p in pairs_mod.plan_pairs(list(range(12)), 30000)}) == 6, "six pairs, six ports")
+    check(raises(ValueError, pairs_mod.plan_pairs, [0, 1, 2]), "an odd number of copies is refused")
+    check(raises(ValueError, pairs_mod.plan_pairs, [0, 1, 1, 2]), "a repeated instance is refused")
+    check(raises(ValueError, pairs_mod.plan_pairs, [2, 3], 65535), "a port above 65535 is refused")
+    check(raises(ValueError, pairs_mod.aligned_ids, 0), "zero pairs is refused")
+    ctx = pairs_mod.context_for(plan, 3)
+    check(ctx["role"] == "host" and ctx["pair"] == 1 and ctx["port"] == 30003 and ctx["client"] == 4, f"context of a host: {ctx}")
+    check(pairs_mod.context_for(plan, 4)["role"] == "client" and pairs_mod.context_for(plan, 9) is None, "context of a client, of a stranger")
+    check([pairs_mod.pair_state(a, b) for a, b in ((True, True), (True, False), (False, True), (False, False))] ==
+          ["up", "partial", "partial", "down"], "pair states")
+
+
+def check_ram_guard_math(mut):
+    hook(mut)
+    g = 2 ** 30
+    check(pairs_mod.max_pairs_by_ram(3 * g, 0, 0.7, 2.0) == 0, "1 GiB spare holds one copy, which is no pair")
+    check(pairs_mod.max_pairs_by_ram(int(5.8 * g), 0, 0.7, 2.0) == 2, "3.8 GiB spare holds five copies: two pairs")
+    check(pairs_mod.max_pairs_by_ram(int(3.1 * g), 2, 0.7, 2.0) == 1, "two copies already run: one more copy makes the second pair")
+    check(pairs_mod.max_pairs_by_ram(0, 0, 0.7, 2.0) == 0 and pairs_mod.max_pairs_by_ram(g, 0, 0.7, 2.0) == 0, "no spare RAM, no pairs")
+    check(pairs_mod.max_pairs_by_ram(12 * g, 0, 10.0, 2.0) == 0 and pairs_mod.max_pairs_by_ram(12 * g, 0, 0.5, 2.0) == 10,
+          "the memory of one copy decides")
+    check(pairs_mod.ram_problem(1, 0, 8 * g, 0.7, 2.0) is None, "one pair fits")
+    msg = pairs_mod.ram_problem(3, 0, 5 * g, 0.7, 2.0)
+    check(msg and "refusing 3 pair(s)" in msg and "4.2 GB" in msg and "at most 2 pair(s) fit" in msg and "--no-ram-check" in msg, f"the refusal explains itself: {msg}")
+    check(pairs_mod.ram_problem(2, 4, 2 * g, 0.7, 2.0) is None, "two pairs already up need no more memory")
+    check(isinstance(pairs_mod.free_ram_bytes(), int) and pairs_mod.free_ram_bytes() >= 0, "free RAM can be read")
+
+
+def check_pairs_config_validation(mut):
+    hook(mut)
+    ok = {"link": {"per_instance_files": ["a.ini"]}, "pairs": {"edits": {"a.ini": [["s", "k", "{port}"]]}}}
+    check(Config(ok)["pairs"]["port_base"] == 27960, "a good pairs block loads with its defaults")
+    for name, raw in (("edit of a file that is not private", {"pairs": {"edits": {"b.ini": [["s", "k", "v"]]}}}),
+                      ("low port", {"pairs": {"port_base": 80}}), ("zero memory per copy", {"pairs": {"copy_gb": 0}}),
+                      ("bad protocol", {"pairs": {"proto": "icmp"}}), ("unknown key", {"pairs": {"ports": 3}}),
+                      ("bad edit row", {"link": {"per_instance_files": ["a.ini"]}, "pairs": {"edits": {"a.ini": [["s", "k"]]}}})):
+        check(raises(ConfigError, Config, raw), f"must refuse: {name}")
+
+
+def check_provision_pairs(mut):
+    cfg, tmp, base = pair_world()
+    hook(mut)
+    rc, out, err = imain(cfg, ["provision", "--pairs", "2"])
+    check(rc == 0 and "pair=1 host port=%d" % (base + 2) in out, f"provision --pairs: {rc} {out} {err}")
+    for i, (role, port, pair) in enumerate([("host", base, 0), ("client", base, 0), ("host", base + 2, 1), ("client", base + 2, 1)]):
+        check(ini_value(cfg, i, "Net", "iPort") == str(port) and ini_value(cfg, i, "Net", "sRole") == role and ini_value(cfg, i, "Net", "iPair") == str(pair),
+              f"instance {i} is the {role} of pair {pair} on port {port}")
+    meta = instances.load_meta(cfg, 2)
+    check(meta["role"] == "host" and meta["port"] == base + 2 and meta["pair"] == 1, f"the pair is recorded in instance.json: {meta}")
+    rc, out, err = imain(cfg, ["provision", "--pairs", "1", "--first-pair", "2"])
+    check(rc == 0 and ini_value(cfg, 4, "Net", "iPort") == str(base + 4) and ini_value(cfg, 5, "Net", "sRole") == "client", "--first-pair adds pairs")
+    check(imain(cfg, ["provision", "--pairs", "2", "--n", "3"])[0] == 2, "--n that does not match --pairs is refused")
+    check(imain(cfg, ["provision", "--first-pair", "1"])[0] == 2, "--first-pair needs --pairs")
+    rc, out, err = imain(cfg, ["destroy", "--pairs", "1", "--first-pair", "2"])
+    check(rc == 0 and not cfg.instance_dir(4).exists() and cfg.instance_dir(0).exists(), "destroy --pairs removes just those instances")
+    # the edit goes into a private file only: a file that is a hard link into the install is refused
+    d = cfg.instance_dir(1)
+    (d / "Game.ini").unlink()
+    os.link(cfg.game_dir / "Game.ini", d / "Game.ini")
+    before = sha(cfg.game_dir / "Game.ini")
+    check(raises(instances.UnsafeTarget, instances.apply_pair_edits, cfg, 1, pairs_mod.context_for(pairs_mod.plan_pairs([0, 1]), 1)),
+          "a pair edit never writes through a link into the install")
+    check(sha(cfg.game_dir / "Game.ini") == before, "the install is untouched")
+
+
+def check_up_pairs_refuses_without_ram(mut):
+    cfg, tmp, base = pair_world(copy_gb=0.7, reserve_gb=2.0)
+    big, _, _ = pair_world(copy_gb=10.0, reserve_gb=2.0)
+    small, _, _ = pair_world(copy_gb=0.5, reserve_gb=2.0)
+    hook(mut)
+    with slot_env(tmp, 6):
+        rc, out, err = lmain(cfg, ["up", "--pairs", "2", "--dry-run", "--free-ram-gb", "3", "--owner", "pt"])
+        check(rc == 4 and "refusing 2 pair(s)" in err and "at most 0 pair(s) fit" in err, f"3 GB free is not enough for two pairs: {rc} {err}")
+        rep = json.loads(out)
+        check(rep["ram"]["ok"] is False and rep["ram"]["max_pairs"] == 0 and rep["ram"]["copy_gb"] == 0.7, f"the numbers are in the plan: {rep['ram']}")
+        rc, out, err = lmain(cfg, ["up", "--pairs", "2", "--free-ram-gb", "3", "--owner", "pt", "--allow-foreign"])
+        check(rc == 4 and "refusing" in err, f"a real start is refused the same way: {rc} {err}")
+        check(all(s["free"] for s in slot_status()["slots"]), "no game slot was taken")
+        check(not any(game_log(cfg, i) for i in range(4)) and launcher.load_state(cfg, "pt")["procs"] == {}, "no copy was started")
+        rc, out, err = lmain(cfg, ["up", "--pairs", "2", "--dry-run", "--free-ram-gb", "3", "--no-ram-check", "--owner", "pt"])
+        check(rc == 0 and json.loads(out)["ram"]["checked"] is False, f"--no-ram-check overrides: {rc} {err}")
+        rc, out, err = lmain(big, ["up", "--pairs", "2", "--dry-run", "--free-ram-gb", "12", "--owner", "pt"])
+        check(rc == 4 and "40.0 GB" in err, f"a copy that needs 10 GB: two pairs do not fit in 12 GB: {rc} {err}")
+        rc, out, err = lmain(small, ["up", "--pairs", "2", "--dry-run", "--free-ram-gb", "12", "--owner", "pt"])
+        check(rc == 0, f"a copy that needs 0.5 GB: two pairs fit in 12 GB: {rc} {err}")
+        rc, out, err = lmain(cfg, ["up", "--pairs", "2", "--n", "3", "--dry-run", "--owner", "pt"])
+        check(rc == 2 and "does not match" in err, f"--n and --pairs must agree: {rc} {err}")
+
+
+def check_up_pairs_dry_run_plan(mut):
+    cfg, tmp, base = pair_world()
+    hook(mut)
+    with slot_env(tmp, 6):
+        rc, out, err = lmain(cfg, ["up", "--pairs", "2", "--dry-run", "--free-ram-gb", "50", "--owner", "pt"])
+        rep = json.loads(out)
+        check(rc == 0 and rep["assumed_instances"] == [0, 1, 2, 3], f"dry run: {rc} {out} {err}")
+        check([(p["host"], p["client"], p["port"]) for p in rep["pairs"]] == [(0, 1, base), (2, 3, base + 2)], f"ports of the plan: {rep['pairs']}")
+        check(rep["port_problems"] == [] and not any(game_log(cfg, i) for i in range(4)), "a dry run starts nothing")
+
+
+def check_up_pairs_needs_free_ports(mut):
+    cfg, tmp, base = pair_world()
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", base))
+    srv.listen(1)
+    hook(mut)
+    try:
+        with slot_env(tmp, 6):
+            instances.provision(cfg, 0)
+            instances.provision(cfg, 1)
+            rc, out, err = lmain(cfg, ["up", "--pairs", "1", "--free-ram-gb", "50", "--allow-foreign", "--owner", "pt", "--slot-wait", "5"])
+            check(rc == 4 and f"port {base} is already in use" in err, f"a busy port stops the start: {rc} {err}")
+            check(launcher.load_state(cfg, "pt")["procs"] == {} and all(s["free"] for s in slot_status()["slots"]),
+                  "no copy was started and the slots were given back")
+            rc, out, err = lmain(cfg, ["up", "--pairs", "1", "--dry-run", "--free-ram-gb", "50", "--owner", "pt"])
+            check(rc == 4 and json.loads(out)["port_problems"], f"the dry run reports the busy port: {rc} {out}")
+    finally:
+        srv.close()
+        with slot_env(tmp, 6):
+            sweep(cfg, ("pt",))
+
+
+def up_two_pairs(cfg, tmp, owner="pt", extra=()):
+    rc, out, err = lmain(cfg, ["up", "--pairs", "2", "--free-ram-gb", "50", "--allow-foreign", "--owner", owner, "--slot-wait", "5", *extra])
+    return rc, out, err
+
+
+def check_pairs_up_status_down(mut):
+    cfg, tmp, base = pair_world()
+    with slot_env(tmp, 6):
+        hook(mut)
+        try:
+            check(imain(cfg, ["provision", "--pairs", "2"])[0] == 0, "provision")
+            rc, out, err = up_two_pairs(cfg, tmp)
+            check(rc == 0, f"two pairs start: {rc} {out} {err}")
+            check(f"pair 0: host instance 0, client instance 1, port {base}" in out and f"pair 1: host instance 2, client instance 3, port {base + 2}" in out,
+                  f"the plan is printed: {out}")
+            for i, (role, port) in enumerate([("host", base), ("client", base), ("host", base + 2), ("client", base + 2)]):
+                check(f"role={role} port={port}" in game_log(cfg, i), f"instance {i} runs as the {role} on port {port}: {game_log(cfg, i)!r}")
+            for port in (base, base + 2):
+                socket.create_connection(("127.0.0.1", port), timeout=2).close()      # each host listens on its own port
+            check(ini_value(cfg, 2, "Net", "iPort") == str(base + 2), "the pair settings are in the private files")
+            rc, out, err = lmain(cfg, ["status", "--pairs", "--owner", "pt"])
+            rows = json.loads(out)
+            check(rc == 0 and [(r["pair"], r["port"], r["state"]) for r in rows] == [(0, base, "up"), (1, base + 2, "up")], f"status per pair: {out}")
+            check(all(r["host"]["alive"] and r["client"]["alive"] and r["host"]["ready"] and r["client"]["ready"] for r in rows), "both copies of both pairs are alive and ready")
+            rc, out, err = lmain(cfg, ["status", "--owner", "pt"])
+            inst = {r["instance"]: r for r in json.loads(out)}
+            check(inst[2]["role"] == "host" and inst[3]["role"] == "client" and inst[3]["port"] == base + 2 and inst[3]["pair"] == 1,
+                  f"the instance rows carry pair, role and port: {inst[3]}")
+            rc, out, err = up_two_pairs(cfg, tmp)
+            check(rc == 0 and out.count("already up") == 4, f"a second `up` finds its own pairs running and does not refuse their ports: {rc} {out} {err}")
+            rec = launcher.load_state(cfg, "pt")["procs"]["3"]
+            winproc.kill_pid(rec["pid"])                                                # the client of pair 1 dies
+            check(wait_for(lambda: not winproc.pid_alive(rec["pid"])), "the client is gone")
+            rows = json.loads(lmain(cfg, ["status", "--pairs", "--owner", "pt"])[1])
+            check([(r["pair"], r["state"]) for r in rows] == [(0, "up"), (1, "partial")], f"one pair lost a copy: {[(r['pair'], r['state']) for r in rows]}")
+            check(rows[1]["client"]["alive"] is False and rows[1]["host"]["alive"] is True, "the dead copy is the client")
+            rc, out, err = lmain(cfg, ["down", "--owner", "pt"])
+            check(rc == 0 and json.loads(lmain(cfg, ["status", "--pairs", "--owner", "pt"])[1]) == [], "after down no pair is listed")
+            check(wait_for(lambda: pairs_mod.port_free(base) and pairs_mod.port_free(base + 2), 10), "the ports are free again")
+            check(all(s["free"] for s in slot_status()["slots"]), "the slots are free")
+        finally:
+            sweep(cfg, ("pt",))
+
+
+def check_pairs_with_slots_that_do_not_start_at_zero(mut):
+    """Another agent holds slot 0: this one gets 1..4. The pairs are (1,2) and (3,4), and the ports and roles written into the
+    private files at `up` follow the real instance numbers, not the numbers provisioning assumed."""
+    cfg, tmp, base = pair_world()
+    with slot_env(tmp, 6):
+        try:
+            check(imain(cfg, ["provision", "--pairs", "3"])[0] == 0, "provision")
+            check(launcher.slot_acquire("other", ttl=300, wait=5, slots=1) == [0], "another agent holds slot 0")
+            check(ini_value(cfg, 1, "Net", "sRole") == "client" and ini_value(cfg, 1, "Net", "iPort") == str(base), "provisioned for the aligned layout")
+            hook(mut)
+            rc, out, err = up_two_pairs(cfg, tmp)
+            check(rc == 0, f"{rc} {out} {err}")
+            check(f"pair 0: host instance 1, client instance 2, port {base + 1}" in out and f"pair 1: host instance 3, client instance 4, port {base + 3}" in out,
+                  f"pairs follow the slots: {out}")
+            check(ini_value(cfg, 1, "Net", "sRole") == "host" and ini_value(cfg, 1, "Net", "iPort") == str(base + 1), "instance 1 was rewritten as a host")
+            check(ini_value(cfg, 4, "Net", "sRole") == "client" and ini_value(cfg, 4, "Net", "iPort") == str(base + 3), "instance 4 was rewritten as a client")
+            check(f"role=host port={base + 1}" in game_log(cfg, 1) and f"role=client port={base + 3}" in game_log(cfg, 4), "the copies got the same values on their command lines")
+            check(not game_log(cfg, 0), "the slot of the other agent was not used")
+        finally:
+            lmain(cfg, ["down", "--owner", "pt"])
+            launcher.slot_release("other")
+            sweep(cfg, ("pt",))
+
+
+def swap_adapter_source():
+    return ("import os\nfrom gplib import winproc\nfrom gplib.adapter import Adapter\n\n\n"
+            "class SwapAdapter(Adapter):\n"
+            "    def can_swap(self, i, pid, payload):\n"
+            "        return 'no reload pipe' if str(i) == os.environ.get('TEST_CANT_SWAP') else None\n\n"
+            "    def swap(self, i, pid, payload):\n"
+            "        with open(self.cfg.instance_dir(i) / 'swapped.log', 'a') as f:\n"
+            "            f.write(repr(sorted(payload.items())) + '\\n')\n"
+            "        if str(i) == os.environ.get('TEST_RAISE_ON'):\n"
+            "            raise RuntimeError('reload failed')\n"
+            "        if str(i) == os.environ.get('TEST_REPORT_FAIL'):\n"
+            "            return {'ok': False, 'detail': 'dll rejected'}\n"
+            "        if str(i) == os.environ.get('TEST_KILL'):\n"
+            "            winproc.kill_pid(pid)\n"
+            "            for _ in range(100):\n"
+            "                if not winproc.pid_alive(pid):\n"
+            "                    break\n"
+            "                __import__('time').sleep(0.05)\n"
+            "        return {'detail': 'reloaded ' + payload.get('dll', '')}\n\n"
+            "    def probe(self, i, pid):\n"
+            "        if str(i) == os.environ.get('TEST_UNHEALTHY') and (self.cfg.instance_dir(i) / 'swapped.log').exists():\n"
+            "            return False\n"
+            "        return super().probe(i, pid)\n")
+
+
+def swap_lines(cfg, i):
+    p = cfg.instance_dir(i) / "swapped.log"
+    return p.read_text().splitlines() if p.exists() else []
+
+
+def swap_run(cfg, extra, **envkw):
+    with env(**envkw):
+        rc, out, err = lmain(cfg, ["swap", "--owner", "pt", "--settle-s", "0.5", *extra])
+    try:
+        rep = json.loads(out)
+    except ValueError:
+        rep = None
+    return rc, rep, err
+
+
+def check_swap_hook(mut):
+    cfg, tmp, base = pair_world(adapter="my_swap.py:SwapAdapter", edits=False)
+    (tmp / "my_swap.py").write_text(swap_adapter_source())
+    plain = Config(dict(cfg.raw, adapter=""), tmp)                      # the same copies, an adapter without a swap hook
+    with slot_env(tmp, 6):
+        try:
+            check(imain(cfg, ["provision", "--pairs", "2"])[0] == 0, "provision")
+            rc, out, err = up_two_pairs(cfg, tmp)
+            check(rc == 0, f"{rc} {out} {err}")
+            pids = {i: launcher.load_state(cfg, "pt")["procs"][str(i)]["pid"] for i in range(4)}
+            hook(mut)
+            rc, rep, err = swap_run(cfg, ["--dry-run"])
+            check(rc == 0 and rep["dry_run"] and [r["status"] for r in rep["results"]] == ["can_swap"] * 4 and not any(swap_lines(cfg, i) for i in range(4)),
+                  f"dry run asks and swaps nothing: {rc} {rep} {err}")
+            rc, rep, err = swap_run(cfg, ["--arg", "dll=new.dll", "--arg", "mode=fast"])
+            check(rc == 0 and rep["ok"] and rep["swapped"] == 4 and [r["instance"] for r in rep["results"]] == [0, 1, 2, 3], f"swap all: {rc} {rep} {err}")
+            check(all(swap_lines(cfg, i) == ["[('dll', 'new.dll'), ('mode', 'fast')]"] for i in range(4)), "the adapter got the payload for every copy")
+            check([(r["pair"], r["role"]) for r in rep["results"]] == [(0, "host"), (0, "client"), (1, "host"), (1, "client")], "the report names pair and role")
+            check(rep["results"][0]["detail"] == "reloaded new.dll" and rep["payload"] == {"dll": "new.dll", "mode": "fast"}, "the adapter's detail and the payload are in the report")
+            check(all(winproc.pid_alive(p) for p in pids.values()) and {i: launcher.load_state(cfg, "pt")["procs"][str(i)]["pid"] for i in range(4)} == pids,
+                  "the copies are the same processes after the swap")
+            # refused before any copy is touched
+            rc, rep, err = swap_run(cfg, [], TEST_CANT_SWAP="2")
+            check(rc == 2 and rep["refused"] == [{"instance": 2, "reason": "no reload pipe"}] and "instance 2 cannot be swapped: no reload pipe" in err, f"refusal: {rc} {rep} {err}")
+            check(all(len(swap_lines(cfg, i)) == 1 for i in range(4)), "a refused swap touched no copy")
+            # the first failure stops the rest
+            rc, rep, err = swap_run(cfg, [], TEST_RAISE_ON="1")
+            check(rc == 1 and [r["status"] for r in rep["results"]] == ["swapped", "failed", "skipped", "skipped"] and "reload failed" in rep["results"][1]["detail"],
+                  f"a failing copy stops the swap: {rc} {rep}")
+            check([len(swap_lines(cfg, i)) for i in range(4)] == [2, 2, 1, 1], "copies after the failure were not swapped")
+            rc, rep, err = swap_run(cfg, [], TEST_REPORT_FAIL="0")
+            check(rc == 1 and rep["results"][0]["status"] == "failed" and rep["results"][0]["detail"] == "dll rejected" and rep["results"][1]["status"] == "skipped",
+                  f"a returned failure is a failure: {rc} {rep}")
+            rc, rep, err = swap_run(cfg, [], TEST_UNHEALTHY="0")
+            check(rc == 1 and "not healthy" in rep["results"][0]["detail"], f"a copy that is not healthy after its swap fails it: {rc} {rep}")
+            # which copies
+            before = [len(swap_lines(cfg, i)) for i in range(4)]
+            rc, rep, err = swap_run(cfg, ["--pair", "1"])
+            check(rc == 0 and [r["instance"] for r in rep["results"]] == [2, 3] and [len(swap_lines(cfg, i)) for i in range(4)] == [before[0], before[1], before[2] + 1, before[3] + 1],
+                  f"--pair 1 swaps only that pair: {rc} {rep}")
+            rc, rep, err = swap_run(cfg, ["--instances", "3,0"])
+            check(rc == 0 and [r["instance"] for r in rep["results"]] == [3, 0], f"--instances keeps the order given: {rc} {rep}")
+            for bad, why in ((["--instances", "9"], "not running"), (["--instances", "x"], "not numbers"), (["--pair", "7"], "no such pair"), (["--arg", "novalue"], "bad --arg")):
+                check(swap_run(cfg, bad)[0] == 2, f"must refuse: {why}")
+            # an adapter without a swap hook
+            n = [len(swap_lines(cfg, i)) for i in range(4)]
+            rc, out, err = lmain(plain, ["swap", "--owner", "pt"])
+            check(rc == 2 and "no swap hook" in err and [len(swap_lines(cfg, i)) for i in range(4)] == n, f"no hook, no swap: {rc} {err}")
+            # a swap that kills the copy
+            rc, rep, err = swap_run(cfg, ["--instances", "0"], TEST_KILL="0")
+            check(rc == 1 and "gone or was replaced" in rep["results"][0]["detail"], f"a copy that died during its swap is a failure: {rc} {rep}")
+            rc, rep, err = swap_run(cfg, ["--instances", "0"])
+            check(rc == 2 and "instance 0 is not running" in err, f"a dead copy is not swapped: {rc} {err}")
+        finally:
+            lmain(cfg, ["down", "--owner", "pt"])
+            sweep(cfg, ("pt",))
+
+
+def check_swap_and_pairs_command_line(mut):
+    cfg, tmp, base = pair_world(adapter="my_swap.py:SwapAdapter", copy_gb=0.01, reserve_gb=0.0)
+    (tmp / "my_swap.py").write_text(swap_adapter_source())
+    cfgfile = tmp / "game.json"
+    cfgfile.write_text(json.dumps(cfg.raw))
+    state, slots = tmp / "cli-state", tmp / "cli-slots"
+    slots.mkdir()
+    (slots / "gameslot_config.json").write_text(json.dumps({"slots": 4, "min_free_gb": 0}))
+    e = dict(os.environ, GAMEPOOL_DIR=str(state), GAMESLOT_DIR=str(slots), GAMESLOT_POLL="0.05", GAMEPOOL_OWNER="clipairs",
+             PYTHONPATH=str(HERE))
+    e.pop("GAMEPOOL_CONFIG", None)
+    hook(mut)
+    try:
+        rc, out, err = run_cli(["--config", str(cfgfile), "provision", "--pairs", "2"], e)
+        check(rc == 0 and "pair=1 client port=%d" % (base + 2) in out, f"provision --pairs: {rc} {out} {err}")
+        rc, out, err = run_cli(["--config", str(cfgfile), "up", "--pairs", "2", "--allow-foreign", "--stagger", "0"], e)
+        check(rc == 0 and out.count("ready") == 4, f"up --pairs: {rc} {out} {err}")
+        rc, out, err = run_cli(["--config", str(cfgfile), "status", "--pairs"], e)
+        rows = json.loads(out)
+        check(rc == 0 and [r["state"] for r in rows] == ["up", "up"] and [r["port"] for r in rows] == [base, base + 2], f"status --pairs: {out} {err}")
+        rc, out, err = run_cli(["--config", str(cfgfile), "swap", "--arg", "dll=x.dll", "--settle-s", "1", "--out", str(tmp / "swap.json")], e)
+        check(rc == 0 and json.loads(out)["swapped"] == 4 and json.loads((tmp / "swap.json").read_text())["ok"], f"swap: {rc} {out} {err}")
+        rc, out, err = run_cli(["--config", str(cfgfile), "up", "--pairs", "1", "--n", "3"], e)
+        check(rc == 2, f"--pairs and --n disagree: {rc} {err}")
+        rc, out, err = run_cli(["--config", str(cfgfile), "down"], e)
+        check(rc == 0 and "RELEASED" in out, f"down: {out} {err}")
+        rc, out, err = run_cli(["--config", str(cfgfile), "swap"], e)
+        check(rc == 2 and "no running copies" in err, f"swap with nothing running: {rc} {err}")
+    finally:
+        with env(GAMEPOOL_DIR=state, GAMESLOT_DIR=slots):
+            sweep(cfg, ("clipairs",))
+
+
+# ---------------------------------------------------------------------------------------------- twins: pairs and swap
+def tw_pairs_share_a_port(**_):
+    patch(pairs_mod, "port_of", lambda host, base=27960: int(base))
+
+
+def tw_roles_swapped(**_):
+    real = pairs_mod.context_for
+
+    def swapped(plan, i):
+        ctx = real(plan, i)
+        if ctx:
+            ctx = dict(ctx, role="client" if ctx["role"] == "host" else "host")
+        return ctx
+    patch(pairs_mod, "context_for", swapped)
+
+
+def tw_ram_always_fits(**_):
+    patch(pairs_mod, "ram_problem", lambda *a, **k: None)
+
+
+def tw_ram_ignores_running_copies(**_):
+    real = pairs_mod.max_pairs_by_ram
+    patch(pairs_mod, "max_pairs_by_ram", lambda free, up=0, copy_gb=2.0, reserve_gb=2.0: real(free, 0, copy_gb, reserve_gb))
+
+
+def tw_ram_ignores_config_copy_gb(**_):
+    real = pairs_mod.ram_problem
+    patch(pairs_mod, "ram_problem", lambda pairs, up, free, copy_gb=0.7, reserve_gb=2.0: real(pairs, up, free, 0.7, reserve_gb))
+
+
+def tw_no_port_check(**_):
+    patch(pairs_mod, "port_problems", lambda plan, proto="both", skip_pairs=(), is_free=None: [])
+
+
+def tw_own_ports_checked(**_):
+    patch(launcher, "running_pairs", lambda cfg, plan, owner: [])
+
+
+def tw_pair_state_always_up(**_):
+    patch(pairs_mod, "pair_state", lambda host_alive, client_alive: "up")
+
+
+def tw_pair_edits_not_applied_at_up(**_):
+    patch(instances, "apply_pair_edits", lambda cfg, i, ctx: [])
+
+
+def tw_no_pairs_validation(**_):
+    patch(Config, "_validate_pairs", lambda self, per: None)
+
+
+def tw_swap_without_precheck(**_):
+    patch(launcher, "swap_refusals", lambda adapter, targets, payload: [])
+
+
+def tw_swap_continues_after_failure(**_):
+    real = launcher.run_swap
+    patch(launcher, "run_swap", lambda cfg, adapter, targets, payload, settle_s, say=None, stop_on_failure=True:
+          real(cfg, adapter, targets, payload, settle_s, say, False))
+
+
+def tw_swap_not_verified(**_):
+    patch(launcher, "swap_verify", lambda cfg, adapter, t, settle_s: None)
+
+
+def tw_swap_drops_payload(**_):
+    real = launcher.run_swap
+    patch(launcher, "run_swap", lambda cfg, adapter, targets, payload, settle_s, say=None, stop_on_failure=True:
+          real(cfg, adapter, targets, {}, settle_s, say, stop_on_failure))
+
+
+def tw_swap_ignores_returned_failure(**_):
+    real_run = launcher.run_swap
+
+    class Wrap:
+        """The adapter, except that a returned {"ok": False} loses its failure flag."""
+        def __init__(self, inner):
+            self.inner = inner
+
+        def swap(self, i, pid, payload):
+            res = self.inner.swap(i, pid, payload)
+            return {"detail": res.get("detail", "")} if isinstance(res, dict) else res
+
+        def __getattr__(self, name):
+            return getattr(self.inner, name)
+
+    patch(launcher, "run_swap", lambda cfg, adapter, targets, payload, settle_s, say=None, stop_on_failure=True:
+          real_run(cfg, Wrap(adapter), targets, payload, settle_s, say, stop_on_failure))
+
+
 # ---------------------------------------------------------------------------------------------- twins (one broken guard each)
 def tw_no_config_validation(**_):
     patch(Config, "validate", lambda self: None)
@@ -1196,6 +1669,10 @@ REAL = [
     check_daemon_and_client, check_client_when_pool_is_not_running, check_real_slots_through_gameslot,
     check_real_pool_with_stand_in_processes, check_smoke_run_cleans_up, check_probe_starts_one_copy_and_stops_it,
     check_command_line,
+    check_pair_layout_math, check_ram_guard_math, check_pairs_config_validation, check_provision_pairs,
+    check_up_pairs_refuses_without_ram, check_up_pairs_dry_run_plan, check_up_pairs_needs_free_ports,
+    check_pairs_up_status_down, check_pairs_with_slots_that_do_not_start_at_zero, check_swap_hook,
+    check_swap_and_pairs_command_line,
 ]
 
 TWINS = [
@@ -1230,6 +1707,25 @@ TWINS = [
     (check_pool_slot_renew_and_pids, "slot_never_renewed", tw_slot_never_renewed),
     (check_pool_slot_renew_and_pids, "pids_not_registered", tw_pids_not_registered),
     (check_daemon_and_client, "no_dirty_recycle", tw_no_dirty),
+    (check_pair_layout_math, "pairs_share_a_port", tw_pairs_share_a_port),
+    (check_provision_pairs, "pairs_share_a_port", tw_pairs_share_a_port),
+    (check_pairs_up_status_down, "pairs_share_a_port", tw_pairs_share_a_port),
+    (check_provision_pairs, "roles_swapped", tw_roles_swapped),
+    (check_pairs_up_status_down, "roles_swapped", tw_roles_swapped),
+    (check_provision_pairs, "no_write_guard", tw_no_write_guard),
+    (check_pairs_config_validation, "no_pairs_validation", tw_no_pairs_validation),
+    (check_ram_guard_math, "ram_ignores_running_copies", tw_ram_ignores_running_copies),
+    (check_up_pairs_refuses_without_ram, "ram_always_fits", tw_ram_always_fits),
+    (check_up_pairs_refuses_without_ram, "ram_ignores_config_copy_gb", tw_ram_ignores_config_copy_gb),
+    (check_up_pairs_needs_free_ports, "no_port_check", tw_no_port_check),
+    (check_pairs_up_status_down, "own_ports_checked", tw_own_ports_checked),
+    (check_pairs_up_status_down, "pair_state_always_up", tw_pair_state_always_up),
+    (check_pairs_with_slots_that_do_not_start_at_zero, "pair_edits_not_applied_at_up", tw_pair_edits_not_applied_at_up),
+    (check_swap_hook, "swap_without_precheck", tw_swap_without_precheck),
+    (check_swap_hook, "swap_continues_after_failure", tw_swap_continues_after_failure),
+    (check_swap_hook, "swap_result_unchecked", tw_swap_not_verified),
+    (check_swap_hook, "swap_drops_payload", tw_swap_drops_payload),
+    (check_swap_hook, "swap_ignores_returned_failure", tw_swap_ignores_returned_failure),
 ]
 
 

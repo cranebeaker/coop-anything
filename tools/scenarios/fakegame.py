@@ -8,6 +8,15 @@ deliberate bugs that the scenario checks must catch:
     double_spawn  every spawn creates two
     dup_loot      a picked up world item can be picked up again
     no_handoff    walking away from the actors does not hand them to the guest
+    popups_persist  a prepared save raises its popups again (the reload check must catch it)
+    name_prefix   save_game only accepts names that start with this text (an engine with a naming rule)
+
+The optional hooks of gameadapter.py are switched on per world, so a plain world behaves like a game without them:
+
+    w.sim = SyncSim(...)             sync_status(): a host and clients that join and catch up as the virtual clock advances
+    w.popup_offsets = [2, 3, ...]    popup_count() and dismiss_popup(): popups that appear that many seconds after each load
+    w.index = {"id": "kind"}         data_index()
+    w.refuse_loads = {"name"}        load_save(name) raises ScenarioError for these names
 
 A FakeGame is a GameAdapter, so the same Runner code that drives a real game drives it.
 """
@@ -41,6 +50,13 @@ class World:
         self.coords = {}             # id -> (x, y) for distance checks; unknown ids get a stable made-up spot
         self.values = {}             # answers for the free `value` check
         self.loads, self.saves, self.calls = [], {}, []
+        self.sim = None                  # SyncSim: answers sync_status() when set (else the fake has no sync readings)
+        self.index = None                # {id: kind}: answers data_index() when set
+        self.popup_offsets = None        # seconds after a load at which each popup appears; None = popup_count() cannot tell
+        self.popup_loaded_at, self.popup_pressed = {}, {}
+        self.clean_saves = set()         # saves written after every popup was pressed: loading them raises none
+        self.save_files, self.save_log = {}, []   # (instance, name) -> version of the save file; (instance, name) in write order
+        self.refuse_loads = set()
         self.lock = threading.RLock()    # parallel steps run in threads; one action at a time keeps the fake deterministic
         self.reset_world()
 
@@ -59,6 +75,10 @@ class World:
         if far:
             self.flags.setdefault("handoff_place", far)
 
+    def touch_save(self, i, name):
+        """Change the save file `name` of instance i, as the game or the owner replacing it would."""
+        self.save_files[(i, name)] = self.save_files.get((i, name), 0) + 1
+
     def where(self, key):
         if key not in self.pos:
             self.pos[key] = self.coords.get(key, (sum(map(ord, key)) * 37 % 9000 + 2000, 0))
@@ -66,8 +86,11 @@ class World:
 
 
 class FakeGame(GameAdapter):
+    ROLLING_SAVES = ("autosave", "quicksave")
+
     def __init__(self, world, i, clock, lacks=()):
         self.w, self.i, self.clock = world, i, clock
+        self.instance = i                  # the id a factory would have given this copy; tests change it to model a second pair
         self.OPS = ALL_CAPS - set(lacks)
 
     # -- helpers
@@ -88,6 +111,8 @@ class FakeGame(GameAdapter):
     def _do(self, op, args):
         w, i = self.w, self.i
         self._log("do", "%s %r" % (op, args))
+        if w.sim is not None and op in scenlib.SETTLE_OPS:
+            w.sim.on_op(self.clock.now())
         if op == "set_state":
             w.state[args["key"]] = args["value"]
             w.reached.setdefault(args["key"], set()).add(args["value"])
@@ -183,18 +208,135 @@ class FakeGame(GameAdapter):
 
     def load_save(self, name):
         self._log("load", name)
+        if name in self.w.refuse_loads:
+            raise ScenarioError("load failed: the game refused save %s" % name)
         self.w.loads.append((self.i, name))
         self.w.reset_world()
         snap = self.w.saves.get(name)
         if snap:
             self.w.state, self.w.reached = dict(snap[0]), {k: set(v) for k, v in snap[1].items()}
+        if self.w.popup_offsets is not None:   # a clean save raises no popups; every other save raises all of them again
+            self.w.popup_loaded_at[self.i] = self.clock.now()
+            self.w.popup_pressed[self.i] = 0
+            if name in self.w.clean_saves and not self.w.flags.get("popups_persist"):
+                self.w.popup_loaded_at.pop(self.i)
+        if self.w.sim is not None:
+            self.w.sim.on_load(self.clock.now())
 
     def save_game(self, name):
         self._log("save", name)
+        prefix = self.w.flags.get("name_prefix")
+        if prefix and not name.startswith(prefix):
+            raise ScenarioError("the engine refused the save name %s" % name)
         self.w.saves[name] = (dict(self.w.state), {k: set(v) for k, v in self.w.reached.items()})
+        if self.w.popup_offsets is not None:
+            # clean = every popup of this copy has appeared and was pressed (one that is still to come would be missing from the save)
+            done = self.w.popup_loaded_at.get(self.i) is None or (
+                self.w.popup_pressed.get(self.i, 0) >= len(self.w.popup_offsets) and self._open_popups() == 0)
+            (self.w.clean_saves.add if done else self.w.clean_saves.discard)(name)
+        self.w.save_log.append((self.i, name))
+        self.w.touch_save(self.i, name)
+
+    # -- optional hooks
+    def sync_status(self):
+        return self.w.sim.status(self.i, self.clock.now()) if self.w.sim is not None else None
+
+    def _open_popups(self):
+        """Popups that have appeared since this copy loaded and are not pressed yet (a popup stays up until pressed)."""
+        w = self.w
+        if self.i not in w.popup_loaded_at:
+            return 0
+        shown = sum(1 for off in w.popup_offsets if off <= self.clock.now() - w.popup_loaded_at[self.i])
+        return max(0, shown - w.popup_pressed.get(self.i, 0))
+
+    def popup_count(self):
+        return None if self.w.popup_offsets is None else self._open_popups()
+
+    def dismiss_popup(self):
+        if self.w.popup_offsets is None or self._open_popups() == 0:
+            return False
+        self.w.popup_pressed[self.i] = self.w.popup_pressed.get(self.i, 0) + 1
+        return True
+
+    def prepared_names(self, save):
+        return ["coop_%s_ready" % save, "autosave_coop_%s_ready" % save]    # the second one is for an engine with a naming rule
+
+    def save_exists(self, name):
+        return (self.i, name) in self.w.save_files
+
+    def save_stamp(self, name):
+        return self.w.save_files.get((self.i, name))
+
+    def data_index(self):
+        return self.w.index
 
 
 def make(n=2, lacks=(), **flags):
     w = World(**flags)
     clock = Clock()
     return w, clock, [FakeGame(w, i, clock, lacks) for i in range(n)]
+
+
+class SyncSim:
+    """sync_status() of a host (instance 0) and clients (the others), as a function of the time since the last load.
+
+    join_at: s until the clients have joined; catch_up_s: s until they applied the host head; digests start at digest_from and then
+    one arrives every `every` s. digests picks the host's judgement of them:
+      "ok" every digest ok | "mismatch_same" every digest mismatches on the same keys and the repair never fixes it |
+      "mismatch_once" the first digest mismatches (a repair), the rest are ok | "stale" every digest is stale | "silent" none arrives |
+      "mismatch_moving" every digest mismatches on other keys (the repairs make progress, so it is not given up on)
+    stuck_at: client applied stops at this count (None = catches up). rejected: the clients refuse the join. disconnected: their
+    link is down. joined=False: they never join. op_lag_s: after a move, spawn or state change the clients are one step behind the
+    host for this many seconds (a very large value: they never catch up).
+"""
+
+    def __init__(self, join_at=2.0, catch_up_s=4.0, head=100, digest_from=6.0, every=2.0, digests="ok", stuck_at=None,
+                 rejected=False, disconnected=False, joined=True, op_lag_s=0.0):
+        self.join_at, self.catch_up_s, self.head, self.digest_from, self.every = join_at, catch_up_s, head, digest_from, every
+        self.digests, self.stuck_at, self.rejected, self.disconnected, self.joined = digests, stuck_at, rejected, disconnected, joined
+        self.op_lag_s, self.busy_until = op_lag_s, 0.0
+        self.t0 = 0.0
+
+    def on_load(self, t):
+        self.t0, self.busy_until = t, 0.0
+
+    def on_op(self, t):
+        self.busy_until = t + self.op_lag_s
+
+    def _digests(self, t):
+        n = max(0, int((t - self.t0 - self.digest_from) / self.every) + 1) if t - self.t0 >= self.digest_from else 0
+        d = dict(received=0, ok=0, mismatch=0, rateLimited=0, stale=0, repairs=0)
+        entries = []
+        if self.digests == "silent":
+            return d, entries
+        d["received"] = n
+        if self.digests == "ok":
+            d["ok"] = n
+        elif self.digests in ("mismatch_same", "mismatch_moving"):
+            d["mismatch"] = d["repairs"] = n
+            for k in range(1, n + 1):
+                key = "actor:raider1.dead" if self.digests == "mismatch_same" else "actor:raider%d.dead" % k
+                entries.append({"id": k, "repaired": False, "key": key, "host": "1", "client": "0"})
+        elif self.digests == "mismatch_once":
+            d["mismatch"] = d["repairs"] = min(n, 1)
+            d["ok"] = max(0, n - 1)
+            if n:
+                entries.append({"id": 1, "repaired": True, "key": "state:quest1", "host": "25", "client": "0"})
+        elif self.digests == "stale":
+            d["stale"] = n
+        return d, entries
+
+    def status(self, i, t):
+        dt = t - self.t0
+        if i == 0:
+            d, entries = self._digests(t)
+            return {"role": "host", "head": self.head, "digests": d, "desyncs": entries}
+        applied = -1
+        if dt >= self.join_at:
+            applied = min(self.head, int((dt - self.join_at) / self.catch_up_s * self.head))
+            if self.stuck_at is not None:
+                applied = min(applied, self.stuck_at)
+            if t < self.busy_until:
+                applied = min(applied, self.head - 1)
+        return {"role": "client", "connected": not self.disconnected, "joined": self.joined and dt >= self.join_at,
+                "syncing": False, "applied": applied, "rejected": "version mismatch" if self.rejected else None}

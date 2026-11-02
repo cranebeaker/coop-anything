@@ -6,7 +6,7 @@
 | Versions tested | Steam build 25477059, `CrimsonDesert.exe` 1.0.0.2976 (game version 2.03.02), PE timestamp `0x6AB28F00`, SHA-256 `57da440d72f4db974f25fef047cf84c4dadd999a88cb2a3c5af4c9bd67fde1e7`; Linux, Proton Experimental |
 | Projects | [cdmp (ByJunter)](https://github.com/ByJunter/CrimsonDesertMultiplayer), [CrimsonDesertCoop (blizz3010)](https://github.com/blizz3010/CrimsonDesertCoop), unreleased mod by No-Context2224; see the three Crimson Desert rows in [DIRECTORY.md](../../DIRECTORY.md) |
 | QA level | none (one-PC tests only) |
-| Last updated | 2026-10-19 |
+| Last updated | 2026-10-21 |
 
 ## Where things stand
 
@@ -15,8 +15,12 @@ shared: each player stays in their own save. This folder documents a revival of 
 (claim: [cranebeaker/coop-anything#51](https://github.com/cranebeaker/coop-anything/issues/51)). So far:
 - cdmp builds on Linux and runs under Proton;
 - the quest/stage messages are mapped;
-- an experimental stage sync applies the host's quest stage branches on the guest. It passed one-PC tests through
-  cdmp's echo relay, but has not been tried between two PCs, and it is not yet shown to move a real quest forward;
+- experimental **quest sharing** (protocol 11): the host's quest stage branches and the host's quest accepts are
+  replayed on the guest's own server. Tested on one PC only:
+  - a side request ("Renee's Request") accepted only by replay, with the meeting scene replayed first so the NPC is
+    known, was then cooked and handed in by a human player: the server completed it and gave the reward;
+  - live accept sharing through cdmp's relay: the meeting scene and the accept applied and verified;
+  - not tried between two PCs yet;
 - the other player's copy no longer jumps while walking (Move thinning).
 
 ## Existing work
@@ -48,7 +52,20 @@ shared: each player stays in their own save. This folder documents a revival of 
     Quest and mission keys are static data keys (0x0F4xxx range).
   - Stages are referenced by **runtime instance ids** (small numbers like 0x158), different per session:
     `StageBranchStateReq` (2436) `u64 instance | u32 branch | u16`; `StageBranchStateAck` (2981)
-    `hdr | u64 instance | u32 state | u32 branch | u32 chart hash`; `StageOnBranchEventAck` (2524).
+    `hdr | u64 instance | u32 state | u32 branch [| u32 chart hash ...]` (payloads of 21, 29 or 37 bytes);
+    `StageOnBranchEventAck` (2524). A scene sends several branches in a row (the butcher shop: 6, 0, 3, 1).
+  - **Accepting a quest from an NPC** is a dialog answer, not a stage branch: `SetQuestDialogObstacleReq` (2621,
+    `u32 actor | u8 on`) for the player and the NPC, `QuestDialogEndReq` (2342, 30 bytes:
+    `u32 npc runtime id | u32 quest key | u32 answer | ...`), then the obstacles off. The server accepts it without the
+    dialog being open. The accept changes rows in the mission list (3009), not the quest list; a hand-in also removes
+    items (`RemoveItemToInventoryAck` 2481).
+  - **NPCs**: runtime actor ids change from load to load (`ActorLoadDataAck` 2005: u32 runtime id at +3, u32 static
+    character key at +22, UTF-16 name at +36). Name an NPC by its static key across PCs.
+  - The NPC becomes "known" (knowledge key, `NormalLearnKnowledgeListAck` 2439) through its meeting scene's first
+    branch; without it the hand-in option stays greyed out.
+  - Mission rows carry the **game-clock time of the accept** (about 19 units per second of play). It differs per
+    session. It was first misread as a randomly rolled "request variant"; that theory is withdrawn (see
+    [NOTES.md](NOTES.md), 2026-10-20 15:15): the request's data defines one fixed task.
 - **Retail stubs** (parse, then do nothing): `CompleteQuestByCheatReq`, `ResetQuestByCheatReq`,
   `StageChartForceBranchDevReq`, `ForcePlayStageDevReq`, `ForcePlayStageSequencerDevReq`,
   `ChangeGameLevelStateByCheatReq`. The quest cheats are not a shortcut. The game's own `StageBranchStateReq`,
@@ -64,11 +81,19 @@ of the revival fork (on top of [`fix/clang-cl-build`](https://github.com/CaptCap
 
 - **clang-cl build fix** (`src/common/enemy_zone.h`): clang rejects a default argument that needs a nested struct's member
   initializers inside the enclosing class; split into two constructors.
-- **Quest stage sync** (`[coop] stage_sync=1`, off by default; protocol v10):
+- **Quest stage sync** (`[coop] stage_sync=1`, off by default):
   - the host sends each stage branch its game chooses (`StageBranchStateReq`), named by the stage's static sequencer key;
-  - the guest applies it to its own instance of that stage when it is waiting there.
+  - the guest applies it to its own instance of that stage when it is waiting there, and follows a scene's later
+    branches on the instance that sits on the host's previous one.
   - Only branches a real game chose are sent: a made-up branch number crashes the game.
   - Rules and tests: `src/common/stage_sync.h`.
+- **Quest accept sharing** (`[coop] quest_share=1`, off by default, needs `stage_sync=1`; protocol 11):
+  - the host's mod spots an accept (a dialog answer that changes mission rows and removes no items) and sends it with
+    the NPC's static key and the rows it changed;
+  - the guest's mod waits until that NPC is loaded and its own rows are in the host's starting state, then sends the same
+    conversation to its own server and checks the rows. Hand-ins and rewards are never shared: each player completes
+    their own request.
+  - Rules and tests: `src/common/quest_accept.h`.
 - **Move thinning** (`[coop] move_thin=1`, on by default): the other player's Moves are cut to about 40 Hz, the cdmp
   author's own proposal. Without it, the client's 30-sample buffer overflowed and the copy stalled and jumped.
 - **Dev test tooling** (`[dev]` keys, all off by default):
@@ -76,9 +101,12 @@ of the revival fork (on top of [`fix/clang-cl-build`](https://github.com/CaptCap
     game without saving when a test ends. The menus react to `WM_KEYDOWN`/`WM_CHAR`, not to Raw Input.
   - `test_walk_s`: walks the player back and forth. The mouse is left alone (`ClipCursor`/`SetCursorPos` do nothing).
     A motion meter logs `Puppet motion: RESULT` for the copy.
-  - `stage_record` / `stage_replay`: records the stage branches and quest changes of one session, and replays the branches
-    on a fresh load. The recorded quest changes are the pass/fail check.
-  - `stage_sync_feed`: the one-PC test of stage sync through `cdmp_peer`.
+  - `stage_record` / `stage_replay`: records the stage branches, quest dialog answers and quest/mission changes of one
+    session, and replays them on a fresh load (NPCs translated by static key). The recorded mission rows are the
+    pass/fail check (the accept time is not compared).
+  - `stage_sync_feed`, `quest_share_feed`: the one-PC tests of stage sync and accept sharing through `cdmp_peer`.
+  - `stage_replay_rng`, `mission_watch`: diagnostics from the withdrawn variant theory (server rand pin and trace,
+    memory scan, hardware write watch); not for play.
   - `stage_force_test`: the mutation case (stub dev request, made-up branch).
 
 ## QA
@@ -99,6 +127,15 @@ unattended. Details and dates are in [NOTES.md](NOTES.md).
   - with thinning: 0 jumps after warm-up in both runs, max 9.8 m/s, copy distance equal to the walk.
   - running (Shift held): about one small jump or stall per minute with or without thinning, so no measurable effect there.
 - Autoload into the world: 3 of 3 runs after the `WM_KEYDOWN` change.
+- Quest accept replay (2026-10-20), from a fixed save, unattended unless noted:
+  - the recorded accept of a side request replayed with no dialog open: the server created the same mission rows;
+  - with the meeting scene replayed first (4 branches chained), the NPC became known;
+  - manual run: after the replayed meeting scene and accept, a human cooked the dish and handed it in; the server
+    completed the request and gave the reward listed in the game data.
+- Live accept sharing through `cdmp_peer`: meeting scene applied (4 branches), accept sent and verified, game alive 30 s
+  after; the host side did not mistake the guest's replayed answer for a new accept.
+- Unit tests for the accept message, detector and queue, with four mutation twins (hand-in shared, no starting-state
+  check, no "already accepted" check, NPC id not translated): each makes the suite fail.
 
 ## How to play
 
@@ -108,20 +145,25 @@ smoke test above). Back up saves; do not save while the other player is in your 
 
 ## Known issues
 
-- Story, NPCs, quest progress and loot are per player; only hostile enemies near the host are shared.
-- Stage sync applies only a stage's first branch, needs both players to have the same stage in their world, and is
-  untested between two PCs.
+- Story, NPCs and loot are per player apart from the experimental quest sharing; only hostile enemies near the host are
+  shared by default.
+- Quest sharing needs both players at the same story point (the guest's rows must match the host's starting state),
+  and is untested between two PCs. A guest who is far from the NPC waits until it loads (up to 10 minutes).
+- Accept sharing replays the accept on the guest, so the guest's own server gives the guest the accept's items too
+  (wanted here: each player completes their own request).
 - Works on one game build only; any patch disables it until offsets are updated.
 - One crash on Proton while opening the menu (vkd3d-proton `VK_ERROR_DEVICE_LOST`) right after a stub request was injected;
   not reproduced since. Treated as unknown.
 
 ## Next steps
 
-1. Record a real quest step (needs one human-played session), then replay it unattended and compare the quest changes.
-2. A two-PC session with stage sync on.
-3. A client-side guard that reads a stage's branch table before sending, so a mismatched branch is refused.
-4. Players at different story points; later branches of a stage; quest rewards for the guest.
-5. Walk bot: climbing and riding; find the cause of the small residue when running.
+1. A two-PC session with stage sync and quest sharing on (the guest accepts nothing and should still get the request).
+2. A guest far from the NPC when the host accepts (the wait), and a guest handing in after a live accept.
+3. Accept/hand-in detection on more quests (one sample of each so far).
+4. A client-side guard that reads a stage's branch table before sending, so a mismatched branch is refused.
+5. Players at different story points; main-story quests; game-free sync tests with the hub's `tools/` (fake world,
+   fuzzer) for the accept queue.
+6. Walk bot: climbing and riding; find the cause of the small residue when running.
 
 ## Tools in this folder
 
@@ -131,5 +173,9 @@ smoke test above). Back up saves; do not save while the other player is in your 
 - `tools/re/`: capstone + pefile scripts, run in a hash-pinned image against your own `bin64` mounted read-only:
   `dis.py` (disassemble at an RVA), `classify2.py` (stub or live handler, exact .pdata bounds), `disp2.py`
   (operand offset search), `callers.py` (direct callers), `cap.py` (extract payloads from a cdmp `.bin` capture),
-  `questlist.py` / `rows.py` (decode list Acks), `sections.py`.
+  `questlist.py` / `rows.py` (decode list Acks), `sections.py`, `missiondiff.py` (mission/quest list changes in a
+  capture), `rec_from_capture.py` (build a replay file from a capture), `findkey.py`, `immscan.py`, `reach.py`,
+  `iat.py`, `bytes.py`.
 - `tools/proton/run_game.sh`: launch a hardlinked test copy with its own prefix through Proton.
+  `rng_pin_runs.sh` (unattended replays from a restored save), `echo_test.sh` (cdmp_peer relay + game) and
+  `echo_quest_test.sh` (the one-PC relay test of accept sharing). All take the Steam folder from `STEAM_ROOT`.

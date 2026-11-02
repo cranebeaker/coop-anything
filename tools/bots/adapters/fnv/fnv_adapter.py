@@ -11,12 +11,17 @@ The bridge is yours. It only needs:
 
 Ids are editor ids or hex ids the console accepts. There is no engine address in here, only console commands. Check each
 console spelling against your own build before you trust it.
+
+The "say why" part (see coopbots/adapter.py): `blockers()` reads the mod's `ui.status` reply, which this example takes to be
+{"menu": "name or empty", "messageBoxes": n, "weaponDrawn": bool}, and the base class adds what it finds (an open menu, a message
+box, a holstered weapon) to every failed action. `goto_ref` reports a stuck walk with the distance that was left.
+`set_timescale` is one console line (`sgtm X`); that line is the only game specific part of the speed hook.
 """
 import json
 import os
 from typing import Dict
 
-from coopbots.adapter import ActionAdapter, Result
+from coopbots.adapter import ActionAdapter, Result, Why
 
 PARSE_ERRORS = ("could not parse", "error line", "unknown", "invalid")
 
@@ -68,13 +73,35 @@ class FnvBot(ActionAdapter):
             json.dump(self.b.call("events", {"since": 0}), f, indent=1)
         return {"events": path}
 
+    # ---- say why: what blocks input right now ----
+    def blockers(self):
+        try:
+            ui = self.b.call("ui.status", {}) or {}
+        except Exception:  # noqa: BLE001  a bridge without ui.status: nothing is known, nothing is added to failures
+            return []
+        out = []
+        if ui.get("menu"):
+            out.append(("menu", "the %s menu is open" % ui["menu"]))
+        if ui.get("messageBoxes"):
+            out.append(("message_box", "%d message box(es) are up" % ui["messageBoxes"]))
+        if ui.get("weaponDrawn") is False:
+            out.append(("holstered", "the weapon is holstered"))
+        return out
+
     # ---- actions ----
     def goto_ref(self, ref, dist=150):
-        r = self._run("player.moveto %s" % ref)
-        if not r:
-            return r
-        d = self._num("player.GetDistance %s" % ref)
-        return Result(d <= max(dist, 250), "" if d <= max(dist, 250) else "still %.0f units from %s after moveto" % (d, ref), {"distance": d})
+        wanted = max(dist, 250)
+
+        def arrived(data):
+            d = self._num("player.GetDistance %s" % ref)
+            data["distance"] = d
+            if d > wanted:
+                raise Why.stuck(d, wanted, "still that far from %s after moveto" % ref)
+        return self.act(lambda: self._run("player.moveto %s" % ref), free=True, ignore=("holstered",), post=[arrived])
+
+    def set_timescale(self, x):
+        """The game's time multiplier: one console line. Console spellings differ between builds; check this one against yours."""
+        return self._run("sgtm %g" % x)
 
     def activate(self, ref):
         return self._run("%s.activate player 1" % ref)

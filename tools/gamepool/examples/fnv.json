@@ -106,5 +106,12 @@
       {"file": "Fallout.ini", "section": "Audio", "key": "bEnableAudio", "value": "0", "why": "no sound device, saves CPU. Opt-in because dialogue driven waits (the end of a voice line) may never finish without audio", "status": "opt-in", "opt_in": "audio_off"}
     ]
   },
-  "pool": {"recycle_after": 25, "ws_growth_mb": 1200, "ws_max_mb": 3300, "slot_ttl_s": 3600, "tick_s": 5}
+  "pool": {"recycle_after": 25, "ws_growth_mb": 1200, "ws_max_mb": 3300, "slot_ttl_s": 3600, "tick_s": 5},
+  "pairs": {
+    "_notes": "Host/client pairs for `up --pairs N`. One running copy took about 0.7 GB in the New Vegas project. A co-op mod that reads its port and role from its own settings file lists them in edits (the file must be in link.per_instance_files); {port} {role} {pair} are filled in per pair.",
+    "port_base": 27960,
+    "copy_gb": 0.7,
+    "reserve_gb": 2.0,
+    "proto": "udp"
+  }
 }

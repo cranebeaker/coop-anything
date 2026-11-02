@@ -5,6 +5,7 @@
 <p align="center">
 <a href="https://ko-fi.com/cranebeaker"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
 <a href="https://discord.gg/EXGB49R82t"><img src="https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join the Discord" height="36"></a>
+<a href="https://coopanything.app"><img src="https://img.shields.io/badge/CoOp%3AAnything-Browse%20every%20co--op%20mod-1abc9c?style=for-the-badge" alt="Browse every co-op mod on CoOp:Anything" height="36"></a>
 </p>
 
 <p align="center">
@@ -24,6 +25,11 @@ friends install it in one click and join over Steam without port forwarding.
 
 The sky is the limit. Every game that runs on your PC is a candidate.
 
+**Playing on one PC?** [Couchlink](https://github.com/cranebeaker/couchlink) runs a copy of the game for each player,
+each with their own part of the screen, their own controller or keyboard and mouse, and their own Steam account if
+they want one. It works with co-op mods and with games that only play online. Mods made here can plug into it: see the
+`couchlink` skill.
+
 Games being made co-op right now: **[Deus Ex](https://github.com/cranebeaker/deus-ex-coop)** (released) ·
 **[Fallout: New Vegas](https://github.com/cranebeaker/fnv-coop)** · **[Zelda: Ocarina of Time](https://github.com/cranebeaker/ocarina-coop)** (fully synced) ·
 **[Dungeon Keeper](https://github.com/cranebeaker/dungeon-keeper-coop)** · **[S.T.A.L.K.E.R. Shadow of Chernobyl](https://github.com/cranebeaker/stalker-soc-coop-fixes)**
@@ -35,7 +41,8 @@ From the community: **[Mega Man X](https://github.com/mstan/MegaManXSNESRecomp)*
 **[Half Sword](https://github.com/Dudiebug/halfsword-multiplayer-mod)** · **[Enter the Gungeon](https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/)** ·
 **[Clive Barker's Jericho](https://github.com/dolbaras/jericho-coop)** · **[Poppy Playtime](https://github.com/romannazarov057-spec/PoppyCoop)** ·
 **[Divinity II](games/divinity-2-developers-cut)** (split-screen) · **[Command & Conquer 3](games/command-and-conquer-3)** (campaign co-op) ·
-**[Far Cry 2](https://github.com/MortyRei/fc2-coop-probe)** · **[Gothic 3](https://github.com/GGM1k3y23/g3-together)** · **[Fear & Hunger](https://github.com/glynn568-glitch/fear-and-hunger-together)** · yours next?
+**[Far Cry 2](https://github.com/MortyRei/fc2-coop-probe)** · **[Gothic 3](https://github.com/GGM1k3y23/g3-together)** · **[Fear & Hunger](https://github.com/glynn568-glitch/fear-and-hunger-together)** ·
+**[Modern Warfare 2](https://github.com/stxlvn/mw2_coop)** (campaign co-op) · **[Little Nightmares](https://discord.com/channels/1561411702082510879/1562210529504927836)** (on our Discord) · yours next?
 
 ## Quick start
 
@@ -71,7 +78,7 @@ Your agent takes one of two paths.
 |---|---|---|
 | When | A co-op mod exists but is buggy, stalled or abandoned. Most loved games are here. | Nothing usable exists. |
 | How | Find the last build, mine its bug reports (issues, forums, Discord), audit the code, fix it as a separate package, test, ship. | Reverse engineer the game and engine, hook in, show the second player, sync enemies, world and story, handle level changes and saves, test, ship. |
-| Skills | `coop-research`, `coop-revive`, `coop-qa` | `coop-reverse-engineer`, `coop-build-from-zero`, `coop-networking`, `coop-sync-testing`, `coop-qa` |
+| Skills | `coop-research`, `coop-revive`, `coop-qa`, `couchlink` | `coop-reverse-engineer`, `coop-build-from-zero`, `coop-networking`, `coop-sync-testing`, `coop-qa`, `couchlink` |
 | Guide | [Reviving abandoned mods](playbook/reviving-abandoned-mods.md) | [How co-op mods work](playbook/how-coop-mods-work.md) |
 
 Both paths end the same way: automated tests with real game clients
@@ -94,6 +101,11 @@ Each has tests, mutation twins and one command that prints `ALL OK`
 | [gameslot](tools/gameslot), [gamepool](tools/gamepool) | Lock and warm pool for running several game copies on one PC safely |
 | [scenarios](tools/scenarios), [bots](tools/bots) | JSON start states plus multi-bot co-op playbooks with a state diff after each step |
 | [animcheck](tools/animcheck) | Compares animation and pose across machines and flags sliding, T-poses, floating and rubber-banding |
+| [bridge](tools/bridge), [inspect](tools/inspect) | An RPC server template for inside your game (console line, state dump, save, load, screenshot) with a Python client, plus a live side-by-side view of every copy |
+| [hotreload](tools/hotreload) | Split your mod into a loader and a core, and swap the core inside the running games instead of restarting them |
+| [mutants](tools/mutants), [buildlock](tools/buildlock) | Runtime mutation twins for every fix, and a shared build lock with a build cache |
+
+[Fast iteration](playbook/fast-iteration.md) shows where the time in an in-game fix round goes and which tool removes each wait.
 
 They come from the [fnv-coop](https://github.com/cranebeaker/fnv-coop) project. The
 `coop-sync-testing` skill tells your agent when to use which.
@@ -130,7 +142,8 @@ Which engine has co-op work you can reuse: [playbook/engine-families.md](playboo
 | Fallout: New Vegas | Story co-op: shared quests, dialogue results, karma and reputation | [fnv-coop](https://github.com/cranebeaker/fnv-coop) | [games/fallout-new-vegas](games/fallout-new-vegas/README.md) |
 | Zelda: Ocarina of Time | Fixes for a fully synced Ship of Harkinian co-op fork | [ocarina-coop](https://github.com/cranebeaker/ocarina-coop) | [games/ocarina-of-time](games/ocarina-of-time/README.md) |
 
-Plus a [directory of 230+ co-op mods and gaps](DIRECTORY.md) for other games, each with
+Plus a [directory of 230+ co-op mods and gaps](DIRECTORY.md) for other games (browse and search it at
+[coopanything.app](https://coopanything.app)), each with
 what it really syncs and how well it was tested.
 
 ## Everyone is a contributor
@@ -182,11 +195,12 @@ above gives a feel for it.
   [networking](playbook/networking.md) · [Steam Spacewar relay](playbook/networking-steam-spacewar.md) ·
   [split screen](playbook/split-screen.md) · [console emulators](playbook/console-emulators.md) · [Switch](playbook/switch.md) ·
   [decomp and recomp](playbook/decomp-and-recomp.md) ·
-  [automated QA](playbook/automated-qa.md) · [multi-agent workflows](playbook/multi-agent-workflows.md) ·
+  [automated QA](playbook/automated-qa.md) · [shipping to players](playbook/shipping-to-players.md) · [multi-agent workflows](playbook/multi-agent-workflows.md) ·
   [network chaos](playbook/network-chaos-testing.md) · [desync hunting](playbook/desync-hunting.md) ·
   [fuzzing sync](playbook/fuzzing-coop-sync.md) · [actor ownership](playbook/actor-ownership.md) ·
   [fake world testing](playbook/fake-world-testing.md) · [several game copies](playbook/multi-instance-testing.md) ·
   [bots and playbooks](playbook/bots-and-playbooks.md) · [animation sync](playbook/animation-sync-checks.md) ·
+  [fast iteration](playbook/fast-iteration.md) · [in-game bridge](playbook/in-game-bridge.md) · [hot reload](playbook/hot-reloading-your-mod.md) ·
   [story sync by effects](playbook/effect-capture-story-sync.md) ·
   [methods](playbook/methods.md) · [lessons](playbook/lessons.md)
 - [DIRECTORY.md](DIRECTORY.md) and its [schema](data/SCHEMA.md)

@@ -7,6 +7,7 @@
   --quick        only the fast Python tests (a few seconds); prints QUICK OK, never ALL OK
   --no-cpp       skip the C++ phase (the cross tests are skipped too); prints PYTHON OK, never ALL OK
   --no-twin      skip the Python mutation twin; prints TESTS OK, never ALL OK
+  --only A,B     run just the Python test classes A and B (used by the twin for the failure-to-case tools, handy while working on one tool)
 
 The twin copies the Python sources to a temp folder, breaks one thing at a time and requires the suite to fail.
 Environment: COFR_SRC=<dir> tests the Python sources in that folder (the twin uses it), COFR_BUILD_DIR=<dir> is the C++
@@ -24,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.environ.get("COFR_SRC") or HERE
@@ -35,6 +37,8 @@ import shrink as SH  # noqa: E402
 import gentest as G  # noqa: E402
 import report as R  # noqa: E402
 import regress as RG  # noqa: E402
+import trace_replay as TR  # noqa: E402
+import from_failure as FF  # noqa: E402
 
 QUICK = "--quick" in sys.argv
 slow = unittest.skipIf(QUICK, "slow: skipped by --quick")
@@ -1045,6 +1049,876 @@ class CliTests(unittest.TestCase):
         self.assertIn("No divergence", out)
 
 
+# ---------------------------------------------------------------- failure dir -> offline repro (from_failure.py, trace_replay.py)
+
+BS = chr(92)
+AP_SNAPSHOT = 1
+CUSTOM_SCHEMA = {"game": "toy", "custom_records": {"40": {"name": "ScriptWrite", "fields": [{"name": "seq", "type": "u64"}, {"name": "key", "type": "str16"}]}}}
+
+
+def pair(skip=(), heal=False, marker=False, digest_bad=False, n=6, bad_seq=None, far=False, schema=None, custom=False):
+    """Host and one client. skip: seqs the client never applies. heal: a snapshot apply after the last txn. marker: the host's own desync marker, early.
+    far: plenty of unrelated note markers minutes later (the part of a long recording a shrink should cut away). custom: game-defined records."""
+    h, c = TB(0, schema=schema), TB(1, schema=schema)
+    if marker:
+        h.add(C.T_MARKER, 5, kind=1, text="host: a client digest did not match (mismatches=1)")
+    for seq in range(1, n + 1):
+        t = seq * 100
+        raw = bytes([4, seq, 1, 0xAB])
+        h.txn(C.T_TXN_CAPTURED, t - 1, seq, good_hash(seq))
+        h.txn(C.T_TXN_APPLIED, t, seq, good_hash(seq))
+        h.net(True, t, 1, 4, seq, raw)
+        if custom:
+            h.add(40, t + 1, fields={"seq": seq, "key": "stage.q%d" % seq})
+        if seq in skip:
+            continue
+        c.net(False, t + 5, 0, 4, seq, raw)
+        c.txn(C.T_TXN_APPLIED, t + 6, seq, 0xBAD if bad_seq == seq else good_hash(seq))
+    if heal:
+        c.txn(C.T_TXN_APPLIED, n * 100 + 50, 0, 0x77, flags=AP_SNAPSHOT)
+    if far:
+        for k in range(40):
+            h.add(C.T_MARKER, 5000 + 5000 * k, kind=0, text="note %d" % k)
+    h.digest(900, 0, 1, 0xAAAA, keys={0x10: 5})
+    c.digest(900, 0, 1, 0xBBBB if digest_bad else 0xAAAA, keys={0x10: 6 if digest_bad else 5})
+    return [h, c]
+
+
+def make_run(root, tbs, run="run-x", fail="FAIL-1-01-the_step", status=None, same_names=False, dump_paths=True, ext=".cofr", encode=None,
+             outdir="out", reason="desync counters rose", tag=""):
+    """Lay out what the bots runner leaves behind: <root>/instances/<n>/gamefl/<file> and <root>/<outdir>/<run>/enemy_fight/<fail>/failure.json.
+    encode turns the recording into another file format (a game's own). -> (failure_dir, instances_dir)."""
+    inst = os.path.join(root, "instances")
+    fdir = os.path.join(root, outdir, run, "enemy_fight", fail)
+    os.makedirs(fdir, exist_ok=True)
+    machines = []
+    for i, tb in enumerate(tbs):
+        d = os.path.join(inst, str(i), "gamefl")
+        os.makedirs(d, exist_ok=True)
+        fn = ("same" if same_names else "dump%s-%d" % (tag, i)) + ext
+        with open(os.path.join(d, fn), "wb") as f:
+            f.write(encode(tb.data()) if encode else tb.data())
+        m = {"name": "host" if i == 0 else "client%d" % i, "role": "host" if i == 0 else "client", "instance": i, "status": (status or {}).get(i, {})}
+        if dump_paths:
+            m["flight_dump"] = {"path": "gamefl" + BS + fn}
+        else:
+            m["flight_dump_error"] = "flight dump failed (no folder configured)"
+        machines.append(m)
+    with open(os.path.join(fdir, "failure.json"), "w", encoding="utf-8") as f:
+        json.dump({"playbook": "enemy_fight", "step": "01-the step", "reason": reason, "kind": "counters", "machines": machines}, f)
+    return fdir, inst
+
+
+def run_ff(*args):
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = FF.main(list(args))
+    return rc, buf.getvalue()
+
+
+def read_json(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+class TraceReplayTests(unittest.TestCase):
+    def test_split_roundtrip_and_truncated_tail(self):
+        data = pair()[0].data()
+        hdr, recs, h = TR.split_cofr(data)
+        self.assertEqual(hdr + b"".join(recs), data)
+        self.assertEqual(len(recs), len(C.loads(data)["records"]))
+        self.assertEqual(h["slot"], 0)
+        self.assertGreater(len(recs[0]), 18)
+        hdr2, recs2, _ = TR.split_cofr(data + recs[0][:18])      # a half-written record at the end (whole header, cut payload) is dropped
+        self.assertEqual(recs2, recs)
+
+    def classify(self, **kw):
+        return TR.classify([t.trace() for t in pair(**kw)])
+
+    def test_classes(self):
+        cl = self.classify(bad_seq=3)
+        self.assertEqual((cl["primary"]["class"], cl["primary"]["key"]), ("divergence", "txn:3[0]"))
+        cl = self.classify(digest_bad=True)
+        self.assertEqual(cl["primary"]["class"], "digest-mismatch")
+        self.assertEqual(cl["primary"]["suspects"], [0, 1])
+        cl = self.classify(skip={2})
+        self.assertEqual((cl["primary"]["class"], cl["primary"]["key"], cl["primary"]["suspects"]), ("stuck-sync", "txn:2", [1]))
+        self.assertFalse(cl["primary"]["healed"])
+        self.assertFalse(self.classify()["found"])
+        self.assertEqual(self.classify()["counts"], {})
+
+    def test_gap_healed_by_a_snapshot_is_not_a_failure(self):
+        cl = self.classify(skip={2}, heal=True)
+        self.assertFalse(cl["found"])
+        self.assertIsNone(cl["primary"])
+        self.assertEqual(cl["counts"], {"transient-gap": 1})
+        self.assertTrue(cl["items"][0]["healed"])
+        # a snapshot BEFORE the missing txn heals nothing
+        h, c = pair(skip={5})
+        c.txn(C.T_TXN_APPLIED, 20, 0, 0x77, flags=AP_SNAPSHOT)
+        cl = TR.classify([h.trace(), c.trace()])
+        self.assertEqual(cl["primary"]["class"], "stuck-sync")
+
+    def test_what_restates_state_comes_from_the_schema(self):
+        # in this game only flag 2 (repair) restates state, so a snapshot heals nothing
+        sch = S.Schema({"restate_mask": 2})
+        cl = TR.classify([t.trace() for t in pair(skip={2}, heal=True, schema=sch)])
+        self.assertTrue(cl["found"])
+        self.assertEqual((cl["primary"]["class"], cl["primary"]["key"]), ("stuck-sync", "txn:2"))
+        cl = TR.classify([t.trace() for t in pair(skip={2}, heal=True, schema=S.Schema({"restate_mask": 1}))])
+        self.assertFalse(cl["found"])
+
+    def test_own_marker_leads_only_when_nothing_else_is_found(self):
+        cl = self.classify(marker=True)
+        self.assertEqual((cl["primary"]["class"], cl["primary"]["key"]), ("desync-marker", "marker:host"))
+        cl = self.classify(marker=True, digest_bad=True)       # the marker comes first in time, the digest explains it
+        self.assertEqual(cl["primary"]["class"], "digest-mismatch")
+        self.assertEqual(cl["counts"]["desync-marker"], 1)
+        res = TR.result_of(cl)
+        self.assertTrue(res["violations"][0].startswith("digest-mismatch"), res["violations"])
+        self.assertEqual(res["first"]["category"], "digest-mismatch")
+
+    def fixture(self, **kw):
+        tbs = pair(**kw)
+        trs = [t.trace() for t in tbs]
+        raw = [(t.h["slot"],) + TR.split_cofr(t.data())[:2] for t in tbs]
+        return FF.build_fixture(raw, trs, {}), trs
+
+    def test_fixture_replays_like_the_traces(self):
+        fx, trs = self.fixture(skip={2})
+        self.assertEqual(fx["format"], "cofr-trace-1")
+        self.assertEqual(TR.run(fx), TR.result_of(TR.classify(trs)))
+        self.assertTrue(TR.run(fx)["diverged"])
+        fx["steps"].append({"op": "quiesce", "pin": True})        # steps that are not records are ignored
+        self.assertTrue(TR.run(fx)["diverged"])
+        self.assertTrue(all(st["op"] == "rec" for st in fx["steps"][:-1]))
+        clean, _ = self.fixture()
+        self.assertEqual(TR.run(clean), {"diverged": False, "violations": [], "first": None, "counts": {}})
+
+    def test_the_header_record_count_follows_the_steps(self):
+        fx, _ = self.fixture(skip={2})
+        full = TR.traces_from_fixture(fx)
+        self.assertEqual([t["header"]["record_count"] for t in full], [len(t["records"]) for t in full])
+        thin = dict(fx, steps=[s for s in fx["steps"] if s["ty"] in ("TxnApplied", "Meta")])
+        got = TR.traces_from_fixture(thin)
+        self.assertEqual([t["header"]["record_count"] for t in got], [len(t["records"]) for t in got])
+        self.assertLess(got[0]["header"]["record_count"], full[0]["header"]["record_count"])
+
+    def test_a_schema_in_the_fixture_overrides_the_recorded_one(self):
+        fx, _ = self.fixture(skip={2}, heal=True)
+        self.assertFalse(TR.run(fx)["diverged"])                 # the default schema: the snapshot heals the gap
+        fx["schema"] = json.dumps({"restate_mask": 2})
+        self.assertTrue(TR.run(fx)["diverged"])
+        fx["schema"] = "{nope"
+        with self.assertRaises(TR.BadFixture):
+            TR.run(fx)
+
+    def test_bad_and_thin_fixtures(self):
+        for bad in ({}, {"format": "cofr-trace-1"}, {"format": "toy", "steps": [], "headers": {}}, {"format": "cofr-trace-1", "steps": [{"op": "rec", "slot": 7, "hex": "00"}], "headers": {"0": "00"}}):
+            with self.assertRaises(TR.BadFixture):
+                TR.run(bad)
+        fx, _ = self.fixture(skip={2})
+        thin = dict(fx, steps=[s for s in fx["steps"] if s["slot"] == 0])     # a machine with no records left: nothing to compare, no crash
+        res = TR.run(thin)
+        self.assertFalse(res["diverged"])
+        real_align = TR.A.align
+        TR.A.align = lambda traces: [][0]         # an analysis that cannot cope with a thin candidate counts as "no failure", not a crash
+        try:
+            res = TR.run(fx)
+        finally:
+            TR.A.align = real_align
+        self.assertFalse(res["diverged"])
+        self.assertIn("IndexError", res["error"])
+
+    @slow
+    def test_command_line_contract(self):
+        d = tempfile.mkdtemp(prefix="cofr_tr_")
+        try:
+            fx, _ = self.fixture(skip={2})
+            p = os.path.join(d, "a.json")
+            with open(p, "w") as f:
+                json.dump(fx, f)
+            r = subprocess.run([sys.executable, "-I", os.path.join(SRC, "trace_replay.py"), p], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 1)
+            self.assertTrue(json.loads(r.stdout)["diverged"])
+            with open(p, "w") as f:
+                f.write("{")
+            r = subprocess.run([sys.executable, "-I", os.path.join(SRC, "trace_replay.py"), p], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 2)
+            clean, _ = self.fixture()
+            with open(p, "w") as f:
+                json.dump(clean, f)
+            r = subprocess.run([sys.executable, "-I", os.path.join(SRC, "trace_replay.py"), p], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0)
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+GAME_CONVERTER = '''import base64
+
+SEEN = []
+
+
+def convert(path, info):
+    SEEN.append(dict(info))
+    with open(path, "rb") as f:
+        return base64.b64decode(f.read())
+
+
+def boom(path, info):
+    raise ValueError("boom")
+
+
+def wrong(path, info):
+    return "text"
+
+
+def gone(path, info):
+    open(path + ".missing", "rb")
+'''
+
+
+class FromFailureTests(unittest.TestCase):
+    modules = 0
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="cofr_ff_")
+        self.cases = os.path.join(self.tmp, "cases")
+        self.old_env = os.environ.pop(FF.ENV_ROOT, None)
+
+    def tearDown(self):
+        os.environ.pop(FF.ENV_ROOT, None)
+        if self.old_env is not None:
+            os.environ[FF.ENV_ROOT] = self.old_env
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_on(self, fdir, inst, *extra):
+        return run_ff(fdir, "--instances", inst, "--out", self.cases, *extra)
+
+    def case(self, i=0):
+        return read_json(os.path.join(self.cases, sorted(os.listdir(self.cases))[i]))
+
+    def converter_module(self):
+        """Write the sample game converter into its own folder under a fresh module name. -> (module name, folder)."""
+        FromFailureTests.modules += 1
+        name = "gameconv_%d_%d" % (os.getpid(), FromFailureTests.modules)
+        d = os.path.join(self.tmp, "conv")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, name + ".py"), "w") as f:
+            f.write(GAME_CONVERTER)
+        return name, d
+
+    def test_end_to_end_reproduce_shrink_and_regress(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("REPRODUCED: stuck-sync (txn:2)", out)
+        self.assertIn("replay the written case(s)", out)
+        cases = os.listdir(self.cases)
+        self.assertEqual(len(cases), 1)         # one json, no cmake: trace cases replay in process
+        self.assertTrue(cases[0].endswith(".json"))
+        with open(os.path.join(self.cases, cases[0])) as f:
+            text = f.read()
+        fx = json.loads(text)
+        self.assertEqual(fx["format"], "cofr-trace-1")
+        self.assertEqual(fx["expect"]["converges"], False)
+        self.assertEqual(fx["expect"]["bug_signature"], "stuck-sync txn:#")
+        self.assertLessEqual(len(fx["steps"]), 3)
+        self.assertGreater(fx["shrunk"]["original_steps"], 30)
+        self.assertEqual(fx["source"]["playbook"], "enemy_fight")
+        self.assertEqual((fx["source"]["run"], fx["source"]["failure"]), ("run-x", "FAIL-1-01-the_step"))
+        self.assertEqual({r["file"] for r in fx["source"]["recordings"]}, {"dump-0.cofr", "dump-1.cofr"})
+        self.assertNotIn(self.tmp.replace(BS, "/"), text.replace(BS + BS, "/").replace(BS, "/"))     # no machine paths in a case that gets shared
+        self.assertNotIn("gamefl", text)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 0))      # the regression runner picks it up with no replay command
+            self.assertEqual(RG.main([self.cases]), 0)
+
+    def test_a_fixed_run_does_not_reproduce(self):
+        fdir, inst = make_run(self.tmp, pair())
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("NOT REPRODUCED", out)
+        self.assertFalse(os.path.isdir(self.cases))
+        # healed by a snapshot: also not a failure
+        fdir, inst = make_run(os.path.join(self.tmp, "b"), pair(skip={2}, heal=True))
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("transient gap", out)
+
+    def test_expectation_flag_and_regress_flip(self):
+        fdir, inst = make_run(self.tmp, pair(digest_bad=True))
+        self.assertEqual(self.run_on(fdir, inst, "--expect-converges")[0], 0)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 1))      # the recordings still show the failure, so a "converges" case fails
+            shutil.rmtree(self.cases)
+            self.assertEqual(self.run_on(fdir, inst)[0], 0)
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 0))
+            p = os.path.join(self.cases, os.listdir(self.cases)[0])
+            fx = read_json(p)
+            fx["steps"] = [s for s in fx["steps"] if s["slot"] == 0]    # a case that stops reproducing is reported
+            with open(p, "w") as f:
+                json.dump(fx, f)
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 1))
+
+    def test_shrink_keeps_the_same_failure(self):
+        # a marker alone would also "fail", with fewer records; the shrink must keep the stuck sync it started from
+        fdir, inst = make_run(self.tmp, pair(skip={2}, marker=True, far=True))
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 0, out)
+        fx = self.case()
+        self.assertEqual(fx["shrunk"]["signature"], "stuck-sync txn:#")
+        self.assertEqual(len(fx["steps"]), 2)
+        self.assertEqual({s["ty"] for s in fx["steps"]}, {"TxnApplied"})
+        self.assertTrue(any(s.startswith("window") for s in fx["shrunk"]["stages"]), fx["shrunk"]["stages"])
+        self.assertTrue(any(s.startswith("dropped all NetIn") for s in fx["shrunk"]["stages"]), fx["shrunk"]["stages"])
+        self.assertTrue(fx["shrunk"]["complete"])
+
+    def test_a_stage_that_changes_the_failure_is_refused(self):
+        fx, trs = TraceReplayTests("test_classes").fixture(skip={2}, digest_bad=True)
+        primary = TR.classify(trs)["primary"]
+        self.assertEqual(primary["class"], "stuck-sync")        # earlier than the digest mismatch
+        old = FF.DROP_ORDER
+        FF.DROP_ORDER = ("TxnApplied",)       # dropping them would leave only the digest mismatch: another failure
+        try:
+            out = FF.reduce_fixture(fx, primary, 500, 10)
+        finally:
+            FF.DROP_ORDER = old
+        self.assertEqual(out["shrunk"]["signature"], "stuck-sync txn:#")
+        self.assertEqual({s["ty"] for s in out["steps"]}, {"TxnApplied"})
+        self.assertFalse(any(s.startswith("dropped") for s in out["shrunk"]["stages"]))
+
+    def test_the_schema_records_are_never_shrunk_away(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}, schema=S.Schema(CUSTOM_SCHEMA)))
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 0, out)
+        fx = self.case()
+        self.assertEqual({s["ty"] for s in fx["steps"]}, {"TxnApplied", "Schema"})
+        self.assertTrue(all(s.get("pin") for s in fx["steps"] if s["ty"] == "Schema"))
+        self.assertEqual(len([s for s in fx["steps"] if s["ty"] == "Schema"]), 2)
+        self.assertEqual(TR.traces_from_fixture(fx)[0]["schema"].game, "toy")
+
+    def test_the_time_window_keeps_the_schema_records(self):
+        fdir, inst = make_run(self.tmp, pair(skip={80}, n=90, schema=S.Schema(CUSTOM_SCHEMA)))       # the failure is 8 s in, the schema records are at 0
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 0, out)
+        fx = self.case()
+        self.assertTrue(any(s.startswith("window +-1000ms") for s in fx["shrunk"]["stages"]), fx["shrunk"]["stages"])
+        self.assertEqual(len([s for s in fx["steps"] if s["ty"] == "Schema"]), 2)
+        self.assertEqual(TR.traces_from_fixture(fx)[0]["schema"].game, "toy")
+
+    def test_ring_drops_are_reported(self):
+        tbs = pair(skip={2})
+        tbs[0].h["records_dropped"] = 7
+        fdir, inst = make_run(self.tmp, tbs)
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("note: host: ring dropped 7 record(s) before the dump", out)
+
+    def test_where_a_named_recording_is_looked_for(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        fj = os.path.join(fdir, "failure.json")
+        manifest = read_json(fj)
+        full = [os.path.join(inst, str(i), "gamefl", "dump-%d.cofr" % i) for i in (0, 1)]
+
+        def found(paths, instance, root):
+            for m, p in zip(manifest["machines"], paths):
+                m["flight_dump"] = {"path": p}
+                m["instance"] = instance if instance is not None else m["instance"]
+            with open(fj, "w") as f:
+                json.dump(manifest, f)
+            return [m["path"] for m in FF.collect(fj, root)["machines"]]
+
+        self.assertEqual([os.path.realpath(p) for p in found(full, None, None)], [os.path.realpath(p) for p in full])       # an absolute path
+        for m in manifest["machines"]:
+            m["instance"] = None
+        self.assertEqual(found(["0/gamefl/dump-0.cofr", "1/gamefl/dump-1.cofr"], None, inst),
+                         [os.path.join(inst, "0/gamefl/dump-0.cofr"), os.path.join(inst, "1/gamefl/dump-1.cofr")])       # relative to the root
+        got = found(["gamefl/dump-0.cofr", "gamefl/dump-1.cofr"], None, inst)       # no instance given: the root's sub folders are searched
+        self.assertEqual([os.path.realpath(p) for p in got], [os.path.realpath(p) for p in full])
+        old = os.getcwd()
+        os.chdir(self.tmp)
+        try:
+            self.assertEqual(found(["instances/0/gamefl/dump-0.cofr", "instances/1/gamefl/dump-1.cofr"], None, None),
+                             ["instances/0/gamefl/dump-0.cofr", "instances/1/gamefl/dump-1.cofr"])      # as written, from the working folder
+        finally:
+            os.chdir(old)
+
+    def test_game_defined_record_kinds_are_dropped_as_a_stage(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}, schema=S.Schema(CUSTOM_SCHEMA), custom=True))
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 0, out)
+        fx = self.case()
+        self.assertTrue(any(s.startswith("dropped all ScriptWrite") for s in fx["shrunk"]["stages"]), fx["shrunk"]["stages"])
+        self.assertNotIn("ScriptWrite", {s["ty"] for s in fx["steps"]})
+
+    def test_the_schema_option_is_kept_in_the_case(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}, heal=True))       # healed under the default schema
+        sp = os.path.join(self.tmp, "game.json")
+        with open(sp, "w") as f:
+            json.dump({"restate_mask": 2}, f)
+        self.assertEqual(self.run_on(fdir, inst, "--no-write")[0], 1)
+        rc, out = self.run_on(fdir, inst, "--schema", sp)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(json.loads(self.case()["schema"]), {"restate_mask": 2})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 0))       # the case replays with that schema, not the default one
+        rc, out = run_ff(fdir, "--instances", inst, "--schema", os.path.join(self.tmp, "none.json"))
+        self.assertEqual(rc, 2)
+        self.assertIn("cannot start", out)
+
+    def test_no_shrink_and_no_write(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        rc, out = self.run_on(fdir, inst, "--no-shrink")
+        self.assertEqual(rc, 0, out)
+        fx = self.case()
+        self.assertEqual(len(fx["steps"]), fx["shrunk"]["original_steps"])
+        self.assertGreater(len(fx["steps"]), 30)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 0))
+        shutil.rmtree(self.cases)
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 0, out)
+        self.assertFalse(os.path.isdir(self.cases))
+        self.assertNotIn("wrote ", out)
+
+    def test_the_case_name_option(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        rc, out = self.run_on(fdir, inst, "--name", "Lost Update!")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(os.listdir(self.cases), ["lost_update.json"])
+
+    def test_case_names_are_stable_and_distinct(self):
+        a = FF.case_name("fight-base", "FAIL-1-04-both_kill_enemy_1_every_hit_once_one_death_one_credit")
+        b = FF.case_name("fight-base", "FAIL-1-04-both_kill_enemy_1_every_hit_once_one_death_one_credit_x")
+        self.assertEqual(a, FF.case_name("fight-base", "FAIL-1-04-both_kill_enemy_1_every_hit_once_one_death_one_credit"))
+        self.assertNotEqual(a, b)
+        self.assertEqual(a[:30], b[:30])        # the readable part is cut short, the tag keeps them apart
+        self.assertLessEqual(len(a), 48)
+        self.assertEqual(FF.case_name("r", "f", "My Case!"), "my_case")
+
+    def test_same_file_name_in_both_instances(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}), same_names=True)
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 0, out)            # each machine's recording is taken from its own instance folder
+        self.assertIn("REPRODUCED", out)
+
+    def test_missing_recordings_are_reported(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}), dump_paths=False)
+        for i in (0, 1):      # recordings far older than the failure are nobody's
+            p = os.path.join(inst, str(i), "gamefl", "dump-%d.cofr" % i)
+            os.utime(p, (1_000_000, 1_000_000))
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("NO REPRO", out)
+        self.assertIn("no folder configured", out)
+        # one machine unreadable, the other fine: still not enough
+        fdir, inst = make_run(os.path.join(self.tmp, "b"), pair(skip={2}))
+        with open(os.path.join(inst, "1", "gamefl", "dump-1.cofr"), "wb") as f:
+            f.write(b"junk")
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("cannot read dump-1.cofr", out)
+        self.assertIn("--converter", out)
+        self.assertIn("got 1", out)
+        # a recording named but not there
+        fdir, inst = make_run(os.path.join(self.tmp, "c"), pair(skip={2}))
+        os.remove(os.path.join(inst, "0", "gamefl", "dump-0.cofr"))
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("recording not found: gamefl" + BS + "dump-0.cofr", out)
+        # a failure.json that cannot be read
+        with open(os.path.join(fdir, "failure.json"), "w") as f:
+            f.write("{")
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("cannot read failure.json", out)
+
+    def test_dump_guessed_from_file_time(self):
+        import time
+        fdir, inst = make_run(self.tmp, pair(skip={2}), dump_paths=False)
+        now = time.time()
+        for i in (0, 1):       # an old recording and a recent one per machine: the recent one is the failure's
+            d = os.path.join(inst, str(i), "gamefl")
+            old = os.path.join(d, "old.cofr")
+            shutil.copy(os.path.join(d, "dump-%d.cofr" % i), old)
+            os.utime(old, (now - 7200, now - 7200))
+            os.utime(os.path.join(d, "dump-%d.cofr" % i), (now - 60, now - 60))
+        fj = os.path.join(fdir, "failure.json")
+        os.utime(fj, (now, now))
+        c = FF.collect(fj, inst)
+        self.assertEqual([os.path.basename(m["path"]) for m in c["machines"]], ["dump-0.cofr", "dump-1.cofr"])
+        self.assertEqual({m["how"] for m in c["machines"]}, {"guessed from file time"})
+        newer = os.path.join(inst, "0", "gamefl", "newer.cofr")      # of two recent ones, the newest
+        shutil.copy(os.path.join(inst, "0", "gamefl", "dump-0.cofr"), newer)
+        os.utime(newer, (now - 10, now - 10))
+        c = FF.collect(fj, inst)
+        self.assertEqual(os.path.basename(c["machines"][0]["path"]), "newer.cofr")
+        os.utime(newer, (now + 3600, now + 3600))        # written long after the failure: not its recording
+        c = FF.collect(fj, inst)
+        self.assertEqual(os.path.basename(c["machines"][0]["path"]), "dump-0.cofr")
+        self.assertEqual(FF.collect(fj, None)["machines"][0]["error"], "flight dump failed (no folder configured)")     # no root, nothing to search
+
+    def test_recording_references_in_failure_json(self):
+        self.assertEqual(FF.recording_ref({"flight_dump": "a.cofr"}), ("a.cofr", None))
+        self.assertEqual(FF.recording_ref({"flight_dump": {"path": "a.cofr"}}), ("a.cofr", None))
+        self.assertEqual(FF.recording_ref({"flight": {"file": "f.cofr"}}), ("f.cofr", None))
+        self.assertEqual(FF.recording_ref({"recording": "r.cofr"}), ("r.cofr", None))
+        self.assertEqual(FF.recording_ref({"capture": {"recording": "b.dat"}}), ("b.dat", None))         # by its key, whatever the file name
+        self.assertEqual(FF.recording_ref({"capture": {"actions": "x.json", "dump": "c.COFR"}}), ("c.COFR", None))        # any capture value that matches the pattern
+        self.assertEqual(FF.recording_ref({"capture": {"actions": "x.json", "dump": "c.trace"}}), (None, None))
+        self.assertEqual(FF.recording_ref({"capture": {"dump": "c.trace"}}, "*.trace"), ("c.trace", None))
+        self.assertEqual(FF.recording_ref({"flight_dump_error": "no dump"}), (None, "no dump"))
+        self.assertEqual(FF.recording_ref({"capture_error": "no capture"}), (None, "no capture"))
+        self.assertEqual(FF.recording_ref({"name": "host", "capture": {"count": 3}}), (None, None))
+        self.assertEqual(FF.recording_ref({"capture": "not a dict"}), (None, None))
+
+    def test_recording_in_the_failure_folder_named_by_capture(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}), dump_paths=False)
+        fj = os.path.join(fdir, "failure.json")
+        manifest = read_json(fj)
+        for i, m in enumerate(manifest["machines"]):       # what an adapter's capture(dir) does: write next to the failure, under the machine's name
+            d = os.path.join(fdir, m["name"])
+            os.makedirs(d)
+            shutil.copy(os.path.join(inst, str(i), "gamefl", "dump-%d.cofr" % i), d)
+            m.pop("flight_dump_error")
+            m["capture"] = {"actions": "x.json", "dump": "dump-%d.cofr" % i}
+        with open(fj, "w") as f:
+            json.dump(manifest, f)
+        shutil.rmtree(inst)
+        c = FF.collect(fj, None)
+        self.assertEqual([m["how"] for m in c["machines"]], ["recorded", "recorded"])
+        self.assertTrue(all(os.path.dirname(m["path"]).startswith(fdir) for m in c["machines"]))
+        rc, out = run_ff(fdir, "--no-write")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("REPRODUCED", out)
+        # with no recorded name the failure sub folder is searched by file time
+        for m in manifest["machines"]:
+            m.pop("capture")
+        with open(fj, "w") as f:
+            json.dump(manifest, f)
+        c = FF.collect(fj, None)
+        self.assertEqual({m["how"] for m in c["machines"]}, {"guessed from file time"})
+        self.assertEqual(run_ff(fdir, "--no-write")[0], 0)
+
+    def test_instances_root_from_the_argument_or_the_environment(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        self.assertIsNone(FF.instances_root())
+        os.environ[FF.ENV_ROOT] = inst
+        self.assertEqual(FF.instances_root(), inst)
+        self.assertEqual(FF.instances_root("elsewhere"), "elsewhere")       # the option wins
+        rc, out = run_ff(fdir, "--no-write")
+        self.assertEqual(rc, 0, out)
+        os.environ.pop(FF.ENV_ROOT)
+        rc, out = run_ff(fdir, "--no-write")        # no root at all: the relative recording path leads nowhere
+        self.assertEqual(rc, 2, out)
+        self.assertIn("recording not found", out)
+        os.environ[FF.ENV_ROOT] = os.path.join(self.tmp, "not-the-root")
+        self.assertEqual(run_ff(fdir, "--instances", inst, "--no-write")[0], 0)
+
+    def test_finding_failures(self):
+        import time
+        a, _ = make_run(self.tmp, pair(), run="run-a", outdir="coop-bots-out")
+        b, _ = make_run(self.tmp, pair(), run="run-b", outdir="coop-bots-out")
+        now = time.time()
+        os.utime(os.path.join(a, "failure.json"), (now - 100, now - 100))
+        os.utime(os.path.join(b, "failure.json"), (now, now))
+        out_dir = os.path.join(self.tmp, "coop-bots-out")
+        self.assertEqual(FF.find_failures([out_dir]), [os.path.join(b, "failure.json"), os.path.join(a, "failure.json")])      # newest first
+        self.assertEqual(FF.find_failures([a]), [os.path.join(a, "failure.json")])
+        self.assertEqual(FF.find_failures([os.path.join(a, "failure.json")]), [os.path.join(a, "failure.json")])
+        old = os.getcwd()
+        os.chdir(self.tmp)
+        try:
+            got = FF.find_failures([])        # no argument: the newest one under ./coop-bots-out
+            self.assertEqual([os.path.realpath(p) for p in got], [os.path.realpath(os.path.join(b, "failure.json"))])
+        finally:
+            os.chdir(old)
+        rc, out = run_ff(os.path.join(self.tmp, "nowhere", "failure.json"))
+        self.assertEqual(rc, 2)
+        os.chdir(os.path.join(self.tmp, "instances"))
+        try:
+            rc, out = run_ff()
+            self.assertEqual(rc, 2)
+            self.assertIn("no failure.json found", out)
+        finally:
+            os.chdir(old)
+
+    def test_recordings_given_directly(self):
+        _, inst = make_run(self.tmp, pair(skip={2}))
+        files = [os.path.join(inst, str(i), "gamefl", "dump-%d.cofr" % i) for i in (0, 1)]
+        rc, out = run_ff(*files, "--out", self.cases)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(len(os.listdir(self.cases)), 1)
+        rc, out = run_ff(files[0], files[0], "--no-write")      # the same machine twice is not a pair
+        self.assertEqual(rc, 2, out)
+        self.assertIn("recorded twice", out)
+        rc, out = run_ff(files[0])
+        self.assertEqual(rc, 2, out)
+        self.assertIn("two or more recordings", out)
+        fdir, _ = make_run(os.path.join(self.tmp, "b"), pair(skip={2}))
+        rc, out = run_ff(files[0], fdir)
+        self.assertEqual(rc, 2, out)
+        self.assertIn("not both", out)
+
+    def test_status_evidence_and_agreement(self):
+        sick = {"counters": {"mismatches": 2, "repairs": 2, "repaired_effects": 11, "bad_messages": 1, "apply_failures": 3, "rebases": 1}}
+        host = {"name": "host", "role": "host", "status": dict(sick, seq=16, synced=False)}
+        cli = {"name": "client1", "role": "client", "status": dict(sick, seq=12, connected=0)}
+        cli2 = {"name": "client2", "role": "client", "status": {"seq": 16, "counters": {}}}
+        ev = FF.status_evidence({"machines": [host, cli, cli2]})
+        self.assertEqual((ev["mismatches"], ev["repairs"], ev["repaired_effects"], ev["bad_messages"], ev["apply_failures"], ev["rebases"]), (4, 4, 22, 2, 6, 2))
+        self.assertEqual(ev["lag"], ["client1 at update 12 of 16"])
+        self.assertEqual(ev["unsynced"], ["host"])
+        self.assertEqual(ev["disconnected"], ["client1"])
+        self.assertEqual(len(ev["symptoms"]), 9)
+        self.assertIn("4 mismatch(es)", ev["symptoms"])
+        quiet = FF.status_evidence({"machines": [{"name": "host", "role": "host", "status": {"seq": 3, "synced": True}},
+                                                 {"name": "c", "role": "client", "status": {"seq": 3, "connected": 1}}]})
+        self.assertEqual(quiet["symptoms"], [])
+        unsure = FF.status_evidence({"machines": [{"name": "host", "role": "host", "status": {"seq": 3, "synced": False}}]})
+        self.assertEqual(unsure["symptoms"], ["host reports synced=false"])
+        ahead = FF.status_evidence({"machines": [{"name": "host", "role": "host", "status": {"seq": 3}}, {"name": "c", "role": "client", "status": {"seq": 4}}]})
+        self.assertEqual(ahead["lag"], [])
+        junk = FF.status_evidence({"machines": [{"name": "host", "role": "host", "status": {"seq": "x", "counters": {"mismatches": "many"}}}, {"name": "c", "status": "down"}]})
+        self.assertEqual(junk["symptoms"], [])
+        self.assertEqual(FF.status_evidence({})["symptoms"], [])
+        found = {"found": True, "items": [{"class": "digest-mismatch"}]}
+        self.assertIn("mismatches in status and in recordings", FF.agreement(ev, found))
+        self.assertIn("sync lag in status but not in recordings", FF.agreement(ev, found))
+        both = {"found": True, "items": [{"class": "divergence"}, {"class": "stuck-sync"}]}
+        self.assertIn("mismatches in status and in recordings", FF.agreement(ev, both))
+        self.assertIn("sync lag in status and in recordings", FF.agreement(ev, both))
+        self.assertIn("mismatches in status but not in recordings", FF.agreement(ev, {"found": True, "items": [{"class": "stuck-sync"}]}))
+        self.assertIn("NOT visible", FF.agreement(ev, {"found": False, "items": []}))
+        self.assertIn("no sync symptoms", FF.agreement(quiet, found))
+        self.assertIn("neither do the recordings", FF.agreement(quiet, {"found": False, "items": []}))
+        hard = FF.status_evidence({"machines": [{"name": "host", "role": "host", "status": {"counters": {"bad_messages": 1}}}]})
+        self.assertIn("different kind", FF.agreement(hard, found))
+
+    def test_status_symptoms_reach_the_report(self):
+        sick = {"counters": {"mismatches": 1, "repairs": 1, "repaired_effects": 3}}
+        fdir, inst = make_run(self.tmp, pair(digest_bad=True), status={0: sick})
+        rc, out = self.run_on(fdir, inst, "--no-write")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("live status: 1 mismatch(es); 1 repair(s); 3 repaired effect(s)", out)
+        self.assertIn("check: mismatches in status and in recordings", out)
+
+    def test_json_output_and_report(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        html = os.path.join(self.tmp, "r.html")
+        rc, out = run_ff(fdir, "--instances", inst, "--no-write", "--json", "--report", html)
+        self.assertEqual(rc, 0, out)
+        rep = json.loads(out[:out.rindex("]") + 1])
+        self.assertEqual(rep[0]["verdict"], "reproduced")
+        self.assertEqual(rep[0]["primary"]["class"], "stuck-sync")
+        self.assertNotIn("_traces", rep[0])
+        self.assertEqual(rep[0]["machines"][0]["file"], "dump-0.cofr")
+        with open(html, encoding="utf-8") as f:
+            text = f.read()
+        self.assertIn("First divergence", text)
+        self.assertIn("txn:2", text)
+        self.assertIn("Minimal reproduction", text)      # the shrunk case is in the report
+        rc, out = run_ff(fdir, "--instances", inst, "--no-write", "--no-shrink", "--report", html)
+        self.assertIn("wrote " + html, out)
+        fdir, inst = make_run(os.path.join(self.tmp, "b"), pair())
+        os.remove(html)
+        rc, out = run_ff(fdir, "--instances", inst, "--json", "--report", html)
+        self.assertEqual(rc, 1, out)
+        self.assertEqual(json.loads(out[:out.rindex("]") + 1])[0]["verdict"], "not-reproduced")
+        self.assertTrue(os.path.exists(html))
+        with open(html, encoding="utf-8") as f:
+            self.assertNotIn("Minimal reproduction", f.read())
+
+    def test_several_failures_in_one_run_folder(self):
+        _, inst = make_run(self.tmp, pair(skip={2}), fail="FAIL-1-a", tag="a")
+        make_run(self.tmp, pair(), fail="FAIL-2-b", tag="b")
+        make_run(self.tmp, pair(digest_bad=True), fail="FAIL-3-c", tag="c")
+        rc, out = run_ff(os.path.join(self.tmp, "out", "run-x"), "--instances", inst, "--out", self.cases, "--name", "ignored")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("3 failure(s): 1 not-reproduced, 2 reproduced", out)
+        self.assertEqual(len(os.listdir(self.cases)), 2)       # --name is not used when there are several, so the cases do not overwrite each other
+        self.assertNotIn("ignored.json", os.listdir(self.cases))
+
+    def test_machine_paths_never_reach_a_case(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}), reason="the bot failed in %s and %s" % (os.getcwd(), os.getcwd().replace(BS, "/")))
+        rc, out = self.run_on(fdir, inst)
+        self.assertEqual(rc, 0, out)
+        with open(os.path.join(self.cases, os.listdir(self.cases)[0])) as f:
+            text = f.read()
+        self.assertNotIn(os.getcwd().replace(BS, BS + BS), text)
+        self.assertNotIn(os.getcwd().replace(BS, "/"), text)
+        self.assertIn("<path>", text)
+
+    # ---- converters: a game with its own recording format
+
+    def b64_run(self, **kw):
+        import base64
+        return make_run(self.tmp, pair(skip={2}), ext=".trace", encode=base64.b64encode, **kw)
+
+    def test_a_converter_turns_a_game_recording_into_cofr(self):
+        mod, d = self.converter_module()
+        fdir, inst = self.b64_run()
+        rc, out = self.run_on(fdir, inst, "--converter", mod + ":convert", "--converter-path", d)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("REPRODUCED: stuck-sync (txn:2)", out)
+        seen = sys.modules[mod].SEEN
+        self.assertEqual([(i["name"], i["role"], i["instance"]) for i in seen], [("host", "host", 0), ("client1", "client", 1)])
+        fx = self.case()
+        self.assertEqual(fx["format"], "cofr-trace-1")
+        self.assertEqual({r["file"] for r in fx["source"]["recordings"]}, {"dump-0.trace", "dump-1.trace"})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(RG.run_dir(self.cases, None), (1, 0))       # the case holds .cofr records: it replays without the converter
+
+    def test_a_converter_in_a_file_and_for_recordings_given_directly(self):
+        mod, d = self.converter_module()
+        _, inst = self.b64_run()
+        files = [os.path.join(inst, str(i), "gamefl", "dump-%d.trace" % i) for i in (0, 1)]
+        rc, out = run_ff(*files, "--no-write", "--converter", os.path.join(d, mod + ".py") + ":convert")
+        self.assertEqual(rc, 0, out)
+        rc, out = run_ff(*files, "--no-write")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("--converter module:function", out)
+
+    def test_recordings_are_found_by_the_pattern_for_the_converter(self):
+        mod, d = self.converter_module()
+        fdir, inst = self.b64_run(dump_paths=False)
+        self.assertEqual(self.run_on(fdir, inst, "--no-write")[0], 2)         # the default pattern is *.cofr
+        rc, out = self.run_on(fdir, inst, "--no-write", "--pattern", "*.trace", "--converter", mod + ":convert", "--converter-path", d)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("guessed from file time", out)
+
+    def test_converter_failures_are_reported(self):
+        mod, d = self.converter_module()
+        fdir, inst = self.b64_run()
+        rc, out = self.run_on(fdir, inst, "--no-write", "--converter", mod + ":boom", "--converter-path", d)
+        self.assertEqual(rc, 2, out)
+        self.assertIn("cannot convert dump-0.trace: ValueError: boom", out)
+        rc, out = self.run_on(fdir, inst, "--no-write", "--converter", mod + ":wrong", "--converter-path", d)
+        self.assertEqual(rc, 2, out)
+        self.assertIn("the converter returned str, not bytes", out)
+        rc, out = self.run_on(fdir, inst, "--no-write", "--converter", mod + ":gone", "--converter-path", d)      # a file error is a read error
+        self.assertEqual(rc, 2, out)
+        self.assertIn("cannot read dump-0.trace", out)
+        self.assertIn("got 0", out)
+
+    def test_converter_specs(self):
+        mod, d = self.converter_module()
+        self.assertIs(FF.load_converter(None), FF.identity_convert)
+        self.assertTrue(callable(FF.load_converter(mod + ":convert", d)))
+        with self.assertRaisesRegex(FF.ConvertError, "module:function"):
+            FF.load_converter("noseparator")
+        for bad in ("noseparator", ":fn", "mod:", "no_such_module_xyz:convert", mod + ":no_such_function", "json:__name__"):
+            with self.assertRaises(FF.ConvertError, msg=bad):
+                FF.load_converter(bad, d)
+        with self.assertRaises(FF.ConvertError):
+            FF.load_converter(os.path.join(d, "missing_file.py") + ":convert")
+        rc, out = run_ff("a.cofr", "b.cofr", "--converter", "noseparator")
+        self.assertEqual(rc, 2)
+        self.assertIn("cannot start", out)
+
+    def test_the_default_converter_passes_cofr_files_through(self):
+        _, inst = make_run(self.tmp, pair())
+        p = os.path.join(inst, "0", "gamefl", "dump-0.cofr")
+        with open(p, "rb") as f:
+            self.assertEqual(FF.identity_convert(p, {}), f.read())
+        with self.assertRaises(FF.ConvertError):
+            FF.convert_file(FF.identity_convert, os.path.join(inst, "nope.cofr"), {})
+
+
+@slow
+class FromFailureCliTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="cofr_ffcli_")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def cli(self, *args, script="from_failure.py", env=None):
+        p = subprocess.run([sys.executable, "-I", os.path.join(SRC, script)] + list(args), capture_output=True, text=True, errors="replace",
+                           env=dict(os.environ, **(env or {})))
+        return p.returncode, p.stdout + p.stderr
+
+    def test_command_line_and_exit_codes(self):
+        fdir, inst = make_run(self.tmp, pair(skip={2}))
+        cases = os.path.join(self.tmp, "cases")
+        rc, out = self.cli(fdir, "--instances", inst, "--out", cases)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("REPRODUCED", out)
+        self.assertEqual(len(os.listdir(cases)), 1)
+        rc, out = self.cli("regress", cases, script="flight.py")      # the case replays with no replay hook
+        self.assertEqual(rc, 0, out)
+        self.assertIn("ALL OK", out)
+        rc, out = self.cli(fdir, "--no-write", env={FF.ENV_ROOT: inst})      # the environment variable names the root
+        self.assertEqual(rc, 0, out)
+        fdir2, inst2 = make_run(os.path.join(self.tmp, "fixed"), pair())
+        rc, out = self.cli(fdir2, "--instances", inst2, "--no-write")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("NOT REPRODUCED", out)
+        rc, out = self.cli(fdir2, "--no-write", env={FF.ENV_ROOT: ""})
+        self.assertEqual(rc, 2, out)
+        self.assertIn("NO REPRO", out)
+
+    def test_flight_py_from_failure_subcommand(self):
+        fdir, inst = make_run(self.tmp, pair(digest_bad=True))
+        rc, out = self.cli("from-failure", fdir, "--instances", inst, "--no-write", "--json", script="flight.py")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(json.loads(out)[0]["primary"]["class"], "digest-mismatch")
+
+    def test_default_case_folder_is_the_flight_regress_folder(self):
+        self.assertEqual(FF.DEFAULT_OUT, os.path.join(SRC, "regress"))
+        import flight
+        self.assertEqual(os.path.abspath(flight.DEFAULT_REGRESS), FF.DEFAULT_OUT)
+
+
+class RegressAndGentestForTraceCasesTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="cofr_rg_")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def trace_fixture(self):
+        return TraceReplayTests("test_classes").fixture(skip={2})[0]
+
+    def test_a_trace_case_gets_no_cmake_file_and_keeps_an_expectation_override(self):
+        fx = self.trace_fixture()
+        fx["shrunk"] = {"signature": "stuck-sync txn:#"}
+        paths = G.generate(fx, "Lost Update", self.tmp, expect={"converges": False, "bug_signature": "x"})
+        self.assertEqual([os.path.basename(p) for p in paths], ["lost_update.json"])
+        self.assertEqual(os.listdir(self.tmp), ["lost_update.json"])
+        self.assertEqual(read_json(paths[0])["expect"], {"converges": False, "bug_signature": "x"})
+        paths = G.generate(fx, "Default", self.tmp)
+        self.assertEqual(read_json(paths[0])["expect"], {"converges": True, "bug_signature": "stuck-sync txn:#"})
+        paths = G.generate({"version": 1, "steps": [{"op": "quiesce"}]}, "plain", self.tmp)          # other fixtures still get theirs
+        self.assertEqual([os.path.basename(p) for p in paths], ["plain.json", "plain.cmake"])
+
+    def test_regress_replays_trace_cases_without_a_hook_and_other_cases_need_one(self):
+        fx = dict(self.trace_fixture(), expect={"converges": False})
+        with open(os.path.join(self.tmp, "a_trace.json"), "w") as f:
+            json.dump(fx, f)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(RG.run_dir(self.tmp, None), (1, 0))
+            self.assertEqual(RG.main([self.tmp]), 0)
+        self.assertIn("PASS a_trace.json (diverged: stuck-sync txn:#)", buf.getvalue())
+        with open(os.path.join(self.tmp, "b_other.json"), "w") as f:
+            json.dump({"version": 1, "steps": [{"op": "quiesce"}], "expect": {"converges": True}}, f)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(RG.run_dir(self.tmp, None), (2, 1))
+        self.assertIn("ERROR b_other.json: no replay hook given", buf.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(RG.run_dir(self.tmp, SH.PyOracle("toy_replay:replay", path=SRC)), (2, 0))
+        bad = dict(fx, steps=[{"op": "rec", "slot": 9, "hex": "00"}])             # a damaged trace case is an error, not a crash
+        with open(os.path.join(self.tmp, "a_trace.json"), "w") as f:
+            json.dump(bad, f)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(RG.run_dir(self.tmp, SH.PyOracle("toy_replay:replay", path=SRC)), (2, 1))
+        self.assertIn("ERROR a_trace.json: bad cofr-trace-1 fixture", buf.getvalue())
+
+
 # ---------------------------------------------------------------- C++ write, Python read
 
 def write_python_trace(path):
@@ -1207,10 +2081,102 @@ MUTATIONS = [
     ("flight", "d = analyze.find_divergence(al)\n        if a.json:", "d = None\n        if a.json:", "diverge never finds anything"),
     ("flight", "return 1 if (a.check and d) else 0", "return 0", "diverge --check always succeeds"),
 ]
-TWIN_MODS = ["cofr", "schema", "analyze", "shrink", "gentest", "report", "regress", "flight", "toy_replay"]
+
+# The twins of the failure-to-case tools (trace_replay.py, from_failure.py and their hooks in regress.py, gentest.py, flight.py).
+# Their tests are all in these classes, so a twin runs only them.
+ONLY_NEW = "TraceReplayTests,FromFailureTests,FromFailureCliTests,RegressAndGentestForTraceCasesTests"
+NEW_MUTATIONS = [
+    ("trace_replay", 'if c["kind"] == "txn-missing" and later:', "if False:", "gap healed by a snapshot counted as a failure", ONLY_NEW),
+    ("trace_replay", "any(t >= c[\"aligned_us\"] for s", "any(t <= c[\"aligned_us\"] for s", "snapshot before the gap heals it", ONLY_NEW),
+    ("trace_replay", "mask = a.schema.restate_mask", "mask = 7", "restate mask not taken from the schema", ONLY_NEW),
+    ("trace_replay", 'own = [i for i in real if i["class"] != "desync-marker"]', "own = []", "own desync marker leads over a real finding", ONLY_NEW),
+    ("trace_replay", "real = ([p] + [i for i in real if i is not p]) if p else real", "real = real", "failure signature taken from the marker", ONLY_NEW),
+    ("trace_replay", "if len(data) - pos - C.RECORD_HEADER < plen:", "if False:", "half-written record kept", ONLY_NEW),
+    ("trace_replay", 'if st.get("op") == "rec":', "if True:", "non-record steps replayed", ONLY_NEW),
+    ("trace_replay", 'fx.get("format") != FORMAT or', "False or", "foreign fixture format accepted", ONLY_NEW),
+    ("trace_replay", "except Exception as ex:   # noqa: BLE001", "except ZeroDivisionError as ex:   # noqa: BLE001", "thin shrink candidate crashes the replay", ONLY_NEW),
+    ("trace_replay", 'return 1 if res["diverged"] else 0', "return 0", "replay exit code ignores divergence", ONLY_NEW),
+    ("trace_replay", '"diverged": cl["found"],', '"diverged": True,', "clean traces reported as failing", ONLY_NEW),
+    ("trace_replay", 'struct.pack_into("<Q", hdr, RECORD_COUNT_OFFSET, len(recs))', "pass", "stale record count in rebuilt headers", ONLY_NEW),
+    ("trace_replay", 'schema = SC.from_json(fx["schema"]) if fx.get("schema") else None', "schema = None", "schema in the fixture ignored", ONLY_NEW),
+    ("trace_replay", '"txn-missing": "stuck-sync"', '"txn-missing": "divergence"', "stuck sync reported as divergence", ONLY_NEW),
+    ("from_failure", "cands.append(os.path.join(root, str(instance), rel))", "pass", "recording taken from the wrong instance folder", ONLY_NEW),
+    ("from_failure", "if root:\n        cands.append(os.path.join(root, rel))", "if False:\n        cands.append(os.path.join(root, rel))", "recording path not tried under the root", ONLY_NEW),
+    ("from_failure", "if name:\n        cands +=", "if False:\n        cands +=", "failure sub folder of the machine not searched", ONLY_NEW),
+    ("from_failure", "os.path.join(fail_dir, base), rel]", "os.path.join(fail_dir, base)]", "recording path as written not tried", ONLY_NEW),
+    ("from_failure", "return max(hits, key=os.path.getmtime)", "return None", "root sub folders not searched", ONLY_NEW),
+    ("from_failure", "return max(near)[1] if near else None", "return min(near)[1] if near else None", "oldest recording guessed", ONLY_NEW),
+    ("from_failure", "0 <= failure_time - os.path.getmtime(f) <= GUESS_WINDOW_S or abs(failure_time - os.path.getmtime(f)) < 5", "True", "any recording guessed", ONLY_NEW),
+    ("from_failure", 'if m.get("name"):\n        files +=', 'if False:\n        files +=', "failure folder not searched when guessing", ONLY_NEW),
+    ("from_failure", 'glob.glob(os.path.join(inst, "*", pattern))', "[]", "game copy sub folders not searched when guessing", ONLY_NEW),
+    ("from_failure", "for holder in (m, cap):\n        for k in REF_KEYS:", "for holder in (m,):\n        for k in REF_KEYS:", "capture dict not searched for the recording", ONLY_NEW),
+    ("from_failure", "for k in REF_KEYS:", "for k in ():", "named recording entries ignored", ONLY_NEW),
+    ("from_failure", 'for k in ("path", "file"):', 'for k in ("path",):', "file entry of a recording reference ignored", ONLY_NEW),
+    ("from_failure", "if p and fnmatch(", "if p or fnmatch(", "every capture value taken for a recording", ONLY_NEW),
+    ("from_failure", "for k in ERROR_KEYS:", "for k in ():", "dump errors of failure.json not shown", ONLY_NEW),
+    ("from_failure", 'if h["slot"] in slots:', "if False:", "same machine accepted twice", ONLY_NEW),
+    ("from_failure", "ev[k] += _int(counters.get(k))", "ev[k] = _int(counters.get(k))", "counters not summed over machines", ONLY_NEW),
+    ("from_failure", 'if name != host and seq < seqs[host]:', 'if name != host and seq > seqs[host]:', "sync lag not seen", ONLY_NEW),
+    ("from_failure", 'if st.get("synced") is False:', "if False:", "host synced=false not seen", ONLY_NEW),
+    ("from_failure", 'elif st.get("connected") in (0, False):', "elif False:", "lost link not seen", ONLY_NEW),
+    ("from_failure", '"and" if classes & {"digest-mismatch", "divergence"} else "but not"', '"and" if False else "but not"', "status/recording agreement wrong for mismatches", ONLY_NEW),
+    ("from_failure", '"and" if "stuck-sync" in classes else "but not"', '"and" if True else "but not"', "status/recording agreement wrong for lag", ONLY_NEW),
+    ("from_failure", 'expect = {"converges": bool(opts.get("expect_converges")),', 'expect = {"converges": True,', "case expectation ignores the flag", ONLY_NEW),
+    ("from_failure", 'return bool(r.get("diverged")) and S.signature(r) == sig', 'return bool(r.get("diverged"))', "shrink accepts a different failure", ONLY_NEW),
+    ("from_failure", 'tag = hashlib.sha1(("%s/%s" % (run, fail)).encode()).hexdigest()[:8]', 'tag = ""', "case names collide", ONLY_NEW),
+    ("from_failure", "found.sort(key=lambda f: (-os.path.getmtime(f), f))", "found.sort(key=lambda f: (os.path.getmtime(f), f))", "oldest failure first", ONLY_NEW),
+    ("from_failure", 'found = glob.glob(os.path.join(os.getcwd(), FAILURE_DIR, "**", "failure.json"), recursive=True)', "found = []", "default failure folder not searched", ONLY_NEW),
+    ("from_failure", "return found[:1] if not paths else found", "return found", "no argument takes every failure", ONLY_NEW),
+    ("from_failure", "if len(traces) < 2:", "if len(traces) < 1:", "one recording treated as enough", ONLY_NEW),
+    ("from_failure", 'return 1 if any(r["verdict"] == "not-reproduced" for r in reps) else 0', "return 0", "exit code ignores not-reproduced", ONLY_NEW),
+    ("from_failure", '    if any(r["verdict"] == "no-recordings" for r in reps):\n        return 2', '    if any(r["verdict"] == "no-recordings" for r in reps):\n        return 0', "exit code ignores missing recordings", ONLY_NEW),
+    ("from_failure", "for m in MARGINS_MS:", "for m in ():", "time window stage skipped", ONLY_NEW),
+    ("from_failure", 'abs(s["at_ms"] - at) <= m', 'abs(s["at_ms"] - at) <= -1', "time window keeps nothing", ONLY_NEW),
+    ("from_failure", 'or s.get("pin") or s["ty"] == "Meta"]', 'or s["ty"] == "Meta"]', "time window cuts the pinned schema records", ONLY_NEW),
+    ("from_failure", "for ty in list(DROP_ORDER[:-1]) + extra + list(DROP_ORDER[-1:]):", "for ty in ():", "record-type stage skipped", ONLY_NEW),
+    ("from_failure", "DROP_ORDER[:-1]) + extra + list", "DROP_ORDER[:-1]) + [] + list", "game-defined record kinds not dropped as a stage", ONLY_NEW),
+    ("from_failure", "if r[\"type\"] == C.T_SCHEMA:", "if False:", "schema records can be shrunk away", ONLY_NEW),
+    ("from_failure", 'if schema_text:\n        fx["schema"] = schema_text', 'if False:\n        fx["schema"] = schema_text', "schema option not kept in the case", ONLY_NEW),
+    ("from_failure", '"reason": _scrub(manifest.get("reason"))[:300]', '"reason": str(manifest.get("reason"))[:300]', "machine paths in the case", ONLY_NEW),
+    ("from_failure", 'run = os.path.basename(os.path.dirname(parent)) if os.path.basename(parent) else ""', 'run = ""', "run name missing from the case", ONLY_NEW),
+    ("from_failure", "for m in machines if m.get(\"dropped\")]", "for m in machines if False]", "ring drops not reported", ONLY_NEW),
+    ("from_failure", "return arg or os.environ.get(ENV_ROOT) or None", "return os.environ.get(ENV_ROOT) or arg or None", "the environment beats the option", ONLY_NEW),
+    ("from_failure", "or os.environ.get(ENV_ROOT) or None", "or None", "environment variable ignored", ONLY_NEW),
+    ("from_failure", "if not isinstance(data, (bytes, bytearray)):", "if False:", "converter result not checked", ONLY_NEW),
+    ("from_failure", "except Exception as ex:   # noqa: BLE001  a game's converter can fail in any way", "except ZeroDivisionError as ex:   # noqa: BLE001  a game's converter can fail in any way", "converter crash not reported", ONLY_NEW),
+    ("from_failure", 'raise ConvertError("cannot read %s: %s"', 'raise ConvertError("cannot convert %s: %s"', "file errors reported as converter errors", ONLY_NEW),
+    ("from_failure", "if not sep or not mod or not fn:", "if False:", "converter spec not checked", ONLY_NEW),
+    ("from_failure", 'if mod.lower().endswith(".py"):', "if False:", "converter in a file not supported", ONLY_NEW),
+    ("from_failure", "if path and os.path.abspath(path) not in sys.path:", "if False:", "converter path ignored", ONLY_NEW),
+    ("from_failure", "if not callable(func):", "if False:", "converter that is not a function accepted", ONLY_NEW),
+    ("from_failure", "convert = load_converter(a.converter, a.converter_path)", "convert = identity_convert", "converter option ignored", ONLY_NEW),
+    ("from_failure", 'opts.get("convert") or identity_convert', "identity_convert", "converter not used", ONLY_NEW),
+    ("from_failure", '{k: m.get(k) for k in ("name", "role", "instance")})', "{})", "converter not told which machine", ONLY_NEW),
+    ("from_failure", '" (a recording in another format needs --converter module:function)" if "magic" in str(ex) else ""', '""', "no hint for another recording format", ONLY_NEW),
+    ("from_failure", 'recs = [p for p in a.paths if _is_recording(p)]', 'recs = [p for p in a.paths if p.lower().endswith(".cofr")]', "recordings in another format not accepted", ONLY_NEW),
+    ("from_failure", "if len(recs) != len(a.paths):", "if False:", "recordings and failures mixed", ONLY_NEW),
+    ("from_failure", "if len(recs) < 2:", "if len(recs) < 1:", "one recording accepted", ONLY_NEW),
+    ("from_failure", "if a.name and len(fjs) > 1:", "if False:", "case name reused for several failures", ONLY_NEW),
+    ("from_failure", 'f.write(R.render(reps[0]["_traces"], reps[0].get("_fixture")))', 'f.write(R.render(reps[0]["_traces"], None))', "report without the minimal reproduction", ONLY_NEW),
+    ("from_failure", 'return {k: v for k, v in rep.items() if not k.startswith("_")}', "return dict(rep)", "internal data in the json output", ONLY_NEW),
+    ("regress", "if fx.get(\"format\") == TR.FORMAT:", "if False:", "trace cases need a replay hook", ONLY_NEW),
+    ("regress", "if oracle is None:", "if False:", "a missing replay hook is not reported", ONLY_NEW),
+    ("regress", "except TR.BadFixture as e:", "except ZeroDivisionError as e:", "a damaged trace case crashes the runner", ONLY_NEW),
+    ("gentest", "if fx.get(\"format\") == TR.FORMAT:", "if False:", "trace cases get a cmake file", ONLY_NEW),
+    ("gentest", "dict(expect) if expect else", "None if expect else", "expectation override ignored", ONLY_NEW),
+    ("flight", 'if argv and argv[0] == "from-failure":', "if False:", "from-failure subcommand missing", ONLY_NEW),
+]
+MUTATIONS += NEW_MUTATIONS
+MUTATIONS += [
+    ("shrink", "cmd = shlex.split(cmd, posix=True)", "cmd = shlex.split(cmd, posix=False)",
+     "POSIX path quotes retained", "PortabilityTests"),
+    ("shrink", "elif c == '\"':\n                if inq and i + 1 < n and s[i + 1] == '\"':",
+     "elif c == '\"':\n                if False:", "Windows doubled quotes discarded", "PortabilityTests"),
+]
+TWIN_MODS = ["cofr", "schema", "analyze", "shrink", "gentest", "report", "regress", "flight", "toy_replay", "trace_replay", "from_failure"]
 
 
-def _one_mutation(i, mod, old, new, why):
+def _one_mutation(i, mod, old, new, why, only=None):
     d = tempfile.mkdtemp(prefix="cofr_mut%d_" % i)
     try:
         for m in TWIN_MODS:
@@ -1224,7 +2190,7 @@ def _one_mutation(i, mod, old, new, why):
             f.write(text.replace(old, new))
         env = dict(os.environ, COFR_SRC=d)
         for extra in (["--quick"], []):      # the fast tests catch most mutants; the slow ones (replay programs, CLI) run only for the rest
-            r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "run_tests.py"), "--no-cpp", "--no-twin", "--fail-fast"] + extra,
+            r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "run_tests.py"), "--no-cpp", "--no-twin", "--fail-fast"] + (["--only", only] if only else []) + extra,
                                capture_output=True, text=True, env=env, errors="replace")
             if r.returncode != 0:
                 break
@@ -1246,10 +2212,69 @@ def twin():
     return survived
 
 
+class PortabilityTests(unittest.TestCase):
+    def test_windows_command_quotes(self):
+        cases = [
+            ('"C:\\Program Files\\Python\\python.exe" -I "C:\\replay tools\\check.py" {fixture}',
+             [r"C:\Program Files\Python\python.exe", "-I", r"C:\replay tools\check.py", "{fixture}"]),
+            ('"a""b" {fixture}', ['a"b', "{fixture}"]),
+            ('"a""b""c" {fixture}', ['a"b"c', "{fixture}"]),
+            ('"" {fixture}', ["", "{fixture}"]),
+        ]
+        for command, expected in cases:
+            with self.subTest(command=command):
+                self.assertEqual(SH._msvcrt_split(command), expected)
+                with mock.patch.object(SH.os, "name", "nt"):
+                    self.assertEqual(SH.CommandOracle(command).cmd, expected)
+
+    def test_windows_list2cmdline_roundtrips(self):
+        import random
+        rng = random.Random(155)
+        alphabet = 'abc XYZ\\"\t012'
+        for _ in range(2000):
+            args = [''.join(rng.choice(alphabet) for _ in range(rng.randrange(25)))
+                    for _ in range(rng.randrange(1, 8))]
+            self.assertEqual(SH._msvcrt_split(subprocess.list2cmdline(args)), args)
+
+    def test_posix_command_quotes(self):
+        command = '"/opt/replay tools/python" -I "/tmp/check script.py" {fixture}'
+        with mock.patch.object(SH.os, "name", "posix"):
+            self.assertEqual(SH.CommandOracle(command).cmd,
+                             ["/opt/replay tools/python", "-I", "/tmp/check script.py", "{fixture}"])
+
+    def test_visual_studio_cache_detection(self):
+        self.assertTrue(_uses_visual_studio("CMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026\n"))
+        self.assertTrue(_uses_visual_studio("CMAKE_GENERATOR:INTERNAL=Visual Studio 17 2022\n"))
+        self.assertFalse(_uses_visual_studio("CMAKE_CXX_COMPILER:FILEPATH=C:/Visual Studio/cl.exe\n"
+                                            "CMAKE_GENERATOR:INTERNAL=Ninja\n"))
+        self.assertFalse(_uses_visual_studio("CMAKE_GENERATOR:INTERNAL=NMake Makefiles\n"))
+        self.assertFalse(_uses_visual_studio(""))
+
+    def test_configure_generator_fallback_order(self):
+        self.assertEqual(_configure_generators(True), [
+            ["-G", "Visual Studio 18 2026", "-A", "x64"],
+            ["-G", "Visual Studio 17 2022", "-A", "x64"],
+            ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],
+        ])
+        self.assertEqual(_configure_generators(False), [["-DCMAKE_BUILD_TYPE=Release"]])
+
+
 # ---------------------------------------------------------------- C++ phase
 
+def _configure_generators(windows):
+    return ([
+        ["-G", "Visual Studio 18 2026", "-A", "x64"],
+        ["-G", "Visual Studio 17 2022", "-A", "x64"],
+        ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],
+    ] if windows else [["-DCMAKE_BUILD_TYPE=Release"]])
+
+
+def _uses_visual_studio(cache_text):
+    return any(line.startswith("CMAKE_GENERATOR:INTERNAL=") and "Visual Studio" in line
+               for line in cache_text.splitlines())
+
 def cpp_phase(cross_dir):
-    """Configure and build the recorder and its tests with cmake (Visual Studio 2022 on Windows, one compile at a time),
+    """Configure and build the recorder and its tests with cmake (one compile at a time),
     run every ctest case (unit, golden, perf and the mutation twins), then run the golden group once more with
     COFR_EMIT_DIR so it leaves the files the cross tests read. Returns (ok, summary)."""
     cmake, ctest = shutil.which("cmake"), shutil.which("ctest")
@@ -1261,7 +2286,7 @@ def cpp_phase(cross_dir):
     os.makedirs(build, exist_ok=True)
     cache = os.path.join(build, "CMakeCache.txt")
     if not os.path.exists(cache):
-        gens = [["-G", "Visual Studio 17 2022", "-A", "x64"], ["-DCMAKE_BUILD_TYPE=Release"]] if os.name == "nt" else [["-DCMAKE_BUILD_TYPE=Release"]]
+        gens = _configure_generators(os.name == "nt")
         for g in gens:
             r = subprocess.run([cmake, "-S", CPP_DIR, "-B", build] + g, capture_output=True, text=True, env=env, errors="replace")
             if r.returncode == 0:
@@ -1270,7 +2295,7 @@ def cpp_phase(cross_dir):
             os.makedirs(build, exist_ok=True)
         else:
             return False, "cmake configure failed:\n" + (r.stdout + r.stderr)[-1500:]
-    vs = "Visual Studio" in read_text(cache)
+    vs = _uses_visual_studio(read_text(cache))
     cmd = [cmake, "--build", build, "--config", "Release", "--parallel", "1"]
     if vs:
         cmd += ["--", "/nologo", "/v:minimal", "/p:IgnoreWarnIntDirInTempDetected=true"]
@@ -1318,6 +2343,9 @@ def main():
                 return 1
             os.environ["COFR_CROSS_DIR"] = cross     # the cross tests, and the twin's child runs, read it
         suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+        if "--only" in argv:      # --only ClassA,ClassB : just those test classes
+            want = argv[argv.index("--only") + 1].split(",")
+            suite = unittest.TestSuite(t for group in suite for t in group if type(t).__name__ in want)
         res = unittest.TextTestRunner(verbosity=1, failfast="--fail-fast" in argv).run(suite)
         if not res.wasSuccessful():
             print("TESTS FAILED")
