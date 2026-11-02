@@ -1153,9 +1153,26 @@ Observed:
   its controls, "Controlling"). The mission completes in `DockAtStation`, called from a ship's step when it docks;
   for a ship that needs its autopilot's `Intent`/`DestinationObject` or a player docking it, which the bot cannot do.
   Moving the ship next to the station (helper `gotohome ... ship`) did not dock it.
-- **A ship's flight is not synced**: moving the guest's copy of the shared ship left the host's where it was. A
-  hijacked ship flown by one player stays put on the other's copy (both stay aboard and see each other, as positions
-  are ship-wise). Open.
+- **A ship's flight** (2026-11-02): each copy flew its own copy of the shared ship (observed: its own autopilot, speed
+  about 12 000/s, angles 70 degrees apart between copies; a hijacked ship flown by one player kept its old course on the
+  other's copy). A ship moves in its end step: `UpdateSpacePosition` (`0x00a33bb0`) adds `xSpeed`/`ySpeed`
+  (0x18b/0x18d, units per second) to `xReal`/`yReal` (0x26a/0x26b) and `Spin` (0x27b, degrees per second) to
+  `MyImageAngle` (0x1b6, = `image_angle`). The bot flies a ship from its bridge as it flies its pod (cursor override,
+  Thrust held: speed 12 000 -> 78 000 in 4.5 s). Now, while a player is at the shared ship's bridge (state
+  "Controlling", Parent = the ship), its copy sends the ship's speed, angle and spin each frame, and the other copy puts
+  them on its ship before `UpdateSpacePosition` runs. Places are not sent (galaxies differ: the ship moves the same way
+  through each copy's own space). Mutation `noshipflight`.
+- **Mistake, recorded**: the first version also had the guest's copy follow the host's while nobody was at the bridge.
+  It broke the alarm scenario (3 of 7 failed, twice; 7 passed with the sync off): during an alarm the ship's
+  `AlarmSecondsLeft` is `TimeForDistanceSpeedAcceleration` to where that copy's autopilot takes it, so with the host's
+  speed the guest's ship never got there (seconds left 17-21 or 11 against the host's 14; the guest's ship not
+  destroyed). Each copy's own autopilot flies the ship while nobody is at its bridge (both run the same course; angles
+  still differ between copies).
+- **Test** (`tools/flight.sh`, 8 checks): nobody at the bridge, nothing is followed; the guest takes the bridge and
+  flies, and the host's copy follows while it thrusts and turns, and keeps its new course after; both still aboard; no
+  dialogs; both advancing. Speeds and angles are read on both copies at once (within 3 degrees, 5%). Mutation
+  `noshipflight`: 2 checks fail. Not done: docking a hijacked ship at a station in a test (the bot would have
+  to fly it there; stations differ between copies, and the mission completes on the docking copy's own station).
 - **A puppet with no route to its player**: the guest put at the bridge from afar; the host's puppet walked toward it
   and stopped at 1 967 units (no route it may take: the bridge is behind keycard doors the guest did not pass, and
   a player can also jump, e.g. with a teleporter item). Now a puppet more than 400 units from its player that has not
