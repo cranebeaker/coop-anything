@@ -3715,3 +3715,51 @@ smoothing lagged the free-run start.
 - What `member+0x308` is; whether a member's `+0x508` flag bits are death or something else (a kill of a character made from a
   member did not change them).
 - Creating a member by the game's own path; two PCs; the host's death screen.
+
+## Session 2026-11-02 by: members the client does not have, made from the host's text
+
+### Observations
+
+- **The game can write one member as text and read it back** with its own functions, called from the mod with the game's own
+  sequence (`FactionMember.Save` handler `1C5BAC4` for the write, the world load's member routine `F99FF0` for the read):
+  - write: `18786F0(doc)`, `1878CA0(doc, "FACTIONMEMBER_SINGLESAVE")` gives the root node, `1BC45A8(member, root)`, `187A3CC(doc, path)` writes the file, `1878A2C(doc)`;
+  - read: `1879AC4(path, 0, callback, arg)` parses the file and calls `callback(doc, arg)`; there `18791F0(doc, "FACTIONMEMBER_SINGLESAVE")`
+    gives the node, then `403DE238(0x528)`, the constructor `1BB4C1C`, `1BC20B0(member, node)` and `1BC159C(member, node)`;
+  - placement in slot n (the tail of `1BD2E20`, the table allocation): if the slot holds a live member (`1BD16D4`), `F67E70(mgr, old)` and
+    `1BD522C(slot, 0)`; then `F67970(mgr, table+0xA8, n)`, `1BD2220(slot, &holder)` with `holder` = the new member, `member+0x174` = n,
+    `19EF15C(&holder)`. `mgr` is `[[RVA 26FFAA8] + 0x6C68]`, the table the object at `region+0x20`.
+  - The text is plain and readable: `Identity` (name, faction, `FactionID`, `RandomSeed`, model, role, tribe, personality), `Flags` (level,
+    location, dead, kills), the trait pickers, the gear with GUIDs, then a `SIMEvent_NOTLOADEDFROMHERE` section. 6,900 to 9,000 bytes.
+- **Round trip, one copy:** member 6 exported, imported into slot 6 of the other copy (which had an identical member) and exported again:
+  the same 304 lines, in another order inside the trait list, with `ImportanceScore` recomputed (51 against -62).
+- **Host to client, live (host A and client B, one PC):** B's slot 99 was first given another member's text (Orthog); A's captain
+  Ur-Gram was announced; A sent his text in 9 messages; B made the member (`members_built=1`), then built the captain's proxy from it. The
+  two members' texts are the same line for line except the `SIMEvent_NOTLOADEDFROMHERE` section (the member's current simulation event: the
+  game itself does not load it from here), the recomputed importance values and nothing else.
+- **Soak 1 (14 min, host moved between spots, nothing prepared):** `members_got=5` (3 skipped: the client already had them, same seed;
+  2 built: Ur-Gram, whose slot held another member after the earlier test, and `Hork`, a captain the host made into slot 497),
+  `captains_built=13`, `captains_missing=0`, 24 of 24 events applied. A text comparison of slot 497 on both copies afterwards: equal.
+  Member 99 differed: the host's Ur-Gram was dead (`IsDead`, `LastDeath*`, `SeveredHead`), the client's was not.
+- **Soak 2 (9 min):** the client's slots 99, 245, 239 and 151 were first filled with another member's text; the host then sent members
+  as its events named them: 4 sent, 3 built, 1 skipped; the games' own handler logs agree: 12 events on each, in the same order with the
+  same subject and other names (`tools/soak_nemesis.py`).
+- **The client's event queue dropped every message over 200 bytes**, so the first live run got no member data (`members_got=0`); member
+  chunks (up to 921 bytes) are now let through.
+
+### Derived
+
+- The seed (`+0x168`, `RandomSeed`) tells two members of one slot apart: the host sends a member's text the first time an event or an
+  enemy names him in a session and again if the slot's seed changes; the client builds him unless it already has that seed there. Chunks
+  of 900 bytes, in order, in front of the message that names the member (reliable ordered transport), so the member exists when the
+  event or the proxy needs him.
+- What the host's kill code sets (`IsDead`, the death attack, a severed head) is not an event, so it is not carried; the
+  dead captain stays alive in the client's Nemesis world until an event (`PromoteDead_*`) replaces him. A fix would send the member
+  again after a death event; not tried.
+
+### Unknown
+
+- A promotion burst of brand-new captains (`PromoteEmpty_*` for many new members) was not seen again; the first soak had one new captain
+  (`Hork`) and a slot reuse. The old replaced member's release (`F67E70`, `1BD522C`) ran in the tests without a crash, for minutes.
+- Whether the client's own Nemesis screens, the army and the hierarchy view show an imported member correctly; the `+0x330` index
+  that the world load updates for each member (post owners) is not done by the placement.
+- Two PCs; the host's death screen.
