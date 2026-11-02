@@ -57,10 +57,31 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
 - `AI + 0x58C` (master/slave role) reads `1` for player 2 even outside a team move, so it is a leftover field, not an
   "in move" flag; `AI + 0x6C8` stayed `0` throughout the observed moves, and `state 11` sub-stage values `1/2/3` from
   earlier sessions were not reproduced in the 2026-10-27 runs.
-- Cloned Leonardo in solo levels is missing the katana scabbards (the blades are there): the bodies share the same
-  `anim[5]/[6]` shape pointer, every skeleton bone's visual geometry matches player 1's, and copying `anim[1]` (which is
-  null on the clone) does not restore them, so the scabbards are most likely separate prop objects that the engine's
-  object duplication does not copy. Not investigated further.
+- Cloned Leonardo in solo levels was missing the katana scabbards: they are a separate prop. Duplicating the prop
+  (pointer at `0x014F4294`, or the turtle AI `+0x8FC`) and calling `Weapon_AttachLeoKatanaCase` (`0x005DEAC0`) on the
+  copy attaches its own scabbards.
+- Turtle identities: 1 Leonardo, 2 Raphael, 3 Michelangelo (nunchucks), 4 Donatello (bo), read from the turtle manager
+  slots in Map 5 (slot i holds identity i). The manager's turtle list is at manager AI `+0x0C + 4 * (id - 1)`.
+- In Map 5 (*Ninja Tag Time*) all four turtles are registered. `Turtle_Spawn` on an absent brother gives him an IO port
+  and state 2, but his body was not drawn: status `120C00A5` (Culled set, Visible clear), draw LOD byte at object
+  `+0x1C` = 0, while his weapon and bandana props were drawn. The game hides an absent brother through its control-flag
+  setter `0x0045B1D0`; clearing `ForceInvisible` (`0x00200000`) in memory alone does not put him back on the draw
+  lists. Setting the flag and clearing it again through `0x0045B1D0` does (status `120C00A3`, LOD `0x2C`), for all three
+  brothers. Forcing `InPause` (`0x04000000`) on the object, as one earlier build did every frame, also kept him hidden.
+- Writing a brother's identity (`+0x6A4`) or weapon skeleton (`anim + 4`) into a Leonardo copy makes its attacks resolve
+  Leonardo's tables against the other brother's objects: the copy pulled katanas and stayed in state 13 without
+  playing an attack. A copy that keeps Leonardo's identity and weapons attacks normally.
+- State 13 is the fight stance after an attack; player 1 also stays in it for about 10 s, and moving the stick leaves
+  it. It is not a lock.
+- The game's projection matrix (`GetTransform(D3DTS_PROJECTION)` at EndScene) is `_11 1.4282`, `_22 -2.5390`,
+  `_33 1.0`, `_43 -0.05`, `_34 1.0` in Map 5 at 1280x720: a vertical focal factor of `|_22| / 2 = 1.27` viewport heights.
+  The turtle position (`[obj+0x0C] + 0x30`) is at the feet.
+- The game reads keyboard (256-byte state) and mouse (20-byte state) through DirectInput `GetDeviceState` also while
+  its window is in the background. Alt is the co-op key (`COOP=LMENU,RMENU`); held, it charges a team move (state 25),
+  so Alt+Tab started team moves over and over. The ground charge needs the button held; a tap only asks
+  `GetCoopPartner` (caller `0x005380E5`).
+- When player 2 starts a team move, player 1 is the partner and `FUN_00586590` sets him absent (call returning to
+  `0x005865E5`); he vanished and lost control until that `state 0` was redirected to 2 with IO port 0.
 
 ## Derived
 
@@ -71,10 +92,15 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
 ## Unknown
 
 - Store/edition of the tested copy; whether other builds match.
-- Behaviour of player 2 and team moves across multi-turtle levels, boss fights, cutscenes, and level transitions.
+- Behaviour of player 2 and team moves in the rest of the campaign, boss fights, cutscenes, and level transitions.
+- Why the `27A2AE` crash happened (null call; seen after repeated team moves on 2026-10-29).
 
 ## Checks that actually ran
 
-- Automated self-test (`selftest both`) and team-move script (`coopmove`) in an isolated windowed test copy of Level 1
-  (2026-10-26 to 2026-10-27), recorded from the D3D9 back buffer (`selftest_170644.mp4`, `team_raw.mp4`,
-  `team_fixed.mp4`).
+- Self-test script (`selftest both`) and team-move script in a windowed test copy of Level 1 (2026-10-26 to 2026-10-27),
+  recorded from the D3D9 back buffer.
+- 2026-11-01 and 2026-11-02, same test copy with a virtual controller for player 2: in Map 5 each of Raphael,
+  Michelangelo and Donatello as player 2 (4-hit armed combo, unarmed attack, walk, jump); in Level 1 the Leonardo copy
+  (same moves), a team move started by each player, and 6 s idle with team moves allowed (nothing started by itself).
+  Checked by looking at the recorded frames one by one. The recordings stay on the developer's machine; they are not in
+  this repo.
