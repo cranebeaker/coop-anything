@@ -3763,3 +3763,29 @@ smoothing lagged the free-run start.
 - Whether the client's own Nemesis screens, the army and the hierarchy view show an imported member correctly; the `+0x330` index
   that the world load updates for each member (post owners) is not done by the placement.
 - Two PCs; the host's death screen.
+
+## Session 2026-11-02 bz: looking for the captain's speech (not found yet)
+
+### Observations
+
+- **What the game logs when a captain engages** (host copy alone, `coop_slowmo=on`, the player kept at 100,000 health and fighting the
+  nearest captain, Ur-Gram): `DatalLevelChanged`, then `ActiveShowdownGiven_Distance` (the captain picks the fight), in one run a
+  half-second `SetPresentationSequenceSlowMo = CombatResetCamera` (start, ramp out, stop), then `ActiveInitialPlayerThreat` about 2-3 s
+  after the first event. In another run only `ActiveInitialPlayerThreat` showed. No other `SLOWMO` line appeared with these events
+  (the lines seen otherwise were `Instakill_01_SM`, `AI_OlogHai_RecoilAttackSlowMo`, and the death sequences: `PlayerDeath_SM` "Pausing
+  due to Epsilon value!", `Taunt_Eye_Zoom_In_SM`, a captain's "Killed You" camera with name, title and subtitle).
+- **No speech was seen on screen.** Window captures every 40-150 ms from the first event on (kept in `local/logs/intro`, not published)
+  showed ordinary fighting; the speech and camera focus the owner describes did not appear in these runs. The "Killed You" scene after
+  the test player died to a captain (Pûg) did appear: camera on the captain, nameplate (name, line), subtitle at the bottom.
+- The game's presentation system is data driven: record types `Presentation.Event` (`BeginPresentation`/`EndPresentation`,
+  `PresentationOnStart/Complete/Cancel/Confirm`, camera type, `PresentationSequence`, `PresentationTimeScale`) and an attack flag
+  `PresentationAttack`/`PresentationAttackName`. `5D1030` is `SetPresentationCameraState(character, state, type)`: it writes the state into
+  the character's AI data (`[char+0x2CE8]+0xB18` / `+0xB1C`) and logs "Presentation camera state changed."; callers `5D0D8C`, `5D0DF4`
+  (twice), `1A945B0`. Polling `+0xB18/+0xB1C` of a captain showed 0, 0 throughout (the player's `+0x2CE8` is not AI data).
+- The slow-motion pause is a time-scale record (`PlayerDeath_SM` logs "Pausing due to Epsilon value!"), so with slow motion off in
+  co-op these pauses do not happen; the owner allows slow motion for captain presentations.
+
+### Unknown
+
+- What the captain's speech is in the game's data (a presentation event, a presentation attack, or an in-world line) and what starts it;
+  why the runs here did not show it (the captain's identity not presented, the test player's state, or a condition of the fight).
