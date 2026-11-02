@@ -105,6 +105,35 @@ Offline: steamwrap 40/40, protocol 12/12, projection 10/10 (cases from the measu
 a fake folder 6/6 (refuses the wrong build, backs up, reinstall keeps the backup, uninstall restores).
 Mod repo commit 355cfbb (phoenixd123/alien-isolation-coop).
 
+## Partner character (3D model) work, started 2026-11-01
+- Tools, owner approved. Ghidra 12.2 (GitHub release zip, SHA-256 2c2cd776…be67 matched the release notes).
+  Ghidra 12.2 needs **JDK 25**: JDK 21 is refused with "JDK 25+ could not be found". Temurin 25.0.5+8
+  (SHA-256 matched the Adoptium API). Headless analysis runs on a copy of AI.exe.
+- Leads from strings in AI.exe (observed): CATHODE classes `SetPosition`, `DespawnCharacter`, `AssetSpawner`,
+  `PathfindingTeleportNode`, `CHR_SetTacticalPosition`. Message names `character_discontinuous_positioning` and
+  `request_display_character`. Error text "Failed to find some valid components for a character spawner".
+- From #156's notes (not re-verified): character transforms live in entity components, read through the generic
+  property getter RVA 0x4D63C0 (bbox atoms); raw memory scans only find GPU noise.
+- Plan (derived): the first target is driving an existing human NPC's transform from the network (a puppet),
+  then spawning a dedicated character.
+- Ghidra headless auto-analysis of AI.exe finished (about 1 h, 12 GB heap). Scripts used (Java, in the mod's RE notes):
+  string xrefs, vtable dump per CATHODE class, refs-to, symbol lookup.
+- Observed (static): "SET_POSITION" / "DESPAWN_CHARACTER" strings are memory-tracking category labels, not logic.
+  The CATHODE::SetPosition / Character / DespawnCharacter vtables share almost every slot with all ~1450 CATHODE
+  vtables. Their only unique slots (198/199) are a setter/getter of a static per-class ID token
+  (SetPosition: DAT_0174e860; Character: DAT_0174ea38). Behavior is reached through generic dispatch, not
+  class-specific virtuals, so static tracing from class names is slow.
+- The decompile of the property getter RVA 0x4D63C0 loses its arguments (calling convention). It walks the entity's
+  component list (`+8`, next at `[3]`) and matches the atom against `DAT_0174d304`.
+- call_method prologue (RVA 0x526680): `55 8B EC 6A FF 68 <imm32>`. The first 10 bytes are position-independent,
+  so a 5-byte jmp hook with a 10-byte trampoline is safe. Installed from DllMain (before game threads start),
+  the game ran through the menus into the level normally.
+- Probe run (p1, menu -> level, ~2 min): 238,494 calls and 2,832 distinct target/message vtables.
+  **No message-type vtable has RTTI**, and most targets don't either. Named targets were only
+  CATHODE::CompositeInstance, CATHODE::MASTER and CATHODE::Sequence. So message types can't be named from RTTI.
+  Next: decompile a message vtable's slots to find a name or ShortGuid accessor, or read the command
+  graph from the level data (CathodeLib / OpenCAGE know the COMMANDS.PAK format) and match entity IDs.
+
 Not done / unknown:
 - Two PCs over the internet: untested.
 - A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.
