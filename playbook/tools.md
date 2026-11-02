@@ -88,7 +88,7 @@ Do not use these tools to bypass anti-cheat on online games, to cheat in other p
 | F4SE (Fallout 4) | Fallout 4 | https://f4se.silverlock.org (unverified, from memory) | Unverified | C++ plugins | Unverified | Same version coupling issue. |
 | OBSE (Oblivion) | Oblivion classic | Unverified | Unverified | | | The xNVSE page notes NVSE descends from OBSE. Oblivion Remastered is Unreal and uses UE4SS-style tooling instead. |
 | Address Library for SKSE Plugins | Version-independent address database for Skyrim plugins | Nexus Mods page 32444 by meh321 (from search results) | Nexus download | Header plus database | Unverified | AE and SE builds are separate files; Vortex has installed the wrong one for some users. Companion C++ framework: CommonLibSSE-NG (several forks, licenses differ). |
-| BepInEx | Unity Mono, Unity IL2CPP, XNA/FNA/MonoGame | https://github.com/BepInEx/BepInEx | Follow the releases guide; the repo page has no steps | C# plugins; works with Harmony | LGPL-2.1 | Only Unity Mono has stable releases at research time. IL2CPP not on macOS or ARM. Version 5 and 6 (bleeding edge) have different install docs. |
+| BepInEx | Unity Mono, Unity IL2CPP, XNA/FNA/MonoGame | https://github.com/BepInEx/BepInEx | Follow the releases guide; the repo page has no steps | C# plugins; works with Harmony | LGPL-2.1 | Only Unity Mono has stable releases at research time. IL2CPP not on macOS or ARM. Version 5 and 6 (bleeding edge) have different install docs. IL2CPP metadata version 31 (seen in Unity 2021.3.45f2, Crime Scene Cleaner) breaks the 6.0.0-pre.2 release: its bundled Cpp2IL supports 23-29, interop generation fails and the game exits at once. Bleeding-edge build be.791 from builds.bepinex.dev worked; check `global-metadata.dat`'s version (Cpp2IL logs it) before picking a build. |
 | MelonLoader | Unity Mono and IL2CPP | https://github.com/LavaGang/MelonLoader | Copy `MelonLoader`, `version.dll`, `dobby.dll` into the game folder, or use the official installer (seen in docs) | C# mods in `Mods`, plugins in `Plugins` | Apache-2.0 | IL2CPP needs .NET 6 runtime. Some games need a different proxy name (`winhttp.dll`, `dinput8.dll`). Debug mode opens a Mono debug port. |
 | Harmony | Runtime patching of .NET/Mono methods | https://github.com/pardeike/Harmony | NuGet `Lib.Harmony` (or `Lib.Harmony.Thin`) (seen in docs) | C# | MIT | Harmony 1.x and 2.x are incompatible. |
 | UE4SS | See section 1.5 | | | | | |
@@ -125,6 +125,15 @@ Linux and Steam Deck notes:
 - REFramework needs `WINEDLLOVERRIDES="dinput8.dll=n,b" %command%` in Steam launch options. MelonLoader lists Linux support via Wine, Proton or native. BepInEx supports Unity Mono on Linux.
 - UE4SS is Windows only per its README, but Windows UE games run under Proton, with the proxy DLL override applied the same way.
 - Goldberg lists Linux support (`libsteam_api.so`).
+
+### 3.1 This repo's own tools for several copies and sync tests
+
+`tools/gameslot` (a lease lock so only one test lane runs game copies at a time) and
+`tools/gamepool` (isolated hardlinked installs, a warm pool of reused copies, low-cost
+minimized launches, crash log reading) do the bookkeeping above for any Windows game from a
+per-game config. The rest of the sync test tools (chaos box, flight recorder, fuzzer,
+ownership library, fake world, scenarios, bots, animation checker) are listed in
+[tools/README.md](../tools/README.md). How to run copies: [multi-instance-testing.md](multi-instance-testing.md).
 
 ## 4. Agent workflow helpers
 

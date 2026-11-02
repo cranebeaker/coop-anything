@@ -14,3 +14,4 @@ jobs:
       - run: pip install pyyaml
       - run: python -m unittest discover -v
       - run: python tools/build_directory.py --check
+      - run: python -m unittest tools/mcp/test_coop_mcp.py

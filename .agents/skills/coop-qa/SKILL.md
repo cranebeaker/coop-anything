@@ -14,4 +14,6 @@ description: Prove co-op works without a human playtest: isolated test installs,
 7. Lag and loss runs; a client install without the mod to test downloads.
 8. Use the game's own screenshots and logs, never desktop capture.
 
+9. Use the ready-made tools in `tools/` (chaos box, flight recorder, fuzzer, game slot and pool, scenarios, bots, animation checker) instead of writing them again; see the `coop-sync-testing` skill.
+
 Details: `playbook/automated-qa.md`.

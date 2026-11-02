@@ -2,6 +2,10 @@ name: New co-op project spotted
 description: Tell us about a co-op mod, fork or port that is missing from the directory
 labels: [directory]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        💬 **Please join our [Discord](https://discord.gg/EXGB49R82t)!** Chat with other co-op modders, follow projects, and get your own Dev role and topic for your mod.
   - type: input
     id: game
     attributes: { label: Game, placeholder: "Deus Ex (2000)" }

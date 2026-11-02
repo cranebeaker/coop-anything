@@ -1,0 +1,36 @@
+{
+ "game": "toy",
+ "digest_categories": {
+  "0": "world",
+  "1": "npcs"
+ },
+ "message_types": {
+  "1": "hello",
+  "2": "welcome",
+  "4": "batch",
+  "5": "ack",
+  "13": "digest"
+ },
+ "txn_messages": [4, 5],
+ "marker_kinds": {
+  "0": "note",
+  "1": "desync",
+  "2": "join",
+  "3": "leave",
+  "4": "test-step",
+  "5": "save",
+  "6": "load",
+  "7": "rebase",
+  "9": "checkpoint"
+ },
+ "custom_records": {
+  "40": {
+   "name": "ScriptWrite",
+   "fields": [
+    {"name": "seq", "type": "u64"},
+    {"name": "key", "type": "str16"},
+    {"name": "value", "type": "i32"}
+   ]
+  }
+ }
+}

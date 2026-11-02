@@ -1,0 +1,30 @@
+{
+  "_notes": "The fields the fnv-coop inspector showed, as a field list. The methods (coop.status, ui.status, bot.menu, ref.info) are custom methods of that project's plugin; see README.md in this folder.",
+  "name": "fnv-coop",
+  "eval_allow": ["player.isweaponout", "player.getav", "player.getequippedobject"],
+  "read_methods": ["bot.menu", "coop.status", "ui.status", "ref.info"],
+  "fields": [
+    {"label": "role",          "source": "call", "method": "coop.status", "path": "role"},
+    {"label": "menu",          "source": "call", "method": "bot.menu", "path": "kind"},
+    {"label": "msg queue",     "source": "call", "method": "bot.menu", "path": "msgCount"},
+    {"label": "weapon drawn",  "source": "eval", "expr": "player.IsWeaponOut"},
+    {"label": "equipped",      "source": "eval", "expr": "player.GetEquippedObject 5", "format": "{}"},
+    {"label": "health",        "source": "eval", "expr": "player.GetAV Health", "format": "{:g}"},
+    {"label": "position",      "source": "call", "method": "ref.info", "params": {"ref": "FalloutNV.esm:14"}, "format": "{x:.0f} {y:.0f} {z:.0f}"},
+    {"label": "cell",          "source": "call", "method": "ref.info", "params": {"ref": "FalloutNV.esm:14"}, "path": "cell", "format": "{:08X}"},
+    {"label": "lastSeq",       "source": "call", "method": "coop.status", "path": "lastSeq"},
+    {"label": "acks",          "source": "call", "method": "coop.status", "path": "host.peers", "template": "slot {slot}: acked {acked}", "empty": "no clients"},
+    {"label": "allSynced",     "source": "call", "method": "coop.status", "path": "host.allSynced"},
+    {"label": "digest",        "source": "call", "method": "coop.status", "path": "desyncs.digests", "format": "ok {ok}  mismatch {mismatch}  repairs {repairs}"},
+    {"label": "mismatches",    "source": "call", "method": "coop.status", "path": "desyncs.digests.mismatch"},
+    {"label": "boxes",         "source": "call", "method": "ui.status", "path": "recentBoxes", "template": "#{seq} {script} {text}", "empty": "none yet"}
+  ],
+  "problems": [
+    {"field": "menu",       "op": "!=", "value": "none", "say": "{copy}: the {value} menu is open"},
+    {"field": "msg queue",  "op": ">",  "value": 0,      "say": "{copy}: {value} message box(es) queued"},
+    {"field": "equipped",   "op": "==", "value": 0,      "say": "{copy}: nothing is equipped"},
+    {"field": "allSynced",  "op": "==", "value": false,  "say": "{copy}: the host says not all clients are synced"},
+    {"field": "mismatches", "op": ">",  "value": 0,      "say": "{copy}: {value} digest mismatch(es)"},
+    {"differs": "lastSeq",  "say": "lastSeq differs between copies: {values}"}
+  ]
+}

@@ -13,8 +13,8 @@
   (an extra `.db` archive appended to the addon) fixes an endgame crash and other bugs.
   Release: [stalker-soc-coop-fixes](https://github.com/cranebeaker/stalker-soc-coop-fixes/releases).
 - **Clear Sky:** Clear COOP 0.5 ships 8 levels and the story was playable only to
-  Agroprom. A port to xrMPE 0.9 with the missing levels and the rest of the story is being
-  built and boot-tested now.
+  Agroprom. We started a port to xrMPE 0.9 but stopped; it isn't being worked on. The notes
+  on this page are there for anyone who wants to pick it up.
 
 ## How the game works (for co-op)
 

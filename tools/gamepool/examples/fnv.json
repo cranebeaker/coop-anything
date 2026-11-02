@@ -1,0 +1,117 @@
+{
+  "_notes": [
+    "Example config: the values the Fallout: New Vegas co-op project used for its test copies.",
+    "Copy this file next to your own work, replace <game dir> (and optionally <instances dir>), and keep the rest as a starting point.",
+    "The tools refuse to run while a <placeholder> is still in game_dir.",
+    "ready.type 'window' only says a game window exists. If your mod has an in-game bridge (a named pipe, a socket, a log line) use named_pipe, tcp_port or log_line, or write an adapter (see ../README.md).",
+    "The low-cost rows are INI keys of this engine family. Rows marked guess use names taken from sibling games; unknown keys are ignored, so a wrong guess costs nothing."
+  ],
+  "name": "Fallout New Vegas",
+  "game_dir": "<game dir>",
+  "instances_root": "<instances dir>",
+  "process_name": "FalloutNV.exe",
+  "launch": {
+    "exe": "nvse_loader.exe",
+    "args": [],
+    "env": {},
+    "window": "minimized",
+    "spawns_game": true,
+    "stagger_s": 2,
+    "child_wait_s": 30,
+    "watch_s": 3
+  },
+  "link": {
+    "modes": ["hardlink", "symlink", "copy"],
+    "per_instance_files": ["Fallout.ini", "FalloutPrefs.ini", "RendererInfo.txt"],
+    "empty_dirs": ["Saves", "ScreenShots"],
+    "per_instance_dirs": ["Data/NVSE/Plugins"],
+    "root_skip_suffixes": [".log", ".dmp", ".mdmp"],
+    "pinned_files": ["FalloutNV.exe", "Data/FalloutNV.esm"]
+  },
+  "config_files": {
+    "Fallout.ini": {
+      "base": "%USERPROFILE%\\Documents\\My Games\\FalloutNV\\Fallout.ini",
+      "fallback_base": "{game_dir}/Fallout_default.ini",
+      "encoding": "latin-1",
+      "edits": [
+        ["General", "bUseMyGamesDirectory", "0"],
+        ["General", "bAlwaysActive", "1"],
+        ["General", "SLocalSavePath", "Saves\\"],
+        ["General", "SLocalMasterPath", "Data\\"],
+        ["Controls", "bBackground Mouse", "1"],
+        ["Controls", "bBackground Keyboard", "1"]
+      ]
+    },
+    "FalloutPrefs.ini": {
+      "base": "%USERPROFILE%\\Documents\\My Games\\FalloutNV\\FalloutPrefs.ini",
+      "encoding": "latin-1",
+      "edits": [
+        ["Display", "bFull Screen", "0"],
+        ["Display", "iSize W", "640"],
+        ["Display", "iSize H", "480"],
+        ["Display", "iPresentInterval", "0"],
+        ["Display", "iMultiSample", "0"]
+      ]
+    }
+  },
+  "protected_paths": ["%USERPROFILE%\\Documents\\My Games\\FalloutNV"],
+  "ready": {"type": "window", "timeout_s": 300},
+  "crash": {
+    "logs": ["nvse.log", "nvse_loader.log", "falloutnv_error.log", "falloutnv_havok.log"],
+    "markers": ["CRASH"],
+    "wer_match": "Fallout"
+  },
+  "collect_logs": ["nvse*.log", "*.dmp", "*.mdmp", "RendererInfo.txt", "Logs/**/*"],
+  "lowcost": {
+    "post_checks": [["Fallout.ini", "General", "bUseMyGamesDirectory", "0"]],
+    "rows": [
+      {"file": "Fallout.ini", "section": "General", "key": "bUseMyGamesDirectory", "value": "0", "why": "read INIs and saves from the instance folder, never from Documents\\My Games", "status": "required"},
+      {"file": "Fallout.ini", "section": "General", "key": "bAlwaysActive", "value": "1", "why": "keep ticking while minimized", "status": "required"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bFull Screen", "value": "0", "why": "windowed so it can stay minimized without a mode switch", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iSize W", "value": "640", "why": "smallest practical resolution: fewer pixels to shade, smaller back buffer", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iSize H", "value": "480", "why": "see iSize W", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iPresentInterval", "value": "0", "why": "no vsync wait", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iMultiSample", "value": "0", "why": "no MSAA", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iMaxAnisotropy", "value": "0", "why": "no anisotropic filtering", "status": "guess"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bTransparencyMultisampling", "value": "0", "why": "no alpha-to-coverage", "status": "guess"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bDoDepthOfField", "value": "0", "why": "no depth-of-field pass", "status": "guess"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bAllow30Shaders", "value": "0", "why": "shader model 2 paths, cheaper", "status": "guess"},
+      {"file": "Fallout.ini", "section": "General", "key": "iFPSClamp", "value": "30", "why": "cap at 30 fps: roughly halves CPU and GPU load per instance", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iShadowFilter", "value": "0", "why": "no shadow filtering", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iActorShadowCountExt", "value": "0", "why": "no actor shadows outdoors", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iActorShadowCountInt", "value": "0", "why": "no actor shadows indoors", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bActorSelfShadowing", "value": "0", "why": "no actor self shadows", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bShadowsOnGrass", "value": "0", "why": "no shadows on grass", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bDoCanopyShadowPass", "value": "0", "why": "no canopy shadow pass", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iShadowMapResolutionPrimary", "value": "256", "why": "smallest shadow map if shadows get re-enabled", "status": "guess"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "iShadowMapResolutionSecondary", "value": "256", "why": "see above", "status": "guess"},
+      {"file": "Fallout.ini", "section": "Grass", "key": "bDrawShaderGrass", "value": "0", "why": "do not draw shader grass (large CPU saver outdoors)", "status": "standard"},
+      {"file": "Fallout.ini", "section": "Display", "key": "bDoTallGrassEffect", "value": "0", "why": "no tall grass effect", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Water", "key": "bUseWaterReflections", "value": "0", "why": "no water reflection render", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Water", "key": "bUseWaterRefractions", "value": "0", "why": "no water refraction render", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Water", "key": "bUseWaterDepth", "value": "0", "why": "no water depth pass", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Water", "key": "bUseWaterDisplacements", "value": "0", "why": "no water displacement", "status": "standard"},
+      {"file": "FalloutPrefs.ini", "section": "Water", "key": "bUseWaterHiRes", "value": "0", "why": "low-res water", "status": "standard"},
+      {"file": "Fallout.ini", "section": "Water", "key": "bUseWaterReflections", "value": "0", "why": "same keys in Fallout.ini (stock files carry both copies)", "status": "guess"},
+      {"file": "Fallout.ini", "section": "Water", "key": "bUseWaterRefractions", "value": "0", "why": "see above", "status": "guess"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bUseRefractionShader", "value": "0", "why": "no refraction shader (heat haze, glass)", "status": "guess"},
+      {"file": "FalloutPrefs.ini", "section": "Display", "key": "bFXAA", "value": "0", "why": "no post-process AA", "status": "guess"},
+      {"file": "Fallout.ini", "section": "Display", "key": "iTexMipMapMinimum", "value": "2", "why": "raise the minimum texture mip (default 0) to cut texture memory; whether the engine skips the big mips for this key is not known", "status": "guess"},
+      {"file": "Fallout.ini", "section": "Display", "key": "fDecalLifetime", "value": "1", "why": "decals expire quickly", "status": "guess"},
+      {"file": "Fallout.ini", "section": "Display", "key": "bDecalsOnSkinnedGeometry", "value": "0", "why": "no decals on skinned meshes", "status": "guess"},
+      {"file": "Fallout.ini", "section": "General", "key": "SIntroSequence", "value": "", "why": "skip the logo movies", "status": "standard"},
+      {"file": "Fallout.ini", "section": "General", "key": "SMainMenuMovieIntro", "value": "", "why": "skip the main menu intro movie", "status": "guess"},
+      {"file": "Fallout.ini", "section": "General", "key": "uMainMenuDelayBeforeAllowSkip", "value": "0", "why": "no forced wait on the main menu", "status": "guess"},
+      {"file": "Fallout.ini", "section": "General", "key": "uGridsToLoad", "value": "3", "why": "load 9 exterior cells instead of 25: big RAM and CPU saver. Risky: a save made with another value can crash or corrupt on load, so it is off unless --opt grids=N is given and every save the pool loads was made at that value", "status": "opt-in", "opt_in": "grids", "value_from_option": true, "option_regex": "3|5|7|9|11"},
+      {"file": "Fallout.ini", "section": "Audio", "key": "bEnableAudio", "value": "0", "why": "no sound device, saves CPU. Opt-in because dialogue driven waits (the end of a voice line) may never finish without audio", "status": "opt-in", "opt_in": "audio_off"}
+    ]
+  },
+  "pool": {"recycle_after": 25, "ws_growth_mb": 1200, "ws_max_mb": 3300, "slot_ttl_s": 3600, "tick_s": 5},
+  "pairs": {
+    "_notes": "Host/client pairs for `up --pairs N`. One running copy took about 0.7 GB in the New Vegas project. A co-op mod that reads its port and role from its own settings file lists them in edits (the file must be in link.per_instance_files); {port} {role} {pair} are filled in per pair.",
+    "port_base": 27960,
+    "copy_gb": 0.7,
+    "reserve_gb": 2.0,
+    "proto": "udp"
+  }
+}

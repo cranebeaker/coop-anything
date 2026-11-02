@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "name": "fight",
+  "title": "Fight: 2 players, 3 raiders",
+  "description": "Both players stand at the raider camp and three raiders are alive. The host kills the first, the guest kills the second, the host the third. After each kill every machine must agree who is dead and who is not.",
+  "players": 2,
+  "tags": ["combat", "2p"],
+  "start": {"save": "autosave"},
+  "objects": {
+    "raider1": {"id": "GSPG01Ref", "kind": "actor"},
+    "raider2": {"id": "GSPG02Ref", "kind": "actor"},
+    "raider3": {"id": "GSPG03Ref", "kind": "actor"}
+  },
+  "refs": {"raiders": ["$raider1", "$raider2", "$raider3"]},
+  "setup": [
+    {"id": "enable_raider1", "op": "enable", "ref": "$raider1"},
+    {"id": "enable_raider2", "op": "enable", "ref": "$raider2"},
+    {"id": "enable_raider3", "op": "enable", "ref": "$raider3"},
+    {"id": "players_to_camp", "op": "move", "who": "player", "to": "$raider1", "on": "all"},
+    {"id": "settle", "op": "wait", "seconds": 3}
+  ],
+  "steps": [
+    {"id": "all_alive_1", "op": "check", "kind": "dead", "ref": "$raider1", "value": 0},
+    {"id": "all_alive_2", "op": "check", "kind": "dead", "ref": "$raider2", "value": 0},
+    {"id": "all_alive_3", "op": "check", "kind": "dead", "ref": "$raider3", "value": 0},
+    {"id": "host_kills_1", "op": "kill", "ref": "$raider1", "on": "host"},
+    {"id": "raider1_dead_everywhere", "op": "check", "kind": "dead", "ref": "$raider1", "value": 1, "timeout": 8},
+    {"id": "raider2_still_alive", "op": "check", "kind": "dead", "ref": "$raider2", "value": 0},
+    {"id": "guest_kills_2", "op": "kill", "ref": "$raider2", "on": "guest"},
+    {"id": "raider2_dead_everywhere", "op": "check", "kind": "dead", "ref": "$raider2", "value": 1, "timeout": 8},
+    {"id": "raider3_still_alive", "op": "check", "kind": "dead", "ref": "$raider3", "value": 0},
+    {"id": "host_kills_3", "op": "kill", "ref": "$raider3", "on": "host"},
+    {"id": "raider3_dead_everywhere", "op": "check", "kind": "dead", "ref": "$raider3", "value": 1, "timeout": 8}
+  ]
+}

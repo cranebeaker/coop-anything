@@ -1,0 +1,33 @@
+{
+  "_comment": "Shared impairment profiles (source of truth). Delays are one-way, per direction. loss is the base loss in the good state; burst_* drive a Gilbert-Elliott two-state model (good->bad with burst_enter per packet, bad->good with burst_exit, loss burst_loss while bad). bandwidth_bps 0 = unlimited; buffer_ms is the queue depth before tail drop.",
+  "lan": {
+    "seed": 1001, "latency_ms": 0.5, "jitter_ms": 0.2, "loss": 0.0,
+    "burst_enter": 0.0, "burst_exit": 0.5, "burst_loss": 1.0,
+    "reorder": 0.0, "duplicate": 0.0, "corrupt": 0.0, "bandwidth_bps": 0, "buffer_ms": 200
+  },
+  "good_wifi": {
+    "seed": 1002, "latency_ms": 12, "jitter_ms": 4, "loss": 0.005,
+    "burst_enter": 0.0, "burst_exit": 0.5, "burst_loss": 1.0,
+    "reorder": 0.0, "duplicate": 0.0, "corrupt": 0.0, "bandwidth_bps": 0, "buffer_ms": 200
+  },
+  "bad_wifi": {
+    "seed": 1003, "latency_ms": 35, "jitter_ms": 25, "loss": 0.02,
+    "burst_enter": 0.01, "burst_exit": 0.25, "burst_loss": 0.6,
+    "reorder": 0.02, "duplicate": 0.005, "corrupt": 0.0, "bandwidth_bps": 0, "buffer_ms": 200
+  },
+  "mobile_tether": {
+    "seed": 1004, "latency_ms": 70, "jitter_ms": 40, "loss": 0.01,
+    "burst_enter": 0.01, "burst_exit": 0.2, "burst_loss": 0.5,
+    "reorder": 0.01, "duplicate": 0.0, "corrupt": 0.0, "bandwidth_bps": 2000000, "buffer_ms": 300
+  },
+  "transatlantic": {
+    "seed": 1005, "latency_ms": 90, "jitter_ms": 8, "loss": 0.003,
+    "burst_enter": 0.0, "burst_exit": 0.5, "burst_loss": 1.0,
+    "reorder": 0.0, "duplicate": 0.0, "corrupt": 0.0, "bandwidth_bps": 0, "buffer_ms": 200
+  },
+  "hell": {
+    "seed": 1006, "latency_ms": 200, "jitter_ms": 150, "loss": 0.08,
+    "burst_enter": 0.03, "burst_exit": 0.1, "burst_loss": 0.9,
+    "reorder": 0.1, "duplicate": 0.05, "corrupt": 0.0, "bandwidth_bps": 512000, "buffer_ms": 500
+  }
+}
