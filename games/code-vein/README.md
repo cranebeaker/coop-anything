@@ -237,8 +237,16 @@ matching signal).
   `MulticastExecuteFlowDiagramWithCallback(3)` itself), the outro plays on both PCs and a skip on the host skips for the guest too.
 - **Memory hang:** characters wait for AppBeginPlay until a global counter `NumInCharacterSetupBeforeAppBeginPlay` reaches 0;
   with a guest it stayed above 0 and the host's memory character never started. Resetting it 2 s into the memory fixes the host.
-  The guest cannot get control inside the memory while connected (the host's server owns his character); the plan is that he
-  leaves for the memory, plays it solo in his own world and rejoins.
+- **Guest in the host's memory (works, 2026-11-02):** the same counter held the guest's memory character on **his own** PC
+  (tick not registered, no movement mode), so he floated without control; the same reset on his side lets him walk. The host's
+  character could stay unstarted on his PC too (tick switched back on there) and arrived in falling mode without its floor
+  (`BasedMovement` did not resolve; set to walking). Host skips are relayed to him and pull him next to the host inside the
+  memory; his own skips are ignored. After the memory he is brought to the host only when the host's final cutscene is over.
+- **Lock counter underflow:** zeroing those counters while other characters still held their lock flags let them decrement
+  again later; below 0 the engine stopped with "BitArrayIndex" (Actor.cpp:88). Clear the holders' flags with every reset and keep
+  the counters from staying negative.
+- **Second memory in one game session:** a cached pointer to the first memory's (freed) museum actor made the end detection fire
+  at once; clear it at every memory start.
 - **Home Base mode:** `CharacterHelper.SetRestrictedActionInBaseInfo` with `FCharacterRestrictedActionInBaseInfo` (weapon
   visibility, attack, dash, step, item use, field menu, mask/blood veil visibility); Home Base is FieldID 0 and a separate map.
 - **UE4SS crash pattern:** `FindAllOf("SomeComponent")` plus `GetOwner()` on each crashed UE4SS (null read) after characters were
@@ -252,7 +260,7 @@ matching signal).
 - A guest whose host stopped on purpose keeps searching every 25 s.
 - Vestige restoration in co-op: the entry checks are answered "not multiplayer" now; whether the screen opens and the memory plays is untested.
 - A guest's rest does not reset the host's world yet (the request reaches the host; the reset entry point is still to find).
-- Inside the host's memory the guest has no control; story progress (blood code, boss state) does not carry over to the guest yet.
+- Story progress (blood code, boss state, the post-boss ending branch) does not carry over to the guest yet.
 - A guest cannot open chests and does not see ground items in the host's world. Story NPCs follow each player's own story
   progress (one appeared twice on the guest's side).
 - While spectating, the low-health screen filter and heartbeat keep playing; a respawned guest flashes once before the appear effect.
@@ -266,5 +274,5 @@ matching signal).
 1. Guest progression and shared boss rewards (CoopProgress by Rikka230, eight8pac/codevein-coop#1): two-PC test.
 2. Host death in a boss fight while the guest lives (the host spectates until everyone is dead).
 3. Gifts equip and chests for the guest, enemy reset on the guest's rest.
-4. Memory for the guest: leave the session at the memory start, play it solo in his own world, rejoin; then vestige restoration.
+4. Memory for the guest: smooth the first seconds; then vestige restoration.
 5. Group teleport vote, Home Base together (with the Home Base mode on the guest), a 3-player cap.
