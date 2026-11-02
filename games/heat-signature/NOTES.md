@@ -1347,3 +1347,105 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
 - **Seen in a try, not followed up:** a hit for a guard far from the host was dropped on the host ("guard not active
   here"); that guard had most likely escaped the ship on the host already (it was panicking). A diagnostic now logs when
   such a guard last stepped on the host.
+
+## How a pod docks, and the bot flying one (2026-11-02)
+
+- **Observed (decompile, `PlayerShipStateFlying`, which needed a 30-minute Ghidra timeout):** an ordinary pod docks by
+  itself: in flight, the nearest airlock facing it (`NearestAirlockFacingPlayerShip`, or `BestAirlockInThrustDirection`)
+  within its `DockingRange` (0x8bb), speeds matched (`MatchDistance`), then `DockWithAirlock`; an `AutoDockFailSafeTimer`
+  docks it if that drags on. Use (`oControls.Use`, control 0) docks only a special pod (`SpecialPodType` 2, in
+  `PlayerShipSpecialActions`).
+- **Observed (game):** leaving a station by its lift (helper `uselift`: the lift's `Activate`, whose step calls
+  `UndockFromStation`) leaves the same state as the helper `undock` (which calls `UndockFromStation` itself): the
+  player "Controlling" its pod, the pod free (Parent = itself), `LeavingStation` (0x890) 1. Undocking from a ship with
+  Use works.
+- **Observed (game): the bot's thrust does not reach a pod.** Holding control 5 (the thrust; it flies a ship from its
+  bridge) with the cursor on the target (helper `mouseon <id>`: the cursor follows an instance), the pod's `Thrust`
+  (0x23e) stayed 0 and its speed did not change, both while leaving a station and after undocking from a ship.
+  `ControlSomething` sets a pod's thrust through `PlayerThrustTowardsCursor` only while `oCamera.Object` passes a test
+  (the camera follows the player here; set to the pod, the game put it back); that function's own debug line never
+  appeared. Cause unknown.
+- **Why** (observed, a hook counting calls): `PlayerThrustTowardsCursor` is called from `ControlSomething` only for
+  `ControllingType` 117 (a ship's bridge); a pod is 163. A pod's own input is read in `PlayerShipStateFlying`, whose
+  decompile (the 30-minute one) lost its call arguments, so what it reads is unknown.
+- **The bot's pod steering** (helper `flyto <id>`): just before the game's `PlayerShipApplyThrust` (which adds
+  `xThrust`/`yThrust` to the speed and uses fuel), the core sets the pod's thrust vector (at most `MaxThrust`) toward the
+  target's velocity plus an approach speed that shrinks near it; with a ship as the target, it heads for the airlock the
+  pod would dock at once within 6000. Observed: from 2 225 units off a ship the pod flew back and the game docked it
+  (its autodock); from a mission ship the host's pod flew 850 000 units home in about 45 s and the game docked it at the
+  station. `home.sh`, `early.sh` and `life.sh` now fly home this way instead of the jump helper `gotohome` (13, 9 and 9
+  checks passed).
+- **Not flown:** out of a station. After `UndockFromStation` (the helper's or the lift's) the pod stays in its station
+  state (`State` 2, `LeavingStation` 1); its thrust step does not run, and moving it out (or clearing `LeavingStation`)
+  did not start it. That state waits on the station's door animation (`StationOpenDoor`,
+  `StationDoorAnimationComplete`); suspected, not checked: the animation does not run in the test copies. Boarding and
+  the new life's re-dock keep `gotoship` and `dockship`.
+- **The new-life re-dock flake, fixed** (2026-11-02): the error dialog of a failing run named `DockWithAirlock` line 39
+  (no message text captured). The helper `dockship` docked at the first airlock of the ship it had seen; with the
+  airlock the game itself would choose (`NearestDockableAirlockToPlayerShip`, helper `dockship 1`) the re-dock raised no
+  error in 9 runs. The test also takes the pod's controls before undocking a new character (helper `sitpod`) and makes
+  sure the guest left its pod before the knockout (once it was still at the controls). `life.sh`: 2 of 5 runs passed
+  before, 5 of 5 after. The first boarding keeps the first airlock (with the game's choice, the guest was never knocked
+  out in 4 runs: the scenario's walk and the guards' carrying start from that airlock).
+
+## Thrown items, traps, items leaving the ship (2026-11-02)
+
+- **A thrown item hitting a guard** (observed): a guest's hammer thrown past an unshielded sentry
+  (`InventoryItemImpactsObject` -> `SetDamageSignal`, self = the item) is a guest hit: sent to the host (two hits per
+  impact), whose sentry goes down; the guest's copy shows it down; the host's shown hammer hurts nobody. Thrown from
+  the airlock, the hammer struck a doorway and only distracted the guard (its bounce noise). Nothing needed changing.
+  Test `tools/thrownhit.sh` (9 checks; gear draw 1 for unshielded guards; mutation `nohits` 6 passed, 3 failed).
+- **A guest's trap** (observed): a Crash Trap armed by its own use (`Activate` -> `DropTrap`, `Armed` 0x551 = 1) is shown
+  on the host; under a sentry on the guest's copy its step goes off (`oCrashTrap_Step_0` -> `SetDamageSignal`) and the
+  hit reaches the host, whose sentry is crashed (`Crashed` 0x499 = 1; its state stays "Sentry"). The guest's copy kept
+  `Crashed` 0 (the guest drops its own signal): the guard messages now carry `Crashed` (the guest's copy takes the
+  host's value; mutation `noguardcrash`). The trap is moved under the sentry with a helper (`putitem`): the bot cannot
+  lead a guard over it. Test `tools/traps.sh` (8 checks; `nohits` 5 passed, 2 failed; `noguardcrash` 7 passed, 1 failed).
+- **An item leaving the ship** (observed): an item outside the hull is taken off the ship by the game (Parent = itself,
+  in space), then destroyed; the other copy's shown item stayed where it had lain. Now the dropping copy keeps watching
+  its items after they come to rest and, when one leaves the ship or is gone (not when someone picks it up), tells the
+  other copy, which destroys its shown one (`DestroyInstance()` run on the item: `DestroyMe` does not remove an item,
+  `DestroyInventoryItem` hung the host, `DestroyInstance` with an argument raised "should be run on self instead").
+  Test `tools/itemgone.sh` (6 checks; moved outside with `putitem`, as if thrown out of a window; mutation `noitemgone`
+  4 passed, 2 failed).
+
+## A pod destroyed; Trackers; the bot firing a gun (2026-11-02)
+
+- **A pod destroyed** (observed): a pod's `DamageSignal` (0x400, which a missile's blast sets: `ExplodeInSpace`) puts it in
+  its damaged state (`State` 3; the pod problem); its `DestroySignal` (0x89b) then destroys it (`PlayerShipDie`), the
+  player at its controls killed with it. Heat (0x684) set to 1000 did nothing, docked or flying. In co-op the other copy
+  saw only "left the ship" and then the new character: the player's state shows "Resting" for a frame or two before
+  "CharacterSelect", too short to be seen there. Now the owner's copy counts its pod destroyed with it at the controls
+  (`hook_pod_destroy`) in its player messages, and the other copy shows "<name>'s pod was destroyed". Test
+  `tools/podlost.sh` (7 checks; mutation `nopodnews` 6 passed, 1 failed).
+- **Trackers** (observed, after an alarm with reinforcements): three "Tracker" mercenaries (`MercType` 3) beamed in,
+  the same on both copies; their heat sensors never switched on (`PredatorHeatRadius` 0, `HeatSensorOn` 0,
+  `SecondsSinceSensorReboot` 0) and they searched like the other guards, whose state is the host's on the guest. Nothing
+  more to sync in this build. (The guest was knocked out and thrown out during that alarm with `unseen` on: the known
+  alarm-time case.)
+- **The bot firing a gun the game's way** (observed): a gun's own step fires when the gun is held and its `Activate` is
+  set (what a use press does), with rounds in the holder's `Ammo` array (`Ammo[AmmoType]`; a gun's own `Ammo` is
+  refilled from it each step: a gun given by the test had none). Helpers `ammo <type> <n>` and `useatguard` (the
+  player faces a guard: `image_angle` world-wise for aim zones, `MyImageAngle` ship-wise for the gun) replace
+  `firegun` for this. The guest's gunshot noise was not sent: the check looked for the gun's `MyOwner`, which a
+  player's gun does not have; it also takes `Owner` now. Observed: the noise sent, 5 to 10 of the host's guards alerted;
+  the gun's spread took a shot 23 units wide, so the test fires up to 4. Test `tools/gunfire.sh` (7 checks; mutation
+  `noalerts` 6 passed, 1 failed: reached at last; `nohits` 6 passed, 1 failed).
+
+## Loot boxes are each player's own; suite check 4d2 again (2026-11-02)
+
+- **The owner's choice:** an ordinary loot box gives each player its own random item, and the mission's box (Steal's)
+  goes to whoever opens it first. Now an ordinary box opens on the opener's copy only (nothing sent): its item is the
+  game's own draw there (`CreateRandomItemOfRarity`, by the ship's difficulty), and the other player can open the same
+  box on their copy for an item of their own. The mission's box (`global.Objective`) is synced as before: it opens on
+  every copy, the item the opener's. Keyed boxes need nothing more: each player opens their own copy with their own
+  keycards. Observed: the guest opened the box by the airlock (its item 101225), the host's copy stayed closed; the host
+  opened it (its own item 101237), the guest's unchanged; Steal still completed for both (8 checks). `mission.sh` check
+  2d (now 11 checks); mutation `sharedboxes` (the old sync for every box) 10 passed, 1 failed.
+- **Suite check 4d2** (a stray hit on the guest from a bullet of its own copy): failed again in 1 of 8 runs on
+  2026-11-02 (its logs overwritten). The guest drops a gun's shots when the gun's `MyOwner` is a shared guard; a
+  player's gun had only `Owner` (found with the gunfire test), so guns are now matched by `Owner` too, and a stray hit
+  now logs its bullet's owners. Then 16 of 16 runs passed (the stray hits logged were the suite's own grenades). Not a
+  proof (it failed now and then before: in 2 of 4 runs on one build, once on 2026-10-31, twice on 2026-11-02), but no
+  failure since.
+- **Left (cosmetic):** what a puppet holds (the other player's selected item in its hands).

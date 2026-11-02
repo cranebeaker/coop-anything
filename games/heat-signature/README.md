@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario an 11-check guns, grenades and noise scenario, an 8-check Steal mission, a 10-check Capture mission, a 10-check Rescue mission, a 10-check Hijack mission (docked at a station) a 9-check Capture by the guest a 7-check alarm-time scenario a 6-check host-knocked-out scenario a 7-check hand-grenade scenario, an 8-check ship-flight scenario a 10-check door-hack scenario and an 8-check guard-hack scenario on two real game copies (host + 1 guest), with 61 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, an 11-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario an 11-check guns, grenades and noise scenario, an 8-check Steal mission, a 10-check Capture mission, a 10-check Rescue mission, a 10-check Hijack mission (docked at a station) a 9-check Capture by the guest a 7-check alarm-time scenario a 6-check host-knocked-out scenario a 7-check hand-grenade scenario, an 8-check ship-flight scenario a 10-check door-hack scenario, an 8-check guard-hack scenario, a 9-check thrown-item scenario, an 8-check trap scenario, a 6-check item-leaves-the-ship scenario, a 7-check destroyed-pod scenario and a 7-check gunfire scenario on two real game copies (host + 1 guest), with 69 mutation runs; the flying-home, leaving-early and new-life scenarios fly the pod home (the bot steers it; the game docks it); nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-02 |
 
 ## Where things stand
@@ -22,8 +22,8 @@ other copy; the guest's copies of guards and sentry guns decide nothing (the hos
 witnesses and other mission stats are counted for the right player; bullets fired aboard the shared ship show on both
 copies (the other copy's are harmless look-alikes; hits travel separately); after an alarm, reinforcements and their
 jammer devices are the same on both copies; guards carry the same gear and drop the same items, and an item or loot
-taken off the ship on one copy is gone on the other; a loot box opened on one copy opens on the other (its item is the
-opener's); an item a player drops or throws aboard is the same item on the other copy (name, traits, every value) and
+taken off the ship on one copy is gone on the other; each player opens a loot box on their own copy for an item of their own
+(the mission's box, as in Steal, is the first opener's and opens on both); an item a player drops or throws aboard is the same item on the other copy (name, traits, every value) and
 rests at the same place; a player who has left the ship in their pod is gone from it on the other copy, and each player's
 mission completes when they dock at home (the end screen pauses only that player); a guest knocked out aboard is
 carried off by the host's guards and thrown out of an airlock on both copies, then floats until it is lost or its own pod picks it up, as the
@@ -89,8 +89,8 @@ sentry and witness checks they see it again.
 `tools/mission.sh` (10 checks) tests the kill, which the suite cannot (its target must live to escape): both copies dock,
 an assassination runs on both, the guest's hit kills the target on the host, `AssassinationCompleted` is set on the
 host and on the guest's copy, the target's drops lie at the same places on both, an item and the money the guest takes
-are gone on the host too, a loot box the guest opens opens on the host too (no inventory menu there, the item on
-the guest's copy only, and the guest takes it), no `FailMission` on either, no error dialogs, both advancing. It uses another draw of the
+are gone on the host too, a loot box the guest opens gives the guest its own item while the host's copy stays closed,
+and the host then opens it for an item of its own, no `FailMission` on either, no error dialogs, both advancing. It uses another draw of the
 guards' gear (`GEAR_SALT=1`): with the default one this ship's target has a shield, which stops the guest's punch.
 
 `tools/items.sh` (7 checks): dock; the guest drops its last item and the host shows the same object at the same
@@ -251,6 +251,13 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `guardguns` (a mirrored guard's gun fires on the guest), suite | 28 passed | not caught: check 4d2's stray hit did not happen in that run (nor in 3 runs with the fix) |
 | `leftspam` (a departure announced on every flicker), alarm-time scenario | 6 passed, 1 failed | not caught by its own check: the flicker did not happen that run; the failed check was another (see NOTES.md) |
 | `noshipflight` (each copy flies its own copy of the shared ship), ship-flight scenario | 6 passed, 2 failed | the guest flew the ship from its bridge to speed 45 677 at angle 303; the host's copy kept speed 12 000 at angle 78 |
+| `sharedboxes` (every loot box opened on both copies, the old sync), mission scenario | 10 passed, 1 failed | the host's copy of the guest's box opened too |
+| `nohits`, thrown-item scenario | 6 passed, 3 failed | the hammer's hit on the sentry not sent; the host's sentry stayed up |
+| `nohits`, trap scenario | 5 passed, 2 failed | the trap's hit not sent or applied |
+| `noguardcrash` (a guard's `Crashed` not sent), trap scenario | 7 passed, 1 failed | the guest's copy of the crashed sentry showed `Crashed` 0 |
+| `noitemgone` (an item that left the ship kept on the other copy), item-leaves-the-ship scenario | 4 passed, 2 failed | the host's shown hammer stayed where it had lain |
+| `nopodnews` (no news of a pod destroyed with its pilot), destroyed-pod scenario | 6 passed, 1 failed | no banner on the host |
+| `nohits`, gunfire scenario | 6 passed, 1 failed | the bullet's hit on the sentry not sent |
 | `noguardhack` (a guest's hack on a guard dropped as the guard's own attack; its `Hacked` not sent), guard-hack scenario | 5 passed, 3 failed | nothing sent; neither copy's guard hacked |
 | `nodoorhack` (a door hacked on one copy keeps its lock on the other), door-hack scenario | 7 passed, 3 failed | the guest hacked doors 3 and 4 (levels 1 and 2 to 0); the host's copies kept levels 1 and 2 |
 | `nosnap` (a stuck puppet not put at its player), Hijack scenario | 7 passed, 1 failed | the host's puppet stayed 1 977 units from the guest at the bridge |
@@ -258,6 +265,7 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `nocarry` (what a guest carries not sent or kept), guest Capture scenario | 5 passed, 4 failed | the host's puppet carried nothing; the target stayed aboard the guest's copy; neither mission completed |
 | `noguardsleft` (a guard that left the ship not reported), Capture scenario | 9 passed, 1 failed | the guest's copy of the captured target stayed aboard, not hidden |
 | `noalerts` (a guest's gunshot noise not sent), grenade scenario | 11 passed | not caught: the grenade is heard through its look-alike's explosion, and the bot cannot fire a gun through its step (see NOTES.md) |
+| `noalerts`, gunfire scenario (2026-11-02: the bot fires a gun through its step) | 6 passed, 1 failed | no noise sent; no guard of the host alerted |
 | `noguardlook` (guards' look not put on a guest's), grenade scenario | 10 passed, 1 failed | the guest showed alerted guards as "Responding" while the host's were "Panicking" (0 of 5 the same) |
 | `nogrenades` (grenades not sent), grenade scenario | 4 passed, 4 failed | nothing shown on the other copy; each grenade exploded only where it was fired |
 | `ghosthurts` (a shown grenade's hits not dropped), grenade scenario | 7 passed, 1 failed | the host's look-alike hit the guest's puppet and sent the hit: the guest would be hurt twice by one grenade |
