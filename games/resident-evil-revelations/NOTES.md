@@ -203,8 +203,8 @@ Mode values:
 | value | meaning |
 |---|---|
 | 0 | campaign (single player) |
-| 1 | co-op — the dormant two-player campaign |
-| 2 | raid — the online Raid Mode the PC release does expose |
+| 1 | co-op - the dormant two-player campaign |
+| 2 | raid - the online Raid Mode the PC release does expose |
 
 `FUN_004373c0` (the episode-start flow state) reads exactly this expression
 and then, in the co-op branch, switches the game system over:
@@ -227,7 +227,7 @@ episode-start flow, not by a menu.
 
 | function | RVA | what it does |
 |---|---|---|
-| `FUN_0042bfc0` | `0x0002BFC0` | builds `archive\game\{scene\|scene_coop}\XX\XX_event` and `archive\game\episode\XX\XX_episode` and loads them — **the point where the game picks the campaign or the co-op route** |
+| `FUN_0042bfc0` | `0x0002BFC0` | builds `archive\game\{scene\|scene_coop}\XX\XX_event` and `archive\game\episode\XX\XX_episode` and loads them - **the point where the game picks the campaign or the co-op route** |
 | `FUN_0041b710` | `0x0001B710` | loads `archive\game\{scene\|scene_coop}\XX\XX_%02x\XX_%02x_event` and swaps every actor that has a `_coop` resource to the co-op variant |
 
 Forcing the mode to 1 in a detour around these two is what makes the game
@@ -298,7 +298,7 @@ The call sites (all in one small input region, RVA `0x5BD000`–`0x5C1000`):
 | `XInputGetState` | `0x005C0692` | `edi`, guarded by a byte at `[esi+7]` |
 | `XInputSetState` | `0x005BDB67`, `0x005BF00E`, `0x005BF20B`, `0x005C0438` | rumble |
 | `XInputGetCapabilities` | `0x005BDDC9` | `[esi+0x10]`, flags `1` = `XINPUT_GAMEPAD` |
-| `DirectInput8Create` | `0x005C1F09`, `0x005CB0D7`, `0x005CBE75` | — |
+| `DirectInput8Create` | `0x005C1F09`, `0x005CB0D7`, `0x005CBE75` | - |
 
 The pattern at the call sites is `push &state; push index; call`, so the user
 index is a **per-object field** (`[this+0x10]`), not a constant: the game
@@ -330,8 +330,8 @@ anything that is not unique. Checked against the shipped `.text`:
 |---|---|---|---|
 | `81 EC 04 02 00 00 53 55 56 8B F1 8B 46 70` (episode loader) | **1** | `0x2BFC0` | `0x2BFC0` ✔ |
 | `81 EC 28 02 00 00 53 55 56 8B F1 33 DB` (scene loader) | **1** | `0x1B710` | `0x1B710` ✔ |
-| `81 EC 04 02 00 00` (episode prefix only) | 11 | — | ambiguous ✘ |
-| `81 EC 28 02 00 00` (scene prefix only) | 2 | — | ambiguous ✘ |
+| `81 EC 04 02 00 00` (episode prefix only) | 11 | - | ambiguous ✘ |
+| `81 EC 28 02 00 00` (scene prefix only) | 2 | - | ambiguous ✘ |
 
 The different stack-frame sizes (`0x204` vs `0x228`) are what make the long
 signatures unique. The 6-byte prefix that the inline hook actually overwrites
@@ -405,7 +405,7 @@ Build and test run after the change:
 
 1. **Does the game create the second player at all** when the mode is co-op?
    The episode-start flow suggests yes, but nothing has been run.
-2. **How is the second player driven** — a second local pad, or replicated pad
+2. **How is the second player driven** - a second local pad, or replicated pad
    data? The seam is now known (`XInputGetState`, see above), but whether the
    game polls a second user index in co-op mode is still unknown. The
    `cPlayerPadSyncData` class exists, but it is attached to the Raid-mode
@@ -414,11 +414,11 @@ Build and test run after the change:
    each system drove its own player locally and the network replicated
    *state*.
 3. ~~**Is the co-op game-system instance created up front** or lazily by the
-   co-op menu?~~ — **answered in the third session: up front.** Both slots are
+   co-op menu?~~ - **answered in the third session: up front.** Both slots are
    filled from start-up; see
    [the two game-system instances](#the-two-game-system-instances-both-slots-exist-from-start-up).
 4. **The save slot** (see above).
-5. **The transport.** Not "does one exist" any more — it does
+5. **The transport.** Not "does one exist" any more - it does
    (`nNetwork::Session*`, `SteamNetworking005`, `WS2_32.dll`). What is still
    open: whether the campaign co-op path can be pointed at a transport we
    control, and whether the Steam session is the only way into a lobby.
@@ -512,7 +512,7 @@ assert messages instead.
 |---|---|---|---|---|
 | `cGameSystem` (A) | `0x00C6F0B4` | `FUN_00721ba0(slot)` | `FUN_00721b40` | `m_index` at `+0x20` |
 | `cGameSystemDouble` (B) | `0x00C6F158` | `FUN_00723790(desiredIndex)` | `FUN_00722790` | `+0x24` own slot, `+0x28` child pointer |
-| class C (derived from B) | `0x00C6F17C` | `FUN_007236e0` | — | size `0x54`, scene object at `+0x40` |
+| class C (derived from B) | `0x00C6F17C` | `FUN_007236e0` | - | size `0x54`, scene object at `+0x40` |
 
 `FUN_00721ba0` is the **only** writer of the instance array
 `(&DAT_0116a344)[slot]` (one store site, `mov [edi*4+0x0116a344], esi` at RVA
@@ -548,7 +548,7 @@ slot 1 (slot 0 is taken by then) and takes the early-return path, so it has
 no child of its own. The manager's reset function `FUN_00792440` destroys the
 instance at `+0x6C` and creates a new one, which refills both slots.
 
-**Derived from the above:** the co-op game system — slot 1 — is already there
+**Derived from the above:** the co-op game system - slot 1 - is already there
 when the title screen appears. `FUN_0041a900(1)` therefore does **not** trip
 its `"false"` assertion when the mode is flipped to 1. This settles the third
 open question of the previous session.
@@ -563,7 +563,7 @@ first.
 **Observed** (string literals in `.rdata`, cross-checked against the
 decompilation):
 
-`network::sNetworkManage` — the netcode singleton, global `DAT_01169398`
+`network::sNetworkManage` - the netcode singleton, global `DAT_01169398`
 (RVA `0x0D69398`). Its constructor is `FUN_00880f10`; it asserts `"false"`
 when the singleton already exists, exactly like `sGameSystems`, and it is the
 only writer of the global (one store site, RVA `0x480F44`). Its source path
@@ -623,7 +623,7 @@ Per-object sync payloads (`cNetSyncData` subclasses):
 | `uWeapon` | `cExplodeSyncData`, `cShootDownSyncData` |
 | `uDoor2pBase` | `cDoor2pSyncData` |
 | `uElevatorBase` | `cElevatorSwitchOnSyncData`, `cElevatorOutOfBlockSyncData`, `cElevatorDoorOpenSyncData` |
-| `uCoopChainLock` | `cCoopChainHostCheckSyncData`, `cCoopChainHostAnswerSyncData` — the chain lock is a **host question / host answer** pair |
+| `uCoopChainLock` | `cCoopChainHostCheckSyncData`, `cCoopChainHostAnswerSyncData` - the chain lock is a **host question / host answer** pair |
 | `sActionCommand` | `cMediateData`, `cMediateResultData`, `cUnlockData` |
 | `cCutRushState` | `cLoadArrangeSyncData`, `cSetArrangeSyncData`, `cActivateEnemySyncData` |
 
@@ -660,8 +660,8 @@ Raid and campaign co-op are the obvious candidates but nothing confirms it.
 The previous plan was "write a host-authoritative netcode for the mod". That
 is now the wrong plan. The remaining work is:
 
-1. **the mode gate** — done (the mod flips the mode field);
-2. **a way into the co-op menu** — the PC interface exposes only Raid
+1. **the mode gate** - done (the mod flips the mode field);
+2. **a way into the co-op menu** - the PC interface exposes only Raid
    matchmaking, so the co-op lobby states have to be reachable somehow;
 3. **reuse the game's own session and transport** instead of shipping one.
 
@@ -748,13 +748,13 @@ exports: [('_DirectInput8Create@20', 1), ('_DllCanUnloadNow@0', 2),
           ('_DllUnregisterServer@5', 5)]
 ```
 
-The proxy exported `_DirectInput8Create@20` — the MSVC **decorated**
-`__stdcall` name — while the game's import table asks for the undecorated
+The proxy exported `_DirectInput8Create@20` - the MSVC **decorated**
+`__stdcall` name - while the game's import table asks for the undecorated
 `DirectInput8Create` (confirmed in the first session: the game imports exactly
 one symbol from `DINPUT8.dll`, at RVA `0x0B1E202`). The loader could not bind
 the import, so it reported the entry point as missing *in the executable*
 (the loader names the module that has the unresolved import, not the DLL that
-failed to provide it — which is why the message points at `rerev.exe`).
+failed to provide it - which is why the message points at `rerev.exe`).
 
 Note that the *string* `DirectInput8Create` was present in the built DLL the
 whole time; a plain `bytes.find()` check said "found" and told us nothing. Only
@@ -783,7 +783,7 @@ The export table now reads `DirectInput8Create` (ordinal 1), and the
 ### The regression test
 
 `tests/export_check.cpp` loads the freshly built proxy and calls
-`GetProcAddress(module, "DirectInput8Create")` — exactly what the game's import
+`GetProcAddress(module, "DirectInput8Create")` - exactly what the game's import
 binder does. It is a ctest target that depends on the DLL target, so a
 recurrence fails the build:
 
@@ -796,7 +796,7 @@ recurrence fails the build:
 
 What it proves: the built DLL exports `DirectInput8Create` by name and the
 symbol resolves through the normal loader. What it does **not** prove: that the
-game starts with the proxy loaded — that still needs the game run.
+game starts with the proxy loaded - that still needs the game run.
 
 ### Note for anyone else proxying a system DLL for this game
 
@@ -809,7 +809,7 @@ the decoration directly.
 ## Fifth session: the proxy crashed the game (two independent defects)
 
 With the export name fixed, the loader bound the import and the game reached
-`DirectInput8Create` — and then died with a fast-fail, every single time:
+`DirectInput8Create` - and then died with a fast-fail, every single time:
 
 ```
 Application Error
@@ -859,7 +859,7 @@ The interesting part is what happened *before* the fix: the linker still set
   GuardCFFunctionCount           +0x54 = 0x00000000
 ```
 
-— an **empty valid-target table** on an image that claims to be instrumented.
+- an **empty valid-target table** on an image that claims to be instrumented.
 Every guard check that resolved a target inside the DLL then failed, and the
 process died before the first window appeared.
 
@@ -875,7 +875,7 @@ target_link_options(dinput8 PRIVATE "/guard:cf")
 ```
 
 After it, the load config of the proxy reads `GuardCFFunctionTable = 0x1002b1f4`,
-`GuardCFFunctionCount = 0xb7`, `GuardFlags = 0x10017500` — a consistent image.
+`GuardCFFunctionCount = 0xb7`, `GuardFlags = 0x10017500` - a consistent image.
 
 Note for the reader: MSVC's x86 linker always writes `0x40` into the load
 config **data-directory** size while the structure's own `Size` field says
@@ -888,7 +888,7 @@ With the CFG table populated the crash moved, but it did not go away: the fault
 offset changed (`0x0000f5ce` → `0x0000f66e`) and the exception code stayed
 `0xc0000409`.
 
-**Observed:** the log file the proxy wrote was exactly **3 bytes** long — the
+**Observed:** the log file the proxy wrote was exactly **3 bytes** long - the
 UTF-8 BOM that `_wfopen_s` writes when it opens a stream with `ccs=UTF-8`.
 Nothing else ever reached the file, so the crash happened between the open and
 the first `fprintf`.
@@ -907,12 +907,12 @@ variant 6: + _snwprintf_s                     -> fine
 ```
 
 So it is not the format string and **not** `setvbuf` (the `_IOLBF` value is
-accepted by this CRT — that hypothesis was wrong and was dropped). It is
+accepted by this CRT - that hypothesis was wrong and was dropped). It is
 `fprintf` itself: `_wfopen_s` returns a **wide-oriented** stream, and a narrow
 `fprintf` on it makes the CRT raise an invalid parameter.
 
 And *that* is fatal here, because the CRT reports an invalid parameter by
-calling through a function pointer — and that pointer is not a legal CFG
+calling through a function pointer - and that pointer is not a legal CFG
 target in this legacy, non-CFG host process. The report therefore ends in
 `__fastfail(FAST_FAIL_GUARD_ICALL_CHECK_FAILURE)` → `int 0x29` →
 `0xc0000409`. The Ghidra decompile of the failing CRT helper shows it
@@ -942,9 +942,9 @@ that the old code had.
 
 Two ctest targets were added, so neither defect can come back unnoticed:
 
-- `tests/log_test.cpp` — writes a real log line with the production logger and
+- `tests/log_test.cpp` - writes a real log line with the production logger and
   reads the file back, checking the banner and the formatted line.
-- `tests/load_config_check.cpp` — parses the built proxy's load config and
+- `tests/load_config_check.cpp` - parses the built proxy's load config and
   fails when the image claims to be CFG instrumented but carries an empty
   valid-target table (the defect-1 shape).
 
@@ -987,7 +987,7 @@ RUN B: with the fixed mod DLL -> PROCESS EXITED (0.5 s, no window)
 ```
 
 The exit is the game's own behaviour when it is launched directly, **with or
-without the mod** — it is not caused by the mod. The game is a Steam title and
+without the mod** - it is not caused by the mod. The game is a Steam title and
 its Steam API needs the app id; when the process is started outside the Steam
 client the API init fails and the game quits.
 
@@ -1009,7 +1009,7 @@ window: visible=True  class=D title=D
 STILL RUNNING pid=9844 ws=172.5MB responding=True
 ```
 
-Launching through Steam needs no such file — the Steam client exports
+Launching through Steam needs no such file - the Steam client exports
 `SteamAppId` into the game process itself.
 
 ### The game with the mod, running
@@ -1075,7 +1075,7 @@ than a dead game.
 
 ---
 
-## Session 6: the premise is dead — this game has no campaign co-op
+## Session 6: the premise is dead - this game has no campaign co-op
 
 **Correction. Everything above that describes a "dormant two-player campaign
 behind a mode switch" is wrong.** It was an inference from decompiled
@@ -1088,7 +1088,7 @@ session checked it, by playing the game and reading its memory.
    read back with OCR: `КАМПАНИЯ`, `РЕЖИМ «РЕЙД»`, `ПАРАМЕТРЫ`, and the
    selection wraps after three `DOWN` presses. There is no co-op entry. The
    description shown for `РЕЖИМ «РЕЙД»` is literally "Режим совместного
-   прохождения, в котором вы боретесь с врагами разной сложности." — the
+   прохождения, в котором вы боретесь с врагами разной сложности." - the
    shipped co-op mode is Raid Mode.
 2. **The campaign pause menu has no invite path:** `ЗАГРУЗКА`,
    `ПАРАМЕТРЫ`, `ВЫЙТИ`.
@@ -1117,7 +1117,7 @@ image-range test. The globals are in the image; the objects are on the heap:
 ```
 
 Consequence: `mode=-1` in every log was the mod failing to look, not the game
-"not having picked a mode yet", and the mode write **never executed** — the
+"not having picked a mode yet", and the mode write **never executed** - the
 "override" was a no-op for the whole project. Pointer validity is now
 `readableMemory()` (`VirtualQuery` → committed, not `PAGE_NOACCESS`/`PAGE_GUARD`).
 

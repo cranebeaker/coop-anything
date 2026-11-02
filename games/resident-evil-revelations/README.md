@@ -4,7 +4,7 @@
 |---|---|
 | Engine | MT Framework (`KATARIBE`, project tree `bhr\biorevhd`) |
 | Versions tested | PC/Steam appid **222480**, build 13298487; `rerev.exe` 14,260,576 bytes, SHA-256 `1573B79EB921B1E7F571E6DEB71C39961C7F1940FAD6D19283FC3AEA7FCA48AA`; x86, image base 0x400000, no ASLR |
-| Projects | `re1coop` (in progress, unpublished) — a campaign co-op mod built on the game's own netcode |
+| Projects | `re1coop` (in progress, unpublished) - a campaign co-op mod built on the game's own netcode |
 | QA level | none |
 | Last updated | 2026-10-23 |
 
@@ -50,7 +50,7 @@ write-up.
 | project | state |
 |---|---|
 | `re1coop` (in progress, unpublished) | proxy `dinput8.dll` that loads into the game. It reads the game's mode, the game-system instances and the network manager, walks the game's type registry, registers one payload type of its own in it, and allocates an instance of it from the game's NETWORK heap. No traffic yet. |
-| No other project found | — |
+| No other project found | - |
 
 Searched on 2026-10-22: Steam community, GitHub, general web search turned up
 nothing for the PC release. Nexus Mods and ModDB refused the fetcher with
@@ -161,7 +161,7 @@ the flow is the mod's.
 
 ## How the game works (for co-op)
 
-### The mode field — what it actually says
+### The mode field - what it actually says
 
 One `int32`:
 
@@ -192,7 +192,7 @@ mode.
 All of these exist in the shipped build, and all of them belong to Raid Mode /
 the network layer that Raid Mode uses:
 
-* `game\scene_coop\...` — a parallel scene tree for every episode id
+* `game\scene_coop\...` - a parallel scene tree for every episode id
   (`01`…`f1`), 81 `*_event.arc` files;
 * `scene_start_list_coop.ssl`, `coop_table\*.lvt`;
 * `_coop` variants of scene actors, swapped in by the scene loader
@@ -204,7 +204,7 @@ the network layer that Raid Mode uses:
   read by `FUN_0041ba70` when the mode is `1`.
 
 `FUN_0042bfc0` (RVA `0x0002BFC0`) does pick between
-`archive\game\{scene|scene_coop}\XX\XX_event` from the mode — that part of the
+`archive\game\{scene|scene_coop}\XX\XX_event` from the mode - that part of the
 old write-up is accurate. It is the Raid/co-op route of a mode that the game
 already ships and enters, not a hidden campaign route.
 
