@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario an 11-check guns, grenades and noise scenario, an 8-check Steal mission, a 10-check Capture mission, a 10-check Rescue mission, an 8-check Hijack mission and a 9-check Capture by the guest on two real game copies (host + 1 guest), with 54 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario an 11-check guns, grenades and noise scenario, an 8-check Steal mission, a 10-check Capture mission, a 10-check Rescue mission, an 8-check Hijack mission a 9-check Capture by the guest a 7-check alarm-time scenario and a 6-check host-knocked-out scenario on two real game copies (host + 1 guest), with 57 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
@@ -172,6 +172,14 @@ advancing.
 docking the ship, which the bot cannot do) completes the host's mission, and it is told; no error dialogs; both
 advancing.
 
+`tools/alarmtime.sh` (7 checks): a ship with `AlarmTime 15`; the host raises the alarm: the guest has it too, with the
+same seconds left; when they run out the shared ship is gone on both and both players with it; the host is told of the
+guest's departure at most once; no error dialogs; both advancing.
+
+`tools/hostdown.sh` (6 checks): the host knocked out inside the ship (the host's guards blinded to the host with the
+helper `unseen 2`): its puppet on the guest lies down there too; both get up together, or the host's guards carry the
+host off and the puppet stays down; no error dialogs; both advancing.
+
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
 helper `MISSION_SET`). Checks: dock; the protocol on both copies; the guest beams in exactly the host's reinforcements;
@@ -179,10 +187,11 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs, on the guest-capture build (2026-11-02, core 99f968fe): guest capture 9/9 twice (04:46, 04:48 UTC), capture
-10/10, rescue mission 10/10, hijack 8/8, steal 8/8, guns and grenades 11/11, security 9/9, mission 10/10, knocked-out
-11/11, home 13/13, early 9/9, items 7/7, rescue 8/8, modules 9/9, breach 8/8, suite 27/28 (check 5, the known flake)
-(04:51-05:15). Hijack 8/8 and rescue mission 10/10 also on the build before it. On the guard-look build (7a7c62a1) suite passed 3 of 6
+Last runs, on the host-knockout build (2026-11-02, core 3246ef81): host knocked out 6/6 three times (06:40-06:43 UTC),
+suite 28/28 in 3 of 4 runs (check 7 once), alarm time 7/7, guest capture 9/9, capture 10/10, rescue mission 10/10,
+hijack 8/8, steal 8/8, guns and grenades 11/11, security 9/9, mission 10/10, knocked-out 11/11, home 13/13, early 9/9,
+items 7/7, modules 9/9, breach 8/8, rescue 8/8 twice (once 7/8: a free pod's position 289 units off where 200 is
+allowed) (06:45-07:25). Hijack 8/8 and rescue mission 10/10 also on the build before it. On the guard-look build (7a7c62a1) suite passed 3 of 6
 (see NOTES.md). Guns and grenades 9/9 twice on the
 gunshots build (811bde56); grenade 8/8 twice on the grenade build
 (c36cc0da); modules also 9/9 twice on the destroyed-modules build (7784485b); breach also 8/8 twice on the window-breach build (f28155a0). On the
@@ -234,6 +243,9 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `noboxes`, Steal scenario | 6 passed, 2 failed | the box did not open on the host; its mission stayed open |
 | `nosharedcomplete` (the other player's completion not shared), Capture scenario | 9 passed, 1 failed | the guest's mission stayed open after the host's capture |
 | `nosharedcomplete`, Rescue scenario | 9 passed, 1 failed | the guest's mission stayed open after the host's rescue |
+| `nohostdown` (the guest's puppet of a knocked-out host stays up), host-knocked-out scenario | 5 passed, 1 failed | the guest's puppet stayed "Free" while the host lay unconscious |
+| `guardguns` (a mirrored guard's gun fires on the guest), suite | 28 passed | not caught: check 4d2's stray hit did not happen in that run (nor in 3 runs with the fix) |
+| `leftspam` (a departure announced on every flicker), alarm-time scenario | 6 passed, 1 failed | not caught by its own check: the flicker did not happen that run; the failed check was another (see NOTES.md) |
 | `nosnap` (a stuck puppet not put at its player), Hijack scenario | 7 passed, 1 failed | the host's puppet stayed 1 977 units from the guest at the bridge |
 | `nosharedcomplete`, Hijack scenario | 6 passed, 2 failed | the host's mission stayed open; no banner |
 | `nocarry` (what a guest carries not sent or kept), guest Capture scenario | 5 passed, 4 failed | the host's puppet carried nothing; the target stayed aboard the guest's copy; neither mission completed |

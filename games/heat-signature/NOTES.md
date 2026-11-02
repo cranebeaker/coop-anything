@@ -1192,3 +1192,45 @@ Range Sidewinder": names are made from the item's traits on each copy, derived),
 copy raised a GameMaker error in `DrawInventoryListText` (its inventory menu, opened by the box for the opener, still
 showed the item). Reverted: the item stays the opener's, as before. Doing it would need the opener's menu closed first
 and the name rebuilt.
+
+## A ship's alarm time; one banner per departure (2026-11-02)
+
+Observed (`tools/alarmtime.sh`, mission set to `AlarmTime 15`, `EscapeProtocol 0`):
+- `AlarmTime` is not a delay before an alarm (none sounded in 25 s) but the ship's time once one sounds: the host raised
+  the alarm, both copies counted the same seconds down (15, 8, 1), and then the shared ship was destroyed on both copies
+  with both players aboard (both "Resting", the end of a life). The same on both: nothing to sync.
+- `SecurityProtocol` is read only when a ship is made (`oShip_Create_0`), from the shared mission, so both copies have
+  the same.
+- **Banner**: as the ship went, the host was told "<guest> left the ship" six times in 2 s (the guest's aboard flag
+  flickered). Now once per departure; another only after the other player has been aboard again for a second. The
+  test's check passed 3 of 3; with the fix off (`leftspam`) the flicker did not come back in one run (not reached), and
+  that run's host still had a shared ship afterwards (once; the 3 other runs had none).
+- Suite check 5 (a guest's hit reaches the host's guard) read the guard's state once, 3 s after the hit, and failed 3
+  times with the hit applied (a patrolling guard back on its path by then). It now samples the state over those 3 s.
+
+## The host knocked out, as the guest sees it (2026-11-02)
+
+Observed:
+- The guest's copy did nothing about it: its puppet of the host went on standing (or walking) while the host lay down
+  or was carried off. Now, when the host's state is "Unconscious" or "Carried", the guest's puppet of it goes
+  "Unconscious" too, stays down while the host does (its `SecondsUntilGetUp` held), is put where the host's body is
+  while it is carried, and gets up when the host does. Mutation `nohostdown`. In the logs: the guest's puppet went down
+  17 ms after the host and got up 2 s later, as the host did.
+- Test findings: knocked out standing in its docked pod, the host was "Free" again within a second (not used); walked
+  into the ship, the host's own guards knocked it out on the way (`unseen` only hid the guest's puppet) and, once it was
+  down, fetched the body and threw it out of an airlock within a few seconds (fetching a body does not go through
+  `EnemyCanSeePlayer`). The test helper `unseen 2` now also blinds the host's guards to the host's player; the walk
+  helper stops when its player leaves the shared ship (walking from space raised a GameMaker error in `GetFore`).
+- **Test** (`tools/hostdown.sh`, 6 checks): dock; the host's puppet stands on the guest; the host is knocked out
+  (3 s) inside the ship: the puppet lies down there too, where the host lies; then either both get up, or the host's
+  guards have carried the host off (or thrown it out) and the puppet is not standing either; no error dialogs; both
+  advancing.
+
+## A mirrored guard's gun (2026-11-02)
+
+Suite check 4d2 (hits on the guest from its own copy's bullets) failed 3 times today. A gun fires in its own step, with
+the gun as `self`, so the guest's drop of a mirrored guard's shots (which asked whether `self` was a mirrored guard) never
+saw them. Derived: since the host's state (e.g. "Chasing") is put on mirrored guards between their steps, their guns'
+steps may fire more often. A shot from a gun whose `MyOwner` is a mirrored guard is now dropped on a guest too.
+Mutation `guardguns`. Not proven: check 4d2 passed in 3 suite runs with the fix, and in 1 with it off (the stray hit
+is too rare to show on demand). Check 7 failed once in those runs, as before (the puppet's injury count going up).
