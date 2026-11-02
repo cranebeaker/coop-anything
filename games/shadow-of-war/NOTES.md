@@ -3830,3 +3830,13 @@ smoothing lagged the free-run start.
 
 - What the client waits for before its intro; whether a host-triggered start can be forced on the client.
 - Whether a strike on a captain's proxy lands now.
+
+### Session ca, later: the intro synced
+
+- After the three fixes above (the captain's proxy linked as his member's character, captains announced before the 16-nearest cut, no
+  ally mark on a captain's proxy) the owner reported that the intro "did sync up" on host and client in a fresh run (hand-played on
+  the host, nothing recorded on screen at that moment). The earlier delay of 6-10 s on the client (and a camera aimed at an empty
+  wall) was most likely the captain's proxy being missing or unlinked when the client's game started its presentation, not a timer.
+- Traces of the slow-motion request `5D08B8` for 10 s after the first event (`tools/trace_on_event.py`): host 23 calls (callers `5D334D`
+  x16, `434A69`, `6EEA47`, `6EECEE`), client 8 (`5D334D` x5, `434A69`); the presentation record on the host was
+  `CombatResetCamera` (2.7 s after `ActiveShowdownGiven_Distance`). The start of the presentation was not isolated further.
