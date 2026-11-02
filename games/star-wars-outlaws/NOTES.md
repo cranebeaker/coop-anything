@@ -1,4 +1,4 @@
-# Star Wars Outlaws (2024) — session notes
+# Star Wars Outlaws (2024): session notes
 
 ## Identity
 - Store: Ubisoft Connect. Main exe `Outlaws.exe`, SHA-256 371BE3E5657B6F46F8C9E2D331696BDE754DF16BFC23F7D5DCCACD9FE19B1D2F (528 MB). Build id: unknown.
