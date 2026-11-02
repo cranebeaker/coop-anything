@@ -6,14 +6,16 @@
 | Versions tested | Steam app 32430, build 6522; `SWTFU.exe` SHA-256 `1C156705…2032`, unpacked with Steamless v3.1.0.5 to `2D872CA9…7B8A` |
 | Projects | tfu-coop (code repository not yet published); directory entry "tfu-coop" |
 | QA level | automated |
-| Last updated | 2026-10-27 |
+| Last updated | 2026-11-02 |
 
 ## Where things stand
 
 Online co-op for 2 to 4 players, each on their own PC with their own camera, works in automated tests
 with several game copies on one PC. The tests include the Kashyyyk prologue started from the main menu,
-the TIE Factory, and simulated internet delay and packet loss. A real session between two PCs has not
-happened yet.
+the TIE Factory, and simulated internet delay and packet loss. The owner has played it on one PC (two
+copies, 2026-10-28/29): enemies now attack remote players and Force Grip works for them. Enemy behaviour on
+clients still looks wrong, and only the host's character advances the level. A real session between two
+PCs has not happened yet.
 
 ## Existing work
 
@@ -85,6 +87,24 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
   player's profile (Force energy stays per character). On clients sharing made puppets act on their own,
   so it is host only. Test: a remote player's pad push threw a host trooper 18 m; no kills while idle.
 
+- **Enemies ignored remote players:** the AI's "may this player be attacked" query reads a per-controller
+  entry that the players 3–4 fix had pointed at the zeroed dummy. That one read now gets controller 0's entry.
+  Found with hardware breakpoints. Test: `m53-attacked-run.sh`, puppet 62 m from the host: 0 damage before,
+  ~1,400 after.
+- **Grip for clients:** TFU drops a Force Grip on an AI with its AI off, so a gripped copy gets its AI back
+  while held. The owner confirmed it in play.
+- **Enemies on clients (experimental):** replaying the host's enemy animations on clients crashed them
+  (memory corruption, off by default). Instead, `local_enemy_ai=1` lets client copies fight with their own
+  AI, aimed at the host AI's target, with the client's player invincible and its health still from the
+  host. A 4-minute test ran without a crash; the owner found it better but still off.
+- **Not yet run in the game (2026-11-02, static analysis only):**
+  - Enemy shots on clients (`enemy_shots=1`): every projectile launch goes through one engine function.
+    The host sends its enemies' launches and clients fire them from their copies.
+  - Level triggers for every player (`shared_triggers=1|2`). The level scripts are Lua 5.1 bytecode in the
+    level packs and are readable. Over all levels they test the host's player 224 times as a volume
+    message's owner and 88 times with `volume.IsInside`. The host now runs their message handlers with a
+    remote player's character standing in for the host's when that player caused the message.
+
 ## QA
 
 - Harness: shell drivers launch several copies of the game, load a level or start from the menu, answer
@@ -108,7 +128,10 @@ See `PLAYING.md` in the tfu-coop package:
 
 ## Known issues
 
-- Enemies on clients slide into place instead of walking, because their AI is off. Walking them with
+- Only the host's character opens gates and starts encounters, so areas ahead of the host stay empty for
+  clients (`shared_triggers` is the untested fix).
+- Enemies on clients slide into place instead of walking, because their AI is off, and their shots are not
+  shown (`local_enemy_ai` and `enemy_shots` are the experimental fixes). Walking them with
   `mobility.RequestPathToPosition` was too slow (~0.5 m/s), and it let them die from the client's own
   hits.
 - Pre-rendered movies between levels play on each PC separately (the cutscene skip probably skips them;
@@ -118,6 +141,8 @@ See `PLAYING.md` in the tfu-coop package:
 
 ## Next steps
 
+- Run the new automated tests in the game: `m80-shot-run.sh` (enemy shots) and `m81-triggers-run.sh`
+  (level triggers).
 - A real two-PC session over the internet.
 - A full-level playthrough, checking doors and objectives on clients with the world diff.
 - Force powers for remote players: Push and Grip work on the host (Grip: m13-grip-run, a puppet lifted a

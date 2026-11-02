@@ -945,7 +945,11 @@ Level scripts:
   - 143 `location.GetPosition` (distance checks);
   - 88 `volume.IsInside(volume, player 0)`;
   - 73 `location.Teleport`, 65 `game.Kill`, 53 `ai.MakeAware`, 50 `camera.ResetToPlayer`.
-- Prologue example: the opening gate runs when `volume.IsInside(ren.Find("GatePlayerTriggerVolume"), player 0)`.
+- Prologue example: the opening gate's state handles a `VaderCharging` message, and only then checks
+  `volume.IsInside(ren.Find("GatePlayerTriggerVolume"), player 0)` and that player 0 faces the gate. So standing in
+  the volume alone does nothing; player 0 must charge there.
+- Prologue checkpoints (`Scum/runtime/scripts/GEN_CheckPoint.lua`, volumes named `.../GEN_CheckPoint.prefab*/checkPointVol`
+  in the pack): on `MsgNotifyEnterVolume`, `if msg.owner == ren.GetPlayer(0) then game.SetLastCheckpoint(...)`.
 - Derived: level progress in scripts follows player 0 only. The host's puppet of a client entering a volume sends
   "inside" (the engine path has no player-0 test, see above), but the scripts ignore it. This matches the playtests
   ("areas past a gate the host has not reached are empty").
@@ -954,6 +958,47 @@ Level scripts:
   Candidates: count player 0 as inside a volume when any player is (a `volume.IsInside` wrapper on the host);
   forward a puppet's volume messages as player 0's only for volumes that are not death volumes; or keep the host
   near the clients (the follow-bot).
+
+### Shared triggers: how level scripts get their messages (2026-11-02, static)
+
+Observed (Ghidra, unpacked exe):
+- FUN_004d2940 creates the engine's Lua state (stores it in DAT_012a17d0) and registers global C helpers. Three
+  of them run level-script code: `OnStateMsg` (FUN_004d25b0, calls fn(a2, a3, a4) protected), `OnSMMsg`
+  (FUN_004d25f0, fn(sm, msg)) and `OnSMUpdate` (FUN_004d2630, fn(sm, dt)). FUN_004d1990 is the protected-call
+  helper they share.
+- Level scripts are state machines: `sm = StateMachine(); sm.renID = renID; sm.X = State();
+  sm.X.OnMsg = function(state, sm, msg) ... end; sm:Change(sm.X)`. `msg.name` is compared with
+  `messages.MsgNotifyEnterVolume` and similar; `msg.owner` is the ren that caused it.
+- Death volumes: `game.FallToDeath(msg.owner, sm.renID)`, then `camera.DeathVolumeEnter` if the owner is player 0,
+  else `ai.RecycleRen(owner)`. So today a host's puppet that falls into one is probably recycled (unknown: not
+  seen in play).
+
+Built (tfu-coop `lua/m81_shared_triggers.lua`, host only, off by default, `shared_triggers=1|2` in coop.ini):
+- The Lua globals `OnStateMsg` / `OnSMMsg` are replaced with wrappers. When the message's `owner` or
+  `collidingRen` is a remote player's puppet, the handler runs with `ren.GetPlayer(0)` returning that same Lua
+  value (two Lua values for one ren need not be `==`), so `msg.owner == ren.GetPlayer(0)` holds.
+- `volume.IsInside(volume, player 0)` is true when any player is inside.
+- Mode 2 (`"nearest"`) also wraps `OnSMUpdate`: during a state machine's per-frame update, player 0 is the player
+  nearest the machine's ren.
+- Unknown until run: whether the state library looks the globals up on each call (if it keeps its own reference
+  the wrappers never run). `coop_shared_triggers_stats()` returns msgs, asked, insides to tell.
+- `tools/m81-triggers-run.sh` walks the client through the prologue's checkpoint volumes and passes only when a
+  level-script message ran as the puppet and asked for player 0. Whether the gate opens for a client that charges
+  in its volume is a manual check.
+
+### Review fixes, enemy shots (2026-11-02, off-game)
+
+- A reviewer found that `coop_shot_events` reported the newest event as read even when its buffer filled, so
+  events that did not fit were lost. It now returns the last event it listed, writes each event's sequence number
+  last, and leaves an event still being written for the next call. tfu-coop `redirect/tests/run_tests.bat` is
+  an off-game test (fake Lua API): 5 of its checks fail on the previous code, all pass on the new.
+- The host keeps shots that do not fit the world packet for up to 15 frames instead of dropping them, and puts
+  them after the AI target entries.
+- The m81 test passed before on the client's position alone (vacuous); fixed as above.
+- A second review found the m81 test could still pass on a result line left in `out.log` by an earlier run (the
+  console log is never truncated, and awk compared non-numbers as strings). It now reads only lines written after
+  it started and compares numbers. Reloading m81 over an older version of the file also failed on load; fixed.
+  Lesson for in-game tests that grep a shared log: mark or count the log first, and compare fields as numbers.
 
 ## Derived (not yet verified)
 
