@@ -274,7 +274,7 @@ cdmp_peer --mode relay --delay 60 --loss 5 --jitter 40 (relay dropped 420 of 851
 branches arrived over the reliable channel (71 fragments), applied 2 (0xF4CB1 -> 0x163, 0xF4CB5 -> 0x164) 100 ms after the feed,
 own echoed branches reached alone 2, game alive 30 s later.
 
-## 2026-10-19 — the echo copy's stutter/teleports (separate read-only investigation; its write-up is not in this repo, the findings are below)
+## 2026-10-19 - the echo copy's stutter/teleports (separate read-only investigation; its write-up is not in this repo, the findings are below)
 Summary of its findings (code refs checked here: inject_clock.h:27 kAheadMs=450; coop.cpp:121-124 echo offset only when offset_m==0):
 - Our test config caused much of it: delay_ms=1500 vs the 450 ms "ahead" clamp re-stamps every Move (timing margin pinned at
   650 ms, ~40 % dropped as repeats, actions ~1 s behind positions); offset_m=0.01 disables the 2.5 m echo offset, so the copy
