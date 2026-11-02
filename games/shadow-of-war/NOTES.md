@@ -3608,3 +3608,158 @@ smoothing lagged the free-run start.
   the promotions it applied); a captain's looks, name and level on the client (the proxy is a generic orc); captains' own
   fights and duels away from both players (they are events of the host's simulation, so they are sent, but not watched).
 - Two PCs, as before.
+
+## Session 2026-11-01 bw: soak test of the Nemesis sharing, and what a captain is made of
+
+### Observations
+
+- **Soak (host and client copy on one PC, same save, 25 minutes, `tools/soak_nemesis.py`):** the host's player was moved
+  between the captains' spot and the start every 40 s and both players were kept at full health; every 10 s both probes
+  answered, both games stayed up, the client's counters ended at `nemesis_got=50 nemesis_applied=50 nemesis_failed=0`. All 50
+  events came in the first 6 minutes; the next 19 minutes had none and the client had 0 proxies (the host's fight was over),
+  so this is a test of the stream's stability, not of a long fight.
+- **The two games' event lists agree for events about members that existed in the save and differ for new ones.** Compared
+  in order from the client's first event (the games' own debug logs): the first five (Ur-Gram: `DatalLevelChanged`,
+  `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`, `ActiveKillPlayer_AlreadyNamed`, `ActiveGotPlayerInLastChance`)
+  are the same on both; then, in one burst on the host (four `TimePassed`, then `PromoteEmpty_BuilderWC_*` /
+  `PromoteEmpty_BuilderTransform_*` with `Promote` and `Clear` for 11 newly named captains, then `PromoteDead_*`), the host's
+  subject has a name and the client's is `None` in 33 of the 50 lines: the client's world has no member with that id, so the
+  handler ran on nothing. The burst came about 40 s after the host's player was killed by Ur-Gram; whether the death caused it
+  was not tested. Events whose subjects existed in the save (Ur-Gram, `Skon`) were applied by name on both.
+- **A captain is a FactionMember object** (vtable `1FD5EA0`, name inline at +0x498, about 0x800 bytes). It holds pointers to
+  records by type: faction `0xA51` (+0x178, +0x180, +0x298, +0x2C8, +0x718), appearance `0xA66` (+0x278), spawn type `0xA06`
+  (+0x338), many `0xA08` (+0x558..+0x5C0) and `0xA0C` (+0x610..+0x650), also `0xA29`, `0xA03`, `0xA01`, `0xA00`, `0xA1D`,
+  `0xA0D`, `0xA30`, `0xA1E`, `0xA4B`, `0xA1B`. Two objects with this vtable carried the name "Ur-Gram" (one with the
+  full set, one with fewer records; which one the game treats as the live member was not worked out).
+- Found with: a heap search for the 8-byte name (`findq`, the name is exactly 8 bytes with its end), then the object start
+  at the hit minus 0x498.
+
+### Derived
+
+- A client that should show a captain as himself, and apply events about captains made after the join, needs the member's
+  data, not only a name: its records (appearance, traits, level, faction), or a member created by the same call with the same
+  inputs on both sides. The game has `FactionMember.Save` / `.Load` console programs; whether they carry a single member is
+  unknown.
+
+### Unknown
+
+- How a spawned character points to its member (and back); how a new member is made (the call that the promotion burst
+  makes before `PromoteEmpty_*`); whether the burst follows the player's death or time passing in general.
+
+## Session 2026-11-01 bx: a captain shown as himself on the client
+
+### Observations
+
+- **A captain's character holds his Nemesis member's reference** at `+0x2708` (the faction record pointer, type `0xA51`) and
+  `+0x2710` (the member id, a dword; `0xFFFFFFFF` for every other character). Found by scanning the unique `OlogHai_Infantry` (11,165
+  health) for the dword 99 (Ur-Gram's id) and checking the qword before it (`Faction_MtnPass`); an `Orc_Archer` and an
+  `Orc_Infantry` next to him hold `ff ff ff ff` there.
+- **The member table.** `LookupFactionMember` (`18DDCC`) indexes the array of member pointers held by the object at `region+0x20`
+  (begin `+0x18`, end `+0x20`, the member id the index, also stored in the member at `+0x174`). In the test save the main
+  regions (`Faction_volcano`, `_island`, `_MtnPass`, `_desert`, `_snowMtn`, `_MinasIthil`, `_None`, `_desert_Real`) share one
+  table of 500 slots; the invasion factions share another (77); `Faction_Demovolcano` has its own (27); the quest-replay and DLC
+  regions have empty tables. A member's `+0x278` is a character type record (`OlogHai_Infantry`, `Orc_Archer`, story captains
+  such as `GP_Bruz`, `SQ_Zog`, `SOTPVolcano_Orc_DefenderWarchief`), `+0x338` a place (`VC_Camp`, `MP_Staging`), `+0x4B8` the level.
+  Two members can have the same name (Ur-Gram is 99 and 117; Orthog 5 and 7).
+- **The game's character spawn takes the member.** `1036D0` (the function `SimSpawn` calls with `"CoopPuppet"`) reads its stack
+  arguments as: 5th and 6th bytes, 7th a pointer, **8th a FactionMember** (its `+0x178` faction record and `+0x174` id go into the
+  spawn request), 9th a pointer. The character set-up `3FAAEC` (from the AI class's slot 12) then finds the member through
+  `18D93C(FactionMgr, ref)`, stores the reference in the character (`60C424`), takes `member+0x270` into `char+0x2B28`, applies the
+  member's own appearance (`member+0x278`, virtual `+0x440`), copies the member's 64-bit seed `member+0x168` into `char+0x2338`
+  (the seed the model's random parts come from) and sets up traits (`578E30` with `member+0x268`, `578EEC` with `member+0x2D8`).
+  Passing the member as the 8th argument (`SimSpawn(..., member)`) made a character with the same reference (`Faction_MtnPass`, id
+  99), the same `+0x2B28` record and the same seed as the game's own Ur-Gram.
+- **Live (host A and client B on one PC, same save, `coop_enemies=on`):** A's player at the captains' spot: A announced 41 enemies
+  and one captain (a 53-byte `MEMBER` message after his `NEW`); B built the captain's proxy from its own member 99 within 3 s
+  (`captains_built=1`), next to A's captain ((25374, 37818, 4274) against (25414, 37818, 4260)). B's window showed an armoured
+  `Ologhai` with the glowing orange armour (`captain-live-b.png` in `local/logs`, not published). The proxy's maximum health
+  is 960, not 11,165 (the client shows the host's health as a fraction, so the bar is right).
+- **A captain the host's game made after the join does not exist on the client.** In the same run A sent a second captain, member
+  497 `?shak`; B's table has nothing at 497 (`captains_missing=1`: "no member 497 named ?shak in this copy"), so his proxy is the
+  type's generic orc. This is the soak's gap again, seen from the spawn side.
+- **Killing a character made from a member** (health to 0, as `FreeProxy` does) changed 0 dwords of the member (member 6,
+  `Orc_Spearman`; a control with the character let go first, `+0x2710` = -1, member 5, also 0). A first try on Ur-Gram's member
+  showed 13 changed dwords (a flag at `+0x508`, `+0x518`, list links); in that run B's native Ur-Gram also left the character list and host
+  events were applying, so the cause was not isolated. `FreeProxy` now lets the proxy go of its member (`+0x2710` = -1) before it
+  kills it.
+- **The proxy lifecycle** (`tools/captain_cycle.py`): captain proxy built (960/960) while A stood at the captains' spot; after A
+  went back to the start, B had no captain proxy left (`client_proxies` 16, then 6; the only character with a member
+  on B was its own native Ur-Gram, 11,165/11,165). One dword of member 99 on B changed over that time (`+0x308`; not
+  explained).
+- Offline: `enemy_test` 56 of 56 (new: the MEMBER message, once per change, again for a new session, length and orphan and
+  unterminated-name checks); `net_test` 36 of 36; `test_guard run` 56 of 56.
+
+### Derived
+
+- The client never needs the member's data for a captain that is in both worlds: it builds him from its own record, so his
+  look, name and traits are the client's copy of the same save. The message carries only the faction record's name hash, the
+  member id and the name (to check it is the same member).
+- Making a member the client does not have needs the game's own creation path:
+  - `19ED468(out)`: `operator new(0x528)`, the member constructor `1BB4C1C`, the pointer stored in `*out`;
+  - `1BD2E20(table, avoid)`: appends a new member when the table is below its limit (`table+0xB0`), else picks a reusable slot
+    (scoring dead and unused members), removes the old member (`F67E70` on the FactionMgr), builds the new one in the slot and
+    sets `member+0x174` to the slot, then `F67970` registers it; the id the client would get is the game's choice, not the host's;
+  - `1BC45A8(member, node)` writes a member into the game's text node tree (the `FACTIONMEMBER_SINGLESAVE` of the `FactionMember.Save`
+    program; a second section holds the other fields), `1BC159C(member, node)` reads it back, `1BB936C(dst, src)` copies one member
+    over another (the copy lists the fields that matter: `+0x168` seed, `+0x170`, `+0x174`, `+0x178`, `+0x180`, `+0x188`,
+    `+0x190`, `+0x268`..`+0x290`, `+0x2C0`.., `+0x318`..`+0x340`, `+0x3D0`..`+0x3F0`, `+0x460`.., `+0x4B8`..`+0x4C4`, `+0x4D0`, `+0x4F8`,
+    `+0x4FC`). The replay code `182AFBC` loads a temporary member from a node and copies it over the target member.
+- So a missing captain could be made on the client by a call to `1BD2E20`'s steps with the host's id and the host's member copied in
+  with `1BB936C`, if the client can be sent the member in a form `1BC159C` reads (the node text) or as the raw field list above. Not
+  tried.
+
+### Unknown
+
+- Whether the client's own Nemesis simulation or its native copy of the same captain ever conflicts with a proxy built from the
+  same member (B's native Ur-Gram was alive far away, then gone; no conflict seen in a few minutes).
+- What `member+0x308` is; whether a member's `+0x508` flag bits are death or something else (a kill of a character made from a
+  member did not change them).
+- Creating a member by the game's own path; two PCs; the host's death screen.
+
+## Session 2026-11-02 by: members the client does not have, made from the host's text
+
+### Observations
+
+- **The game can write one member as text and read it back** with its own functions, called from the mod with the game's own
+  sequence (`FactionMember.Save` handler `1C5BAC4` for the write, the world load's member routine `F99FF0` for the read):
+  - write: `18786F0(doc)`, `1878CA0(doc, "FACTIONMEMBER_SINGLESAVE")` gives the root node, `1BC45A8(member, root)`, `187A3CC(doc, path)` writes the file, `1878A2C(doc)`;
+  - read: `1879AC4(path, 0, callback, arg)` parses the file and calls `callback(doc, arg)`; there `18791F0(doc, "FACTIONMEMBER_SINGLESAVE")`
+    gives the node, then `403DE238(0x528)`, the constructor `1BB4C1C`, `1BC20B0(member, node)` and `1BC159C(member, node)`;
+  - placement in slot n (the tail of `1BD2E20`, the table allocation): if the slot holds a live member (`1BD16D4`), `F67E70(mgr, old)` and
+    `1BD522C(slot, 0)`; then `F67970(mgr, table+0xA8, n)`, `1BD2220(slot, &holder)` with `holder` = the new member, `member+0x174` = n,
+    `19EF15C(&holder)`. `mgr` is `[[RVA 26FFAA8] + 0x6C68]`, the table the object at `region+0x20`.
+  - The text is plain and readable: `Identity` (name, faction, `FactionID`, `RandomSeed`, model, role, tribe, personality), `Flags` (level,
+    location, dead, kills), the trait pickers, the gear with GUIDs, then a `SIMEvent_NOTLOADEDFROMHERE` section. 6,900 to 9,000 bytes.
+- **Round trip, one copy:** member 6 exported, imported into slot 6 of the other copy (which had an identical member) and exported again:
+  the same 304 lines, in another order inside the trait list, with `ImportanceScore` recomputed (51 against -62).
+- **Host to client, live (host A and client B, one PC):** B's slot 99 was first given another member's text (Orthog); A's captain
+  Ur-Gram was announced; A sent his text in 9 messages; B made the member (`members_built=1`), then built the captain's proxy from it. The
+  two members' texts are the same line for line except the `SIMEvent_NOTLOADEDFROMHERE` section (the member's current simulation event: the
+  game itself does not load it from here), the recomputed importance values and nothing else.
+- **Soak 1 (14 min, host moved between spots, nothing prepared):** `members_got=5` (3 skipped: the client already had them, same seed;
+  2 built: Ur-Gram, whose slot held another member after the earlier test, and `Hork`, a captain the host made into slot 497),
+  `captains_built=13`, `captains_missing=0`, 24 of 24 events applied. A text comparison of slot 497 on both copies afterwards: equal.
+  Member 99 differed: the host's Ur-Gram was dead (`IsDead`, `LastDeath*`, `SeveredHead`), the client's was not.
+- **Soak 2 (9 min):** the client's slots 99, 245, 239 and 151 were first filled with another member's text; the host then sent members
+  as its events named them: 4 sent, 3 built, 1 skipped; the games' own handler logs agree: 12 events on each, in the same order with the
+  same subject and other names (`tools/soak_nemesis.py`).
+- **The client's event queue dropped every message over 200 bytes**, so the first live run got no member data (`members_got=0`); member
+  chunks (up to 921 bytes) are now let through.
+
+### Derived
+
+- The seed (`+0x168`, `RandomSeed`) tells two members of one slot apart: the host sends a member's text the first time an event or an
+  enemy names him in a session and again if the slot's seed changes; the client builds him unless it already has that seed there. Chunks
+  of 900 bytes, in order, in front of the message that names the member (reliable ordered transport), so the member exists when the
+  event or the proxy needs him.
+- What the host's kill code sets (`IsDead`, the death attack, a severed head) is not an event, so it is not carried; the
+  dead captain stays alive in the client's Nemesis world until an event (`PromoteDead_*`) replaces him. A fix would send the member
+  again after a death event; not tried.
+
+### Unknown
+
+- A promotion burst of brand-new captains (`PromoteEmpty_*` for many new members) was not seen again; the first soak had one new captain
+  (`Hork`) and a slot reuse. The old replaced member's release (`F67E70`, `1BD522C`) ran in the tests without a crash, for minutes.
+- Whether the client's own Nemesis screens, the army and the hierarchy view show an imported member correctly; the `+0x330` index
+  that the world load updates for each member (post owners) is not done by the placement.
+- Two PCs; the host's death screen.
