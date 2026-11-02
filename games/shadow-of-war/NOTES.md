@@ -3789,3 +3789,44 @@ smoothing lagged the free-run start.
 
 - What the captain's speech is in the game's data (a presentation event, a presentation attack, or an in-world line) and what starts it;
   why the runs here did not show it (the captain's identity not presented, the test player's state, or a condition of the fight).
+
+## Session 2026-11-02 ca: the captain's intro on the client
+
+### Observations
+
+- **The intro as the owner played it on the host:** at the captain's first events (`ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`) the
+  camera cuts to a close-up of his face, with a nameplate (name, title) and a subtitle, for about 1.5 s; the log has no attack or
+  presentation line for it. Captured by `tools/ring_shot.ps1` (a ring of window frames) and `tools/speech_capture.py` (copies the frames around a log
+  trigger).
+- **The client already plays a presentation when it replays the host's event** (the game's own handler starts it), but:
+  1. the first time the camera showed an empty wall: the captain's member had no character (`member+0x48`, the character the member points
+     to, was 0 on the client; on the host it is the captain's character). A proxy built from a member is not linked by the spawn. The
+     client now links its proxy (`SimMemberLink`, every frame while the proxy lives; unlinked before the proxy is freed). After that the
+     client's log (a per-event diagnostic line) shows "his member points to a proxy" and the owner saw the captain on both screens;
+  2. in a crowd the captain was often missing from the client: only the 16 nearest enemies are announced and he was the 17th. Captains
+     are now announced first;
+  3. the client's proxies were marked as the player's followers (an ally: the owner saw the captain's level in blue, "dominated", and could
+     not hit him with the controller). Captains' proxies are no longer marked (`SimProxyAdopt(owner, false)`); ordinary proxies still are,
+     and one client strike on an ordinary proxy was counted and applied on the host (`hits_on_proxies=1`, `hits_applied=1`). A strike on a
+     captain's proxy was not retested (the proxy was gone before the test).
+- **The client's intro comes late, about 6-7 s after the replayed event.** The client's log: `ActiveShowdownGiven_Distance` replayed at
+  84,828, `ActiveInitialPlayerThreat` at 95,390, then `SetPresentationSequenceSlowMo = Identify_Slowmo_Timestop_50_SM` at 101,234 with
+  "Pausing due to Epsilon value!" lines (the game's pause), and the close-up in the frames at the end of the window. So the client
+  runs its own presentation for its own player when its own conditions are met (the owner's phrase: it plays "way after" the host's),
+  and it pauses the client's world (the slow-motion record), as the owner expects. The host's own timeline for the same fight was not seen
+  in the automated runs (the test player there never got the close-up).
+- A captain's death ("Killed You": camera, nameplate, subtitle, "New Title earned") also plays on the client when the host's player dies
+  (the host's events reach the client's presentation).
+- The slow-motion manager is at `5CF6C4`; the setter functions `5D095C` (4 callers), `5D09E0` (the world-UI one, 2 callers), `5D0A28`
+  (3 callers) are the candidates for the sequence and dynamic presentation setters; which is which was not worked out.
+
+### Derived
+
+- The pause and the close-up are the game's own presentation, started by the game in each copy; syncing their start (one copy starts
+  when the other does) needs the call that starts the "Identify" presentation (found with a call trace on the slow-motion setters while
+  the client's intro starts). Not done.
+
+### Unknown
+
+- What the client waits for before its intro; whether a host-triggered start can be forced on the client.
+- Whether a strike on a captain's proxy lands now.
