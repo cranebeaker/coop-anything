@@ -340,8 +340,8 @@ Derived (design consequence):
 - **Host guards notice guests** (observed, first test): on the host, each shared-ship guard's step runs with
   `global.Player` = the nearest player aboard the same ship (the host's own player or a guest's puppet). After the guest
   walked toward guards, the host had 2 guards "Panicking" and 2 "Searching" (none in earlier runs), and the host's game
-  ran its "spotted" pause, which the shared time sent to the guest ("Paused by the host"). To do: the spotted pause and
-  zoom should happen on the spotted player's screen (a guest), not as the host's own pause.
+  ran a pause, which the shared time sent to the guest ("Paused by the host"). Correction (2026-11-01): it was not a
+  "spotted" pause. In this build no spotting changes time (see "Banners with names" below); which pause it was is unknown.
 - **Guests' hits reach the host** (observed): a hit is put on its target with `SetDamageSignal(target id, damage mask)`
   (`0x005d0050`, sets `DamageSignal` 0x400 / `DamageMask` 0x401 inside `with(target)`); the guard handles it in its step
   (`EnemyHandleDamageSignal`). On a guest the hooked function also sends the hit (guard's original position + mask,
@@ -688,9 +688,455 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
 - **Test tooling**: suite check 7 counted a hit on the guest as an injury; with more gunfire since the gear change the
   guest was already knocked out (`Unconscious`, no more injuries counted), so the check now also accepts the hit
   arriving at a knocked-out guest.
-- **Not done**: items dropped or thrown by a player, loot boxes, what a puppet holds; the pickups are tested with the
+- **Loot boxes** (observed): `oLootBox_Step_0` (`0x00f03740`) opens a box when `Activate` (0x377) is set: `Open` (0x438),
+  then `MyLoot` (0xb96, 0 before) = `CreateRandomItemOfRarity`, put on top of the box, then `ShowInventoryMenu`
+  (`0x009372e0`) for the opener, all in one step. Both copies opening the same box in the same step with the same random
+  state (hash of the 72-byte state identical) made different items (e.g. "Long Range Glitch Trap" and "Silenced
+  Quickfire Gun"), so the item pool depends on more than the random numbers (per-player unlocks: a guess, unverified).
+  Sync: a box that opens here is sent; the other copy sets `Activate` on the same box, lets it open with
+  `ShowInventoryMenu` dropped, and removes the item it made (`DestroyContents`): the item is the opener's only.
+  Observed: 3 runs, the host opened the guest's box, no menu, no item on the host's box, the guest took its item.
+- **Not done**: the box's item for both players, keyed boxes, what a puppet holds; the pickups are tested with the
   test helper `takeitem`, which calls `AddToInventory` (or sends and removes loot as `CollectLoot` would), not by walking.
+
+## Items dropped and thrown (2026-10-31)
+
+- **Where** (decompiled): `DropInventoryItem`, `DropTrap` and `ThrowInventoryItem` (`0x008cafb0`) all call
+  `EjectFromInventory` (`0x0088bf00`, self = the person, argument = the item id): the item leaves the owner's inventory
+  and is put aboard the owner's ship at the owner's feet; a throw then sets `ForeSpeed` (0x37d) and `StarboardSpeed`
+  (0x380). Aboard a ship things move ship-wise; `HorizontalSpeed`/`VerticalSpeed` (0x54f/0x550) are not speeds there
+  (observed: 4287, -11207 on a dropped item at rest). The throw's direction comes from the thrower, not from the target
+  arguments (observed: three targets in different directions, same direction each time); unknown which variable.
+- **Item variables** (observed): items have no flat `yyvars` array; their variables live in a hash map at instance
+  `+0x60` (the runtime's `GetYYVarRef`, `0x010b6960`: capacity at `+0`, elements at `+0x10`, 12 bytes each
+  `{slot, RValue *, hash}`, hash 0 = empty). A Sidewinder had 157 set: 128 numbers, 24 texts (`Name`, `BaseName`,
+  `Grade`, `ChecksumString`...), 3 lists (`0x298` = the trait names, read by `DrawDescriptionAndTraitsForItem`;
+  `TraitTypes`, `TraitChances`) and 2 instance ids (`Parent`, `UseHandle`). A list is `{refs, row array, owner, visited,
+  rows}`, a row `{length, RValue *}`.
+- **Instances by id** (disassembly of `0x01098ea0`): buckets at `[0x048df1b0]`, mask at `[0x048df1b4]`, 8 bytes per
+  bucket, nodes `{?, next, id, instance}`.
+- **Sync**: when my player's item lands on the shared ship, the next frame (after a throw has set its speed) the core
+  sends every variable set to a number, text or one-row list, except the place, `Parent`, `Owner`, `DestroyMe` and any
+  value that looks like an instance id (an integer from 100000 to 2e7); about 2 KB. The other copy creates the object
+  there (`CreateInstance`, then into the ship's contents) and sets them. A thrown item is watched until it has been
+  still for 20 frames (a bounce off a guard stopped one for a frame and it moved on: 5 units apart on the first try);
+  then its resting place is sent and the copy is put there. A shown item in flight does not impact anyone: the game calls
+  `InventoryItemImpactsObject` (`0x00894e30`, which can call `SetDamageSignal` and distract guards with the bounce sound)
+  from the item's step for each nearby person; for a shown item in flight it is dropped, so the thrower's copy alone
+  decides a hit (a guest's hit already reaches the host).
+- **Matching**: a taken item is looked up by object and place; the tolerance went from 3 to 24 units for thrown items.
+- **Event numbers** for taken items, boxes and drops now start from the clock: after a hot reload of the sender's core
+  they started again at 1 and the receiver ignored them as already seen.
+- **Observed** (items scenario): a Grenade Launcher the guest dropped appeared on the host with the same name and the
+  same 171 variables; the host took it (gone on the guest), threw it 32 units; both copies had it at the same place; the
+  guest took it back under the same name.
+- **Not done**: a thrown item's hit on a guard is not tested (no throw in the tests did damage, so the `ghostimpacts`
+  switch has no check that can fail); a guest's thrown item does not distract the host's guards (its bounce sound plays
+  only on the guest's copy); armed traps not tested (`Armed` is copied, so a shown trap may go off on both copies: unknown); an item that leaves
+  the shared ship (thrown out of an airlock) is not followed; items dropped in space or on another ship.
+
+
+## Banners with names (2026-11-01)
+
+- **No spotted slow-down in this build** (decompiled): guards chasing or confronting a player and sentries shooting at
+  one call `SetTimeScale(oTime.SlowMoScale, oTime.EnemyTargetPriority, 1)`; `oTime_Create_0` sets
+  `EnemyTargetPriority` (0x3e9) to 0 and nothing else writes it, so the request never applies (observed: about 10000 such
+  calls at 0.2/0 in one suite run, time unchanged). The game itself shows nothing when a player is spotted.
+- **Spotted banner** (new, the tester's request): a sighting adds to the player's `TimesSeen` (0x2cb). The host's guards
+  decide sightings (a guest's copies see nobody), so the host watches `TimesSeen` of its player and of the puppet and
+  sends both counts in its player packet; each copy shows "You were spotted" or "<name> was spotted" when a count grows,
+  at most once per 10 s per player.
+- **Names**: each player packet carries the sender's character `Name` (0x2a1); pause banners read "You paused the game"
+  or "<name> paused the game" ("Your partner"/"The host" until a name arrives). Steam names can replace character names
+  once lobbies exist.
+- **Observed**: suite check 4d3, the guest's pause showed "You paused the game" on the guest and "<guest's character>
+  paused the game" on the host; the host's sentry spotting the guest showed "You were spotted" on the guest and
+  "Tyeesha Prophecy was spotted" on the host.
+
+
+## Leaving the ship and flying home (2026-11-01)
+
+- **How a player leaves** (observed): standing in its docked pod, Use (`InteractWith(<the pod>)`) seats the player
+  (state "Controlling") and the pod undocks. Flying home ends at a station: `oShip_Step_0` calls `DockAtStation` when
+  the pod reaches it, which calls `CompleteMission` (or `FailMission`) on that copy; the mission end screen opens.
+  Test helper `gotohome <distance>` puts the pod that far from `global.HomeStation`, stopped (a pod just off a ship
+  kept its speed and flew past), instead of the flight. Observed: pod 100 units from the station, docked within 5 s,
+  `Completed` 1, end screen open. (A direct `DockAtStation` call had closed the game earlier.)
+- **Three bugs found and fixed** (observed in this order):
+  1. A guest who flew off left its puppet standing in the host's airlock. The host's guards shot it, and those hits
+     reached the guest in its pod and knocked it out into space (state "Floating", injured 1 -> 5). Now a puppet whose
+     player has been aboard the shared ship and is no longer is held there, hidden, its step skipped (its own step had
+     walked it after its player into the station).
+  2. The guest's end screen is a menu, which pauses the game; shared time made it pause the host, still aboard.
+     A copy's own mission end screen is no longer shared: it pauses only that copy, with no banner.
+  3. The host could not dock at home after the guest had: on the host's copy the guest's puppet had walked after its
+     player into the station (Parent = the station) and the puppet pod sat at the station's centre; the host's pod was
+     pushed away (drifted 38 000 units) and never got a docking opportunity. Fix 1 (the puppet held, its step skipped)
+     ended this: the host docked in every later run. A second fix that also moved the puppet pod far away made no
+     difference when switched off (mutation `nostow`: 9/9), so it was removed.
+- **Docking timing** (observed): twice in 5 runs the guest's pod, put 100 units from the station, had not docked 6 s
+  later; put there again it docked (the station may not be ready right after the jump; unknown). The test retries every
+  5 s for up to 20 s. *Superseded, see "Docking at home, corrected" below.*
+
+## Docking at home, corrected; banners for the other player; leaving early (2026-11-01)
+
+- **Docking at home failed in about half the runs** (observed: host in 3 of 4 runs, guest in 1, after 20 s of retries).
+  Investigation (observed unless marked):
+  - The bot's pod was pushed west at exactly 450 units/s right after `gotohome 100`. The station's `Radius` is 3976,
+    so 100 (and the old default 3000) is inside its hull; placed 1500 out and drifting in, the pod bounced off about
+    600 units from the centre. Not a docking path either way.
+  - `PlayerShipIsAllowedToDockAtStation` (0x00af6320, hooked and logged) was never called. The flying state's dock
+    check uses the pod's `NearestStation` (0x83b), which named a station of another faction 820 000 units away; the
+    home station, about 30 000 units away, was not a candidate.
+  - `ControlSomething` finds the nearest station from the **player's** x/y, and oGalaxy activates the galaxy around
+    the camera's sector (`ActivateNearbyGalaxyElements`; derived from the decompile). The camera follows the player.
+    After Use in a docked pod and the undock, the player (state "Controlling", `Controlling` = the pod) has
+    `Parent` = itself and its x/y **stay where the pod left the ship**: observed over 6 s, the body did not move while
+    the pod flew 100 000 units. So the camera stayed at the mission ship, the home station was not activated, and the
+    pod could not dock unless the mission ship happened to be near home (which explains the flaky passes).
+  - Test fix: `gotohome` also puts the player's body at the pod. With it the pod docked within 2 s.
+  - **Unknown, important**: whether a real player is left behind too, or only the bot. The bot is placed in its pod by
+    `dockship` (the game's `DockWithAirlock`) and never walks in; undocking (`UndockAtSpeedAndAngle`) moves the ship's
+    `Contents` that lie in the pod's footprint to the pod, so a player missing from the ship's `Contents` list would be
+    left behind (guess). A walk-in test (`walkto` out and back, then Use) did not seat the bot. Needs a check by a
+    walking bot before anyone flies home for real.
+- **Correction to bug 3 above**: the host's pod "pushed away" was the station's hull pushing out a pod put inside it,
+  and the host not docking was the body left behind. Putting the guest's puppet pod far away was tried again
+  (mutation `nostow`) and again made no difference (home 12/12 with it switched off), so it is not in the mod. On the
+  host's copy the guest's puppet pod may still sit at the home station after the guest docks (cosmetic, not checked).
+- **Leaving early does not fail the mission** (observed): the guest flew home with the target alive; it docked
+  (state "Free" at the station), `Completed` 0 and no `FailMission`. When the host later killed the target, the
+  guest's `CheckIfAssassinationMissionCompleted` (run from `PlayerStateFree`) completed the guest's mission at home.
+  `FailMission` is called from `DockAtStation`, `MissionCheckEarlyFailure`, `StartDeathZoom`, objective-delivery
+  scripts (decompile); none of them fired here.
+- **`CompleteMission` repeats** (observed): once the mission is complete the game calls it every second
+  (`CheckIfAssassinationMissionCompleted` from the player's step), so a call count is no "just docked" signal.
+- **Banners for the other player** (new): each player packet carries the last mission that ended on the sender's copy
+  and how (`CompleteMission`/`FailMission` argument and kind). The other copy shows "<name> left the ship" when the
+  sender's puppet starts being held (it had been aboard and no longer is), "<name>: mission complete" or
+  "<name>'s mission failed" when the pair changes (not the first one seen after joining). Observed: host shown
+  "Jigme Cuba left the ship" and "Jigme Cuba: mission complete" once each; the guest shown the host's. A failure
+  banner has not been seen (no failure happened).
+- **Not done**: a failed mission (a player captured or the pod destroyed); the real flight (bot steering) instead of
+  `gotohome`.
+
+## The pilot left behind at undock (2026-11-01)
+
+Observed, unless marked:
+- **Real players too**: the bot walked from its pod into the ship and back (`walkto`, with the host's guards told to
+  ignore it), then Use: same result. Its body stayed where the pod left the ship, the camera with it; a screenshot
+  showed empty space while the pod flew off. So this is not a test-placement artefact.
+- **Frame by frame** (a per-frame watch of Parent, state and camera object): Use calls `InteractWith(<pod>)` (no
+  `SitIn`, no Parent change); on the next frame the pod's `PlayerShipStateDocked` calls `UndockAtSpeedAndAngle`
+  (`ContentsToMoveCount` 1: the player); the player's `Parent` becomes itself while still "Free", then "Floating",
+  then "Controlling". The camera's `Object` stays the player throughout.
+- **Why the body stays**: the undock removes the player from the ship's contents and calls
+  `AddToPlayerShipsContents(player)`, which skips `global.Player` (decompile: it compares the id with global.Player
+  and jumps past the re-parenting; observed: Parent stays itself after the call, with global.Player and
+  global.PlayerShip correct). With no Parent, `UpdatePosition` moves the player by its own `xSpeed`/`ySpeed`
+  (`UpdateSpacePosition`), which are 0. The carry test itself passes (inside the pod's bounds 0x637-0x63a, no module
+  at that spot; test helper `carrycheck`).
+- **Unknown**: what keeps the pilot with its pod in the unmodded game. The game's own `UndockFromStation` gives the
+  same "Controlling, Parent = itself" state; pushing that pod by its speed left the body behind too, but that pod was
+  still tied to the station (clamped at x 100000), so the check is not conclusive. Bot thrust (control 5 held) did not
+  move it.
+- **Fix**: while my player is at the controls of its own pod, the player's Parent is itself and the pod is free in
+  space, the player's x/y (and xReal/yReal) are set to the pod's each frame. Observed: distance 0 in flight, the
+  screenshot shows the pod centred. `gotohome` no longer moves the body. Mutation `nopilotfollow`.
+- Side finding: on the host's copy, the host's own player was missing from its ship's `Contents` list (helper
+  `incontents`); effect unknown.
+- Side finding: walking into the shared ship without `unseen`, the guest was knocked out by 38 hits from the host's
+  copy right inside the airlock (a guard or sentry there; likely normal play, not investigated).
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
+
+## Knocked out: what the game does, and what co-op did (2026-11-01)
+
+Observed, unless marked:
+- **Unmodded flow, on the host (its copy runs the guards)**: with the target already dead (`hitguard -2 1`, so no escape
+  could end the mission), the host walked into the guards' view (`walkto 3400 3400`): knocked out within 30 s, then
+  state `Carried` (a guard in "Carrying Body"), after ~20 s `Floating` (thrown out of an airlock into space), after
+  ~50 s more `Resting` and the "Character Select" screen; `global.Mission` gone. No `FailMission` and no
+  `CompleteMission` call on that copy (the assassination was already complete). From the decompile (derived):
+  `PlayerStateUnconscious` calls `SendNearestGuardToSavePlayer` (sets the guard's `MySaviour`/state), the guard carries
+  the body to `NearestAirlock` and ejects it; `PlayerStateFloating` can end in `KillPlayer` (oxygen,
+  `PlayerCanLoseOxygen`) -> `StartDeathZoom`, or a pod scooping the body up (`CanBeScoopedUp`).
+- **The guest knocked out (co-op, before any fix)**: `walkto` into view with `unseen 0`: `Unconscious` within 5 s,
+  injuries 7 -> 10, and then nothing: no guard came for it (the guest's copies of the guards are mirrors and do not
+  act; the host never sends one for the puppet), and the host's guards kept shooting the puppet (hits events 56-65
+  every ~0.7 s, forwarded to the guest). The alarm they raised made the target escape ~35 s later: `FailMission`
+  from `MissionCheckEarlyFailure` on both copies in the same frame (then every frame), both end screens, and the
+  banners "<guest>'s mission failed" on the host and "<host>'s mission failed" on the guest (first failure banners
+  seen).
+- **Misleading banner**: when the host was carried off and thrown out, the guest was shown "<host> left the ship".
+- **Unmodded throw-out, in detail** (observed on the host, hooks on `EjectContentsFromAirlock`): the guard carries the
+  body to its `DestinationAirlock` ("Fetching Body" -> "Carrying Body" -> "Leaving Body"); 0.8 s after it lays it down,
+  `oAirlock_Step_0` calls `EjectContentsFromAirlock(<player id>, <airlock id>, 5000, <direction ~ the airlock's
+  image_angle>)` with self = the airlock; a puppet standing in the same airlock went out in the same step. The airlock
+  was not docked (`DockedState` 0) and its doors did not cycle. What starts the throw looks at `global.Player` only
+  (unknown how): running the airlock's step with the puppet as `global.Player` threw nothing out.
+- **Fixed, the knocked-out guest** (all observed in `fail.sh`, see below):
+  1. The host's puppet goes "Unconscious" when the guest does (`ChangeStateTo`); while the guest stays down the puppet
+     stays down (`SecondsUntilGetUp` held), and gets up with it. The guards stop shooting it.
+  2. The guard sent for it (the puppet's `MySaviour`) keeps the puppet as `global.Player` during its step. Before, the
+     host's own player standing nearer made the guard take the host as the body it carried; it put the puppet down
+     ("Leaving Body" after 14.5 s every time).
+  3. A guest knocked out in the airlock beside its docked pod no longer counts as "in its pod": that parked (hid) the
+     puppet, and the guard lost the body.
+  4. 0.8 s after the guard lays the puppet in an airlock, the host makes the same `EjectContentsFromAirlock` call for it,
+     and does not board it onto the ship again until its player follows.
+  5. The guest's copy follows its puppet (packet fields `body`, `body_fore/star`, `body_dx/dy/vx/vy`): held down while
+     carried (positioned where the guard carries it), and when the puppet is thrown out, out of the ship at the same
+     offset and speed, state "Floating"; from there its own copy runs the rest. Observed: oxygen ran out after ~50 s,
+     "Death Zoom", then the character select, as for the host's own player unmodded.
+  6. The guest's copy sends none of its own guards for its player (`SendNearestGuardToSavePlayer` dropped there): one
+     of them (a guard the host had not reported lately runs its own step) had carried the guest off and thrown it out
+     on the guest's copy alone, while on the host the puppet lay in the airlock.
+  7. Banners: "<name> was thrown out of an airlock" (instead of "left the ship") and "<name> was lost in space".
+- **A death crashed the game in co-op, host and guest alike** (observed, also with no knockout involved: the host's own
+  player thrown out and lost): "Reached SwitchToCharacterSelect and no chooseable players exist, must have failed to
+  generate choices". Cause, observed by an A/B run: `StartANewLife` builds the chosen station anew (new characters to
+  choose) only if `station.MyBuilding` does not exist; with a puppet (made from one of our roster characters by
+  `PlayAsCharacter`), the home station's building was still there after our player left (without a puppet, `NOPUPPET=A`,
+  it was gone and the select worked), while its characters were gone. Why the building outlives the departure with a
+  puppet: unknown (moving the puppet out of the building right after the undock did not change it). Fix: during a new life (after `EndLife`),
+  if the station `GetRandomStationOfFactionWithNoClient` returns has a building with no character to choose in it, the
+  mod removes it with `DestroyShip` (as `oStation_Destroy` does; `DestroyInstance` raised "Destroying a ship without
+  destroying its contents first"). Observed: four new characters, the select open, no dialog.
+- **Notes for tests**: a knockout made by the test helper alone (`knockout`, `ChangeStateTo` + `KnockOutTime`) brought no
+  guard, even with the puppet's `SecondsSinceSeen` set to 0 (the game sends one only to a player its guards are onto,
+  exact rule unknown); `fail.sh` lets the host's guards knock the guest out for real. Walking the guest through the
+  ship with the guards watching raised the alarm and the target escaped: both missions failed early (`fail.sh` kills
+  the target first). With the target dead, the lost player's mission ends without `FailMission` (observed, host and
+  guest).
+- **Later runs** (observed): once in 7 runs the guest, thrown out beside the airlock its own pod was docked at, was at
+  that pod's controls a moment later (state "Controlling", off the ship): picked up by its pod (cause not checked; the
+  game has `CanBeScoopedUp`). A pod undocking puts its pilot in "Floating" for a frame, so "thrown out" is now named only
+  for a player who was down before it floated. In the suite, the host's guards now knock the walking guest out and
+  carry it off as the game does (the sentry then holds fire at the downed puppet, and a down player takes no hits:
+  `PlayerStateUnconscious` handles no damage); two suite checks were changed to accept that. A hit on the guest made it
+  drop a grenade (`PlayerHandleDamageSignal` -> `CreateContentsOnTopOf`) whose blast hurt it on its own copy; grenades
+  are not synced yet, so such blasts are counted apart from hits not from the host.
+- Not done: a pod destroyed; a test that reaches the cases of `noguestsave` and `nodownpod`.
+
+## Rescued by your own pod (2026-11-01)
+
+- **Only your own pod** (decompiled): `PlayerStateFloating` calls `CanBeScoopedUp`, which looks at `global.PlayerShip`
+  (needs fuel, `PlayerShipHasFuel`); while floating, the player steers its pod from outside (`PlayerRemoteControls`).
+  The other player's pod cannot pick you up in the game; that would be a new feature, not a sync.
+- **The pod flying free** (fixed): a player's pod was sent to the other copy only while the player sat at its controls
+  ("Controlling"); a pod steered from outside by a floating player stayed docked at the shared ship on the other copy
+  (observed with the change switched off, mutation `nofreepod`: nothing sent, the host's copy of the pod 884 000 units
+  away). It is now sent whenever it is free in space too. Observed: the host showed it 125 units from where the guest's
+  copy had it, while it drifted fast from the throw.
+- **Observed** (`tools/rescue.sh`): thrown out, the guest's own pod picked it up (test helper `podtome`: the pod
+  undocks and is put beside the player, instead of the flight), it flew home and its mission completed; the host was
+  told "mission complete", not "lost". In 2 of about 10 runs the guest, thrown out beside the airlock its pod was
+  docked at, was picked up at once without the helper.
+
+## A new life, and the next shared mission (2026-11-01)
+
+Observed (`tools/life.sh`), unless marked:
+- **A new character**: after the guest was lost, a click on the first seat of the character select (as at the start)
+  gave it a new character at its station, state "Free"; the next player packet carried the new name and the host's copy
+  used it. Nothing in the mod had to change for this.
+- **The other player's puppet was lost with the mission ship**: `EndLife` cancels the dead player's mission and
+  destroys its mission ship with all aboard (decompile: `CancelMission`, `DestroyShip`), and a new shared mission
+  replaces the old ship the same way; the other player's puppet, aboard it, went with it (on the guest's copy the host
+  was invisible from then on; not live already before `EndLife`, so the ship had gone with the mission end before).
+  Fix: once both players are aboard the next shared ship and the puppet has been gone for 2 s, another roster
+  character becomes the puppet (as `two.sh` does at the start; the next life has one choice fewer). Mutation `norenew`.
+- **A GameMaker error after the next mission was shared** (on the host, then on the guest): "GetFore" in
+  `PlayerPathfindingTo`, called by the mod for a puppet left in space by the throw-out (Parent = itself) or on a ship
+  that was gone. Such a puppet now waits out of sight, its step skipped, until its player boards the shared ship;
+  boarded again, it is stood up ("Free") if its player is. Mutation `nospacewait`.
+- **Test notes**: the pod picked up its thrown-out pilot even when free in space 5000 units away (whether the game
+  flies a free pod to its floating pilot by itself: unknown), so `life.sh` empties the pod's `Fuel` and `EmergencyFuel`
+  first (`CanBeScoopedUp` needs fuel). The test's walk from the pod found no path on the second ship (another layout), so
+  the last check takes the puppets parked in the pods (aboard, hidden). `life.sh` passed 4 of 9 runs on the final build: every failure
+  was the test re-docking the new character with its jump-and-dock helpers (the body stayed in the station's building,
+  Parent = the building, state "Controlling", while its pod docked; two or three times a GameMaker error in
+  `DockWithAirlock`, called by the helper `dockship`). Causes unknown; a real player flies the pod instead.
+
+## Windows broken: hull breaches (2026-11-01)
+
+Derived from the decompile (`oWindowGlass_Step_0`):
+- A window is an `oWindowModule` with an `oWindowGlass` (`MyModule` = the module). The glass breaks when its
+  `DamageSignal` carries a damage flag that breaks glass, or when its `BurstOverride` is set: a sound,
+  `WindowChangesCollisionGrid`, `GiveModuleAForcefieldInDirection`, `CreateAirlock`, `DestroyContents`, and the glass is
+  gone. Explosions break windows through `DamageWindowsInRadius` (`ExplodeOnShip`).
+
+Observed:
+- **Before the fix a broken window broke on one copy only**: a shown bullet's hit is dropped (`ghost:` lines), and the
+  test break on the guest left the host's glass whole. On the guest an airlock (object 116) and a forcefield (61)
+  stood where the glass was; on the host the "Window" (83) was still there.
+- `oWindowModule.Burst`, which the glass's step looks to set, read 0 on the module after a break (why: unknown). The
+  mod sees a break as the glass going away while its ship lives on.
+- **Fix**: each copy remembers the shared ship's windows by their module's ship-wise position (the same on every copy,
+  instance ids differ), and sends every window broken there (both directions, every 15 frames; breaking is one-way, so
+  the union is enough). The other copy sets that window's `BurstOverride`, and the glass breaks the game's own way at
+  its next step: the same objects in its place on both copies. Mutation `nobreach`.
+- **Blown out**: the guest standing next to a window the host's copy broke was pulled out through it on its own copy
+  (state "Floating", flying off fast), as the game does to anyone at a broken window. The host's banner said "left the
+  ship"; now "... was blown out into space" when the other player starts floating within 3 s of a window breaking (or,
+  since the next section, a module going). Mutation `noblownnews`.
+- **Test** (`tools/breach.sh`, 8 checks): windows are broken with `BurstOverride` (helper `breakwin`), because the
+  bot cannot aim a gun or throw a grenade yet; a break by a real shot or blast is not tested.
+- Not covered: a copy that was not running when the glass broke (a hot reload) never reports it.
+
+## Modules destroyed by explosions (2026-11-01)
+
+Derived from the decompile:
+- `DestroyModule(module, name)` (called by `ExplodeOnShip`, missiles, `BlastDestroyModule`,
+  `DestroyAllModulesInBlastRadius`) works `with (module.Parent)`, skips a station, and then: alarm, screen shake, an
+  explosion in space, the ship's `ModuleGrid` and `DestroyedModule`, turrets and thrusters, `CreateBreachForcefield`,
+  the player's pod undocked if its airlock went (`UndockAtSpeedAndAngle`, `PlayerReturnToShip`), `SplitShip`, and the
+  module destroyed. `DestroyMultipleModules` has its own copy of that code (it does not call `DestroyModule`).
+- `ModuleAt(fore, starboard, ship)` finds a module from the ship's grid (`ModulesLong`, `ModulesWide`, `ModuleLength`,
+  `ModuleWidth`).
+
+Observed:
+- The mod first called `DestroyModule` and nothing happened: the game's own `Exists` said no for a module that was
+  there. Modules and contents away from the players are deactivated; `ExplodeOnShip` calls `ActivateMyModules` and
+  `ActivateMyContents` first, and with those calls it worked.
+- **Fix**, as for windows: each copy tracks the shared ship's modules (its `ModuleList`) by ship-wise position and sends
+  every one it has seen destroyed (both directions); the other copy activates the ship's modules and contents and runs
+  `DestroyModule` on its module at that position. A part cut off from the ship splits off the same way on both copies
+  (the end module of an arm, held only by the destroyed one, went on both). Mutation `nomodloss`.
+- A guest standing in a module whose neighbour the host's copy destroyed was blown out on its own copy ("Floating"), and
+  the host was told "... was blown out into space".
+- Game rules seen on the way (the same on both copies, nothing to sync): a test blast that took the assassination
+  target with it failed the mission at once (`MissionCheckEarlyFailure`: the target no longer exists); destroying the
+  module whose airlock held the guest's pod undocked the pod with the guest at its controls.
+- **Test** (`tools/modloss.sh`, 9 checks): modules are destroyed by the helper `blastmod` (the game's `DestroyModule`),
+  not by a real explosion; positions are those of the fixed test ship. Its walk to the window module found no path once
+  other modules were gone, so the blow-out check runs first.
+- Not covered here: grenades themselves (next section).
+
+## Grenades (2026-11-01)
+
+Derived from the decompile:
+- `oGrenade` is an item (name, `Armed`, `Trigger` "Timed", `TimerSeconds`, `SecondsUntilDetonation`, `Sticky`,
+  `StuckTo`, `BlastRadius`, `GrenadeDamageMask`). A gun fires one through `GunFiresBulletInDirection(gun, direction)`
+  (self = the gun), which passes an `oGrenadeGun` (object 100) on to `GunFiresGrenadeInDirection`; its step counts the
+  fuse down and calls `ExplodeOnShip` (damage, windows, modules, knockback, guards alerted).
+- `SelectInventoryIndex` is a stub that calls the game's `Crash` (it raised an error dialog when the mod called it);
+  `SelectInventoryItem(item)` reactivates the item and selects it. A held gun's own step does not run (setting its
+  `Fire` did nothing).
+
+Observed:
+- **Before**: a grenade existed on the copy that fired it only (`projectile: grenade #1 created` there, nothing on the
+  other copy).
+- **Fix**, as for bullets: a grenade fired aboard the shared ship is sent the frame after it was made, with every
+  variable (164, about 1.9 KB: fuse, speeds, blast); the other copy makes a look-alike `oGrenade` at the same ship-wise
+  place and copies them in. Its step runs with hits dropped (its blast's hits on guards and players come from the real
+  one's copy as hits) and a module it would destroy dropped (the real copy sends its destroyed modules; mutation
+  `ghostblasts` lets them through). Mutation `nogrenades`.
+- In the test both grenades exploded on both copies at the same place (0 and 3 units apart), and the host's look-alike
+  next to the guest's puppet sent no hit for it (the guest was hurt once, by its own copy's real blast).
+- A real grenade blast that took the assassination target with it failed the mission on both copies; a failed
+  mission's end screen paused the game, and grenades fired afterwards lay with their fuse stopped (on both copies).
+- **Test** (`tools/grenade.sh`, 8 checks): each player gets a grenade gun (helpers `giveitem 100`, `selectitem`) and
+  fires it with `firegun` (the game's `GunFiresBulletInDirection`), not through the controls: the bot's injected item
+  keys (controls 32 and 33) and attack did not select or fire (unknown why). Grenades thrown by hand (an `oGrenade` from
+  the inventory via `ThrowInventoryItem`) go the way of thrown items (earlier section) and are not tested armed yet.
+
+## A guest's gunshots, and aiming for the test bot (2026-11-01)
+
+Observed:
+- **A gun's direction is ship-wise**: traced bullets (helper `tracebullets`) fired at 0 went towards +fore, at 90 towards
+  -starboard (`MyImageAngle` = the direction given); the helper `fireat` aims at a ship-wise point with that rule.
+- **A guest's bullet is shown on the host**: the guest's gun fired a bullet at an inner wall; the host showed it heading
+  the same way, one step (50 units) further on (sent the frame after it was made), fired by the guest's puppet
+  (`grenade.sh` check 2; mutation `noghosts` on it).
+- A guest's bullet hitting a guard was not reached: the bot's shots across the ship stopped at walls, and two broke
+  windows that blew the guest out into space (then `walkto` from space raised a GameMaker error in `GetFore`; the
+  helper now refuses unless the player is aboard). A guest's hit on a guard goes to the host through the same
+  `SetDamageSignal` hook as before (suite check 5).
+- Guards moving on an errand were at the same place on both copies (within 12 units for all 38 of a ship); only the
+  state names differed (the host's "Errand" shown as "Sentry" or "Responding" on the guest: states that need extra
+  data, an open item).
+- Found in review: the grenade packet had the same id as the guards' packet ("HSG1"), and the destroyed-modules packet
+  the same as the mission message ("HSM1"); their sizes kept them apart (the receiving checks compare sizes), so nothing
+  was misread. Both have their own ids now ("HSN1", "HSL1").
+
+## Guards hear a guest, and look alerted on its screen (2026-11-02)
+
+Derived from the decompile:
+- A gun's step (when it fires) and `ExplodeOnShip` call `AlertAllGuardsInShipwiseRadius(fore, starboard, radius,
+  ship, ...)` (7 arguments): guards within earshot respond.
+- A guard's draw reads its `State`, `RespondingText` (words over its head), `AlertSpriteOverride` and the animation its
+  step sets (`Animation`); the alert states keep their own data (`RespondingFore`/`RespondingStarboard`,
+  `MyErrandObject`, `StartSearchModule`, `LastKnownPlayerFore` ...).
+
+Observed:
+- **A guest's gunshots**: on a guest every guard of the shared ship is a blind mirror, so the noise its own gun's step
+  makes reaches no guard that matters, and the bullet shown on the host makes none (derived; the bot cannot fire through
+  a gun's step, so not observed). **Fix**: a guest sends the call from its own player's gun (the shared ship's id swapped
+  for the host's), and the host makes it at the puppet. The path was observed working with a grenade's call: the host
+  logged the guest's noise and 4 of its guards went "Responding", then "Investigating" and "Panicking". Mutation
+  `noalerts`: no test reaches it now (see below).
+- **A guest's grenade is heard without it**: with `noalerts` the host's guards were alerted all the same, because the
+  grenade's look-alike explodes on the host through `ExplodeOnShip`, which makes the noise there. (A first version also
+  sent the grenade's call, alerting the host's guards twice; it sends gunshots only now. Correction: an earlier draft of
+  this section said the host's guards did not hear a guest's grenade; that run had used the `firegun` helper, which
+  skips the gun's step and its noise.)
+- The helper `firestep` (the gun's `Fire` set and its own step run once) used up `Fire` but fired nothing (the step's
+  other conditions are unknown), so gunshot noise stays untested.
+- **A guest did not see guards alerted**: only states without extra data (Sentry, PatrolPath, Down ...) were put on a
+  guest's mirrored guard; the others kept the guest's own (blind) state, so a guard investigating the guest's noise
+  looked like a sentry there. **Fix**: the host also sends each guard's look (`RespondingText`,
+  `AlertSpriteOverride`, `Animation`); the guest runs the guard's step in its own state, then puts the host's state and
+  look on it for drawing, and its own back before the next step (forcing an alert state with its data missing raised a
+  GameMaker error before). All guards then had the same state, words and animation on both copies (36 of 36 compared).
+  Mutation `noguardlook`.
+- With the noise heard, the target fled and the mission failed (the game's rule), which paused the test before the
+  next grenade: `grenade.sh` now boards with `EscapeProtocol = 0` (test helper `MISSION_SET`).
+- Suite on the final build: 3 of 6 runs passed. Check 5 failed once (the known patrolling guard). Check 7 failed twice
+  in a new way: the puppet's own injury count went up with the guest's (puppet 3 -> 4, guest 2 -> 3), though the hit
+  is meant to reach only the guest; not seen on the 8 builds before (28/28 there, check 7 failing earlier only with no
+  hit arriving). Cause unknown; the change between the passing build and this one was only which noises a guest sends.
+- Errand guards walked the same and looked the same on both copies already ("Walking", no words); the guest's copy
+  still runs its own errand state underneath (where to go is the host's anyway: positions follow the host).
+
+## Other mission types: Steal and Capture (2026-11-02)
+
+The game's mission types (strings in the exe): Assassinate, Capture, Steal, Rescue, Hijack. The tests set the shared
+mission's type with `MISSION_SET="Type <type>"`; the ship is generated from the mission on both copies as before.
+
+Derived from the decompile, and observed:
+- **Steal**: the objective is a loot box (`oLootBox`, named after the mission). Opening it completes the mission at
+  once (`oLootBox_Step_0` calls `CompleteMission`). Observed: the guest opened it (helper `interact`: the game's
+  `InteractWith`, which works from any distance), the box sync opened the same box on the host, and both missions
+  completed in the same frame. No new code: `tools/steal.sh` (8 checks); mutation `noboxes` on it leaves the host's
+  mission open.
+- **Capture**: the objective is the target guard. Knocked out (`KnockEnemyOut`), carried into the player's pod and put
+  down there; when the pod undocks it takes what lies inside (the body's Parent becomes the pod). At a station the
+  game hands the captive to the player to carry out; put down at the station's agent drop (`oAgentDrop`, object 178),
+  the target's own step (`EnemyCheckObjectiveDelivered`, which asks `NearestContentsOfType` and `point_distance`)
+  completes the mission. Observed for the host, with helpers for what the bot cannot do: `knocktarget`, `interact`
+  (pick the body up from afar; then the pod, to take its controls: the Use control picked the body up again instead),
+  `gotohome`, `gotodrop` (to the agent drop).
+- Found on the way: adding the body to the pod's contents directly (`AddToPlayerShipsContents`, as
+  `CanBeCollectedInPlayerShip` does) without it lying in the pod raised "oEnemy is in my contents but I'm not its
+  parent" at undock; the helper is gone, the test drops the body in the pod as a player does.
+
+Co-op:
+- **A captured guard leaves the guest's ship too**: once the host's pod had it, the host stopped reporting it (not
+  aboard the shared ship), and the guest's copy, lying "Down" aboard, would have got up there later. The host now keeps
+  sending such a guard as "left" and the guest hides it and skips its step. Mutation `noguardsleft`.
+- **The capture counts for both**: the delivery completes the mission on the deliverer's copy only. When the other
+  player's mission completes and ours is a Capture, Rescue or Hijack, ours completes too (`CompleteMission`, called at
+  the start of our player's step, with the message "<name> completed it for the crew."). Mutation `nosharedcomplete`.
+  Assassinate needs none (the kill is shared and each completes at home) and Steal neither (the box opens on both).
+- `CompleteMission` takes two arguments (the mission, and a message for the end screen). Called with one, the game
+  process ended at once, with no dialog and no log (Proton: "Primary child shut down"); first taken for something
+  about the captive, then shown on a Steal mission with the same call.
+- **Test** (`tools/capture.sh`, 10 checks): dock; the same target; the host knocks it out (down on the guest too);
+  carries it into its pod and leaves (the target leaves the guest's ship too); flies home and delivers it (its mission
+  completes from `EnemyCheckObjectiveDelivered`); the guest's mission completes with it and the guest is told; no
+  mission failed; no error dialogs; both advancing.
+- Not tested yet: a guest capturing (it would carry a guard its copy only mirrors; the host's copy of the body would
+  stay where it was), Rescue, Hijack.
