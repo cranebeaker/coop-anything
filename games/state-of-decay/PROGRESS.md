@@ -96,6 +96,23 @@ Main test tools: `zm_soak.py` (long stress cycles), `soak_ab.sh`, `zm_freeze_tes
 
 Newest first. One entry per discovery; link the NOTES section for details.
 
+### 2026-11-02 - owner's local test: crouch confirmed; flashlight; log flood; failed starts
+- Owner confirmed the joining player's crouch now shows on the host.
+- Flashlight (T): the key is part of the relayed input (bytes 0xFB.. block: 0x103/0x104 change on the host copy's
+  stand-in input). The joining player's host copy runs it through its state machine: UL action ThrowEntity
+  (0x8B, fire 0x1709590) spawns a UL_Flashlight (call chain 0x1709772 -> 0x1707172 -> 0x1706B41 -> spawn at
+  0x1465862) at that player, and at the same moment the host's own flashlight goes out (one player flashlight
+  per machine?). On the joining machine its own T cannot spawn anything (the host spawns entities), so it gets no
+  light; the host's light is replicated and shown at the host's player (near the joining player it looks like
+  its own). Open: give each player its own light.
+- Joining machines' logs grew by ~40 MB per 15 min: "Entity %u is not part of the community" every frame (also on
+  the host). `crash_guards.quiet_community_warning` NOPs the three CryWarning calls (0x17167AD, 0x171685B,
+  0x17168EB); installed at boot. Verified: client log growth 0 B in 3 s afterwards.
+- A host start failed (early save redirect timed out after 60 s; the game was gone). `save_redirect.install_early`
+  now ends the game process on a timeout (it must never run without the redirect: Steam folder), and
+  `coop_agent.start_game` tries a second start. The owner's Steam folder was not written by it (newest file there
+  from 2026-10-30).
+
 ### 2026-10-29 - host crash while a third player joined; mailbox wait
 - The host crashed (dump in test-install/USER) while a third player was being set up: access violation writing
   [0+4] at 0x170B3AE, in the fire handler of UL action RTSResourceNodeQueryMode (type 0x72, 0x170B340), whose
