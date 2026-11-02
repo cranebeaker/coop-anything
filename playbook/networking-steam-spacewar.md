@@ -76,6 +76,20 @@ gives both a scriptable test stand-in (UDP over localhost, no second account, tw
 one PC) and the real Steam path from the same code. Evidence: Poppy Playtime,
 [games/poppy-playtime/NOTES.md](../games/poppy-playtime/NOTES.md) (Phase 6).
 
+### A game with its own old Steamworks: use ISteamNetworking
+
+A game that is already on Steam under its own app id doesn't need Spacewar, but its
+Steamworks may be too old for `ISteamNetworkingMessages` or `SteamNetworkingSockets`.
+Cuphead (Unity 2017.4) ships a Steamworks.NET in `Assembly-CSharp-firstpass.dll` and a
+`steam_api64.dll` that have neither. Replacing them means shipping game files. The old
+P2P API they do have is enough: `ISteamNetworking.SendP2PPacket` with reliable and
+unreliable send types, `AcceptP2PSessionWithUser` on `P2PSessionRequest_t`, and
+`AllowP2PPacketRelay(true)` so Steam falls back to Valve's relay when there's no direct
+route. Lobbies and invites work as above, under the game's own app id. Valve marks this
+API deprecated but it still works. The same-account limit still applies, so the lab
+needs a second transport: the CupHeads fork carries the same packets over TCP on
+localhost ([games/cuphead](../games/cuphead/README.md)).
+
 ## Design: no SDK headers, dynamic loading only
 
 `LoadLibrary("steam_api.dll")`, then `GetProcAddress` for each **flat C API**
@@ -159,8 +173,15 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   allocates 160) and fill or read it only through `SetSteamID64` / `GetSteamID64`.
   The session request/failed callbacks start with that identity.
 - **SteamNetworkingMessage_t** (32-bit, MSVC build of the DLL): `data` at offset 0,
-  `size` at 4, and the sender identity at **16**. KeeperFX falls back to 12 if the
-  identity at 16 doesn't decode. Always call `SteamNetworkingMessage_t_Release`.
+  `size` at 4, and the sender identity at **12** in the real 32-bit `steam_api.dll`
+  (Steamworks.NET Standalone 2025.164.1; confirmed between two real accounts in
+  Clive Barker's Jericho, 2026-10-21). 16, which the 8-byte packing of the headers
+  suggests, reads sender 0: every message is then dropped as unknown and nothing
+  says why, while the session request (whose identity sits at 0) still looks fine.
+  Read 16 and 12 and keep whichever decodes to a non-zero id (KeeperFX does the
+  same), and log which one won. A mock that writes the identity at 16 passes either
+  way, so only a two-account test catches this. Always call
+  `SteamNetworkingMessage_t_Release`.
 - **SteamNetworkingMessage_t on 64-bit** (`steam_api64.dll`): `data` at 0 (an
   8-byte pointer), `size` at **8**, sender identity at 16. Reading `size` at 4 on
   x64 gives garbage. `FriendGameInfo_t` and the callback structs above keep the
@@ -196,6 +217,11 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   - after LobbyCreated, the host calls `SetLobbyData` and
     `SetRichPresence("connect", "+connect_lobby <id>")`, then opens
     `ActivateGameOverlayInviteDialog(lobby)`;
+  - the overlay may not open in an old D3D9 game (it didn't in Clive Barker's
+    Jericho, with the overlay loaded): list the friends online in your own menu
+    (`GetFriendCount(4)`, `GetFriendByIndex`, `GetFriendPersonaState` != 0) and send
+    `ISteamMatchmaking::InviteUserToLobby(lobby, friend)` for the one picked. The
+    friend gets a normal Steam invite;
   - a friend accepting while the game is running gives callback 333;
   - Join Game from the friends list gives 337 with the connect string;
   - when the game isn't running, Steam launches it with `+connect_lobby <id>`
@@ -265,6 +291,38 @@ the mock and 300 for its transport.
   late compatibility hello locked the mod's transport to the wrong channel. The
   other order would have hidden it. Where real Steam doesn't promise an order, add
   a switch for each order (we haven't added one yet).
+
+### Unity IL2CPP games: call steam_api64 flat, poll everything
+
+In an IL2CPP game the game's own Steamworks.NET is compiled to native code, and
+IL2CPP strips every method the game never calls, so the matchmaking and
+networking calls a mod needs are often missing from the interop assemblies.
+Harmony can't help either: there is no managed body to patch. Dave the Diver
+(Unity 6000.0, BepInEx 6 be.790) did it this way:
+
+- **Call the flat API yourself.** `[DllImport("steam_api64")]` on the
+  `SteamAPI_*` exports (`SteamAPI_SteamMatchmaking_v009`,
+  `SteamAPI_SteamNetworkingMessages_SteamAPI_v002` and so on). The game has
+  already run `SteamAPI_Init` with its real app id, so the interfaces work.
+  The DLL is in `<game>_Data\Plugins\x86_64`, outside the default search path:
+  set `NativeLibrary.SetDllImportResolver` to load it from there.
+- **No callbacks.** A plugin can't register `CCallback`s here. Poll instead:
+  `ISteamUtils::IsAPICallCompleted` and `GetAPICallResult` for lobby create and
+  join, `GetNumLobbyMembers` and `GetLobbyOwner` for membership, and
+  `GetFriendGamePlayed` to list friends who are hosting.
+- **Accept sessions by polling.** With no `SteamNetworkingMessagesSessionRequest_t`
+  callback, the host calls `AcceptSessionWithUser` every 0.5 s for each lobby
+  member it hasn't accepted yet. It accepts only members of its own lobby.
+- **Tune the send buffer for big transfers.** The default rate and buffer choked
+  on a save transfer: every unacked chunk was re-sent after 0.1 s, the relay
+  link clogged, and even keepalives stopped. A retransmit timeout from the
+  measured round trip, at most 32 chunks in flight, and a larger
+  `SetGlobalConfigValueInt32` send buffer and rate fixed it.
+- **Mock it in the mod, not the DLL.** One Steam account can't P2P to itself.
+  A lab switch (`-dtmp-steam-mock <slot>`) sends the same calls to an in-mod
+  stand-in: fake account `900000000 + slot`, lobbies as files in a folder both
+  lab copies share, and datagrams over localhost UDP. Like Steam, it holds a
+  peer's datagrams until `Accept` or until we have sent to that peer first.
 
 ## Reusing it for Deus Ex (Unreal Engine 1) co-op
 
@@ -371,10 +429,16 @@ and emulator netplay do), relay streams instead of packets:
 
   `ActivateGameOverlayInviteDialog` returns void, so there's no success value,
   and nobody saw the overlay on screen.
-- A real two-account join through the relay isn't tested yet. To confirm with a
-  friend:
-  - that the message offset 16 is right;
-  - invite and Join Game auto-launch;
-  - relay latency.
+- Real two-account play (Clive Barker's Jericho co-op, 2026-10-21, two PCs on one LAN,
+  two Steam accounts that are friends):
+  - the message sender is at offset **12**, not 16 (above): with 16 nobody could join;
+  - with that fixed, a friend joins from the in-game friends' games list and the
+    session plays (lobby, level load, world sync), round trip 6-19 ms;
+  - the overlay invite dialog did not open in that D3D9 game: invites go through
+    `InviteUserToLobby` from the game's own list (above);
+  - a scripted two-account test (host on one PC reads its lobby id from its log, the
+    other PC's game joins it by id) now runs with every regression there.
+  Still open: Join Game auto-launch when the game is not running, and two PCs on
+  different networks (relay rather than LAN).
 - HXCoop: all tests pass over the mock with real game clients relayed through it.
-  Real two-account play is the same open item.
+  Real two-account play: check the sender offset first.

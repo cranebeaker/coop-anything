@@ -11,7 +11,7 @@
 ## Where things stand
 
 **The Cell stage of the Spore Multiplayer Mod is verified on the owner's exact
-Steam build, with two real game processes talking to a real session server — and
+Steam build, with two real game processes talking to a real session server - and
 the co-op session now continues past Cell into the Creature stage.** The second
 half is a patch written here and published as a fork of the upstream mod;
 upstream itself still stops at Cell. The owner's priority (the **Space** stage)
@@ -20,7 +20,7 @@ is **not covered by anything that exists**.
 **What the milestone does:** the shared session moves from `cell` to `creature`
 and both windows agree on it, the native landfall runs instead of the version 1
 end screen, and the land editor stays shared. **What it does not do:** sync
-Creature-stage gameplay — two players still do not see each other's creature, a
+Creature-stage gameplay - two players still do not see each other's creature, a
 shared planet, shared herds or creature interactions. The Creature simulator
 stays local to each window; that needs its own reverse engineering (see
 [Next steps](#next-steps)).
@@ -29,12 +29,12 @@ Five Spore co-op projects were found. Two are real code (the *Spore Multiplayer
 Mod*, whose licence metadata is ambiguous, and the GPL *CoopMeld Spore Coop*),
 one is a prototype pinned to a different store build, and two are empty. All of
 them stop well short of Space, and the one that aimed furthest has a **paused
-live service** (HTTP 503) and had only reached "Civilization and Space — coming
+live service** (HTTP 503) and had only reached "Civilization and Space - coming
 later".
 
 ## Existing work
 
-### Spore Multiplayer Mod — `emerald194520350-alt/spore-multiplayer-mod` ✅ works
+### Spore Multiplayer Mod - `emerald194520350-alt/spore-multiplayer-mod` ✅ works
 
 | | |
 |---|---|
@@ -71,15 +71,15 @@ timeline, one-sided campaign saves (the owner writes, the guest is blocked), pau
 and editor entry and exit.
 
 What it does not do: the Creature, Tribal, Civilization and Space stages. After
-Cell the mod shows an end screen instead of the landfall transition — confirmed
+Cell the mod shows an end screen instead of the landfall transition - confirmed
 in-game, see QA.
 
-### Spore Multiplayer Mod, Co-Me fork — https://github.com/Co-Me/spore-multiplayer-mod ✅ patched and published here
+### Spore Multiplayer Mod, Co-Me fork - https://github.com/Co-Me/spore-multiplayer-mod ✅ patched and published here
 
 | | |
 |---|---|
 | Base | `emerald194520350-alt/spore-multiplayer-mod` @ `d837f83` (v1.0.1 + docs translation) |
-| Patch commit | `6b8f436` "Creature stage: continue the co-op session past the Cell stage" — 11 files, +343 / −12 |
+| Patch commit | `6b8f436` "Creature stage: continue the co-op session past the Cell stage" - 11 files, +343 / −12 |
 | Licence of the patch | GPL-3.0-or-later |
 | Stage coverage | Cell → **Creature transition**; Creature gameplay not synchronised |
 
@@ -107,7 +107,7 @@ The fork is the deliverable of this milestone: it keeps the upstream history, so
 the patch is visible as one commit and can be sent to the author as a pull
 request.
 
-### CoopMeld "Spore Coop" — https://coopmeld.com/spore/ ⚠️ service paused
+### CoopMeld "Spore Coop" - https://coopmeld.com/spore/ ⚠️ service paused
 
 The only project that ever went past the Cell stage. GPL sources (installer,
 native mod, launcher), 2–4 players, online rooms, Cell + Creature + Tribe.
@@ -118,11 +118,11 @@ native mod, launcher), 2–4 players, online rooms, Cell + Creature + Tribe.
 - Its own site lists Civilization and Space as *"Coming later"*.
 - Its build guard (`launcher/game_build.h`) matches this owner's install
   (`October2024Steam` = 25 066 744 bytes **and** version 3.1.0.29), and the
-  release policy is RSA-signed with the exe hash in a `games` set — so the build
+  release policy is RSA-signed with the exe hash in a `games` set - so the build
   is compatible, only the service is down.
 - Its policy requires `stage: cell`.
 
-### SporeMP — https://github.com/raph559/SporeMP ⚠️ wrong store build
+### SporeMP - https://github.com/raph559/SporeMP ⚠️ wrong store build
 
 GPL-3.0, has a roadmap for all stages, ships a dedicated server. Its byte-level
 guard is pinned to the **GOG** build (24 895 536 bytes, SHA-256 `dc04aee5…`) and
@@ -131,11 +131,11 @@ guard is pinned to the **GOG** build (24 895 536 bytes, SHA-256 `dc04aee5…`) a
 ### Dead ends
 
 - [Spore-Multiplayer/Spore-Multiplayer](https://github.com/Spore-Multiplayer/Spore-Multiplayer)
-  — an empty Visual Studio skeleton; `dllmain.cpp` is the ModAPI template,
+  - an empty Visual Studio skeleton; `dllmain.cpp` is the ModAPI template,
   `Client/README.md` says *"Files for the Client. TBA"*.
-- [sunglocto/SporeMultiplayer](https://github.com/sunglocto/SporeMultiplayer) —
+- [sunglocto/SporeMultiplayer](https://github.com/sunglocto/SporeMultiplayer) -
   a 545-byte README, no code.
-- `NeDether/SporeMultiplayer` — **404 / gone**.
+- `NeDether/SporeMultiplayer` - **404 / gone**.
 
 Two more Spore projects exist but are not co-op:
 [SporeNEXT](https://github.com/bisfranz/SporeNEXT) is a mod manager, and the
@@ -157,7 +157,7 @@ modding framework everything is built on.
   right, and the kit's GUI flow does two things the upstream script skips:
   - it writes **`steam_appid.txt`** with the app id (`24720`) into the game's
     `SporebinEP1` folder, so `SteamAPI_Init` succeeds when the game is started
-    outside Steam — without it the game exits immediately with **code 53**;
+    outside Steam - without it the game exits immediately with **code 53**;
   - it copies `coreLibs\SporeModAPI.<version>.dll` over `mLibs\SporeModAPI.dll`
     on **every** launch, so a second concurrent window from the same kit folder
     fails with *"cannot copy SporeModAPI.dll, the file is in use by another
@@ -180,12 +180,12 @@ modding framework everything is built on.
   authoritative world changes and writes the campaign; the guest's writes are
   blocked at the native save hooks (`native/CampaignSync.h`).
 - **Stage scope**: the Cell stage is a 2D single-screen world. The Space stage
-  is a different game — 3D galaxy flight, planets, cities — and nothing in any
+  is a different game - 3D galaxy flight, planets, cities - and nothing in any
   of these projects touches it.
 
 ## What we changed
 
-### Milestone 1 — research and launch glue, no mod code changed
+### Milestone 1 - research and launch glue, no mod code changed
 
 **No mod code was changed.** The native DLL is pinned to hashed RVAs and would
 need MSVC v143 to rebuild, which the owner declined; the **prebuilt release DLL**
@@ -197,9 +197,9 @@ README:
 |---|---|---|---|
 | Game exits with **code 53** when started outside Steam | the Steam build needs `steam_appid.txt` with its app id for `SteamAPI_Init`; the upstream script bypasses the kit's `Execute()` flow that writes it | write `steam_appid.txt` = `24720` into `<game>\SporebinEP1` | direct launch then runs (≈ 408 MB, window present); with the wrong id `17390` it exits with code 86 instead |
 | Second window fails to launch | the kit overwrites `mLibs\SporeModAPI.dll` on every launch, and the first game process holds it open | use a **second copy of the kit** for the second window | two windows start and stay up |
-| Mod never appears to load | none — this one was a *reporting* artefact: `Get-Process .Modules` from a 64-bit shell lists only the 7 WoW64 host modules of the 32-bit game | use the mod's own probe log (`%TEMP%\SporeCoop.Probe.log`) as the evidence | the log carries the game PID and the mod's initialisation lines |
+| Mod never appears to load | none - this one was a *reporting* artefact: `Get-Process .Modules` from a 64-bit shell lists only the 7 WoW64 host modules of the 32-bit game | use the mod's own probe log (`%TEMP%\SporeCoop.Probe.log`) as the evidence | the log carries the game PID and the mod's initialisation lines |
 
-### Milestone 2 — the Creature stage: the native client and the server were changed
+### Milestone 2 - the Creature stage: the native client and the server were changed
 
 The toolchain is now on the machine (Visual Studio Build Tools 2022 17.14.42,
 MSVC v143 14.44.35207, Windows SDK 10.0.22621.0, installed to `D:\VSBuildTools`
@@ -256,9 +256,9 @@ is still the Cell-stage state plus the stage itself.
 | Fork's server protocol suite | `Test-Server.ps1` in the fork checkout | **PASS: 148 protocol assertions.** (+6 for the stage work) |
 | Fork's native engine checks | `Test-Native.ps1` in the fork checkout | **PASS: 119 native visual/network assertions.** (+4) |
 | Fork's native source invariants | `node tests/native-source.test.mjs` | **PASS: native lifecycle source invariants**, now with 8 new invariants for the stage work |
-| Fork's native idle check | `node tests/native-idle.test.mjs` | **PASS** — it runs now; it needs `bin\tests\NativeVisualTests.exe`, which could not be built in the first milestone because MSVC was not installed |
+| Fork's native idle check | `node tests/native-idle.test.mjs` | **PASS** - it runs now; it needs `bin\tests\NativeVisualTests.exe`, which could not be built in the first milestone because MSVC was not installed |
 | Fork's stage end-to-end test | `node tests/native-stage.test.mjs` | **PASS: native clients and the real server moved the shared world into the Creature stage.** Two real native clients complete the real invitation handshake against the real session server over TCP |
-| Patch-boundary compatibility | a raw protocol probe run against both servers | **both directions work.** An upstream-shaped client against the patched server gets `welcome`, `state` (`stage = cell`) and `pong`. A patched client against the **unpatched** upstream server gets `{"type":"error","message":"Unknown message type"}` and the session **survives** — the server rolls the state back and answers the next `ping` with `pong`, and the native client stores the error in `lastError` instead of disconnecting |
+| Patch-boundary compatibility | a raw protocol probe run against both servers | **both directions work.** An upstream-shaped client against the patched server gets `welcome`, `state` (`stage = cell`) and `pong`. A patched client against the **unpatched** upstream server gets `{"type":"error","message":"Unknown message type"}` and the session **survives** - the server rolls the state back and answers the next `ping` with `pong`, and the native client stores the error in `lastError` instead of disconnecting |
 | Fork build from a clean checkout | `Build-Probe.ps1 -LauncherRoot "<kit>" -SdkRoot "vendor\Spore-ModAPI"` | **0 errors** with MSVC v143 (93 pre-existing SDK warnings), `bin\SporeCoop.Probe.dll` |
 | This repo's own tool suite | `python -I tools/test_all.py` | 13 of 15 suites pass (`chaos`, `ownership`, `fakeworld`, `fuzz`, `gameslot`, `gamepool`, `scenarios`, `bots`, `animcheck`, `bridge`, `inspect`, `hotreload`, `buildlock`); 2 fail for reasons that have nothing to do with this game, see below |
 | This repo's CI | `python tools/build_directory.py --check` and `python -m unittest tools/mcp/test_coop_mcp.py` | `OK: 303 entries` and `Ran 13 tests … OK` |
@@ -268,7 +268,7 @@ The two failing suites of this repo's own tooling were checked against a
 work:
 
 - `mutants` fails there too, with the same assertion
-  (`check_cpp_shipped_build_ignores_twins` — "the test build contains the twin
+  (`check_cpp_shipped_build_ignores_twins` - "the test build contains the twin
   name"), so it is a pre-existing issue of the repo's C++ tooling under
   MSVC v143.
 - `flight` passes in a checkout with an ASCII path and fails in this one
@@ -326,7 +326,7 @@ touched).
   process, plus the listening socket.
 - The server wrote `session.json` (`"Stage":"cell"`, `"Format":1`, `"Revision":0`).
 
-**In-game proof of the stage limit** — the mod's own log, in the running game,
+**In-game proof of the stage limit** - the mod's own log, in the running game,
 for both windows:
 
 ```
@@ -378,7 +378,7 @@ session file of that run.
 - **Creature-stage gameplay.** Nothing about the creature is synchronised: two
   players do not see each other's creature, a shared planet, shared herds or
   creature interactions, and the Creature simulator runs locally in each window.
-- The end screen, saving, return to the menu and fragment drops — the author's
+- The end screen, saving, return to the menu and fragment drops - the author's
   own list of unconfirmed behaviour.
 - Remote play between two machines (world transfer is not implemented).
 - The upstream "154 native engine checks" claim (the shipped suite builds 115
@@ -391,7 +391,7 @@ two windows):
 
 1. Install Spore: Galactic Adventures from Steam and the
    [SPORE ModAPI Launcher Kit](https://github.com/Spore-Community/ModAPI-Launcher-Kit)
-   — and make a **second copy of the kit folder**, one per window.
+   - and make a **second copy of the kit folder**, one per window.
 2. Close both game windows, extract `spore-multiplayer-mod-v1.0.1-windows.zip`.
    For the Creature-stage patch, use the
    [Co-Me fork](https://github.com/Co-Me/spore-multiplayer-mod) instead; it
@@ -418,8 +418,8 @@ The upstream scripts hardcode the author's machine (`C:\Games\SPORE Collection`,
 - **The Creature stage is a transition, not a shared stage.** The session
   reaches the Creature stage and both windows agree on it, but the creature
   itself is local to each window: no shared creature, no shared planet, no
-  shared herds, no creature interactions. The other three stages — Tribal,
-  Civilization, Space — are not playable in co-op by any project.
+  shared herds, no creature interactions. The other three stages - Tribal,
+  Civilization, Space - are not playable in co-op by any project.
 - **The Space stage has no implementation at all.** This is the honest answer to
   "can I play Space co-op with friends today": no.
 - Two windows on one PC are what was verified. Remote play between computers is
@@ -446,7 +446,7 @@ The upstream scripts hardcode the author's machine (`C:\Games\SPORE Collection`,
    editor and the stage report are observed in the real game. This is the last
    unverified piece of the milestone and it needs a human at the keyboard (or a
    UI bot).
-2. **Creature-stage gameplay synchronisation** — the real next milestone.
+2. **Creature-stage gameplay synchronisation** - the real next milestone.
    The reference implementation is CoopMeld's GPL source
    (`creature_hooks.inc`, 76 KB, plus `herd_sync.inc` and `interaction_sync.inc`),
    which is the only code in existence that reached this stage. The mod's own
@@ -455,7 +455,7 @@ The upstream scripts hardcode the author's machine (`C:\Games\SPORE Collection`,
    knows when it is in a creature game (`Simulator::IsCreatureGame()`).
 3. **World transfer**, the real blocker for remote play: the guest's profile has
    to receive the host's campaign and creature assets. Everything else is
-   plumbing — the transport is already TCP and the server is already a
+   plumbing - the transport is already TCP and the server is already a
    standalone process.
 4. **Decide the target stage.** Cell-stage co-op is one product; the Space stage
    is a different game (3D galaxy flight, planets, cities) and would be new

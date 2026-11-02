@@ -61,6 +61,21 @@ time the recruiter walks away, and it would lose its follow behaviour at each ha
 The library has this as `setRecruiter`. The fake world has a test where a companion follows its
 recruiter into a far cell and keeps the same owner.
 
+## Two players, pose-only state
+
+Skyward Sword ([write-up](../games/skyward-sword/README.md)) needed only part of the library, so it uses the same rules
+in a few lines of Python:
+
+- With two players the host decides every owner (nearer Link, hold 1.5 s, challenger 25 percent nearer), and one epoch
+  counter that never goes down, also across area changes, stamps every grant. The joiner keeps an assignment only if its
+  epoch is newer; motion is used only from the owner at exactly the known epoch. A test replays an old grant and a past
+  owner's motion, and a mutation twin without the epoch check must fail it.
+- When the only synced state is pose (position, facing, animation frame), the handoff handshake can be dropped: the new
+  owner has been showing the old owner's pose until the switch, so it already holds the last state. State that is not
+  pose (health, timers, AI memory) still needs the handshake, or a merge that does not care about order.
+- Health that only goes down merges without any owner: both machines take the lower value, so hits from either player
+  count and nothing is ever undone.
+
 ## The bug class: stale and echoed assignments
 
 Every ownership system eventually meets this one. The shape:

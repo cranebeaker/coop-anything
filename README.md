@@ -25,6 +25,11 @@ friends install it in one click and join over Steam without port forwarding.
 
 The sky is the limit. Every game that runs on your PC is a candidate.
 
+**Playing on one PC?** [Couchlink](https://github.com/cranebeaker/couchlink) runs a copy of the game for each player,
+each with their own part of the screen, their own controller or keyboard and mouse, and their own Steam account if
+they want one. It works with co-op mods and with games that only play online. Mods made here can plug into it: see the
+`couchlink` skill.
+
 Games being made co-op right now: **[Deus Ex](https://github.com/cranebeaker/deus-ex-coop)** (released) ·
 **[Fallout: New Vegas](https://github.com/cranebeaker/fnv-coop)** · **[Zelda: Ocarina of Time](https://github.com/cranebeaker/ocarina-coop)** (fully synced) ·
 **[Dungeon Keeper](https://github.com/cranebeaker/dungeon-keeper-coop)** · **[S.T.A.L.K.E.R. Shadow of Chernobyl](https://github.com/cranebeaker/stalker-soc-coop-fixes)**
@@ -36,7 +41,8 @@ From the community: **[Mega Man X](https://github.com/mstan/MegaManXSNESRecomp)*
 **[Half Sword](https://github.com/Dudiebug/halfsword-multiplayer-mod)** · **[Enter the Gungeon](https://thunderstore.io/c/enter-the-gungeon/p/GoTeamAlex/Gungeon_Online/)** ·
 **[Clive Barker's Jericho](https://github.com/dolbaras/jericho-coop)** · **[Poppy Playtime](https://github.com/romannazarov057-spec/PoppyCoop)** ·
 **[Divinity II](games/divinity-2-developers-cut)** (split-screen) · **[Command & Conquer 3](games/command-and-conquer-3)** (campaign co-op) ·
-**[Far Cry 2](https://github.com/MortyRei/fc2-coop-probe)** · **[Gothic 3](https://github.com/GGM1k3y23/g3-together)** · **[Fear & Hunger](https://github.com/glynn568-glitch/fear-and-hunger-together)** · yours next?
+**[Far Cry 2](https://github.com/MortyRei/fc2-coop-probe)** · **[Gothic 3](https://github.com/GGM1k3y23/g3-together)** · **[Fear & Hunger](https://github.com/glynn568-glitch/fear-and-hunger-together)** ·
+**[Modern Warfare 2](https://github.com/stxlvn/mw2_coop)** (campaign co-op) · **[Little Nightmares](https://discord.com/channels/1561411702082510879/1562210529504927836)** (on our Discord) · yours next?
 
 ## Quick start
 
@@ -72,7 +78,7 @@ Your agent takes one of two paths.
 |---|---|---|
 | When | A co-op mod exists but is buggy, stalled or abandoned. Most loved games are here. | Nothing usable exists. |
 | How | Find the last build, mine its bug reports (issues, forums, Discord), audit the code, fix it as a separate package, test, ship. | Reverse engineer the game and engine, hook in, show the second player, sync enemies, world and story, handle level changes and saves, test, ship. |
-| Skills | `coop-research`, `coop-revive`, `coop-qa` | `coop-reverse-engineer`, `coop-build-from-zero`, `coop-networking`, `coop-sync-testing`, `coop-qa` |
+| Skills | `coop-research`, `coop-revive`, `coop-qa`, `couchlink` | `coop-reverse-engineer`, `coop-build-from-zero`, `coop-networking`, `coop-sync-testing`, `coop-qa`, `couchlink` |
 | Guide | [Reviving abandoned mods](playbook/reviving-abandoned-mods.md) | [How co-op mods work](playbook/how-coop-mods-work.md) |
 
 Both paths end the same way: automated tests with real game clients
@@ -189,7 +195,7 @@ above gives a feel for it.
   [networking](playbook/networking.md) · [Steam Spacewar relay](playbook/networking-steam-spacewar.md) ·
   [split screen](playbook/split-screen.md) · [console emulators](playbook/console-emulators.md) · [Switch](playbook/switch.md) ·
   [decomp and recomp](playbook/decomp-and-recomp.md) ·
-  [automated QA](playbook/automated-qa.md) · [multi-agent workflows](playbook/multi-agent-workflows.md) ·
+  [automated QA](playbook/automated-qa.md) · [shipping to players](playbook/shipping-to-players.md) · [multi-agent workflows](playbook/multi-agent-workflows.md) ·
   [network chaos](playbook/network-chaos-testing.md) · [desync hunting](playbook/desync-hunting.md) ·
   [fuzzing sync](playbook/fuzzing-coop-sync.md) · [actor ownership](playbook/actor-ownership.md) ·
   [fake world testing](playbook/fake-world-testing.md) · [several game copies](playbook/multi-instance-testing.md) ·
