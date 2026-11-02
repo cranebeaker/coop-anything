@@ -104,6 +104,9 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
     level packs and are readable. Over all levels they test the host's player 224 times as a volume
     message's owner and 88 times with `volume.IsInside`. The host now runs their message handlers with a
     remote player's character standing in for the host's when that player caused the message.
+  - More players, more enemies (`scale_enemies=1`, host). Each regular enemy brings on average 0.5 extra
+    enemies of its type per extra player. Bosses are never doubled; they get 75% more health per extra
+    player. Bosses are found through the boss health bar the level script attaches.
 
 ## QA
 
@@ -142,7 +145,8 @@ See `PLAYING.md` in the tfu-coop package:
 ## Next steps
 
 - Run the new automated tests in the game: `m80-shot-run.sh` (enemy shots), `m81-triggers-run.sh`
-  (level triggers) and `m82-fall-run.sh` (a client falling into a death volume keeps its character on the host).
+  (level triggers), `m82-fall-run.sh` (a client falling into a death volume keeps its character on the host)
+  and `m83-scale-run.sh` (more enemies and tougher bosses for more players).
 - A real two-PC session over the internet.
 - A full-level playthrough, checking doors and objectives on clients with the world diff.
 - Force powers for remote players: Push and Grip work on the host (Grip: m13-grip-run, a puppet lifted a

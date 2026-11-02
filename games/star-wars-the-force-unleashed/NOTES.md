@@ -1019,7 +1019,7 @@ Built (tfu-coop `lua/m81_shared_triggers.lua`, host only, off by default, `share
 
 ### Difficulty for more players: levers (2026-11-02, static)
 
-The mod does not scale difficulty with the player count yet. The engine's own Lua bindings (2,131, listed by
+Before this, the mod did not scale difficulty with the player count. The engine's own Lua bindings (2,131, listed by
 tfu-coop `re/lua_bindings.py` from their registration calls, with the engine's help texts) offer:
 - Health: `game.SetMaxHealth(ren, hp)` and `game.OverrideHealth(ren, hp)` (both already used on client copies).
 - Damage: `social.SetFactionDamageMultiplier(attackingFaction, defendingFaction, factor)` and
@@ -1031,6 +1031,33 @@ tfu-coop `re/lua_bindings.py` from their registration calls, with the engine's h
   the spawner path (`Spawn_<n>_<type>`, m6 `host_type`). Leftovers of a multiplayer mode: `Mp.GetMPEncounterSpawns`,
   `Mp.EnableEncounterSpawnGroup` (whether the campaign levels have MP spawn groups: unknown).
 - `game.GetDifficulty()` / `game.SetDifficulty()`: what the difficulty changes is unknown.
+
+Built (the owner chose "more enemies" over "tougher enemies"; bosses not multiplied, only harder). tfu-coop
+`lua/m83_scale.lua`, host only, off unless `scale_enemies=1`. Not yet run in the game.
+- n = the host plus peers heard from in the last 3 s. Every 10 frames the host lists the players' enemies within
+  40 m (`ai.GetAllEnemiesInRadius`, so allies are left out). Each enemy is decided once, after 1 s. It adds
+  `scale_extra` x (n - 1) to a running total (default 0.5), and each whole unit spawns one copy of its spawner type
+  next to it: same faction, aware of every player, attacking the original's target. At most 12 copies alive and 2
+  spawned per check.
+- Only types seen at least twice in the level get copies: a one-off enemy (most bosses) gets none even before its
+  boss bar shows. Enemies without a spawner type (story characters) get none.
+- Bosses: wrappers of `ai.AttachBossMeter` and `ui.SetBossMeter(true, ...)` mark the ren as a boss and raise its
+  max health by `scale_boss` x (n - 1) (default 0.75), keeping its health fraction.
+- Clients: copies have no spawner path, so m6 now exports its type table (`coop_m6_types`) and the scaler writes
+  each copy's type into it; the client then spawns its own copy like for any host enemy it cannot pair.
+- Not covered: copies do not count toward a script's "wave cleared", so they may outlive a wave; a copy placed in a
+  wall; a boss script that refills health from a max it read before the scaling. `tools/m83-scale-run.sh` is the
+  test.
+- Review (fresh reviewer, read-only): the world packet holds about 18 AI entries (1150 bytes), and an old client log
+  already showed 18-21 per packet in a fight. With copies, the same AIs were left out of every packet, so clients
+  would never see them. m6 now starts each packet where the last one stopped when not all fit (every AI at least
+  every ceil(count / 18) packets, checked with a Python model of the rule). Also fixed: reset on every load
+  (`coop_world_gen`), not only on a level change; a reload of the file no longer runs two scalers; a copy whose
+  target died attacks the nearest living player; a boss is scaled later if its bar appeared while scaling was off.
+  A second review: the load check now also runs when a boss bar appears (else that boss was wiped before being
+  scaled), each boss is scaled under its own pcall, and a boss is never scaled twice across a load. Known
+  tradeoff, kept: with many AIs, one rotation takes several packets, so shots and animation starts of AIs outside
+  the current packet can be dropped.
 
 ## Derived (not yet verified)
 
