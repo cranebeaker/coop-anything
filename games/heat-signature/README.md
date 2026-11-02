@@ -190,10 +190,11 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs, on the hand-grenade build (2026-11-02, core 74868bca; e8cd61c3 the same code rearranged): hand grenade 7/7
-three times, guns and grenades 11/11, items 7/7, host knocked out 6/6, alarm time 7/7, guest capture 9/9, capture 10/10,
-hijack 8/8, steal 8/8, security 9/9, mission 10/10, knocked-out 11/11, home 13/13 twice, early 9/9 twice, rescue 8/8,
-modules 9/9, breach 8/8, suite 27/28 (check 7) (07:32-08:22 UTC). Hijack 8/8 and rescue mission 10/10 also on the build before it. On the guard-look build (7a7c62a1) suite passed 3 of 6
+Last runs, on the final build of 2026-11-02 (core b1cff894, source as the mod's commit 5faeadf): suite 28/28 (also twice
+on the build before, after the check-7 fix), guest capture 9/9, hand grenade 7/7, home 13/13, capture 10/10
+(08:50-08:56 UTC). On the hand-grenade build (74868bca): hand grenade 7/7 three times, guns and grenades 11/11, items
+7/7, host knocked out 6/6, alarm time 7/7, hijack 8/8, steal 8/8, security 9/9, mission 10/10, knocked-out 11/11, early
+9/9, rescue 8/8, modules 9/9, breach 8/8 (07:32-08:22). Hijack 8/8 and rescue mission 10/10 also on the build before it. On the guard-look build (7a7c62a1) suite passed 3 of 6
 (see NOTES.md). Guns and grenades 9/9 twice on the
 gunshots build (811bde56); grenade 8/8 twice on the grenade build
 (c36cc0da); modules also 9/9 twice on the destroyed-modules build (7784485b); breach also 8/8 twice on the window-breach build (f28155a0). On the

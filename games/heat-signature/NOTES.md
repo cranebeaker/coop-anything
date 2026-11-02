@@ -1260,8 +1260,10 @@ Parent = the building) while its pod docks at the mission ship. Tried: a pilot a
 parented to something else is taken out of that (`RemoveFromParentsContents`, Parent = itself), as after an undock from
 a ship. It broke docking at home: while a pod docks at a station it is still free for some frames after the game has
 put the pilot into the building (`PlayerArrivesOnStation`); the pilot was taken out again and the game raised "Adding
-oPlayer to parents contents but I'm already in there!" (then the host's copy stalled). Reverted. A fix would have to
-tell an undock from a station apart from a docking at one.
+oPlayer to parents contents but I'm already in there!" (then the host's copy stalled). Reverted. A second try (only
+when the pod is over 1 500 units from the pilot) passed home, early and rescue, and `life.sh` docked both players in 3
+of 3 runs, but its log shows it never acted; 2 of those runs then stopped on the known GameMaker error in
+`DockWithAirlock` (called by the test helper `dockship`). Reverted too: the re-dock flake is the helper's.
 
 ## Suite check 7's puppet injuries (2026-11-02)
 
@@ -1270,3 +1272,5 @@ up by one, each time with the guest knocked out by that hit (guest 1 -> 2, "Unco
 `PlayerStateUnconscious` adds to `TimesInjured` (0x2c4) when a player goes down, and the host lays the puppet down when
 its player goes down (`puppet_down`): going down counts one, no hit reached the puppet. The check now allows that one.
 (A side effect to know: on the host, the guest's going down counts one more injury in that count there.)
+- Builds are not reproducible here (the DLL's hash differs for the same source, built twice), so a "core <hash>" in
+  the results names that build, not the source; the mod repo's commit names the source.
