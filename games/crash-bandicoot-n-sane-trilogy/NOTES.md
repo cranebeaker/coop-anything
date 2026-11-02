@@ -713,3 +713,24 @@ was no "puppet gone".
   15/15, Crash 3 Toad Village 15/15. So crates, fruit, the fall guard and the puppet work the same in all three games.
 - Fruit counter lock: one pickup can leave two candidates (in Toad Village a crate gave 1 fruit while another game
   variable also went 0 -> 1). The counter is found at the next change; until then the friend's fruit waits.
+
+### Checkpoints and multi-hit crates: mod v19 (2026-11-03, automated suite)
+
+- A checkpoint crate is not freed when hit: it opens and its component stays, so "vtable gone" never saw it. The same
+  is true for bounce crates, which take several hits. Every hit advances the crate's damage stage (component +0x30,
+  via exe+0x468130). Since v19 the poll also sends a stage increase as a hit, and the receiver applies one bounce hit
+  per message.
+- Echo control: a crate hit for the friend stays listed, and anything it does in the next 3 s (stage change,
+  disappearing) is not sent back. The duplicate guard on our own sends is now time-based (1.5 s), so later hits on
+  the same crate still go out.
+- Fruit anti-echo window: since v19 it opens only when our player is within 300 units of the replayed crate. A 4 s
+  window opened for any replayed crate swallowed our own fruit (the Crash 3 run failed check 3 once).
+- Crate type names are readable from the crate entity (e.g. "Levels\Crash1\crates\Crash_Crate_Checkpoint",
+  "Crash1\Crates\BounceCrate"). Script: scripts/cratenames.ps1. N. Sanity Beach checkpoint: (-14.6, 7374.6, 2074.5).
+- Suite check 6 (checkpoint): A opens the checkpoint crate, B's opens too, B dies, and B must respawn at the
+  checkpoint (without the sync it respawned at the level start: y -400). The jump key was sometimes not taken while
+  standing on the crate, so the mod has a file-gated test hook: coop-<name>.hit "x y z" hits our own crate with the
+  damage function, and the normal detection sends it.
+- loadmap from the main menu crashed the game twice at exe+0x75BBE8 right after the hero loaded. From the Crash 1
+  map it works, and the suite goes through the map first.
+- Results with v19: Crash 1 N. Sanity Beach 19/19, Crash 2 Turtle Woods 15/15, Crash 3 Toad Village 15/15.

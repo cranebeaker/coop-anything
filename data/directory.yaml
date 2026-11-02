@@ -10780,7 +10780,7 @@
   last_activity: 2026-11
   qa: automated
   notes: Each player runs their own game; an injected DLL shows the friend as a puppet of the hero they play, with
-    replayed Havok behavior events, and syncs broken crates and the wumpa counter over Steam P2P. Steam build 2964270
+    replayed Havok behavior events, and syncs crates (checkpoints included) and the wumpa counter over Steam P2P. Steam build 2964270
     only. Automated two-client suite (two game copies on one PC over UDP; presence, crate replay, fruit, falls, level
     change, crash and dialog invariants), 15/15 PASS in one level of each of Crash 1, 2 and 3; presence and animations also
     played over Steam.

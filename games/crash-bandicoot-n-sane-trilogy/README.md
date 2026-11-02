@@ -12,8 +12,8 @@
 
 Two players can play Crash 1, 2 and 3 levels "together" today: each runs their own game, sees the other as a second Crash
 (or Coco, when both play Coco) that runs, jumps and spins, and crates and wumpa fruit stay in step between the two
-games. A friend who falls into a pit makes the puppet hide until they respawn. Not handled yet: a friend on another
-hero than yours (they appear as your hero), checkpoints, and characters slide a little.
+games, including checkpoints and multi-hit crates. A friend who falls into a pit makes the puppet hide until they
+respawn. Not handled yet: a friend on another hero than yours (they appear as your hero), and characters slide a little.
 
 ## Existing work
 
@@ -39,7 +39,8 @@ Full notes with addresses: [NOTES.md](NOTES.md). In short:
 
 The mod is a DLL injected into the running game (no game files changed):
 - puppet of the friend (position, rotation, buttons every frame, behavior events replayed);
-- crate sync by position, replayed with the game's damage function so fruit and counters behave normally;
+- crate sync by position, replayed with the game's damage function so fruit and counters behave normally; every hit is
+  sent (damage stage at component +0x30), so checkpoint crates and bounce crates follow too;
 - shared wumpa counter (each side sends what it picked up; anti-echo window after replayed crates);
 - the puppet uses the hero the friend plays when it is also ours (Coco/Coco gets all animations); loading another
   hero's pack crashed the game on the next level change and is disabled;
@@ -83,7 +84,9 @@ copy of the suite published in the mod repository (relative paths) was then run 
 Also played over Steam by two people: presence, animations, spins breaking crates.
 The same suite, entering levels with `loadmap`, then passed in all three games with v18: Crash 1 N. Sanity Beach 15/15,
 Crash 2 Turtle Woods 15/15, Crash 3 Toad Village 15/15.
-Not covered: checkpoints, a friend on another hero, play over Steam for crates and fruit.
+With v19 a check 6 was added (A opens a checkpoint crate; B's opens too; B dies and respawns at the checkpoint, which
+without the sync it did not: B came back at the level start). Results with v19: Crash 1 19/19, Crash 2 15/15, Crash 3 15/15.
+Not covered: checkpoints in Crash 2 and 3, a friend on another hero, play over Steam for crates and fruit.
 
 ## How to play
 
@@ -101,5 +104,5 @@ and run `Lancer Crash Coop.cmd`. Paste the friend's SteamID64 and start the game
 
 - Sync deaths and checkpoint reloads (and the crates they restore).
 - Reduce sliding (velocity or root motion on the puppet).
-- Extend the suite: checkpoints, more levels per game, a two-PC run over Steam.
+- Extend the suite: checkpoints in Crash 2 and 3, more levels per game, a two-PC run over Steam.
 - Load a second hero without breaking the next level load (see the notes: removing the loader cache entry was not enough).
