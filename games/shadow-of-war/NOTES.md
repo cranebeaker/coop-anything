@@ -3840,3 +3840,32 @@ smoothing lagged the free-run start.
 - Traces of the slow-motion request `5D08B8` for 10 s after the first event (`tools/trace_on_event.py`): host 23 calls (callers `5D334D`
   x16, `434A69`, `6EEA47`, `6EECEE`), client 8 (`5D334D` x5, `434A69`); the presentation record on the host was
   `CombatResetCamera` (2.7 s after `ActiveShowdownGiven_Distance`). The start of the presentation was not isolated further.
+
+## Session 2026-11-02 cb: the client's frozen world, and enemies hunting the nearest player
+
+### Observations
+
+- **The owner's "no animation, enemies slide to player A and stand idle" was the client's own pause.** On the client the game started
+  `SetPresentationSequenceSlowMo = Identify_Slowmo_Timestop_50_SM` at game time 101,234 and stopped it at 174,984: 73 s of "Pausing
+  due to Epsilon value!" (8,314 lines). The host never ran that record (0 lines in its log). With the world at epsilon the proxies' animations
+  stand still while the mod keeps writing their positions, so they slide in frozen poses. These test copies had `coop_slowmo=on`
+  (the shipped default is off, which skips slow motion entirely).
+- **Animation otherwise works.** A fresh run with slow motion on: 388 attack starts and 253 locomotion plays applied on the client (26 plays
+  refused, 0 attack failures; new counters `attacks_ok/fail`, `plays_ok/fail` in the `enemies` status); frames of the client show orcs
+  walking and swinging; a single copy with an AI-off orc and `WalkForward` shows the legs moving.
+- **Enemies hunt the client when the decoy is on.** The shipped host setup writes `coop_decoy=on`, the test copies did not (the code default
+  was off). With it on and the players 600 units apart at the fort: the client lost 708 to 557 health in 40 s, the host sent 4 damage
+  messages and the client applied 4. The code default is now on (`coop_decoy=off` switches it off; `off` was not parsed before).
+- The slow-motion manager (global at RVA `2A86888`) keeps its requests in a list of pointers (`[mgr]`..`[mgr+8]`), each with its source
+  id at `+0x80`; the request function `5D08B8(mgr, source, record, flag)` ends a source's request when the record is null. The setters
+  `19CFxxx` pass source ids 5, 7, 8, 9, `0xD`, `0x10`; which is the presentation sequence was not worked out.
+
+### Derived
+
+- With `coop_slowmo=on` a client now ends any slow-motion request after 4 s (`SimSlowMoCap`, `coop_slowmo_cap_ms` is a constant for now).
+  Not yet seen working against the identify pause (it did not start in the one run made after the change).
+
+### Unknown
+
+- Why the client's identify pause ran 73 s (it probably waits for an end that the proxy captain's missing AI never sends); whether
+  the cap ends it cleanly; how long the host's intro really holds the world.
