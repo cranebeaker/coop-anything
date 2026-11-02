@@ -1303,3 +1303,36 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
 (A side effect to know: on the host, the guest's going down counts one more injury in that count there.)
 - Builds are not reproducible here (the DLL's hash differs for the same source, built twice), so a "core <hash>" in
   the results names that build, not the source; the mod repo's commit names the source.
+## Doors hacked by a guest; what terminals do (2026-11-02)
+
+- **Observed (decompile).** A door's lasting state besides open/closed: `Security` (0x374, its keycard level),
+  `HackedSecondsLeft` (0x86a) and `CrashedSecondsLeft` (0x43b). `oDoor.Step` reads its `DamageSignal`: one damage flag
+  sets `Security` to 0 (and starts `HackedSecondsLeft` on an airlock's door), another starts `CrashedSecondsLeft`. The
+  hack signal comes from the **Subverter** item (`oSubverter`, object 111): when used (`Activate`) while carried, its
+  step signals every door, guard, teleporter and turret in the owner's rectangular aim zone
+  (`ObjectIsInPersonsRectangularAimZone`, which reads the owner's `x`, `y`, `image_angle` and the item's `Range` and
+  `BeamWidth`). Other signal senders: `ExplodeOnShip`, `oFrazzler` (the "Crashbeam": guards and their shields; it did
+  not crash a door when tried), bullets, melee, traps.
+- **Observed (game).** The guest, facing door 3 (keycard level 1) with a Subverter: the door's `Security` went to 0
+  and the item's use went down by one (a one-use one vanished). The host's copy of the door kept level 1: a desync.
+- **Fix.** The door messages (every 15 frames) now carry each door's `Security` and its hack and crash timers. A guest
+  also sends a door when its level dropped or a timer started on its copy. A hack is one-way, so every copy keeps the
+  lowest level it has heard of for each door of the shared ship and puts it on that door whenever the door is active
+  there (doors far from the player do not step); a timer that started on the other copy is put on the door if it is
+  active. Mutation `nodoorhack`.
+- **Test** (`tools/doorhack.sh`, 10 checks): dock; the host knocks out every guard; doors 3 and 4 are keycard doors
+  (levels 1 and 2) on both copies; the host cannot walk past door 4; the guest hacks door 3, then door 4 (helpers
+  `giveitem 111`, `selectitem`, `doordir`, `useitem`: the item's `Activate` set while the guest faces the door, then the
+  item's own step hacks it): both locks gone on both copies; the host was told of both; the host then walks past door 4;
+  no error dialogs; both advancing. With `nodoorhack`: 7 passed, 3 failed (the host's locks stayed). Note: the walk
+  past door 4 passed under the mutation too: the guest's copy, where the door is unlocked, opens it for the host's
+  puppet, and the open-door message opens it on the host. The lock checks are what catch a missing hack.
+- **Terminals** (observed, decompile of `oTerminal.Step`): a terminal with `HasIntel` lowers the user's own
+  `PersonalMissionCost`; otherwise it gives the user a keycard of its `Security` level (`GiveThisPersonAKeycard`).
+  Both are the user's own, not the ship's: each player uses a terminal on their own copy and gets their own intel or
+  card (a card's clearance already reaches the other copy for the puppet). Whether a terminal used by one player should
+  be used up for the other is a design choice; not synced now.
+- **A guard hacked by a guest's Subverter** (derived, not tested): the Subverter hacks a guard through
+  `SetDamageSignal` on it, and a guest's damage signal on a shared guard is already sent to the host as a hit
+  (applied there with the same mask), so the host's guard should be hacked too. A test needs a guard the Subverter can
+  hack (`GuardCanBeHacked`) in reach.
