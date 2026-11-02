@@ -496,3 +496,21 @@ symbol to the root menu, label it, and catch its press. A lobby list screen can 
 (`BaseFullGridMenu`) or be a small SWF of our own that uses the game's font library (`gfxfontlib`).
 Unknown: whether FrontEnd is AS2 or AS3 (decides how buttons are cloned); how a menu press reaches the game
 (ExternalInterface name or UnrealScript event); where the GFx natives are in the exe.
+
+### 2026-11-02: Steam relay
+
+Observed:
+- The exe imports `SteamAPI_Init`, `SteamAPI_RunCallbacks`, `SteamNetworking`, `SteamUser`, `SteamMatchmaking`, ...
+  from the game's own `steam_api.dll` (2014 SDK: accessor exports, C++ interfaces, no flat API, no
+  `ISteamNetworkingMessages`). The game initializes Steam itself under AppID 288470.
+- The proxy now takes `FABLE_COOP_PEER=steam:<SteamID64>`: it calls `SteamNetworking()` from the game thread,
+  `AllowP2PPacketRelay(true)`, and sends the same 20 Hz packet with `SendP2PPacket` (unreliable, channel 7); it reads
+  only channel 7 and only packets from that SteamID. Both sides send to a known id, and the proxy also calls
+  `AcceptP2PSessionWithUser(peer)` once a second, so no `P2PSessionRequest_t` callback is needed.
+  Interfaces are declared as C++ vtables in the order of the SDK headers (ISteamNetworking005 slots 0-7,
+  ISteamUser017 slots 0-2; `GetSteamID` returns the struct through a hidden pointer, like MSVC built it).
+- One PC, one account: `FABLE_COOP_PEER=steam:me` sends to the player's own SteamID. One copy (p1), Oakvale save:
+  `GetSteamID` returned a 17-digit id starting 7656119; 2 s after "Steam P2P ready" the copy received its own
+  packets and spawned the puppet on its own hero; owner: the second player is there, right behind the hero.
+  So Steam loops a P2P packet back to the sender, and send / read / user slots are right.
+Unknown: two different accounts on two PCs (relay route, latency, session accept order) not tested yet.
