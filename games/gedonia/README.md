@@ -6,7 +6,7 @@
 | Versions tested | Steam, app 1114220, build 16727998 (Gedonia.exe SHA-256 B375205374C5355991FE1C91577CEB729AD9FBC2FC6534FE4EF897288A5DF91B), Windows 11 x64 |
 | Projects | [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) (directory entry "Gedonia / Gedonia Co-op"), claim [#214](https://github.com/cranebeaker/coop-anything/issues/214) |
 | QA level | automated |
-| Last updated | 2026-10-26 |
+| Last updated | 2026-10-30 |
 
 This is the original Gedonia, not Gedonia 2 (which has official co-op).
 
@@ -16,7 +16,8 @@ Two or more players can play the open world and the story together over Steam (f
 relay) or in the home network. Players, enemies, story, conversations, loot spots, world events,
 expeditions with their generated dungeons, time and weather are shared. Every feature has an automated
 two-client scenario; real sessions with friends over Steam went fine, and the points they
-found (0.6.x) are fixed in 0.7.x. Status: alpha (0.7.1).
+found (0.6.x) are fixed in 0.7.x. 0.8 adds groups, enemy scaling and trading, so far tested only by the
+automated scenarios. Status: alpha (0.8.1).
 
 ## Existing work
 
@@ -74,10 +75,25 @@ All in the [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) plugin; each
   owned twice in a row. Bug found: an exception on an enemy whose cell had unloaded aborted the rest of an
   ownership message. Bug found by players: looting writes "0" for the body into the world database, and
   the host's world-state sync deleted the body at everyone else; now a dead body stays until looted there.
+- **Groups** (party): the host keeps the groups (the inviter leads; invite, answer, leave, remove are
+  requests to the host, which sends the whole table). A group limits combat XP sharing and the map
+  markers to its members; without a group neither is shared.
+- **Enemy scaling** (scaling): the host counts, per shared enemy, the members of one group within 150 m
+  (from the enemy presence reports). The count goes up at once and down only after 10 s and when the
+  enemy is unhurt and has no target, so a fight keeps its numbers. Every machine applies the host's
+  settings to `maxHealth` (health in proportion); damage is scaled once, where the player is hit
+  (`PlayerScript.Damage`, or by enemy id for a hit forwarded by the owner, whose attacker may not be
+  loaded there).
+- **Trading** (trade): offers carry versions and a confirmation names both, so any change takes it back.
+  Two-phase commit with the host as coordinator: both confirmed -> each trader re-checks, writes an
+  escrow file and takes its goods out -> the host writes its decision to a file before anyone hears it
+  -> deliver, or abort and give back (a failure, a trader gone, or 20 s of silence). A trader that
+  missed the outcome asks the host again from its escrow file. The game has no quest-item flag;
+  `Item.cantbesold` serves as one (weapons and armour with it stay tradable).
 - **Shared XP** (effects): `PlayerScript.AddExperience` multiplies by intellect, rings, sleep and dungeon
   blessings, so equal kills gave different XP and levels drifted apart. Copied deaths give no XP; the
-  machine where the enemy really dies sends the amount it gained, and players within 100 m add exactly
-  that (level-ups through the game's own loop).
+  machine where the enemy really dies sends the amount it gained, and group members within 100 m add
+  exactly that (level-ups through the game's own loop).
 - **Story** (story, latejoin): a Harmony transpiler swaps the `SendMessage` in the answer/trigger sites for
   a dispatcher; the host numbers story calls and every machine runs the same function in that order;
   quest digests repair anyone who fell behind; the world database changes are sent to late joiners.
@@ -115,7 +131,12 @@ All in the [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) plugin; each
   (the second is hard links; each has its own Unity product name, so saves and settings are separate)
   with a fixed test save, runs timed test steps and bots in both, and logs what each side observed
   (positions, animation, look signatures, ownership, story events, votes) plus screenshots.
-- 35 scenarios. Last runs 2026-10-26 on the 0.7.x code: dialogue (gold answer paid by the friend only,
+- 38 scenarios. Runs on the 0.8.x code (2026-10-27 to 2026-10-30): party (XP not shared before the group,
+  shared in it, not after leaving; invite, remove, decline), scaling (same max health on both PCs, Bandit
+  100 -> 150; hits 35 -> 42; an attacking unhurt enemy keeps its numbers after the group ends), trade (a
+  normal exchange, an offered item used up, no answer to the commit, a missed outcome; the sum of both
+  inventories per stack stays the same), a fight without the private German files; 0 errors.
+- Runs on 2026-10-26 on the 0.7.x code: dialogue (gold answer paid by the friend only,
   host's gold unchanged, mercenary joins the payer), effects (UDP and Steam mock: friend's slashes and
   host's spells shown on the other side, both players 33 -> 183 XP with intellect 2 vs 8, a body looted
   by the host still lootable at the friend), transformations (all six forms shown, puppet hidden),
@@ -126,7 +147,8 @@ All in the [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) plugin; each
 - After every run the real saves and registry values were compared with a backup (unchanged).
 - Real mouse clicks in the test windows were not automated (desktop control was not used). The tester
   and friends used the menus and shared conversations by hand in real sessions up to 0.6.x; the 0.7
-  additions (hold-to-confirm ring, transformations) are only tested by the automated scenarios so far.
+  additions (hold-to-confirm ring, transformations) and the 0.8 windows (group, trade) are only tested by
+  the automated scenarios so far; those call the same functions as the buttons.
 
 ## How to play
 
@@ -137,6 +159,9 @@ Everyone needs the same mod version.
 
 ## Known issues
 
+- A game closed without saving goes back to its last save, so a crash right after a trade can undo that
+  player's side.
+- Scaling also applies to neutral animals, which are shared enemies too.
 - Story teleports move every player.
 - Steam's overlay invite may not open when the game is started outside Steam; the in-game friend list
   works.
@@ -148,4 +173,4 @@ Everyone needs the same mod version.
 
 - Real-network sessions with more than two players.
 - In-game chat (the co-op menu has a placeholder).
-- Voiced quest texts (TTS) are planned.
+- A real-network test of groups, scaling and trading.

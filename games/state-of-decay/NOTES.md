@@ -1,10 +1,10 @@
-# State of Decay (2013) — notes
+# State of Decay (2013) - notes
 
 Game slug: `state-of-decay`. Session: 2026-10-19.
 
 Private install path, exe hash and Steam build id live in `local/identity.md` (gitignored).
 
-## Phase 0 — Triage (2026-10-19)
+## Phase 0 - Triage (2026-10-19)
 
 ### Identity (rule 5)
 
@@ -53,7 +53,7 @@ Private install path, exe hash and Steam build id live in `local/identity.md` (g
 - Whether any leaderboard or Xbox service is still live. Not tested.
 - Saves location. Not searched in this phase (no launch yet); Phase 3b found where the first launch of the test copy writes its profile.
 
-## Phase 1 — Research (2026-10-19)
+## Phase 1 - Research (2026-10-19)
 
 Searches that ran:
 
@@ -89,7 +89,7 @@ Checked 2026-10-19 on the test copy: all 1388 entries in `Game\gamedata.pak` use
 
 That method is Xbox `XMemDecompress` (LZX), the mapping in QuickBMS `zip2.bms`. A reader in `local/lzx/` (gitignored; MonoGame's LZX decoder, LGPL 2.1 or MS-PL) decodes it with LZX window bits **17**. Short blocks start with `0xFF`, then big-endian destination size and source size, then the LZX bytes, then a 5-byte tail. Verified 2026-10-19: `config/multiplayer.cfg` came out as readable text (2977/2977 printable bytes). The same settings extracted the game-rules and player scripts below. Extracted text is in `local/extract/` and stays out of git.
 
-## Phase 3 — Scripts (2026-10-19)
+## Phase 3 - Scripts (2026-10-19)
 
 Read from the test copy only, before its first launch (test copies were launched from Phase 3b on, as the README says). The Steam install was not modified.
 
@@ -118,7 +118,7 @@ Read from the test copy only, before its first launch (test copies were launched
 - Whether a loose file next to the pak overrides it. A 2013 Japanese mod note says it does (http://jpmod.blogspot.com/2013/09/state-of-decay.html). Not tested here.
 - The real folder behind `%USER%`. Do not launch until saves are forced into the test copy.
 
-## Phase 3b — Loose files and a test launch (2026-10-19)
+## Phase 3b - Loose files and a test launch (2026-10-19)
 
 The Steam install was not modified. Launches used `local/test-install/StateOfDecay.exe` only, windowed, then the process was closed.
 
@@ -140,7 +140,7 @@ The Steam install was not modified. Launches used `local/test-install/StateOfDec
 
 - Whether `+map` on the command line is applied too early. A later run answered the level name and the local connect. See the next section.
 
-## Phase 3c — Level load and a second process (2026-10-19)
+## Phase 3c - Level load and a second process (2026-10-19)
 
 Steam install not modified. Both processes were test copies. The host was `local/test-install`. The joining process was a second folder with its own exe, DLLs, and cfg files, and with `Engine` and `Game` junctioned back to the host copy. Its profile name was `USER2`, junctioned the same way as `USER`.
 
@@ -169,7 +169,7 @@ Steam install not modified. Both processes were test copies. The host was `local
 - Whether `OnClientConnect` will run for that peer if the disconnect is avoided.
 - Whether `ULBarricade` and the other UL classes can replicate once a second channel exists. They currently have no network scheduling parameters.
 
-## Phase 3d — Second channel reaches the host (2026-10-19)
+## Phase 3d - Second channel reaches the host (2026-10-19)
 
 Same two test copies as Phase 3c. Host: `map class3 server`, `sv_bind` on the LAN address. No file of the exe was changed; both fixes below are a loose Lua edit and a runtime memory patch written by `WriteProcessMemory` into the running test copy. The exe is SteamStub-wrapped, so `.text` is only readable from a live process.
 
@@ -193,7 +193,7 @@ Same two test copies as Phase 3c. Host: `map class3 server`, `sv_bind` on the LA
 - What the vtable `+0x114` call that returns NULL on the client is (likely the client actor or a game-rules lookup). The NULL guard may hide later problems.
 - Why the host renders black. It is black with no client too (checked 15 seconds after `spawned channel=1`), so it comes from loading the level with the console `map` command instead of the menu, not from the join. Whether the host world is playable from this state.
 
-## Phase 3e — Why `map` is black; the real entry is the front-end (2026-10-19)
+## Phase 3e - Why `map` is black; the real entry is the front-end (2026-10-19)
 
 Host test copy only. No file of the exe changed. All loads via `user.cfg`.
 
@@ -218,7 +218,7 @@ Host test copy only. No file of the exe changed. All loads via `user.cfg`.
 - The `Play State of Decay` button in the front-end flash (`libs/ui/flashassets/scripts/class3frontend/class3_frontend.as`) fires `fscommand("DLCSelected", "SOD")` (and `BREAKDOWN` / `LIFELINE` for the other two). A native handler for `DLCSelected` runs the campaign start. There is no console command for it, so a campaign is started either by driving the menu with real input or by calling that native handler.
 - Whether the client's title menu is drawn on top of a loaded world, and what "we are not a server" RMI path needs.
 
-## Phase 3f — Menu Play automation; full rendered campaign (2026-10-20)
+## Phase 3f - Menu Play automation; full rendered campaign (2026-10-20)
 
 Test copy only. No exe file changed. Automation scripts in `local/`.
 
@@ -236,7 +236,7 @@ Test copy only. No exe file changed. Automation scripts in `local/`.
 
 ### Derived
 
-- The two half-paths can be sequenced: **menu Play gives a rendered game that still uses `OnClientConnect` for the local player**; it simply never binds a listen port. Co-op needs that same start plus a listen/server context (or opening a listen socket after load) — not `map class3 server` alone (black, no front-end flow).
+- The two half-paths can be sequenced: **menu Play gives a rendered game that still uses `OnClientConnect` for the local player**; it simply never binds a listen port. Co-op needs that same start plus a listen/server context (or opening a listen socket after load) - not `map class3 server` alone (black, no front-end flow).
 - Menu automation must run sound/Flash-touching calls on the CryEngine main thread.
 
 ### Unknowns
@@ -245,7 +245,7 @@ Test copy only. No exe file changed. Automation scripts in `local/`.
 - Whether `singleplayer.cfg` vs `multiplayer.cfg` blocks hosting even if a socket is opened.
 
 
-## Phase 3g — Rendered listen host via `map %s server` (2026-10-20)
+## Phase 3g - Rendered listen host via `map %s server` (2026-10-20)
 
 Test copies only. Runtime patch; exe file not modified on disk.
 
@@ -256,9 +256,9 @@ Test copies only. Runtime patch; exe file not modified on disk.
 - The real formatter is at `0x0144D7AF`: `snprintf(buf, 0x100, "map %s", level)` then `ExecuteString(buf)`. Level name comes from `0x01E80CE0` (Class3).
 - Runtime patch: replace the `push "map %s"` immediate with a remote string `map %s server`. Script: `local/force_map_server.py <pid>` (before `boot_to_gameplay.py`).
 - Result after `boot_to_gameplay.py`: log shows `Executing console command 'map Class3 server'`, loads **`multiplayer.cfg`**, `OnClientConnect channel=1`, UDP listen on the host address, port `64087` (from `sv_bind` / `sv_port` in host `user.cfg`).
-- Host screenshot: full rendered campaign (Marcus/Ed, HUD, minimap, objective, ~117 FPS) — **not** the black `map` path. So front-end New Game + `server` flag gives both render and listen.
+- Host screenshot: full rendered campaign (Marcus/Ed, HUD, minimap, objective, ~117 FPS) - **not** the black `map` path. So front-end New Game + `server` flag gives both render and listen.
 - Client (`local/client-install`, `connect <host address> 64087`, `patch_client.py`): host logs `OnClientConnect channel=2`, `AllocateObject ... (CoopPeer2)`, `spawned channel=2 ... name=CoopPeer2`, `PlayerJoined`. Both processes stayed up.
-- Client window remained on the DLC title menu (`[SPC] Play State of Decay`) after join — same as earlier black-host joins. Peer exists on the host; client has not taken over CoopPeer2 / left the front-end yet.
+- Client window remained on the DLC title menu (`[SPC] Play State of Decay`) after join - same as earlier black-host joins. Peer exists on the host; client has not taken over CoopPeer2 / left the front-end yet.
 
 ### Derived
 
@@ -284,7 +284,7 @@ Test copies only. Runtime patch; exe file not modified on disk.
 - Client must be started **after** the host UDP listen is up. `connect` in client `user.cfg` during early boot often fails silently (no client UDP socket).
 - Writing `menu depth` to 0 on the client crashes the process. Need a real FrontEnd unload / possess path for CoopPeer2.
 
-## Phase 3h — New test machine; second join crash; channel 2 again (2026-10-20)
+## Phase 3h - New test machine; second join crash; channel 2 again (2026-10-20)
 
 Test copies under the gitignored `local/` folder; the Steam install was not modified. Exe SHA matches prior build.
 
@@ -310,7 +310,7 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Correct FrontEnd unload / possess entry that clears FE and gives control of CoopPeer2 without pushing another menu state.
 - Whether PrintWindow black captures are D3D-only (likely) or the host really went black after long join.
 
-## Phase 3i — FrontEnd dismiss mapping (2026-10-20)
+## Phase 3i - FrontEnd dismiss mapping (2026-10-20)
 
 ### Observations
 
@@ -318,11 +318,11 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Real dismiss routine is **`0x01617130`** (not `0x016171F0`). It finds `Class3FrontEnd`, calls vtable+0x64(0), then `mov byte ptr [0x01EE8807],0`. Confirmed: fe 1→0, process stays up. Script: `local/fe_dismiss.py`.
 - `0x016171F0` is the *next* function (destroy via vtable+0x3C(1)). Calling it after dismiss **re-sets fe to 1**. Do not use it for leave-FE.
 - Wrapper `0x01449810` (destroy + `0x01616CF0` state machine) pushes menu depth (1→2). Avoid.
-- `MenuStackPop` at `0x01614300` after dismiss: when depth is the DLC layer (depth=1), pop **re-enables fe_flag**. When depth was artificially 2 from the bad wrapper, two pops reached depth 0 with fe staying 0 once — not a reliable recipe.
+- `MenuStackPop` at `0x01614300` after dismiss: when depth is the DLC layer (depth=1), pop **re-enables fe_flag**. When depth was artificially 2 from the bad wrapper, two pops reached depth 0 with fe staying 0 once - not a reliable recipe.
 - Poking `0x01EE8890=0` after dismiss still AVs (`…21-48-26.dmp` at `0x0120F96B`). Do not poke depth.
 - Thirteen inlined `fe_flag=0` sites exist under `0x01617xxx`; no direct `E8` callers of `0x01617130` (likely reached via other control flow). `local/client_post_join.py` now does dismiss-only.
 - Client ActionGame often has `+0x20`/`+0x28` (server/game nub) null after join; host has both set. Client log still `Unable to bind object to network (Dude|CoopPeer2)` and `CPlayerInput::SetState called: should never happen`. Possession/view not solved.
-- Foreground BitBlt: host shows outdoor world (~47 FPS overlay); client still shows State of Decay title logo (~37 FPS) even after fe_flag clear — flag clear alone does not remove the Flash title draw.
+- Foreground BitBlt: host shows outdoor world (~47 FPS overlay); client still shows State of Decay title logo (~37 FPS) even after fe_flag clear - flag clear alone does not remove the Flash title draw.
 
 ### Derived
 
@@ -334,18 +334,18 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - What New Game does after `0x01617130`-equivalent to also drive `depth→0` and replace the title render with the world view on a *client* session.
 - Where the client nub / view entity should be installed so `Unable to bind` stops and `CPlayerInput::SetState` is valid.
 
-## Phase 3j — Menu stack vs FE flag; why title sticks (2026-10-20)
+## Phase 3j - Menu stack vs FE flag; why title sticks (2026-10-20)
 
 ### Observations
 
 - Joined client sits at **menu depth 1** with DLC entry handler `0x01619B10`. Entry+4 (leave) is **`0x01617130`** (same as FE dismiss). So popping the DLC menu *calls dismiss as leave*.
 - `MenuStackPop` (`0x01614300`) takes a **bool arg at [esp+4]**. Nonzero arg re-enters a menu after leave. Callers use `push 0`. Our earlier stub only did `sub esp,8` without `push 0`, so garbage arg re-opened UI.
 - When pop drives depth to 0, code at `0x01614360` (`test eax; jnz`) falls into **`push 0; push 0x0B; call …`** which **reopens FrontEnd**. That is why a normal pop turns `fe` back on. Patch site: `0x01614362` (`75→EB` skips reopen). Script: `local/menu_pop_noreopen.py`.
-- Even with reopen skipped + leave call nopped, a pop from the live joined client still ended at `depth=1 fe=1` (needs more work — possible FE tick re-sync, or pop not actually decrementing under that patch set).
+- Even with reopen skipped + leave call nopped, a pop from the live joined client still ended at `depth=1 fe=1` (needs more work - possible FE tick re-sync, or pop not actually decrementing under that patch set).
 - **Poking `depth=0` crashes** the client even if all threads are suspended for the write and then resumed (`ag` goes NULL). Same class of failure as earlier `0x0120F96B` dump. Do not poke depth.
 - ActionGame layout clarification: **`+0x1c` and `+0x20` share NetNub vtable `0x1836EA0`**. Host has both; client has **`+0x1c` only** (likely `m_pClientNub`). Host-only `+0x20` server nub and `+0x28` game nub. Client is not missing a client nub at `+0x1c`.
 - `Unable to bind object to network` site: push at `0x7908C9` (string `0x17D5E3C`).
-- `fe_flag=0` alone does not remove the title logo while depth stays 1 — Flash/DLC menu still draws.
+- `fe_flag=0` alone does not remove the title logo while depth stays 1 - Flash/DLC menu still draws.
 
 ### Derived
 
@@ -358,7 +358,7 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Exact reason pop-with-noreopen still left depth 1 / fe 1 on the clean join test.
 - How to hide Class3FrontEnd Flash while depth remains 1 (or how host zeroes depth without AV).
 
-## Phase 3k — Depth clears; Flash carousel remains (2026-10-20)
+## Phase 3k - Depth clears; Flash carousel remains (2026-10-20)
 
 ### Observations
 
@@ -370,9 +370,9 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - **BitBlt after that recipe still shows the DLC carousel** (SoD / Breakdown tiles, ~32 FPS). Clearing the menu stack does **not** unload the orphan Flash movie.
 - Host in world vs client after leave-stack (same globals region):
   - Host: `0x01EE8894=1`, `0x01EE8898=0`, `0x01EE88A0` nonzero float
-  - Client: `0x01EE8894=0`, `0x01EE8898=0xFC0` (not a usable pointer — RPM fails), `0x01EE88A0=0`
+  - Client: `0x01EE8894=0`, `0x01EE8898=0xFC0` (not a usable pointer - RPM fails), `0x01EE88A0=0`
 - Poking `8894=1` / clearing `8898` does not remove the carousel.
-- `0x01614720` sets `8894=1` but is the **pause main-menu** entry (`sounds/ui:ui_pause:main_menu`) — calling it pushed depth 2 and re-set fe=1. Do not use for leave-title.
+- `0x01614720` sets `8894=1` but is the **pause main-menu** entry (`sounds/ui:ui_pause:main_menu`) - calling it pushed depth 2 and re-set fe=1. Do not use for leave-title.
 - Class3FrontEnd `vtable+0x64(1)` via patched dismiss killed the client window; `+64(0)` alone (dismiss) does not hide the carousel.
 - `OnShutdown` invoke (`vtable+0x3C("OnShutdown")` then `+0x44`) and destroy `0x016171F0` (`vtable+0x3C(1)`) left the carousel drawing.
 - FlashUI notify helper `0x01475A90` (used by dismiss for `Class3HUDPause` / `Class3FrontEnd`) with (0,0) did not hide the carousel.
@@ -398,13 +398,13 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Whether `0x01EE8898=0xFC0` is a sentinel/state code or a corrupted handle from a client-only path.
 - Correct possess/view bind once the world is visible.
 
-## Phase 3l — World view after destroying FE movie (2026-10-21)
+## Phase 3l - World view after destroying FE movie (2026-10-21)
 
 ### Observations
 
 - Steam SoD must not run during tests: it shares `%USERPROFILE%\Saved Games\USER` via the junction into `local/test-install\USER` and caused early host AVs (`0x012FAA8A`). Stop the Steam process only; do not touch Steam files.
 - BitBlt of overlapping maximized windows lies (both “captures” show the topmost client). Always tile host/client apart before judging FE vs world.
-- Class3FrontEnd `vtable+0x64` is SetVisible: compares arg to element `+0x4C`, may Invoke `cry_onShow` / `cry_onHide`. After leave-stack, client already has `+0x4C=0` but **`+0x44` still holds a GFx movie** — SetVisible(0) no-ops and the carousel keeps drawing.
+- Class3FrontEnd `vtable+0x64` is SetVisible: compares arg to element `+0x4C`, may Invoke `cry_onShow` / `cry_onHide`. After leave-stack, client already has `+0x4C=0` but **`+0x44` still holds a GFx movie** - SetVisible(0) no-ops and the carousel keeps drawing.
 - Calling **element `vtable+0x3C(1)`** (same as destroy helper `0x016171F0`'s core call) clears `+0x44` to NULL. Separated BitBlt then shows the **3D world** on the client (trees/terrain; no DLC tiles). Host still in world.
 - Full leave recipe is now dismiss → pop-noreopen → destroy-movie (`local/client_leave_title.py` + `local/fe_destroy_movie.py`).
 - After world reveal, client log still has `Unable to bind … Dude|CoopPeer2` and `CPlayerInput::SetState called: should never happen`. ActionGame still `+0x1c` client nub only (`+0x20`/`+0x28` null). Possession not solved.
@@ -423,7 +423,7 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 
 - Host `6696` / client `18048` after full leave recipe: both render world when windows are tiled apart. Client still unbound for input.
 
-## Phase 3m — Join crash fix + local actor id (2026-10-21)
+## Phase 3m - Join crash fix + local actor id (2026-10-21)
 
 ### Observations
 
@@ -431,8 +431,8 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Host menu: **Start a New Game is idx 2** on this profile (idx 1’s handler is DLC `0x01619B10`). `boot_to_gameplay.py` now forces idx 2.
 - Stale host after a crashed client keeps `Resend last packet` to the dead UDP port and can make the next `connect` immediately `disconnect`. Prefer kill both and clean dual boot.
 - After a clean join (host `4932` / client `17660`): channel 2 / CoopPeer2 / rename Dude(1) as before. Leave-title cleared FE movie `+0x44`; depth sometimes stays 1 / fe flaps to 1.
-- Game framework object at `gEnv+4` (`0x01EE2F18`): **`+0x78` is local entity id** — host `0x7777` (Dude), client `0xFE5F` (=65119, matches `PlayerRenamed 65119 Dude(1)`). So the client already has a local actor id for Dude(1); input still broken (`Unable to bind`, `CPlayerInput::SetState` warn stub at vtable slot `0x0191C9E8 → 0x0164DBC0`).
-- Do **not** probe EntitySystem via CreateRemoteThread into arbitrary vtable slots — that hung/killed both processes earlier.
+- Game framework object at `gEnv+4` (`0x01EE2F18`): **`+0x78` is local entity id** - host `0x7777` (Dude), client `0xFE5F` (=65119, matches `PlayerRenamed 65119 Dude(1)`). So the client already has a local actor id for Dude(1); input still broken (`Unable to bind`, `CPlayerInput::SetState` warn stub at vtable slot `0x0191C9E8 → 0x0164DBC0`).
+- Do **not** probe EntitySystem via CreateRemoteThread into arbitrary vtable slots - that hung/killed both processes earlier.
 
 ### Derived
 
@@ -448,12 +448,12 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 
 - Full dismiss → pop-noreopen → destroy crashed client at **`0x0056FFF8`** (dump `08:51:53`, `ecx` garbage after `mov ecx,[edx]`).
 - **Dismiss → destroy only** (skip pop) keeps the client alive: `fe=0`, movie `+0x44=0`, depth may stay 1, BitBlt shows world. `client_leave_title.py` now defaults to that; pass `--pop` for the old path.
-- Live PIDs after safe leave (this pass): host `20792` / client `22240`. `gEnv+4+0x78` still host `0x7777` / client `0xFE5F`. Client later died again after console `g_detachCamera`/`r_DisplayInfo` (new dump — check EIP before retrying those cvars).
+- Live PIDs after safe leave (this pass): host `20792` / client `22240`. `gEnv+4+0x78` still host `0x7777` / client `0xFE5F`. Client later died again after console `g_detachCamera`/`r_DisplayInfo` (new dump - check EIP before retrying those cvars).
 - `Unable to bind` path: `0x7908A0` looks up a word key at game-object `+0x50` in a map (`0x72E410`); null → log. Client still hits this for Dude/CoopPeer2 after join. Next possess lead: identify that game-object on the client and why the map miss happens (vs host Dude).
 - Host entity-slot-like records exist for Dude (`vt 0x183D1B8`, eid at +8). Client had no matching records for `0xFE5F` / `0x1FF5D` in the same shape; raw `0xFE5F` heap hits look like non-object data.
 - **Unsafe on joined client (crash):** `g_gameRules:GetPlayerByChannelId(2)` via `#System.Log`, and earlier `g_detachCamera` / `r_DisplayInfo`. Prefer pure RPM for possess dig. Orchestrator: `local/session_join_leave.py` (host boot + patch + connect + dismiss/destroy leave).
 
-## Phase 3n — CGameObject layout + bind map root (2026-10-21)
+## Phase 3n - CGameObject layout + bind map root (2026-10-21)
 
 ### Observations
 
@@ -461,7 +461,7 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Layout (verified host Dude / client Dude(1)):
   - `+0x8` = entity id (`0x7777` / `0xFE5F`)
   - `+0x54` = **net channel** (host Dude `1`, CoopPeer2 / client Dude(1) `2`)
-  - `+0x10` / aspect obj holds world pos — client Dude(1) at ~1345,3442,117 (spawn)
+  - `+0x10` / aspect obj holds world pos - client Dude(1) at ~1345,3442,117 (spawn)
 - `BindToNetwork` map provider: `[*(0x019EF9AC)+0x28]+0x28` → **`ActionGame+0x28` (game nub)**. Host has it; **client `AG+0x28=0`**, so the map getter returns null on a joined client. `Unable to bind` is the server-nub map path; client missing game nub matches earlier ActionGame notes.
 - `BecomeLocalPlayer` is GameObject extension **event id 8** (registered with PauseGame/OnCollision/… at `0x674Axx`). Not yet invoked.
 - Helper: `local/find_gameobjects.py`. Live after safe leave: host `15916` / client `8692` (BitBlt world avgB≈71).
@@ -480,12 +480,12 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 
 - IGameObject method at `0x78EF20` (secondary vt ~slot 17) special-cases `ebx==8` as BecomeLocalPlayer. Naive main-thread call `SendEvent(igo, 0, 8, 0, 0)` **crashed** the client (dump after call). Need correct `SGameObjectEvent` / arg layout before retrying.
 
-## Phase 3o — BecomeLocalPlayer args + CPlayerInput (2026-10-21)
+## Phase 3o - BecomeLocalPlayer args + CPlayerInput (2026-10-21)
 
 ### Observations
 
 - `SendEvent` at `0x78EF20` is **stdcall 4 args** (`ret 0x10`). `ebx` = stack arg1. Extension loop calls `ext->vt+0x2c` (HandleEvent) with those 4 args; any extension returning 0 fails the whole call. After all extensions return true, `arg1==8` hits a BecomeLocalPlayer tail that requires **`IGO+0x18 == 0`**, then `entity = [IGO+0x0c]`, `proxy = entity->vt+0xe8(1)`, then `proxy->(arg0->vt+0x28)(arg0)`.
-- When set, **`IGO+0x18` points at `CPlayerExt+0x14`** (MI adjustor inside the player extension). Host local Dude and client Dude(1) both have it set after spawn — the tail is a “not yet local” path.
+- When set, **`IGO+0x18` points at `CPlayerExt+0x14`** (MI adjustor inside the player extension). Host local Dude and client Dude(1) both have it set after spawn - the tail is a “not yet local” path.
 - CPlayer HandleEvent `0x1574A30` first calls helper `0x13EA531`. Helper **`cmp [esp+0x0C], 8`** (SendEvent **arg2**, not arg1). If arg2==8 it takes an ActorMass/`skip` profile path; bad stack object → AV at `0x13EA5C4` (`mov eax,[ecx]`). That matches the naive `(0,8,0,0)` crash (eip ~`0x13EA5D8`). **Do not pass arg2=8 without a real profile object on stack.**
 - With `IGO+0x18` cleared and `(arg0=igo, 8, 8, 4)` SendEvent returned **0** safely (no CPI change). Direct BLP tail with `arg0=igo` completed (`entity->e8(1)` non-null) but **still left CPI inert**.
 - **`CPlayerInput` already exists** on both: `player+0xF34` → MI object (`vt 0x0191C9D4 / +4 0x0191C9C4 / +8 0x0191C98C`). `GO+0x14` = that object +4. Host local has view floats at CPI+0x0C..+0x14 and **`CPI+0x20 = 0x1C`**; client Dude(1) has zeros / `+0x20=0`.
@@ -503,136 +503,136 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 ### Unknowns
 
 - Exact arg to CPlayer `vt+0x28` (`0x1571FD0`) for local-player init (looks like script/property bag: `viewQuat`, `PlayerInputExists`, …).
-- What writes host CPI `+0x0C..+0x14` (stable ~3255/3240/216 floats — not per-frame mouse deltas).
+- What writes host CPI `+0x0C..+0x14` (stable ~3255/3240/216 floats - not per-frame mouse deltas).
 - How to get the case-8 body in `0x13EA6C0` to finish view/input bind on the joined client.
 
 ### Follow-up (same day)
 
 - `CActor`-ish vt `0x018CEB98` slot 16 = `0x13EA6C0`: `HandleEvent(SGameObjectEvent*)` with `cmp eax,8` → sets `player+0x56=1`, calls `IGO→vt+0x60(1)`, then entity flag tweaks. No live objects start with that vt (MI-only?). Calling it with `this=CPlayer*` + stack `{8,0,0,0}` returned safely but left CPI floats still zero.
-- `IGO→vt+0x60` (`0x78F520`) only stores arg into `IGO+0x7C` and forwards — not full possess.
+- `IGO→vt+0x60` (`0x78F520`) only stores arg into `IGO+0x7C` and forwards - not full possess.
 - Client `player+0x57` differs from host (`0x00`/`0x30` vs `0x0D`); poking `0x0D` alone does not wake CPI.
 - **CPlayerInput MI:** `player+0xF34` → base vt `0x0191C9D4`. Big update `0x164D580` is **base slot 6** (`vt+0x18`), not third-vt slot 24. Callers pass a **pointer to a stack struct** (`lea edx,[esp+…]; push edx`). Sites: `0x1574C89` (inside CPlayer HandleEvent after building the struct) and `0x156C582`.
 - **Unsafe:** naive `SendEvent` with event `0x10` / `0x20` / `0x4000` (killed client). CPI slot24/slot6 with wrong `this`/args also unstable.
 - Helpers: `local/probe_local_player.py`.
 
-### Follow-up — CPI source + proxy0 (same day, continued)
+### Follow-up - CPI source + proxy0 (same day, continued)
 
 - **What writes CPI `+0x0C..+0x14`:** `CPlayerInput::Update` (`0x164D580`) copies the first 3 dwords of **`view+0x304`** (via `player+0x9CC` → view → `vt+8` memcpy of `0x3D` dwords). Host local matches world pos there; client CoopPeer2’s `view+0x304` stays zero.
-- **Why client `view+0x304` stays 0:** view pose updater `vt+0x30` (`0x1682520`) needs `entity->GetCharacter(0)` (`vt+0x144` / `0xBC66F0` → proxy0 → slot `+0x6C`). Client **CoopPeer2 / Dude(1) have `entity` proxy[0] == NULL** (host remote CoopPeer2 likewise). NPCs on the client often have proxy0 but still `GetChar`/`+0x6C` empty — only the host local Dude reliably returns a live character instance.
-- **`CreateProxy(0)`** (`entity vt+0xF0` / `0xBCB520`) on client CoopPeer2 allocates a proxy (`vt 0x180F6F8`) safely but leaves the character vector empty — not enough for pose.
+- **Why client `view+0x304` stays 0:** view pose updater `vt+0x30` (`0x1682520`) needs `entity->GetCharacter(0)` (`vt+0x144` / `0xBC66F0` → proxy0 → slot `+0x6C`). Client **CoopPeer2 / Dude(1) have `entity` proxy[0] == NULL** (host remote CoopPeer2 likewise). NPCs on the client often have proxy0 but still `GetChar`/`+0x6C` empty - only the host local Dude reliably returns a live character instance.
+- **`CreateProxy(0)`** (`entity vt+0xF0` / `0xBCB520`) on client CoopPeer2 allocates a proxy (`vt 0x180F6F8`) safely but leaves the character vector empty - not enough for pose.
 - **Workaround that sticks:** write aspect/world pos into `view+0x304`; then `Update` fills CPI and **keeps** it (earlier “CPI cleared” was Update copying zeros from empty `view+0x304`). Patching out `Update` also made manual CPI pokes stick; `SetState` patch did not.
-- **Event `0x4000` gate:** HandleEvent uses **`arg0->vt+0x20()`** (not arg2); need return **0** to call CPI Update. A minimal fake vtable (`xor eax,eax; ret` only) **killed the client** — other slots / later `0x1565E80` paths touch `arg0`. Need a real message/object or skip SendEvent and drive `0x13E7000` / camera bind after seeding CPI.
+- **Event `0x4000` gate:** HandleEvent uses **`arg0->vt+0x20()`** (not arg2); need return **0** to call CPI Update. A minimal fake vtable (`xor eax,eax; ret` only) **killed the client** - other slots / later `0x1565E80` paths touch `arg0`. Need a real message/object or skip SendEvent and drive `0x13E7000` / camera bind after seeding CPI.
 - Injection caveat: check `ctx.Esp`; cool down after splash / rapid restarts.
 
-### Follow-up — pose seed live (same day)
+### Follow-up - pose seed live (same day)
 
 - Helper: `local/seed_cpi_pose.py <client_pid> [--patch]`. `--patch` trampolines `CPlayerInput::Update` (`0x164D580`) to copy `IGO+0x0C` entity `+0x24` xyz into `view+0x304` each call. Confirmed on live join: CPI `+0x0C..+0x14` stay at CoopPeer2 world pos; client stays alive.
-- **`0x4000` arg0 is a property-bag**, not IGO: gate is `arg0->vt+0x20()` (no stack args) must return 0; later `0x1565E80` reads named props via `arg0->vt+0x4C/0x68/0x74`. Minimal fake vtable killed the client. **Do not** call IGO `vt+0x20` (`0x792190`) with no args (it expects stack args — also fatal).
+- **`0x4000` arg0 is a property-bag**, not IGO: gate is `arg0->vt+0x20()` (no stack args) must return 0; later `0x1565E80` reads named props via `arg0->vt+0x4C/0x68/0x74`. Minimal fake vtable killed the client. **Do not** call IGO `vt+0x20` (`0x792190`) with no args (it expects stack args - also fatal).
 - `player vt+0x134` = `return byte [this+0x56]`; `vt+0x130` = nonzero if `IGO+0x50` (channel word) nonzero. Host ch=1 / client CoopPeer2 ch=2 both pass.
 - Client `player+0x57` still `0x00` vs host `0x0D` (poke alone unproven for input).
 
-### Follow-up — view system empty on client
+### Follow-up - view system empty on client
 
 - Object at **`gEnv+0x24`** (`vt 0x178F470`): host has populated pointer fields at `+0x08` / `+0x14`; **joined client is mostly zeros there** (same vt/`+0x04=2`). Likely I3DEngine (not CViewSystem); `+0x08/+0x14` were freelist/string noise, not the render cam.
 - Live PIDs after rejoin+seed: see `local/last_pids.txt`. Re-apply `seed_cpi_pose.py --patch` after each client boot.
 
-### Follow-up — render camera already on CoopPeer2
+### Follow-up - render camera already on CoopPeer2
 
-- **Rendered camera** lives in static `gEnv+0x10` object (`0x1DD7320`) at **`+0x1394`** (also mirrored at `+0x13C8`, `+0x1690`, …). Host ≈ Dude; joined client ≈ CoopPeer2 (`~1345/3439/118` vs peer `~1345/3442/118`) once world is up — **no separate SetActiveEntity needed for position**.
+- **Rendered camera** lives in static `gEnv+0x10` object (`0x1DD7320`) at **`+0x1394`** (also mirrored at `+0x13C8`, `+0x1690`, …). Host ≈ Dude; joined client ≈ CoopPeer2 (`~1345/3439/118` vs peer `~1345/3442/118`) once world is up - **no separate SetActiveEntity needed for position**.
 - Player view (`player+0x9CC`, vt `0x191FF6C`): host fills **`view+0x18`** with cam xyz; client peer left it 0. Seeding `view+0x18` from aspect sticks. `view+0x10` host local `0x80001008` vs client `0x80201068` (poke to host value sticks).
 - CViewSystem is created into CryAction `+0x4C4` (ctor `0x75C970`, multi-vt `0x17D1FF0/FD4/FB8`); `SetActiveCamera` = iface `vt+4` → `0x75B710`. Framework at `0x01EE2F18` is **not** that owner (`+0x4C4=0`).
 - Console **`EnableActionMap` is unregistered** on client (`Unknown command`). Call **`IActionMapManager` `vt+0x24`** (`0x1098570`, `ret 8`) with `(name, enable)` via main-thread inject. Helper: `local/enable_actionmap.py <pid> [player]`.
 - Input still short vs host local: client peer often has **`player+0x57=0`** (host `0x0D`) and **`CPI+0x28=0`** (host `0x1C`). Both stick when poked; `seed_cpi_pose.py` now sets them + seeds `view+0x18` / `view+0x10`. Patch trampoline also copies aspect → `view+0x18`.
 
-### Follow-up — leave-title recipe (depth 0 safe)
+### Follow-up - leave-title recipe (depth 0 safe)
 
 - After dismiss+destroy, **`menu_pop_noreopen.py` can reach `depth=0` with `fe=0`, `ag` live, `localEid=0xFE5F`** without AV (confirmed host 11496 / client 8172). Do dismiss → destroy → pop (not pop alone; not depth poke).
-- **But BitBlt still shows DLC carousel** (`[SPC] Play State of Decay`) even with `elem+0x44=0` and depth 0. Gameplay `renderCam` (`gEnv+10+0x1394`) sits at CoopPeer2 while the window composites the FE farm scene + logos — need a different Flash/UI teardown (or FE level unload), not another `+0x44` clear.
+- **But BitBlt still shows DLC carousel** (`[SPC] Play State of Decay`) even with `elem+0x44=0` and depth 0. Gameplay `renderCam` (`gEnv+10+0x1394`) sits at CoopPeer2 while the window composites the FE farm scene + logos - need a different Flash/UI teardown (or FE level unload), not another `+0x44` clear.
 - Console `EnableActionMap` = unknown; use `local/enable_actionmap.py`. `seed_cpi_pose.py` now also seeds `view+0x18`, `view+0x10`, `player+0x57=0x0D`, `CPI+0x28=0x1C`. Do **not** `movups` into `view+0x18` (clobbers `+0x24+` and breaks Update→CPI); use 3× `movss`.
 
-### Follow-up — logos survive every FlashUI movie clear (2026-10-21)
+### Follow-up - logos survive every FlashUI movie clear (2026-10-21)
 
 - FlashUI manager (`gEnv` query `"FlashUI"`, vt `0x17BD070`) keeps a **vector at `+0x40`** of ~10 elements (all vt `0x17C6DF8`). Index 0 is `Class3FrontEnd`; **index 2 is often the only other `+0x4C=1` (visible) element** with a live `+0x44` movie after leave-title.
-- Helper: `local/flash_destroy_all.py` — walks that vector and calls `vt+0x3C(1)` on every element with `+0x44!=0` or `+0x4C!=0`. Confirmed all `+0x44`/`+0x4C` stay 0 afterward; client stays up.
+- Helper: `local/flash_destroy_all.py` - walks that vector and calls `vt+0x3C(1)` on every element with `+0x44!=0` or `+0x4C!=0`. Confirmed all `+0x44`/`+0x4C` stay 0 afterward; client stays up.
 - **BitBlt still shows the three DLC logos + `[SPC] Play`** after that full clear, with `LoadMovie` stubbed (`0x6E0A30` → `xor eax,eax; ret 4`) so movies cannot reload, and after nulling element `+0x48` (GFx player). Ret-patching several FlashUI vtable methods also did not remove logos.
 - Assets still in heap: `FrontEnd.gfx`, `Libs/UI/Class3_FrontEnd_I1.dds`, AS names `LogoToDisplay` / `PressStart`, meshes `logo.cgf` / `logo_sign.cgf` (also world props). Logos are **not** only `Class3FrontEnd+0x44`.
-- Gameplay `renderCam` at CoopPeer2 is live while the window shows the FE farm; forcing other cam slots in the same object to peer xyz did not change BitBlt. **Do not poke `depth=0` by hand** — still kills the client (`ag→0`).
+- Gameplay `renderCam` at CoopPeer2 is live while the window shows the FE farm; forcing other cam slots in the same object to peer xyz did not change BitBlt. **Do not poke `depth=0` by hand** - still kills the client (`ag→0`).
 - `bitblt_pid.py` now prefers the hwnd titled `StateOfDecay` (crash-dialog / `DIEmWin` otherwise steal the capture).
 - Leave-title can leave `depth=1`/`fe=1` if pop does not stick; a clean session still reaches `depth=0`/`fe=0` via `client_leave_title.py`. Live PIDs: `local/last_pids.txt`.
 - `client_leave_title.py` now runs `flash_destroy_all.py` instead of only `fe_destroy_movie.py`. Element `[2]` sometimes survives one pass (movie reloads); a second destroy with `LoadMovie` stubbed clears it.
-- Console `gfx_draw 0` / `sys_flash 0` via working `ExecuteString` (callee cleans args — do **not** `add esp,0x14`) left the client alive but **logos still BitBlt**. So the remaining composite is not gated by those cvars (or draws as FE level meshes / `FrontEnd.gfx` outside FlashUI). Wrong stack cleanup on `ExecuteString` kills the client.
-- **BitBlt is a weak oracle:** writing `renderCam` (`+0x1394` / mirrors) to a totally different xyz did **not** change BitBlt pixels while the memory values stuck — GDI BitBlt is likely not the live D3D swap chain (DWM cache / last GDI frame). Prefer engine capture or host-side observation of CoopPeer2.
+- Console `gfx_draw 0` / `sys_flash 0` via working `ExecuteString` (callee cleans args - do **not** `add esp,0x14`) left the client alive but **logos still BitBlt**. So the remaining composite is not gated by those cvars (or draws as FE level meshes / `FrontEnd.gfx` outside FlashUI). Wrong stack cleanup on `ExecuteString` kills the client.
+- **BitBlt is a weak oracle:** writing `renderCam` (`+0x1394` / mirrors) to a totally different xyz did **not** change BitBlt pixels while the memory values stuck - GDI BitBlt is likely not the live D3D swap chain (DWM cache / last GDI frame). Prefer engine capture or host-side observation of CoopPeer2.
 - **`e_ScreenShot` is server-controlled** on the joining client (host resets it; log shows `Server controlled CVar: e_ScreenShot`). Run screenshots on the host, or find a client-local capture path.
 - FE UIElement XML for `Class3FrontEnd` lists `Class3_FrontEnd.gfx` on **layer 2**, functions `Setup3DElements` / `HideMainMenu` / `OpenFrontend` / `ShowDLCSelect`, and `cry_onSetup`. Logos may be **Setup3DElements** world billboards that outlive `+0x44` destroy.
-- Game code at **`0x0161BA00`** (menu entry idx 3 slot0) contains `push HideMainMenu` + call through **`[caller_ebp+0xF4]`** (Invoke) on the Class3FrontEnd element, then touches Journal. Calling `0x161BA00` alone from inject **sets `fe=1` again** and can reload Flash movies — treat as menu-enter, not a safe hide. Related toggle helper **`0x0161B6B0`** flips byte **`0x0197327C`** and plays `sounds/ui:ui_main_menu:*`.
+- Game code at **`0x0161BA00`** (menu entry idx 3 slot0) contains `push HideMainMenu` + call through **`[caller_ebp+0xF4]`** (Invoke) on the Class3FrontEnd element, then touches Journal. Calling `0x161BA00` alone from inject **sets `fe=1` again** and can reload Flash movies - treat as menu-enter, not a safe hide. Related toggle helper **`0x0161B6B0`** flips byte **`0x0197327C`** and plays `sounds/ui:ui_main_menu:*`.
 - `local/console_exec.py` for safe main-thread console commands.
 
-### Follow-up — HideMainMenu Invoke clears logo composite (2026-10-21)
+### Follow-up - HideMainMenu Invoke clears logo composite (2026-10-21)
 
 - Element **Invoke = vt+0xF4 (`0x6E37D0`)**, stdcall 3 args `(name, SUIArguments*, 0)`. Backend vt+0xF0 auto-`LoadMovie(1)` when `+0x44==0`. Helper: `local/hide_main_menu.py` (default `HideMainMenu` then `FadeOutPressStart`). SUIArguments ctor/dtor `0x5CD0A0` / `0x5C7590`.
 - Do **not** call `0x161BA00` (menu-enter). Safe path: leave-title → Invoke → `flash_destroy_all` again. Wired into `client_leave_title.py` steps 4–5.
-- **Oracle:** `PrintWindow(..., PW_RENDERFULLCONTENT)` — count 40×40 near-white blocks. Logo FE (`c-world.bmp`) ≈28/228; after HideMainMenu+FadeOut+destroy ≈**0/228**. BitBlt alone remains unreliable. No FE-named entities near cam; logos were Setup3D/AS-driven, not leftover `+0x44` movies.
-- EntitySystem is **`gEnv+0x38`** (query-by-name returns null). Entity map vector at `ES+0x68..+0x6c`; `GetEntity` = vt[10] (`0xBA0FB0`). Entity world pos ≈`+0xDC`; name often inline/`+0xB0`. **Do not** probe random ES vtable slots with a lone EntityId — stack-corrupt / kill client (lost prior session; recovered via `session_join_leave.py`).
+- **Oracle:** `PrintWindow(..., PW_RENDERFULLCONTENT)` - count 40×40 near-white blocks. Logo FE (`c-world.bmp`) ≈28/228; after HideMainMenu+FadeOut+destroy ≈**0/228**. BitBlt alone remains unreliable. No FE-named entities near cam; logos were Setup3D/AS-driven, not leftover `+0x44` movies.
+- EntitySystem is **`gEnv+0x38`** (query-by-name returns null). Entity map vector at `ES+0x68..+0x6c`; `GetEntity` = vt[10] (`0xBA0FB0`). Entity world pos ≈`+0xDC`; name often inline/`+0xB0`. **Do not** probe random ES vtable slots with a lone EntityId - stack-corrupt / kill client (lost prior session; recovered via `session_join_leave.py`).
 - Live session after recover: host/client in `local/last_pids.txt`. `seed_cpi_pose.py --patch` + `enable_actionmap.py player` re-applied. `GO+0x57=0x0D`, `CPI+0x28=0x1C` stick; **keybd_event / PostMessage WASD still do not move** eid `0xFE5F` (Dude / CoopPeer2).
-- `CPlayerInput` MI vts `0x191C9D4` / `+4 0x191C9C4` / `+8 0x191C98C`. **Primary vt[5]=`0x164DBC0` is the static “SetState called: should never happen” stub** (push log + `ret 4`) — not a corrupted slot. Keyboard path is ActionMap→OnAction, not SetState; the log fires when something wrongly calls SetState on this CPI. `seed_cpi_pose` hooks **vt[6] Update** (`0x164D580` → cave).
+- `CPlayerInput` MI vts `0x191C9D4` / `+4 0x191C9C4` / `+8 0x191C98C`. **Primary vt[5]=`0x164DBC0` is the static “SetState called: should never happen” stub** (push log + `ret 4`) - not a corrupted slot. Keyboard path is ActionMap→OnAction, not SetState; the log fires when something wrongly calls SetState on this CPI. `seed_cpi_pose` hooks **vt[6] Update** (`0x164D580` → cave).
 - **Two ActionMap managers:** `gEnv+0x20` (vt `0x185CA20`, used by `enable_actionmap.py` / `EnableActionMap` at `0x1098570`) is **not** the one game code uses for filters. Real manager: `gEnv+4` → `vt+0x38()` → `vt+0x70()` → AMM vt `0x17D5500`; **`EnableFilter` = vt+0x68 (`0x78A480`, ret 8)**. Game toggles `no_move`+`no_mouse` together at `0x013D2BC0`. Helper: `local/enable_filter.py`. Wired into `client_leave_title` after HideMainMenu.
 - After filter clear + player map enable + CPI flags, **keybd/SendInput still do not move** eid `0xFE5F`. Host gameAMM also has filter-index-ish `+0x7C=-1`. Possession / local-actor binding (not just filters) is still the blocker.
 
-### Follow-up — possess dig (2026-10-21, continued)
+### Follow-up - possess dig (2026-10-21, continued)
 
-- **BecomeLocalPlayer already applied:** both host Dude and client CoopPeer2 have `IGO+0x18 = CPlayerExt+0x14`. Event-8 BLP tail is a “not yet local” path — it will not re-run.
-- **gameAMM `vt+0x30(name, listener)`** = SetActionListener (ret 8). With `listener=CPI` it refcounts `CPI+4` and returns `CPI+4`. Helper: `local/set_action_listener.py` (aborts if main-thread EIP is outside the game module — see crash dialog below).
+- **BecomeLocalPlayer already applied:** both host Dude and client CoopPeer2 have `IGO+0x18 = CPlayerExt+0x14`. Event-8 BLP tail is a “not yet local” path - it will not re-run.
+- **gameAMM `vt+0x30(name, listener)`** = SetActionListener (ret 8). With `listener=CPI` it refcounts `CPI+4` and returns `CPI+4`. Helper: `local/set_action_listener.py` (aborts if main-thread EIP is outside the game module - see crash dialog below).
 - **Only live `CActionMap` (vt `0x192248C`) in either process is `muscle_car_variant_shiny`.** No `player`-named map object. `enable_actionmap.py` hits `gEnv+0x20` AMM; movement bindings are not that singleton.
-- **`CPlayerInput::OnAction` body `0x164F890`** (ret `0xC`; mid vt[1] adjustor). Needs a real ActionId (CCryName), not a raw `"moveforward"` string — naive calls return safely with no pose delta.
+- **`CPlayerInput::OnAction` body `0x164F890`** (ret `0xC`; mid vt[1] adjustor). Needs a real ActionId (CCryName), not a raw `"moveforward"` string - naive calls return safely with no pose delta.
 - **`CPlayer::Update` = vt+0x3C (`0x1575E80`).** Host: ~300+ calls/s. Client CoopPeer2: **0** while hung.
 - **Player list:** host `LIST[0]` = local Dude; client `LIST[0]` = ch=1 remote, CoopPeer2 often last. CPI `Update` is not invoked for the peer unless something calls it (manual inject fills xyz from seeded `view+0x304`).
-- **Leave-title:** first `menu_pop` can leave `depth=1`; second destroy+dismiss+pop reaches `depth=0` with `ag` live. After `HideMainMenu`, FlashUI query can fail — `client_leave_title.py` now continues.
+- **Leave-title:** first `menu_pop` can leave `depth=1`; second destroy+dismiss+pop reaches `depth=0` with `ag` live. After `HideMainMenu`, FlashUI query can fail - `client_leave_title.py` now continues.
 - **Critical hang:** client `#32770` title **`Crash Dump Error!`** leaves main thread in `win32u` (`Responding=False`). Game Update never runs → WASD impossible until restart. Avoid injects while EIP is outside `0x00400000–0x02000000`. Dump: AV in `ntdll` (`0x77091432`); dialog close kills the process.
 - **Leave-title crash source:** `flash_destroy_all` / pop path often raises Crash Dump Error. **`fe_dismiss` alone is safe:** `depth=1` `fe=0` `ag` live, **no dialog**, `CPlayer::Update` ~6k calls/s, `seed_cpi_pose --patch` fills CPI xyz, `set_action_listener` returns `CPI+4` and client stays `Responding=True`. Pop alone does not drop depth (stays 1, may set `fe=1`). Prefer dismiss-only for input work until destroy is fixed.
 - Live PIDs after dismiss-only session: see `local/last_pids.txt`. WASD still no pose delta after listener+filters+seed at depth 1.
-- Hooked `OnAction` (`0x164F890`): **0 calls** during WASD `keybd_event` while listener is bound and Update is live. Same on **host** (pos unchanged, OnAction cnt 0) — game ignores synthetic `keybd_event` (DirectInput/raw path). Not a useful WASD oracle.
+- Hooked `OnAction` (`0x164F890`): **0 calls** during WASD `keybd_event` while listener is bound and Update is live. Same on **host** (pos unchanged, OnAction cnt 0) - game ignores synthetic `keybd_event` (DirectInput/raw path). Not a useful WASD oracle.
 - `client_leave_title.py --dismiss-only` for the safe path (dismiss + filters + env EnableActionMap).
 - Helpers: `local/set_action_listener.py`.
 - **IInput** ≈ `gEnv+0x14` (vt `0x182DCC8`, near DirectInput strings). `+0x8/+0x10` look like paired buffers but are not a plain DIK[256] map (writing `DIK_W=0x80` stuck, no move / no OnAction).
 
-### Follow-up — ActionId OnAction + FE input gate (2026-10-21)
+### Follow-up - ActionId OnAction + FE input gate (2026-10-21)
 
 - **Join AV** at `0x79140C` (`test [esi+0x5C],2` with `esi==0` from list node `+0x0C`). Dump `StateOfDecay_*_15-34-02.dmp`. Patched in `local/patch_client.py` as **join null list payload esi** (skip to `0x79147A`).
 - **Host New Game** often sticks at `depth=3` idx=5 (handler `0x161DA20` list UI) and never issues `map`. Workaround: after `force_map_server`, `console_exec.py <pid> "map class3 server"` → listen + Dude + UDP. Prefer fixing the depth-3 confirm path later.
 - **Join wait must require fresh `CoopPeer2`** (not stale `OnClientConnect channel=1` / old log lines). Use a log marker or `after_size` + `CoopPeer2` only.
 - **ActionId**: `gEnv+0x58` → `vt+4(const char*)` returns NameEntry*; **ActionId value = entry+0xC** (string). `moveforward` lives at GF ActionId table `+0x8` (same handle). Helper: `local/inject_onaction.py`.
-- **`CPlayerInput::OnAction` (`0x164F890`)** is gated by **`0x146EF10`**: if it returns 1, OnAction zeroes move floats and returns without dispatch. Gate reads **`[0x1EA7FFC]`** (`test eax, 0xC01A00` — client/host often have bit **`0x800`** set while FE depth≥1) plus bytes `0x1EA70D9` / `0x1EA710A`. Patch gate → `xor eax,eax; ret` (or clear `0x800`) and OnAction(`moveforward`, mode=4 hold, value=1.0) sets **`CPI+0x30 = 1.0`**.
-- With gate clear + `CPI+0x30=1.0` sticky, **entity `+0x24` xyz still does not change** on client CoopPeer2 or host’s ch=2 peer (**console-map session**). Console `map class3 server` leaves FE up, Dude falls through world (Z→−20k), and **`CPlayer::Update` (`0x1575E80`) never runs** — OnAction floats are inert there.
+- **`CPlayerInput::OnAction` (`0x164F890`)** is gated by **`0x146EF10`**: if it returns 1, OnAction zeroes move floats and returns without dispatch. Gate reads **`[0x1EA7FFC]`** (`test eax, 0xC01A00` - client/host often have bit **`0x800`** set while FE depth≥1) plus bytes `0x1EA70D9` / `0x1EA710A`. Patch gate → `xor eax,eax; ret` (or clear `0x800`) and OnAction(`moveforward`, mode=4 hold, value=1.0) sets **`CPI+0x30 = 1.0`**.
+- With gate clear + `CPI+0x30=1.0` sticky, **entity `+0x24` xyz still does not change** on client CoopPeer2 or host’s ch=2 peer (**console-map session**). Console `map class3 server` leaves FE up, Dude falls through world (Z→−20k), and **`CPlayer::Update` (`0x1575E80`) never runs** - OnAction floats are inert there.
 - **`CPlayerInput::Update` (`0x164D580`, vt+0x18) is never called for CoopPeer2** (private-vt call counter = 0 over 4s). Callers: `0x1574C89` (HandleEvent path) and player-list loop `0x156C582` inside `0x156C4A0`. **Do not** call Update with a zeroed ctx (hung/killed client).
 - Live helpers: `inject_onaction.py <pid> moveforward --hold --patch-gate`. `local/call_player_list_update.py` forces `0x156C4A0`.
 
-### Follow-up — New Game host: OnAction moves local Dude (2026-10-21)
+### Follow-up - New Game host: OnAction moves local Dude (2026-10-21)
 
 - **Do not use console `map class3 server` for input work.** Use `host_boot_coop.py` (`force_map_server` + `boot_to_gameplay`). New Game briefly hits depth=3 then settles at **depth=0**, UDP listen, Dude grounded, **`CPlayer::Update` ~150–270/0.5s**.
 - On that host, gate-patched `OnAction(moveforward, hold, 1.0)` sets `CPI+0x30=1.0` / `+0xd4=1.0` and **Dude entity `+0x24` moves** (~10 m over 3 s). First confirmed pose delta from injected ActionId.
 - **`session_join_leave.py`** now boots via `host_boot_coop` (not console map). Leave defaults to `fe_dismiss` only.
-- **Join without `fe_dismiss` stays healthy** (both titles `StateOfDecay`). **`fe_dismiss` after join often raises client `Crash Dump Error!`** and parks main thread in win32u — revisit; prior “dismiss-only is safe” note is **not** reliable on this boot path.
-- **`OnAction` on host CoopPeer2 CPI** (ch=2) hung/failed (`mark` stayed `DEAD`) and raised host Crash Dump — do not call OnAction on remote peer CPI until gated. Peer often spawns at default `(1345,3442,117)` while Dude is elsewhere after New Game.
+- **Join without `fe_dismiss` stays healthy** (both titles `StateOfDecay`). **`fe_dismiss` after join often raises client `Crash Dump Error!`** and parks main thread in win32u - revisit; prior “dismiss-only is safe” note is **not** reliable on this boot path.
+- **`OnAction` on host CoopPeer2 CPI** (ch=2) hung/failed (`mark` stayed `DEAD`) and raised host Crash Dump - do not call OnAction on remote peer CPI until gated. Peer often spawns at default `(1345,3442,117)` while Dude is elsewhere after New Game.
 - Trampolines: steal **full** instructions (e.g. 6-byte `sub esp,imm32` via `FF 25` abs jmp). A 5-byte `E9` over a 6-byte insn corrupts `CPlayer::Update`.
 
-### Follow-up — client peer Update live; authority gap (2026-10-21)
+### Follow-up - client peer Update live; authority gap (2026-10-21)
 
 - After clean `host_boot_coop` + join (**no** `fe_dismiss`), client often already has `fe=0` at depth=1, stays `StateOfDecay`, and **`CPlayer::Update` ~6k/s total / ~300+/s with `ecx==CoopPeer2`**.
-- Client CoopPeer2 CPI vt = **`0x191C9D4`** (real `CPlayerInput`). Host’s ch=2 CPI vt = **`0x1920D08`** (remote/net input). Remote slot `+0x10` at `0x14D0470` is **`ret 0xC`** stub — never call Dude `OnAction` (`0x164F890`) on host peer CPI (Crash Dump).
-- Client `OnAction(moveforward)` + sticky `+0x30/+0xd4` with Update live: **no entity `+0x24` delta** (host peer also unchanged). Local host Dude *does* move from the same inject when the session is healthy — client peer is not movement authority.
+- Client CoopPeer2 CPI vt = **`0x191C9D4`** (real `CPlayerInput`). Host’s ch=2 CPI vt = **`0x1920D08`** (remote/net input). Remote slot `+0x10` at `0x14D0470` is **`ret 0xC`** stub - never call Dude `OnAction` (`0x164F890`) on host peer CPI (Crash Dump).
+- Client `OnAction(moveforward)` + sticky `+0x30/+0xd4` with Update live: **no entity `+0x24` delta** (host peer also unchanged). Local host Dude *does* move from the same inject when the session is healthy - client peer is not movement authority.
 - Raw `entity+0x24` writes on host peer snap back within 1s (net/physics). `wait_join` must use **fresh log bytes after `after_size`** and confirm **client `ag != 0`** (stale `CoopPeer2` lines false-positive).
 
-### Follow-up — host remote CPI pose drive (2026-10-21)
+### Follow-up - host remote CPI pose drive (2026-10-21)
 
 - Host CoopPeer2 movement authority is the **remote CPI** (`vt 0x1920D08`): writing world xyz into **`CPI+0x3C` and `CPI+0x58`** (both triplets) updates `entity+0x24` and sticks. Helpers: `local/drive_remote_peer.py`, `local/bridge_peer_move.py`.
 - Confirmed: `--to-dude` / `--nudge` teleports host peer next to Dude; bridging client `CPI+0x30` (from `inject_onaction`) → host remote pose steps moved host peer **~15 m** while both stayed `StateOfDecay`.
 - Client `entity+0x24` is overwritten by net each tick (snaps to spawn). **High-rate rewrite of `+0x24` + cam holds** for the duration of the sync loop; `+0xDC` sticks even after. Helper: `local/sync_peer_view.py` (now writes both). Same in `wasd_bridge.py` / `bridge_peer_move.py`.
-- Entity vt+0x74 (`0xBC72F0`) is **not** a usable SetPos for peers (returns ok, no `+0x24` change) and **raised Crash Dump** once — do not call.
+- Entity vt+0x74 (`0xBC72F0`) is **not** a usable SetPos for peers (returns ok, no `+0x24` change) and **raised Crash Dump** once - do not call.
 - GetPos-like stubs: vt+0x60 / +0x70 → `lea eax,[ecx+0x24]; ret`.
 - Working control loop: `drive_remote_peer.py --to-dude` then `wasd_bridge.py <host> <client> --cam [--demo]`. Keep a sync loop running or cam/`+0x24` revert. Physical WASD needs real keys (`GetAsyncKeyState`); `--demo` for unattended tests.
-- After client Crash Dump, host often stops accepting new joins — **full `session_join_leave` reboot** rather than reconnect-only.
+- After client Crash Dump, host often stops accepting new joins - **full `session_join_leave` reboot** rather than reconnect-only.
 
-### Follow-up — net sync asymmetry (2026-10-21)
+### Follow-up - net sync asymmetry (2026-10-21)
 
 - **Host Dude → client Dude(1) position sync works** (same xyz). Proves the listen/join pipe replicates the local player.
 - **Host CoopPeer2 pose pokes do not reach client CoopPeer2** (`+0x24` stays spawn). Extra host mirrors at remote CPI `+0x94` and `player+0xBB8` also fail to replicate.
@@ -640,34 +640,34 @@ Test copies under the gitignored `local/` folder; the Steam install was not modi
 - Client CoopPeer2 `+0x24` force-reset every tick (Dude flag copy does not help). **Continuous client overwrite** of `+0x24`/`+0xDC`/cam remains the view fix; host motion stays on remote CPI (`drive_remote_peer` / `wasd_bridge` / `sync_peer_view`).
 - Live: see `local/last_pids.txt`. Avoid entity vt+0x74 inject (Crash Dump).
 
-### Follow-up — channel authority + AG+0x28 create (2026-10-21)
+### Follow-up - channel authority + AG+0x28 create (2026-10-21)
 
 - **Authority is flipped per channel (expected CryEngine):**
   - ch=1 Dude: host CPI vt `0x191C9D4` (local), client vt `0x1920D08` (remote) → host→client sync works.
   - ch=2 CoopPeer2: host CPI vt `0x1920D08` (remote), client vt `0x191C9D4` (local) → **client owns motion**; host remote CPI pokes move **host only** and will not appear on the owning client.
-- Confirmed live: host `--to-dude` moves host peer; client ch=2 stays at spawn. Client entity/`CPI+0x3C` pokes snap back; `inject_onaction` sets client `CPI+0x30=1.0` but entity does not walk. Forced `CPlayerInput::Update` (`0x156C4A0`) spam did not move either (and once killed the client — avoid).
+- Confirmed live: host `--to-dude` moves host peer; client ch=2 stays at spawn. Client entity/`CPI+0x3C` pokes snap back; `inject_onaction` sets client `CPI+0x30=1.0` but entity does not walk. Forced `CPlayerInput::Update` (`0x156C4A0`) spam did not move either (and once killed the client - avoid).
 - `GO+0x14` is set on **local** players only (host Dude, client ch=2); null on remotes. `GO+0x58=0xff` on both sides after join (bind flag looks set despite log spam).
 - **How host creates `AG+0x28`:** AG method table slot `0x017C8BC8` → `0x6EE330` (string near path: `[Host Migration]: CActionGame::OnPromote`). Flow: alloc `0x58` via `0x404100`, ctor `0x72FB00` writes vt `0x017CDB50`, `mov [AG+0x28], eax`, then `0x72E2A0`. Gated by `g=*(0x019EF9AC)` → `vt+0x1F0` (`0x666980`). Clearer at `0x6EA560` (`mov [AG+0x28],0`).
 - Bind map getter `0x668380`: `return AG ? AG+0x28 : 0`. Null → Bind takes alt path straight into `Unable to bind` (`0x7908C9`).
-- **Do not** raw-alloc + ctor the game nub on the client the same way — crashed the client process. Need a client-safe registration/bind path, or fix local ch=2 locomotion so outbound aspects can flow client→host.
+- **Do not** raw-alloc + ctor the game nub on the client the same way - crashed the client process. Need a client-safe registration/bind path, or fix local ch=2 locomotion so outbound aspects can flow client→host.
 - Visual stopgap unchanged: `drive_remote_peer` (host) + `sync_peer_view` / `wasd_bridge --cam` (client `+0x24`/`+0xDC`/cam).
-- Join-only client stays **depth=1**; host is depth=0. `client_leave_title --dismiss-only` on a freshly joined client still ended **ag=0 / process dead** this session (after prior seed/OnAction patches) — keep skipping dismiss in `session_join_leave`.
+- Join-only client stays **depth=1**; host is depth=0. `client_leave_title --dismiss-only` on a freshly joined client still ended **ag=0 / process dead** this session (after prior seed/OnAction patches) - keep skipping dismiss in `session_join_leave`.
 - Host peer pose from remote CPI is **temporary**: without continuous writes it returns to spawn (client authority re-asserts spawn). Client `+0xDC` can be held at a target but `+0x24` and host peer do not follow.
 - Clearing `no_move` / `no_mouse` / cutscene filters + `EnableActionMap player` + OnAction still leaves ch=2 at spawn (`CPI+0x30=1.0`). Filters alone are not the locomotion gate.
 - Do **not** fire the current `inject_onaction` stub at host Dude (ch=1): one attempt zeroed Dude and killed the host process.
 - Local-player memory gaps on client ch=2 vs host Dude: `pl+0x57` is `0` vs `0x0D`; `CPI+0x28` is `0` vs `0x1C`; `CPI+0x0C` pose is `0,0,0` vs live xyz. Seeding those + calling `CPlayer` vt+0x54 (`0x156E1C0`, calls `CPlayerInput::Update`) still does not move the entity.
 - `CPlayer` “Update” body at `0x156FDF0` early-outs if `player+0x0C` (entity) is null; both sides have an entity. CPI Update call site is from vt+0x54, not from that Update body directly.
-- Game-nub bind table (used by `0x72E410` → `0x66BA80`): not a std::map — list/tree under `AG+0x28` with `gn+8` head, node key at `+0x0C`, value at `+0x10`. Host has `gn+0xC=2` entries. Client has no table (`AG+0x28=0`) → `Unable to bind` for Dude and CoopPeer2. Receive path for Dude(1) still works without client bind.
+- Game-nub bind table (used by `0x72E410` → `0x66BA80`): not a std::map - list/tree under `AG+0x28` with `gn+8` head, node key at `+0x0C`, value at `+0x10`. Host has `gn+0xC=2` entries. Client has no table (`AG+0x28=0`) → `Unable to bind` for Dude and CoopPeer2. Receive path for Dude(1) still works without client bind.
 - After `drive_remote_peer --to-dude`, host peer can **stay** near Dude for a while (client not actively correcting); `sync_peer_view` still needed for client `+0xDC`/cam. Live: `local/last_pids.txt`.
 
 ### Next
 
-- Make **client-owned** ch=2 actually walk (OnAction → physics) **while still depth=1**, or find a non-dismiss depth→0 path that does not Crash Dump — then confirm host remote peer follows via net.
-- Client-safe game-nub: alloc + minimal list + insert local ch=2 key/value, then `BindToNetwork` — **without** running full `0x72FB00` ctor (that crashed once). A bare `VirtualAlloc` shell (`vt=0x17CDB50`, empty sentinel at `gn+8`) can be installed at `AG+0x28` without an immediate crash; Bind was not completed because the client main thread was parked in ntdll (`EIP>=0x70000000`) and hijacking that state killed the process — only inject when `EIP` is in the game image.
+- Make **client-owned** ch=2 actually walk (OnAction → physics) **while still depth=1**, or find a non-dismiss depth→0 path that does not Crash Dump - then confirm host remote peer follows via net.
+- Client-safe game-nub: alloc + minimal list + insert local ch=2 key/value, then `BindToNetwork` - **without** running full `0x72FB00` ctor (that crashed once). A bare `VirtualAlloc` shell (`vt=0x17CDB50`, empty sentinel at `gn+8`) can be installed at `AG+0x28` without an immediate crash; Bind was not completed because the client main thread was parked in ntdll (`EIP>=0x70000000`) and hijacking that state killed the process - only inject when `EIP` is in the game image.
 - Keep avoiding `fe_dismiss` on join-only clients.
 
 
-## Phase 3p — Joining player walks, input replicates client→host (2026-10-21, Claude Code)
+## Phase 3p - Joining player walks, input replicates client→host (2026-10-21, Claude Code)
 
 New tooling in `local/sodlib.py` (gitignored, described here so it can be rebuilt):
 
@@ -680,7 +680,7 @@ New tooling in `local/sodlib.py` (gitignored, described here so it can be rebuil
 - Authority is already delegated correctly. `CGameContext::SynchObject` (`0x76E790`) on the host serializes only objects the host owns (host Dude, 4 survivors, rules); the client serializes only its ch=2 player, input aspect `0x4000`, ~10 Hz (change polling). Built-in `test_delegate <entityName> <channel>` exists (`0x668890`). The ch=2 entity is named `Dude(1)` on both sides (log: `CoopPeer2$o renamed to Dude(1)`), so `test_delegate CoopPeer2 2` finds nothing.
 - `CPlayer::NetSerialize` = `0x1574A30`; input aspect branch calls `CPlayerInput::GetState` (vt[6] `0x164D580`) when writing and `SetState` (vt[5]) when reading. Host `CNetPlayerInput::SetState` = `0x169E740`. `GetState` serializes the *physics velocity* of the player when `[0x1E75B74]+0x260 != 0` (it is 1), so nothing changes upstream unless the client player actually moves locally.
 - UL world state `[0x1E81F20]`: host **2** (playing), client **3** (front-end idle). Switch at `0x145ED60` (jump table `0x145EE48`): 2 → `0x1449720` then UL world tick `0x145E040` (community sim, UI, all state machines); 3 → `0x145B080`; 4/5 → loading→playing transition `0x145B100` (calls FE teardown `0x16171F0`, sets state 2). `0x1449AD0(teleport, fade)` enters loading (state 4/5). `NSRTSWorld::OnStartGame` = `0x145F730`.
-- Calling `0x1449AD0(0,0)` on the joined client takes it 3→4→2 within ~1 s: depth 0, fe 0, UI flags 0, no exit. The world tick then runs on the client, but ~1 min later the client crashed (AV `0x161226E`, UI queue arrays `0x1EE7F5C/60`) — `OnStartGame` never initialised that state. **Not used** in the working recipe below.
+- Calling `0x1449AD0(0,0)` on the joined client takes it 3→4→2 within ~1 s: depth 0, fe 0, UI flags 0, no exit. The world tick then runs on the client, but ~1 min later the client crashed (AV `0x161226E`, UI queue arrays `0x1EE7F5C/60`) - `OnStartGame` never initialised that state. **Not used** in the working recipe below.
 - UI gate `0x146EF10` (`[0x1EA7FFC]` bit `0x800` = "a menu is open") has only two callers: `CPlayerInput::OnAction` (`0x164FA82`) and `0x16B4B05`. Clearing bit `0x800` by hand makes the client push the pause menu (depth 1→2); a few seconds later a Flash menu event reached `FrontEndEventListener` (`0x16189A0`) and the client called `ExitProcess` (caught by the exit trap; stack through `NSUIMFrontend::MenuStackPush`). Patching the gate globally had the same effect. Patch only the OnAction call site.
 - `CPlayerInput::PreUpdate` (vt[1] `0x164E900`) copies `+0x2C..` → `+0x44..` unconditionally; with the OnAction call-site bypass the client's `+0x48`/`+0x94` follow the injected action.
 - Root cause of "client player does not walk": **the client's player entity has no character model.** `IEntity` vt+0x144 (`0xBC66F0`, `GetCharacter(slot)`) returns null for `Dude(1)` on both machines and for the remote `Dude` on the client; only the host's own `Dude` has `characters/male/human/story_characters/marcus_campbell.cdf`. Locomotion is animation-driven (`CAnimatedCharacter::UpdatePhysicalEntityMovement` `0x885E50`), so no character → no movement.
@@ -727,7 +727,7 @@ The hard-coded action-name addresses in the old `inject_onaction.py` were wrong:
 - Called physics-entity vtable slots 0 and 2 blind, assuming CryPhysics order (`GetType/AddRef/Release`). Slot 0 behaved like a deleting destructor; the host showed "CryEngine Error" and had to be restarted. Disassemble a slot before calling it.
 - `last_pids.txt` is written with CRLF; strip `\r` before passing pids to `taskkill`.
 
-## Phase 3q — Joining copy sees the world; joining player visible on the host (2026-10-21, Claude Code)
+## Phase 3q - Joining copy sees the world; joining player visible on the host (2026-10-21, Claude Code)
 
 ### Observations
 
@@ -756,7 +756,7 @@ The hard-coded action-name addresses in the old `inject_onaction.py` were wrong:
 - The client has no HUD (front-end update skipped; UL world tick not running), and the single-player systems (missions, community, inventory) are host-only.
 - Whether a real mouse/keyboard player on the client can do everything: sprint, crouch, attack, interact were not tested.
 
-## Phase 3r — Control feel, survivors and HUD on the joining copy (2026-10-21 late, Claude Code)
+## Phase 3r - Control feel, survivors and HUD on the joining copy (2026-10-21 late, Claude Code)
 
 After Phase 3q: turning was "tanky" (character followed the camera late, in steps), strafing played the walk-forward animation, and the joining player played random animations on the host.
 
@@ -778,7 +778,7 @@ After Phase 3q: turning was "tanky" (character followed the camera late, in step
 - The same scripts booted fine at 22:34.
 - Because of this, the Phase 3r changes were verified on the live 22:34 session one by one, **not** together on a fresh boot. `coop_setup.py` now applies all of them (not yet run end-to-end).
 
-## Phase 3s — Client HUD renders; boot made reliable; combined re-test (2026-10-22, Claude Code)
+## Phase 3s - Client HUD renders; boot made reliable; combined re-test (2026-10-22, Claude Code)
 
 ### Observations
 
@@ -806,7 +806,7 @@ After Phase 3q: turning was "tanky" (character followed the camera late, in step
 - Mission banner, item slot and minimap terrain on the client (host-side game state; needs networking).
 - `sync_models.py` and any mirroring must become network messages before two PCs can play.
 
-## Phase 3t — Held items visible; movement/animation sync (2026-10-22, Claude Code)
+## Phase 3t - Held items visible; movement/animation sync (2026-10-22, Claude Code)
 
 Observed: movement animations felt out of sync with WASD/camera on both machines, the joining player played random animations on the host, and held items (Marcus's weapon, the journal on Tab) were invisible.
 
@@ -814,7 +814,7 @@ Observed: movement animations felt out of sync with WASD/camera on both machines
 
 - **Held items.** Single-player host (`host_boot_safe.py --sp`): Tab puts the journal in Marcus's right hand (`right_item_attachment` holds a `CEntityAttachment`, vt `0x1811FD8`, bound to the journal entity; flags `+0xC4 = 0`). Listen-server host: the same attachment holds a static `notebook.cgf` (`CCGFAttachment`, vt `0x18072E0`) with flags `0x50000` = hidden in main pass, shadow only. The item code (`0x1554560` → `HideAttachment(1)` + `HideInShadow(0)`) does that when the owner is first-person.
 - `CPlayer` vt+0x128 `IsThirdPerson` (`0x1564400`): non-client actors → 1; the local player → byte `pl+0xC85`. Single-player: 1. Multiplayer: 0 for the host's own player **and** the client's own player (`gEnv+0x12D` `bMultiplayer` = 1 in both; `gEnv+0x12C` = `bServer`).
-- `CPlayer::SetThirdPerson(bool)` = `0x15717F0` (thiscall; notifies listeners at `pl+0xA88`). Calling it with 1 on both local players before items are drawn makes the host's journal bind as an entity attachment with flags 0 — visible, same as single-player. Clearing the flags by hand also showed it.
+- `CPlayer::SetThirdPerson(bool)` = `0x15717F0` (thiscall; notifies listeners at `pl+0xA88`). Calling it with 1 on both local players before items are drawn makes the host's journal bind as an entity attachment with flags 0 - visible, same as single-player. Clearing the flags by hand also showed it.
 - Side effect, wanted: idle turning now matches single-player (the body no longer chases the camera while standing; 0 yaw changes in `turn_probe.py`, both machines and SP).
 - `CItem::AttachToBack` (`0x154F030`) returns early when `bMultiplayer`; patching that out alone did not help (journal is a hand item).
 - **Remote copies snapping.** `move_probe.py` / `follow_probe.py`: the host's copy of the joining player periodically flipped up to ~170° for 3–4 frames during strafes (client body smooth). Source: `CNetPlayerInput` position interpolation (`0x169E9C0`, `+0x58` interpolated point, `+0x94` net target, flags `+0x90/+0x91`); each update can put the target beside the copy and SoD turns the body to its movement → `CAnimatedCharacter::UpdatePhysicalEntityMovement` → `CEntity::SetRotation` (`0xBC72F0`, quat at `entity+0x30`). `turn_clamp.py` hooks `SetRotation` and limits yaw change to N° per call for remote copies only.
@@ -829,10 +829,10 @@ Observed: movement animations felt out of sync with WASD/camera on both machines
 | Check | Result | Single-player reference |
 |---|---|---|
 | Host own player, strafe, max yaw step | 5.7° | 3.3–8.5° |
-| Client own player, strafe | 5.6° | — |
-| Host player seen on client | 11.9° | — |
-| Client player seen on host | 20.0° (2 clamped frames between samples; was 135–171°) | — |
-| Host copy vs client body, strafe | median 3.9° | — |
+| Client own player, strafe | 5.6° | - |
+| Host player seen on client | 11.9° | - |
+| Client player seen on host | 20.0° (2 clamped frames between samples; was 135–171°) | - |
+| Host copy vs client body, strafe | median 3.9° | - |
 | Walk 2 s | client 6.91 m, host copy 6.55 m | 7.4 m |
 | Host Tab → hand attachment | `CEntityAttachment`, flags 0 (journal visible) | same |
 
@@ -841,7 +841,7 @@ Observed: movement animations felt out of sync with WASD/camera on both machines
 - Inventory/journal/UL actions for the joining player, and their poses on the other machine (needs networking of UL state).
 - Not checked: whether the host player's weapon is drawn on the client when equipped.
 
-## Phase 3u — Client HUD over the game's own network (2026-10-22, Claude Code)
+## Phase 3u - Client HUD over the game's own network (2026-10-22, Claude Code)
 
 First use of real game network messages instead of reading the other process's memory directly. The loose
 `Game/scripts/gamerules/singleplayer.lua` (same file on host and client) now declares script RMIs on the
@@ -880,7 +880,7 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
 - Verified: the client minimap shows the host's icons (?, flag, home, survivors) and follows them as they change;
   clearing the cvar removes them; the periodic resend restores them.
 
-### Item slot — not fixed, and not a HUD problem
+### Item slot - not fixed, and not a HUD problem
 - The slot is `class3_stats` `ConsumableSet(count, icon)` (HUD ActionScript is extractable:
   `libs/ui/flashassets/scripts/class3hud/*.as` in `gamedata.pak`, LZX via `lzx/PakRead.exe --blob`).
   It is driven by widget `0x1977A80` (`+8` item, `+0x1C` count; refresh `0x163D900`), which reads UL's
@@ -896,7 +896,7 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
 - Host-only HUD still missing on the client: the radar's "Home Status" panel (`SetBaseStatus`) and the
   building-interior minimap.
 
-## Phase 3v — Joining player's actions (2026-10-22; client could only walk)
+## Phase 3v - Joining player's actions (2026-10-22; client could only walk)
 
 - Inputs arrive: `act_probe.py client lmb|<scancode>` logs `CPlayerInput::OnAction` (`0x164F890`). A left click gives
   `attack1`, `ul_melee_attack`, `ul_shoot`; Space gives `jump`/`jump_hold`. They are the same on the host.
@@ -913,7 +913,7 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
   so they don't damage host-simulated zombies. Next step: forward the UL action to the host (client → server RMI) and
   feed it into the host's state machine for `Dude(1)`.
 
-## Phase 3w — Journal mouse, actions on the host, prompts, journal data (2026-10-22 afternoon)
+## Phase 3w - Journal mouse, actions on the host, prompts, journal data (2026-10-22 afternoon)
 
 ### Boot fix: title carousel
 - Three joins in a row failed: the client got game-rules class "TeamRandomSoundVolume" and disconnected. The host had
@@ -922,14 +922,14 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
   before pressing Play. (A game-rules `Net.Expose` ServerMethods entry was blamed first and removed; it was not the
   cause, and it hasn't been retried.)
 
-### 3) Mouse "locked" in the journal — fixed
+### 3) Mouse "locked" in the journal - fixed
 - The client's OnAction UI-gate bypass (`0x164FA82`) made the player camera eat mouse input while the journal was open.
   Gate `0x146EF10`: blocks on `[0x1EA7FFC] & 0xD`, `& 0xC01A00`, byte `0x1EA70D9` (set while the journal is open, on
   both machines) or byte `0x1EA710A`. Once the title menu is popped the client's gate inputs are clear, so
   `coop_setup.py` restores the original call. Verified: walking still works (6.3 m in 4 s), journal mouse moves the
   cursor and a click switches pages, camera stays put (2.3° during open/close).
 
-### 1) Joining player's actions on the host — transport works, animation does not yet
+### 1) Joining player's actions on the host - transport works, animation does not yet
 - Client → host transport: chat message `"coop:<hex>"` via `g_gameRules.game:SendChatMessage(2, g_localActorId,
   NULL_ENTITY, ...)` (native RMI `SvRequestChatMessage`). Host hook on `CGameRules::SendChatMessage` (`0x15D10D0`,
   thiscall, `ret 0x10`) decodes and swallows them (`peer_input.py`).
@@ -944,7 +944,7 @@ them with `g_gameRules.otherClients:<Method>(hostChannel, ...)` (`local/hud_rela
 - Damage to host zombies from the client's local attack: untested (no zombies near the start; `zm_spawn N` spawned
   none in view).
 
-### 2) and 4) Journal data and interaction prompts — same root cause, not fixed
+### 2) and 4) Journal data and interaction prompts - same root cause, not fixed
 - Host prompt: `Class3HUDCenterPrompts.ShowUseButton` every frame via `0x1478720`, which checks UL item/character
   handles (`0x14A5A20`, `0x14A5AE0`) and the backpack (`0x14B0420`).
 - The journal character page, the item slot and the prompts all read UL's character table `[0x1EA83B8]`

@@ -76,6 +76,20 @@ gives both a scriptable test stand-in (UDP over localhost, no second account, tw
 one PC) and the real Steam path from the same code. Evidence: Poppy Playtime,
 [games/poppy-playtime/NOTES.md](../games/poppy-playtime/NOTES.md) (Phase 6).
 
+### A game with its own old Steamworks: use ISteamNetworking
+
+A game that is already on Steam under its own app id doesn't need Spacewar, but its
+Steamworks may be too old for `ISteamNetworkingMessages` or `SteamNetworkingSockets`.
+Cuphead (Unity 2017.4) ships a Steamworks.NET in `Assembly-CSharp-firstpass.dll` and a
+`steam_api64.dll` that have neither. Replacing them means shipping game files. The old
+P2P API they do have is enough: `ISteamNetworking.SendP2PPacket` with reliable and
+unreliable send types, `AcceptP2PSessionWithUser` on `P2PSessionRequest_t`, and
+`AllowP2PPacketRelay(true)` so Steam falls back to Valve's relay when there's no direct
+route. Lobbies and invites work as above, under the game's own app id. Valve marks this
+API deprecated but it still works. The same-account limit still applies, so the lab
+needs a second transport: the CupHeads fork carries the same packets over TCP on
+localhost ([games/cuphead](../games/cuphead/README.md)).
+
 ## Design: no SDK headers, dynamic loading only
 
 `LoadLibrary("steam_api.dll")`, then `GetProcAddress` for each **flat C API**
@@ -277,6 +291,38 @@ the mock and 300 for its transport.
   late compatibility hello locked the mod's transport to the wrong channel. The
   other order would have hidden it. Where real Steam doesn't promise an order, add
   a switch for each order (we haven't added one yet).
+
+### Unity IL2CPP games: call steam_api64 flat, poll everything
+
+In an IL2CPP game the game's own Steamworks.NET is compiled to native code, and
+IL2CPP strips every method the game never calls, so the matchmaking and
+networking calls a mod needs are often missing from the interop assemblies.
+Harmony can't help either: there is no managed body to patch. Dave the Diver
+(Unity 6000.0, BepInEx 6 be.790) did it this way:
+
+- **Call the flat API yourself.** `[DllImport("steam_api64")]` on the
+  `SteamAPI_*` exports (`SteamAPI_SteamMatchmaking_v009`,
+  `SteamAPI_SteamNetworkingMessages_SteamAPI_v002` and so on). The game has
+  already run `SteamAPI_Init` with its real app id, so the interfaces work.
+  The DLL is in `<game>_Data\Plugins\x86_64`, outside the default search path:
+  set `NativeLibrary.SetDllImportResolver` to load it from there.
+- **No callbacks.** A plugin can't register `CCallback`s here. Poll instead:
+  `ISteamUtils::IsAPICallCompleted` and `GetAPICallResult` for lobby create and
+  join, `GetNumLobbyMembers` and `GetLobbyOwner` for membership, and
+  `GetFriendGamePlayed` to list friends who are hosting.
+- **Accept sessions by polling.** With no `SteamNetworkingMessagesSessionRequest_t`
+  callback, the host calls `AcceptSessionWithUser` every 0.5 s for each lobby
+  member it hasn't accepted yet. It accepts only members of its own lobby.
+- **Tune the send buffer for big transfers.** The default rate and buffer choked
+  on a save transfer: every unacked chunk was re-sent after 0.1 s, the relay
+  link clogged, and even keepalives stopped. A retransmit timeout from the
+  measured round trip, at most 32 chunks in flight, and a larger
+  `SetGlobalConfigValueInt32` send buffer and rate fixed it.
+- **Mock it in the mod, not the DLL.** One Steam account can't P2P to itself.
+  A lab switch (`-dtmp-steam-mock <slot>`) sends the same calls to an in-mod
+  stand-in: fake account `900000000 + slot`, lobbies as files in a folder both
+  lab copies share, and datagrams over localhost UDP. Like Steam, it holds a
+  peer's datagrams until `Accept` or until we have sent to that peer first.
 
 ## Reusing it for Deus Ex (Unreal Engine 1) co-op
 
