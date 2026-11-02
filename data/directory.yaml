@@ -3553,8 +3553,9 @@
     VrDummyPlayer prefab, animated with Ethan's motion bank (walk/jog/crouch in 4 directions, idle) and head
     look. Position, rotation, look direction and crouch/walk flags go over Steam relay
     (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
-    extrapolation. Local player cannot walk through the other player. No world sync yet; each player plays
-    their own world (no shared enemies, items, doors or story). Saving is blocked while the mod runs.
+    extrapolation. Local player cannot walk through the other player. Enemies are
+    shared (early); each runs in the nearest player's game and is copied in the other, with damage and deaths
+    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). A fatal hit downs a player until the other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
     Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
     two real players not tested together. Write-up in games/resident-evil-7.
   sources:
@@ -7063,10 +7064,10 @@
   players: "2-4"
   networking: direct-ip
   open_source: yes
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Version 0.2.7 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
+    split screen. Version 0.3.0 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
     player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
     display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
     releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
@@ -7075,13 +7076,14 @@
     powers, doors, breakable and movable objects and saves; each fire team follows its own player. The whole
     campaign runs in automated tests over a LAN between two PCs, every story split with a real host and client; a
     first human session over Steam (missions 1-8) was fixed up in 0.2.2, a full human playthrough is still to come.
-    MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
+    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees (the Bull's wind-up, second-weapon triggers, magazines), adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
     0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.0
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-10-23'
+  checked: '2026-11-01'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -7641,6 +7643,38 @@
   sources:
   - https://github.com/S1ii/Coop-Divers
   checked: '2026-10-19'
+- game: Dave the Diver
+  year: 2023
+  engine: Unity 6000.0 (IL2CPP)
+  project: Dave the Diver Multiplayer (Coop-Divers fork)
+  url: https://github.com/multiplayereverything/Dave-The-Divers-Coop
+  other_urls:
+  - https://github.com/S1ii/Coop-Divers
+  - https://www.multiplayereverything.com/#davethediver
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: 'yes'
+    items: partial
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Fork of S1ii's Coop-Divers (BepInEx 6 be.790, IL2CPP) with Steam online play (friends-only lobby plus
+    SteamNetworkingMessages through Valve's relay, called from steam_api64.dll directly) and LAN as the fallback, plus
+    fixes for Steam build 26209260. A two-copy lab suite (19 checks over LAN, the Steam path through a SteamMock, and
+    120 ms lag with 5% loss) passes, and every check has a mutant that must fail it. Diver HP, oxygen and weapons are
+    not synced and clients can't damage bosses. Releases are pre-releases (v0.19.3) until two Steam accounts have played
+    a full session. MIT. Write-up in games/dave-the-diver.
+  sources:
+  - https://github.com/multiplayereverything/Dave-The-Divers-Coop
+  - https://github.com/multiplayereverything/Dave-The-Divers-Coop/releases/tag/v0.19.3
+  checked: '2026-10-30'
+  made_with_coop_anything: true
 - game: Pacific Drive
   year: 2024
   engine: Unreal Engine 4
@@ -8595,6 +8629,7 @@
   - https://github.com/Blizzard/s2client-proto/blob/master/docs/protocol.md
   checked: '2026-10-23'
   made_with_coop_anything: true
+
 - game: Teenage Mutant Ninja Turtles (TMNT)
   year: 2007
   engine: Ubisoft Jade
@@ -8661,7 +8696,7 @@
   project: Gedonia Co-op
   url: https://github.com/Zerbith/gedonia-coop
   other_urls:
-  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.7.1
+  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.8.1
   kind: mod
   status: alpha
   coop_scope:
@@ -8675,7 +8710,7 @@
   open_source: 'yes'
   last_activity: 2026-10
   qa: automated
-  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one tester with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; shared combat XP; spell effects and transformations shown to others; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 35 scenarios, logged assertions and screenshots); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
+  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one tester with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; groups (combat XP and map markers per group); enemy scaling by group size near the enemy (host''s settings); trading as a two-phase commit with the host as coordinator; spell effects and transformations shown to others; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 38 scenarios, logged assertions and screenshots); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
   sources:
   - https://github.com/Zerbith/gedonia-coop
   - https://github.com/cranebeaker/coop-anything/issues/214
@@ -8812,6 +8847,7 @@
   project: MiSide Together
   url: https://github.com/multiplayereverything/miside-coop
   other_urls:
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5
   - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
   - https://github.com/cranebeaker/coop-anything/tree/main/games/miside
   kind: mod
@@ -8833,16 +8869,21 @@
     Interactions that put an item in the hand are done by the presser only; the rest play the same animation on
     every player's own character. Mita and NPCs are host-driven; chasers hunt each player locally, and a death
     restarts everyone at the checkpoint. Shared key inventory, seeded randomness, room objects, minigame end events,
-    the Scene 18 visual novel; host migration; joins wait for the next chapter. Not shared yet - the Scene 13-15
-    computers (folders, phone chat, the Scene 14 PC game) and the handheld Tetris. Steam P2P through the game's own
-    steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.2 release. The lab suite
-    drives 2-4 game copies on one PC (21 tours plus an every-chapter interaction run, 17 of 18 chapters);
-    Steam was tested with one account only. Source is public with no licence file yet.
+    the Scene 18 visual novel; host migration; joins wait for the next chapter. The Scene 13/15 core computer and
+    the Scene 14 PC game are run by one operator and replayed on every copy; the Scene 14 phone character and the
+    Scene 1 phone app (dialogue, name, days, shop, cooking result, money) follow their holder or the host, and the
+    phone shows in the holder's hand for the others. The handheld Tetris is each player's own. Steam P2P through
+    the game's own steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.5
+    pre-release (v0.3.2 is the last full release). The lab suite drives 2-4 game copies on one PC (34 tours,
+    including all of Scene 1 played to Scene 2, plus an every-chapter interaction run, 18 of 18 chapters). The
+    author has played it with two friends (three players over Steam on separate PCs and accounts); their 19
+    reports fed the 0.3.5 fixes. Source is public with no licence file yet.
   sources:
   - https://github.com/multiplayereverything/miside-coop
   - https://github.com/multiplayereverything/miside-coop/blob/main/docs/SYNC.md
-  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
-  checked: '2026-10-27'
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5
+  checked: '2026-10-30'
+  made_with_coop_anything: true
 - game: "Spooky's Jump Scare Mansion: HD Renovation"
   year: 2017
   engine: Unity 2021.3 (Mono)
@@ -9618,6 +9659,512 @@
   - https://github.com/IntQuant/noita_entangled_worlds/releases/tag/v1.6.8
   - https://www.youtube.com/watch?v=mMP-93-RTs0
   checked: '2026-10-30'
+- game: 'Rick and Morty: Virtual Rick-ality'
+  year: 2017
+  engine: Unity 5.4 (Mono)
+  project: Rick and Morty Together
+  url: https://github.com/multiplayereverything/rick-and-morty-coop
+  other_urls:
+  - https://github.com/multiplayereverything/rick-and-morty-coop/releases/tag/v0.7.0
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/rick-and-morty-virtual-rick-ality
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-10
+  qa: automated
+  notes: BepInEx 5 plugin for the Steam VR build; two players, each a Morty-clone head and hands. The host's game is in
+    charge. Shared are grabbable items (host-granted ownership with epochs, hand-offs, throws), doors, levers, sliders,
+    buttons and pull cords, the story graph's events and stage, scene and mission-area changes, Rick's and Morty's lines
+    and animations (dice seeded the same), things the game makes or destroys, enemies (aim at the nearest player), and
+    the final boss. Each player dies and respawns on their own; only the host saves. Late joiners skip a scene's opening
+    lines. A flat-screen mode (`-vrmode None`, keyboard and mouse) can play with a headset player. Putting a part into
+    an attach point (the computer's RAM stick, crystal, fuse) stays on the player's own side in v0.7.0. Steam lobbies
+    and P2P through the game's own Steamworks, or LAN/direct TCP 27040. v0.7.0 pre-release. The lab runs two or three
+    minimized game copies without a headset through scripted tours (LAN, 120 ms lag, Steam lobby, all mission areas)
+    with error and desync checks, plus a mutation check per fix. Two Steam accounts and real headsets are not covered
+    by the lab. Source is public with no licence file yet.
+  sources:
+  - https://github.com/multiplayereverything/rick-and-morty-coop
+  - https://github.com/multiplayereverything/rick-and-morty-coop/releases/tag/v0.7.0
+  checked: '2026-10-30'
+  made_with_coop_anything: true
+- game: Persona 5 Royal
+  year: 2022
+  engine: Atlus in-house (GFD), closed native x64 binary with Denuvo
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found for the PC version (Steam 1.0.4.0). The game has no Remote Play Together on
+    Steam. A shared-screen prototype made with Co-op Anything (one game, each battle turn routed to the owning player's
+    XInput pad) works in an owner playtest but is not public yet; reverse-engineering findings (battle actor pointer
+    chains, input layer) are in games/persona-5-royal.
+  sources:
+  - https://shrinefox.com/blog/2022/10/22/modding-persona-5-royal-on-pc-switch/
+  - https://github.com/Sewer56/p5rpc.modloader
+  - https://store.steampowered.com/api/appdetails?appids=1687950&filters=categories
+  checked: '2026-10-30'
+  searched:
+  - 'WebSearch: Persona 5 Royal PC co-op multiplayer mod (2026-10-30, nothing found)'
+  - 'GitHub repository search: p5rpc, p5rpc battle, persona 5 royal reloaded (2026-10-30, no multiplayer project)'
+  - coop-anything directory, issues and PRs (2026-10-30, none)
+  - Nexus Mods, Reddit and the ShrineFox Discord not checked
+- game: Heat Signature
+  year: 2017
+  engine: GameMaker Studio 1 (YYC)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Single-player only; the Steam page says players are never in the same world. A from-zero co-op mod (up to 4
+    players, version.dll + MinHook) is in progress, see games/heat-signature and issue 274; host + 1 guest pass a
+    14-check automated suite on localhost, not released.
+  sources:
+  - https://store.steampowered.com/app/268130/Heat_Signature/
+  - https://steamcommunity.com/app/268130/discussions/0/144512526678821083/
+  - https://steamcommunity.com/app/268130/discussions/0/1520386297686058374/
+  checked: '2026-10-30'
+  searched:
+  - 'WebSearch: Heat Signature co-op multiplayer mod; Heat Signature multiplayer mod github / nexusmods / steam workshop
+    (nothing found)'
+  - 'Not checked: Nexus Mods pages directly (403 to the fetch tool), Reddit, Discord'
+- game: "Crash Bandicoot 4: It's About Time"
+  year: 2020
+  engine: Unreal Engine 4
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No online or simultaneous co-op mod found; the game ships only local hotseat Pass N. Play and Bandicoot
+    Battle. Groundwork in games/crash-bandicoot-4 (Steam build, UE 4.24.2) - UE4SS v3.0.1 runs when injected after
+    SteamStub unpacks and with HookLoadMap = 0; the game ships unused multiplayer classes (LavaMPGameMode Lobby/Match,
+    MPLavaPlayerController) and a replicated combat framework; a listen server starts, but a second copy on one PC
+    crashes after about 56 s.
+  sources:
+  - https://www.techradar.com/how-to/crash-bandicoot-4-multiplayer-is-it-online-and-co-op
+  - https://en.wikipedia.org/wiki/Crash_Bandicoot_4:_It%27s_About_Time
+  - https://github.com/UE4SS-RE/RE-UE4SS/issues/720
+  checked: '2026-10-30'
+  searched:
+  - 'WebSearch: Crash Bandicoot 4 co-op mod PC; Crash 4 online multiplayer mod; Crash Bandicoot 4 UE4SS; Nucleus
+    Co-op handler Crash Bandicoot 4 (2026-10-30, nothing found)'
+  - 'coop-anything DIRECTORY.md and games/ (2026-10-30, nothing)'
+  - 'Not checked: Nexus Mods and GameBanana file lists directly, Reddit, Discord servers'
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire)
+  project: Overgrowth Online (CoreFX)
+  url: https://github.com/crxhvrd/overgrowth-online
+  other_urls:
+    - https://github.com/crxhvrd/overgrowth-online/releases
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: "Engine fork with rewritten movement replication (local player simulation, snapshots, clock sync), a story co-op mode, revive, server browser, Steam friend join and direct IP. Nine days old, one author, daily builds; release 0.40.0 (2026-10-23). Apache-2.0. Bundled \"Overhaul\" mod is optional but must match across players. Tested with two real clients on one PC (games/overgrowth): join, first story level with its cutscene, movement sync and a level change pass; a join is refused when Workshop mods are subscribed (order-dependent mod check, bug reported in the write-up). Enemies, items, dialogue choices, checkpoints and deaths not yet checked."
+  sources:
+    - https://github.com/crxhvrd/overgrowth-online
+    - https://api.github.com/repos/crxhvrd/overgrowth-online/releases
+    - https://github.com/cranebeaker/coop-anything/tree/main/games/overgrowth
+  checked: '2026-10-25'
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire)
+  project: Wolfire Online Multiplayer Prototype
+  url: https://www.wolfire.com/blog/2021/12/Overgrowth-Online-Multiplayer-Prototype/
+  other_urls:
+    - https://github.com/WolfireGames/overgrowth
+  kind: official
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2022-04
+  qa: community-reports
+  notes: "Steam beta branch internal_multiplayer_testing (2021-12-15). Host simulates everything; clients send input and receive poses, so remote players report heavy input lag. Campaign levels are only exposed through a mod (see Story Multiplayer). Code is in Source/Online of the open-source engine; no upstream commits to it since open-sourcing."
+  sources:
+    - https://www.wolfire.com/blog/2021/12/Overgrowth-Online-Multiplayer-Prototype/
+    - https://steamcommunity.com/app/25000/discussions/0/3415432674403889605/
+    - https://github.com/WolfireGames/overgrowth/tree/main/Source/Online
+  checked: '2026-10-25'
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire)
+  project: Overgrowth Story Multiplayer
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=3496994351
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: no
+  last_activity: 2025-06
+  qa: community-reports
+  notes: "Adds the campaign to the official prototype's multiplayer menu (needs the multiplayer beta branch). Author lists rough latency, client moving during dialogue, kill barriers killing the host, and guests waiting for the host's level load. No source found."
+  sources:
+    - https://steamcommunity.com/sharedfiles/filedetails/?id=3496994351
+  checked: '2026-10-25'
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire)
+  project: Full Coop (Campaign, arena...)
+  url: https://steamcommunity.com/sharedfiles/filedetails/?id=2637639111
+  other_urls:
+    - https://github.com/Denperidge/Overgrowth-Full-Local-Coop
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: yes
+    items: unknown
+  players: '1-4'
+  networking: lan
+  open_source: yes
+  last_activity: 2021-10
+  qa: community-reports
+  notes: "Local split screen only (F9 adds a player, F10 removes). Online only via Steam Remote Play Together. MIT source. Players report it still works as of 2023-12; over Remote Play both players sometimes drive the same character. networking value is the closest schema option; it is really shared-screen."
+  sources:
+    - https://steamcommunity.com/sharedfiles/filedetails/?id=2637639111
+    - https://github.com/Denperidge/Overgrowth-Full-Local-Coop
+  checked: '2026-10-25'
+
+- game: Overgrowth
+  year: 2017
+  engine: Phoenix (Wolfire)
+  project: OGMP
+  url: https://github.com/ogmp/ogmp_client
+  other_urls:
+    - https://github.com/ogmp/ogmp_server
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: no
+  players: unknown
+  networking: dedicated-server
+  open_source: yes
+  last_activity: unknown
+  qa: none
+  notes: "Pre-1.0 alpha-era mod: presence, chat and positions through a Linux server. Public server gone by 2020. GPL-2.0."
+  sources:
+    - https://github.com/ogmp/ogmp_client
+    - https://steamcommunity.com/app/25000/discussions/0/540733524019609149/?ctp=28
+  checked: '2026-10-25'
+- game: 'The Legend of Zelda: Skyward Sword'
+  year: 2011
+  engine: Nintendo in-house (EGG / NW4R g3d), Wii; decompilation zeldaret/ss
+  project: ss-coop
+  url: https://github.com/ItsPainY/ss-coop
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/skyward-sword
+  - https://github.com/zeldaret/ss
+  kind: emulator-netplay
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: Wii USA disc SOUE01 revision 0 in Dolphin 2609a, each player with their own dump. A bridge next to each
+    Dolphin reads and writes guest memory and talks UDP (host forwards one port); a REL built from the zeldaret/ss
+    decomp replaces the unused J_TEST actor and draws the other player as a second Link (models, outfit, real
+    animations, sword, shield, held items). Story, item, scene, dungeon (keys), chest and enemy defeat flags are
+    shared and written to both save files; loads and resets cannot erase the other player's progress. Live enemies
+    are owned by the nearer player (epochs, following playbook/actor-ownership.md); the other game shows them at the
+    owner's position with shared (lower) health, and Keese, ChuChus, Remlits and Skytails also with the owner's
+    animation. Enemies only damage their own game's Link. A two-PC internet session was played with version 0.1;
+    later features are covered by an automated two-client bot test (21 checks, Skyloft, see games/skyward-sword).
+  sources:
+  - https://github.com/ItsPainY/ss-coop
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/skyward-sword
+  - https://github.com/zeldaret/ss
+  checked: '2026-10-25'
+  made_with_coop_anything: true
+  searched:
+  - 'Repo DIRECTORY.md, games/, and public GitHub issues and PRs for "skyward" (nothing), 2026-10-25'
+  - 'Archipelago games list: not supported; Skyward Sword randomizers (Wii, HD) are single-player, 2026-10-25'
+- game: Cuphead
+  year: 2017
+  engine: Unity 2017.4 (Mono)
+  project: CupHeads
+  url: https://github.com/Germanized/CupHeads
+  other_urls:
+  - https://github.com/multiplayereverything/CupHeads
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Online version of the game's own two-player co-op, by Germanized (with Sh0kr). BepInEx 5 plugin with Steam lobby invites
+    and Steam P2P (ISteamNetworking with relay allowed, so no port forwarding). Host owns the world, scenes, save and bosses; the
+    guest plays Player Two on a mirror of the host's save. Last release v1.6.2 (2026-10-15). Source is public but the repo has no
+    license file. Continued in the Multiplayer Everything fork (separate entry).
+  sources:
+  - https://github.com/Germanized/CupHeads
+  - https://github.com/Germanized/CupHeads/releases/tag/v1.6.2
+  checked: '2026-10-30'
+- game: Cuphead
+  year: 2017
+  engine: Unity 2017.4 (Mono)
+  project: CupHeads (Multiplayer Everything fork)
+  url: https://github.com/multiplayereverything/CupHeads
+  other_urls:
+  - https://github.com/Germanized/CupHeads
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/cuphead
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Fork of Germanized's CupHeads, v1.7.0 pre-release (wire protocol 4). Adds a LAN/direct-IP TCP fallback (port 27140), a
+    mod-only BepInEx ZIP instead of the installer, and a fix that reconciles the partner's cup health and death or revive with its
+    owner. A same-PC lab with two game copies over the LAN fallback passes 15 checks (connect, world map, both cups moving, level
+    load, boss HP, guest hits and death, revive by heart and by parry, back to the map); 6 mutants that each drop one sync path
+    are all caught, and a 7th shows the health backup covers lost hit packets. Steam P2P between two real accounts is not yet tested. Write-up in games/cuphead.
+  sources:
+  - https://github.com/multiplayereverything/CupHeads
+  - https://github.com/multiplayereverything/CupHeads/releases/tag/v1.7.0
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/cuphead
+  checked: '2026-10-30'
+  made_with_coop_anything: true
+- game: Zoo Tycoon
+  year: 2001
+  engine: Blue Fang proprietary (C++, DirectDraw); built on openzt
+  project: ZooTogether
+  url: https://github.com/multiplayereverything/zoo-tycoon-coop
+  other_urls:
+  - https://github.com/openzt1/openzt
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/zoo-tycoon
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Host-authoritative co-op as a patch on openzt (GPL-3.0). A friend joins by IP and receives the host's zoo; budget, date,
+    pause, admission price and research are shared, and everything either player builds, sells, fences in (exhibits with their
+    gate), lays as path, terraforms, adopts, hires, moves or fires appears on both copies; the host's animals and staff (positions,
+    births, deaths) are mirrored once a second; each player sees the other's map cursor. Guests and animal needs are per copy.
+    Tested with a two-copy lab (35 checks, 11 mutants) on the Complete Collection, zoo.exe 12.4.0.9; freeform only, scenarios
+    untested; no two-PC test yet. Write-up in games/zoo-tycoon.
+  sources:
+  - https://github.com/multiplayereverything/zoo-tycoon-coop
+  - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
+  checked: '2026-10-30'
+  made_with_coop_anything: true
+- game: Star Wars Outlaws
+  year: 2024
+  engine: Snowdrop (closed native x64 binary with Denuvo)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found (Ubisoft Connect build, exe SHA-256 371BE3E5...1D2F). The exe contains an
+    unreleased 2-4 player co-op heist mode (CoopHeistMode, CanStartCoopMatch, team lives, reinforcement waves, ping
+    points), and a runtime read confirmed all seven co-op and heist settings files ship and load. Snowdrop's session
+    layer (reliable UDP, hot-join, host migration) is linked; matchmaking goes through Ubisoft services. Not playable;
+    findings and tools in games/star-wars-outlaws.
+  sources:
+  - https://nexusmods.com/starwarsoutlaws/mods/24
+  - https://github.com/patrickmollohan/Ultimate-SWO-ModLoader
+  - https://steamcommunity.com/app/2842040/discussions/0/4625854988055223265
+  checked: '2026-11-01'
+- game: 'Dynasty Warriors 3: Complete Edition Remastered'
+  year: 2026
+  engine: Unreal Engine 5
+  project: Official split-screen co-op (shipped) and online co-op (free update announced)
+  url: https://store.steampowered.com/app/3841510/DYNASTY_WARRIORS_3_Complete_Edition_Remastered/
+  other_urls:
+  - https://noisypixel.net/dynasty-warriors-3-remastered-demo-online-co-op/
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'no'
+  last_activity: 2026-09
+  qa: none
+  notes: Ships with 2-player local split-screen co-op and versus only; Steam does not list Remote Play Together.
+    Koei Tecmo announced at TGS 2026 a free update adding online 2-player co-op, due by January 2027 (not released
+    as of 2026-11-01). No community online mod found. Research only, see games/dynasty-warriors-3-remastered.
+  sources:
+  - https://store.steampowered.com/app/3841510/DYNASTY_WARRIORS_3_Complete_Edition_Remastered/
+  - https://www.co-optimus.com/game/18377/pc/dynasty-warriors-3-complete-edition-remastered.html
+  - https://noisypixel.net/dynasty-warriors-3-remastered-demo-online-co-op/
+  - https://www.thesixthaxis.com/2026/09/24/dynasty-warriors-3-remaster-demo-out-now-online-co-op-announced/
+  checked: '2026-11-01'
+- game: TimeShift
+  year: 2007
+  engine: Saber3D (Saber Interactive), Direct3D 9, Havok, FMOD, Bink; own event-driven level script language
+  project: TimeShift Co-op
+  url: https://github.com/dolbaras/timeshift-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: "2-4"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Whole story campaign over the game's own netcode (host plays the story, clients replay it), 2 to 4 players on a LAN or by
+    direct IP (the Internet list is revived through OpenSpy, not yet tested between two homes), and two players on one PC
+    in split screen. Version 0.1.1; a dinput8.dll proxy plus data built at install time from the player's own archives
+    (no game files in the repo); needs patch 1.2, Steam copies (patch 1.0) are brought to 1.2 only with the player's
+    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse, AI on
+    clients (deaths, corpses, shots and their sound), levers, mounted guns and quad on clients, Regroup, gate hints, Continue with
+    the real loadout of the host and each client. One-file setup exe, installer in six languages and a shortcut that
+    installs newer releases from GitHub before each start. A bot runs a host and a client through all 24 levels with the
+    level changes; a whole campaign played by people, Internet play and sound judged by ear are still to come. Soldiers'
+    voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
+  sources:
+  - https://github.com/dolbaras/timeshift-coop
+  - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.1
+  - https://github.com/cranebeaker/coop-anything/issues/191
+  checked: '2026-11-01'
+- game: 'Alien: Isolation'
+  year: 2014
+  engine: Creative Assembly proprietary
+  project: AI co-op (build from zero, this fork)
+  url: https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: per-player
+  players: "2"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: >
+    Build-from-zero presence co-op. A mock steam_api.dll plus a narrow two-jump
+    patch of AI.exe lets a second instance boot; an in-process D3D11 probe
+    (coopnet.dll) syncs player position and facing over UDP at 20 Hz and draws
+    the peer as a body-shaped, screen-space avatar in both instances, with
+    snapshot interpolation, a 1.5 s peer timeout, and an edge arrow when the
+    peer is off screen or behind the camera. Each player is in their own world
+    (no shared enemies/doors/items); both must load the same mission save.
+    Occlusion was attempted via depth sampling at Present and found not viable
+    (the depth buffer is cleared before Present); the avatar draws through
+    walls. Packaging scripts (install/host/join/local2p/status) provided.
+    Tested with a two-instance harness (wingame/tile/keys/ocr/winshot/pix) on
+    a 3440x1440 rig, side by side on one display.
+  sources:
+  - https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation
+  checked: 2026-10-23
 - game: 'IRON NEST: Heavy Turret Simulator'
   year: 2026
   engine: Unity 6 (IL2CPP)
