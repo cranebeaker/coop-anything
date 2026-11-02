@@ -97,16 +97,19 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
   (memory corruption, off by default). Instead, `local_enemy_ai=1` lets client copies fight with their own
   AI, aimed at the host AI's target, with the client's player invincible and its health still from the
   host. A 4-minute test ran without a crash; the owner found it better but still off.
-- **Not yet run in the game (2026-11-02, static analysis only):**
+- **Passed their automated tests in the game (2026-11-02), off by default, not yet played by a person:**
   - Enemy shots on clients (`enemy_shots=1`): every projectile launch goes through one engine function.
-    The host sends its enemies' launches and clients fire them from their copies.
+    The host sends its enemies' launches and clients fire them from their copies (m80: 43 sent, 41 fired).
   - Level triggers for every player (`shared_triggers=1|2`). The level scripts are Lua 5.1 bytecode in the
     level packs and are readable. Over all levels they test the host's player 224 times as a volume
     message's owner and 88 times with `volume.IsInside`. The host now runs their message handlers with a
-    remote player's character standing in for the host's when that player caused the message.
+    remote player's character standing in for the host's when that player caused the message (m81: the
+    prologue's checkpoint script took the client's character for the host's 3 times).
   - More players, more enemies (`scale_enemies=1`, host). Each regular enemy brings on average 0.5 extra
     enemies of its type per extra player. Bosses are never doubled; they get 75% more health per extra
-    player. Bosses are found through the boss health bar the level script attaches.
+    player. Bosses are found through the boss health bar the level script attaches (m83: 4 enemies got 2
+    copies, both shown on the client; a boss went from 75 to 131 health with 2 players).
+  - A client falling into a death pit keeps its character on the host, and respawns next to the host (m82).
 
 ## QA
 
@@ -116,10 +119,15 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
   - `m7-*-run.sh`: death, level, cinematics, waves.
   - `m8-run.sh <n>`: 2–4 players.
   - `m9-*-run.sh`: autorun and menu start.
+  - `fast-start.sh`: host and client straight into the prologue in about 35 s; the later tests start with it.
+  - `m80`–`m83`: enemy shots, level triggers, death pits, enemy scaling.
   - `spoof_test.py`: forged packets.
   - `m11_world_diff.py`: object drift.
 - Last results (2026-10-26/27, Steam build 6522): all checks passed, including 4 players (m8r5), 150 ms /
   5% loss (m6net1), menu start in the prologue (m9m3) and keyed sessions with forged-packet floods (m9a5).
+- 2026-11-02: m80 SHOT PASS, m81 TRIGGER PASS, m82 FALL PASS and m83 SCALE PASS, each from a fresh fast start.
+  m81 and m82 first failed because the tests used the wrong volume names; fixed, then passed. m83 failed as it
+  should with its fix taken out (client paired 0 of 2 copies).
 
 ## How to play
 
@@ -132,7 +140,7 @@ See `PLAYING.md` in the tfu-coop package:
 ## Known issues
 
 - Only the host's character opens gates and starts encounters, so areas ahead of the host stay empty for
-  clients (`shared_triggers` is the untested fix).
+  clients. `shared_triggers` is the fix: it passed its automated test, but not yet played.
 - Enemies on clients slide into place instead of walking, because their AI is off, and their shots are not
   shown (`local_enemy_ai` and `enemy_shots` are the experimental fixes). Walking them with
   `mobility.RequestPathToPosition` was too slow (~0.5 m/s), and it let them die from the client's own
@@ -144,9 +152,8 @@ See `PLAYING.md` in the tfu-coop package:
 
 ## Next steps
 
-- Run the new automated tests in the game: `m80-shot-run.sh` (enemy shots), `m81-triggers-run.sh`
-  (level triggers), `m82-fall-run.sh` (a client falling into a death volume keeps its character on the host)
-  and `m83-scale-run.sh` (more enemies and tougher bosses for more players).
+- Play with `enemy_shots`, `shared_triggers` and `scale_enemies` on, then decide which become defaults.
+- Check by hand whether the prologue's opening gate opens for a charging client (`shared_triggers`).
 - A real two-PC session over the internet.
 - A full-level playthrough, checking doors and objectives on clients with the world diff.
 - Force powers for remote players: Push and Grip work on the host (Grip: m13-grip-run, a puppet lifted a

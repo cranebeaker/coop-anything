@@ -984,7 +984,7 @@ Observed (Ghidra, unpacked exe):
     component map (`[0x01306fd0]+0x10`, FUN_0041ff80, the lookup `coop_aicomp` uses). Whether player characters
     are in that map: unknown. On every PC the owner can be another player's character, so tfu-coop
     `lua/m7_respawn.lua` now keeps the four players' characters from `ai.RecycleRen` (logs
-    "m7 kept player character"). `tools/m82-fall-run.sh` is the test (not yet run).
+    "m7 kept player character"). `tools/m82-fall-run.sh` is the test (passed 2026-11-02, see below).
   - `game.FallToDeath` = FUN_00835db0: kills the ren with falling damage. On the host that is the puppet; the
     client fell in its own game too, and its m6 death check ignores a host death within 150 frames of a local one.
   - `camera.DeathVolumeEnter` = FUN_0083be90: switches to the death camera only when the ren is the local player 0.
@@ -1033,7 +1033,7 @@ tfu-coop `re/lua_bindings.py` from their registration calls, with the engine's h
 - `game.GetDifficulty()` / `game.SetDifficulty()`: what the difficulty changes is unknown.
 
 Built (the owner chose "more enemies" over "tougher enemies"; bosses not multiplied, only harder). tfu-coop
-`lua/m83_scale.lua`, host only, off unless `scale_enemies=1`. Not yet run in the game.
+`lua/m83_scale.lua`, host only, off unless `scale_enemies=1`. Passed its test in the game 2026-11-02 (below).
 - n = the host plus peers heard from in the last 3 s. Every 10 frames the host lists the players' enemies within
   40 m (`ai.GetAllEnemiesInRadius`, so allies are left out). Each enemy is decided once, after 1 s. It adds
   `scale_extra` x (n - 1) to a running total (default 0.5), and each whole unit spawns one copy of its spawner type
@@ -1095,6 +1095,41 @@ Run fs1 (2026-11-02, `tools/fast-start.sh fs1`, host and client on one PC):
 - Only A was pressed. Derived: the menu took Continue Game, since New Game needs Left first. The same start spot
   in m75play suggests the menu runs also resumed the save (unverified).
 - Both games were closed afterwards with `tools/stop-test.ps1`.
+
+### In-game runs of m80-m83 (2026-11-02)
+
+Each test from a fresh `tools/fast-start.sh` (ready in 33-35 s every time). No Lua errors in any of the 10 launches.
+
+- m80f1: SHOT PASS. Host shots sent 0 -> 43, client fired 0 -> 41, no new client crash. The projectile hook
+  installed on both ("bytes match").
+- m81f1: TRIGGER FAIL, because of the test, not the feature. No checkpoint volume was found: volumes have no
+  ren names in this build (`ren.GetName` returned "" for each of the first 80 from `volume.GetAllRens()`). The pack has
+  their full paths, and `ren.Find` accepts those:
+  - `KAS_BeachA_PR.region/KAS_BeachA_Enemies_PR.markerset/GEN_SavePoint.prefab/checkPointVol` (-400, 13, -164)
+  - `KAS_BeachB_PR.region/KAS_BeachB_Enemies_PR.markerset/GEN_SavePoint.prefab/checkPointVol` (-329, 13, -61)
+  - `KAS_TreeB_PR.region/KAS_BranchBridge_PR.markerset/GEN_CheckPoint.prefab1/checkPointVol` (-187, 24, 32)
+  - `KAS_TreeB_PR.region/KAS_BranchBridge_PR.markerset/GEN_CheckPoint.prefab/checkPointVol` (-162, 74, 9)
+  - `KAS_HouseExt_PR.region/KAS_HouseExt_Enemies_PR.markerset/GEN_SavePoint.prefab1/checkPointVol` (-88, 92, -4)
+  - With or without a leading `/`. Not found: `.../KAS_BeachA_Enemies_PR.markerset/GEN_CheckPoint.prefab1/...`
+    (the pack names it relative, `../../KAS_BeachA_PR.region/...`).
+  - `ronin._SMTEMPLATES` holds only 6 templates in the prologue (KAS_ATAT and others), none for checkpoints.
+- m81f3 (test walks those five, then the gate): TRIGGER PASS, msgs 32, asked 3, insides 0. The gate volume: the
+  puppet was inside, the host's player outside, and the wrapped `volume.IsInside` answered true for player 0.
+- m82f1: FALL FAIL, again the test. The ren named `FallToDeathVolume` is a 967 x 144 x 998 m volume centred
+  under the level. The client teleported into it, landed at y -134 and stayed alive. The pack gives the
+  `FallToDeathVolume` script to markers `FallToDeath` (-176, 69, -41; 106 x 12 x 81 m) and `FallToDeath1`
+  (-18, 64, -14). Dropped 3 m above `FallToDeath`'s top, the client died and respawned next to the host. Within
+  the same second the host logged "m7 kept player character from ai.RecycleRen, slot 1 times 1".
+- m82f2 (test drops the client into `FallToDeath`): FALL PASS. Client deaths 1, guard kept 1, puppet ren the same
+  before and after (F08C11E4).
+- m83f1: SCALE PASS. 4 Wookiees moved to the host, 2 copies spawned and alive, client paired 2 of 2; boss max
+  health 75 -> 131.25 (ratio 1.750, 2 players).
+- Negative gate for m83 (the line that writes a copy's type into `coop_m6_types` taken out):
+  - m83neg2: SCALE FAIL, client paired 0 of 2, both games running. With the line back, m83f1 paired 2 of 2.
+  - m83neg (first try) does not count. The host's 2 copies were already dead at the 8 s check (alive 0). Then
+    both games saved their settings and exited at the same millisecond (16:55:35.457), with no crash entry and no
+    DXVK error. Cause unknown: no other Claude session was active, and Windows logged a Restart Manager session
+    8 s later.
 
 ## Derived (not yet verified)
 
