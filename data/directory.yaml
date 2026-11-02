@@ -10778,12 +10778,12 @@
   networking: steam-relay
   open_source: yes
   last_activity: 2026-11
-  qa: none
-  notes: Each player runs their own game; an injected DLL shows the friend as a puppet Crash (or Coco) with replayed
-    Havok behavior events, and syncs broken crates and the wumpa counter over Steam P2P. Steam build 2964270 only.
-    Tested by the author in real two-player Steam sessions (presence, animations) and with two game copies on one PC
-    (crates, fruit, Coco); no automated suite. MIT license. Write-up in
-    games/crash-bandicoot-n-sane-trilogy.
+  qa: automated
+  notes: Each player runs their own game; an injected DLL shows the friend as a puppet of the hero they play, with
+    replayed Havok behavior events, and syncs broken crates and the wumpa counter over Steam P2P. Steam build 2964270
+    only. Automated two-client suite (two game copies on one PC over UDP; presence, crate replay, fruit, falls, level
+    change, crash and dialog invariants), last full run 15/15 PASS; presence and animations also played over Steam.
+    MIT license. Write-up in games/crash-bandicoot-n-sane-trilogy.
   sources:
   - https://github.com/MaegIins/CrashNSaneCoop
   checked: '2026-11-02'

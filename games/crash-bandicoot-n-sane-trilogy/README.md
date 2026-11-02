@@ -5,14 +5,15 @@
 | Engine | Alchemy (Vicarious Visions), Havok behavior graphs, NovaScript / visual scripts |
 | Versions tested | Steam build 2964270, exe SHA-256 `170c61d37fb5277dd94b3e41f7a918f227b76bc67aa338f5c97f63ac317b6af3` |
 | Projects | [Crash N. Sane Coop](https://github.com/MaegIins/CrashNSaneCoop) (directory entry "Crash N. Sane Coop") |
-| QA level | none (author's manual tests only, see QA) |
+| QA level | automated (two-client suite, see QA) |
 | Last updated | 2026-11-02 |
 
 ## Where things stand
 
 Two players can play Crash 1 levels "together" today: each runs their own game, sees the other as a second Crash
-(or Coco) that runs, jumps and spins, and crates and wumpa fruit stay in step between the two games. Not handled yet:
-deaths and checkpoints, Crash 2's animation events, Coco's own animations, and characters slide a little.
+(or Coco, when both play Coco) that runs, jumps and spins, and crates and wumpa fruit stay in step between the two
+games. A friend who falls into a pit makes the puppet hide until they respawn. Not handled yet: a friend on another
+hero than yours (they appear as your hero), checkpoints, Crash 2's animation events, and characters slide a little.
 
 ## Existing work
 
@@ -45,13 +46,40 @@ The mod is a DLL injected into the running game (no game files changed):
 
 ## QA
 
-No automated suite yet. Manual checks that ran (2026-11-01..02):
-- Real two-player sessions over Steam P2P (owner and a friend): presence, animations, spins breaking crates.
-- Lab: two copies of the game on one PC over UDP. Crate break on A is replayed on B (log plus same-spot
-  screenshots). Fruit is added both ways (6 -> 16, 10 -> 18). The Coco puppet runs and jumps, with no crash in
-  about 2 minutes.
-Not tested yet: crates, fruit and Coco over Steam; Crash 2 and Crash 3 for those features; deaths and checkpoints.
+Automated two-client suite: [tests/suite.ps1](https://github.com/MaegIins/CrashNSaneCoop/tree/main/tests) in the mod
+repository. It starts two copies of the game on one PC (separate APPDATA folders), enters Crash 1 N. Sanity Beach in
+both, connects the two mods over UDP, drives player A and asserts on B's game and both mod logs. A scorer self-test
+runs first; a check that never ran fails.
 
+Last full run (2026-11-02, mod v18 code):
+
+```
+scorer self-test ok
+PASS  setup: both copies in N. Sanity Beach
+PASS  1 presence: puppets spawned, friend visible on both
+PASS  1 presence: crate lists built on both (precondition)
+PASS  3 fruit: B found its own counter (precondition)
+PASS  2 crate: A detected its own break and sent it
+PASS  2 crate: B found its copy of the crate and broke it
+PASS  2 crate: B did not report it missing
+PASS  2 crate: B did not send the crate back as its own
+PASS  3 fruit: B added the fruit A picked up  wumpa: +1 from the friend (12 -> 13)
+PASS  4 fall: B parked the puppet while A fell (precondition friend visible: True)
+PASS  4 fall: puppet back once A respawned
+PASS  4 fall: puppet never destroyed by the kill plane
+PASS  5 level: A went to the map (precondition)
+PASS  5 level: A back in the level, puppet spawned again
+PASS  invariants: both games alive, no FAULT, no error dialog
+15/15 checks passed
+RESULT: PASS
+```
+
+The suite found one real bug (a crate broken for the friend was sent back as ours, fixed in v18). Earlier runs
+failed for reasons in the test itself (a crate with no fruit, a menu click during a respawn), which were fixed. The
+copy of the suite in the repository (paths made relative) has passed setup and the first checks; its full run was
+stopped by the PC running low on memory.
+Also played over Steam by two people: presence, animations, spins breaking crates.
+Not covered: checkpoints, Crash 2 and Crash 3, a friend on another hero, play over Steam for crates and fruit.
 ## How to play
 
 Download the latest release from <https://github.com/MaegIins/CrashNSaneCoop/releases>. Unzip it into a normal folder

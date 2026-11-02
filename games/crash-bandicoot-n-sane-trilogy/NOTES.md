@@ -630,3 +630,73 @@ Observed:
 Mod v14: an empty file `coop.coco` next to the dll shows the friend as Coco. The pack is requested once per level,
 the Coco prototype is looked for for up to 8 s (fallback: Crash), and no events are replayed on a Coco puppet.
 Not done: translating events by name for Coco; Crash 2 and Crash 3; level changes with Coco loaded; play over Steam.
+
+### The puppet takes the friend's real hero: mod v15 / packet v8 (2026-11-02, two test copies)
+
+- Our own hero = slot 0's wanted name in CPlayerEntityManager (+0x100, a char*). It is sent in the packet (`hero`).
+- The receiver spawns the puppet with that hero. If it is not its own hero, it first loads that pack with the v14
+  trick: exe+0x4EBDB0 into pool(92). This works both ways: a Coco player gets "Loaded chunk 'crash:Hero_Coco_data_92'"
+  and a Crash puppet.
+- Events are replayed only when the puppet's hero equals the friend's hero, so the behavior graphs match. The
+  "Show my friend as Coco" option still makes a Crash friend look like Coco, without events.
+- If the friend switches hero, the old puppet is retired (kept parked above the level, never left to the kill plane)
+  and a new one is spawned.
+- Bug fixed on the way: find_prototype must skip the mod thread's own stack. Its locals (the CActor vtable value and
+  the hero name) matched first, and the spawn then failed.
+- Test that ran: A switched to Coco by writing slot 0's wanted name (as the game's own hero switch does; the friend's
+  100% save shows "CHANGER DE HEROS" on the Crash 1 map). B saw A as Coco with replayed events (158, 163...): running,
+  jumping, spinning, alive. A saw B as Crash.
+- Side note: loading a 100% save in a test copy unlocks Steam achievements on the account running it.
+
+### Crash on level changes with a second hero pack: mod v16 (2026-11-02)
+
+Observed:
+- The owner's real game crashed twice with v14 and "show my friend as Coco" on, at exe+0x768E00 (20:31) and
+  exe+0x375832 (20:37). The offsets come from the Windows Application log, event 1000.
+- Reproduced in the lab: with Coco's pack loaded next to Crash in pool 92, going back to the map and entering a level
+  again crashed the game itself at exe+0x768E00, while it spawned the PLAYER hero (stack 0xDE22EB 0x768CAE 0xCB715B
+  0x74CBAD 0x494310 0xC06D68 0x4D758D 0xC06E93 0x5046E4 0x4D0540), before the mod did anything in the new level.
+- Asking for the pack again in each level, and waiting 3 s before the prototype search, did not prevent it. Note: the
+  player actor keeps the same address from one level to the next, so anything keyed "per actor" is not per level.
+- With cross-hero pack loading disabled: three map <-> level round trips on both copies, no crash, and the puppet
+  respawned each time.
+
+Mod v16: the puppet only uses our own hero. A friend who plays the same hero gets full animations; otherwise they
+appear as our hero, driven by their buttons only. Cross-hero loading stays behind a `coop.experimental` file, for
+research. Open question: how to drop the extra request from the loader's cache ([exe+0x1A61C88]+0x18, keyed by name
+and pool) before a level change.
+
+Lab mishap: the owner's launcher was open and auto-enabled the release mod inside the test copies, and that
+overwrote coop-me.log. Since v16, the launcher and coop.ps1 only take a game under `\steamapps\`, and the mod keeps the
+previous log as coop-<name>.prev.log.
+
+### Deaths and falls: mod v17 (2026-11-02, two test copies)
+
+Observed (A dropped below N. Sanity Beach and died):
+- A's game rebuilt all crates at once (45, then 4 more): the "more than 3 at once = reload, not sent" guard held,
+  and no false crate break reached B.
+- Crates A broke before dying stay broken in B, and come back in A. If A breaks them again, B logs "none here".
+  Harmless.
+- In B, the puppet followed A below the level and was destroyed by the kill plane ("puppet gone"), then was respawned.
+  That is the path of the 18:38 crash (exe+0xDDE1D0).
+
+Mod v17: when the friend falls more than 400 units below their highest point of the last 1.5 s, the puppet is parked
+above the level. It comes back when they are up again, or when they reappear more than 600 units away horizontally (a
+respawn elsewhere). Lab: B logged "friend falling: puppet parked above the level" then "back on their feet"; there
+was no "puppet gone".
+
+### Automated two-client suite, and a disproved Coco idea (2026-11-02)
+
+- `scripts/suite.ps1` (local lab) starts two test copies, enters N. Sanity Beach in both, injects the mod (UDP
+  between the copies), drives A and asserts on both games and both mod logs: presence, crate replay (and no echo),
+  fruit, fall/respawn, level change, and invariants (both alive, no FAULT, no Windows error dialog, sampled 3 times).
+  A scorer self-test runs first. Last run: 15/15 checks, RESULT: PASS (mod dev16 = v18 code).
+- The suite found a bug: a crate B broke for A was re-listed by a rescan before the game freed it, and B then sent it
+  back as its own. Fixed in v18: spots broken for the friend are never sent.
+- Startup flake: a test copy crashed by itself while starting (exe+0x9945FF, no mod loaded). The suite now restarts a
+  copy that died during setup.
+- Disproved: removing our Coco request from the loader cache right after loading it ([loader+0x18], key =
+  exe+0xE45910(&pool, 8, exe+0xE556E0(name, 0x811C9DC5)); remove = exe+0xE03250(table, &key, key); lookup =
+  exe+0xDF5A10). The removal worked ("cache removal 1"), yet the next level entry still crashed at exe+0x768E00. The
+  game logged the pack as "coco:Hero_Crash_data_92", so Coco seems attached to hero chunk 92 itself. Next idea: a
+  chunk of its own for the puppet's hero, instead of pool 92's chunk.
