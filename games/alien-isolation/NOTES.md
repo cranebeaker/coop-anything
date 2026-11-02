@@ -1,22 +1,22 @@
-# Alien: Isolation — agent notes
+# Alien: Isolation - agent notes
 
 Game: Alien: Isolation (2014, Creative Assembly / SEGA).
 Owner goal: **online co-op with friends** (splitscreen out of scope unless asked later).
 
-## Phase 0 — Triage (2026-10-20)
+## Phase 0 - Triage (2026-10-20)
 
 ### Observations (verified on this machine)
 
 - Store/version: **Steam**, appid 214490, **buildid 4940658** (from `appmanifest_214490.acf`,
   `TargetBuildID` = `buildid` = 4940658, StateFlags 4 = fully installed, 2026-10-20).
-- Install dir: `<SteamLibrary>\steamapps\common\Alien Isolation` (owner's copy —
+- Install dir: `<SteamLibrary>\steamapps\common\Alien Isolation` (owner's copy -
   read-only for us; test copies will be made per ground rule 2).
 - Main exe: `AI.exe`, 21,822,464 bytes,
   SHA-256 `DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90`.
 - Top-level layout: `AI.exe`, `DATA\`, `Extras\`, `AMD_AGS.DLL`, `ATIAGS.DLL`,
   `CRASHREPORTER32.DLL`, `STEAM_API.DLL`, `BENCHMARK_TEMPLATE.TXT`.
 - Engine: Creative Assembly proprietary ("Evolution" engine; no Unreal/Unity/CryEngine
-  DLLs present). 64-bit (Steam build). See engine-families.md — no sibling co-op
+  DLLs present). 64-bit (Steam build). See engine-families.md - no sibling co-op
   framework known for this engine.
 - OS: Windows 10/11 (PowerShell 5.1 environment), VS 2026 Community + C++ workload
   installed (from prior sessions, see `local/`).
@@ -25,11 +25,11 @@ Owner goal: **online co-op with friends** (splitscreen out of scope unless asked
 
 1. Exact game: Alien: Isolation, 2014, Steam build 4940658. ✔
 2. Already done? Per `DIRECTORY.md`: one prototype (Dropper7894, announced, never
-   released). Research below — **no downloadable co-op mod found** as of 2026-10-20.
+   released). Research below - **no downloadable co-op mod found** as of 2026-10-20.
 3. Engine: Creative Assembly proprietary. DLL-level modding only.
-4. Source available: **nothing public** — closed binary. Heavy RE expected. No decomp
+4. Source available: **nothing public** - closed binary. Heavy RE expected. No decomp
    project found (searched "alien isolation decomp", GitHub topics `alien-isolation`).
-5. Engine multiplayer: **none** — the game is single-player only (Survivor Mode is a
+5. Engine multiplayer: **none** - the game is single-player only (Survivor Mode is a
    scoring challenge mode, not netcode). No replication layer to reuse → must build a
    sync layer (host authority + state sync).
 6. Shipping check: mod must ship as a separate package (DLL proxy/hooks + scripts),
@@ -37,28 +37,28 @@ Owner goal: **online co-op with friends** (splitscreen out of scope unless asked
    overlay only) → safe to hook offline play. Must not touch Steam multiplayer of
    other games. OK.
 
-**Verdict: Path 2 — build from zero** (nothing usable exists to revive). Difficulty:
+**Verdict: Path 2 - build from zero** (nothing usable exists to revive). Difficulty:
 closed binary, no MP, no scripting language shipped → "very hard" row of the triage
 table. Start with research + design doc, look harder for collaborators/existing work.
 
-## Phase 1 — Research (2026-10-20, in progress)
+## Phase 1 - Research (2026-10-20, in progress)
 
 ### Existing attempts
 
-1. **Alien Isolation co-op (Dropper7894)** — announced 2026-06-30 with gameplay
+1. **Alien Isolation co-op (Dropper7894)** - announced 2026-06-30 with gameplay
    video; goal: turn **Survivor Mode into 2-player co-op**. No release, no repo, no
    ETA. Author runs a Discord for progress updates: https://discord.gg/UhHCPMdMh
    (joining = contacting people → needs owner's permission, ground rule 1).
    - https://bloody-disgusting.com/video-games/3957869/fan-made-co-op-mod-for-alien-isolation-announced/
-     (article fetched 2026-10-20, dated June 30 2026 — confirms Discord link + goals)
+     (article fetched 2026-10-20, dated June 30 2026 - confirms Discord link + goals)
    - https://www.dsogaming.com/videotrailer-news/first-look-at-upcoming-multiplayer-co-op-mod-for-alien-isolation/
    - https://shazoo.ru/2026/06/30/186490/modder-sozdaet-kooperativnyi-rezim-dlia-alien-isolation (2026-06-30)
    - Reddit r/alienisolation "A small mod I'm working on"
      (https://www.reddit.com/r/alienisolation/comments/1uhr3gr/, ~384 upvotes,
-     "short demo of a multiplayer mode… still far from being a full co-op mode") —
+     "short demo of a multiplayer mode… still far from being a full co-op mode") -
      this IS the Dropper7894 demo post (linked from the BD article). Direct fetch
      403'd; content confirmed via article quotes.
-2. **Echo Protocol** — fan-made 2-player co-op announced in r/modding
+2. **Echo Protocol** - fan-made 2-player co-op announced in r/modding
    (https://www.reddit.com/r/Modding/comments/1jyz9dq/, ~2025-03). No repo, no
    release, no recent activity found by web search. Status: **unknown, looks silent**.
 3. Steam thread "has anyone played the alien isolation co-op mod"
@@ -66,8 +66,8 @@ table. Start with research + design doc, look harder for collaborators/existing 
    reply says the linked "co-op" is a Garry's Mod gamemode, not an A:I mod. Treat
    player chatter as low-signal here.
 4. **Nucleus Co-op** (splitscreen tool, open source) supports many games; A:I support
-   **unknown** — would only matter for splitscreen, currently out of scope.
-5. **OpenCAGE** — https://github.com/MattFiler/OpenCAGE (MIT, 356★, 1024 commits as of
+   **unknown** - would only matter for splitscreen, currently out of scope.
+5. **OpenCAGE** - https://github.com/MattFiler/OpenCAGE (MIT, 356★, 1024 commits as of
    2026-10-20, actively maintained; also a free Steam tool app 3367530; site
    opencage.co.uk). Full modding toolkit for A:I: level logic scripts ("Composites",
    XML/BML format), **behaviour trees** (Brainiac Designer editor), character/item
@@ -77,7 +77,7 @@ table. Start with research + design doc, look harder for collaborators/existing 
    the game's logic layer is data-editable without native code, and CinematicTools
    proves DLL injection into AI.exe works.
 6. **aliasIsolation** (TAA mod): https://github.com/aliasIsolation/aliasIsolation
-   — another proven AI.exe injection precedent (method not yet verified).
+   - another proven AI.exe injection precedent (method not yet verified).
 7. Engine families: `playbook/engine-families.md` has **no entry** for Creative
    Assembly's Evolution engine → no sibling co-op framework to port. Possible
    playbook gap to note in the PR.
@@ -88,19 +88,19 @@ table. Start with research + design doc, look harder for collaborators/existing 
   closed; the realistic model is **host authority + state sync via injected DLL**
   (the fnv-coop / Skyrim Together family). Level logic ("Composites") is editable
   via OpenCAGE, which may carry story/quest sync at the data layer instead of the
-  native layer — to evaluate in Phase 4.
-- Game AI runs on behaviour trees (Brainiac Designer lineage) — AI ownership sync
+  native layer - to evaluate in Phase 4.
+- Game AI runs on behaviour trees (Brainiac Designer lineage) - AI ownership sync
   will be the hard part (see playbook/actor-ownership.md).
 
 ### Unknowns / next questions
 
 - Does Dropper7894 publish anything (YouTube channel, GitHub, Nexus)? Owner may
   join the mod's Discord (discord.gg/UhHCPMdMh) to ask about collaboration
-  (ground rule 1 — contacting people needs permission; also Discord mining requires
+  (ground rule 1 - contacting people needs permission; also Discord mining requires
   playbook/discord-export.md).
 - Whether the game's own save format / script tables can be driven externally.
 - Legal/licensing: SEGA's stance on A:I mods (community has modded openly for years;
-  no C&D known — verify before shipping).
+  no C&D known - verify before shipping).
 
 ### Checks that ran
 
@@ -109,9 +109,9 @@ table. Start with research + design doc, look harder for collaborators/existing 
 - GitHub issues/PRs of cranebeaker/coop-anything searched for "alien": 0 results. ✔
 - Web searches (2026-10-20): "alien isolation co-op mod", "Echo Protocol alien
   isolation", "Dropper7894 github", nexusmods multiplayer, github topics
-  `alien-isolation`. Reddit direct fetches blocked (403) — noted per research.md.
+  `alien-isolation`. Reddit direct fetches blocked (403) - noted per research.md.
 
-## Phase 2 — Workspace (2026-10-20)
+## Phase 2 - Workspace (2026-10-20)
 
 - Test copy: robocopy of the owner's install (read-only source) →
   `<workspace>\test-install\Alien-Isolation`, 389 dirs / 7,586 files / 30.17 GB,
@@ -126,13 +126,13 @@ table. Start with research + design doc, look harder for collaborators/existing 
   `GLOBAL\`, `PACKAGES\`, `TEXT\`, `UI\`.
 - Loose logic/config files are **both** `.XML` and `.BML` pairs (e.g.
   `GBL_ITEM.XML` 236 KB / `GBL_ITEM.BML` 143 KB, `ENGINE_SETTINGS.XML`,
-  `INPUT.XML`) — consistent with OpenCAGE's AlienBML (XML source → compiled BML).
+  `INPUT.XML`) - consistent with OpenCAGE's AlienBML (XML source → compiled BML).
   Confirms the game's logic layer is editable at the data level.
 - Native side still closed: `.BIN` (compiled behaviour), `.HKX64` (Havok anim),
   `.USM` (movies). No scripting VM docs found → native RE still needed for
   runtime sync (Phase 3+).
 
-## Phase 3 — Understand (2026-10-20, in progress)
+## Phase 3 - Understand (2026-10-20, in progress)
 
 ### Static recon on the test copy (`test-install\Alien-Isolation\AI.exe`)
 
@@ -142,7 +142,7 @@ table. Start with research + design doc, look harder for collaborators/existing 
   (check `.text` entropy before any decomp plan; deferred). Verified with
   `dumpbin /headers`. (Recorded in case other write-ups assume 64-bit.)
 - **Imports (dumpbin /dependents):** `steam_api.dll`, KERNEL32, USER32, **WS2_32,
-  WSOCK32** (Winsock present — telemetry/LAN? to investigate), PSAPI, imagehlp,
+  WSOCK32** (Winsock present - telemetry/LAN? to investigate), PSAPI, imagehlp,
   SETUPAPI, **dxgi, d3d11** (D3D11 renderer), XINPUT1_3, GDI32, SHELL32, ole32,
   WINMM, ADVAPI32, WLDAP32.
 - **Derived:** no `dinput8.dll` import → the dinput8-proxy entry point used on
@@ -151,7 +151,7 @@ table. Start with research + design doc, look harder for collaborators/existing 
   hook) or `steam_api.dll` proxy (classic, game must find real steam_api). 32-bit
   process ⇒ x86 DLLs, 32-bit pointer space.
 - Python 3.12.10 located at `%LOCALAPPDATA%\Programs\Python\Python312\python.exe`
-  (installed via winget; **not on this session's PATH** — use full path).
+  (installed via winget; **not on this session's PATH** - use full path).
 
 ### Next (Phase 3)
 
@@ -164,14 +164,14 @@ table. Start with research + design doc, look harder for collaborators/existing 
 
 ### Boot smoke test (2026-10-20, test copy, owner approved)
 
-- Launch: `Start-Process AI.exe` — the started pid **exited immediately**; a second
+- Launch: `Start-Process AI.exe` - the started pid **exited immediately**; a second
   `AI.exe` process owned the window ("Alien: Isolation" title) ~40 s later (intro
   movies). Find: track by process name, not launcher pid.
 - Runtime: process stable, ~1.2 GB working set, responsive. Steam must be running
   (steam.exe was up; direct launch worked without Steam launch-integration prompt).
 - Filesystem footprint of a bare boot + graceful exit (CloseMainWindow): **nothing**
   written to Documents, `%APPDATA%`, `%LOCALAPPDATA%`, HKCU\Software (checked:
-  My Games, Feral Interactive, `Creative Assembly` key — all absent before and
+  My Games, Feral Interactive, `Creative Assembly` key - all absent before and
   after). Settings/saves presumably appear only after a settings change or
   checkpoint; revisit redirection (junction/env) when we drive real gameplay.
 - Smoke test result: **boot verified on build 4940658** (QA: boot test only).
@@ -184,7 +184,7 @@ table. Start with research + design doc, look harder for collaborators/existing 
 - Build: **Win32/x86**, VS2022 v143, NuGet packages: **MinHook** (hooking),
   DirectXTK, Boost. Output `Build\CT_AlienIsolation.dll`.
 - Load vector: **runtime injection** via https://github.com/nefarius/Injector
-  (`inject.bat` after the game is running) — *not* a proxy DLL. So the proven
+  (`inject.bat` after the game is running) - *not* a proxy DLL. So the proven
   community pattern is: external injector + hooking DLL (MinHook) into the live
   32-bit process; hooks D3D11 among others.
 - Derived: our Stage 1 can copy this exact pattern (x86 MinHook DLL + nefarius
@@ -216,12 +216,12 @@ table. Start with research + design doc, look harder for collaborators/existing 
 ### Full decompile + seam hunt (2026-10-20)
 
 - **Analysis succeeded:** 456 s auto-analysis; **66,811 functions decompiled, 10
-  failed** (9 of those "Unable to read bytes at ram:0x03030303/0x020202" —
+  failed** (9 of those "Unable to read bytes at ram:0x03030303/0x020202" -
   data-as-code false positives). Outputs: `decomp\AI.exe.c` (69.9 MB),
   `AI.exe.functions.tsv` (67,005 lines incl. header), plus
   `decomp\AI.exe.strings.txt` (62,670 strings ≥6 chars, via
   `coop-anything-cache\strings_dump.py`).
-- **Engine identity: CATHODE** — RTTI class names in the exe use namespace
+- **Engine identity: CATHODE** - RTTI class names in the exe use namespace
   `CATHODE` (e.g. `.?AVIsMultiplayerMode@CATHODE@@`). Creative Assembly's Cathode
   engine. *Triage correction: "Creative Assembly proprietary" in the directory
   should say "Creative Assembly Cathode".*
@@ -236,14 +236,14 @@ table. Start with research + design doc, look harder for collaborators/existing 
 - **Multiplayer status: NO game netcode in this binary.** Evidence:
   - All `connect/send/recvfrom/WSAStartup` hits trace to **libcurl**
     (`curl_easy_send`, FTP/SMTP/TFTP strings) and **Havok visual debugger**
-    ("Server created and will poll for new client(s) on port…", hkBase) —
+    ("Server created and will poll for new client(s) on port…", hkBase) -
     debug/HTTP only.
   - Dormant script-layer multiplayer *concepts* exist (engine heritage):
     RTTI `.?AVIsMultiplayerMode@CATHODE@@`, strings `IS_MULTIPLAYER_MODE`,
     `MULTIPLAYER_MOTIVATION`, `Multiplayer_Communications`, and a diagnostic
     "…this is okay in multiplayer, but suspicious if it triggers constantly".
   - Derived: A:I itself never shipped MP; but **Cathode as an engine family did**
-    (Halo Wars 2, same engine, shipped multiplayer) — a possible reference binary
+    (Halo Wars 2, same engine, shipped multiplayer) - a possible reference binary
     for how sessions/replication were structured in Cathode. `engine-families.md`
     has no Cathode entry → playbook gap to propose in our PR.
 - Main loop candidates: `PeekMessageA` loops at `AI.exe.c` line 873653 (engine
@@ -251,18 +251,18 @@ table. Start with research + design doc, look harder for collaborators/existing 
   third-party, e.g. crash/HTTP lib). Far Cry 2 playbook step (patch the message
   pump imports) maps onto line 873653's loop.
 
-## Stage 1 — Load vector + pump probe (2026-10-20, TEST COPY ONLY)
+## Stage 1 - Load vector + pump probe (2026-10-20, TEST COPY ONLY)
 
 **Correction to the earlier smoke-test note:** the "second AI.exe pid" behavior was
-NOT a self-spawn — the test-copy exe calls `SteamAPI_RestartAppIfNecessary`
+NOT a self-spawn - the test-copy exe calls `SteamAPI_RestartAppIfNecessary`
 (import #A of `steam_api.dll`), which hands off to the running Steam client, and
 **Steam relaunched the game from the registered real install (G:)**. So the first
 smoke test actually ran the owner's real install (bare boot, verified 0 files
-written — but still not the intent). Recorded here to keep the trail honest.
+written - but still not the intent). Recorded here to keep the trail honest.
 
 ### Build
 
-- `ai-coop\stage1\dxgi_proxy.cpp` + `dxgi_proxy.def` — a **dxgi.dll proxy**,
+- `ai-coop\stage1\dxgi_proxy.cpp` + `dxgi_proxy.def` - a **dxgi.dll proxy**,
   x86 (cl /LD /O2 via vcvarsall x86), no third-party deps. Source: workspace.
 - Forwards to real `C:\Windows\System32\dxgi.dll` (lazy LoadLibrary on first
   export): `CreateDXGIFactory`, `CreateDXGIFactory1`, **`CreateDXGIFactory2`**,
@@ -275,7 +275,7 @@ written — but still not the intent). Recorded here to keep the trail honest.
     in-process system consumers need, not just the game's own imports.
 - On `DLL_PROCESS_ATTACH`: creates `<test dir>\stage1-probe.log`, IAT-patches
   the main module's `USER32.dll` imports (`PeekMessageA`, `PeekMessageW`,
-  `PostQuitMessage`) with logging wrappers (Far Cry 2 playbook pattern — plain
+  `PostQuitMessage`) with logging wrappers (Far Cry 2 playbook pattern - plain
   PE parsing + in-place thunk rewrite, no MinHook needed), snapshots loaded
   modules. No `LoadLibrary` work in DllMain (real dxgi deferred to first export).
 
@@ -300,7 +300,7 @@ written — but still not the intent). Recorded here to keep the trail honest.
 
 - Deployed artifact: `test-install\Alien-Isolation\dxgi.dll`
   (sha256 recorded in session log; rebuilt versions overwrite this copy of our
-  own file — nothing of the game's is ever replaced: dxgi.dll did not exist in
+  own file - nothing of the game's is ever replaced: dxgi.dll did not exist in
   the install).
 - QA level for this stage: **manual boot test with log assertions** (not yet an
   automated suite). No bots yet (playbook/automated-qa.md is Phase 6).
@@ -309,11 +309,11 @@ written — but still not the intent). Recorded here to keep the trail honest.
 
 1. Hook the named-event firehose (script seam `FUN_0050e4f0` / command table) to
    log Composite commands as they fire in gameplay.
-2. Locate and log the player position/entity each N frames (memory seam —
+2. Locate and log the player position/entity each N frames (memory seam -
    reverse-engineering.md "find a value in memory" dance in the live process).
 3. Both on top of the existing proxy; still test-copy only.
 
-## Stage 2 — Load-vector correction + seam probe (2026-10-21)
+## Stage 2 - Load-vector correction + seam probe (2026-10-21)
 
 ### The dxgi-proxy load vector does not reach gameplay
 
@@ -326,35 +326,35 @@ written — but still not the intent). Recorded here to keep the trail honest.
   → **did not work**; Steam resolves the install via
   `libraryfolders.vdf` + `appmanifest_214490.acf`, not that key. Registry was
   **restored** to the `G:` path. Getting the test copy to run under Steam needs
-  a second Steam library / a copied app manifest — an install-level change we did
+  a second Steam library / a copied app manifest - an install-level change we did
   not make.
 - **Adopted load vector (proven):** external x86 injector
   (`injector.exe`, `CreateRemoteThread` + `LoadLibraryA`) targets the already
   running `AI.exe` and loads `ai_probe.dll`. No install mutation at all; works
   against the `G:` process exactly as it would against the test copy.
   This matches the community pattern already proven for A:I (CinematicTools uses
-  nefarius/Injector + a MinHook DLL — see Stage 1 notes).
+  nefarius/Injector + a MinHook DLL - see Stage 1 notes).
 
 ### Tooling built (all small, pinned, in-repo)
 
-`ai-coop\stage2\inject\` — `probe.cpp` (+`build_inject.bat`), `injector.cpp`
+`ai-coop\stage2\inject\` - `probe.cpp` (+`build_inject.bat`), `injector.cpp`
 (+`build_injector.bat`), `snapshotter.cpp`/`regions.cpp`/`pospoll.cpp` (+build
 scripts). All x86 via `cl` from VS 2026 Community.
 
 ### Probe seams
 
-- **`call_method`** (RVA `0x526680`, thiscall, `ret 0Ch`) — EntityManager entity
+- **`call_method`** (RVA `0x526680`, thiscall, `ret 0Ch`) - EntityManager entity
   method dispatch. Fires **~58,000 calls / 50 s** in normal play. Arguments are
   smart pointers (caller pushes entity, entity, message). `this` is a stable
   context (e.g. `1C966F80`); entity pointers cluster in `1C59xxxx`. Useful as a
   firehose for the entity set, but **the player's transform is not among the
   entities seen here** (`this+0xC0..0xD4` is a static transform unrelated to the
   player).
-- **`send_event`** (RVA `0x10E3B0`, cdecl 5 args) — hooked OK but fires
+- **`send_event`** (RVA `0x10E3B0`, cdecl 5 args) - hooked OK but fires
   **0 events in normal play** (only 2 call sites in the binary). Keep the hook for
   now; the `call_method` stream is the live seam that matters.
 - **IAT hooks** (Stage 1, kept): `USER32.dll!PeekMessageA/W`, `PostQuitMessage`
-  — 3/3 patch OK, drives graceful shutdown detection.
+  - 3/3 patch OK, drives graceful shutdown detection.
 
 ### Boot fix
 
@@ -372,11 +372,11 @@ scripts). All x86 via `cl` from VS 2026 Community.
   combination of `CreateRemoteThread` + `LoadLibrary` in the workspace path trips a
   heuristic). An elevated `Add-MpPreference -ExclusionPath` was attempted; the file
   was removed anyway. **Workaround:** run the injector + DLL from
-  `%LOCALAPPDATA%\Temp\opencode\probe-inject` — it runs there with no
+  `%LOCALAPPDATA%\Temp\opencode\probe-inject` - it runs there with no
   interference. Note for anyone reproducing: build in-repo, execute from a trusted
   temp dir.
 
-## Stage 2b — Player world position FOUND (verified)
+## Stage 2b - Player world position FOUND (verified)
 
 Method: memory-diff (reverse-engineering.md "find a value in memory" dance).
 
@@ -387,7 +387,7 @@ Method: memory-diff (reverse-engineering.md "find a value in memory" dance).
 3. Diff 4-aligned float triples between snapshots and rank by how many addresses
    share the **same displacement vector**.
 
-Result — four addresses moved with an identical, coherent displacement of
+Result - four addresses moved with an identical, coherent displacement of
 `(-2.75, 0.0, 1.84)` (≈3.3 units) during the short walk:
 
 | Address | Layout | Role |
@@ -428,7 +428,7 @@ Result — four addresses moved with an identical, coherent displacement of
 - **Stage 2 verified.** Remaining for Stage 3: interpret the EntityManager to map
   entity pointers → gameplay objects, and pick the networking model (Phase 4).
 
-## Stage 3 — EntityManager / script-command layer mapped (2026-10-21)
+## Stage 3 - EntityManager / script-command layer mapped (2026-10-21)
 
 Static work on the decompilation (`decomp\AI.exe.c`, 66,811 functions). All
 addresses below are **VAs with base 0x400000** (RVA = VA − 0x400000).
@@ -450,7 +450,7 @@ addresses below are **VAs with base 0x400000** (RVA = VA − 0x400000).
   (`FUN_009366d0`, `FUN_00936c60`, `FUN_00938a20`, …). This is the Composite
   **name→handler command table**.
 - `FUN_0050e4f0` (RVA 0x10E3B0, "send_event") builds a 3-`double` argument vector
-  and dispatches via `(*msg + 0x18)(msg[2], 0)`. **It fires 0× in normal play** —
+  and dispatches via `(*msg + 0x18)(msg[2], 0)`. **It fires 0× in normal play** -
   script commands queue through the `call_method` path instead. Keep the send_event
   hook dormant; `call_method` is the live seam.
 
@@ -458,7 +458,7 @@ addresses below are **VAs with base 0x400000** (RVA = VA − 0x400000).
 
 - **840 distinct `CATHODE::<Class>::vftable` symbols** are present in the binary
   (full list saved to `coop-anything-cache\cathode_classes.txt`). These are the
-  complete vocabulary of the game's logic layer — every scriptable action/condition.
+  complete vocabulary of the game's logic layer - every scriptable action/condition.
 - Base classes: `EntityInterface`, `EntityVariableInterface`,
   `EntityMethodInterface` (reflection over named entity methods/variables),
   `EntityState`, `EntityContainer`.
@@ -481,8 +481,8 @@ The frame schedule `FUN_007d6a00` registers every per-frame task by name
 
 | Task name | Note |
 |---|---|
-| `NET_AI_UPDATE` | network AI stage — present in the frame loop |
-| `NETZ_DISPATCH` | network dispatch stage — present in the frame loop |
+| `NET_AI_UPDATE` | network AI stage - present in the frame loop |
+| `NETZ_DISPATCH` | network dispatch stage - present in the frame loop |
 | `ENTITY_MANAGER_TICK` | per-frame entity processing (`LAB_00783640`) |
 | `ENTITY_MANAGER` | `FUN_00783500` |
 | `ZONE_MANAGER` | streaming (RVA hint for zone sync) |
@@ -497,7 +497,7 @@ CATHODE classes with **live vftables** for multiplayer concepts:
 
 → **Derived:** Cathode as an engine family shipped multiplayer (Halo Wars 2);
 A:I retains the command/player classes but no network transport. The co-op layer
-does not have to invent a state model from scratch — the *command* and *player*
+does not have to invent a state model from scratch - the *command* and *player*
 vocabulary already exists, and the command stream is serializable. A:I also ships
 `AI_UI_NET_*` strings (Steam leaderboard / sign-in UI), evidence the net-facing UI
 scaffolding survived.
@@ -507,13 +507,13 @@ scaffolding survived.
 1. **Interception point:** `call_method` (RVA 0x526680) sees every queued script
    command, with entity + message smart-pointers. This is where a host writes
    commands into a network stream and where a client applies remote commands.
-2. **Serialization:** per-command ID token + vtable `+0x394` deserialize — reuse
+2. **Serialization:** per-command ID token + vtable `+0x394` deserialize - reuse
    rather than reinvent the wire format.
 3. **Player identity:** `FilterIsLocalPlayer` / `ParticipatingPlayersList` give the
    engine's own local-vs-remote concept; the confirmed position record
    (`0x1CA467C0`, `[pos][fwd]`) is the per-frame transform to replicate.
 4. **Next (Phase 4):** pick the networking model (playbook `how-coop-mods-work.md`
-   / `networking-steam-spacewar.md`) — host-authoritative command relay +
+   / `networking-steam-spacewar.md`) - host-authoritative command relay +
    transform replication looks directly supported by the above.
 
 ### Stage 3 status
@@ -529,7 +529,7 @@ object pointer (`+0xC`), then histogram the type words. Observed live in gamepla
 
 - Message type words are **per-command-class vtable addresses**, stable and
   repeated (e.g. `0cf735e0`, `0cf73450`, `0cf73510`, `0cfa1930`, `0cf7d2a0`, …).
-  **64 distinct message types** appear within ~1 s of play — a rich live command
+  **64 distinct message types** appear within ~1 s of play - a rich live command
   vocabulary, matching the static `FUN_0091d9f0` command-table finding.
 - **Target objects live in a different region** (`0x18ABxxxx`, `0x1202xxxx`) from
   the message/entity control blocks (`0x1C59xxxx`), and the *target set is small and
@@ -543,11 +543,11 @@ object pointer (`+0xC`), then histogram the type words. Observed live in gamepla
   `msgtype NEW:` and `cm #` lines.
 
 → **Verdict:** the `call_method` seam yields every queued script command with a
-resolvable type and target — the interception point Phase 4 assumes is real.
+resolvable type and target - the interception point Phase 4 assumes is real.
 
-## Phase 4 — Networking model chosen (2026-10-21)
+## Phase 4 - Networking model chosen (2026-10-21)
 
-Per `playbook/networking.md`. A:I has **no live UDP netcode to tunnel** — the
+Per `playbook/networking.md`. A:I has **no live UDP netcode to tunnel** - the
 net-layer strings and `NET_*` frame stages exist, but there is no transport (see
 Stage 3). So section 4 (local UDP proxy) does **not** apply; this is section 1
 (sync models) work.
@@ -558,12 +558,12 @@ Stage 3). So section 4 (local UDP proxy) does **not** apply; this is section 1
   Each player's own avatar (position + facing) is simulated locally and replicated
   by the host to the others. The confirmed per-frame transform record
   (`0x1CA467C0`, `[float3 pos][float3 fwd]`) is the datum; send it unreliable
-  (stale positions are worthless — playbook §1.2), quantized per §1.2.
+  (stale positions are worthless - playbook §1.2), quantized per §1.2.
 - **Script commands / story state: host-authoritative relay.** The whole Composite
   command layer is serializable (per-class ID token + vtable `+0x394` deserialize,
   Stage 3), so the host captures commands at `call_method` (RVA 0x526680), writes
   them to a stream, and clients replay them. This is the playbook's
-  "quest and story flags — the highest-value hook" (§1.3) in this engine's own
+  "quest and story flags - the highest-value hook" (§1.3) in this engine's own
   vocabulary.
 - **NPC/enemy ownership:** one owner per NPC with transfer, per
   `playbook/actor-ownership.md`. Deferred to build; the entity set is visible via
@@ -591,11 +591,11 @@ Stage 3). So section 4 (local UDP proxy) does **not** apply; this is section 1
 ### Phase 4 status
 
 - Model + transport **chosen and grounded in the Stage 3 findings**. Next:
-  Phase 5 build — start with the avatar replication loop (position record) and the
+  Phase 5 build - start with the avatar replication loop (position record) and the
   `call_method` command relay, tested without the game first (fake world), then in
   two local instances.
 
-## Phase 5 — Build: avatar sync (2026-10-21, in progress)
+## Phase 5 - Build: avatar sync (2026-10-21, in progress)
 
 Sources live in the separate `ai-coop` project folder (not in this hub repo, per
 AGENTS.md rule 7): `ai-coop\stage5\proto\` (protocol + interpolation, header-only)
@@ -611,7 +611,7 @@ and `ai-coop\stage5\test\` (harness + in-game capture).
   between the bracketing snapshots, drops reordered/duplicate ticks (positions are
   unreliable, per playbook §1.2).
 
-### Fake-world test (`stage5\test\fake_world_test.c`) — PASSED
+### Fake-world test (`stage5\test\fake_world_test.c`) - PASSED
 
 No game, no network: two simulated worlds exchange wire records over an in-memory
 link with configurable latency/jitter/loss. `fake_world_test.exe` results:
@@ -624,7 +624,7 @@ link with configurable latency/jitter/loss. `fake_world_test.exe` results:
 | duplicate/out-of-order drop | ✔ older & dup ticks dropped |
 | yaw wrap over full turn | ✔ worst error 0.0123 rad |
 
-### In-game integration (`stage5\test\sync_capture.cpp`) — VERIFIED live
+### In-game integration (`stage5\test\sync_capture.cpp`) - VERIFIED live
 
 The injected probe now round-trips the **live** player transform through the
 protocol each pass (capture → encode → decode → interpolate) and logs the
@@ -635,7 +635,7 @@ pos[1] 1d5fb2a4 = (6.5801, 9.1852, 11.4342) fwd=(-0.7340, -0.2368, 0.6365)
 sync: render=(6.5801, 9.1852, 11.4342) yaw=-0.8468 err=0.000010 avg=0.000009 n=3
 ```
 
-- Error **~1e-5 m** — pure quantisation, matching the fake-world prediction.
+- Error **~1e-5 m** - pure quantisation, matching the fake-world prediction.
 - Yaw `-0.8468` rad matches `atan2(fwd.x, fwd.z)` for the live facing vector,
   and follows when the player turns.
 - The capture path reads `0x1CA467C0` (pos) + `0x1D5FB2A4+0xC` (facing, the clean
@@ -645,12 +645,12 @@ sync: render=(6.5801, 9.1852, 11.4342) yaw=-0.8468 err=0.000010 avg=0.000009 n=3
 
 - **Done:** protocol, interpolation, fake-world tests (all passing), in-game
   capture verified live, **real UDP transport verified between two processes**.
-- **Next:** real transport between two instances — direct UDP now proven at the
+- **Next:** real transport between two instances - direct UDP now proven at the
   transport level; next is wiring it into the game (two instances) with a **mock
   `steam_api.dll`** so two local game processes can handshake; then the Steam
   relay path. After that, the `call_method` command relay for story/quest state.
 
-### Transport (`stage5\proto\transport.h`) — VERIFIED between two processes
+### Transport (`stage5\proto\transport.h`) - VERIFIED between two processes
 
 Plain Winsock UDP (the playbook's direct-IP fallback, and the layer the Steam
 relay will slot behind). Framing: `PktHeader {kind, version, seq, fromId}` +
@@ -687,7 +687,7 @@ transport depends on.
 ### Running two local instances: the startup gate (2026-10-21)
 
 Tried launching the test copy (`<project>\test-install\Alien-Isolation`) while the
-`G:` copy was running. It **exits immediately with code 0xCACA** (51914) — Steam's
+`G:` copy was running. It **exits immediately with code 0xCACA** (51914) - Steam's
 `RestartAppIfNecessary` convention. Static analysis of the gate
 (`AI.exe.c` → `FUN_007dacd0` @ RVA 0x3DACD0 calls `FUN_00a540d0` @ RVA 0x6540D0,
 which is the Steam boot check):
@@ -731,13 +731,13 @@ GameServer variants we don't need).
 Verified so far: `AI.exe` / `steam_api.dll` identities and the import list; the gate
 disassembly. Not yet built: the mock.
 
-## Stage 5 — Two local instances: mock Steam API (2026-10-21)
+## Stage 5 - Two local instances: mock Steam API (2026-10-21)
 
 Goal of this stage: get **two local instances of the game booting side by side**
 so the co-op sync layer can be tested for real. Three blockers had to be cleared:
 the boot gate, a crash ~1 minute into the run, and the mock's Steam ABI.
 
-### Root cause #1 — the game must be launched with CWD = the game directory
+### Root cause #1 - the game must be launched with CWD = the game directory
 
 **Observation.** The engine's mount table (`DAT_0174ba60`, count `DAT_0174ba64`)
 and its search-path list (`DAT_0174ba54`, count `DAT_0174ba58`) are **empty**, so
@@ -747,20 +747,20 @@ anywhere else and the settings XML never opens.
 
 **Symptoms of getting it wrong.** `LIST_BUILT` / `REGISTER_SECTIONS` never fire,
 the settings registry is never populated, and the process later dies in the
-settings path — the old crash site was `AI+0x5A4D01`.
+settings path - the old crash site was `AI+0x5A4D01`.
 
 **Consequence.** A pile of accumulated **null-check exe patches** was written to
 paper over that crash (settings flag `0x16512AC` → 0 at file offset `0x124eeac`,
 plus null-checks at RVA `0x5A4D00`, `0x60FE49`, `0x60FE68-0x60FE6F`, `0x60FE84`,
 `0x60FEB6`, `0x60FDEF`). With the CWD fixed **all of them were unnecessary and
-were reverted**. The test copy now carries **only** the gate patch (see below) —
+were reverted**. The test copy now carries **only** the gate patch (see below) -
 a much smaller and safer diff against the shipped exe.
 
 **Rule for everything from here on: always launch the game with its working
 directory set to the game directory.** `stage5/test/launch_two.ps1` does that
 (`Start-Process -WorkingDirectory`), and so does the cdb launch.
 
-### Root cause #2 — the crash was stack skew in the mock, not a null deref
+### Root cause #2 - the crash was stack skew in the mock, not a null deref
 
 **Symptom.** With the mock `steam_api.dll` in place the game died after
 40–75 s with an access violation at `AI+0xD3A9A6`, exit code `0xC0000005`.
@@ -769,12 +769,12 @@ directory set to the game directory.** `stage5/test/launch_two.ps1` does that
 breakpoints never fire, so the crash is not in the bundled HTTP client.
 
 **Actual cause.** AI.exe calls Steam interface methods **callee-pop `__thiscall`**
-— three arguments are pushed for `SteamFriends` vtable `+0x10` and there is **no
+- three arguments are pushed for `SteamFriends` vtable `+0x10` and there is **no
 `add esp, 0xC`** afterwards, so the *callee* pops them. The first version of the
 mock used a shared "ladder" of stubs with one fixed argument count per slot
 index. Several slots had the **wrong** count, so each such call left the
 caller's stack skewed by 4·N bytes, and a frame or two later the game
-dereferenced a garbage pointer. **That** was the crash — not a null deref, and
+dereferenced a garbage pointer. **That** was the crash - not a null deref, and
 not the game faulting on its own.
 
 **Fix.** One stub per `(interface, slot)` pair, each generated by a macro so the
@@ -795,10 +795,10 @@ that produce the right answer:
   **no-offset** load (`mov edx, dword ptr [eax]`); a load *with* an offset from
   an interface pointer is a field access, not a vtable. Register-save pushes live
   *before* the vtable load, and argument pushes can sit on **either side** of it
-  — so the naive "pushes after the slot load" rule undercounts.
+  - so the naive "pushes after the slot load" rule undercounts.
 * **Slot detection:** `mov Y, dword ptr [vt_reg]` is slot `0x00`;
   `mov Y, dword ptr [vt_reg+OFF]` is slot `OFF`. Offsets below `0x10` render
-  **without** the `h` suffix (`[edx+4]`, not `[edx+4h]`) — that broke an earlier
+  **without** the `h` suffix (`[edx+4]`, not `[edx+4h]`) - that broke an earlier
   regex.
 * **Accessor calls come in two forms**, both must be handled:
   `call dword ptr ds:[IAT]` and `mov reg, dword ptr ds:[IAT]` + `call reg`.
@@ -816,11 +816,11 @@ that produce the right answer:
 **Return values the game actually depends on** (all verified in the disassembly):
 
 * `SteamApps +0x00` (ownership) **must be non-zero**. Both `FUN_00a540d0` and
-  `FUN_00a64c10` do `if (!c) { *(int*)0 = -1; }` — a *deliberate* null
+  `FUN_00a64c10` do `if (!c) { *(int*)0 = -1; }` - a *deliberate* null
   dereference when the ownership check fails.
 * `SteamFriends +0x00` must return a valid **NUL-terminated string** (the game
   `strncpy`s it into the player record).
-* `SteamUser +0x08` must **write 8 bytes** to its pointer argument — the game
+* `SteamUser +0x08` must **write 8 bytes** to its pointer argument - the game
   reads both halves (`[ebp-10h]`, `[ebp-0Ch]`).
 * `SteamApps +0x10` → `"english"`.
 * `SteamUser +0x04` → 1.
@@ -830,7 +830,7 @@ that produce the right answer:
 
 ### The mock `steam_api.dll`
 
-`ai-coop/stage5/mock/mock_steam_api.cpp` — 32-bit MSVC, built by
+`ai-coop/stage5/mock/mock_steam_api.cpp` - 32-bit MSVC, built by
 `stage5/mock/build_mock.bat` (`vcvarsall.bat x86`; `cl /nologo /LD /O2 /EHsc`),
 linked against `mock_steam_api.def` so the exported names are pinned. It is
 **test tooling only** and is never installed into the owner's `G:` copy.
@@ -846,7 +846,7 @@ linked against `mock_steam_api.def` so the exported names are pinned. It is
   `UNEXPECTED SLOT iface=.. slot=+0xNN caller_rva=0x..`. It deliberately pops
   **nothing**: we do not know that call's argument count, and a wrong pop would
   turn a clear diagnosis into a mystery crash.
-* Call log: `ai_mock_steam_<pid>.log` beside the exe — **one file per process**
+* Call log: `ai_mock_steam_<pid>.log` beside the exe - **one file per process**
   so two instances do not interleave. Enabled with `AIC_MOCK_LOG=1`.
 
 ### The exe patch that is left (and why it is narrow)
@@ -872,7 +872,7 @@ Test-copy `AI.exe` state: **original + the gate patch only**, SHA-256
 `570B09B2F78DE872E5A60FCA80721D17042E39D6DC3850F90D607E8F32C1F165`
 (original `DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90`).
 
-### Two instances side by side — VERIFIED
+### Two instances side by side - VERIFIED
 
 `stage5/test/launch_two.ps1` (sets CWD, `AIC_MOCK_LOG=1`, `SteamAppId=214490`,
 starts N instances, waits, reports liveness + mock-log summary).
@@ -902,7 +902,7 @@ game progression."** and never enters the main menu.
 That string is `DATA\TEXT\ENGLISH\UI.TXT` key
 `AI_UI_DLG_WSETUP_CONFIRM_SAVE_ERROR` (`UI.TXT` is UTF-16LE). There is no
 `%USERPROFILE%\Documents\My Games\Alien Isolation` directory at all (checked on
-this machine) — the game does not use the filesystem for saves. It calls
+this machine) - the game does not use the filesystem for saves. It calls
 `ISteamRemoteStorage`, i.e. **Steam Cloud**. With real Steam the files live in
 `<steam>\userdata\<accountid>\214490\remote\`.
 
@@ -943,7 +943,7 @@ the call sites, not from an SDK header:
 | `0x44` | `GetQuota` | 2 | `(*total, *avail)`, 64-bit outs |
 
 `GetFileCount` returning 0 is why the mock never hit slot `0x2C` and reported
-no unexpected slots — the enumeration loop at RVA `0xA618B0` was simply skipped
+no unexpected slots - the enumeration loop at RVA `0xA618B0` was simply skipped
 (`for (i = 0; i < GetFileCount(); i++) { name = GetFileNameAndSize(i, &size); ... vtable[0x2C](name) ... }`).
 
 **Fix:** the mock now implements a small real cloud backed by
@@ -1002,7 +1002,7 @@ below.
   `CreateRemoteThread`+`LoadLibrary` injector) from the workspace *and* from
   `%LOCALAPPDATA%\Temp\opencode\probe-inject`. Without elevation an exclusion
   cannot be added (`Get-MpPreference` needs administrator), so the external
-  injector is currently unusable. The probe has to be loaded another way — the
+  injector is currently unusable. The probe has to be loaded another way - the
   mock `steam_api.dll` is already in the process and can `LoadLibrary` a test
   DLL itself, or the load vector moves to a `steam_api.dll` **proxy** that
   forwards to the real one (the classic, and it avoids the injector entirely).
@@ -1011,7 +1011,7 @@ below.
 * The game is 32-bit x86 with ASLR: always talk about `AI+RVA`, never an
   absolute VA.
 * PowerShell here has no `tail`; use `Select-Object -Last N`. Inline
-  `python -c` with newlines fails — write a `.py` file and run it with
+  `python -c` with newlines fails - write a `.py` file and run it with
   `%LOCALAPPDATA%\Programs\Python\Python312\python.exe`.
 
 ### Windowed mode: two instances side by side on one display
@@ -1405,7 +1405,7 @@ Gotchas worth recording:
 * 1.5 GB snapshot ≈ 4.4 s, so with a 15 s window the walk has to start
   about 7 s in.
 
-### Phase 6: the gameplay view-projection is not in the heap — capture the pipeline
+### Phase 6: the gameplay view-projection is not in the heap - capture the pipeline
 
 The camera hunt through memory scanning ran out of road. `vpfind` (structural
 VP test: scaled-orthonormal basis, 4th basis parallel to the 3rd,
@@ -1994,7 +1994,7 @@ address is resolved **once** at startup rather than on every send. Two cases:
 The more important change is that the host side **learns** its peer: the first
 avatar packet that arrives carries the real source address, and from then on the
 send thread talks to that address instead of the configured one. That is what
-makes this usable over the internet without both sides configuring anything —
+makes this usable over the internet without both sides configuring anything -
 only the joining side needs an IP, and NAT hole-punching falls out for free
 because the host answers the mapped source port it actually saw.
 
@@ -2049,17 +2049,17 @@ output" instead of describing symptoms.
 `stage5/pack/` contains the install + run scripts, plus `aicctl.ps1` (a UDP
 control client) and `fakepeer.ps1` (a scripted peer for QA):
 
-- `install.ps1` — backs up `AI.exe` and `STEAM_API.DLL` once (never
+- `install.ps1` - backs up `AI.exe` and `STEAM_API.DLL` once (never
   overwriting a pristine backup), applies `patch_gate.py` (which refuses unless
   the guard bytes match the expected function), installs the mock DLL and
   `coopnet.dll`, creates `steam_remote\p1..pN`. `-Uninstall` restores.
-- `host.ps1` / `join.ps1` — one instance each, with all environment variables
+- `host.ps1` / `join.ps1` - one instance each, with all environment variables
   set in one place (`aiclaunch.ps1`).
-- `local2p.ps1` — two instances on this PC, tiled side by side on the primary
+- `local2p.ps1` - two instances on this PC, tiled side by side on the primary
   display (the user's standing requirement).
-- `status.ps1` — asks every instance whether the link is alive and explains how
+- `status.ps1` - asks every instance whether the link is alive and explains how
   to read the answer.
-- `README.md` — honest about the limits: separate worlds, same save required,
+- `README.md` - honest about the limits: separate worlds, same save required,
   no occlusion, no Steam overlay, no join UI.
 
 All the variables the mock and the transport read are centralised in
@@ -2108,13 +2108,13 @@ would first hide them, and one frame of lag between the overlay publishing the
 pixel and Present sampling it is invisible.
 
 **Result (2026-10-23): depth sampling at Present does not work for this game.**
-The pipeline itself is sound — `OMGetRenderTargets` returns a DSV, the staging
+The pipeline itself is sound - `OMGetRenderTargets` returns a DSV, the staging
 texture is created in the buffer's own format (`D24_UNORM_S8_UINT`), the 1x1
 copy succeeds, and `Map` returns data. But 7410 consecutive samples at
 `(840,525)` all read `raw=00000000` (`scene=0.0000`), and earlier samples at
 the same camera position read `0.2477` (a 6.6 cm "wall" that is really the
 player's own weapon, or a cleared buffer). The depth buffer is **cleared before
-Present** — there is nothing to sample by the time the frame is presented.
+Present** - there is nothing to sample by the time the frame is presented.
 
 Consequences:
 

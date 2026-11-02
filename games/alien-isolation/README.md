@@ -13,14 +13,14 @@
 Presence co-op only: two players each run their own instance of the game and see
 the other as a body-shaped avatar in the world, at the right place, size and
 facing. Positions sync over UDP at 20 Hz with snapshot interpolation and a 1.5 s
-peer timeout. The two worlds are **not** shared — the alien, doors, items and
+peer timeout. The two worlds are **not** shared - the alien, doors, items and
 story are per-instance, and both players must load the same mission save to be
 in the same place. Occlusion does not work (the avatar draws through walls) and
 there is no join/host UI beyond scripts.
 
 ## Existing work
 
-- **Alien Isolation co-op (Dropper7894)** — announced prototype aimed at
+- **Alien Isolation co-op (Dropper7894)** - announced prototype aimed at
   Survivor Mode; no campaign support confirmed. Listed in `data/directory.yaml`.
 - No usable campaign co-op mod exists; this project builds from zero.
 
@@ -67,8 +67,8 @@ there is no join/host UI beyond scripts.
 
 ## QA
 
-- `convtest.exe` — 36 checks on the camera detector (all pass).
-- `stage5/test/fakepeer.ps1` — scripted peer for projection and peer-learning
+- `convtest.exe` - 36 checks on the camera detector (all pass).
+- `stage5/test/fakepeer.ps1` - scripted peer for projection and peer-learning
   tests.
 - Two-instance harness on a 3440x1440 rig: avatar projection checked against
   hand arithmetic (971 px at 2.16 m vs 972; 230 px wide vs 229; 1040 px at
