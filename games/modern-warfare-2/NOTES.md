@@ -823,6 +823,253 @@ eye; his body from the ground. Lip sync: voice and lips seen out of sync on both
 screens; `timescale` stayed 1 the whole scene except the throw's slow motion (back to 1), so not
 the cause; open.
 
+## QA bots press real buttons (2026-10-21)
+
+Console `+activate` did nothing because the 64-bit build has no such console command (`!cmds`:
+168 commands; of the `+` ones only `+moveup`, `+speed`, `+melee_breath`, `+throw`,
+`+nightvision`, `+incAnimWeight`, `+decAnimWeight`, registered at rva 0xcf5d0 and 0xd3240).
+How a key works (Ghidra, iw4sp.exe build 25374375):
+- Bind name table at rva 0x3be770, 0x4c `char *` entries: index 0 empty, `+attack` 1, `-attack`
+  2, `+melee` 3, ... `+forward` 0x1b, `+back` 0x1d, `+gostand` 0x19, `+activate` 0x31,
+  `-activate` 0x32, `+reload` 0x33, ... then `togglemenu`, `weapnext`, ... `leaveads` 0x4b.
+- rva 0xd1810: name -> index (0 if none). Per-key bind index at 0x5300f0 (stride 0x18,
+  256 keys); rva 0xd17f0 reads it; `bind` (rva 0xd13d0) writes it.
+- rva 0xce450 `(localClient, index, key)`: the switch over the index. Odd index: kbutton down
+  (rva 0xd0620), even: up (rva 0xd06f0); a few run actions (actionslots, stance). It returns
+  early unless the client is in a level (bytes 0x5dac53 and 0x40cac8). kbutton (0x14 bytes):
+  `int down[2]; int downtime; int msec; char active; char wasPressed`; the array starts at
+  0x52fbc0 (`+left` 0x52fbc0, `+forward` 0x52fbe8, `+attack` 0x52fcd8, `+activate` 0x52fd3c).
+- rva 0xd03a0 builds the usercmd: with key catcher 0x10 (0x533cb0) set it only does stance;
+  otherwise buttons (rva 0xce200: attack 0x1, melee 0x4, Use 0x8, reload 0x10, usereload 0x20,
+  prone 0x100, ...), key moves (rva 0xcf900, forward/back/strafe from kbutton state, rva
+  0xcfbc0) and mouse. Key moves are skipped while the player state's flag 0x800 (0x535d44,
+  frozen controls) is set.
+- mw2_coop: console command `mw2coop_bind +activate` calls 0xce450 with key 0x1ff (no keyboard
+  sends it); QA scripts set `mw2coop_qa_press "<player> <button> <ms> <n>"` and only the DLL of
+  that player's machine (host = player 1) presses and lets go after ms.
+
+Results: `buttons` (S.S.D.D., Whiskey Hotel) and `pickups` (rifle, pistol, frag box) all PASS on
+both machines with real presses. Found with real input:
+- S.S.D.D.: player 1's range place (48 units left of `player_start_range`) was 10 units further
+  back than player 2's and inside the bay's back wall: traces from him were blocked to the
+  sides and back, Forward moved him 0 units in five tries. Now both stand where COD-MOD puts
+  its players: player 1 at -2515.2 5190.2 (67 units left
+  of the start, 36 forward: bags 20 ahead, wall 23 behind), player 2 on the start (bags 42
+  ahead). The bay (player traces): from 101 units left to 28 right of the start; the back wall
+  slants, 7 to 25 units behind the start's line. QA `bay` checks both inside, not stuck.
+- `maps\_introscreen` froze `level.player` only (S.S.D.D.: 12 s): player 2 could walk and take
+  the pistol while player 1 could not. Patched (tools/gen_intro_patches.py): FreezeControls,
+  DisableWeapons and EnableWeapons on `level.player` in the 12 intro functions go to every
+  player. Each of them lifts its own freeze (no early return in between). QA `introfreeze`.
+
+## Loose Ends: Shepherd's betrayal for two players (2026-10-22)
+
+Scene (estate.gsc `ending_moments()`): at the LZ a mortar drops Roach (`birchfield_knockout`,
+flag `play_ending_sequence`); Ghost drags him on rig `playerview` (anim `estate_ending_drag`,
+`PlayerLinkToDelta` arcs 30) while he fights on his back with an AK; blackout; at the Pave Low
+(`estate_ending_part1`) Ghost pulls him up, Shepherd draws (`pistol_pullout`), fires at him
+(`shepherd_fire2`: `DoDamage(99 / damagemultiplier)` with the death shield on) and at Ghost
+(`shepherd_fire1`); blackout; `estate_ending_part2`: two men throw Roach's body
+(`body_ending`), then Ghost's, into a pit; gasoline, fire, `end_the_mission`. Everything is on
+`level.player`. Before: player 2 stayed where he was (12,000 units away at start `ending`) and
+saw nothing. COD-MOD: only freeze and death shield for both at the knockout; its attempts to link
+both players to the rig are commented out.
+Design: as in COD-MOD, player 2 invisible in the
+cutscenes and thrown with Roach in the one throw; Shepherd's shot hits player 2 as well (he
+sees from Roach's eyes, the gun points at him), then a black screen without text.
+Done (tools/gen_estate_patches.py, `maps\_mw2coop_estate`): every `level.player` statement of
+`ending_moments`, `ending_gasoline_sequence`, `ending_passing_out`, `ending_slowmo`,
+`ending_mortarhit_ghost_sequence`, `startEnding`, `birchfield_knockout` runs for each player,
+except Shepherd's hit and its rumbles, the damage watch, the breathing sound and the blur cycle's
+pacing; both lose their model function (`SetModelFunc( undefined )`: Hide does not hide a co-op
+player) and names; player 2 takes the same hit after Roach's, then a client black overlay
+(sort -1, under the subtitles) fades in over 0.3 s and out with the toss's `restoreVision`.
+QA `betrayal`: with test god mode on, the hit does nothing (health stays 100, for player 1 too):
+run it with `MW2COOP_GOD=0`. The ending's death shield sends no `damage` notify; the test reads
+the lowest health instead.
+
+## UPnP on a PC with several network adapters (2026-10-22)
+
+On a PC with several network adapters the search got no answer ("no router answered"). A plain
+SSDP M-SEARCH (Python, no interface chosen) got no answer either, even for `ssdp:all`; the same
+search sent from the LAN address (bound to it, `IP_MULTICAST_IF`) or straight to the gateway got
+the router's answer at once. Windows sent the multicast out of another adapter. Fix in
+`src/upnp.c`: the address of the route to the internet (UDP `connect` to a public address,
+`getsockname`; it sends nothing) and the gateway of that route (`GetBestRoute`); the search goes
+out from that address and to the gateway as well. The router then answered and took the forward
+(UDP 28960). Also, starting a level dropped "hosting" for a moment and the forward was removed and
+added again; removal now waits for a 10 s stop.
+
+## No Russian: Makarov's crew look on the Spec Ops body (2026-10-22)
+
+Player bodies must be Spec Ops co-op bodies (`coop_body_*`): an AI body such as the crew's
+`body_airport_com_c` on a player gives a broken pose (the player animations need the co-op
+skeleton). To dress both players as Makarov's crew, the DLL (`src/transplant.c`) puts the crew's
+mesh on `coop_body_us_army` in memory: the target keeps its bones, hit locations, collision and
+bounds and takes the donor's LODs (surface copies) and material list. Every vertex's bones are
+renumbered by bone name; a donor bone the target lacks takes its nearest ancestor. Heads stay
+separate models (the crew's own heads attach to the co-op body as the co-op heads do).
+
+Observations (dumps with the new `!surfs <xmodel>` QA command, then frames):
+- 64-bit layouts. XModel: boneNames +0x28 (script string indices, interned), parentList +0x30
+  (a byte per non-root bone: its index minus its parent's), materialHandles +0x58, lodInfo[4]
+  +0x60, stride 0x38 (dist +0, numsurfs +4, surfIndex +6, modelSurfs +8, partBits[6] +0x10, surfs
+  +0x28). XModelSurfs: name +0, surfs +8, numsurfs +0x10, partBits +0x14. XSurface, 0x58 bytes:
+  deformed +1, vertCount +2, vertInfo.vertCount[4] +0x18, vertsBlend +0x20, vertListCount +0x30,
+  vertList +0x38 (0x10 each: boneOffset, vertCount, triOffset, triCount, collision tree +8),
+  partBits[6] +0x40. Checked on every surface of three models: the vertex groups add up to
+  vertCount.
+- vertsBlend: vertCount[0] vertices with 1 bone (1 value), [1] with 2 (bone, bone, weight), [2]
+  with 3 (5 values), [3] with 4 (7 values); a bone is stored as its index * 64.
+- partBits: one bit per bone used, bone 0 = the top bit of word 0, without ancestors (17 of 17
+  crew surfaces match that rule, none match "with ancestors").
+- Crew (com_c) 81 bones, 17 surfaces in 4 LODs; ranger 90 bones, 33 surfaces. Six crew bones have
+  no ranger bone of the same name (mapped to ancestors).
+- The swap runs on the main thread (a console command the control thread queues), only while the
+  requested map runs: asset lookups from another thread, or during the next level's zone load,
+  hung the game in earlier work. A level restart finds it done (the target's material list is the
+  donor's); the next level's zone load brings the original model back.
+- Frames (QA `bodyview`, airport start `stairs`): both players in the crew's jacket and trousers,
+  standing, stepping sideways and backing off with the player animations; no visible stretching
+  at the hips, where the two skeletons' bind poses differ by up to 5 units.
+
+Unknown: how it looks in the other LODs at distance (not looked at). Both players share one crew
+body (com_c) with different crew heads; whether the loaded zones hold a second co-op body that
+could take com_d is not checked.
+
+## No Russian level tour and the squad's line of fire (2026-10-22)
+
+QA `tour` on airport (9 start points, each with frames on both screens): 109 PASS, 0 FAIL. The
+script errors came from the developer start `grigs` and from one `Kill()` under the test god mode.
+That kill is the squad's line of fire: in the lobby (`intro_civilians`) and the massacre
+(`massacre_killers_shotgun`) the level waits on a final trigger with `add_wait(
+::trigger_wait_targetname )`, aborted by the squad's move-on flag, and calls `level.player
+add_call( ::Kill )`; before that, `player_line_of_fire` fires warning MagicBullets at
+`level.player`'s feet while he stands within the line's radius. The trigger fires for either
+player, so player 2 walking in killed player 1, and player 2 got no warning shots. Fix (generated
+by `tools/gen_airport_patches.py`): the warning goes to the player in the line, and the player who
+walks into the final trigger dies (player 1 outside co-op). QA `lineoffire` (start `intro`,
+`MW2COOP_GOD=0`): player 2 walks in, he dies, player 1 lives, the mission fails for both.
+
+Frames: the `intro` start is the elevator with the mission's intro screen, black for its first
+10 s, as in single player.
+
+## God mode, downs and difficulty for two (2026-10-22, v0.4.0-beta)
+
+- Test god mode: `god_mode_on()` was `GetDvar("mw2coop_god") != "0"`, and only the removed
+  `.bat` launchers set "0": every lobby session of v0.3.0-alpha and v0.3.1-alpha ran with both
+  players invulnerable. Now on only for "1" (`tools/qa_pair.sh` sets it). QA `god` both ways.
+- Recruit: `maps\_gameskill` has `player_downed_buffer_time` for normal, hardened and veteran
+  only. On Recruit (`easy`) `maps\_coop::downed_player_manager()` multiplied undefined on the
+  first down (script error) and its thread ended: nobody went down after it and both down never
+  failed the mission. Patched to Regular's 2 s. QA `downs` (forces Recruit with
+  `level.forcedgameskill`): before 4 FAIL plus the error on both machines, after all PASS.
+- `resetSkill()` runs on every down and revive (Spec Ops' buff for the player still up) and set
+  both players' `threatbias` and `attackeraccuracy` back to the difficulty's values, undoing a
+  scene's own. Both kept around the call. QA `sceneskill`: before 150 and 1 instead of 777 and
+  0.123, after all PASS.
+- Difficulty: the popup's buttons run `profile_difficultySave <n>` and `setdvar` on
+  `g_gameskill` and `g_gameskill_player_1/2`. All three are latched (flag 2; `g_gameskill` has
+  0x2000 too, and console `set`, `setdvar`, `seta` change nothing): `devmap` applies the latch,
+  a co-op session starts with `coopLaunch`, so the pick never applied. The level start (rva
+  `0x22e1a0`) sets `g_gameskill_player_<n>` from party member n's difficulty (rva `0x5dd988` +
+  n * 0x38, each member's own profile), `GetPlayerSetting("gameskill")` reads that dvar (rva
+  `0x18de0a`), and `updateGameSkill()` plays the higher of the two players'. So the host played
+  what his profile loaded at startup and the client his own. Fix: the DLL hooks
+  `profile_difficultySave` for the host's pick (else the difficulty it plays), sends it as
+  `mw2coop_skill` with `coopLaunch`, and `updateGameSkill()` takes each player's from it in a
+  co-op campaign. QA `skill` (host picks through `profile_difficultySave`, client profile on
+  Regular): picks 3, 0 and 2 give the level and both players 3, 0 and 2 on both machines; the
+  release DLL checked with 3.
+
+## Level tour results (2026-10-22)
+
+QA `tour` on two copies (host + client), god mode on, the mod's main of the day (each level run
+once between 07:22 and 13:20; fixes found earlier in the day were in, later ones not). Per level:
+start points (sections), checks passed and failed on the host, runtime script errors host/client,
+frames host/client. dc_whitehouse (Whiskey Hotel) and ending (Museum) were toured later that day
+(16:55 and 16:58).
+
+| Level | Sections | PASS | FAIL | Script errors | Frames | Notes |
+|---|---|---|---|---|---|---|
+| trainer | 7 | 91 | 0 | 0/0 | 28/28 | |
+| roadkill | 9 | 88 | 1 | 0/0 | 30/30 | walk check at `dismount`: 26 of 100 units (the level's slow walk) |
+| cliffhanger | 15 | 162 | 21 | 4/4 | 56/56 | the walk check stepped off the cave ledge and player 2 fell forever: fixed (ledge death per player, walk only where there is floor); first two sections rerun after the fix PASS; errors from the dev-only `jump` start |
+| airport | 9 | 109 | 0 | 6/6 | 34/34 | errors in `grigs_test` / `_anim::get_anim_position` (not looked into) |
+| favela | 12 | 123 | 0 | 0/0 | 37/37 | |
+| invasion | 17 | 201 | 0 | 0/0 | 62/62 | run after the Burger Town spot fix |
+| favela_escape | 13 | 169 | 0 | 0/0 | 52/52 | |
+| arcadia | 5 | 65 | 0 | 0/0 | 20/20 | |
+| oilrig | 9 | 93 | 0 | 0/0 | 30/30 | surfacing start fixed afterwards |
+| gulag | 13 | 139 | 4 | 1/1 | 46/46 | player 1 sent to triggers inside walls (test artifact); error: scripted kill in `player_dies_to_cavein` under god mode |
+| dcburning | 10 | 116 | 0 | 0/0 | 36/36 | Blackhawk ride fixed afterwards |
+| contingency | 8 | 104 | 0 | 0/0 | 32/32 | |
+| dcemp | 12 | 126 | 0 | 7/7 | 40/40 | errors in the level's `emp_empaftermath` / ambient start code; partner rigs fixed afterwards |
+| estate | 10 | 121 | 1 | 4/4 | 38/38 | walk check at `forest_fight` (the start's shellshock); errors in the level's start code |
+| boneyard | 7 | 83 | 2 | 5/5 | 26/26 | `ride_end`: player 2 left behind, fixed (UAZ back seat); errors in the level's vehicle start code |
+| af_caves | 10 | 108 | 1 | 0/0 | 33/33 | walk check at the default start: 25 of 99 units (not looked into) |
+| af_chase | 13 | 39 | 0 | 0/0 | 14/14 | knife dev starts skipped |
+| dc_whitehouse | 4 | 52 | 0 | 0/0 | 16/16 | |
+| ending | 9 | 45 | 9 | 361714/2562846 | 16/16 | player 2 cannot walk (0 of 100 units) or is 1500-1800 units from player 1 at the exhibit starts: not fixed; the errors are the civilians' `_anim::anim_weight` storm, also in single player |
+
+## Playtest 2026-10-23 (two PCs, Cliffhanger and No Russian)
+
+Two people played over the internet, each on his own PC and Steam account, with a
+session recorder in the scripts (`maps\_mw2coop_rec.gsc`: positions every second, buttons,
+weapons, links, damage, downs and the allies, written to `mw2coop.log` through a `setdvar`
+the DLL catches). Both machines' logs matched line for line (no desync). Builds were sent
+during the session (v0.4.6-beta-rec1 to rec10), each fix from the last log:
+
+| Seen in the logs | Cause | Fix |
+|---|---|---|
+| player 2 lost his ice picks, then fell off the wall when player 1 reached the top | the weapon sync took the picks with player 1's and gave them back mid-climb | the picks are each climber's own (`level.mw2coop_own_weapons`) |
+| player 2 hung inside the rock after the big jump; later Soap caught a player who had already fallen | player 2's far-lane spot under the edge was in the rock; his hidden rig still hit `start_gaz` | player 2 uses player 1's spots across the gap; no catch without `player_hangs_on` |
+| a fall put player 2 off the ground in the slope, then 40 units under the floor | the lane-shifted `player_recover`, then his lane's start | both players recover at `player_recover`; moved beside the other if on top of him |
+| falls above the safe point killed | vanilla rule | in co-op any fall from the first wall goes back to the bottom; the climb uses the easy rules |
+| two MacTavishes at the top | `friendly_init_cliffhanger` spawns a Soap per catch | the second catch reuses him |
+| a restart at checkpoint `c4` put both at the cave | `start_c4()` places nobody (teleport commented out) | checkpoints keep where they were reached; restore at the start |
+| the helicopter ending never started, the mission failed later | it waited for player 2 to get off his snowmobile | the ending starts when either player is there (as in the original) |
+| No Russian never ended after a restart at `tarmac` | `escape_main()` calls `nextmission()` from the default start only | `maps\_mw2coop::ending_goes_on()` in five level endings |
+
+Cliffhanger was finished; No Russian's ending fix was not played yet. The 12 s lobby drop seen
+earlier in QA was a two-copies-on-one-PC artifact (joining `127.0.0.1` makes member addresses
+loopback, so the lobby heartbeat never reaches the socket); players on two PCs are not affected.
+
+## v0.5.0-beta (2026-10-25)
+
+Release `v0.5.0-beta` of mw2_coop (tag on main 8e4f31c, docs 83c6cbd): zip SHA-256
+`661359ebba9e8ee4a9f4d62f2a9a533a00afa341178a72dca848d1897051c4e6`, release `winmm.dll` SHA-256
+`12176eeea7bf517c1901812e2f996a3dbc4175ac794c1806bc918a671d4c13fd`, built from a fresh clone of GitHub `main`.
+Release DLL checked on two test copies: `spawn` on the range and the Gulag rope (`rappel`): PASS on both, the fonts load. The experimental
+32-bit archive `mw2coop-v0.5.0-beta-x86.zip` (SHA-256 `146d14513c1944b21a4ac3e4c473de0801c191d87d50f6209ad37e4a69b073bf`, its DLL
+`836f09112cf33694...`): `spawn` PASS on two 32-bit copies.
+
+Observations (what ran; all by bots on two copies on one PC, nobody played these with two people):
+- Scenes for both: QA `rappel` (Gulag cellblock rope: both on the rope, both 479 units down, let go, weapons in
+  hand), `rappel` on af_caves, `gulagevac`, `chopperjump`, `bigjump`, `oilbird`, `invconvoy`: PASS.
+- Cliffhanger: `snow`, `snowview` (frames of the rider, the partner's view of the snowmobile), `climbview` (frames of
+  the climber and the ice picks), `climb` (both reach the top; Soap catches both; four runs failed at the bot's
+  run-up to the big jump while one passed with the new picks: a flaky QA step, not proven).
+- S.S.D.D. `course` (gates close after both are through), Team Player `seatview` (the passenger looks ahead, no
+  friendly damage on the ride): PASS.
+
+Things we learned (worth knowing for other games on this engine):
+- `GetEntArray( value, "script_flag" )` returns undefined in this build: pick triggers by class and compare the field.
+- A player body (multiplayer skeleton) cannot play the campaign AI animations (a snowmobile driver twists across the
+  seat): make a model with an AI skeleton wearing the player's mesh. The DLL copies the AI model into the XModel
+  pool and puts the co-op body's surfaces on it (the same transplant as No Russian's crew), and answers the lookup
+  of a made-up model name; `DB_IsXAssetDefault` must say "not default" for that name or a reader count leaks and
+  the next `playsound` hangs.
+- Attach takes no angles: an upright ice pick in a fist needs a model whose bone is turned in memory.
+- Debugging a hang: a thread of the DLL that writes every other thread's return addresses to a file on request
+  (a file `dumpstacks` in the mod folder gives `stacks.txt`), taking no lock the game may hold.
+
+Unverified: the click fix for the ice climb (a guess; its own commit, revert with `git revert`), the second
+player's stealth in Cliffhanger (no frame), slide_sync in Escape from Favela, the other player's view of every
+rope scene.
+
 ## Status
 
-Next: lip sync (off on both screens), Endgame boat, the nrend anim_loop error; profile records.
+Done in v0.5.0-beta: the rope and rappel scenes for two, S.S.D.D.'s gates, Team Player's swap, Cliffhanger's
+snowmobile and climb views, Russian fonts, an experimental 32-bit archive. Next: a real two-person playthrough of the new
+scenes, lip sync (off on both screens), the nrend anim_loop error, the Museum for player 2, split screen.
