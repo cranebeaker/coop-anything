@@ -1234,3 +1234,39 @@ saw them. Derived: since the host's state (e.g. "Chasing") is put on mirrored gu
 steps may fire more often. A shot from a gun whose `MyOwner` is a mirrored guard is now dropped on a guest too.
 Mutation `guardguns`. Not proven: check 4d2 passed in 3 suite runs with the fix, and in 1 with it off (the stray hit
 is too rare to show on demand). Check 7 failed once in those runs, as before (the puppet's injury count going up).
+
+## Grenades thrown by hand (2026-11-02)
+
+Observed (`tools/handgrenade.sh`; the guest is given an `oGrenade` with `giveitem 99` and throws it with `throwitem`):
+- A thrown grenade goes the way of thrown items: the other copy makes the item (`spawn_aboard_shared`, all its
+  variables), shown flying and coming to rest. Its impacts were dropped while it flew, but at rest it was an ordinary
+  item there: when its fuse ran out, the host's copy exploded as a real grenade (hits live; it would have hit the
+  guest's puppet and sent that to the guest, who was also hurt by its own copy's blast).
+- And an echo: the host's making of that item went through the grenade hook as a grenade fired on the host, was sent
+  to the guest as one, and the guest showed a second grenade (its log: "a shown grenade's explosion" beside its real one).
+- **Fix**: items made as the other copy's are remembered (also after they come to rest); such a grenade explodes like
+  a shown one (hits and destroyed modules dropped; mutation `thrownblasts`); and an item made by the item sync is not
+  sent as a fired grenade.
+- Given grenades are random ("Proximity Breach Grenade" did not go off with nobody near): the test puts it on a 2 s
+  timer (helper `timedgrenade`: `Trigger` "Timed", `TimerSeconds`, `SecondsUntilDetonation`).
+- **Test** (`tools/handgrenade.sh`, 7 checks): dock; the guest has a grenade; throws it: the host shows it; it explodes
+  on both copies at the same place (0 units apart); the host's shown one sends no hit for the guest's puppet; no error
+  dialogs; both advancing.
+
+## The new life's re-dock: a try that broke docking at home (2026-11-02)
+
+`life.sh` fails about half its runs with the new character's body left in its station's building ("Controlling",
+Parent = the building) while its pod docks at the mission ship. Tried: a pilot at the controls of its free pod but
+parented to something else is taken out of that (`RemoveFromParentsContents`, Parent = itself), as after an undock from
+a ship. It broke docking at home: while a pod docks at a station it is still free for some frames after the game has
+put the pilot into the building (`PlayerArrivesOnStation`); the pilot was taken out again and the game raised "Adding
+oPlayer to parents contents but I'm already in there!" (then the host's copy stalled). Reverted. A fix would have to
+tell an undock from a station apart from a docking at one.
+
+## Suite check 7's puppet injuries (2026-11-02)
+
+Check 7 (a hit on the guest's puppet hurts the guest, not the puppet) failed 3 times today with the puppet's injury count
+up by one, each time with the guest knocked out by that hit (guest 1 -> 2, "Unconscious"). Derived from the decompile:
+`PlayerStateUnconscious` adds to `TimesInjured` (0x2c4) when a player goes down, and the host lays the puppet down when
+its player goes down (`puppet_down`): going down counts one, no hit reached the puppet. The check now allows that one.
+(A side effect to know: on the host, the guest's going down counts one more injury in that count there.)
