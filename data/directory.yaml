@@ -3555,7 +3555,7 @@
     (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
     extrapolation. Local player cannot walk through the other player. Enemies are
     shared (early); each runs in the nearest player's game and is copied in the other, with damage and deaths
-    synced; items, doors and story are not. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
+    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). A fatal hit downs a player until the other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
     Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
     two real players not tested together. Write-up in games/resident-evil-7.
   sources:
@@ -7064,10 +7064,10 @@
   players: "2-4"
   networking: direct-ip
   open_source: yes
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Version 0.2.7 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
+    split screen. Version 0.3.0 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
     player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
     display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
     releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
@@ -7076,13 +7076,14 @@
     powers, doors, breakable and movable objects and saves; each fire team follows its own player. The whole
     campaign runs in automated tests over a LAN between two PCs, every story split with a real host and client; a
     first human session over Steam (missions 1-8) was fixed up in 0.2.2, a full human playthrough is still to come.
-    MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
+    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees (the Bull's wind-up, second-weapon triggers, magazines), adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
     0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.0
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-10-23'
+  checked: '2026-11-01'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -7865,35 +7866,32 @@
 - game: 'Middle-earth: Shadow of War'
   year: 2017
   engine: Firebird (LithTech derivative)
-  project: shadow-of-war-coop
-  url: https://github.com/Santonus-not-bot/shadow-of-war-coop
-  other_urls:
-  - https://github.com/JustAddMP/ShadowOfWar
-  kind: mod
-  status: alpha
-  coop_scope:
-    players_visible: 'yes'
-    story: unknown
-    enemies: partial
-    world_state: partial
-    items: unknown
-  players: '2'
-  networking: vpn-needed
-  open_source: 'yes'
-  last_activity: 2026-11
-  qa: automated
-  notes: One host and one client, UDP, direct address over an overlay VPN. The host's world is the real one; the client
-    joins the host's save (SHA-256 checked), sees the host's enemies (up to 16 near either player), hurts them and is hurt
-    by them, and follows the host's fast travel. MIT, Steam build 3095001 only; runs in a separate copy of the game
-    folder with saves and Steam cloud redirected and the game itself offline. Tested only with two game copies on one PC
-    (loopback and a simulated bad network, scripted checks plus an offline suite); never on two PCs. Slow motion is not
-    off in co-op yet, captains and Nemesis events are the host's only, the client cannot fast-travel by itself. Research
-    and reverse-engineering notes are in games/shadow-of-war; claim issue cranebeaker/coop-anything#93.
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found; the game's online features (Vendettas, Online Conquest) are asynchronous only.
+    JustAddMP/ShadowOfWar is a placeholder repo ("planned", README only, 2026-10-17). Research and reverse-engineering
+    notes for Steam build 3095001 (test-copy isolation, debug-print capture, Nemesis event, death, promotion and RNG
+    functions with signatures) are in games/shadow-of-war; claim issue cranebeaker/coop-anything#93.
   sources:
-  - https://github.com/Santonus-not-bot/shadow-of-war-coop
+  - https://github.com/JustAddMP/ShadowOfWar
+  - https://twinfinite.net/?p=305996
   - https://github.com/cranebeaker/coop-anything/issues/93
-  checked: '2026-11-01'
-  made_with_coop_anything: true
+  checked: '2026-10-20'
+  searched:
+  - 'Web search (several phrasings: co-op mod, multiplayer mod, coop campaign) for Shadow of War and Shadow of Mordor,
+    2026-10-20'
+  - GitHub repository search "shadow of war" (first 30 results read), 2026-10-20
+  - Nexus mod pages (automated fetch blocked, 403; search-result text only), Steam forum threads via search, 2026-10-20
+  - Not searched yet; Reddit, ModDB, the game's modding Discord, non-English sources
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)
@@ -10040,4 +10038,162 @@
   - https://github.com/multiplayereverything/zoo-tycoon-coop
   - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
   checked: '2026-10-30'
+  made_with_coop_anything: true
+- game: Star Wars Outlaws
+  year: 2024
+  engine: Snowdrop (closed native x64 binary with Denuvo)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found (Ubisoft Connect build, exe SHA-256 371BE3E5...1D2F). The exe contains an
+    unreleased 2-4 player co-op heist mode (CoopHeistMode, CanStartCoopMatch, team lives, reinforcement waves, ping
+    points), and a runtime read confirmed all seven co-op and heist settings files ship and load. Snowdrop's session
+    layer (reliable UDP, hot-join, host migration) is linked; matchmaking goes through Ubisoft services. Not playable;
+    findings and tools in games/star-wars-outlaws.
+  sources:
+  - https://nexusmods.com/starwarsoutlaws/mods/24
+  - https://github.com/patrickmollohan/Ultimate-SWO-ModLoader
+  - https://steamcommunity.com/app/2842040/discussions/0/4625854988055223265
+  checked: '2026-11-01'
+- game: 'Dynasty Warriors 3: Complete Edition Remastered'
+  year: 2026
+  engine: Unreal Engine 5
+  project: Official split-screen co-op (shipped) and online co-op (free update announced)
+  url: https://store.steampowered.com/app/3841510/DYNASTY_WARRIORS_3_Complete_Edition_Remastered/
+  other_urls:
+  - https://noisypixel.net/dynasty-warriors-3-remastered-demo-online-co-op/
+  kind: official
+  status: official
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'no'
+  last_activity: 2026-09
+  qa: none
+  notes: Ships with 2-player local split-screen co-op and versus only; Steam does not list Remote Play Together.
+    Koei Tecmo announced at TGS 2026 a free update adding online 2-player co-op, due by January 2027 (not released
+    as of 2026-11-01). No community online mod found. Research only, see games/dynasty-warriors-3-remastered.
+  sources:
+  - https://store.steampowered.com/app/3841510/DYNASTY_WARRIORS_3_Complete_Edition_Remastered/
+  - https://www.co-optimus.com/game/18377/pc/dynasty-warriors-3-complete-edition-remastered.html
+  - https://noisypixel.net/dynasty-warriors-3-remastered-demo-online-co-op/
+  - https://www.thesixthaxis.com/2026/09/24/dynasty-warriors-3-remaster-demo-out-now-online-co-op-announced/
+  checked: '2026-11-01'
+- game: TimeShift
+  year: 2007
+  engine: Saber3D (Saber Interactive), Direct3D 9, Havok, FMOD, Bink; own event-driven level script language
+  project: TimeShift Co-op
+  url: https://github.com/dolbaras/timeshift-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: yes
+    enemies: yes
+    world_state: partial
+    items: unknown
+  players: "2-4"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Whole story campaign over the game's own netcode (host plays the story, clients replay it), 2 to 4 players on a LAN or by
+    direct IP (the Internet list is revived through OpenSpy, not yet tested between two homes), and two players on one PC
+    in split screen. Version 0.1.1; a dinput8.dll proxy plus data built at install time from the player's own archives
+    (no game files in the repo); needs patch 1.2, Steam copies (patch 1.0) are brought to 1.2 only with the player's
+    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse, AI on
+    clients (deaths, corpses, shots and their sound), levers, mounted guns and quad on clients, Regroup, gate hints, Continue with
+    the real loadout of the host and each client. One-file setup exe, installer in six languages and a shortcut that
+    installs newer releases from GitHub before each start. A bot runs a host and a client through all 24 levels with the
+    level changes; a whole campaign played by people, Internet play and sound judged by ear are still to come. Soldiers'
+    voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
+  sources:
+  - https://github.com/dolbaras/timeshift-coop
+  - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.1
+  - https://github.com/cranebeaker/coop-anything/issues/191
+  checked: '2026-11-01'
+- game: 'Alien: Isolation'
+  year: 2014
+  engine: Creative Assembly proprietary
+  project: AI co-op (build from zero, this fork)
+  url: https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: no
+    world_state: no
+    items: per-player
+  players: "2"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-10
+  qa: automated
+  notes: >
+    Build-from-zero presence co-op. A mock steam_api.dll plus a narrow two-jump
+    patch of AI.exe lets a second instance boot; an in-process D3D11 probe
+    (coopnet.dll) syncs player position and facing over UDP at 20 Hz and draws
+    the peer as a body-shaped, screen-space avatar in both instances, with
+    snapshot interpolation, a 1.5 s peer timeout, and an edge arrow when the
+    peer is off screen or behind the camera. Each player is in their own world
+    (no shared enemies/doors/items); both must load the same mission save.
+    Occlusion was attempted via depth sampling at Present and found not viable
+    (the depth buffer is cleared before Present); the avatar draws through
+    walls. Packaging scripts (install/host/join/local2p/status) provided.
+    Tested with a two-instance harness (wingame/tile/keys/ocr/winshot/pix) on
+    a 3440x1440 rig, side by side on one display.
+  sources:
+  - https://github.com/Joshiloveyou/coop-anything/tree/game/alien-isolation
+  checked: 2026-10-23
+- game: 'Middle-earth: Shadow of War'
+  year: 2017
+  engine: Firebird (LithTech derivative)
+  project: shadow-of-war-coop
+  url: https://github.com/Santonus-not-bot/shadow-of-war-coop
+  other_urls:
+  - https://github.com/JustAddMP/ShadowOfWar
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: vpn-needed
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: One host and one client, UDP, direct address over an overlay VPN. The host's world is the real one; the client
+    joins the host's save (SHA-256 checked), sees the host's enemies (up to 16 near either player), hurts them and is hurt
+    by them, and follows the host's fast travel. MIT, Steam build 3095001 only; runs in a separate copy of the game
+    folder with saves and Steam cloud redirected and the game itself offline. Tested only with two game copies on one PC
+    (loopback and a simulated bad network, scripted checks plus an offline suite); never on two PCs. Slow motion is not
+    off in co-op yet, captains and Nemesis events are the host's only, the client cannot fast-travel by itself. Research
+    and reverse-engineering notes are in games/shadow-of-war; claim issue cranebeaker/coop-anything#93.
+  sources:
+  - https://github.com/Santonus-not-bot/shadow-of-war-coop
+  - https://github.com/cranebeaker/coop-anything/issues/93
+  checked: '2026-11-01'
   made_with_coop_anything: true
