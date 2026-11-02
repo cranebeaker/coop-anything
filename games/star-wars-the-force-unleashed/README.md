@@ -14,8 +14,10 @@ Online co-op for 2 to 4 players, each on their own PC with their own camera, wor
 with several game copies on one PC. The tests include the Kashyyyk prologue started from the main menu,
 the TIE Factory, and simulated internet delay and packet loss. The owner has played it on one PC (two
 copies, 2026-10-28/29): enemies now attack remote players and Force Grip works for them. Enemy behaviour on
-clients still looks wrong, and only the host's character advances the level. A real session between two
-PCs has not happened yet.
+clients still looks wrong, and only the host's character advances the level. Experimental options for enemy
+shots on clients, level triggers for every player and more enemies for more players pass their automated
+tests in the game (2026-11-02); they are off by default and nobody has played with them yet. A real session
+between two PCs has not happened yet.
 
 ## Existing work
 
