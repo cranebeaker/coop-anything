@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario and a 9-check guns and grenades scenario on two real game copies (host + 1 guest), with 45 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario and an 11-check guns, grenades and noise scenario on two real game copies (host + 1 guest), with 47 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
@@ -142,10 +142,12 @@ goes on the host; the host's copy destroys a module that holds the end of an arm
 copies; the same modules are left on both; no error dialogs; both advancing. Modules are destroyed with the game's
 `DestroyModule` (helper `blastmod`), not by a real explosion.
 
-`tools/grenade.sh` (9 checks): dock; the guest fires a plain gun at an inner wall and the host shows the bullet (the same
+`tools/grenade.sh` (11 checks): dock; the guest fires a plain gun at an inner wall and the host shows the bullet (the same
 heading, one step on, fired by the guest's puppet); the guest fires a grenade gun: the host shows the grenade where it was fired, it
 explodes on both copies at the same place, and the host's look-alike hurts nobody (no hit on the guest's puppet sent);
-the host fires one: the guest shows it and it explodes on both at the same place; no error dialogs; both advancing.
+the guest's grenade alerts the host's guards, and the guest sees each alerted guard in the host's state; the host fires
+one: the guest shows it and it explodes on both at the same place; no error dialogs; both advancing (boards with
+`EscapeProtocol = 0`, so the alerted target does not flee and end the mission).
 Guns are given and fired with test helpers (`giveitem`, `selectitem`, `firegun`: the game's `GunFiresBulletInDirection`),
 not through the controls.
 
@@ -156,9 +158,11 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs, on the gunshots build (2026-11-01, core 811bde56): guns and grenades 9/9 twice (23:25, 23:27 UTC), modules 9/9
-(also with the new packet id, and `nomodloss` still caught), breach 8/8, suite 28/28, knocked-out 11/11, home 13/13,
-early 9/9, items 7/7, security 9/9, mission 10/10, rescue 8/8 (23:32-23:49); grenade 8/8 twice on the grenade build
+Last runs, on the guard-look build (2026-11-02, core 7a7c62a1): guns, grenades and noise 11/11 twice (00:43, 00:45 UTC);
+suite 3 of 6 runs 28/28 (check 7 failed twice in a new way, check 5 once: see NOTES.md); on the build before it
+(89311ae8, the same but for which noises are sent) suite 28/28, security 9/9, mission 10/10, knocked-out 11/11, home
+13/13, early 9/9, items 7/7, rescue 8/8, modules 9/9, breach 8/8 (00:24-00:40). Guns and grenades 9/9 twice on the
+gunshots build (811bde56); grenade 8/8 twice on the grenade build
 (c36cc0da); modules also 9/9 twice on the destroyed-modules build (7784485b); breach also 8/8 twice on the window-breach build (f28155a0). On the
 new-life build (e496cfaa): new life 9/9 in 4 of 9 runs (see above). Earlier
 runs are in the history of this file.
@@ -205,6 +209,8 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `noblownnews` (no "blown out" banner), breach scenario | 7 passed, 1 failed | the host was told only that the guest left the ship |
 | `nomodloss` (destroyed modules not sent), modules scenario | 4 passed, 5 failed | a module destroyed on one copy stayed on the other (78 modules left on the host, 80 on the guest); the guest was not blown out |
 | `noghosts` (shown bullets off), grenade scenario | 8 passed, 1 failed | the host showed no bullet for the guest's shot |
+| `noalerts` (a guest's gunshot noise not sent), grenade scenario | 11 passed | not caught: the grenade is heard through its look-alike's explosion, and the bot cannot fire a gun through its step (see NOTES.md) |
+| `noguardlook` (guards' look not put on a guest's), grenade scenario | 10 passed, 1 failed | the guest showed alerted guards as "Responding" while the host's were "Panicking" (0 of 5 the same) |
 | `nogrenades` (grenades not sent), grenade scenario | 4 passed, 4 failed | nothing shown on the other copy; each grenade exploded only where it was fired |
 | `ghosthurts` (a shown grenade's hits not dropped), grenade scenario | 7 passed, 1 failed | the host's look-alike hit the guest's puppet and sent the hit: the guest would be hurt twice by one grenade |
 | `noblownnews`, modules scenario | 8 passed, 1 failed | the host was told only that the guest left the ship |

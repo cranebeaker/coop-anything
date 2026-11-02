@@ -1061,3 +1061,42 @@ Observed:
 - Found in review: the grenade packet had the same id as the guards' packet ("HSG1"), and the destroyed-modules packet
   the same as the mission message ("HSM1"); their sizes kept them apart (the receiving checks compare sizes), so nothing
   was misread. Both have their own ids now ("HSN1", "HSL1").
+
+## Guards hear a guest, and look alerted on its screen (2026-11-02)
+
+Derived from the decompile:
+- A gun's step (when it fires) and `ExplodeOnShip` call `AlertAllGuardsInShipwiseRadius(fore, starboard, radius,
+  ship, ...)` (7 arguments): guards within earshot respond.
+- A guard's draw reads its `State`, `RespondingText` (words over its head), `AlertSpriteOverride` and the animation its
+  step sets (`Animation`); the alert states keep their own data (`RespondingFore`/`RespondingStarboard`,
+  `MyErrandObject`, `StartSearchModule`, `LastKnownPlayerFore` ...).
+
+Observed:
+- **A guest's gunshots**: on a guest every guard of the shared ship is a blind mirror, so the noise its own gun's step
+  makes reaches no guard that matters, and the bullet shown on the host makes none (derived; the bot cannot fire through
+  a gun's step, so not observed). **Fix**: a guest sends the call from its own player's gun (the shared ship's id swapped
+  for the host's), and the host makes it at the puppet. The path was observed working with a grenade's call: the host
+  logged the guest's noise and 4 of its guards went "Responding", then "Investigating" and "Panicking". Mutation
+  `noalerts`: no test reaches it now (see below).
+- **A guest's grenade is heard without it**: with `noalerts` the host's guards were alerted all the same, because the
+  grenade's look-alike explodes on the host through `ExplodeOnShip`, which makes the noise there. (A first version also
+  sent the grenade's call, alerting the host's guards twice; it sends gunshots only now. Correction: an earlier draft of
+  this section said the host's guards did not hear a guest's grenade; that run had used the `firegun` helper, which
+  skips the gun's step and its noise.)
+- The helper `firestep` (the gun's `Fire` set and its own step run once) used up `Fire` but fired nothing (the step's
+  other conditions are unknown), so gunshot noise stays untested.
+- **A guest did not see guards alerted**: only states without extra data (Sentry, PatrolPath, Down ...) were put on a
+  guest's mirrored guard; the others kept the guest's own (blind) state, so a guard investigating the guest's noise
+  looked like a sentry there. **Fix**: the host also sends each guard's look (`RespondingText`,
+  `AlertSpriteOverride`, `Animation`); the guest runs the guard's step in its own state, then puts the host's state and
+  look on it for drawing, and its own back before the next step (forcing an alert state with its data missing raised a
+  GameMaker error before). All guards then had the same state, words and animation on both copies (36 of 36 compared).
+  Mutation `noguardlook`.
+- With the noise heard, the target fled and the mission failed (the game's rule), which paused the test before the
+  next grenade: `grenade.sh` now boards with `EscapeProtocol = 0` (test helper `MISSION_SET`).
+- Suite on the final build: 3 of 6 runs passed. Check 5 failed once (the known patrolling guard). Check 7 failed twice
+  in a new way: the puppet's own injury count went up with the guest's (puppet 3 -> 4, guest 2 -> 3), though the hit
+  is meant to reach only the guest; not seen on the 8 builds before (28/28 there, check 7 failing earlier only with no
+  hit arriving). Cause unknown; the change between the passing build and this one was only which noises a guest sends.
+- Errand guards walked the same and looked the same on both copies already ("Walking", no words); the guest's copy
+  still runs its own errand state underneath (where to go is the host's anyway: positions follow the host).
