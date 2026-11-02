@@ -3555,7 +3555,7 @@
     (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
     extrapolation. Local player cannot walk through the other player. Enemies are
     shared (early); each runs in the nearest player's game and is copied in the other, with damage and deaths
-    synced; items, doors and story are not. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
+    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). A fatal hit downs a player until the other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
     Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
     two real players not tested together. Write-up in games/resident-evil-7.
   sources:
@@ -7064,10 +7064,10 @@
   players: "2-4"
   networking: direct-ip
   open_source: yes
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Version 0.2.7 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
+    split screen. Version 0.3.0 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
     player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
     display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
     releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
@@ -7076,13 +7076,14 @@
     powers, doors, breakable and movable objects and saves; each fire team follows its own player. The whole
     campaign runs in automated tests over a LAN between two PCs, every story split with a real host and client; a
     first human session over Steam (missions 1-8) was fixed up in 0.2.2, a full human playthrough is still to come.
-    MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
+    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees (the Bull's wind-up, second-weapon triggers, magazines), adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
     0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.0
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-10-23'
+  checked: '2026-11-01'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -10038,6 +10039,34 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/zoo-tycoon/README.md
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: Star Wars Outlaws
+  year: 2024
+  engine: Snowdrop (closed native x64 binary with Denuvo)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope:
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found (Ubisoft Connect build, exe SHA-256 371BE3E5...1D2F). The exe contains an
+    unreleased 2-4 player co-op heist mode (CoopHeistMode, CanStartCoopMatch, team lives, reinforcement waves, ping
+    points), and a runtime read confirmed all seven co-op and heist settings files ship and load. Snowdrop's session
+    layer (reliable UDP, hot-join, host migration) is linked; matchmaking goes through Ubisoft services. Not playable;
+    findings and tools in games/star-wars-outlaws.
+  sources:
+  - https://nexusmods.com/starwarsoutlaws/mods/24
+  - https://github.com/patrickmollohan/Ultimate-SWO-ModLoader
+  - https://steamcommunity.com/app/2842040/discussions/0/4625854988055223265
+  checked: '2026-11-01'
 - game: 'Dynasty Warriors 3: Complete Edition Remastered'
   year: 2026
   engine: Unreal Engine 5

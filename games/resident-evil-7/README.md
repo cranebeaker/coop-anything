@@ -17,8 +17,11 @@ Steam friends list in an in-game window (the other player gets an invite to acce
 other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
 the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
 Enemies are shared in an early form: each enemy is run by the game of the player nearest to it and copied in the
-other game, and damage and deaths go both ways. Items, doors and story progress are not shared. Saving is off by
-default and can be switched on, with automatic save backups.
+other game, and damage and deaths go both ways. Door unlocks and openings are shared, and supplies picked up by
+one player vanish for the other (keys, files and maps stay for both). Story cutscenes are shared by name and
+story progress is copied forward (early). A fatal hit puts a player down until the other stands next to them for
+3 seconds. Item boxes are not shared. Saving is off by default and can be switched on, with automatic save
+backups.
 
 ## Existing work
 
@@ -84,6 +87,21 @@ default and can be switched on, with automatic save backups.
   only ever chase their own game's player.
 - **Cutscenes can't be skipped by API** (no skip method on `app.GameEventController`), but
   `via.Scene.set_TimeScale(8)` on the current scene while one plays fast-forwards it with every step intact.
+- **Story progress** lives in `app.GameFlowFsmManager` (singleton): `CurrentMainGameFlow`
+  (`GameFlowKindEnum`: C00_Main, C01_Main, C03_1..C03_5_Main, C04_1..C04_3_Main, FF000..FF050_Main,
+  C07_1..C07_4_Main, C08_Main, C03_IMD_Main, C09_Main), and per stage a progress number keyed by a uint32 hash
+  (`getProgressiveNo(hash)` → `via.userdata.Variable`, `get_S32`; `setProgressiveNo(hash, int)`,
+  `jumpProgressiveNo`), plus `sendEventEnded(hash)` / `isEventEnded(hash)`. In Chapter3 the progress of
+  stage C03_1 went 100 → 200 → 300 → 400 as the player followed the objective. **The numbers only record the
+  story**: `jumpProgressiveNo` to the next value changed nothing in the world. Chapter jumps keep a session's
+  progress, and a dinner cutscene started with progress already past it hung (player locked); a full game
+  restart clears it.
+- **Cutscenes by name**: each has an `app.GameEventSetting` whose `get_eventName` is like `c03e01_00`
+  (chapter 03, event 01, part 00); the area's settings are in `GameManager._GameEventMan.EventSettings` (41 in
+  the Chapter3 main house, including Jack's scripted `em3000_*` moves). `app.GameEventManager.requestEvent(name,
+  nil, false)` starts one at once. Replaying one the game had already finished hung it at `Process` 3; ending
+  it with `RunningEventControllers[i].EventTask:doTerminate()` cleared the event but left the player locked
+  until the chapter reloaded.
 
 ## What we changed
 
@@ -129,6 +147,15 @@ default and can be switched on, with automatic save backups.
   REFramework and csharp-api from the pinned release with SHA-256 checks, installs the mod and backs up saves.
 - **Saving.** Off by default (all request and internal save paths skipped). When switched on, the C# plugin
   first copies the save folder (found with `ISteamUser_GetUserDataFolder`) and keeps the last 20 backups.
+  Each player saves their own game; when one really saves (hooks on `SaveDataManager.saveFileMenuRequestExecute`
+  and `saveFileAutoRequestExecute`), the other is told, so both can save at the same point. What a save
+  stores matters for co-op: the ghost has no folder or save component, so it's never saved; doors and items
+  keep their shared state; but an enemy's save data (`EnemyStatus.EnemySaveDataClass`: IsUpdate, IsDraw,
+  Health, Position, Rotation, ThinkState, CommonThinkState) would store a followed enemy's AI-off state, so a
+  pre-hook on `app.EnemySave.prepareToSave` gives followed enemies their AI back for a few seconds.
+  Autosave points are `app.TriggerInAction` zones under `LevelFsm_cNN/.../AutoSave/<flow>_<progress>`; they
+  fire once (`TriggerInSuccessCount`, IsLoop false), even when the save itself was blocked, and don't fire on a
+  warp into them. `SaveDataManager.saveFileMenuRequest(player)` doesn't open the save menu without a recorder.
 - **On screen.** Connection, ping (an echo of the peer's send time in the packet), the friend's chapter and Steam
   name, a version-mismatch warning, and a nameplate. The ghost is hidden during either player's cutscene
   (a cutscene bit in the stance flags). REFramework's default font (ImGui 1.92 with Windows fallbacks)
@@ -154,6 +181,34 @@ default and can be switched on, with automatic save backups.
 - **Clock offsets must reset.** The receiver maps the sender's clock with the smallest `now - senderTime` seen.
   When the sender's clock restarts (their game or plugin restarted), every sample then looks minutes old and
   the other player stays hidden; reset the offset when a sample looks 5 s+ older than expected.
+- **Doors.** `app.DoorPush` (an `app.Door`; find them with `scene:findComponents(app.DoorPush)`) has a
+  `SaveGUID`, `get_isLocked`, `get_doorState` (0 closed, 1 locked, 2 little open as the player approaches,
+  3 pushed, 4 auto-opening, 5 opened, 6 auto-closing), `unlockDoor()` and `requestAutoOpen(OpenSide)` (Auto =
+  2 swings it to 90°). Key doors are pairs (left and right halves). coop-re7 polls them 4 times a second and
+  sends `unlock <id>` and `open <id>` (states 3-5 only, not the approach creak); the other game applies them.
+- **Items.** `app.Item` has a `SaveGUID`, `ItemDataID` ("ShotgunBullet", "Herb", "3CrestKeyA"...) and
+  `get_ItemData().Category` (`ItemCategoryType`: 0 Other, 1 Weapon, 2 Shell, 3 Drug, 4 KeyItem, 5 File, 6 Map,
+  7 Material, 8 StackWeapon, 9 UsableKeyItem, 10 DiscardableKeyItem such as coins and lockpicks, 11 SupplyBox).
+  A pickup does **not** go through `Item.changeStateInventoryIn` (a hook there never fired): the world item's
+  `getItemState` goes 0 → 6 and a separate inventory Item is created. `disableFromScene()` produces the same
+  0 → 6 without touching any inventory. coop-re7 watches world supplies for 0 → 6 and sends `took <id>`; the
+  other game hides that item (or remembers it until the area loads). Categories 4, 5, 6, 9 and 10 are never
+  removed, so both players can progress.
+- **Story.** Since progress numbers don't drive the story, coop-re7 shares the triggers' results: whoever
+  starts a story cutscene (hook on `GameEventController.requestSetup`, names matching `cNNeNN_NN`) sends
+  its name and the other game plays it with `requestEvent` (the player is pulled in wherever they are),
+  once per side; progress numbers and ended events are copied, only ever forward. The list of played
+  cutscenes is kept per chapter in a file, because replaying a finished one hangs it. A "Share story" switch
+  turns it off.
+- **Downed and revive.** The player's death goes through `app.PlayerDamageController`
+  (`isEnableDieByDamageInfo`, `doDie`, `add_DieHandler`, `playDeadMotion`) and the base
+  `DamageController.canDie(DamageInfo)`, then `GameManager.setGameOverFlag` and `app.GameOverScreen`.
+  coop-re7 pre-hooks `isEnableDieByDamageInfo` and `canDie` (only for the player's controller, by address) and
+  returns false (SKIP_ORIGINAL, return value 0) while the friend is connected: the player stays alive on 1
+  health. The downed look: `PlayerMovement.set_isCrouch(true)` (the view drops; the friend's ghost crouches),
+  `PlayerOrder.switchPlayerOperatable(false, OperationLayer.Base)` and `PlayerOrder.setDamageGUIMonochrome(true)`;
+  `PlayerOrder.setReserveProne()` did nothing visible. The friend within 2.8 m for 3 s revives (35% health).
+  Both down, or 90 s alone, lets a real death through (a self-hit via `newFakeDamageInfo`).
 
 ## QA
 
@@ -187,20 +242,36 @@ default and can be switched on, with automatic save backups.
 - Bot "follow me" mode (replays the local player's own path, timed by the sample clock, skipping idle stretches,
   stopping 2.5 m away with 1 m hysteresis) stays on walkable ground; an early version skipped idle time in
   0.1 s steps and made 52 visible jumps in 75 s.
+- Doors and items, 2026-10-31, Chapter3 main house: the bot's `open` swung a closed door open (state 5), its
+  `unlock` unlocked one half of a key-locked hall door, its `took` hid a Herb; none were echoed back. The
+  owner's own door push and handgun-ammo pickup were sent. The "remembered until the area loads" path is
+  untested.
+- Story, 2026-10-31, Chapter3: the bot's `story c03e00_00` played in the owner's game; its `prog` raised stage
+  C03_1 from 500 to 600 and a later lower value was ignored; the owner's own cutscenes (c03e00_01, c03e00_02)
+  and progress were sent. Replaying the already-finished dinner (after a script reset had cleared the played
+  list) hung it; fixed by keeping the list on disk.
+- Downed and revive, 2026-10-31: with the bot standing still ~5 m away, a fatal self-hit left the player crouched,
+  locked and monochrome on 1 health (no game over); switched to follow, the bot walked over, stopped 2.6 m away
+  and the player was up again 3 s later. Both-down and the 90 s timeout are untested.
+- Saving together, 2026-10-31: the bot's `saved menu` event showed "Your friend saved at a tape recorder (your
+  saving is off ...)". A real save wasn't tested (no recorder loaded, the nearby autosave had already fired);
+  the save files' SHA-256 were unchanged while saving was briefly on.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.7 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.7), unzip it and run **Install.cmd**.
+[v0.11 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.11), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
 - Enemy copies don't show held weapons and don't flinch from the other player's hits; ownership handovers
-  between two real games are untested. Items, doors and story are separate per player.
+  between two real games are untested. Item boxes are separate per player.
+- Shared story is early: a cutscene that hangs locks the player until the game restarts.
+- Being downed has no fall or kneel animation (a forced crouch stands in for it).
 - Saving is off by default; with it off, nothing from a session is kept.
 - Some cutscenes aren't detected, so the other player can stay visible during them.
 - A little residual choppiness under heavy simulated jitter.
@@ -214,4 +285,4 @@ player's name; they click **Accept**. To meet up, click **Go to my friend's chap
 1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
 2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
 3. Enemy copies: held weapons and hit reactions; a real Molded test.
-4. The rest of world sync: story and area, doors, items.
+4. Shared story in real play (area changes between stages, cutscenes far from the other player); item boxes.
