@@ -66,7 +66,7 @@ Because TMNT (2007) was designed from the ground up strictly as a single-player 
 - **Multi-Turtle Levels:** Levels designed with tag mechanics (like *Ninja Tag Time*) contain all four turtles in memory, allowing full model and identity switching between Leonardo, Raphael, Donatello, and Michelangelo.
 
 ### B. Untested Campaign Scope
-- **Broad Campaign Coverage:** Automated testing and verification have been executed primarily in Level 1 (*Mystical Jungle*) and Map 5 (*Ninja Tag Time*). The remainder of the retail campaign—including later city chapters, vehicular chase sequences, underground sectors, and multi-phase boss encounters—has **not** been exhaustively tested.
+- **Broad Campaign Coverage:** Automated testing and verification have been executed primarily in Level 1 (*Mystical Jungle*) and Map 5 (*Ninja Tag Time*). The remainder of the retail campaign-including later city chapters, vehicular chase sequences, underground sectors, and multi-phase boss encounters-has **not** been exhaustively tested.
 - **Scripted Checkpoints & Cutscenes:** Scripted in-game cinematic triggers, pre-rendered video handoffs, and checkpoint reloads may occasionally fail to account for the second player actor, resulting in temporary camera misalignments, partner despawns, or state freezes until manual repositioning (`INSERT` or hold `BACK`) is used.
 
 ### C. Controls and State Triggers Not Guaranteed in All States
