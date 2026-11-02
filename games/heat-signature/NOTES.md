@@ -1303,7 +1303,7 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
 (A side effect to know: on the host, the guest's going down counts one more injury in that count there.)
 - Builds are not reproducible here (the DLL's hash differs for the same source, built twice), so a "core <hash>" in
   the results names that build, not the source; the mod repo's commit names the source.
-## Doors hacked by a guest; what terminals do (2026-11-02)
+## Doors and guards hacked by a guest; what terminals do (2026-11-02)
 
 - **Observed (decompile).** A door's lasting state besides open/closed: `Security` (0x374, its keycard level),
   `HackedSecondsLeft` (0x86a) and `CrashedSecondsLeft` (0x43b). `oDoor.Step` reads its `DamageSignal`: one damage flag
@@ -1332,7 +1332,18 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
   Both are the user's own, not the ship's: each player uses a terminal on their own copy and gets their own intel or
   card (a card's clearance already reaches the other copy for the puppet). Whether a terminal used by one player should
   be used up for the other is a design choice; not synced now.
-- **A guard hacked by a guest's Subverter** (derived, not tested): the Subverter hacks a guard through
-  `SetDamageSignal` on it, and a guest's damage signal on a shared guard is already sent to the host as a hit
-  (applied there with the same mask), so the host's guard should be hacked too. A test needs a guard the Subverter can
-  hack (`GuardCanBeHacked`) in reach.
+- **A guard hacked by a guest's Subverter** (observed): the Subverter hacks a guard (`GuardCanBeHacked`: shielded,
+  not hacked or crashed yet) by `SetDamageSignal` on it, run inside its loop over guards with the **guard as self**. The
+  guest's core took that for the mirrored guard's own attack and dropped it (`hit: a mirrored guard's own attack
+  dropped`), so the hack reached nobody. Fixed: a signal on the guard that is self is not that guard's attack; it goes
+  the guest-hit way (sent to the host, applied there with the same mask). The host's guard then has `Hacked` (0x4b4) 1;
+  `GuardHasShield` still answers 1 (the shield is there, hacked). The guard messages now carry `Hacked`, and a guest's
+  copy takes it (one-way). Mutation `noguardhack` (both halves).
+- **Test** (`tools/guardhack.sh`, 8 checks): dock; guards blind to both (no knockouts: knocked-out bodies sent the
+  target panicking to an escape pod in a try); the guest hacks door 3 and walks past it; the nearest hackable shielded
+  guard within 300; the guest's Subverter hack is sent as a hit (helper `useatguard`: aims at the guard in the same
+  frame, it moves); the host's guard is hacked; the guest's copy shows it; no error dialogs; both advancing. With
+  `noguardhack`: 5 passed, 3 failed.
+- **Seen in a try, not followed up:** a hit for a guard far from the host was dropped on the host ("guard not active
+  here"); that guard had most likely escaped the ship on the host already (it was panicking). A diagnostic now logs when
+  such a guard last stepped on the host.
