@@ -41,7 +41,9 @@ The mod is a DLL injected into the running game (no game files changed):
 - puppet of the friend (position, rotation, buttons every frame, behavior events replayed);
 - crate sync by position, replayed with the game's damage function so fruit and counters behave normally;
 - shared wumpa counter (each side sends what it picked up; anti-echo window after replayed crates);
-- optional Coco model for the friend;
+- the puppet uses the hero the friend plays when it is also ours (Coco/Coco gets all animations); loading another
+  hero's pack crashed the game on the next level change and is disabled;
+- falls: the puppet hides while the friend falls into a pit, instead of hitting the kill plane;
 - a WinForms launcher (French/English) that starts the game and enables the mod.
 
 ## QA
@@ -80,6 +82,7 @@ copy of the suite in the repository (paths made relative) has passed setup and t
 stopped by the PC running low on memory.
 Also played over Steam by two people: presence, animations, spins breaking crates.
 Not covered: checkpoints, Crash 2 and Crash 3, a friend on another hero, play over Steam for crates and fruit.
+
 ## How to play
 
 Download the latest release from <https://github.com/MaegIins/CrashNSaneCoop/releases>. Unzip it into a normal folder
@@ -88,14 +91,14 @@ and run `Lancer Crash Coop.cmd`. Paste the friend's SteamID64 and start the game
 ## Known issues
 
 - Characters slide a little while running.
-- Coco has no animations of her own yet (Crash's event ids made her puppet shatter, so events are off for her).
+- A friend who plays another hero than you appears as your hero, moved by their buttons only.
 - Dying or going back to a checkpoint is not synced.
 - Crash 2: the friend appears, but some animation events do not match.
 - Only the Steam build above works (fixed addresses).
 
 ## Next steps
 
-- Translate behavior events by name between Crash's and Coco's graphs.
 - Sync deaths and checkpoint reloads (and the crates they restore).
 - Reduce sliding (velocity or root motion on the puppet).
-- Build an in-game bot and a two-client test to reach the `automated` QA level.
+- Extend the suite: checkpoints, Crash 2 and Crash 3, a two-PC run over Steam.
+- Load a second hero without breaking the next level load (see the notes: removing the loader cache entry was not enough).
