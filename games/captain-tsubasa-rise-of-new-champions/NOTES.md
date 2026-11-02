@@ -1,4 +1,4 @@
-# Captain Tsubasa: Rise of New Champions — local story co-op investigation
+# Captain Tsubasa: Rise of New Champions: local story co-op investigation
 
 ## Goal
 
