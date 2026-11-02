@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario and an 11-check guns, grenades and noise scenario on two real game copies (host + 1 guest), with 47 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario, an 11-check knocked-out scenario, an 8-check rescue scenario, a 9-check new-life scenario (flaky in the test's own docking) an 8-check window-breach scenario, a 9-check destroyed-modules scenario an 11-check guns, grenades and noise scenario, an 8-check Steal mission and a 10-check Capture mission on two real game copies (host + 1 guest), with 50 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-11-01 |
 
 ## Where things stand
@@ -151,6 +151,15 @@ one: the guest shows it and it explodes on both at the same place; no error dial
 Guns are given and fired with test helpers (`giveitem`, `selectitem`, `firegun`: the game's `GunFiresBulletInDirection`),
 not through the controls.
 
+`tools/steal.sh` (8 checks): a Steal mission (`MISSION_SET="Type Steal"`); dock; the same objective box on both; the
+guest opens it: its mission completes, the box opens on the host and the host's completes; each is told of the
+other's; no mission failed; no error dialogs; both advancing.
+
+`tools/capture.sh` (10 checks): a Capture mission; dock; the same target; the host knocks it out (down on the guest);
+carries it into its pod and leaves (on the guest the target leaves the ship too); flies home and delivers it at the
+station's agent drop (completed by the game's `EnemyCheckObjectiveDelivered`); the guest's mission completes with it,
+and it is told; no mission failed; no error dialogs; both advancing.
+
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
 helper `MISSION_SET`). Checks: dock; the protocol on both copies; the guest beams in exactly the host's reinforcements;
@@ -158,10 +167,10 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs, on the guard-look build (2026-11-02, core 7a7c62a1): guns, grenades and noise 11/11 twice (00:43, 00:45 UTC);
-suite 3 of 6 runs 28/28 (check 7 failed twice in a new way, check 5 once: see NOTES.md); on the build before it
-(89311ae8, the same but for which noises are sent) suite 28/28, security 9/9, mission 10/10, knocked-out 11/11, home
-13/13, early 9/9, items 7/7, rescue 8/8, modules 9/9, breach 8/8 (00:24-00:40). Guns and grenades 9/9 twice on the
+Last runs, on the mission-types build (2026-11-02, core 6c4234c0): capture 10/10 twice (02:37, 02:38 UTC), steal 8/8,
+guns, grenades and noise 11/11, suite 28/28, security 9/9, mission 10/10, knocked-out 11/11, home 13/13, early 9/9,
+items 7/7, rescue 8/8, modules 9/9, breach 8/8 (02:39-03:03). On the guard-look build (7a7c62a1) suite passed 3 of 6
+(see NOTES.md). Guns and grenades 9/9 twice on the
 gunshots build (811bde56); grenade 8/8 twice on the grenade build
 (c36cc0da); modules also 9/9 twice on the destroyed-modules build (7784485b); breach also 8/8 twice on the window-breach build (f28155a0). On the
 new-life build (e496cfaa): new life 9/9 in 4 of 9 runs (see above). Earlier
@@ -209,6 +218,9 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `noblownnews` (no "blown out" banner), breach scenario | 7 passed, 1 failed | the host was told only that the guest left the ship |
 | `nomodloss` (destroyed modules not sent), modules scenario | 4 passed, 5 failed | a module destroyed on one copy stayed on the other (78 modules left on the host, 80 on the guest); the guest was not blown out |
 | `noghosts` (shown bullets off), grenade scenario | 8 passed, 1 failed | the host showed no bullet for the guest's shot |
+| `noboxes`, Steal scenario | 6 passed, 2 failed | the box did not open on the host; its mission stayed open |
+| `nosharedcomplete` (the other player's completion not shared), Capture scenario | 9 passed, 1 failed | the guest's mission stayed open after the host's capture |
+| `noguardsleft` (a guard that left the ship not reported), Capture scenario | 9 passed, 1 failed | the guest's copy of the captured target stayed aboard, not hidden |
 | `noalerts` (a guest's gunshot noise not sent), grenade scenario | 11 passed | not caught: the grenade is heard through its look-alike's explosion, and the bot cannot fire a gun through its step (see NOTES.md) |
 | `noguardlook` (guards' look not put on a guest's), grenade scenario | 10 passed, 1 failed | the guest showed alerted guards as "Responding" while the host's were "Panicking" (0 of 5 the same) |
 | `nogrenades` (grenades not sent), grenade scenario | 4 passed, 4 failed | nothing shown on the other copy; each grenade exploded only where it was fired |

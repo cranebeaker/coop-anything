@@ -1100,3 +1100,43 @@ Observed:
   hit arriving). Cause unknown; the change between the passing build and this one was only which noises a guest sends.
 - Errand guards walked the same and looked the same on both copies already ("Walking", no words); the guest's copy
   still runs its own errand state underneath (where to go is the host's anyway: positions follow the host).
+
+## Other mission types: Steal and Capture (2026-11-02)
+
+The game's mission types (strings in the exe): Assassinate, Capture, Steal, Rescue, Hijack. The tests set the shared
+mission's type with `MISSION_SET="Type <type>"`; the ship is generated from the mission on both copies as before.
+
+Derived from the decompile, and observed:
+- **Steal**: the objective is a loot box (`oLootBox`, named after the mission). Opening it completes the mission at
+  once (`oLootBox_Step_0` calls `CompleteMission`). Observed: the guest opened it (helper `interact`: the game's
+  `InteractWith`, which works from any distance), the box sync opened the same box on the host, and both missions
+  completed in the same frame. No new code: `tools/steal.sh` (8 checks); mutation `noboxes` on it leaves the host's
+  mission open.
+- **Capture**: the objective is the target guard. Knocked out (`KnockEnemyOut`), carried into the player's pod and put
+  down there; when the pod undocks it takes what lies inside (the body's Parent becomes the pod). At a station the
+  game hands the captive to the player to carry out; put down at the station's agent drop (`oAgentDrop`, object 178),
+  the target's own step (`EnemyCheckObjectiveDelivered`, which asks `NearestContentsOfType` and `point_distance`)
+  completes the mission. Observed for the host, with helpers for what the bot cannot do: `knocktarget`, `interact`
+  (pick the body up from afar; then the pod, to take its controls: the Use control picked the body up again instead),
+  `gotohome`, `gotodrop` (to the agent drop).
+- Found on the way: adding the body to the pod's contents directly (`AddToPlayerShipsContents`, as
+  `CanBeCollectedInPlayerShip` does) without it lying in the pod raised "oEnemy is in my contents but I'm not its
+  parent" at undock; the helper is gone, the test drops the body in the pod as a player does.
+
+Co-op:
+- **A captured guard leaves the guest's ship too**: once the host's pod had it, the host stopped reporting it (not
+  aboard the shared ship), and the guest's copy, lying "Down" aboard, would have got up there later. The host now keeps
+  sending such a guard as "left" and the guest hides it and skips its step. Mutation `noguardsleft`.
+- **The capture counts for both**: the delivery completes the mission on the deliverer's copy only. When the other
+  player's mission completes and ours is a Capture, Rescue or Hijack, ours completes too (`CompleteMission`, called at
+  the start of our player's step, with the message "<name> completed it for the crew."). Mutation `nosharedcomplete`.
+  Assassinate needs none (the kill is shared and each completes at home) and Steal neither (the box opens on both).
+- `CompleteMission` takes two arguments (the mission, and a message for the end screen). Called with one, the game
+  process ended at once, with no dialog and no log (Proton: "Primary child shut down"); first taken for something
+  about the captive, then shown on a Steal mission with the same call.
+- **Test** (`tools/capture.sh`, 10 checks): dock; the same target; the host knocks it out (down on the guest too);
+  carries it into its pod and leaves (the target leaves the guest's ship too); flies home and delivers it (its mission
+  completes from `EnemyCheckObjectiveDelivered`); the guest's mission completes with it and the guest is told; no
+  mission failed; no error dialogs; both advancing.
+- Not tested yet: a guest capturing (it would carry a guard its copy only mirrors; the host's copy of the body would
+  stay where it was), Rescue, Hijack.
