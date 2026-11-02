@@ -1059,6 +1059,32 @@ Built (the owner chose "more enemies" over "tougher enemies"; bosses not multipl
   tradeoff, kept: with many AIs, one rotation takes several packets, so shots and animation starts of AIs outside
   the current packet can be dropped.
 
+### Faster test start (2026-11-02, from logs; not yet run)
+
+The owner asked for a test setup without cutscenes that loads straight to where the tests take place.
+
+Observed in the test copy's console logs (host and client, menu runs m67dz3 to m75play):
+- `tools/m9-menu-run.sh` reached "co-op running" 29-30 s after launch. It then spent about 30 s more in fixed waits
+  (25 s world check, 15 s settle, a kill check) before handing over. The test scripts call it with the default
+  `LAUNCH_GAP` of 45 s, so a test began about 105 s after launch.
+- Lua ran in the level from its first second (`skip_cutscenes=1`), so no intro held these runs up.
+- Side finding: the level's first script lines came 4.1-4.2 s after `menu_new_game.lua` started its presses, but
+  its New Game sequence sends its last A at 6.6 s. The same holds in m9m8par, which had no DLL skip presses.
+  Whether these runs took New Game or Continue Game is unknown. After the Oct 29 runs, the save differed from the
+  template in about 40 bytes only.
+
+Built (tfu-coop `tools/fast-start.sh`; the test scripts now start with it, `START=m9-menu-run` for the old path):
+- Both copies launch together (simultaneous launches booted fine three times, see the 2026-10-28 section).
+- Pad 0 gets an A press every second (`.pad` files, which need no Lua) until a level runs. That skips the start-up
+  movies and takes the main menu's default entry, Continue Game (seen 2026-10-26, `menu_new_game.lua`), which
+  resumes the test save instead of starting a new game.
+- It is ready once the client tracks the host, the host has the client's puppet and the client receives the
+  host's enemies, plus 3 s. On the m75play log lines that would have been 33 s after launch.
+- No game file is changed. A separate game copy was not needed: the time went into the start path and the waits,
+  not into game data.
+- Unknown until run: whether the menu takes A that early, which checkpoint Continue resumes (the template was made
+  by prologue runs), and whether an intro plays there (`skip_cutscenes` presses through it).
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
