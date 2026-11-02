@@ -531,3 +531,155 @@ Unknown: two different accounts on two PCs (relay route, latency, session accept
   `libraryfolders.vdf`, foreign `dinput8.dll` backed up and restored, second install is a no-op, bad / own SteamID
   refused, saves copied, peer remembered, wrong exe refused with nothing written, missing game explained.
   `play` on the test copy started the game with profile `coop` and the Steam peer (log checked).
+
+### 2026-11-02: quests
+
+Traced every `CGameScriptInterface` call (vftable 0x2ee35c4, 942 slots; `FABLE_COOP_TRACE_GSI=1` hooks each slot
+with a logging trampoline) through a new game: Oakvale intro, then the guild woods beetles (a gold quest).
+Slot order comes from the vtable in the exe; the sorted address list from Ghidra does not give it.
+
+Observed (trace log and bridge reads, p1):
+- Intro end: 0x49c(`Q__OakValeIntro_PostAttack`), 0x4bc(`Q_NewOakValeIntro`, 0), 0x4d8(`OBJECT_QUEST_CARD_TRAINING_MELEE`,
+  `Q_GuildTraining`), 0x484, 0x514(`Q_GuildTraining`, 0, 1), 0x4a0(`Q_NewOakValeIntro`).
+- Beetles: 0x4d8(`OBJECT_QUEST_CARD_TRAINING_KILL_BEETLES`, `Q_GuildTrainingWoodsMelee`), 0x514(..., 1, 0); one minute
+  later 0x4bc(`Q_GuildTrainingWoodsMelee`, 1, 0) with the "quest complete" screen.
+- Quest manager `[0x3630360]`: +0x34 vector of every quest script name; +0x44 list of running scripts (node +8 ->
+  entry, entry +0x34 name, +0x28/+0x29 flags); +0x6c vector of current gold quest names; +0x88 list of active quest
+  card things, +0x94 completed ones (node +0xc -> holder -> CThing; card component id 0x6c = CTCQuestCard).
+- CTCQuestCard: +0xc CQuestCardDef, +0x10 done flag (set on complete and on fail), +0x14 int (-1 on the three cards
+  seen), +0x1c objective text key, +0x20 region, +0x28 quest name, +0x2c/+0x30 reward numbers (20 / 30 on the beetles).
+- Bridge calls on p1 match the lists: `quests.py p1 active|completed <quest>`.
+
+Derived (Ghidra):
+- 0x4ac (0x1c91e50) = quest script running (searches +0x44). 0x4b4 (0x1c91e70) = card completed (searches +0x94).
+- 0x4bc (0x1c91e90) = set quest completed (name, show screen, ?, ?) -> 0x1fbe4a0: marks the card done, moves it,
+  counts hero stats, clears the running entry's +0x28. 0x4c0 -> 0x1fbebd0 has the same shape: set quest failed.
+- Gold (core) quest = card +0x14 < 0 and CQuestCardDef +0x5c != 0 (0x1e7cc30, also used for `NumCompletedACoreQuest`).
+  Non-core cards split on card +0x14 < 0 or not; which of those is silver and which bronze is unknown.
+
+Test (p1, owner watching): after graduation the owner accepted `Q_WaspBoss` (gold) at the guild quest table and did
+not travel there. `quests.py p1 complete Q_WaspBoss 1` (GSI 0x4bc with self = `[0x35bbc34]`, name, 1, 0, 0) at once
+showed the game's own "Quest complete" screen with the full reward list: trophy (wasp queen head), 500 gold,
+240 renown, 607 experience, 0/0 boasts (owner's screenshot). The card moved to the completed list, the hero's core
+counter (component 4 +0xc8) went 1 -> 2, and the running entry's flags went 0100 -> 0000, but the `Q_WaspBoss`
+script stays in the running list.
+
+Owner after Continue: the 500 gold and the trophy were in the inventory, the story went on (Maz in Bowerstone, next
+quest at the guild table). But the `Q_WaspBoss` script still ran: leaving the guild, the villager ran up as if the
+quest was new and the "Quest start" screen played at the picnic area, wasps there. GSI 0x49c (0x1c91e10 ->
+0x1fc1e20, finds the running entry and ends it; the game uses it for `Q__OakValeIntro_PostAttack`) on `Q_WaspBoss`:
+the queen never came, no second end screen, and the game started the follow-up scripts itself
+(`V_PicnicAreaAfterWaspBoss`, `Hook_BowerstoneTeleportTutorial`).
+
+Wrong order, second test: on `Q_OrchardFarmRaidGood` (gold, just accepted) stop first, then complete. The core counter
+went 2 -> 3 and the Steam achievement fired, but no end screen came for the orchard (the owner got the wasp one again)
+and the card left the active list without reaching the completed list: the card is lost. So: complete first, stop the
+script only once the card is in the completed list (`quests.py ... completed` true; it was within 3 s for the wasps).
+
+Third test: GSI 0x4d8(`OBJECT_QUEST_CARD_PROTECT_FARM`, `Q_OrchardFarmRaidGood`, 0) gave the lost card back (the game
+showed "new quest card", re-ran `Q_OrchardFarmRaid`); the owner accepted it again and walked towards the farm. In
+Greatwood, `quests.py p1 finish Q_OrchardFarmRaidGood` (complete, card in the completed list, then stop): the end
+screen came with the rewards, but after Continue the screen stayed black and the game took no input, while it kept
+rendering (`fable.frames` advancing). The wasp test, where the stop came minutes after the screen was closed, did
+not hang. Guess: what follows the end screen waits on the quest script, so the stop must wait until the end screen
+is closed. Starting `Global_TeleportToHeroGuild` (GSI 0x48c) did not log anything visible.
+
+Derived after the hang (Ghidra): the stop (0x1fc1e20) calls 0x1fbc260(quest), which takes the quest's card off the
+active list and, if it is not in the completed list, abandons it; that is how the orchard card was lost. The completion
+(0x1fbe4a0) only shows the end screen and gives rewards when the quest's card is in the active list (0x1fbae60): a
+player who never took the card would get nothing, so the peer has to give the card first (0x4d8, as the third test
+did). It also sets quest manager +0xeb = 1; whether that clears when the end screen closes is not checked yet
+(`finish` now waits for it, then 3 s, before the stop, and logs it).
+
+Saves (p1): loading the "AutoSave" written at 16:33:51 (orchard just accepted) put the hero back at the guild
+arrival as a child, the moment `AutoSave.qs` (16:02) was written, and the game then rewrote `AutoSave`,
+`AutoSave.bck`, `AutoSave.qs` and `QuestCheckPoint` within seconds: the 16:33 state is gone. Back up the profile's
+`Saves\Hero1` before loading an autosave. The `.qs` and the main autosave files carried the same header.
+
+Fourth test (p1 back at the child's guild arrival): the owner took the beetle card and stayed in the guild.
+`quests.py p1 finish Q_GuildTrainingWoodsMelee`: quest manager +0xeb was already 0, so the guess above is wrong and
+the stop came about 3 s after the completion, with the end screen still up. The end screen showed; after Continue
+the game went on normally (owner). So stopping during the end screen is not what hung the orchard test. Remaining
+difference: the orchard was completed far from the guild (Greatwood); guess: what follows a quest's end (going
+back to the guild) is driven by the quest script.
+
+Blocker after the fourth test (owner): the map still said "go to the woods", the woods had no beetles, and the
+guildmaster kept refusing ("you can't even beat a few insects"). Ghidra on the beetle script (0x1852690, the code
+around its 0x4bc call): it waits for its own success (+0x5c) or failure (+0x5d) byte, calls 0x4bc or 0x4c0, then sets
+the parent objective (0x4dc: `Q_GuildTraining`, `TEXT_QUEST_GUILD_TRAINING_OBJECTIVE_02`, `HeroGuildComplexInside`),
+shows `TEXT_QST_028_GUILDSEAL_COME_BACK`, writes 1 to byte +0xa1 of a data block shared by the training scripts
+(script +0x58), waits for the hero in `HeroGuildComplex`, and calls 0x4a0 on itself. The stop skipped all of it.
+Running entry +8 is the script object (+0x54 the GSI, +0x58 the shared block; the same block for `Q_GuildTraining`
+and `Q_GuildTrainingPreMelee`). Wrote 1 to that +0xa1 by hand to unblock p1.
+
+Derived: completing a quest from outside is not enough; the quest script's own epilogue carries story state. Better
+lead: set the receiving script's own success byte (+0x5c here) so it runs its normal ending itself. Unknown whether
+other quest scripts use the same layout.
+
+The guildmaster let the owner go on after the +0xa1 write (owner). Survey of the exe (bytes `8b 8x bc 04 00 00`, the
+`mov reg,[reg+0x4bc]` before each script's completion call): 84 sites. 19 sit in a function whose wait loop tests two
+bytes of the script object like the beetle script, at offsets that change per script (0x5c/0x5d, 0x5f/0x60,
+0x69/0x6a, 0x71/0x72, ...); the other 65 complete in some other way. So there is no single success byte: a "make the
+receiving script succeed" sync needs a per-quest table (partly automatable from this pattern, the rest by hand).
+
+Not unblocked after all: leaving the woods, the training played its video (`Data\Video\2_guild_split_1_comp_LOC.xmv`,
+GSI 0x60c), the owner skipped it, and the screen stayed black while the game ran (music, hits audible). The trace shows
+`Q_GuildTraining` taking a branch (0x183d809) that writes 1 to shared +0x5d, fades to black (0x61c, color ff000000),
+and ends `Q_GuildTrainingPreMelee` (0x4a0); in the first run the melee training was then started by 0x48c from
+0x182a3b2, which never came this time. Calling 0x4a0(`Q_GuildTrainingWoodsMelee`, 0) by hand changed nothing.
+Conclusion: the training is a long coroutine (0x1839910, 0x1827c30) whose state the skipped beetle epilogue fed in
+several ways; patching single bytes after the fact does not rebuild it. p1 is beyond repair.
+
+### 2026-11-02: saves from the internet, achievements blocked in test profiles
+
+Owner asked to test from players' saves instead of replaying. Two archives from vgtimes (SHA-256
+`d86f66e3...4092`: two saves "after the training, before Wasp Menace", one per difficulty, stored RAR5 inside RAR5 with
+Cyrillic names that Windows `tar` skips, so the stored inner archives were cut out by hand; `1026cbd9...ca16`: main
+story done, most side quests left). Only save files inside, all with the `FableSavg!` header. Put in test profiles
+(p1 Hero3/Hero4, p2 Hero1), never in the real Documents folder.
+
+Loaded saves and tool-completed quests can unlock Steam achievements for good (the orchard test already did). The
+proxy now blocks them in every profile but the kit's `coop`: `steam_api.dll` export `SteamUserStats()` ->
+ISteamUserStats011, vtable slot 7 SetAchievement and 10 StoreStats replaced (logs each blocked name). The per-frame hook
+only runs in the world (`fable.frames` 0 at the menu), so a startup thread installs it: logged 2-3 s after launch.
+Not yet seen: a blocked achievement name in the log, which would confirm the slot numbers.
+
+### 2026-11-02: success marker test (wasps, internet save "after the training", p1 Hero3)
+
+Owner loaded the save (Wasp Menace already accepted) and stepped out of the guild; the villager came to lead him to
+the picnic area. The wasp script's ending function (0x19280b0, uses `PicnicArea`; started from 0x1a66df0's table
+like the others) waits on +0x5d / +0x5c of the script object and calls 0x4bc when +0x5c is set with +0x5d clear,
+0x4c0 otherwise; so +0x5c is success, as in the beetle script (the White Balverine script uses +0x5d for success:
+the offsets differ per script). `quests.py p1 succeed Q_WaspBoss 0x5c` at 17:49: nothing at once. At 17:52:36, when
+the owner entered the picnic area, the script itself called 0x4bc(`Q_WaspBoss`, 1, 0): end screen and rewards
+(owner), then its normal ending (gossip "wasp boss killed", "visit Maze" in Bowerstone, `QS_GuardianSisterInfo`
+objective), card in the completed list. But the main quest flow went on too: right after, the "Quest start" screen
+for the wasps (boasts 0/0 only), the small wasps, then the queen cutscene. So the marker runs the ending, but a
+script's other coroutines keep playing the quest until they reach their own end.
+
+Queen killed (owner): the villagers' cutscene played, then the screen stayed black while the game ran. The main flow
+faded out (0x61c 0.5 s, black) and leaves the fade-in to the ending function (0x19280b0 calls 0x290, 0x234, 0x620,
+then 0x4bc), which had already run when the marker was set. Calling GSI 0x620 by hand (no arguments) brought the
+image back (owner). No second 0x4bc. So the marker must come when the receiving script really is at its end (in
+co-op: when the other player's queen dies), not earlier.
+
+## 2026-11-02: learning the success byte on the completing side
+
+Proxy: every frame the first 0x100 bytes of each running script object (quest manager +0x44 list, entry +8; entries
+of finished scripts stay listed with object 0) are kept with the time each byte went 0 -> 1. GSI slot 0x4bc is
+hooked: it logs the quest, the caller (Ghidra VA), the `cmp byte ptr [reg+disp8], 0` tests in the 0x200 bytes before
+the call, and the bytes that went 0 -> 1 in the last 60 s per script (also appended to `quest_markers.txt`).
+
+Endgame save (p2), owner played the last two side quests normally:
+- "Bandit spy: extraction" = `Q_RansomVictim`. 0x4bc came from 0x18ee00f, in the ending function 0x18ede80, which
+  waits `while (!obj[0x69] && !obj[0x6a])` and tests +0x69 again before the call: success +0x69 (derived, as for
+  the wasps and beetles; not set by hand). Same pattern as the gold quests, so markers cover silver and bronze too.
+- First build logged nothing useful: the hook read the quest name one pointer too shallow (the argument points at
+  the CCharString, which holds the string object), and the watcher stopped at the first script with object 0, so it
+  watched 1 script. Both fixed; the fixed build is untested (no quests left in that save).
+- Steam achievement block confirmed: `Achievement_36` and `Achievement_35` logged as blocked during these quests.
+
+Owner: no more quest runs just to learn markers (they don't want to finish the game solo before playing co-op).
+Plan: in co-op the completing player's DLL learns the byte at the moment of success and sends it with the quest
+name, so no table is needed in advance; the first real co-op quests test it. A static table (from each 0x4bc call
+site's wait loop) can back it up.
