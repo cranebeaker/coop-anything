@@ -188,7 +188,7 @@ Drawn from six co-op projects (STALKER, Fallout New Vegas, Dungeon Keeper 1, Oca
 
 88. **Driving hidden game windows: activate, fake the mouse for drags, and don't trust captures.** With two Zoo Tycoon copies parked off-screen (not minimized, which stops the game loop), posted clicks were ignored by every copy but the last one started until `WM_ACTIVATEAPP`/`WM_ACTIVATE` were posted first. Drags (fences, paths, terrain) and picking the object under the mouse read `GetCursorPos`, not the messages, so a lab-only `GetCursorPos` detour returns a position the test sets (only during drags; left on, it broke plain clicks). `PrintWindow` on the DirectDraw window often returned an old frame (the start screen until the first click), so reading panel state from captures toggled panels shut; click deterministically and keep pixel checks only where a retry is harmless. Example: Zoo Tycoon (`zt_launch.py`, `lab_coop.py`).
 
-55. **Count your Harmony patches at start-up, and fail loudly on zero.** In Superflight the plugin called
+90. **Count your Harmony patches at start-up, and fail loudly on zero.** In Superflight the plugin called
 `harmony.PatchAll(typeof(Patches))` with every patch as a nested class of `Patches`; that overload patches only the
 type it is given, so no hook was live, while the log still said "patches applied" and three test runs passed because
 none of their checks needed a hook. The first test that did (a portal flow) failed on every patched behaviour at once.
