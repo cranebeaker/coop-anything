@@ -891,6 +891,70 @@ Reverse-engineering maps (agents, static, partly unverified; full text in the te
 - Open from the same playtest: enemy attacks show no animation on the client (copies only play walk/run/idle), and
   areas past a gate the host has not reached are empty (only the host's progress spawns enemies).
 
+## Enemy animations and local-AI copies (2026-10-29)
+
+- Every animation chore-block start goes through FUN_0058af50 (thiscall: AnimComp, out handle, chore CRC, block CRC,
+  params, flag; RET 0x18), AI attacks and hit reactions included. tfu-coop `redirect/anim_sync.cpp` hooks it on the
+  host; the enemy sync sends "N <id> <chore> <block> <flag>;" and the client replays the starts on its copies through
+  FUN_0058c2b0 (d33a371, `tools/m60-anim-run.sh` passed). In play the attacks looked right, but the client crashed:
+  after 1039 replays, and after 224 when only the newest start per copy was replayed, each time at another address
+  (`tools/m62-anim-soak-run.sh`). Probably attack chores on a brainless AI corrupt memory. Replay is off by default
+  (`COOP_ENEMY_ANIM_SYNC`); with it off the 4-minute soak passes.
+- Option `COOP_COPY_BRAIN` (client, off by default): copies keep their own AI, so they attack and fire with the
+  game's own animations and projectiles. The client's player is invincible (`player.SetInvincible`; OverrideHealth
+  still works) and keeps taking its health from the host. The soak passed (4 min, no crash). Findings on the way:
+  - Copies made with `Mp.CacheEncounterAsset` are in other factions than the level's AIs (5 / 2 against 6 / 7) and
+    picked each other. The host now sends each AI's target ("G <id> P<player id>" or "G <id> <AI id>") and the
+    client points the copy at the same one (`tools/m65-copy-target-run.sh` passed).
+  - A local-AI copy attacks but never walks or turns by itself (3 copies moved 0.0 m in 10 s while starting 18-34
+    attacks each). Copies now follow the host AI's position and facing, except while their own attack chore plays
+    (`animation.IsWaitingForChore`), and play walk / run / idle in between.
+  - Fewer attacks on the client with several attackers: TFU paces attackers on the local player. The coordinator
+    (FUN_007bf6c0 in PlayerSith::Update, state at PlayerSith+0x59a0..0x5a23) had empty lists for Wookiees on both
+    instances, so it is not the cause for them.
+- Owner's playtests: attacks "a lot better" but "still off". The host's own Wookiees stand still under
+  `ai.AttackTarget`, so natural movement is untested. `lua/host_follow.lua` (test aid, not yet played) moves the
+  host's player behind the client's puppet so one person can play a level as the client.
+
+## Offline work: enemy shots and level scripts (2026-11-02)
+
+Static only (Ghidra headless on the unpacked exe; our own reader for the level packs). Nothing here was run in the
+game yet.
+
+Projectiles:
+- Every projectile launch goes through FUN_0073ceb0 (thiscall, `this` = [0x012f0ff4], RET 0x28): type, origin
+  vec4*, direction vec4*, speed, max time, owner ren, target ren, ability key, ability index, extra. It has 38 call
+  sites: AI abilities (0x7f6ec0-0x815670), the Lua binding `projectile.Launch` (0x832e50) and a few others.
+- The ability pair is an asset-path hash and an index into that ability group (FUN_00c596a0), so it means the same
+  on every PC. Without an ability the launch fails (FUN_0085f0b0 -> FUN_008534c0). The projectile keeps the owner at
+  +0x114 and extra at +0x118 (FUN_00858dd0).
+- tfu-coop `redirect/proj_sync.cpp` hooks the entry (5 stolen bytes, `push esi; mov esi, [esp+8]`), only once shot
+  sync is first turned on, so a game without it runs unpatched. The host records launches. The enemy sync sends "L <id> <target> <type> <origin> <dir> <speed> <time> <key> <index>
+  <extra>;" for its AIs. The client launches them from its brainless copies through the same function. The option
+  is `COOP_ENEMY_SHOT_SYNC`, off by default on both instances. The client's player is then invincible, as with
+  local-AI copies. Builds clean; `tools/m80-shot-run.sh` is the test.
+
+Level scripts:
+- Level packs (`LevelPacks/*.lp`) hold the level scripts as plain Lua 5.1 bytecode: header `1b4c7561 51 00 01 04 04
+  04 04 00`, 4-byte float numbers, source names stripped. tfu-coop `re/level_lua_scan.py` finds every chunk and lists
+  each call and compare that gets the player. All 3,613 chunks in the 49 packs over 100 MB parsed. The per-level
+  output is in the test folder (`ghidra-agents/levels/`), not in this repo.
+- Uses of `ren.GetPlayer(0)` over all levels include:
+  - 404 equality compares, 224 of them `<msg>.owner == player 0` (handlers that react only when player 0 entered or
+    sent something) and 29 `collidingRen`;
+  - 143 `location.GetPosition` (distance checks);
+  - 88 `volume.IsInside(volume, player 0)`;
+  - 73 `location.Teleport`, 65 `game.Kill`, 53 `ai.MakeAware`, 50 `camera.ResetToPlayer`.
+- Prologue example: the opening gate runs when `volume.IsInside(ren.Find("GatePlayerTriggerVolume"), player 0)`.
+- Derived: level progress in scripts follows player 0 only. The host's puppet of a client entering a volume sends
+  "inside" (the engine path has no player-0 test, see above), but the scripts ignore it. This matches the playtests
+  ("areas past a gate the host has not reached are empty").
+- Not decided: what to change. Some handlers also act on player 0: death volumes call `game.Kill(player 0)`, others
+  teleport it or move the camera. So treating a puppet as player 0 everywhere would also kill or teleport the host.
+  Candidates: count player 0 as inside a volume when any player is (a `volume.IsInside` wrapper on the host);
+  forward a puppet's volume messages as player 0's only for volumes that are not death volumes; or keep the host
+  near the clients (the follow-bot).
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
