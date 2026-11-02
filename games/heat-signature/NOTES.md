@@ -1153,6 +1153,16 @@ Observed:
   its controls, "Controlling"). The mission completes in `DockAtStation`, called from a ship's step when it docks;
   for a ship that needs its autopilot's `Intent`/`DestinationObject` or a player docking it, which the bot cannot do.
   Moving the ship next to the station (helper `gotohome ... ship`) did not dock it.
+- **Docking a hijacked ship** (2026-11-02): the player at the bridge presses Set Course (`oControls.SetCourse`, control
+  26; found by listing the controls the game asks about each frame at the bridge). In `ControlSomething` (self = the
+  ship) this needs the ship `Secured` (0x1a3: set once no guard aboard is conscious; the host's knockouts reach the
+  guest's copy through the guard mirror, so both copies are secured) and `PlayerShipIsAllowedToDockAtStation`; it calls
+  `SetCourseForStation` for the nearest station of the player's faction (`NearestStationOfFaction(x, y,
+  PlayerFaction())`: the home station, 627 000 units away in the test), which sets `Autopilot` 1, `Intent`
+  "PlayerAutopilot", `DestinationObject` the station. The ship's own step flies it there (about 100 000 units/s) and calls
+  `DockAtStation` on arrival, which completes the Hijack mission (observed in about 2 minutes). `BigShipAutopilot`
+  (control 80) is never called (no call to it in the code). While the guest's copy flies home, the host's follows its
+  speed and angle through its own space; the guest's completion completes the host's (shared completion).
 - **A ship's flight** (2026-11-02): each copy flew its own copy of the shared ship (observed: its own autopilot, speed
   about 12 000/s, angles 70 degrees apart between copies; a hijacked ship flown by one player kept its old course on the
   other's copy). A ship moves in its end step: `UpdateSpacePosition` (`0x00a33bb0`) adds `xSpeed`/`ySpeed`
@@ -1171,16 +1181,18 @@ Observed:
 - **Test** (`tools/flight.sh`, 8 checks): nobody at the bridge, nothing is followed; the guest takes the bridge and
   flies, and the host's copy follows while it thrusts and turns, and keeps its new course after; both still aboard; no
   dialogs; both advancing. Speeds and angles are read on both copies at once (within 3 degrees, 5%). Mutation
-  `noshipflight`: 2 checks fail. Not done: docking a hijacked ship at a station in a test (the bot would have
-  to fly it there; stations differ between copies, and the mission completes on the docking copy's own station).
+  `noshipflight`: 2 checks fail. Check 3 reads both copies up to 3 times (turning at up to 45 degrees a second, two
+  reads a fraction of a second apart once differed by 10 degrees). Docking: see the Hijack notes above (`hijack.sh`).
 - **A puppet with no route to its player**: the guest put at the bridge from afar; the host's puppet walked toward it
   and stopped at 1 967 units (no route it may take: the bridge is behind keycard doors the guest did not pass, and
   a player can also jump, e.g. with a teleporter item). Now a puppet more than 400 units from its player that has not
   got 30 closer in 3 s is put where its player is. Mutation `nosnap`.
-- **Test** (`tools/hijack.sh`, 8 checks): the bridge is the objective on both; the host knocks the pilot out (down on the
-  guest too); the guest takes the bridge and the host's copy shows it there; the guest's mission completes (stand-in
-  for the docking: helper `completemission`, the path the other player's completion takes) and the host's completes
-  with it, and it is told; no error dialogs; both advancing.
+- **Test** (`tools/hijack.sh`, 10 checks): the bridge is the objective on both; the host knocks the pilot out (down on the
+  guest too); the guest takes the bridge and the host's copy shows it there; the host knocks every guard out (secured
+  on both copies); the guest presses Set Course: its ship flies to the station and docks (`DockAtStation` from the
+  ship's step) and its mission completes; the host's completes with it, and it is told; no error dialogs; both
+  advancing. Mutation `nosharedcomplete`: the host's mission stays open (1 check fails). The bot's control arrays now
+  go to 128 (Set Course is 26, the unused `BigShipAutopilot` asked for 80).
 - Test mistake, recorded: the setup command `puppet` run without an id made the host's copy call `PlayAsCharacter` on
   nothing (GameMaker error in `PlayerShipDockAtStation`); it now refuses without an id.
 
