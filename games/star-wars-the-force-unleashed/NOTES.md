@@ -1017,6 +1017,21 @@ Built (tfu-coop `lua/m81_shared_triggers.lua`, host only, off by default, `share
   it started and compares numbers. Reloading m81 over an older version of the file also failed on load; fixed.
   Lesson for in-game tests that grep a shared log: mark or count the log first, and compare fields as numbers.
 
+### Difficulty for more players: levers (2026-11-02, static)
+
+The mod does not scale difficulty with the player count yet. The engine's own Lua bindings (2,131, listed by
+tfu-coop `re/lua_bindings.py` from their registration calls, with the engine's help texts) offer:
+- Health: `game.SetMaxHealth(ren, hp)` and `game.OverrideHealth(ren, hp)` (both already used on client copies).
+- Damage: `social.SetFactionDamageMultiplier(attackingFaction, defendingFaction, factor)` and
+  `social.SetFactionInaccuracyMultiplier(...)`, per faction pair, by faction name. Faction names: unknown
+  (`social.GetFactionID(name)` adds a faction it does not find, so guessing names is not harmless).
+- Bosses: level scripts call `ai.AttachBossMeter(ren)` or `ui.SetBossMeter(true, ren, name)` when a boss fight
+  starts, so wrapping those names the boss ren.
+- More enemies: `Mp.CacheEncounterAsset("<type>.actor.xml")` spawns a working enemy (m46-m50); the type comes from
+  the spawner path (`Spawn_<n>_<type>`, m6 `host_type`). Leftovers of a multiplayer mode: `Mp.GetMPEncounterSpawns`,
+  `Mp.EnableEncounterSpawnGroup` (whether the campaign levels have MP spawn groups: unknown).
+- `game.GetDifficulty()` / `game.SetDifficulty()`: what the difficulty changes is unknown.
+
 ## Derived (not yet verified)
 
 - `libScumEuphoria` suggests NaturalMotion Euphoria; `Scum*` names suggest the LucasArts in-house
