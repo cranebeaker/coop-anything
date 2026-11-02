@@ -54,13 +54,66 @@ def signature(result):
 
 # ---------------------------------------------------------------- oracles
 
+def _msvcrt_split(s):
+    """Parse Windows argument quoting, including list2cmdline output and doubled
+    quotes inside a quoted argument. This is not shell parsing: metacharacters
+    are passed literally. shlex(posix=False) incorrectly retains path quotes."""
+    args, i, n = [], 0, len(s)
+    while True:
+        while i < n and s[i] in " \t":
+            i += 1
+        if i >= n:
+            return args
+        cur, inq = [], False
+        while True:
+            if i >= n or (not inq and s[i] in " \t"):
+                args.append("".join(cur))
+                if i >= n:
+                    return args
+                i += 1
+                break
+            c = s[i]
+            if c == "\\":
+                bs = 0
+                while i < n and s[i] == "\\":
+                    bs += 1
+                    i += 1
+                if i < n and s[i] == '"':
+                    cur.append("\\" * (bs // 2))
+                    if bs % 2:
+                        cur.append('"')
+                        i += 1
+                    else:
+                        if inq and i + 1 < n and s[i + 1] == '"':
+                            cur.append('"')
+                            i += 2
+                        else:
+                            inq = not inq
+                            i += 1
+                else:
+                    cur.append("\\" * bs)
+            elif c == '"':
+                if inq and i + 1 < n and s[i + 1] == '"':
+                    cur.append('"')
+                    i += 2
+                else:
+                    inq = not inq
+                    i += 1
+            else:
+                cur.append(c)
+                i += 1
+
+
 class CommandOracle:
     """Runs an external replay program. cmd is a list of args (or a string) with the token {fixture} replaced by a temp file."""
 
     def __init__(self, cmd, tmpdir=None, timeout=60):
         if isinstance(cmd, str):
-            import shlex
-            cmd = shlex.split(cmd, posix=(os.name != "nt"))
+            if os.name == "nt":
+                cmd = _msvcrt_split(cmd)
+            else:
+                import shlex
+                cmd = shlex.split(cmd, posix=True)
         if not any("{fixture}" in c for c in cmd):
             raise OracleError("replay command must contain {fixture}")
         self.cmd = cmd
