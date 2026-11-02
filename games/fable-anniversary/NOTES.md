@@ -514,3 +514,20 @@ Observed:
   packets and spawned the puppet on its own hero; owner: the second player is there, right behind the hero.
   So Steam loops a P2P packet back to the sender, and send / read / user slots are right.
 Unknown: two different accounts on two PCs (relay route, latency, session accept order) not tested yet.
+
+### 2026-11-02: kit for a friend
+
+- `fable-coop/kit/FableCoop.bat`: one `.bat` with a PowerShell body (the shipping playbook's pattern); `make_kit.py`
+  embeds the DLL as base64 with its SHA-256. Menu or `install | play host|guest <SteamID64> | uninstall`, `--game-dir`.
+- The kit installs into the player's own game folder (a copy would be 8.7 GB), so the DLL is now inert unless
+  `FABLE_COOP_PROFILE` is set (only the kit and tests set it). Checked: test copy started without it, our DLL loaded and
+  forwarded, no log written, nothing written under the real `My Games\FableHD`.
+- Own SteamID64: recent Steam no longer writes `MostRecent` in `config\loginusers.vdf` (none of 4 accounts had it);
+  `HKCU\Software\Valve\Steam\ActiveProcess\ActiveUser` (32-bit account id, + 76561197960265728) gives the logged-in
+  one; it matched the id the game reported.
+- Started from PowerShell 7, Windows PowerShell inherits a PSModulePath where `Get-FileHash` is missing; the kit
+  hashes with .NET.
+- `kit/test_kit.ps1` (fake Steam folder, fake Documents, the real exe copied in): 13/13 pass: game found through
+  `libraryfolders.vdf`, foreign `dinput8.dll` backed up and restored, second install is a no-op, bad / own SteamID
+  refused, saves copied, peer remembered, wrong exe refused with nothing written, missing game explained.
+  `play` on the test copy started the game with profile `coop` and the Steam peer (log checked).
