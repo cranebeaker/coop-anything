@@ -13,9 +13,9 @@
 Not playable together yet. Two copies of the game, linked over UDP or the Steam relay, each show the other
 player's hero walking, running, fighting and turning in the same region, with matching animations and a normal
 face, and share the time of day. Enemies placed in the world share position, anims, health and death: both
-players fought and killed one troll in turns (owner, 2026-11-03). Sync of summoned creatures is written but not
-tested. Quests, items, money and the day count are not shared. Only tested with both copies on one PC; the Steam
-relay only as a one-account loopback.
+players fought and killed one troll in turns (owner, 2026-11-03). A nymph's summoned scorpions and a troll's thrown
+rocks show on both screens (owner, 2026-11-04). Quests, items, money and the day count are not shared. Only tested
+with both copies on one PC; the Steam relay only as a one-account loopback.
 
 ## Existing work
 
@@ -96,6 +96,9 @@ No automated suite yet. What ran, all on one PC with two copies (profiles p1 hos
 - Owner's visual checks, 2026-11-02: normal face, combat stance, no slide on strikes, fluid sharp turns.
 - Enemies, 2026-11-03: the owner fought a troll with both heroes in turns until it died; it animated on both
   screens and the kill reached the other game.
+- Summons and rocks, 2026-11-04: the owner saw a nymph's scorpions in sync on both screens, woke a troll with the guest
+  while the host watched, then fought it with both, rocks included. The logs matched: 58 rocks from the guest and 11
+  from the host, each count received by the other game.
 
 ## How to play
 

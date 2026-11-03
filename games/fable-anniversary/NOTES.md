@@ -824,11 +824,36 @@ Observed (owner watching, p2 host and p3 guest over local UDP, plus memory reads
   (0x1f59cb0 reads them as damageable and killable) stopped it.
 - Result (owner): both heroes hit the same troll in turns until it died, on both screens, logs clean.
 
-Written and built, not tested in game yet: summoned creatures (a wood nymph's scorpions were on one screen only).
-Their ids differ per game, so the summoning game always drives them and lists them every second ("FCS1": id, position,
-definition name); the peer creates a creature of that definition (a mirror) and drives it as a copy. Unknown: whether
-scorpions carry the summoned component live; the log prints it per creature. If both nymph copies summon, each
-player gets two sets.
+Summoned creatures (a wood nymph's scorpions were on one screen only). Their ids differ per game, so the summoning
+game always drives them and lists them every second ("FCS1": id, position, definition name); the peer creates a
+creature of that definition (a mirror) and drives it as a copy.
+- First try failed: scorpions carry no live CTCSummonedCreature (the log said "not summoned" for all), so no mirror was
+  made, and the copies' own AI summoned, so each game had a set of its own (owner: different places, dead on one
+  screen only).
+- Fix: summons go through CTCAISummon 0x1d31f30 (called at 0x1b9d719 and 0x1c0f0de), which creates each creature with
+  the cdecl 0x1f38400 at 0x1d3225c. Both calls are redirected: a summoner the peer drives summons nothing, and what the
+  call creates is marked as summoned. Test (owner): in sync on both screens; logs 6 mirrors each way, 13 summons skipped.
+
+Thrown rocks (owner: the guest's troll threw one, the host saw the throw and no rock). The rock is a CThingObject
+(`OBJECT_ROCK_TROLL_ROCK`, def index 0x4a8), created at 0x1bc3449 by the cdecl
+0x1f58490(def index, position, thing +0x9c, 1, 0, 0, name ""), carried, then fired (0x1ec2a80 / 0x1ec1f30). Tried live
+through the bridge on p3 (2026-11-03): name to index with 0x16cc3c0(definition manager; CCharString), create, it
+falls and rolls, physics slot 0x10 with a matrix from 0x1be0cf0 moves it, 0x1f2e530(thing, 0) removes it. The DLL
+sends rocks at 20 Hz ("FCT1"); the peer creates the same object and places it each frame. Position only: no spin, no
+impact effect. A thing handle {vftable, refblock} (ctor 0x16e6e90, set 0x16e6ee0, get 0x16e6ea0, dtor 0x16e6f60) reads 0
+once the thing is destroyed, which also answers the freed-creature question above: thing +4 -> {thing, refcount}.
+Test (owner, 2026-11-04): rocks show on both screens, with small sync differences the owner does not mind. Logs: 58
+rocks thrown by the guest and 11 by the host, each count received on the other side, no faults.
+
+Sleeping enemies and the sticky owner (2026-11-04). With the host idling within 35 m, the guest walked up to a
+troll: rise sound and red eyes, body underground, nobody attacked, nothing on the host's screen. The host owned the
+sleeping enemies (it stayed owner while within 35 m), so the guest's waking copy was forced to the host's sleeping
+anim, and the host's copy never woke with no hero near it. Fix: an owner keeps an enemy only in a fight (main anim or
+health changed in the last 5 s); otherwise the closer hero takes it. Idle anims hold still: a sleeping troll and two
+nymphs kept theirs for 12 s in both games. A hero within 30 m also takes the enemy when the other is beyond 30 m, so it
+is never ownerless. Result (owner): the guest woke and fought the troll, the host then hit it too, and it kept
+throwing rocks at the guest. Ceiling: 5 s without a change in a fight can still hand over and replay the rise. Log: an
+idle nymph changed owner a few times in a minute with both heroes about as close, with no effect seen.
 
 ## 2026-11-03: AlbionTogether, an existing mod we missed
 
