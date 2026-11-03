@@ -10759,3 +10759,62 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: Fable Anniversary
+  year: 2014
+  engine: Unreal Engine 3 (with the original Fable engine inside)
+  project: fable-coop
+  url: https://github.com/LenoreSlate/fable-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: partial
+    items: 'no'
+  players: "2"
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Built from zero (our triage missed AlbionTogether, listed next, found on 2026-11-03). A 32-bit dinput8.dll
+    proxy (MIT) links two games over the Steam relay of the game's own
+    steam_api.dll (or local UDP); each player keeps their own camera and roams freely. The other hero shows as a puppet
+    with synced animations, and the guest follows the host's time of day. Enemies placed in the world share health and
+    death; the closer player's game runs each one and the other mirrors it, but it fights only that player's hero.
+    Not shared yet - quests, items, money, enemies from generators. Tested only by the author with two copies on one
+    PC; Steam relay only in a one-account loopback test. Player kit is one FableCoop.bat. Write-up in
+    games/fable-anniversary.
+  sources:
+  - https://github.com/LenoreSlate/fable-coop
+  - https://github.com/cranebeaker/coop-anything/issues/280
+  checked: '2026-11-03'
+  made_with_coop_anything: true
+- game: Fable Anniversary
+  year: 2014
+  engine: Unreal Engine 3 (with the original Fable engine inside)
+  project: AlbionTogether
+  url: https://github.com/kvoeten/AlbionTogether
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: partial
+    items: 'no'
+  players: up to 65
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: none
+  notes: Injected DLL and launcher (MIT), same exe as fable-coop. By its README, each player loads their own hero and
+    roams freely; heroes keep appearance and weapons; combat, NPC and enemy sync, ownership across regions. Shared
+    quests, items and money are listed as next. The author tested six players by hand. Scope above is the author's
+    claim. Built from source on 2026-11-03 for games/fable-anniversary, it crashed at startup on all 4 tries on that
+    test copy (cause unknown).
+  sources:
+  - https://github.com/kvoeten/AlbionTogether
+  checked: '2026-11-03'
