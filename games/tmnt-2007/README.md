@@ -1,23 +1,25 @@
 # TMNT (2007, PC)
 
-> **Work in progress, not finished.** Two players can play on one PC, but large parts of the game have not been
-> tried yet and there is no public release.
+> **Work in progress, not finished.** Two players can play on one PC and every story mission starts and passes a
+> scripted smoke test, but no mission has been played through with two players, level changes are untested, and
+> there is no public release.
 
 | | |
 |---|---|
 | Engine | Ubisoft Jade ("Engine v428-42" in the game's log; gameplay scripts compiled into the exe) |
 | Versions tested | Retail PC, `TMNTGame.exe` 1.0.0.188 (UPX-packed, SecuROM traces), SHA-256 `701d9f00f8c1edf790466f2ecfeb72a64fe7ccdc491f7c370ae11c1942740589`; store/edition unknown |
 | Projects | Local couch co-op by DLL injection (private, in progress; no public repo yet) |
-| QA level | none |
-| Last updated | 2026-11-02 |
+| QA level | automated (scripted smoke test per mission, see QA) |
+| Last updated | 2026-11-04 |
 
 ## Where things stand
 
 A second player controls a second turtle in the same game process, on one screen, with a second controller. Where a
-level has the other brothers loaded (Map 5, *Ninja Tag Time*), player 2 plays the real Raphael, Michelangelo or
-Donatello with his own weapon and combos; in levels that load only one turtle (Level 1, *Mystical Jungle*) player 2
-is a copy of player 1's turtle in another bandana colour. Covered: Level 1 and Map 5. Rest of the campaign: not
-covered yet. Not released.
+mission has the other brothers loaded (7 of the 16 story missions in the test), player 2 plays the real Raphael,
+Michelangelo or Donatello with his own weapon and combos; in the other 9 he is a copy of player 1's turtle in another
+bandana colour. All 16 story missions were started with player 2 and pass a scripted smoke test (join, walk, jump,
+attack, leave and rejoin, leave while player 1 is down, restart from the pause menu). Not covered: playing a mission
+to its end, level changes, cutscenes, bosses. Not released.
 
 ## Existing work
 
@@ -67,21 +69,36 @@ files are changed on disk.
   projection (focal factor `|proj._22| / 2`, 1.27 here); an earlier fixed guess of 1.05 put markers too high near the
   bottom of the screen.
 - **Keyboard only while the game is in front.** Alt is the co-op key; held for Alt+Tab it started team moves in a loop.
+- **Hazards and deaths.** Toxic water (turtle state 26) returns player 1 to safe ground after about 3 s, but player 2
+  stayed in it until he was downed (about 11 s). After 2.5 s in the water he now joins again beside player 1. When
+  player 1 dies (state 24) the checkpoint reload frees spawned objects; a copy of player 1 still shares some of player
+  1's objects, and freeing it corrupted the heap (3 of 4 deaths crashed). At the death the copy is now released and
+  kept out of that free, and used again after the reload.
+- **Main actor 0 is never swapped to null.** Enemies near player 2 target him by swapping main actor 0 around their
+  AI. After player 2 left while player 1 was down, that swap wrote null and the next script crashed
+  (`TMNTGame.exe+2B3E91`).
 
 ## QA
 
-QA level is `none`: there is no test suite with pass/fail output yet. What was checked, and how:
+QA level is `automated`, with this scope: a smoke test per mission, not a playthrough.
 
-- A windowed copy of the game runs in the background with scripted controller input and records frames from the
-  Direct3D back buffer. A frame-by-frame look at those recordings (kept on the developer's machine, not in this repo)
-  showed, on 2026-11-01 and 2026-11-02:
-  - Map 5: player 2 as Raphael, Michelangelo and Donatello, each with his own weapon, doing a 4-hit combo, an
-    unarmed attack, walking and jumping afterwards.
-  - Level 1: player 2 as a copy of Leonardo doing the same; a team move started by player 2 and one started by player
-    1, both turtles staying in the level and playable afterwards; no team move starting by itself.
-- The controller path was driven by a virtual pad in the test copy; real controllers (Xbox, Switch 2 Pro) were last
-  played by hand on an earlier build.
-- An older self-test script covers only the start of Level 1.
+- A windowed copy of the game (separate install and saves) runs in the background. A command channel into the mod
+  drives player 2 through the same input path as a real second controller, and player 1 through a virtual pad. The
+  runner (`suite.py`, in the private project) starts a fresh copy for each mission, starts a new game forced to that
+  mission, skips the intro and checks from the mod's log: player 2 joins and is drawn; he walks more than 1.5 units
+  (other directions are tried if one drops him off a ledge); he jumps (state 3 or 4); he attacks (a combat state); he
+  leaves and rejoins; he leaves while player 1 is down; a restart from the pause menu brings both back; the game is
+  still running. Only a game that stopped counts as a crash; exceptions caught by the mod's guards are logged.
+- Result, 2026-11-04 00:56, 16 missions x 10 checks: **156 of 160 pass** (Map n is story mission index n, 0-15).
+  - Map 1: the restart crashed the game (restart and no-crash fail).
+  - Map 8: the attack check got no samples (attack fail; it passed in every other run of Map 8).
+  - Map 12: player 2 walked into a ledge grab (state 6) and the runner did not try another direction (walk fail).
+- Rerun of Maps 1, 8 and 14 after the last change (mod 194): Maps 1 and 8 pass all 10; Map 14's restart crashed.
+- Restarts with a copy as player 2 over these runs: 10 of 12 pass. With a real brother: 7 of 7.
+- Player 1 killed by enemies in Map 8 with a copy as player 2 (`p1_death.py`, mods 192-193): 10 of 10 pass (game running, player 2
+  back after the checkpoint and able to walk), 4 of them followed by a restart that also passed.
+- Not covered by any script: real controllers (last played by hand on an earlier build), level changes, cutscenes,
+  bosses, finishing a mission, the camera beyond the 14-unit leash.
 
 ## How to play
 
@@ -89,18 +106,17 @@ Not released.
 
 ## Known issues
 
-- Covered: Level 1 and Map 5. Rest of the campaign (later chapters, vehicle chases, bosses): not covered yet.
-- In levels that load only one turtle, player 2 is a Leonardo copy: katanas and Leonardo's moves, whatever hero is
-  picked.
-- Cutscenes, checkpoint reloads and level changes may lose or misplace player 2; he can be brought back by hand.
-- A crash at `TMNTGame.exe+27A2AE` (a call through a null pointer) was seen twice on 2026-10-29, the second time right
-  after team moves had started over and over; that loop is fixed, but the crash itself was not reproduced or explained.
+- A restart from the pause menu with a copy as player 2 can crash the game (2 of 12 in the test runs, Maps 1 and 14).
+  The copy shares some of player 1's objects; the restart frees it. A clean copy that shares nothing is not done yet.
+- Level changes with player 2 have not been tested; the mod brings player 2 back once player 1 has stood for 3 s, but
+  whether a copy survives the old level being unloaded is unknown.
+- In missions that load only one turtle, player 2 is a copy of player 1's turtle: same weapons and moves whatever hero
+  is picked; only the bandana colour changes.
+- Cutscenes, bosses and vehicle sections: not checked.
 - Picking or switching heroes while a turtle is climbing, wall-running or in the air can snap positions.
 
 ## Next steps
 
-- A test script with pass/fail output (states reached, positions, which object player 2 is) so the QA level can rise.
-- Load the other brothers' data into single-turtle levels, so player 2 can be a real Raphael, Michelangelo or Donatello
-  there too.
-- Try the rest of the campaign, cutscenes and level changes.
-- Track down the `27A2AE` crash.
+- A copy of player 1 that shares none of his objects, so a restart or a checkpoint can free it safely.
+- A level-change test (the game's own level end, not a forced mission) and a two-player playthrough of a mission.
+- Load the other brothers' data into single-turtle missions, so player 2 can be a real brother there too.

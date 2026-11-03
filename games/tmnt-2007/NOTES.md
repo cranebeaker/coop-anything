@@ -15,7 +15,8 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
   Writing main actor 1 := idle turtle: no crash, nothing visible.
 - Turtle id: obj -> [+0x18] -> [+4] -> [+0x48] -> +0x6A4 (1-4). Turtle AI struct: health float +0x174 (0-100),
   IO port +0x708 (0 controlled, -1 idle), present state +0x938 (2 ground playable, 3 jump/air, 4 fall, 11 air leapfrog,
-  14..17 brother team attacks, 18 downed/dead, 24 revive, 25 ground co-op charge, 0 absent).
+  14..17 brother team attacks, 18 downed (revivable), 24 when player 1's health ran out with no brother able to revive
+  him (the checkpoint reload follows about 2 s later), 25 ground co-op charge, 26 in toxic water, 0 absent).
 - `Switch_SwitchMainActor` 0x00575AE0 only moves main actor 0 and the port; the old turtle stays alive.
 - `Turtle_Spawn` 0x005C1F70 (id, spawn point, offset, port): teleports and makes present; port set via 0x004E5190.
   Spawning an idle brother with port 0 puts a second turtle on screen.
@@ -83,6 +84,24 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
 - When player 2 starts a team move, player 1 is the partner and `FUN_00586590` sets him absent (call returning to
   `0x005865E5`); he vanished and lost control until that `state 0` was redirected to 2 with IO port 0.
 
+- Story missions: the world keys are the non-zero entries of the table at `0x008003B8` (read by `FUN_00405830`);
+  mission index *i* (0-15) uses the *i*-th non-zero key, and `FUN_005f5110` maps the same 16 indices to their intro
+  videos. Writing the key into the next-map slot (`[0x014F4530]`) and the index into `[0x014F4544]`, then forcing the
+  index in the launch call `0x0040B380`, starts any mission from a new game.
+- `FUN_00491db0` is the worker behind the script function `OBJ_Destroy` (`0x00491F10`, always on the calling object):
+  a normal object is only hidden and deactivated through `0x0045B1D0`; one with the Generated identity flag `0x20000`
+  (made by the duplicate `0x00491C40`) is freed. Checkpoint reloads and restarts also free Generated objects (not
+  through this function).
+- A duplicate of player 1 keeps pointers to three of player 1's own objects in its AI block (`+0x6C4`, `+0x930`,
+  `+0xA7C`; `+0x8FC` is its own). Freeing the copy corrupted the heap and the next large allocation crashed in the
+  allocator (`TMNTGame.exe+2ACC92`/`+2ACCCA`), also after those three pointers were cleared. Keeping the copy from
+  being freed (clearing `0x20000` at player 1's death) avoided it; clearing the flag from the start made restarts
+  re-initialise the copy and crash instead (2 of 9).
+- In toxic water the game puts main actor 0 back on safe ground after about 3 s; a second turtle stays in state 26
+  until downed. Position writes (`0x004A6150`) to a turtle in state 26 keep z but x/y snap back.
+- Crash `TMNTGame.exe+2B3E91`: `FUN_006b3e80(a, b, flag)` tests `[b+4]`; the AI function at `0x0052EC05` passes main
+  actor 0 as `b`. It crashed when the mod swapped main actor 0 to a null player 2 around enemy AI.
+
 ## Derived
 
 - Swapping the 584-byte pad and wrapper buffer (`[0x01502198]`) solves per-player button/stick history in Level 1
@@ -92,8 +111,10 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
 ## Unknown
 
 - Store/edition of the tested copy; whether other builds match.
-- Behaviour of player 2 and team moves in the rest of the campaign, boss fights, cutscenes, and level transitions.
-- Why the `27A2AE` crash happened (null call; seen after repeated team moves on 2026-10-29).
+- Behaviour of player 2 in boss fights, cutscenes and level transitions; no mission was played to its end.
+- What else a duplicate of player 1 shares with him, and how to make one that shares nothing.
+- The `27A2AE` crash (null call) has not been seen since its two known triggers were fixed (Alt held in the background
+  starting team moves, and a teleport during restart teardown); its exact cause was not traced.
 
 ## Checks that actually ran
 
@@ -104,3 +125,6 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
   (same moves), a team move started by each player, and 6 s idle with team moves allowed (nothing started by itself).
   Checked by looking at the recorded frames one by one. The recordings stay on the developer's machine; they are not in
   this repo.
+- 2026-11-03/04, `suite.py` in the test copy: all 16 story missions, 10 pass/fail checks each, judged from the mod's
+  log; results and failures are listed in [README.md](README.md#qa). `p1_death.py` (player 1 killed by enemies in Map 8
+  with a copy as player 2) and `probe_map.py` (frames of one mission) were used to find the hazard and death crashes.
