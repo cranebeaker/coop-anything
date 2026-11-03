@@ -1449,3 +1449,58 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
   proof (it failed now and then before: in 2 of 4 runs on one build, once on 2026-10-31, twice on 2026-11-02), but no
   failure since.
 - **Left (cosmetic):** what a puppet holds (the other player's selected item in its hands).
+
+## What a puppet holds (2026-11-02)
+
+- Each player message carries the objects of the sender's primary and secondary items (`PrimaryItem` 0x2b8,
+  `SecondaryItem` 0x2b9; sent as object + 1, so a message's zeros before the first real one are not object 0: an
+  instance of object 0 made at the start hung the host). On the receiving copy, aboard the shared ship only, the puppet
+  gets a shown item of the same object: created there, added to the puppet's inventory with the game's
+  `AddToInventory` (the puppet's own pickup hook, which drops pickups by a puppet, is bypassed for it), and set as its
+  primary or secondary item directly. The game's `AssignAsPrimaryItem` / `AssignAsSecondaryItem` hung the game when
+  called for a puppet (and for the test's own `equip` helper), and `SelectInventoryItem` was undone by the game. Empty
+  hands are the puppet's own `Inventory[0]`. A shown item the game replaced is destroyed.
+- `held.sh` (8 checks): the guest equips a gun, then empty hands; the host's puppet holds the same each time and its
+  inventory grows by at most one item per hand; the other way round too. Mutation `noheld`: 4 of 8 failed.
+- One run on 2026-11-02 failed 4 of 8 (the puppet kept its own items), with stage-2 work in progress in the build; not
+  seen again (8 of 8 on 2026-11-03 02:19Z). Cause not found.
+
+## Up to 4 players (stage 2, 2026-11-02/03)
+
+- **Network:** the host keeps up to 3 guests' addresses (`MAX_GUESTS` 3) and sends to all of them; a guest sends to
+  the host only. Each player message carries the sender's slot (0 the host, 1-3 the guests), set by the host from the
+  address it came from, and a welcome message tells each guest its slot (again every 2 s: one lost would leave a guest
+  without one). The host relays each guest's player messages and its world events (items put down, grenades, bullets,
+  breaches, modules lost, taken guards, boxes) to the other guests. Hit messages carry the sender's and the target's
+  slots; a hit on a player's puppet is applied by that player only (it was applied by every guest that got it), and the
+  host relays one meant for another guest.
+- **One puppet per other player:** the 2-player code keeps the other player in globals (its puppet, the puppet's pod,
+  its latest message, small per-puppet state). That stays the first partner (the host's first guest; a guest's host).
+  Each further player gets a context with the same fields and its own puppet, an unused roster character made playable
+  with its own pod, when its first message arrives. When that puppet or its pod steps, or its news, held items or body
+  are handled, its context is swapped into the globals, the 2-player code runs unchanged, and it is swapped back.
+  Bugs found this way: a function's own static state (the puppet step's frame counter, the last known state of the
+  puppet for its knockout, the airlock its body was laid in) is per puppet too, or two puppets take turns overwriting
+  it (only one of two puppets found its way through the ship until the step counter moved into the context); a swap
+  back that looked the context up again left the globals swapped.
+- **Carrying:** a further guest carrying a guard is carried by its puppet on the host, as the first guest's is (mutation
+  `noextracarryguard`).
+- **Guards:** the host's guards pick the nearest up player aboard, extra puppets included (mutation `noextraguards`). A
+  guard sent to carry off an extra player's knocked-out body keeps that puppet as its target until it lays it down
+  (mutation `noextracarry`); the host throws it out of that airlock as it does the first guest's.
+- **Fields about the receiver:** a few fields of the host's message are about the guest that gets it (its body as the
+  host's guards treat it, its mission stats, how often the host's guards spotted it). With one guest, one message did.
+  Now each guest gets its own copy (mutation `samepacket`: one message for all, the first guest's body for everyone).
+  Stats are kept for the first guest only; a further guest's copy has none (its own copy counts).
+- **Time over N players:** anyone pauses, everyone pauses; anyone slows, slow; fast-forward only when every player
+  asks (mutation `fastforany`). The pauser is sent as its slot + 1 (the 2-player values 1 host, 2 guest are the same),
+  and the banner names whoever paused on every copy.
+- **Banners:** "X was spotted" for every player on the host (by slot); a further guest is told "You were spotted".
+  Its pod lost, its mission ended, its departure: its news runs in its context, so the banner should name it (not
+  tested with 3 players yet).
+- **Tests:** `nplay.sh` starts 3 or 4 copies (C and D are copies of B's test install, own prefixes) and connects them.
+  `three.sh` (13 checks): connect, dock, each copy shows both others where they are, hits land on the right player,
+  C's pause and the fast-forward rule. `four.sh` (10): the same with four copies. `threebody.sh` (10): the second
+  guest is spotted (banners), knocked out, carried off and thrown out on the host, and its own copy follows while the
+  first guest's does not. `threecarry.sh` (7): the second guest carries the knocked-out target of a Capture mission; on
+  the host its puppet carries the host's copy, and the first guest's copy is carried too.
