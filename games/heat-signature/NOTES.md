@@ -1524,3 +1524,45 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
   - `fail.sh`'s check that the host's guards did not shoot the knocked-out guest (2 hits sent while it lay down)
     failed once. That check passed in every earlier run without mutations, and in 4 reruns on the same build right
     after. Its logs were overwritten by the next test, so the cause is unknown.
+
+## Steam networking (stage 3, 2026-11-03)
+
+- **The owner allowed using their Steam account** for lobbies and Valve's P2P relay; no second account is available.
+- **The game's `steam_api.dll`** (225 056 bytes, SHA-256 prefix af17df745250d181) is of the SDK with `SteamClient017`,
+  `SteamUser019`, `SteamUtils009`, and exports Valve's flat C API (`SteamAPI_ISteamNetworking_SendP2PPacket` ...).
+  Observed by disassembly: each flat function takes the interface first, then its arguments on the stack (cdecl); a
+  `CSteamID` or `SteamAPICall_t` is passed as a 64-bit value and returned in edx:eax. So plain C calls them. The flat
+  functions use the DLL's own SDK's method order, so interfaces are asked for by the DLL's versions
+  (`SteamUser019`, `SteamUtils009`; `SteamNetworking005`, `SteamMatchMaking009`, `SteamFriends015` are the same in the
+  game's exe, which was built with `SteamUser018`/`SteamUtils007`).
+- **No callbacks registered:** call results (CreateLobby, JoinLobby) are polled with `ISteamUtils::GetAPICallResult`
+  (`LobbyCreated_t` 513, 16 bytes; `LobbyEnter_t` 504, 24 bytes); the host accepts P2P sessions from its lobby's
+  members every half second (so nobody else's packets are read); a guest finds a friend's lobby with
+  `GetFriendGamePlayed` (the first friend playing this game in a lobby).
+- **One account, two copies (observed):** both copies run as the same Steam user. A lobby made by A can be "joined" by
+  B (response 1) but stays at one member. P2P packets sent to one's own Steam id are delivered, but only to the first
+  copy (A): B's packets to itself arrived at A, never at B. So with one account, Steam carries traffic one way, to A.
+- **Transport:** sends and receives go through one layer: UDP on localhost (the tests) or Steam P2P (unreliable up to
+  1200 bytes, reliable above). A player is its address or its Steam id. Test mode `steamup`: the guest sends everything
+  to the host over Steam (to its own id), plus a UDP hello now and then so the host can answer over UDP. The whole
+  28-check suite passed in that mode (the guest sent 6762 messages over Steam, the host read 6654); mutation
+  `nosteamrx` (the host ignores Steam): 15 passed, 13 failed. Derived, not checked: P2P to one's own id probably does
+  not go through Valve's relay, so this tests the API and the messages, not the internet path.
+- **Bandwidth:** list messages (guards, doors, jammers, bullets) were sent at their full array size (guards: 12 KB,
+  10 times a second); now up to their last entry. Measured aboard (2 copies, 38 guards): the host sent 94 KB/s per
+  guest before, 36 KB/s after (player messages 13 KB/s at 60 per second, guards 22 KB/s). A guest's jammer request
+  still went at full size at first, and the host dropped it (security scenario, 1 failed); fixed.
+- **Real play without test commands:** `coop_settings.txt` next to the game (`mode host` or `mode join`). Once the
+  player stands in the station, a roster character becomes the puppet and the copy hosts a friends-only lobby, or
+  looks for a friend's lobby every 10 s (banners say what happens). Missions the host accepts at the mission computer
+  are shared: `DrawAcceptButtonAt` calls `AcceptMission(id)` with the mission as self (decompiled); the hook shares
+  it instead (our own accept passes through). Tested with a helper that makes that call, not with a click. Mutation
+  `noautoshare` caught.
+- **Per-guest mission acknowledgements:** the first guest's acknowledgement stopped the resending for every guest. Now
+  the mission is resent to each guest until it has it, so a guest that joins late gets the mission being played
+  (`latejoin.sh`; mutation `firstack`: the late guest never gets it).
+- **Version check:** the host's welcome carries its mod build (a hash of the core's compile time); a guest with another
+  build sees a banner.
+- **Not tested (needs a second account):** the host's traffic to a guest over Steam, a friend finding and joining the
+  lobby, the internet path through Valve's relay. A playtest guide for the owner and a friend is in the mod repo
+  (`PLAYTEST.md`).
