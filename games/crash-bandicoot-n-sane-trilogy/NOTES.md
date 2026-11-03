@@ -734,3 +734,17 @@ was no "puppet gone".
 - loadmap from the main menu crashed the game twice at exe+0x75BBE8 right after the hero loaded. From the Crash 1
   map it works, and the suite goes through the map first.
 - Results with v19: Crash 1 N. Sanity Beach 19/19, Crash 2 Turtle Woods 15/15, Crash 3 Toad Village 15/15.
+
+### Freeze fix: game-thread work moved to the hero manager's update, mod v20 (2026-11-03)
+
+Observed: twice the suite failed on everything A did (no crate, no respawn, no reload) while both games stayed
+alive. A's screen was frozen, its CPU was still busy (the GPU driver thread), and the mod's event replay counter had
+stopped. Thread sampling (probe threadrip.c) showed the main thread waiting at exe+0xDF8AF3 and all worker threads
+waiting at exe+0xDF8AE6. The last mod action had been replaying the friend's hit on a bounce crate.
+
+Derived: the behavior-sync hook exe+0x3733F0, where the mod ran crate hits and pack requests, runs on the game's
+worker threads too, and damaging a crate from there could deadlock.
+
+v20: those tasks run from DR0 on the hero manager update exe+0x511480 (main thread). DR0 is lent to the spawn hook
+while a puppet spawns, then goes back. Results: Crash 1 19/19 twice in a row, Crash 2 15/15, Crash 3 15/15.
+Players on v13-v19 could see the same freeze in a real game.

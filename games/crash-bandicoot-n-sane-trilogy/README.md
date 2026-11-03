@@ -85,7 +85,8 @@ Also played over Steam by two people: presence, animations, spins breaking crate
 The same suite, entering levels with `loadmap`, then passed in all three games with v18: Crash 1 N. Sanity Beach 15/15,
 Crash 2 Turtle Woods 15/15, Crash 3 Toad Village 15/15.
 With v19 a check 6 was added (A opens a checkpoint crate; B's opens too; B dies and respawns at the checkpoint, which
-without the sync it did not: B came back at the level start). Results with v19: Crash 1 19/19, Crash 2 15/15, Crash 3 15/15.
+without the sync it did not: B came back at the level start). Results with v19: Crash 1 19/19, Crash 2 15/15, Crash 3 15/15. The suite then caught an intermittent freeze (crate hits run from a
+hook that also runs on worker threads); v20 moved them to the main thread: Crash 1 19/19 twice, Crash 2 and 3 15/15.
 Not covered: checkpoints in Crash 2 and 3, a friend on another hero, play over Steam for crates and fruit.
 
 ## How to play
