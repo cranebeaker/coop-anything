@@ -1491,16 +1491,36 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
 - **Fields about the receiver:** a few fields of the host's message are about the guest that gets it (its body as the
   host's guards treat it, its mission stats, how often the host's guards spotted it). With one guest, one message did.
   Now each guest gets its own copy (mutation `samepacket`: one message for all, the first guest's body for everyone).
-  Stats are kept for the first guest only; a further guest's copy has none (its own copy counts).
+  Stats: each guest gets its own count.
 - **Time over N players:** anyone pauses, everyone pauses; anyone slows, slow; fast-forward only when every player
   asks (mutation `fastforany`). The pauser is sent as its slot + 1 (the 2-player values 1 host, 2 guest are the same),
   and the banner names whoever paused on every copy.
 - **Banners:** "X was spotted" for every player on the host (by slot); a further guest is told "You were spotted".
-  Its pod lost, its mission ended, its departure: its news runs in its context, so the banner should name it (not
-  tested with 3 players yet).
+  Its departure, its mission ended, its pod lost: its news runs in its context and names it. The news code kept its
+  own memory in function statics (announced already, last pod-loss count, aboard frames ...) and "has been aboard"
+  was one global: with two other players these flipped between them every call (mutation `sharednews`, which shares
+  them again: 22 "pod destroyed" banners instead of 1, and two "left the ship"). Now per player, reset for every
+  player when a mission is accepted.
+- **Mission stats:** the host keeps a baseline of each further puppet's stats at the mission's start and sends each
+  guest its own count (mutation `noextrastats`).
+- **Ship flight:** the shared ship follows whichever other player is at its bridge (any slot: the host's message and
+  the relayed ones), not only the first partner (mutation `firstpilotonly`).
 - **Tests:** `nplay.sh` starts 3 or 4 copies (C and D are copies of B's test install, own prefixes) and connects them.
   `three.sh` (13 checks): connect, dock, each copy shows both others where they are, hits land on the right player,
   C's pause and the fast-forward rule. `four.sh` (10): the same with four copies. `threebody.sh` (10): the second
   guest is spotted (banners), knocked out, carried off and thrown out on the host, and its own copy follows while the
-  first guest's does not. `threecarry.sh` (7): the second guest carries the knocked-out target of a Capture mission; on
-  the host its puppet carries the host's copy, and the first guest's copy is carried too.
+  first guest's does not. `threecarry.sh` (11): the second guest carries the knocked-out target of a Capture mission (on
+  the host its puppet carries the host's copy, and the first guest's copy is carried too), puts it in its pod, flies it
+  home and delivers it: all three missions complete. `threenews.sh` (8): the second guest leaves (both others told by
+  name, once), docks home (both told its mission completed); the first guest's pod is destroyed (the host and the
+  second guest told). `threeflight.sh` (8): the second guest flies a hijacked ship; the host's and the first guest's
+  copies follow. `threebody.sh` is 11 checks now (the second guest's mission stats).
+- **Final runs (2026-11-03, build 2ba30208):** `suite` 27/28, `flight` 8, `guestcapture` 9, `home` 13, `podlost` 7,
+  `fail` 10/11, `held` 8, `three` 13, `four` 10, `threebody` 11, `threenews` 8, `threeflight` 8, `threecarry` 11.
+  Two failures, both unexplained:
+  - Suite check 5 (a guest's hit on a guard reaches the host's guard: applied, but the guard kept patrolling) has
+    failed in 8 of about 73 suite runs since 2026-11-01, all without mutations, long before stage 2. Cause not looked
+    into yet.
+  - `fail.sh`'s check that the host's guards did not shoot the knocked-out guest (2 hits sent while it lay down)
+    failed once. That check passed in every earlier run without mutations, and in 4 reruns on the same build right
+    after. Its logs were overwritten by the next test, so the cause is unknown.
