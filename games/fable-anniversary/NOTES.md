@@ -683,3 +683,78 @@ Owner: no more quest runs just to learn markers (they don't want to finish the g
 Plan: in co-op the completing player's DLL learns the byte at the moment of success and sends it with the quest
 name, so no table is needed in advance; the first real co-op quests test it. A static table (from each 0x4bc call
 site's wait loop) can back it up.
+
+## 2026-11-03: enemies, first step (health and death)
+
+Observed (endgame save p2, copy p3 loaded from the same manual save, two games on one PC):
+- CTCEnemy (vftable 0x2ef4924, component +4 = owner thing) is on the hero, villages and every hostile creature: a
+  faction tag, not "is hostile". Hostiles near the hero were `CThingAICreature` (vftable 0x2f1afe4).
+- CThingAICreature: +0x14 id, +0xcc max health, +0xd0 health (floats; found by diffing before and after one hit:
+  500 -> 452), +0x6c physics (position +0xc), +0x90 a next pointer (not a clean global list: scanning for its
+  heads found stale copies and unrelated holders).
+- Ids are the same in both copies for placed creatures (0x4c6, 0x4c7, 0x545, 0x71e, 0x720, 0x722, 0x732, 0x742 at
+  the same places). Creatures from generators get large ids (0x6574b, 0x66f11) that differ between copies.
+- Health is not saved: a troll at 452/500 in p2 was 500/500 in p3 from the save made after the hit.
+- Writing health 0 does not kill (troll stayed up at 0 for minutes); one hit then killed it (owner).
+- Creature vtable slot 0x100 (0x1f5a520, thiscall(float delta, bool)) rounds and calls 0x1f59cb0, which skips
+  negative deltas unless byte +0xd8 bit 0 is set and clamps at 1 unless the bool and bit 1 are set. Slot 0x104
+  (0x1f32dd0) is not the death (does nothing when the creature has an actor at +0xa4).
+- GSI 0x1c8fd50 (change health, may kill) kills with a `CCreatureAction_Die` (vftable 0x2ecac34): ctor 0x1bc03f0
+  thiscall(holder; thing, 0) returns the holder, 0x1f42f70 thiscall(thing; holder) queues it, 0x1beec00
+  thiscall(holder) releases it. Called from the bridge on a stone troll at full health: it died (owner).
+
+DLL (FABLE_COOP_PEER set): a background thread scans memory for CThingAICreature every 2 s (~0.4 s per scan);
+the game thread checks each candidate (vftable, id, sane health, physics component pointing back) and keeps per id
+the sum of health changes it saw itself. Packet "FCH1" (same region only, 10 Hz, ids changed in the last 5 s)
+carries those sums; the receiver applies the part not applied yet and queues the die action at 0.
+Test (owner, p2 host and p3 guest linked over local UDP, same save): killed a small creature in p2 -> p3 logged
+"enemy 720: peer dealt 25, health 25 -> 0" and the owner saw it die in p3.
+Seen in the same test, not handled yet:
+- A stone troll woke up and fought in p2 while it stayed asleep (a rock) in p3: AI state is per game.
+- In p2 the troll attacked only p2's hero, not the other player's puppet standing next to it.
+
+### 2026-11-03: enemies, second step (the closer player's game drives each enemy)
+
+Design (owner): free co-op, so an enemy must react to the guest even with the host far away, and it should focus
+the closest player, host or guest.
+
+DLL, as tested:
+- Each enemy belongs to the player whose hero came within 30 m of it first (host takes ties), and stays theirs while
+  that hero is within 35 m. Nobody that near: each game runs its own copy. The owner sends position, facing and main
+  anim ("FCE1", 10 Hz, 12 per packet); the other game teleports its copy there 0.1 s late (navigator slot 0x90, as
+  the puppet) and puts that anim on the copy's sequence nodes (SetAnim hook). 0.5 s without packets: the copy's own
+  AI again. Health and death keep going through "FCH1" both ways.
+
+Observed on the way (owner watching, p2 host and p3 guest over local UDP, same save, plus memory reads):
+- Anim names reach 43 characters (`ANIM_CREATURE_ROCK_TROLL_ROCK_STATE_IDLE_01`); a 40-byte field cut them and the
+  guest could not find the name.
+- A far game does not animate the creature: all its `AnimNodeSequence` names are `None`. The guest's copy then has
+  to play its own anims, or it shows the mesh's standing pose.
+- Brain byte `[[CThing+0x1e0]+0x44]+0x10` (the first puppet's "pause"): CAIBrain slot 4 (0x1ad7700) updates the
+  current behaviour object at brain +0x44 only while that byte is 0, and in memory brain +0x44 went 0 / object
+  4 times a second while the DLL wrote the byte every frame. Derived: it marks the behaviour done and the brain
+  starts a new one. On a stone troll near the guest's hero that was the rise, again and again: rubble, sound and red
+  eyes (eye mesh `MESH_TROLL_ROCK_EYE_01` in its `CTCCreatureModeManager`), body kept underground by the host's
+  anim. Writing the byte is gone.
+- A troll copy driven from load on never went underground (standing); handing an awake troll to the other game
+  replayed its rise (that game's copy never woke). Hence the 30 m range and the sticky owner.
+- CAIBrain derives from `CSuspendableProcessFibre` (fibres, process done flag at +5). Creature slot 0xc8
+  (0x1f3b830, calls 0x1ad7e50) is not the per-frame brain update: hooked, it was never called for driven copies.
+  `CTCScriptedControl` (component 0x1f) +0x20 set by hand did not stop a copy's behaviour.
+- Components are a sorted array of (id, pointer) pairs between CThing +0x44 and +0x48 (lower bound 0x1b80030).
+  Troll: 0x8 `CTCTargetingAI`, 0x1f `CTCScriptedControl`, 0x30 `CTCCombat`, 0x31 `CTCCreatureModeManager`,
+  0x34 `CTCPerceiveThing`, 0xd4 `CTCSleep`, among ~35.
+
+Test result (owner): p3 alone approaches a stone troll: it rises once, focuses p3, p3 can fight it, p2 sees the
+same; p3 walks away: it goes back underground. No looping anim in either game.
+
+Not handled yet: an enemy fights only its owner's hero (the other player's puppet is no target), and a driven copy
+near its own hero still thinks (needs a real brain freeze). Both only matter when both players are near one enemy.
+Generator spawns (ids differ per game) are not synced.
+
+Hang seen right after (owner: p2's window froze, hourglass; log ended at 14:57:01 on "enemy 720: peer dealt 25"):
+thread contexts read from outside (Toolhelp32 + Wow64GetThreadContext, stack words mapped to modules) showed the
+game's logic thread in the DLL's enemy-position receiver, waiting in MSVC's thread-safe static init
+(`_Init_thread_header`) on a function-local `static std::map` whose guard read -1 ("being initialised") with no thread
+initialising it. Cause of the stuck guard: unknown. The map moved to file scope (initialised at load, no guard);
+the same test afterwards (owner): no hang.
