@@ -5,7 +5,7 @@
 | Engine | RE Engine (TDB 70) |
 | Versions tested | Steam, app 418370, buildid 22773795 (RT/DX12 build); REFramework nightly-01433 (d4611ae) with csharp-api |
 | Projects | [coop-re7](https://github.com/xXCroissantXx/coop-re7) (directory entry "Resident Evil 7 biohazard") |
-| QA level | none (bot tests on one PC, plus one two-player session by the author and a friend, 2026-11-02) |
+| QA level | none (bot tests on one PC, plus one two-player session by the author and a friend, 2026-11-02, on v0.11; v0.12-v0.17 bot-tested only) |
 | Last updated | 2026-11-03 |
 
 ## Where things stand
@@ -13,15 +13,19 @@
 Two players can play through the start of the game together, each in their own world: the first real session
 went from the opening to the first save point after Chapter 3 and fought Mia together. Each player sees the other
 as a full-body character (Ethan, or Mia, Clancy, Zoe, Chris or Joe picked in a Lobby) who walks, jogs, crouches,
-sidesteps, looks around and blocks where the other player does, with footstep sounds, over Steam relay. Players
+sidesteps, looks around, blocks and swings their weapon (shown in hand) where the other player does, with
+footstep sounds, over Steam relay. Players
 install with one script, pick each other from a Steam friends list in an in-game window (the other player gets an
 invite to accept), and can jump to the other player's chapter with one click.
 Enemies are shared: each enemy is run by the game of the player nearest to it and copied in the other game,
-damage and deaths go both ways, and a paused player's enemies move to the other game. Doors (unlock, open,
-close), drawers, breakable boxes and supply pickups are shared; weapons, keys, files and maps stay for both.
+damage, deaths and flinches go both ways, a paused player's enemies move to the other game, and bosses (Jack's
+garage fight onward) run in each game with shared damage and defeat. Doors (unlock, open, close), drawers,
+switches, one-off interactions (the fridge, the van), pushed physics objects, breakable boxes (each player gets
+the box's item) and supply pickups are shared, including for areas the other player reaches later; weapons, keys,
+files and maps stay for both.
 Story cutscenes can be shared between players close together (experimental, off by default). A fatal hit puts a
-player down until the other stands next to them for 3 seconds. Item boxes, pushed physics objects, puzzles and
-scripted one-off interactions are not shared, and weapon swings and shots aren't shown on the other player yet.
+player down until the other stands next to them for 3 seconds. Item boxes, puzzles, phone calls and weapon
+sounds are not shared.
 Saving is off by default and can be switched on, with automatic save backups.
 
 ## Existing work
@@ -95,9 +99,26 @@ Saving is off by default and can be switched on, with automatic save backups.
   Joe animates). A ghost dressed this way must not reuse the local character's parts mask (Ethan's hides parts
   1, 10 and 11, which are Mia's eyes and chest on hers).
 - **Breakable boxes and drawers**: `app.ItemDropDestruct` (SaveGUID, `IsBreaked`, `RigidBodyCompo` =
-  `app.Havok.RigidBodyDestruct` with `setBreak(dir, pos, normal, attacker, type)`) and `app.InteractDrawer`
-  (SaveGUID from `InteractObjectBase`, `NowDrawerOpen`, `SetSwitch(bool)`). Doors close with
-  `DoorPush.requestClosed(false)`.
+  `app.Havok.RigidBodyDestruct`) and `app.InteractDrawer` (SaveGUID from `InteractObjectBase`, `NowDrawerOpen`,
+  `SetSwitch(bool)`). Doors close with `DoorPush.requestClosed(false)`. **Don't call
+  `RigidBodyDestruct.setBreak(dir, pos, normal, attacker, type)` from a script**: it threw with a nil attacker
+  and crashed the game (access violation) with the player as attacker. `setAlreadyBreak()`,
+  `dispBreakAfter(true)` and `breakObjectWithoutSetBreak()` run but leave the box drawn, so a box smashed in the
+  other game is hidden instead (`set_DrawSelf(false)`, `via.physics.Colliders` and `via.dynamics.RigidBodySet`
+  disabled). `ItemDropDestruct.setItem()` rolls the box's drop (`SetItemID`, or `DROP_TABLE_DEFAULT` for a
+  random one) and creates `DropItem` as a child of the box at the world origin; `set_Position` doesn't stick
+  until it's detached with `set_Parent(nil)`. Box items have a SaveGUID.
+- **Weapon animations**: every weapon's motion list is active at once, all as `BankID` 0 with the same motion
+  IDs (2000s stance and walk, 2200s aim pose, 2300s guard, 2400s attacks); the body's
+  `Motion.TargetBankType` picks the set (0 hands, 10 axe, 30 knife, 100 handgun, 110 shotgun, 200 items...).
+  A copy body must keep the same `TargetBankType` while a clip plays (the clip binds a frame after
+  `changeMotion`; switching back at once bound nothing), and the clip list (`getMotionInfoByIndex`) also follows
+  it, so list clips with it at 0. The weapon stance clips use joint mask 120, which covers the legs too (the
+  player never sees them), so on a walking copy they freeze the legs. The held weapon is the player's
+  `wpNNNN_*_Item` child, parented to joint `R_Wep` with a local offset (the knife: 10 cm, turned).
+- **Leaving an area hides its items like a pickup** (`getItemState` 0 -> 6, often with `ItemDataID` nil), so a
+  pickup watcher must check that the player was within reach. Unloaded objects throw an
+  `InvalidOperationException` on every call (about 2,700 a minute from a 4 Hz poll), so drop references at once.
 - **Spawning enemies by script**: the Molded wait in `MoldedPool` (`app.EnemyPool`) and are spawned by
   `app.EnemyGenerator` from `app.EnemySpawnInfo` points; a spawn requested from a point outside the loaded
   area is taken straight back into the pool, so a test Molded has to be met where the game spawns it.
@@ -255,6 +276,15 @@ Saving is off by default and can be switched on, with automatic save backups.
   every 15 s) and the other game re-dresses the ghost. The current action clip (first bank-0 motion ID ≥ 1000 on
   the player's layers 4, 1, 2) rides in the movement packet's chapter field (`chapter + 256 * motionID`), and
   the ghost plays it on a second layer with the player's own mask and blend mode.
+- **v0.13-v0.17.** Every bank-0 action on the player's layers (not just blocking) is mirrored; the weapon set
+  goes as a reliable `bank <TargetBankType>` event and the held weapon as `weapon <mesh> <mdf>` plus `grip
+  <local pos/rot>`. Interactions (`app.InteractSendFsm`, `InteractLongPressSendFSM`: `InteractSuccessCount`
+  -> `successInteract()`; saving, tapes, phones and item boxes excluded) and switches (`app.InteractSwitch`) are
+  shared, and loose props (`app.Havok.RigidBodyDynamics`, keyed by name and first position) are re-placed
+  with physics off. A friend's hit requests the enemy's own reaction (`requestDamageAction` with a
+  `ResistResultSet`). Bosses (anything but Em3000 and the Molded) aren't owned or copied: each game runs its
+  own, and only damage and the defeat go across. Unlocks and box, drawer and switch states for an area not
+  loaded yet are applied when it loads.
 - **Downed and revive.** The player's death goes through `app.PlayerDamageController`
   (`isEnableDieByDamageInfo`, `doDie`, `add_DieHandler`, `playDeadMotion`) and the base
   `DamageController.canDie(DamageInfo)`, then `GameManager.setGameOverFlag` and `app.GameOverScreen`.
@@ -327,11 +357,16 @@ Saving is off by default and can be switched on, with automatic save backups.
   right; Mia keeps a gap on her left side and dark eyes; Joe has no hands.
 - Blocking, 2026-11-03: the bot's ghost, told to play `Guard_Loop`, raised its arms and lowered them on release;
   the owner's own blocks went out in the packet as 2305/2306.
+- Weapons and boxes, 2026-11-03 (v0.16, bot copying the owner, Chapter 1 main house): the knife showed in the
+  bot's hand at the right angle, the bot swung when the owner did (2400/2401 bound, 62 frames) and walked with
+  the knife out (slightly choppy; fading the layer in and out made swings stop matching, so it snaps). A box
+  smashed by the bot vanished and left its item, which the owner picked up. Other weapons untested.
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.12 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.12), unzip it and run **Install.cmd**.
+latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.17), unzip
+it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other.
 A player starting RE7 for the first time should play the opening alone first. Full steps are in the
@@ -339,13 +374,13 @@ A player starting RE7 for the first time should play the opening alone first. Fu
 
 ## Known issues
 
-- Weapon swings and shots, ladder climbing and scripted moments (phone calls, the leg scene) aren't shown on the
-  other player; in VHS tapes the character may slide.
-- Enemy copies don't flinch from the other player's hits, and an enemy mostly goes after the player whose game
-  runs it. Jack's scripted moments (the wall in the hatch room) happen in each game on its own.
-- Keys and story items are picked up by each player separately, and scripted events can follow only the
-  picking player. Each player plays VHS tapes on their own. Item boxes, pushed physics objects (chairs),
-  puzzles and one-off interactions (the van, the fridge) aren't shared.
+- Scripted moments played by other actors (phone calls, the leg scene) aren't shown on the other player; in VHS
+  tapes the character may slide. Weapon swings are a little choppy; only the knife is tested.
+- An enemy mostly goes after the player whose game runs it. Bosses fight each player separately. Jack's
+  scripted moments happen in each game unless Share story is on and the players are close.
+- Keys and story items are picked up by each player separately (the other is told to pick them up too). A box
+  smashed in the other game just disappears (no debris). Item boxes, puzzles and weapon sounds aren't shared.
+- Mia (non-ship) has a gap on her left side and dark eyes with the full-model mod; Joe may have no hands.
 - Being downed has no fall or kneel animation (a forced crouch stands in for it).
 - Saving is off by default; with it off, nothing from a session is kept.
 - The face doesn't animate. Only footsteps are heard from the other player.
@@ -354,7 +389,7 @@ A player starting RE7 for the first time should play the opening alone first. Fu
 
 ## Next steps
 
-1. A second two-player session with v0.12 (enemy handovers, doors closing, pausing, blocking, the Lobby).
-2. Weapon swings and shots: record the player's action layers with a weapon, then mirror them like blocking.
+1. A second two-player session with v0.17 (enemy handovers, flinches, boss mode, weapons, boxes, interactions).
+2. Other weapons' swings and shots, and weapon sounds (the held weapon's `app.WwiseContainerApp`).
 3. Shared key pickups that run the item's own pickup on the other side, so scripted events fire in both games.
-4. Pushed physics objects, VHS tape animations and following a friend into a tape.
+4. Phone calls and other scripted moments played on event actors.

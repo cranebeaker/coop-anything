@@ -3548,18 +3548,21 @@
   open_source: yes
   last_activity: 2026-11
   qa: none
-  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795), v0.12. The other
+  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795), v0.17. The other
     player appears as a full-body character (Ethan by default; Mia, Clancy, Zoe, Chris or Joe from an in-game
     Lobby) built from the shadow-only "Shadow*" player meshes on a spawned VrDummyPlayer prefab, animated with
-    Ethan's motion bank (walk/jog/crouch in 4 directions, idle, head look, blocking). Movement goes over Steam
-    relay (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation. Each enemy
-    runs in the nearest player's game and is copied in the other, with damage and deaths synced. Doors,
-    drawers, breakable boxes and supply pickups are shared (weapons and keys stay for both); story cutscenes
-    can be shared between nearby players (experimental, off by default). A fatal hit downs a player until the
-    other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick
-    a Steam friend in-game (they accept an invite) and jump to their chapter. Bot tests on one PC plus one
-    two-player session by the author and a friend (opening to Chapter 3, 2026-11-02); weapon swings and shots,
-    item boxes and pushed objects are not shared yet. Write-up in games/resident-evil-7.
+    Ethan's motion bank (walk/jog/crouch in 4 directions, idle, head look) and mirroring the moves RE7 plays on
+    the player's body (blocking, weapon swings with the right weapon's animation set, the held weapon). Movement
+    goes over Steam relay (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with
+    interpolation. Each enemy runs in the nearest player's game and is copied in the other, with damage, deaths
+    and flinches synced; bosses run in each game with shared damage and defeat. Doors, drawers, switches,
+    breakable boxes (each player gets the box's item), one-off interactions and supply pickups are shared
+    (weapons and keys stay for both), also for areas the other player loads later; story cutscenes can be shared
+    between nearby players (experimental, off by default). A fatal hit downs a player until the other revives
+    them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend
+    in-game (they accept an invite) and jump to their chapter. One two-player session (v0.11, 2026-11-02);
+    v0.12-v0.17 tested with a bot on one PC only. Phone calls, weapon sounds and puzzles are not shared yet.
+    Write-up in games/resident-evil-7.
   sources:
   - https://github.com/xXCroissantXx/coop-re7
   - https://github.com/cranebeaker/coop-anything/tree/main/games/resident-evil-7
