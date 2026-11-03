@@ -3897,3 +3897,24 @@ smoothing lagged the free-run start.
 
 - Waking idle enemies for B (what the AI's perception needs); the 45 s before B was attacked in the run above; the dead-enemy proxies; the
   client's animation as the owner sees it.
+
+### Session cc, later: waking idle enemies
+
+- **What a woken enemy does.** `SimPokeEnemy`: the game's hit function with the decoy as attacker and the record
+  `AI_Infantry_Melee_Front_1_RR`, then the enemy's health put back (hostile kinds by name, not followers, within `coop_wake_radius`
+  (600, 0 = off) of the decoy, each at most once in 15 s, two per 100 ms; the host's `enemies` status shows `hunt_woken`,
+  `hunt_wake_failed`). 20 enemies woken in 75 s at the fort with the host's player at the spawn, 0 failed.
+- **At the fort the woken enemies take the decoy as their target but do not come:** 6 to 8 engaged; of the enemies within 1,500 of B,
+  five archers and an orc had the decoy as target (one archer shot), most were in `AI_Bip_Cheer_Loop`, the captain targeted an orc;
+  no damage reached B in 75 s. The fort's guards are stationary ("StatOrc" posts).
+- **With roaming orcs** (4 `Orc_Infantry` spawned on the host 450 units around B, the host's player at the spawn): the woken orcs
+  came, one at a time (one at 124 units, the others circled at 300-1,000), and B lost 708 to 406 over 48 s (9 damage messages). The game
+  keeps most of a crowd out of a fight while one attacks (its combat circle, built around the one player); for the decoy the same
+  seems to hold.
+- Measurement aids: `tools/hunt_session.py`, `a_keeper.py`; a client that must stay where the test puts it needs
+  `coop_follow_travel=off`.
+
+### Unknown
+
+- Whether more than one enemy can be made to attack B at once (the combat circle is per player); why the archers and guards stand in the
+  cheer loop; dead-enemy proxies; animation as the owner sees it.
