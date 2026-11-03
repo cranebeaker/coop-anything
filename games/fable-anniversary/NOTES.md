@@ -3,6 +3,8 @@
 Goal agreed with the owner: online co-op, one PC per player, Steam relay (no port
 forwarding). First milestone: player 2 visible and walking in the same world, enemies
 not synced.
+Later (2026-11-03): first milestone reached (two games on one PC); placed enemies are now synced too (health,
+death, position and anims; see the 2026-11-03 sections).
 
 ## 2026-10-31: triage
 
@@ -16,6 +18,8 @@ not synced.
   interfaces SteamClient016, SteamNetworking005, SteamUser017, SteamMatchMaking009.
   No SteamNetworkingMessages / SteamNetworkingSockets.
 - Directory and `games/`: no Fable entry. GitHub issues and PRs searched for "fable": none.
+  Later (2026-11-03): wrong conclusion. This searched only this repo; GitHub repositories were not searched and
+  AlbionTogether was there (see "AlbionTogether" at the end).
   Web: no co-op project for Fable Anniversary
   ([Steam discussions](https://steamcommunity.com/app/288470/discussions/0/613936039452164692/),
   [ModDB](https://www.moddb.com/games/fable-anniversary/mods)). The official modding
@@ -47,17 +51,25 @@ not synced.
 - UE3 replication is unlikely to help directly, because the world state lives in the
   Fable simulation, not in replicated UE3 actors.
 - Hook point: a 32-bit `dinput8.dll` proxy (imported statically) with MinHook.
+  Later (2026-11-03): no MinHook; the proxy patches vftable slots (`hook_vftable_slot`), one import
+  (`CreateMutexW`) and a few checked code bytes (`patch_code`).
 - Transport: both players own the game, so the game's own AppID and
   `ISteamNetworking::SendP2PPacket` (SteamNetworking005, relayed by Steam) should work
   without Spacewar. Not tested yet.
+  Later (2026-11-03): local UDP tested (two copies on one PC); the Steam relay only by a one-account loopback
+  (see "Steam relay"). Two PCs with two accounts: still untested.
 
 ### Unknown
 
 - What `CNetworkServer` / `CNetworkClient` do: a real client/server split inside the
   Fable engine (a possible second-player path) or leftover/loopback code. Next: Ghidra.
+  Later: an in-process per-tick message pipeline, not networking (derived; see "network classes").
 - How a Fable thing gets its UE3 pawn (needed to spawn a puppet hero).
+  Later: GSI CreateCreature builds the pawn itself; pawn = `[[thing+0xa4]+8]` (see "hero look-alike puppet").
 - Whether the UE3 console can be enabled in this shipping build.
 - Whether two copies can run on one PC (single-instance check, Steam).
+  Later: yes, with the UE3 mutex renamed per process and one profile folder per copy (see "proof of life",
+  "two games on one PC").
 
 ## Workspace
 
@@ -217,6 +229,9 @@ proxy `fable-coop/proxy/coop.cpp`.
   byte `[[brain+0x44]+0x10]` is 0. Checked in game: the object at brain+0x44 belonged to one
   brain only; setting the byte to 1 there made the villager stop following its own goals, but
   its walk action kept moving it and the forced position lost (stuck on collisions).
+  Later (2026-11-03): wrong reading. Slot 4 updates the current behaviour only while the byte is 0; writing 1
+  marks that behaviour done and the brain starts a new one, so "brain off" below is really "brain restarting its
+  behaviour every frame" (a stone troll replayed its rise 4 times a second; see "enemies, second step").
 - `CTCPhysicsNavigator` slots (decompiled): 0x14c (0x1e760f0) adds a movement delta to an
   accumulator at +0x95; 0x90 (0x1e75ec0) queues a teleport at +0xa1 with flags at +0xad
   (bit0 pending, bit1 = second argument); 0x164 (0x1e76870) is the per-frame update: a pending
@@ -295,6 +310,8 @@ no shared camera and no leash to the other player. Consequences for the design (
 - The puppet stands for the other player's real position; it is not a follower. Large jumps (fast travel) are real.
 - Samples must carry the region; the puppet exists on a PC only while both players are in the same region.
 - Each region needs an owner for its creatures (see playbook/actor-ownership.md) once enemies are synced.
+  Later (2026-11-03): built per enemy instead: the player whose hero came within 30 m first owns it while within
+  35 m (see "enemies, second step").
 - Owner decision (2026-11-01): main-story quests are done together. Either both players must be near the quest
   start, or one player starts it and the other is teleported to them. Side quests and other optional activities:
   no constraint, players may be anywhere.
@@ -531,6 +548,8 @@ Unknown: two different accounts on two PCs (relay route, latency, session accept
   `libraryfolders.vdf`, foreign `dinput8.dll` backed up and restored, second install is a no-op, bad / own SteamID
   refused, saves copied, peer remembered, wrong exe refused with nothing written, missing game explained.
   `play` on the test copy started the game with profile `coop` and the Steam peer (log checked).
+- Later (2026-11-03): kit 0.2.0 carried the enemy sync, 0.2.1 the die-action buffer fix (see the hang below);
+  built locally (`kit/build` is not in git), tests 13/13 pass. Still never used between two PCs.
 
 ### 2026-11-02: quests
 
@@ -752,9 +771,107 @@ Not handled yet: an enemy fights only its owner's hero (the other player's puppe
 near its own hero still thinks (needs a real brain freeze). Both only matter when both players are near one enemy.
 Generator spawns (ids differ per game) are not synced.
 
+Also not handled, found by reading `coop.cpp` (2026-11-03 review, not seen in game yet):
+- Health is synced by differences, never as a value: each game sends the sum of the changes it saw itself. A
+  reload, leaving and re-entering a region (the creature comes back at full health) or regeneration counted in
+  both games makes the two copies differ for good. Now that each enemy has an owner, the owner can send its
+  absolute health with the position ("FCE1").
+  Later (2026-11-03): fixed, the owner sends absolute health; see "enemies, third step".
+- "FCH1" goes out only while both players are in the same region and only for 5 s after a change: an enemy killed
+  while the other player is elsewhere stays alive in the other game.
+  Later (2026-11-03): fixed for this session by the dead set "FCD1"; see "enemies, third step".
+- The 2 s memory scan can return a freed copy of a creature (stale copies were seen); `creature_at` would accept it
+  (vftable, id, health, physics back pointer) and the DLL would then write health and queue a die action in freed
+  memory. Not checked: whether the thing's refblock (thing +4 -> {thing, refcount}) tells a live thing.
+- Ownership is decided by each game on its own from 0.05-0.1 s old positions, with no epoch. playbook/actor-ownership.md
+  has the host decide and stamps every grant with an epoch. On one PC (no latency) both agree; over the internet
+  both may claim, or both drop, an enemy near the 30 m line.
+- No latency or loss test: 0.1 s of interpolation is one packet at 10 Hz, and a 0.5 s gap hands the copy back to its
+  own AI (a Steam hiccup could replay a troll's rise). Playbook: network-chaos-testing.md.
+
 Hang seen right after (owner: p2's window froze, hourglass; log ended at 14:57:01 on "enemy 720: peer dealt 25"):
 thread contexts read from outside (Toolhelp32 + Wow64GetThreadContext, stack words mapped to modules) showed the
 game's logic thread in the DLL's enemy-position receiver, waiting in MSVC's thread-safe static init
 (`_Init_thread_header`) on a function-local `static std::map` whose guard read -1 ("being initialised") with no thread
 initialising it. Cause of the stuck guard: unknown. The map moved to file scope (initialised at load, no guard);
 the same test afterwards (owner): no hang.
+
+Cause found later the same day (derived from Ghidra, not proven in game): the DLL's `kill_creature` passed a
+0x40-byte static buffer to 0x1bc03f0, which builds the whole `CCreatureAction_Die` (vftable 0x2ecac34) in place:
+its base constructor 0x1beee30 writes up to +0xac, including 0xffffffff at +0x4c and +0x50, and 0x1bc03f0 then writes
+a byte at +0xb4. The game's own caller (GSI 0x1c8fd50) gives it 0xb6+ bytes of stack. So every death received from
+the peer overwrote ~0x78 bytes of the DLL's globals after that buffer. The hung log ended on "enemy 720: peer dealt
+25", which is a kill, and the guard then read -1 with no thread initialising it. Moving the map only moved the damage
+to other globals. Fixed: a 0x100-byte stack buffer, as the game does. Kill test with the fix: passed the same day
+(owner: troll killed, both games kept running).
+
+### 2026-11-03: enemies, third step (anim time, health, summoned creatures)
+
+Observed (owner watching, p2 host and p3 guest over local UDP, plus memory reads):
+- A driven troll slid without moving its limbs: the game does not let UE3 play these anims. Nodes have Rate 0 and
+  bPlaying off, and the game writes `CurrentTime` every frame. Fix: the owner sends its anim time and the copy calls
+  `UAnimNodeSequence::SetPosition` (0x8055b0, vftable 0x2b43090 slot 0x1a0, no notifies). Node fields, from UE3
+  reflection: +0xf0 AnimSeqName, +0xf8 Rate, +0xfc bits (0x200 bIsIssuingNotifies), +0x100 CurrentTime, +0x10c AnimSeq.
+- AlbionTogether's brain freeze (skip CAIBrain slot 4 = 0x1ad7700 and the state dispatcher 0x1f3b800 on a copy) was
+  ported, then removed: a frozen copy stays in its local state, so a sleeping troll never woke, could not be hit
+  by its host, and after a reload only its red eyes showed. Freezing needs the owner's AI state sent as well.
+- A copy reloaded at full health (500) against its owner's 310 was left alive at 190 when the owner killed it.
+  Fix: packet "FCE2" (11 per packet) adds anim time and health; the copy takes the owner's health, downwards only,
+  and "FCH1" no longer applies to a driven copy.
+- A troll killed by one player was alive for the other after a checkpoint reload. Fix: "FCD1", the dead placed
+  creatures of a region, every second; one that loads alive is killed 3 s after its body appears. This session only.
+- The puppet next to a troll went and came back every 9 s, killed most likely. Clearing bits 0 and 1 of thing +0xd8
+  (0x1f59cb0 reads them as damageable and killable) stopped it.
+- Result (owner): both heroes hit the same troll in turns until it died, on both screens, logs clean.
+
+Written and built, not tested in game yet: summoned creatures (a wood nymph's scorpions were on one screen only).
+Their ids differ per game, so the summoning game always drives them and lists them every second ("FCS1": id, position,
+definition name); the peer creates a creature of that definition (a mirror) and drives it as a copy. Unknown: whether
+scorpions carry the summoned component live; the log prints it per creature. If both nymph copies summon, each
+player gets two sets.
+
+## 2026-11-03: AlbionTogether, an existing mod we missed
+
+The owner found https://github.com/kvoeten/AlbionTogether. Read at commit 2507de0 (v0.1.0-alpha.14, 2026-09-03; repo
+created 2026-08-06, so before our triage). MIT, one author. No commit since.
+
+### Observed
+
+- Same exe: `config/fable-installation.json` and `Client/Game/Native/Addresses.h` carry the SHA-256 above.
+- Its addresses are RVAs: RVA + 0x400000 = the addresses in these notes (`SubmitAction` 0x01b42f70 is our 0x1f42f70,
+  the brain update 0x016d7700 our 0x1ad7700).
+- Built from source with MSVC (Release Win32, first try); its unit tests pass.
+- It did not run for us: 4 tries on our test copy, with our DLL set aside and Documents redirected by its own launcher
+  (three `--multiplayer-playtest` runs, one `--dual-instance-test`). The host crashed each time before the title
+  screen or within a minute of start; in the playtests, a null read in a game function that looks an item up by name.
+  The same launch without its DLL ran normally. Its hooks were not bisected, so we saw none of its co-op working.
+
+### Claimed by its README and code, not seen running
+
+- Each player loads their own save and hero; up to 65 players, six tested by hand. Free roaming across regions.
+- Remote heroes as adults with appearance and weapons, from a runtime clone of `CREATURE_HERO_RIVAL_GOOD_01`.
+- Melee and ranged combat, hero death and resurrection, Will spell effects.
+- NPC and enemy sync: host-granted map leases with epochs (what playbook/actor-ownership.md asks for and we lack),
+  brain skipped and actions gated on non-owners, absolute health at `ModifyCombatHealth`.
+- Launcher with injection, automation scenarios, unit tests, an AngelScript runtime.
+- Listed as next: shared quests, cutscenes, world progress, items, trading, money.
+
+### Used in fable-coop so far
+
+Addresses and layouts only, all checked on our copy: CThing +0x44 component list, CTCSummonedCreature (type 0x26) and
+its live test, definition name from thing +0x98, the brain freeze hooks (tried, removed, see above).
+
+### Derived
+
+- By these claims it is ahead of fable-coop on heroes, combat, enemies and QA. fable-coop has what it lacks: Steam
+  relay (it uses direct IP, port 38171, and a firewall rule) and time-of-day sync. The two differ on saves: its guest
+  brings their own hero; the owner's design has the guest in the host's world.
+- The triage miss: playbook/research.md already says to run a GitHub repository search. We ran only the repo's own
+  issue and PR search. No playbook change needed; the step was skipped.
+
+### Unknown, and what could come next
+
+- Why it crashes here. Finding out means bisecting its hooks.
+- Not decided: (a) keep fable-coop and keep reading AlbionTogether as a reference (today), (b) port larger parts under
+  its MIT license (ownership with epochs, adult hero clone, ranged combat), (c) bring Steam relay, time of day and
+  quests to AlbionTogether. Nobody has contacted its author.

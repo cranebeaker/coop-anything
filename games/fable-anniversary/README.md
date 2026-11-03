@@ -4,20 +4,38 @@
 |---|---|
 | Engine | Hybrid: the original Fable C++ engine (simulation, AI, quests) inside Unreal Engine 3 (rendering, UI) |
 | Versions tested | Steam, AppID 288470, build id 434572, exe FileVersion 1.0.8767.0, SHA-256 `2a95eea3c2cce9b47ca0f454a605b6952216f5d25158efd12ba48b70130989f2` |
-| Projects | fable-coop (dinput8.dll proxy, MIT), https://github.com/LenoreSlate/fable-coop; claim issue [#280](https://github.com/cranebeaker/coop-anything/issues/280) |
+| Projects | fable-coop (dinput8.dll proxy, MIT), https://github.com/LenoreSlate/fable-coop; claim issue [#280](https://github.com/cranebeaker/coop-anything/issues/280). AlbionTogether (injected DLL and launcher, MIT, separate author), https://github.com/kvoeten/AlbionTogether |
 | QA level | none (two copies on one PC, checked by the owner's eyes and by memory reads through the bridge; no bot harness yet) |
-| Last updated | 2026-11-02 |
+| Last updated | 2026-11-03 |
 
 ## Where things stand
 
-Not playable together yet. Two copies of the game, linked over UDP, each show the other player's hero
-walking, running, fighting and turning in the same region, with matching animations and a normal face, and
-share the time of day. Nothing else is shared: no enemies, quests, items or day count. Only tested with both
-copies on one PC; the planned online transport (Steam relay) is not written yet.
+Not playable together yet. Two copies of the game, linked over UDP or the Steam relay, each show the other
+player's hero walking, running, fighting and turning in the same region, with matching animations and a normal
+face, and share the time of day. Enemies placed in the world share position, anims, health and death: both
+players fought and killed one troll in turns (owner, 2026-11-03). Sync of summoned creatures is written but not
+tested. Quests, items, money and the day count are not shared. Only tested with both copies on one PC; the Steam
+relay only as a one-account loopback.
 
 ## Existing work
 
-None found on 2026-10-31: no directory entry, no GitHub issue or PR for "fable", nothing on the
+**[AlbionTogether](https://github.com/kvoeten/AlbionTogether)** (MIT, one author, v0.1.0-alpha.14 of 2026-09-03)
+is a co-op mod for this same game and exe (its launcher checks the same SHA-256), much further along than
+fable-coop by its README: own hero per player, up to 65 players (6 tested by hand), combat, NPC and enemy sync,
+region ownership. It existed before this project started: our triage of 2026-10-31 missed it, because it searched
+this repo's issues and PRs but not GitHub repositories, which [playbook/research.md](../../playbook/research.md)
+asks for. The owner found it on 2026-11-03.
+
+- **Addresses carry over:** its `Client/Game/Native/Addresses.h` holds RVAs, and RVA + 0x400000 = the addresses in
+  our notes. fable-coop already uses its creature layout and summoned-creature check.
+- **We could not run it:** built from source (unit tests pass), it crashed at startup on all 4 tries on our test
+  copy, and the same launch without its DLL ran normally. Cause unknown; it may be our setup.
+- **What it lacks that we have:** Steam relay (it is direct IP, port 38171) and time-of-day sync. Quests, items and
+  money are unfinished in both.
+- **Open question:** keep fable-coop and read AlbionTogether as a reference, or bring what is missing to it. Not
+  decided; details in [NOTES.md](NOTES.md).
+
+Nothing else found on 2026-10-31: no directory entry, nothing on the
 [Steam discussions](https://steamcommunity.com/app/288470/discussions/0/613936039452164692/) or
 [ModDB](https://www.moddb.com/games/fable-anniversary/mods). The official modding kit covers art and
 animation only ([PC Gamer](https://www.pcgamer.com/uk/fable-anniversary-will-support-modding-with-included-unreal-engine-3-editor)).
@@ -76,6 +94,8 @@ No automated suite yet. What ran, all on one PC with two copies (profiles p1 hos
 - Region, 2026-11-01: p2 entered the Heroes' Guild, p1 removed the puppet; p2 reloaded Oakvale, both respawned it.
 - Time of day, 2026-11-01: 0.95 written into p1 reached p2 within 1 s.
 - Owner's visual checks, 2026-11-02: normal face, combat stance, no slide on strikes, fluid sharp turns.
+- Enemies, 2026-11-03: the owner fought a troll with both heroes in turns until it died; it animated on both
+  screens and the kill reached the other game.
 
 ## How to play
 
@@ -88,15 +108,16 @@ Not ready for players. To try the prototype: build the proxy (MSVC, 32-bit, `pro
 - Same region only; the puppet looks like the child hero, whatever the other player's age or clothes.
 - One anim per packet: an upper-body move over walking legs shows only one of the two. One-shot anims are not
   time-aligned.
-- Nothing else is shared yet: enemies, quests, items, money, day count.
+- Not shared yet: quests, items, money, day count, enemies from generators. An enemy fights only its owner's hero.
 - A copy sometimes crashes about 10 s after launch, before the menu (exe 0x62f361); this was seen before any
   co-op code. Relaunching works.
 
 ## Next steps
 
 - Online transport: `ISteamNetworking::SendP2PPacket` (SteamNetworking005, in the game's own `steam_api.dll`)
-  under the game's AppID, then lobbies (SteamMatchMaking009) for a Coop entry in the main menu.
+  under the game's AppID is written; test it between two PCs, then lobbies (SteamMatchMaking009) for a Coop entry
+  in the main menu.
 - Owner's design: free co-op (own camera, roam anywhere). Gold (story) quests done together, silver and bronze
   solo; all quest progress shared. The host's save is the world; the guest keeps their hero, gold and items.
-- Quest sync (the card colour's location in the game data is unknown), enemies with per-region ownership,
-  an adult look-alike puppet, a bot harness for the QA level.
+- Quest sync (the card colour's location in the game data is unknown), an adult look-alike puppet (AlbionTogether
+  clones `CREATURE_HERO_RIVAL_GOOD_01` at runtime), a bot harness for the QA level.
