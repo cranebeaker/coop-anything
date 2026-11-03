@@ -5,23 +5,24 @@
 | Engine | RE Engine (TDB 70) |
 | Versions tested | Steam, app 418370, buildid 22773795 (RT/DX12 build); REFramework nightly-01433 (d4611ae) with csharp-api |
 | Projects | [coop-re7](https://github.com/xXCroissantXx/coop-re7) (directory entry "Resident Evil 7 biohazard") |
-| QA level | none (single-PC bot tests only; two real players not tested together) |
-| Last updated | 2026-10-31 |
+| QA level | none (bot tests on one PC, plus one two-player session by the author and a friend, 2026-11-02) |
+| Last updated | 2026-11-03 |
 
 ## Where things stand
 
-You can't play the story together yet. Each player plays their own world, and sees the other as a full-body
-Ethan who walks, jogs, crouches, sidesteps, backpedals and looks around where the other player does, with
-footstep sounds, over Steam relay. You can't walk through each other. Players install with one script, pick each other from a
-Steam friends list in an in-game window (the other player gets an invite to accept), and can jump to the
-other player's chapter with one click. The ghost rebuilds itself after save loads, hides when
-the other player's data stops or during cutscenes, and shows the friend's name, ping and chapter on screen.
-Enemies are shared in an early form: each enemy is run by the game of the player nearest to it and copied in the
-other game, and damage and deaths go both ways. Door unlocks and openings are shared, and supplies picked up by
-one player vanish for the other (keys, files and maps stay for both). Story cutscenes are shared by name and
-story progress is copied forward (early). A fatal hit puts a player down until the other stands next to them for
-3 seconds. Item boxes are not shared. Saving is off by default and can be switched on, with automatic save
-backups.
+Two players can play through the start of the game together, each in their own world: the first real session
+went from the opening to the first save point after Chapter 3 and fought Mia together. Each player sees the other
+as a full-body character (Ethan, or Mia, Clancy, Zoe, Chris or Joe picked in a Lobby) who walks, jogs, crouches,
+sidesteps, looks around and blocks where the other player does, with footstep sounds, over Steam relay. Players
+install with one script, pick each other from a Steam friends list in an in-game window (the other player gets an
+invite to accept), and can jump to the other player's chapter with one click.
+Enemies are shared: each enemy is run by the game of the player nearest to it and copied in the other game,
+damage and deaths go both ways, and a paused player's enemies move to the other game. Doors (unlock, open,
+close), drawers, breakable boxes and supply pickups are shared; weapons, keys, files and maps stay for both.
+Story cutscenes can be shared between players close together (experimental, off by default). A fatal hit puts a
+player down until the other stands next to them for 3 seconds. Item boxes, pushed physics objects, puzzles and
+scripted one-off interactions are not shared, and weapon swings and shots aren't shown on the other player yet.
+Saving is off by default and can be switched on, with automatic save backups.
 
 ## Existing work
 
@@ -60,7 +61,48 @@ backups.
   invisible and the player outside the map, so allow one at a time. About ten jumps in one session broke the
   game again (black screen) even with that rule; a restart fixes it.
 - **Cutscenes**: `GameManager`'s static `_GameEventMan` (`app.GameEventManager`): `RunningEventControllers.Count`
-  > 0, or `GameManager.PlayingMovie` set. Some scenes are missed by this check.
+  > 0, or `GameManager.PlayingMovie` set. Some scenes are missed by this check, and some events run in the
+  background while the player has control (`c01e00_01` for the whole basement after the ladder), so also require
+  `app.MenuManager.isPlayingEvent()`.
+- **Pause menu stuck**: `MenuManager.isCanOpenPauseMenu(InputLevel.Normal)` stays false while
+  `IsPlayInGameFullScreenMovie` is true, and a video cut short (chapter jump, forced cutscene) can leave it true
+  for good. `set_IsPlayInGameFullScreenMovie(false)` brings the pause menu back.
+- **Movement locks**: `MenuManager._PlayerOperatableFlag` / `_CameraOperatableFlag` (app.MultiBoolFlag:
+  `_FalseIds` dictionary, `setFlag(id, bool)`) and `app.PlayerOrder.switchPlayerOperatable` /
+  `switchCameraOperatable(bool, OperationLayer Base|Menu|Interact)`. Calling `Inventory.addItem` from a script
+  left an `InventoryMenu` lock on both with no menu open; clearing it with `setFlag("InventoryMenu", true)`
+  freed the player. Beware calling zero-argument methods blindly when probing: `PlayerOrder.requestCodexOperationAction`
+  raised the wrist codex and started a story call.
+- **Pausing**: `GameManager.get_IsPause()` (pause menu, inventory, map) or `MenuManager.isOpenPauseMenu()`.
+  A paused game stops updating its enemies but REFramework's `on_frame` keeps running.
+- **Player action animations**: the player object's own `via.motion.Motion` plays the body you never see.
+  Layer 0 is locomotion (`pl0000_Idle`, `pl0000_Move` blend trees, `TurnL/R`); blocking is on layers 1 and 2
+  (`Hands_Guard_Start` 2305, `Guard_Loop` 2300, `Guard_End` 2306, upper-body joint mask 120); door and wall
+  touches on layer 4 (`Hands_TouchDoor_End` 9012, `TouchWall_Start/End` 9000/9002); camera-only clips on bank 1.
+  Phone calls play on a separate event actor, not on the player. All pl0000 banks report `BankID` 0, so a clip
+  is identified by motion ID. A ghost layer given the same `JointMaskID` and `BlendMode` plays the clip over
+  its walk.
+- **Other playable characters**: every player character has the same shadow-only pieces on Ethan's skeleton:
+  `ShadowBody` plXX01, `ShadowLowerBody` plXX02, `ShadowHead` plXX50, `ShadowHandL/R` (Ethan pl0000, Mia pl2000,
+  Mia on the ship pl2100, Clancy pl3000, Clancy DLC pl3100, Zoe pl3400, Chris `ch8/.../pl1000`, Joe
+  `ch9/.../pl9000`; Joe's hands are not at pl9010/pl9020). The plain-game versions are incomplete (the heads
+  have no real face). Nexus RE7 mod 86, "Third Person Full Model Placeholders", replaces them with complete
+  models under the same paths, but then the player's own first-person body has a head too (the camera sits
+  inside it). Moving the mod's `*.mesh.*`/`*.mdf2.*` files under `natives\stm\coop\...` and loading
+  `coop/<path>` keeps the player's view normal; REFramework's Loose File Loader serves such new paths. The
+  mod's bodies include the head (adding the plain shadow head on top shows black), its Mia is laid out
+  differently (pl2001 clothes, pl2002 head, pl2020 hair, pl2023 skin) and its Joe stands in a T-pose (the plain
+  Joe animates). A ghost dressed this way must not reuse the local character's parts mask (Ethan's hides parts
+  1, 10 and 11, which are Mia's eyes and chest on hers).
+- **Breakable boxes and drawers**: `app.ItemDropDestruct` (SaveGUID, `IsBreaked`, `RigidBodyCompo` =
+  `app.Havok.RigidBodyDestruct` with `setBreak(dir, pos, normal, attacker, type)`) and `app.InteractDrawer`
+  (SaveGUID from `InteractObjectBase`, `NowDrawerOpen`, `SetSwitch(bool)`). Doors close with
+  `DoorPush.requestClosed(false)`.
+- **Spawning enemies by script**: the Molded wait in `MoldedPool` (`app.EnemyPool`) and are spawned by
+  `app.EnemyGenerator` from `app.EnemySpawnInfo` points; a spawn requested from a point outside the loaded
+  area is taken straight back into the pool, so a test Molded has to be met where the game spawns it.
+- **Adding items**: `ItemManager.createDropItemInstance(owner, id, count)` creates an item (at the world origin,
+  not interactable); `Inventory.addItem(item, go)` returns `LimitOver` for a weapon the story hasn't given yet.
 - **Steam**: the game's `steam_api64.dll` exports the modern flat API (`SteamNetworkingMessages_SteamAPI_v002`
   and friends), so a plugin can use Valve's relay through the game's own Steam session.
 - **Enemies**: `app.ObjectManager.ManagedObjects` is a list of lists; one of them holds the area's enemies
@@ -177,7 +219,12 @@ backups.
   game turns that enemy's FSM and AI off and drives it 0.15 s behind. When the other player is 3 m+ closer to
   an enemy, the owner hands it over (reliable `own <id>`), so the enemy's real AI always chases a real local
   player and its hits land in the right game. A game that hears nothing about an enemy it gave away for 3 s
-  takes it back.
+  takes it back, and then waits 30 s before handing it over again. **Both games must send snapshots**: the
+  first version only let the "host" send and the "guest" read, so every enemy handed to the guest was taken
+  back 3 s later and Jack flickered between the two games (seen in the first two-player session, invisible in
+  bot tests because the bot never owns anything). Now the guest sends the enemies handed to it, the host only
+  follows those it handed away, and a snapshot from the moment of the hand-off is ignored. A paused player's
+  game hands all its enemies to the other.
 - **Clock offsets must reset.** The receiver maps the sender's clock with the smallest `now - senderTime` seen.
   When the sender's clock restarts (their game or plugin restarted), every sample then looks minutes old and
   the other player stays hidden; reset the offset when a sample looks 5 s+ older than expected.
@@ -192,14 +239,22 @@ backups.
   A pickup does **not** go through `Item.changeStateInventoryIn` (a hook there never fired): the world item's
   `getItemState` goes 0 → 6 and a separate inventory Item is created. `disableFromScene()` produces the same
   0 → 6 without touching any inventory. coop-re7 watches world supplies for 0 → 6 and sends `took <id>`; the
-  other game hides that item (or remembers it until the area loads). Categories 4, 5, 6, 9 and 10 are never
-  removed, so both players can progress.
+  other game hides that item (or remembers it until the area loads). Categories 1 (weapons), 4, 5, 6, 9 and 10
+  are never removed, so both players can progress: weapon pickups start story beats, and hiding the Chapter 1
+  handgun froze the other player mid-pickup.
 - **Story.** Since progress numbers don't drive the story, coop-re7 shares the triggers' results: whoever
   starts a story cutscene (hook on `GameEventController.requestSetup`, names matching `cNNeNN_NN`) sends
-  its name and the other game plays it with `requestEvent` (the player is pulled in wherever they are),
-  once per side; progress numbers and ended events are copied, only ever forward. The list of played
-  cutscenes is kept per chapter in a file, because replaying a finished one hangs it. A "Share story" switch
-  turns it off.
+  its name and the other game plays it with `requestEvent`, once per side. The first version pulled the other
+  player in wherever they were and copied progress numbers and ended events at once. In real play that broke
+  the player who was behind: a VHS tape ended for both when one finished it, a chapter change after the Mia
+  fight hung on a loading screen, a forced cutscene left the picture washed out, and the dinner chair became
+  usable mid-cutscene. Now a cutscene only pulls in a player in the same chapter within 12 m, progress and
+  ended events are only copied for 30 s after a cutscene both watched, and the switch is off by default. The
+  list of played cutscenes is kept per chapter in a file, because replaying a finished one hangs it.
+- **Lobby and actions.** Each player picks a character; the choice goes as a reliable `look <key>` event (re-sent
+  every 15 s) and the other game re-dresses the ghost. The current action clip (first bank-0 motion ID ≥ 1000 on
+  the player's layers 4, 1, 2) rides in the movement packet's chapter field (`chapter + 256 * motionID`), and
+  the ghost plays it on a second layer with the player's own mask and blend mode.
 - **Downed and revive.** The player's death goes through `app.PlayerDamageController`
   (`isEnableDieByDamageInfo`, `doDie`, `add_DieHandler`, `playDeadMotion`) and the base
   `DamageController.canDie(DamageInfo)`, then `GameManager.setGameOverFlag` and `app.GameOverScreen`.
@@ -258,31 +313,48 @@ backups.
   the save files' SHA-256 were unchanged while saving was briefly on.
 - Installer: run end to end against a stand-in game folder (all steps, both hash checks), plus the update path
   (keeps the friend's ID).
+- **First two-player session, 2026-11-02** (v0.11 plus fixes, two PCs over Steam relay, opening to the first
+  save point after Chapter 3, about 90 minutes). Worked: invite and Accept, auto-reconnect on Continue, seeing
+  each other, door openings received and applied, supplies, the Mia fight (each player's hits counted in the
+  other game, her takedown applied), downed and revive (back up after 14 s), "friend saved" notices. Broke:
+  enemy handovers (one-way snapshots, above), door closing (not sent), shared story pushing the player behind,
+  the friend's ghost sliding after a VHS tape and vanishing after the basement ladder, hiding a weapon pickup.
+  Install problems: a first-time player with no save gets "create save data?" in a loop while saving is blocked
+  (tick Allow saving first), joining before the opening has finished leaves the screen black, and an install
+  into a OneDrive-synced Documents folder (the installer now uses `C:\RE7-coop` there). Fixed in v0.12 except
+  where listed under Known issues; v0.12 hasn't had a second session.
+- Lobby looks, 2026-11-03, on the bot: with the full-model mod set up, Ethan, Chris, Clancy and Zoe look
+  right; Mia keeps a gap on her left side and dark eyes; Joe has no hands.
+- Blocking, 2026-11-03: the bot's ghost, told to play `Guard_Loop`, raised its arms and lowered them on release;
+  the owner's own blocks went out in the packet as 2305/2306.
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-[v0.11 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.11), unzip it and run **Install.cmd**.
+[v0.12 release](https://github.com/xXCroissantXx/coop-re7/releases/tag/v0.12), unzip it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
-player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other. Full steps are in the [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
+player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other.
+A player starting RE7 for the first time should play the opening alone first. Full steps are in the
+[coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
 ## Known issues
 
-- Enemy copies don't show held weapons and don't flinch from the other player's hits; ownership handovers
-  between two real games are untested. Item boxes are separate per player.
-- Shared story is early: a cutscene that hangs locks the player until the game restarts.
+- Weapon swings and shots, ladder climbing and scripted moments (phone calls, the leg scene) aren't shown on the
+  other player; in VHS tapes the character may slide.
+- Enemy copies don't flinch from the other player's hits, and an enemy mostly goes after the player whose game
+  runs it. Jack's scripted moments (the wall in the hatch room) happen in each game on its own.
+- Keys and story items are picked up by each player separately, and scripted events can follow only the
+  picking player. Each player plays VHS tapes on their own. Item boxes, pushed physics objects (chairs),
+  puzzles and one-off interactions (the van, the fridge) aren't shared.
 - Being downed has no fall or kneel animation (a forced crouch stands in for it).
 - Saving is off by default; with it off, nothing from a session is kept.
-- Some cutscenes aren't detected, so the other player can stay visible during them.
-- A little residual choppiness under heavy simulated jitter.
-- The face doesn't animate.
-- Only footsteps are heard from the other player (no voice, weapon or door sounds).
+- The face doesn't animate. Only footsteps are heard from the other player.
 - Tested on the current ray-tracing build only; the older non-RT build (Steam beta `dx11_non-rt`) is untried.
   The installer warns about it (it reads `BetaKey` from `appmanifest_418370.acf`).
 
 ## Next steps
 
-1. A two-player test on two PCs, including the invite and Accept (QA is still `none`).
-2. Check whether blocking `folderSave` affects in-session area state (items or doors resetting).
-3. Enemy copies: held weapons and hit reactions; a real Molded test.
-4. Shared story in real play (area changes between stages, cutscenes far from the other player); item boxes.
+1. A second two-player session with v0.12 (enemy handovers, doors closing, pausing, blocking, the Lobby).
+2. Weapon swings and shots: record the player's action layers with a weapon, then mirror them like blocking.
+3. Shared key pickups that run the item's own pickup on the other side, so scripted events fire in both games.
+4. Pushed physics objects, VHS tape animations and following a friend into a tape.
