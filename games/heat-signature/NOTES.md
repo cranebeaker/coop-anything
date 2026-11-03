@@ -1566,3 +1566,42 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
 - **Not tested (needs a second account):** the host's traffic to a guest over Steam, a friend finding and joining the
   lobby, the internet path through Valve's relay. A playtest guide for the owner and a friend is in the mod repo
   (`PLAYTEST.md`).
+
+## Bad networks, players leaving, and suite check 5 (2026-11-03)
+
+- **Chaos tests:** the hub's chaos relay (`tools/chaos`) sits between the guests and the host (UDP); the launchers
+  take `CHAOS=<profile>`. Results before the fixes below: suite 28/28 through `good_wifi` (103 packets dropped),
+  `bad_wifi`, `transatlantic` and `mobile_tether`; `three.sh` 13/13 through `bad_wifi`; through `hell` 27/28: a
+  guest's hit on a guard never arrived (applied 0).
+- **Events delivered once, for sure:** one-off events (hits, items put down, boxes, items taken, grenades, an escaped
+  target, a jammer destroyed) were sent three times unconfirmed, so a burst of loss could lose all three. Over Steam
+  they now go reliable; over UDP each is numbered, resent every 0.2 s until confirmed (10 s at most), and copies are
+  dropped by the receiver (a duplicated grenade would have shown twice: it had no check). Through `hell` the hit check
+  then passed; mutation `norely` (the old way) through `hell`: the target's escape was lost and the mission ended on
+  the host only.
+- **Two message ids collided:** the new event wrapper first took "HSR1", the reinforcements' id, and swallowed every
+  reinforcement message (`security.sh` through `bad_wifi`: the guest beamed in none of the host's); and the test-mode
+  hello had the hits' id "HSH1" (harmless: a hello is 4 bytes). Both moved; the core now logs a bug line if two message
+  kinds ever share an id.
+- **Spotted banners under loss:** a guest skipped a count it first saw above 1 (meant for joining late); having missed
+  the message with 1, it saw 2 and showed nothing (`hell`). Now the host's first message sets the start.
+- **Players leaving:** nothing handled it: a player who quit or crashed stood frozen, a pause it left on stayed on for
+  everyone, and after a restart its messages (counted from 1 again) were ignored as old. Now a player not heard for
+  10 s is gone: its puppet is hidden (no guard's target), its time requests no longer count, and the others are told
+  ("<name> left the game", "Co-op: lost the connection to the host"). Heard again, it is back: its restarted count is
+  taken, and on the host a guest joining from a new address takes a gone guest's place (its slot, its puppet) and gets
+  the mission being played. `leave.sh` (8 checks, 3 copies): C pauses and is killed, A and B run on, are told, hide
+  it; C restarts, joins, gets its old slot and the mission (same ship), A and B are told it is back; the host is
+  killed, B is told, hides it and runs on. Mutations `nogone` (6 failed) and `norejoin` (2 failed). (In that test the
+  loader's heartbeat file lagged for B after the host's copy was killed, while the game ran at its normal rate: the
+  check reads the core's frame count instead.)
+- **Suite check 5 (a guest's hit on a guard; fails about 1 run in 9): not explained.** The guard carries a shield, and
+  the attacker of the test's hit is the guest's puppet, parked in its pod about 2000 units away, so the guard's facing
+  looked like the cause. Turned to four directions on fresh ships (helper instvar on MyImageAngle): from 0, 90 and 180
+  degrees the hit was applied and nothing happened, from 270 the guard panicked, and with its shield hacked from 0 it
+  went down. But with the shield hacked before the hit in the suite itself, check 5 failed again (2026-11-03 15:23Z:
+  hacked 1 a second before, the hit applied, the guard patrolled on). Three failures in four turned tries is far more
+  than the suite's rate, so turning the guard by hand probably caused failures of its own. Observed in that failure:
+  the guard stood at (3456, 3456) turning fast (MyImageAngle 328, 622, 677 within 0.75 s) when hit, and walked on 2 s
+  later. Unknown: whether a guard turning at a patrol point ignores a damage signal. The check is unchanged; a
+  failing run's logs are now kept (`local/qa/fail-*`).
