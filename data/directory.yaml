@@ -4417,44 +4417,13 @@
 - game: Outlast
   year: 2013
   engine: Unreal Engine 3
-  project: OpenOL (multiplayer beta, with OpenOL-Relay)
+  project: OpenOL (multiplayer, with OpenOL-Relay)
   url: https://github.com/ShyKiss/OpenOL
   other_urls:
   - https://github.com/ShyKiss/OpenOL-Relay
+  - https://github.com/ShyKiss/OpenOL/releases/tag/2.2.0
   kind: mod
-  status: alpha
-  coop_scope:
-    players_visible: 'yes'
-    story: partial
-    enemies: partial
-    world_state: partial
-    items: unknown
-  players: unknown
-  networking: hosted-relay
-  open_source: partial
-  last_activity: 2026-08
-  qa: automated
-  notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
-    beta since 2.0.1, release 2.1.0 (2026-08-29). Source is public but no license is stated. Joining works through
-    the standalone OpenOL-Relay 2.1.0 (room PUBLIC); the relay source embedded in the OpenOL repo uses the old packet
-    format. Two-client tests show players, doors, player-spawned enemies (attacks, death, respawn) and story triggers
-    synced; checkpoint loads are not synced, triggers fire for everyone wherever they are, and map enemies are
-    duplicated (every client runs its own copy). Open upstream issues report that connect and Start Server do nothing.
-    A scripted suite (two real clients plus protocol tests, 67 pass, 4 known-bug expectations) and three small relay patches (out-of-context triggers, enemy packet ids, late-join snapshots) is in the own fork https://github.com/G3RKA/OpenOL (tools/outlast-coop); details in games/outlast.
-  sources:
-  - https://github.com/ShyKiss/OpenOL
-  - https://github.com/ShyKiss/OpenOL-Relay
-  - https://github.com/ShyKiss/OpenOL/issues/7
-  - https://github.com/ShyKiss/OpenOL/issues/8
-  checked: 2026-10-21
-- game: Outlast
-  year: 2013
-  engine: Unreal Engine 3
-  project: OpenOL fork with a native enemy patch, play kit and tests (own development)
-  url: https://github.com/G3RKA/OpenOL
-  other_urls: []
-  kind: mod
-  status: alpha
+  status: partial
   coop_scope:
     players_visible: 'yes'
     story: partial
@@ -4464,20 +4433,53 @@
   players: unknown
   networking: hosted-relay
   open_source: partial
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: A fork of OpenOL with its own work in tools/outlast-coop (the upstream has no license, the folder is MIT). A native patch
-    of OpenOL 2.1.0's OLGame.exe keeps one real copy of every map enemy (the lower player id wins) instead of two,
-    the same rule is written in EnemyChannel.cpp (not compiled). The same patch carries a checkpoint load to the other client and shows
-    the idle poses of waypoint enemies on both screens. Also host and join scripts, three relay patches as files and an
-    automated suite with real clients (67 pass, 4 known-bug expectations on patch v5; menu path, New Game and rejoin 6 of 6) and
-    hands-free tests on patch v7 (a sweep of 95 checkpoints without hang, crash or doubled enemy; 4 checkpoints of the overlay list do not load). Tested on one PC
-    with two copies of the game; two PCs, the internet and three players are untested. The exe patch drops a story trigger
-    from a player more than 3000 units away (works with any relay).
+  notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
+    since 2.0.1. Release 2.2.0 (2026-11-02) rewrote the multiplayer with encrypted and authenticated UDP, a pinned server
+    key and room passwords, a server that owns the world session and arbitrates limited-use triggers, one AI owner per
+    room that hands over when the owner leaves, checkpoint loads shared through a session travel, and enemy animations shown
+    to the other players. Everyone needs the same game and relay version. Hosting through the embedded relay (in-game
+    menu, Steam P2P) or the standalone OpenOL-Relay (the commit pinned by the OpenOL submodule). Source is public but no
+    license is stated. Tested on 2026-11-04 on one PC with two clients and the standalone relay (release 2.2.0, relay 69998e7).
+    At 17 checkpoints of the Prison, Admin, Lab and Male groups the enemies were spawned by one client and shown as puppets on the other,
+    with their animations playing on both. Owner handover, rejoin, a relay restart, joining and leaving 5 times and 10 minutes idle
+    ran without errors (games/outlast/NOTES.md). Two PCs, Steam P2P, three players and the other checkpoint groups are untested.
+  sources:
+  - https://github.com/ShyKiss/OpenOL
+  - https://github.com/ShyKiss/OpenOL-Relay
+  - https://github.com/ShyKiss/OpenOL/releases/tag/2.2.0
+  checked: 2026-11-04
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL 2.1.0 fork with a native enemy patch, relay patches, play kit and tests (own development, archived)
+  url: https://github.com/G3RKA/OpenOL
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: partial
+  last_activity: 2026-11
+  qa: automated
+  notes: Archived on 2026-11-04 (tag legacy-2.1.0-final). The work was for OpenOL 2.1.0, and what it added (one real copy of every map
+    enemy, shared checkpoint loads, enemy idle poses, arbitration of triggers) is part of OpenOL 2.2.0 itself, so the recommended
+    setup is the OpenOL entry above. What stays in tools/outlast-coop (MIT, the rest of the fork is the upstream code under its own
+    terms) is a native patch of 2.1.0's OLGame.exe (one owner for every map enemy, shared checkpoint loads, enemy idle poses, a trigger
+    distance gate), host and join scripts, three relay patches, an automated suite with real clients (83 checks pass on patch v7),
+    hands-free tests (a sweep of 95 checkpoints, soaks) and scripts that test 2.2.0 without mouse or keyboard. Tested on one PC
+    with two copies of the game; two PCs, the internet and three players are untested.
   sources:
   - https://github.com/G3RKA/OpenOL
   - https://github.com/ShyKiss/OpenOL
-  checked: 2026-10-28
+  checked: 2026-11-04
 - game: Outlast
   year: 2013
   engine: Unreal Engine 3
