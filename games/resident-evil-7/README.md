@@ -5,8 +5,8 @@
 | Engine | RE Engine (TDB 70) |
 | Versions tested | Steam, app 418370, buildid 22773795 (RT/DX12 build); REFramework nightly-01433 (d4611ae) with csharp-api |
 | Projects | [coop-re7](https://github.com/xXCroissantXx/coop-re7) (directory entry "Resident Evil 7 biohazard") |
-| QA level | none (bot tests on one PC, plus one two-player session by the author and a friend, 2026-11-02, on v0.11; v0.12-v0.17 bot-tested only) |
-| Last updated | 2026-11-03 |
+| QA level | none (bot tests on one PC, plus two two-player sessions by the author and a friend: 2026-11-02 on v0.11 and 2026-11-03 on v0.22; v0.23-v0.24 untested) |
+| Last updated | 2026-11-04 |
 
 ## Where things stand
 
@@ -21,11 +21,12 @@ Enemies are shared: each enemy is run by the game of the player nearest to it an
 damage, deaths and flinches go both ways, a paused player's enemies move to the other game, and bosses (Jack's
 garage fight onward) run in each game with shared damage and defeat. Doors (unlock, open, close), drawers,
 switches, one-off interactions (the fridge, the van), pushed physics objects, breakable boxes (each player gets
-the box's item) and supply pickups are shared, including for areas the other player reaches later; weapons, keys,
-files and maps stay for both.
-Story cutscenes can be shared between players close together (experimental, off by default). A fatal hit puts a
-player down until the other stands next to them for 3 seconds. Item boxes, puzzles, phone calls and weapon
-sounds are not shared.
+the box's item) and phone calls are shared, including for areas the other player reaches later; each player gets
+their own supplies (one shared copy is an option), and weapons, keys, files and maps stay for both.
+Story cutscenes can be shared between players close together (experimental, off by default); every sharing
+switch is one setting for both games. A fatal hit puts a player down until the other stands next to them for 3
+seconds. Quick messages and pings (F5-F8), the other player's health, and a catch-up after a rejoin are built
+in. Item boxes, puzzles and weapon sounds are not shared.
 Saving is off by default and can be switched on, with automatic save backups.
 
 ## Existing work
@@ -166,6 +167,20 @@ Saving is off by default and can be switched on, with automatic save backups.
   it with `RunningEventControllers[i].EventTask:doTerminate()` cleared the event but left the player locked
   until the chapter reloaded.
 
+- **Calls on unloaded objects throw inside the game.** After a door loads another area, the first call on each
+  cached door or physics prop raises an internal exception even inside `pcall`; one session logged about 565 per
+  game and three "VMContext was already corrupted" warnings. Asking the scene first
+  (`findComponents(type)` and comparing `get_address()`) before touching cached objects avoids them.
+- **`successInteract()` on the other game does the whole interaction.** On the hall statue it handed out the
+  shotgun without the broken-shotgun swap; on the car it ran "get in" and "get out". Interactions that give items
+  or move the player have to stay per player.
+- **An unbound clip on a layer shows the bind pose.** A move from a motion set the copied body doesn't have (Jack
+  lifting Ethan, the bathroom scene) gave a T-pose; muting that layer (`set_BlendRate(0)`) leaves the walk or
+  idle underneath.
+- **Molded wait hidden** and their own AI shows them as they climb out of the wall; a copy with its AI off can
+  stay invisible while playing the owner's attacks (seen in the 2026-11-03 session; coop-re7 v0.23 forces the
+  copy's mesh on, untested).
+
 ## What we changed
 
 - **Second body.** GameObjects built at runtime (`create` + `createComponent(via.render.Mesh)`) never render
@@ -285,6 +300,16 @@ Saving is off by default and can be switched on, with automatic save backups.
   `ResistResultSet`). Bosses (anything but Em3000 and the Molded) aren't owned or copied: each game runs its
   own, and only damage and the defeat go across. Unlocks and box, drawer and switch states for an area not
   loaded yet are applied when it loads.
+- **v0.18-v0.24.** Boss mode for Jack's garage fight (story stage `9fb77189` 900-999); flinches with
+  `ValueType.new` for the `ResistResultSet`; a second simultaneous action in the packet (both hands); the weapon's
+  own walk and jog on the arm layer while moving; a catch-up list of lasting changes (12 h, on disk) replayed on
+  a rejoin; quick messages, pings and health as reliable events; shared phone calls; own supplies by default.
+  After the second session: every sharing switch is one setting for both games (`opt <key> <0|1> <time>`, the
+  newest change wins; a mismatch had left Share story on for one player only, so the other game ignored every
+  story step), a version check, interactions that give items or move the player kept per player, enemy copies
+  forced visible, 15 enemy snapshots a second with a 0.25 s buffer, a Molded health check-in every 3 s (the
+  lower value wins), the friend hidden on ladders, and an optional "heal my friend" that moves the health from a
+  healing item to a player within 2.5 m.
 - **Downed and revive.** The player's death goes through `app.PlayerDamageController`
   (`isEnableDieByDamageInfo`, `doDie`, `add_DieHandler`, `playDeadMotion`) and the base
   `DamageController.canDie(DamageInfo)`, then `GameManager.setGameOverFlag` and `app.GameOverScreen`.
@@ -361,11 +386,20 @@ Saving is off by default and can be switched on, with automatic save backups.
   bot's hand at the right angle, the bot swung when the owner did (2400/2401 bound, 62 frames) and walked with
   the knife out (slightly choppy; fading the layer in and out made swings stop matching, so it snaps). A box
   smashed by the bot vanished and left its item, which the owner picked up. Other weapons untested.
+- **Second two-player session, 2026-11-03** (v0.22, two PCs, about 3 hours, Chapter 3 main house through Jack's
+  garage fight). Worked: connecting, quick messages and health, door and drawer sharing, Jack flinching to the
+  other player's hits, weapons held and swung. Broke: Share story was on for one player only, so the other's
+  story never advanced (the hatch-room wall, the garage door, the shadow puzzle, chapter 3 replayed) and the
+  garage fight ran out of step; Molded copies were invisible and could still hit; the other player T-posed when
+  lifted by Jack and in the bathroom scene; the knife showed with a gun or a heal; the shotgun statue could be
+  emptied for free; enemies were jittery. A save made earlier with one-sided shared progress hung on Continue
+  (an event that never finished) and was recovered with "Go to my friend's chapter". Fixed in v0.23-v0.24,
+  untested.
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.17), unzip
+latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.24), unzip
 it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other.
@@ -374,12 +408,14 @@ A player starting RE7 for the first time should play the opening alone first. Fu
 
 ## Known issues
 
-- Scripted moments played by other actors (phone calls, the leg scene) aren't shown on the other player; in VHS
-  tapes the character may slide. Weapon swings are a little choppy; only the knife is tested.
-- An enemy mostly goes after the player whose game runs it. Bosses fight each player separately. Jack's
-  scripted moments happen in each game unless Share story is on and the players are close.
+- Scripted moments played by other actors (the leg scene) aren't shown on the other player; in VHS tapes the
+  character may slide. Animations are a little choppy. The other player's shots have no sound or muzzle flash.
+- An enemy mostly goes after the player whose game runs it. Bosses fight each player separately (in the garage
+  fight each player drives their own car). Jack's scripted moments happen in each game unless Share story is on
+  and the players are close.
 - Keys and story items are picked up by each player separately (the other is told to pick them up too). A box
-  smashed in the other game just disappears (no debris). Item boxes, puzzles and weapon sounds aren't shared.
+  smashed in the other game just disappears (no debris). Item boxes, puzzles (the shadow puzzle) and some
+  switches (the garage door) aren't shared; coop-re7 v0.23+ logs the ones it doesn't share.
 - Mia (non-ship) has a gap on her left side and dark eyes with the full-model mod; Joe may have no hands.
 - Being downed has no fall or kneel animation (a forced crouch stands in for it).
 - Saving is off by default; with it off, nothing from a session is kept.
@@ -389,7 +425,8 @@ A player starting RE7 for the first time should play the opening alone first. Fu
 
 ## Next steps
 
-1. A second two-player session with v0.17 (enemy handovers, flinches, boss mode, weapons, boxes, interactions).
-2. Other weapons' swings and shots, and weapon sounds (the held weapon's `app.WwiseContainerApp`).
-3. Shared key pickups that run the item's own pickup on the other side, so scripted events fire in both games.
-4. Phone calls and other scripted moments played on event actors.
+1. A third two-player session with v0.24 and Share story on for both (story, Molded, garage fight).
+2. Share the interactions the v0.23 log names (garage-door button, puzzle unlocks).
+3. Weapon sounds and muzzle flash (the held weapon's `app.WwiseContainerApp`, `app.EPVExpertMuzzleFlush`; a real
+   weapon instance on the copied body froze or crashed the game).
+4. Shared key pickups that run the item's own pickup on the other side, so scripted events fire in both games.
