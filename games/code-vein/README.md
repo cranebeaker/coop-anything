@@ -6,20 +6,20 @@
 | Versions tested | Steam (app 678960), ProductVersion 1.53.93354, game exe SHA-256 `8fa550fe00a8c28c8947a9511128c21924860be0bb4ebf5a09b8a6cf50e0e172` |
 | Projects | [eight8pac/codevein-coop](https://github.com/eight8pac/codevein-coop) (code, MIT; claim: cranebeaker/coop-anything#207); Nexus mod 192 (older, partial) |
 | QA level | none (manual two-PC sessions only) |
-| Last updated | 2026-10-29 |
+| Last updated | 2026-11-04 |
 
 ## Where things stand
 
 Code Vein ships online co-op for a host and **one** guest, matched by distress signals. Vanilla ends the session on host
 death, on a guest's final death in a boss room and after every boss kill, and it forbids co-op in areas whose boss is dead.
-This project keeps the vanilla session and works around those ends. A UE4SS Lua mod re-hosts and re-joins automatically after
-field deaths, host deaths, boss-room deaths and boss kills. A native hook DLL (C, MinHook) reaches the parts that Lua cannot. In
-two-PC sessions: a guest who dies for good stays in the host's world, spectates the host and respawns next to the host at the
-host's next Mistle rest (the partner cannot revive him after his revive window); a guest held in a boss fight lets the host's
-outro play after the kill; the host can rest at a Mistle with a guest connected; and the guest gets his own Mistle menu in the
-host's world and can level up there (both PCs show the new level and max HP); a Mistle teleport by the host takes the guest
-along, also into another stage, with the game's own teleport fade on the guest's screen; enemies respawn on the host's rest; and
-after a boss kill the guest stays and watches the outro, and the host's memory sequence plays with the guest connected.
+This project keeps one session running through those ends. A native hook DLL (C, MinHook) and UE4SS Lua mods do the work;
+automatic re-hosting and re-joining remain as a fallback. In two-PC sessions: a guest who dies for good stays in the host's
+world, spectates the host and respawns next to the host at the host's next Mistle rest; the host can rest at a Mistle with a
+guest connected, and enemies respawn on that rest; the guest gets his own Mistle menu and can level up there; a Mistle teleport by
+the host takes the guest along, also into another stage, with the game's own fade; after a boss kill both watch the outro and
+**walk through the host's memory together**, with the host's skips relayed to the guest. The guest's story position, story flags,
+post-memory ending and blood codes follow the host's, and story NPCs, side-quest characters and mist walls follow the host's
+state on his screen.
 Seamless story co-op for 3+ players is the goal;
 it is not playable as a release today. Code: [eight8pac/codevein-coop](https://github.com/eight8pac/codevein-coop).
 
@@ -254,15 +254,39 @@ matching signal).
 - **Startup:** creating all MinHook hooks first and enabling them with one `MH_EnableHook(MH_ALL_HOOKS)` took about 0.2 s instead of
   about 7 s (each single enable suspends all game threads).
 
+## Findings 2026-11-04 (two-PC sessions)
+
+- **Post-memory ending:** each Successor boss's memory map has `IsReturn`, which checks a `ReturnFlags` list of broken vestiges
+  (`IAF_BloodCrystal_BrokenNormal_*`) and picks `Boss_StXX_Ret` or `_Suc` (found by Rikka230). A full `CheckGameProgress` trace on both
+  PCs showed the same answers for all 198 symbols the guest asked, including the vestige check. The difference was timing: the host's
+  flag is set in the step after the memory, which the guest's game never runs. So the host works out the result at the kill and
+  sends the flag. Blueprint functions could not be hooked on our UE4SS build, and a Lua hook on `CheckGameProgress` froze the load
+  (Rikka230); no hook is needed this way.
+- **Story sync channel:** `ScenarioPlayerComponent:MulticastSetSyncedSymbols` carries any strings from host to guest. Flags that turn
+  true and the whole flag state on join go through it, then `ScenarioProgressLoader:ReloadProgress` applies them to the guest's world.
+  Item and weapon pickup flags (`IAF_`, `WAF_`) stay per player.
+- **Blood codes:** the `Get_<X>BC` flag alone does not unlock a code. `CharacterHelper:AcquireBloodCode(pawn, article, true, false)` on
+  the guest does, with the game's message, but not while he is in a cutscene.
+- **Chest contents:** `ItemChestBase.SpawnItemInfos` holds the loot; `ChestBase.ChestState` is 0 closed, 2 opened.
+  `UItemComponent:RPCClient_GainItem` **crashes with a weapon article**. `CharacterHelper:UpdateWeaponInventoryInfo` and
+  `UpdateJinkakuInventoryInfo(pawn, article, count, degeneration, grind, false)` work, with the pickup message (host, solo).
+- **Slow startup was our own Lua:** first engine tick after 80 s with our mods polling during the load, 22 s with them off, 21 s without
+  UE4SS. Before the first tick UE4SS has no fast object lookup. The loops now wait for a file the native DLL writes at the first
+  tick: 22 s with all mods on.
+- **Crash report text can be stale:** a skipped engine check still wrote its "Assertion failed" text, and the report of a later,
+  unrelated access violation showed it as the error. Read the `Unhandled Exception` line and the call stack in the crash log.
+- **Session search:** `FindSessionsCallbackProxy:GetServerName` returns a numeric ID here, not the player name.
+
 ## Known issues
 
 - Without a matchmaking password a guest's automatic search can join a stranger's signal.
 - A guest whose host stopped on purpose keeps searching every 25 s.
 - Vestige restoration in co-op: the entry checks are answered "not multiplayer" now; whether the screen opens and the memory plays is untested.
 - A guest's rest does not reset the host's world yet (the request reaches the host; the reset entry point is still to find).
-- Story progress (blood code, boss state, the post-boss ending branch) does not carry over to the guest yet.
-- A guest cannot open chests and does not see ground items in the host's world. Story NPCs follow each player's own story
-  progress (one appeared twice on the guest's side).
+- A guest cannot open chests and does not see ground items in the host's world.
+- Cutscenes are rough on the guest's side: no subtitles, characters missing, scenes out of step with the host, his weapon invisible
+  after the memory until he switches it.
+- Occasional crashes inside UE4SS (null reads from Lua calls), at the title screen and in the world.
 - While spectating, the low-health screen filter and heartbeat keep playing; a respawned guest flashes once before the appear effect.
 - Home Base: a teleport there keeps the vanilla behaviour (`teleport_skip_fields=0`), which ends co-op; going there together is not done.
 - A guest joining while the host sits at a Mistle crashes.
@@ -271,8 +295,9 @@ matching signal).
 
 ## Next steps
 
-1. Guest progression and shared boss rewards (CoopProgress by Rikka230, eight8pac/codevein-coop#1): two-PC test.
-2. Host death in a boss fight while the guest lives (the host spectates until everyone is dead).
-3. Gifts equip and chests for the guest, enemy reset on the guest's rest.
-4. Memory for the guest: smooth the first seconds; then vestige restoration.
-5. Group teleport vote, Home Base together (with the Home Base mode on the guest), a 3-player cap.
+1. Chest loot for the guest (written, needs its two-PC test), then the guest opening chests himself, then visible drops.
+2. Everything the host can do for the guest too: one relay for world objects (chests, ladders), purifying Mistles.
+3. Cutscene sync through the game's own ready reports (`ServerSetReadyToPlay`, `ServerSetReadyToFinish`), reported for the guest.
+4. Host death in a boss fight while the guest lives (the host spectates until everyone is dead).
+5. Vestige restoration, enemy reset on the guest's rest, NPC interaction for the guest.
+6. Group teleport vote, Home Base together (with the Home Base mode on the guest), a 3-player cap.
