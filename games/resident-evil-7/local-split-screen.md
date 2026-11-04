@@ -16,8 +16,8 @@ notes with every run and its numbers: [NOTES.md](NOTES.md).
 ## Where things stand
 
 Works on the test PC: two players started a new game together and played about 10 minutes, each copy sending and
-receiving the whole time, then again with one player per screen. Each controller drives only its own copy. Saving
-by player 1 and Continue on both is not tested yet.
+receiving the whole time, then again with one player per screen. Each controller drives only its own copy. Player 1
+saved, both games were closed, and after a restart Continue on both put both players back where they were.
 
 ## How to play
 
@@ -52,7 +52,7 @@ the PR's `split-screen/README.md`.
 ## Known issues
 
 - Memory: each copy took about 8 GB of RAM (16 GB PC, 0.6 GB left with both in game). Keep graphics low.
-- Saving with player 1 then Continue on both: untested.
+- Only player 1 can save (player 2's saves are blocked, since both copies share one save folder).
 - `-Layout split` untested since the `own_pads` change; Xbox pads untested.
 - Couchlink's own launcher does not work for this game yet (stall above); reported as
   [cranebeaker/couchlink#11](https://github.com/cranebeaker/couchlink/issues/11).

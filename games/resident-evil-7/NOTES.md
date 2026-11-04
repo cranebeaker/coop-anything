@@ -113,3 +113,5 @@ Working notes, 2026-11-04. Goal: two players on one PC, one copy of RE7 each, th
   Launcher now adds `"own_pads": []` (hide every real pad from DirectInput, Raw Input and HID opens), so each
   copy should only see its own XInput pad (DS4Windows' virtual Xbox 360 pads). Not yet tested.
   (Why the earlier session looked right per pad is unknown.)
+- 2026-11-05, owner: player 1 saved, both games closed, restart with the 2-screen launcher, Continue on both:
+  both players back where they were, player 2 next to player 1. Player 2 cannot save (blocked by design).
