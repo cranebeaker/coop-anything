@@ -172,6 +172,39 @@ Mod repo commit 355cfbb (phoenixd123/alien-isolation-coop).
 - Close: the second run needed a second WM_CLOSE (first was ignored); clean `detach` in the log afterwards. Cause unknown.
 - Not tested: two accounts (needs a second person or machine).
 
+## World sync groundwork: decoding call_method, 2026-11-03
+Goal: effect capture (playbook/effect-capture-story-sync.md). The host records which script entity got which method,
+the client replays it. Cathode runs level scripts as messages through `EntityManager::call_method` (RVA 0x526680).
+
+Observed (static, Ghidra 12.2 decompile of RVA 0x526680 and its caller RVA 0x526A60):
+- call_method is `thiscall(self, a1, a2, a3)`. a1/a2 point at a handle block whose `+0xC` is the target entity object;
+  the target object's `+4` holds flags (bit 28 tested) and `+0xC` is compared with a sentinel global (RVA 0x134E250).
+- a3 points at the message. **Message `+0` is the method name's ShortGuid**: the caller compares it with the atoms
+  `proxy_enable`, `proxy_disable` and `callback`. Message `+8` is the target handle, `+0x18` an 8-byte value
+  (unknown), `+0x20` a 16-bit type code (0x41/0x43/0x44/0x55 seen in the compare). The earlier probe read `+8` as
+  a "message vtable"; that is why it found no RTTI. Fixed in the mod (commit after b071119).
+- The caller (0x526A60) is called from RVA 0x52CE20 only (2 sites).
+
+Observed (runtime, menu only, AIC_PROBE=2 sampling):
+- The main menu makes only ~1 call_method call; the traffic is in levels.
+- That call decoded fully: method `Paused`, target object `+0xC` and `+0x10` = the ShortGuid of composite
+  `PauseMenu` (from `levelmod ids` on FRONTEND\WORLD\COMMANDS.PAK). So runtime calls map back to level-file IDs.
+
+Derived (not yet verified in a level):
+- Entity IDs come from the level data (CathodeLib `GenerateCompositeInstanceID` combines path ShortGuids with a fixed
+  base), so they are the same on both players' machines. A host can send (target ID, method ShortGuid) and the
+  client can find the same entity.
+- SOLACE has script entities for doors (`Door`, `DoorStatus`, door archetypes), pickups (`pickup_common` x86,
+  `AddToInventory` x24) and objectives (`SetPrimaryObjective`, `SetSubObjective`), so one capture/replay path could
+  cover doors, items and story.
+
+Next (needs the game in a level, i.e. bot input; the owner asked to run that only while they are away):
+1. AIC_PROBE=2 in SOLACE; `tools/re/match_ids.py samples.bin ids_solace.tsv` to fix which offset holds the entity
+   ID vs the composite instance ID.
+2. Log every call with decoded names while opening a door and taking a pickup; that list is the effect vocabulary.
+3. Replay: call call_method on the client's game thread with a rebuilt message for the same entity.
+4. The alien last: it's an AI character (actor ownership), which needs the character transform that is still unknown.
+
 Not done / unknown:
 - Two PCs over the internet, and two Steam accounts: untested.
 - A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.
