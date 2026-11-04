@@ -4,13 +4,16 @@
 |---|---|
 | Engine | Firebird, Monolith's LithTech-derived engine (internal name "Kraken") |
 | Versions tested | Steam app 356190, build 3095001 (last update 2018-09-05), `x64\ShadowOfWar.exe` 1.0.8874.0, SHA-256 `ed0d95cabb033cd66aaa99d699374881846c3cb03ec345f1123d82d45e0bdaef` |
-| Projects | none playable; [JustAddMP/ShadowOfWar](https://github.com/JustAddMP/ShadowOfWar) is a placeholder; research here (claim: cranebeaker/coop-anything#93) |
-| QA level | none (no co-op exists yet) |
-| Last updated | 2026-10-21 |
+| Projects | [Santonus-not-bot/shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (alpha, MIT); [JustAddMP/ShadowOfWar](https://github.com/JustAddMP/ShadowOfWar) is a placeholder; research here (claim: cranebeaker/coop-anything#93) |
+| QA level | automated: scripted checks with two game copies on one PC and an offline suite; never tried on two PCs |
+| Last updated | 2026-11-01 |
 
 ## Where things stand
 
-There is no co-op for Shadow of War. This folder holds research and reverse-engineering
+The co-op mod is in its own repo, [shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop): one host and one
+client, the client joins the host's save, sees and fights the host's enemies, follows the host's fast travel, and runs the
+host's Nemesis events (captain fights, kills, promotions) on its own copy of the Nemesis world. Alpha, tested
+only on one PC. This folder holds the research and reverse-engineering behind it,
 for a from-scratch, host-authoritative co-op: a safe way to run and instrument a test copy,
 a map of the engine's console commands, the Nemesis system's live log output, and the
 Nemesis event, death, promotion and RNG functions with byte signatures for the Steam
@@ -100,8 +103,9 @@ No co-op changes yet. Tooling for working on the game safely (not published yet)
 
 ## QA
 
-- Offline test suite for the tooling (no game process): 28 of 28 cases pass; a mutant
-  build with the protections compiled out fails the 8 cases that depend on them.
+- The tooling has an offline test suite (no game process) and a negative-control build
+  with the protections compiled out; both live in an unpublished repo, so no results are
+  claimed here.
 - Live: seven guarded launches on the Steam build. The after-run check against a hashed
   backup of the real saves and Steam folder caught two writes from outside the game
   process: the NVIDIA App rewriting the real `render.cfg`, and `steam.exe` writing the

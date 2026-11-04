@@ -1,0 +1,35 @@
+{
+  "_notes": ["Example tools/gamepool config for Slime Rancher 2 test copies. Copy to local/sr2.json and fill in the placeholders."],
+  "name": "Slime Rancher 2",
+  "game_dir": "<game dir copy>",
+  "instances_root": "<instances dir>",
+  "process_name": "SlimeRancher2.exe",
+  "launch": {
+    "exe": "SlimeRancher2.exe",
+    "args": ["-logFile", "{instance_dir}\\Player.log", "-screen-fullscreen", "0", "-screen-width", "960", "-screen-height", "540"],
+    "env": {},
+    "window": "minimized",
+    "spawns_game": false,
+    "stagger_s": 5,
+    "child_wait_s": 30,
+    "watch_s": 8
+  },
+  "link": {
+    "modes": ["hardlink", "copy"],
+    "per_instance_files": ["steam_appid.txt", "version.dll"],
+    "empty_dirs": ["LocalLow"],
+    "per_instance_dirs": ["MelonLoader", "Mods", "Plugins", "UserData", "UserLibs"],
+    "root_skip_suffixes": [".log", ".dmp", ".mdmp"],
+    "pinned_files": ["SlimeRancher2.exe", "GameAssembly.dll", "UnityPlayer.dll"]
+  },
+  "config_files": {},
+  "write_files": {
+    "steam_appid.txt": "1657630",
+    "UserData/CoopQA.SaveRoot.txt": "{instance_dir}\\LocalLow"
+  },
+  "protected_paths": ["%USERPROFILE%\\AppData\\LocalLow\\MonomiPark", "<game dir>"],
+  "ready": {"type": "log_line", "path": "MelonLoader/Latest.log", "text": "CoopQA.SaveIsolation", "timeout_s": 900},
+  "crash": {"logs": ["Player.log", "MelonLoader/Latest.log"], "markers": ["Crash!!!", "Unhandled", "FATAL"], "wer_match": "SlimeRancher2"},
+  "collect_logs": ["Player.log", "MelonLoader/Latest.log"],
+  "pairs": {"port_base": 1919, "copy_gb": 3.5, "reserve_gb": 2.0, "proto": "udp"}
+}

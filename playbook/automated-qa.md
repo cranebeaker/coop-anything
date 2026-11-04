@@ -69,6 +69,17 @@ animation checker.
 - **Teleports fail silently.** A test put a player inside a wall and then "found" a bug.
   Assert the precondition (player really is inside the trigger) before asserting the
   result.
+- **A death in a test changes the test world.** In Shadow of War a test copy whose player
+  died autosaved a different world: a large enemy came to the test start and its fire hurt
+  the player and the stand-in in later checks. A health invariant (no player or stand-in may
+  lose health during a check) is what showed it. Before a suite, assert that no living
+  stranger is near the test start, and restore the test copy's save from a backup when one
+  is ([NOTES](../games/shadow-of-war/NOTES.md), session as).
+- **Alternate the fix with the control when the symptom varies.** In Shadow of War an
+  animation glitch ran at one of two speeds at random (5 or 56 restarts in 6 s with nothing
+  changed). Two single before/after comparisons looked like fixes and were chance. Run each
+  setting several times, interleaved with the control, and look at the spread before
+  believing a difference ([NOTES](../games/shadow-of-war/NOTES.md), session bb).
 - **Check streamed-object ownership.** Validate current-area identity before reusing a trigger; stale registrations can survive a load ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Low memory kills long runs.** Run tests one at a time on a busy PC, in short
   batches, and clean up any game process you started.
@@ -86,8 +97,14 @@ animation checker.
 - **Match errors exactly.** A scorer that killed the host on "ERROR" also matched a harmless coloured map warning (`^1ERROR: ref_tag ... invalid target`) and a GL extension name. Strip timestamps and colour codes and match the engine's real error prefix at line start, case-sensitive (Jedi Outcast).
 - **Own processes positively.** Stop only a process your run started (its PID, or a marker on its command line). A blanket kill by image name once destroyed a live two-player session (The Doors of Trithius).
 
+- **A zero is an answer.** A poll helper that returns the measured value treats `0.0` as "not yet" in most languages, so a perfect match (gap 0.0) timed out. Return a tuple or a flag, not the value (Skyward Sword).
+- **Startup is a gate.** If the games never come up, the runner must still print `RESULT: FAIL`; one run crashed with a traceback instead, which a scorer may read as no result at all (Skyward Sword).
+- **Savestates pin the build.** On emulators a savestate holds the mod's code as it was loaded. Write a build number where the bot can read it and fail the boot gate when it does not match, or you test yesterday's code (Skyward Sword).
+- **Give the bot dev commands for states it cannot reach.** With no button input and an early save, the bot could not make an enemy switch animation; a one-shot "play animation N on enemy X" field in the mod's mailbox, ignored in normal play, made the check possible. Keep such commands out of player-facing paths (Skyward Sword).
 - **Validate the checksum itself.** Exclude padding and inactive history only with native control-flow evidence; retain mutation checks for active fields ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Respect fixture boundaries.** Inject controls before the measured binding stage and end special assertions on schedule; keep general invariants running ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
+- **Let a bot play the story and compare quests.** Per-feature tours only cover what you thought of. A story autopilot on the host (answer choices, press whatever the story has armed, walk into and look at story triggers) with one check, "every client holds the host's active quests, every 30 s", found a desync in a chapter that every feature tour had passed. Report how far the bot got in each chapter: a chapter where it took 0 to 2 actions proves little ([MiSide](../games/miside/README.md)).
+- **Measure leaks with memory held after a full collection.** .NET's `GCMemoryInfo.HeapSizeBytes` includes garbage not yet collected, so it rises with the allocation rate and flagged long two-player runs as leaking. `GC.GetTotalMemory(true)` once a minute showed a flat 11 MB ([MiSide](../games/miside/README.md)).
 
 ## Testing online features on one PC
 

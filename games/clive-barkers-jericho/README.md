@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
-| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3 |
+| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
 | QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-10-24 (0.2.7) |
+| Last updated | 2026-11-01 (0.3.0) |
 
 ## Where things stand
 
@@ -33,8 +33,16 @@ shape on wide screens, shows each split screen player their own hints, stops an 
 when switching squad members in split screen, caps the frame rate at the screen's (twice it in
 split screen), makes Rawlings come for a downed player 3-4 every time, stops a joining PC's
 split screen player from falling through the map at a level's start and fixes a rare crash on
-a joining PC when the psychic commander disappears. A whole campaign played through by people
-is still to come.
+a joining PC when the psychic commander disappears. 0.2.8 fixes what the first long Steam
+sessions of 0.2.7 found (players sunk into the ground, enemy fire a client could not see or
+feel, bosses and dialogue missing on the joining PC). 0.2.9 smooths other players' characters
+and enemies on the joining PC, lets enemy fire (flames, missiles, blows, bosses) reach a
+joining player, shows the squad choice screen at every story split and fixes a "puppet stuck,
+flying or snapping back and forth" storm. 0.3.0 goes through every weapon, fire mode, reload,
+melee strike, power and ability of the seven playable characters, held by a person and by the
+AI, and checks on screen what the watching player sees; it adds gestures for actions that
+have no animation in the game, a compatibility layer for SMOD Add-ons, and a single-file
+setup exe next to the zip. A whole campaign played through by people is still to come.
 
 ## Existing work
 
@@ -238,6 +246,36 @@ restored on uninstall.
   a zip extracted into the game folder) are recognised by the proxy's own marker string and
   their files; the installer then updates or removes them like a recorded install and never
   keeps an older mod's file as the game's original.
+- **A short trigger pull plays out on the watcher too (0.3.0):** the owner reported pistol
+  shots with no animation for the watching player. Cause: Delgado's Raging Bull shot in third
+  person starts with a 1.4-1.7 s wind-up (`Shot0Init`) and fires only if the trigger
+  (`owc.Shot`) is still held at its end (`Delgado.EndOfBullShot`); a press lasts 0.1-0.5 s, so
+  the copy raised and lowered the pistol without firing. Fix: a puppet keeps the trigger down
+  through the wind-up and the first shot, and a wind-up is cut to 0.3 s on a puppet
+  (`cfg.puppetholdshot`, `cfg.puppetskipinit`). Before: short press 1 shot for the owner, 0 for
+  the copy; long press 5 and 3. After: 1 of 1 (shot after ~0.4 s), long press 4 of 4 plus
+  `Reload0`.
+- **Second weapon and fire modes (0.3.0):** weapons that fire on a weapon switch use a second
+  trigger (`owc.SecondWeaponTrigger`: pistol / Bull, Rawlings' pistols, Black's grenade
+  launcher); the state message carries it (22nd field) with the fire mode and the charge type
+  (23rd field). A puppet's magazines are refilled, so Black's one-round launcher shows every
+  volley. Reloads: `Reload0` for the second weapon of Delgado, Black, Jones and Ross, `ReloadE`
+  for Rawlings' fragmenting and explosive loads. Rawlings' ghost heal shows `ShotH_GH`, Vlad's
+  course `Special1`, the heal `ShotH`; Church's sabre strikes `Combo1Hit1/2` are played once
+  each. Delgado's dragon from his case could not be reproduced as missing: with a real gamepad
+  the watcher sees the case, the arm (`Shot1Init`, `Shot1`, `Shot1EndAlt`, slot 2), the fire,
+  the spirit and the arm closing.
+- **Gestures for actions without a third-person twin (0.3.0):** orders, fire-mode switches,
+  Cole's mine mode pick and detonation, levers, doors, the pillbox, landing, QTE strikes and
+  Rawlings' calm map to existing actions (`Relax1/2/0`, `Reload`, `Hack`, `Punch`,
+  `DuckRelaxInit`, `HitStrong`); `CoopAnim.FPMAP` in the mod. Each has a switch in the config
+  (`gapgestures`, `gaporders`, `gapmodes`, `gaplevers`, `gapfall`, `gapqte`, `gapcalm`, ...).
+- **SMOD Add-ons (0.3.0):** detected at run time by the globals it defines (the lobby is
+  tagged "[SMOD+]"); its third-person mode is refused in split screen, in scenes and when
+  downed, and the third-person twins of the add-on's powers are replayed on the watcher.
+  The add-on's balance changes and third person inside a session are not synced unless every
+  player has it, and that is not a priority. SMOD (SkacikPL) and its Add-ons (PHM2D) are
+  credited in the mod's readme; none of their files is in the mod.
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -247,6 +285,28 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.3.0 (2026-11-01):
+
+- Live animation checks between a PC with a virtual gamepad (ViGEm) and a second PC as host and
+  watcher, frames of the watcher's screen from an F11 clip plus the watcher's log (which action
+  the copy played): every weapon, fire mode, reload, melee strike, power and gesture of
+  Delgado, Black, Cole, Church, Jones and Rawlings; characters under AI in a real 60 s fight
+  (shots of all weapons, the Bull's wind-up, minigun, reloads, cover, hits, agony); trance and
+  stun on frames. SMOD Add-ons 1.1: load (no Lua error, 0 engine errors), a mixed session,
+  third person through the add-on's toggle, Delgado's pistol, dragon and barrier in third person.
+- Regression on the final code: eleven Lua mock tests, the whole campaign 33/33 levels over a
+  LAN (34 loads on the client), the virtual gamepad suite (9 runs, 0 engine errors), nine split
+  screens (errors 0, no crash), player souls twice, player 2 waiting, no mouse, 2 x 60 squad
+  switches in split screen, both Lost Patrol branches, the exit through the menu.
+- Packaging: every version 0.1.0 to 0.2.9 installed, updated to 0.3.0 and removed (13 of 13,
+  game folder equal to the clean one), the setup exe (extract, quiet install, reinstall, removal),
+  the update from 0.2.9 through the shortcut from a local feed with the exe listed first
+  (the zip is taken), 81 zip entries audited.
+- Not seen on real objects: Delgado's dragon under AI, a real QTE, real levers, doors, the
+  pillbox and Cole's mines (the first-person actions were fired from the console), Rawlings'
+  calm, Ross in act 1, the SMOD Add-ons tests that need both PCs, the real P key and a Steam
+  session with two accounts.
 
 Results for 0.2.6 (2026-10-24):
 
@@ -371,6 +431,10 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
   controls while the host walked) could not be reproduced.
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
   Join Game auto-launch (game not running) are not tested yet.
+- Animations seen by the watching player were checked on screen for the main weapons and powers
+  of each character; a few first-person-only actions (real levers, doors, the pillbox, Cole's
+  mines, Rawlings' calm) are shown as a gesture that was only fired from the console, not on
+  the real object. The pose of a fall is the engine's.
 - Split screen draws the two views on alternate frames, so each runs at half the frame rate.
 - The "own eyes" cutscene view is experimental: the sets were built for one camera, and it
   falls back to the original camera where a character cannot see the scene.

@@ -15,6 +15,20 @@ Two halves, one file format:
 
 The playbook page [Desync hunting with traces and shrinking](../../playbook/desync-hunting.md) shows the whole workflow.
 
+### Host portability
+
+On Windows, the test runner tries Visual Studio 2026, Visual Studio 2022, then
+Ninja when creating a fresh CMake build. Ninja requires a configured C++17 compiler
+on PATH. An existing CMake cache keeps its generator; compiler installation paths
+containing "Visual Studio" do not make a Ninja build an MSBuild build.
+
+Replay commands may be argument lists (preferred for API callers) or strings.
+Windows strings use CRT-style argument quoting, including paths with spaces,
+backslashes before quotes and doubled quotes inside quoted arguments. POSIX
+strings retain POSIX `shlex` parsing. Neither path enables shell execution.
+The `PortabilityTests` group checks both parsers and generator/cache selection
+without needing a game or all supported Visual Studio versions installed.
+
 ## Try it in one minute
 
 The repo ships two pairs of sample traces made by the C++ recorder ([golden/](golden)). In `desync_*` a script on the client
