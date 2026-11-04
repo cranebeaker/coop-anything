@@ -5,15 +5,16 @@
 | Engine | Cathode (Creative Assembly proprietary), 32-bit x86 |
 | Versions tested | Steam build 4940658, AI.exe SHA-256 `DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90` |
 | Projects | Dropper7894 Survivor Mode co-op (unreleased); Joshiloveyou presence prototype ([#85](https://github.com/cranebeaker/coop-anything/issues/85), PRs #156/#164); [alien-isolation-coop](https://github.com/phoenixd123/alien-isolation-coop) presence prototype (this write-up) |
-| QA level | automated, for presence only (bot drives two real clients and checks marker placement) |
+| QA level | automated (bot drives two real clients: marker placement; door, pickup and story-step sync) |
 | Last updated | 2026-11-03 |
 
 ## Where things stand
 
-Nobody can play the story together today. Two from-zero efforts reach **presence**: each player
-runs their own campaign and sees the partner as an on-screen marker. This one (alien-isolation-coop)
-adds host/join over UDP or Steam P2P (by Steam ID, no port forwarding) and an installer. Nothing shares the world yet: no 3D partner
-character, and the alien, doors, items and story are separate.
+Two from-zero efforts reach **presence**: each player runs their own campaign and sees the partner as an
+on-screen marker. This one (alien-isolation-coop) adds host/join over UDP or Steam P2P (by Steam ID, no port
+forwarding), an installer, and the first **shared world**: doors the partner opens, items they pick up and
+mission steps they reach are replayed in your game (tested with two copies on one PC). The alien and a 3D partner
+character are not done.
 
 ## Existing work
 
@@ -91,6 +92,15 @@ steamwrap is a replacement `steam_api.dll` for a copy of the game:
 Only presence works: you see your partner's marker, and each of you plays your own campaign.
 Install and host/join steps are in the mod repo's README (`install.ps1`, `play-coop.bat`).
 
+## World sync (how it works)
+
+Cathode runs level scripts as messages through `EntityManager::call_method` (RVA 0x526680): message `+0` is the
+method ShortGuid, the target entity holds its level-file ID at `+0xC`, and following owner handles (`+8` ->
+handle `+0xC`) gives a path of entity IDs that is the same on both PCs. The mod hooks call_method, captures a few
+messages, sends (method, entity, type, path), and the other game finds the entity by path and replays the method:
+`IsOpen.set_true` in a Door_Package -> `Door.request_open`; `pickup_common` collected -> its load-time "taken"
+check (hides the item); a story-mission `LogicOnce` -> the same `LogicOnce`. Details in NOTES.md.
+
 ## Known issues
 
 - The marker is an overlay, so it shows through walls.
@@ -102,5 +112,5 @@ Install and host/join steps are in the mod repo's README (`install.ps1`, `play-c
 1. Test across two PCs with two Steam accounts (Steam P2P is built; `play-coop.bat steam-host` / `steam-join <SteamID64>`).
 2. A 3D partner character: find how Cathode spawns or moves a human NPC, and drive one from the network.
 3. Coordinate with #85 so the two efforts merge rather than duplicate.
-4. The unsolved part: alien and NPC ownership (playbook/actor-ownership.md), doors, and story via
-   `EntityManager::call_method`.
+4. World sync beyond doors/pickups/LogicOnce (unlocks, lifts, cutscenes), then the alien: its record in the
+   character table (`AI.exe + 0x1307AC8`) and host ownership (playbook/actor-ownership.md). See NOTES.md.

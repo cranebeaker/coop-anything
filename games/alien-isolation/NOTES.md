@@ -205,6 +205,45 @@ Next (needs the game in a level, i.e. bot input; the owner asked to run that onl
 3. Replay: call call_method on the client's game thread with a rebuilt message for the same entity.
 4. The alien last: it's an AI character (actor ownership), which needs the character transform that is still unknown.
 
+## World sync in game, 2026-11-03 (owner away; bot input)
+**Correction:** the test save is in **HAB_AIRPORT** (mission M04_Pt01), not SOLACE. The owner-chain IDs of live
+entities resolve only against HAB_AIRPORT's COMMANDS.PAK. The SOLACE statements above are wrong.
+
+Observed (runtime, mod commits bb64a03..f57b6fe):
+- Entity object: `+8` = handle block of its owner, `+0xC` = level-file entity ID, `+0x10` = type ShortGuid.
+  Handle block: 16 bytes `{vtable, refcount, flag, entity*}`. Following `+8` -> handle `+0xC` -> parent entity gives
+  the path of plain entity IDs up to the level root (root entity ID 0x4af05bfe in HAB_AIRPORT), e.g.
+  `Door_Package_1 / Door_SML_9 / ENVIRONMENT_Airport_1`. CathodeLib's composite-instance hashes are not stored
+  anywhere in memory (searched); the plain path is the cross-machine key.
+- Messages sit in a queue of 0x28-byte records: `+0` method ShortGuid, `+8` target handle, `+0xC` sender,
+  `+0x20` 0x80000000, `+0x24` 2. call_method is called with `a1 = a2 = &msg.target`, `a3 = &msgptr`.
+- Replay: building such a message for a handle found by path (memory scan for `{id, type}` + owner-chain check,
+  60-110 ms) and calling call_method from the hook right after a real dispatch returns works; the game keeps running.
+- Doors: `Door.trigger` is filtered (needs a character in the sensor) and did nothing. `force_open` opened the door
+  and kept it open. **`request_open` opens it and it auto-closes 5 s later** (normal behaviour).
+- Mission `PlayerTriggerBox` entities accept `trigger` (returns 1) but don't fire; `callback`, `on_entered`, `enter`,
+  `entered` return 0. Boxes near the save point are `enable_on_reset = False` (dormant). Story sync uses LogicOnce.
+- Character table: a static array in AI.exe .data, position floats at `exe + 0x1307AC8 + k*0xB0`, a tag dword after.
+  In this save: player (tag 0) and 5 NPCs (tags 5 and 7). By CathodeLib's CHARACTER_CLASS those would be facehugger
+  and heavy android, which doesn't fit the scene, so the tag's meaning is unknown. Found by scanning for floats with
+  the camera's x/z at foot height; the records follow characters as they move; same offset on a fresh launch.
+
+Two copies on one PC (localhost), p1 traced, p2 acting:
+- Door: p2 walked into Door_SML_9 -> p2 sent `request_open` + path -> p1 got it 38 ms later, resolved in 109 ms, and
+  p1's trace shows the full opening sequence (IsOpen, barrier off, finished_opening, IsFullyOpen) with p1 standing still.
+- Pickup: p2 collected molotov_cocktail_1 through AddPickupToInventory (triggered by the test tool, not by aiming) ->
+  p2 sent SetPersistentIntegerValue + IntegerEquals_1 -> p1 ran the molotov's hide_pickup (Master suspended, selection box off).
+- Story: p2 fired M04_Pt01 `LogicOnce_give_crowbar_1` through the hook -> p1's own mission script ran
+  `WEAPON_GiveToCharacter_give_crowbar` -> `GIVE_TO_PLAYER MeleeWeapon_crowbar`.
+
+Derived:
+- Door_Package, pickup_common and the 35 SCRIPT_StoryMission composites have the same IDs in every level that has them,
+  so the rule table needs no per-level data.
+
+Not tested / unknown:
+- A whole mission with two players, keycard/hacking unlocks, lifts, cutscenes. Two PCs.
+- The alien: no available save has it. Next step is a save with the alien, then find its record and tag.
+
 Not done / unknown:
 - Two PCs over the internet, and two Steam accounts: untested.
 - A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.

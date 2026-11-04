@@ -4424,17 +4424,19 @@
   status: prototype
   coop_scope:
     players_visible: partial
-    story: 'no'
+    story: partial
     enemies: 'no'
-    world_state: 'no'
-    items: 'no'
+    world_state: partial
+    items: partial
   players: '2'
   networking: steam-relay
   open_source: 'yes'
   last_activity: 2026-11
   qa: automated
-  notes: Presence only. Each player runs their own campaign and sees the partner as an overlay marker (name,
-    distance, arrow), not a 3D character; the alien, doors, items and story are not shared. A steam_api.dll wrapper
+  notes: Each player runs their own campaign and sees the partner as an overlay marker (name, distance, arrow),
+    not a 3D character. Doors the partner opens, items they pick up and story-mission LogicOnce steps are replayed
+    in your game by entity path through EntityManager::call_method (two copies on one PC, bot-tested). The alien
+    is not shared. A steam_api.dll wrapper
     (no exe patch) loads coopnet.dll, which reads the camera record and sends it over Steam P2P by Steam ID (relayed, no port forwarding) or
     direct UDP. A bot drove two copies into a level on one PC and checked marker placement both ways; the Steam path
     was checked with the real client by loopback to the player's own ID. Two-PC / two-account play untested. Steam
