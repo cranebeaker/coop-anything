@@ -8696,7 +8696,7 @@
   project: Gedonia Co-op
   url: https://github.com/Zerbith/gedonia-coop
   other_urls:
-  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.8.1
+  - https://github.com/Zerbith/gedonia-coop/releases/tag/v0.9.5
   kind: mod
   status: alpha
   coop_scope:
@@ -8708,13 +8708,13 @@
   players: '2-4'
   networking: steam-relay
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one tester with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; groups (combat XP and map markers per group); enemy scaling by group size near the enemy (host''s settings); trading as a two-phase commit with the host as coordinator; spell effects and transformations shown to others; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 38 scenarios, logged assertions and screenshots); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
+  notes: 'BepInEx 5 / HarmonyX plugin for the original Gedonia (Steam app 1114220, build 16727998; not Gedonia 2), built from zero. Steam P2P through the game''s own Steamworks.NET (friends-only lobby of 4, in-game invites) or plain UDP in the home network (LAN discovery). Host-authoritative: enemies, followers and world events have one owner with epochs; story calls (dialogue answers, triggers) run on every machine in the host''s order; shared conversations with voting; groups (combat XP and map markers per group); enemy scaling by group size near the enemy (host''s settings); trading as a two-phase commit with the host as coordinator; text chat; spell effects, enemy projectiles, mounts and transformations shown to others; doors shared; cutscenes start when every player confirms; chests, gathering spots, expeditions with seeded generated dungeons, travellers, time and weather, sounds; respawn crystals replace the reload-only death screen, and loading is blocked while players are connected. The mod''s windows use the game''s own UI art, cut from its atlas at runtime. QA: two game clients on one PC driven by test steps and bots (scripts/test-local.ps1, 54 scenarios, logged assertions and screenshots, control runs with each fix switched off); real sessions of the tester with friends over Steam went fine, their findings fixed in 0.7 and 0.9.2-0.9.3. Each player keeps their own save. Write-up in games/gedonia/. MIT licence.'
   sources:
   - https://github.com/Zerbith/gedonia-coop
   - https://github.com/cranebeaker/coop-anything/issues/214
-  checked: '2026-10-26'
+  checked: '2026-11-04'
   made_with_coop_anything: true
 
 - game: Code Vein
