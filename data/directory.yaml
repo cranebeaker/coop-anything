@@ -4429,18 +4429,20 @@
     world_state: 'no'
     items: 'no'
   players: '2'
-  networking: direct-ip
+  networking: steam-relay
   open_source: 'yes'
   last_activity: 2026-11
   qa: automated
   notes: Presence only. Each player runs their own campaign and sees the partner as an overlay marker (name,
     distance, arrow), not a 3D character; the alien, doors, items and story are not shared. A steam_api.dll wrapper
-    (no exe patch) loads coopnet.dll, which reads the camera record and sends it over UDP (host/join). A bot drove two
-    copies into a level on one PC and checked marker placement both ways; two-PC play untested. Steam build 4940658.
+    (no exe patch) loads coopnet.dll, which reads the camera record and sends it over Steam P2P by Steam ID (relayed, no port forwarding) or
+    direct UDP. A bot drove two copies into a level on one PC and checked marker placement both ways; the Steam path
+    was checked with the real client by loopback to the player's own ID. Two-PC / two-account play untested. Steam
+    build 4940658.
     MIT. Write-up in games/alien-isolation.
   sources:
   - https://github.com/phoenixd123/alien-isolation-coop
-  checked: 2026-11-01
+  checked: 2026-11-03
   made_with_coop_anything: true
 - game: Outlast
   year: 2013

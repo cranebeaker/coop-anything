@@ -90,6 +90,17 @@ API deprecated but it still works. The same-account limit still applies, so the 
 needs a second transport: the CupHeads fork carries the same packets over TCP on
 localhost ([games/cuphead](../games/cuphead/README.md)).
 
+One account can still exercise the real Steam path: a single client may `SendP2PPacket`
+to **its own SteamID** and read the packets back. That checks the interface ABI against
+the real Steam client (argument layout, channels, `ReadP2PPacket`) without a second
+account. Sending to an offline account checks your callback object: Steam delivers
+`P2PSessionConnectFail_t` (error 4, timeout) after about 15 s. When you build
+`CCallbackBase` by hand for an MSVC-built steam_api, the vtable is
+`Run(void*, bool, SteamAPICall_t)`, `Run(void*)`, `GetCallbackSizeBytes()`: MSVC puts
+the overloads in reverse order. Evidence: Alien: Isolation, Steam build 4940658
+([games/alien-isolation](../games/alien-isolation/README.md)): loopback 1168/1168 packets,
+and the fail callback reached slot 1 with the game still running.
+
 ## Design: no SDK headers, dynamic loading only
 
 `LoadLibrary("steam_api.dll")`, then `GetProcAddress` for each **flat C API**

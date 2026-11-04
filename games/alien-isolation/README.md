@@ -6,13 +6,13 @@
 | Versions tested | Steam build 4940658, AI.exe SHA-256 `DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90` |
 | Projects | Dropper7894 Survivor Mode co-op (unreleased); Joshiloveyou presence prototype ([#85](https://github.com/cranebeaker/coop-anything/issues/85), PRs #156/#164); [alien-isolation-coop](https://github.com/phoenixd123/alien-isolation-coop) presence prototype (this write-up) |
 | QA level | automated, for presence only (bot drives two real clients and checks marker placement) |
-| Last updated | 2026-11-01 |
+| Last updated | 2026-11-03 |
 
 ## Where things stand
 
 Nobody can play the story together today. Two from-zero efforts reach **presence**: each player
 runs their own campaign and sees the partner as an on-screen marker. This one (alien-isolation-coop)
-adds host/join over UDP and an installer. Nothing shares the world yet: no 3D partner
+adds host/join over UDP or Steam P2P (by Steam ID, no port forwarding) and an installer. Nothing shares the world yet: no 3D partner
 character, and the alien, doors, items and story are separate.
 
 ## Existing work
@@ -80,7 +80,11 @@ steamwrap is a replacement `steam_api.dll` for a copy of the game:
 - Boot test (2026-11-01, real Steam client): p1 reached the main menu; p2 started alongside it and
   reached the first-run calibration screen. Both responded and closed cleanly. All save files were in
   `coop_saves\p1` and `coop_saves\p2`.
-- Untested: two PCs over the internet.
+- Steam P2P transport (2026-11-03): offline against a fake steam_api that checks the MSVC argument
+  layout both ways, **24 passed, 0 failed**. With the real Steam client, one copy at the main menu:
+  loopback to its own SteamID 1168/1168 packets; to an offline account, `P2PSessionConnectFail_t`
+  (error 4) reached our hand-built callback object and the game kept running.
+- Untested: two PCs over the internet, and two different Steam accounts.
 
 ## How to play
 
@@ -95,7 +99,7 @@ Install and host/join steps are in the mod repo's README (`install.ps1`, `play-c
 
 ## Next steps
 
-1. Test across two PCs. Then Steam networking (ISteamNetworking005), so no port forwarding is needed.
+1. Test across two PCs with two Steam accounts (Steam P2P is built; `play-coop.bat steam-host` / `steam-join <SteamID64>`).
 2. A 3D partner character: find how Cathode spawns or moves a human NPC, and drive one from the network.
 3. Coordinate with #85 so the two efforts merge rather than duplicate.
 4. The unsolved part: alien and NPC ownership (playbook/actor-ownership.md), doors, and story via

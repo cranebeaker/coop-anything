@@ -158,8 +158,22 @@ Mod repo commit 355cfbb (phoenixd123/alien-isolation-coop).
   fire when a save is loaded (a save restores entity state). Next: start the level fresh (new game or a level-start
   checkpoint) instead of Continue, and drive the waypoint through a script-visible variable rather than memory.
 
+## Steam P2P transport, 2026-11-03 (owner approved starting Steam)
+- Game's steam_api exports `SteamNetworking` (SteamNetworking005), `SteamUser` (017), `SteamFriends` (014).
+  Slot order from the Steamworks headers in Goldberg's sdk_includes (isteamnetworking.h slots 0..7 are the same in 005).
+- ABI used: thiscall; CSteamID by value = 8 bytes on the stack; `GetSteamID()` returns through a hidden result
+  pointer (first stack arg, callee pops 4). CCallbackBase = {vtbl, uint8 flags, int iCallback}; vtable order
+  Run(void*,bool,u64), Run(void*), GetCallbackSizeBytes (MSVC reverses overloads).
+- Offline (fake steam_api with raw-dword MSVC signatures): 24/24.
+- Observed with the real client, p1 alone at the main menu, mod commit b071119:
+  `steam-join self`: tx 1168 / rx 1168 over ~2 min. Loopback to your own ID works with ISteamNetworking005.
+  `steam-join` to an offline account: `P2PSessionConnectFail_t` error 4 (timeout) ~15 s after the first send,
+  delivered to slot 1 of our callback object; the game kept responding.
+- Close: the second run needed a second WM_CLOSE (first was ignored); clean `detach` in the log afterwards. Cause unknown.
+- Not tested: two accounts (needs a second person or machine).
+
 Not done / unknown:
-- Two PCs over the internet: untested.
+- Two PCs over the internet, and two Steam accounts: untested.
 - A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.
 - Alien / NPC / doors / items / story sync: not started.
 
