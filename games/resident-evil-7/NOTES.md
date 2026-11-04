@@ -115,3 +115,12 @@ Working notes, 2026-11-04. Goal: two players on one PC, one copy of RE7 each, th
   (Why the earlier session looked right per pad is unknown.)
 - 2026-11-05, owner: player 1 saved, both games closed, restart with the 2-screen launcher, Continue on both:
   both players back where they were, player 2 next to player 1. Player 2 cannot save (blocked by design).
+- Idea left for later (owner: not needed): save both players at once, each in their own save folder.
+  Pieces found: saves are plain files under Steam `userdata\<account>\418370\remote\win64_save` (`data000.bin`,
+  `data001Slot.bin`, `data00-1.bin`, `data00-3.bin`), so Couchlink's hook `saves` redirect could give each copy its
+  own folder; coop-re7 already sends `saved menu|auto <chapter>` when a player saves. A probe of
+  `app.SaveDataManager` (test copy, title screen) gave the request signature:
+  `saveFileAutoRequest(via.GameObject requestObj, via.GameObject savePosObj, System.Int32 slotNo,
+  System.Boolean isResultSend, System.Boolean isNewData, app.SaveDataManager.RestartFadeTypeEnum restartType,
+  System.Single fadeInTime)`; `get_isAllCharacterReadyToSave()` and `isCantSave()` look like the checks to make
+  first. Not tried.
