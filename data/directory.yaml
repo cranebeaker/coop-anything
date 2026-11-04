@@ -8736,7 +8736,7 @@
   players: '2'
   networking: steam-relay
   open_source: yes
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: none
   notes: Extends the game's own host + 1 guest Steam session instead of replacing it (UE4SS Lua plus a native MinHook DLL, MIT).
     Host re-signals and guests re-join automatically after field deaths, host deaths, boss-room deaths and boss kills; co-op works in
