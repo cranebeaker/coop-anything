@@ -3961,3 +3961,26 @@ smoothing lagged the free-run start.
   on the host): `killed=5 kill_failed=0` on the client, 2 characters with health 0 on it afterwards; the frames did not settle whether they lie
   where they fell. Side effect to check: the hit is the client player's, so the game may credit it a kill (experience, loot).
 - Probe `kill abs:<character>` does the same on any copy.
+
+## Session 2026-11-04 ce: attack moves on the proxies
+
+### Observations
+
+- The owner's report after the session with the aimed attacks and the game-driven death: the orcs dying works; still no counter indicator, B cannot
+  counter, the orcs have no attack animation; B's ranged attacks do not register on the host and the orc "turns invisible".
+- A player's strike (and so an enemy's swing) is not a graph action but a move request on the character's animation controller
+  (`[character+0x1970]`); the mirrored graph actions (session cd) never carried it. `PlayAttackMoveOn(character, record)` (the call the
+  stand-in's swings use: `4CA9A0` gives the move's name, `2E17D8` its animation object, `2C614C` registers the request) is now
+  called when a proxy starts an attack record: 31 moves played, 0 failed in 10 s with four orcs.
+- Both players side by side, the same moment on both windows (frames): the orcs on B's screen lunge at B and **the counter prompt (the
+  white star with Y) shows above the attacking orc on B's screen** (the host's own screen showed the orcs at the host player). First time
+  the prompt was seen on B. Whether B can counter with it (the input timing) was not tried.
+- **Ranged.** The probe's virtual pad now also holds the triggers (bits 16-23 and 24-31 of the buttons value). A left-trigger hold on B
+  made its player crouch beside an orc, not aim (not worked out why); a shot was not made, so what an arrow does to a proxy is not
+  known. 2 melee hits (`PC_Recoil_Light_U2D_F`, `PC_Recoil_Heavy_U2D_F`) of the client were reported and applied on the host, which did not
+  hurt the host's orc (all three stayed at 300 health).
+
+### Unknown
+
+- What B's arrow hit does on the client (which function applies it; whether the proxy takes it and is then hidden or killed locally) and
+  why the host's orc does not feel it; the "invisible orc"; whether B can counter an aimed attack.
