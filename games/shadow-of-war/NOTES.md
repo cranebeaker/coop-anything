@@ -3984,3 +3984,38 @@ smoothing lagged the free-run start.
 
 - What B's arrow hit does on the client (which function applies it; whether the proxy takes it and is then hidden or killed locally) and
   why the host's orc does not feel it; the "invisible orc"; whether B can counter an aimed attack.
+
+## Session 2026-11-04 cf: arrows, strike reactions, counter prompts (owner's hand tests)
+
+### Observations
+
+- **Ranged hits.** An arrow does not go through the game's hit function (`2C70C0`), so the hit filter never saw it. On the client it took a
+  proxy orc from full health (300) to 0 in one step (3 of 3 logged events, `coop: local damage on proxy ...`), the host's orc did not feel it.
+  The client now compares each proxy's health with what it wrote the frame before (`SimHealthNow`); a drop that no reported strike explains
+  is told to the host as strikes (`PC_NT_L1_D1_F_LL_RL_04`, about 96 damage each on a 300 orc; one per 90 taken, 1..6). Owner: "ranged
+  attacks seem to be working".
+- The orc's health on the client is the host's, written every frame (a write watch on a proxy's health showed only our own writer, ~590
+  writes in 10 s), so only a non-health death path (arrows, executions) can differ from the host.
+- `kill_failed` on the client rises with arrow kills (23 and 46 in two sessions): the game-driven kill (`SimKillCharacter`) fails on a
+  proxy that is already dead locally; the fallback writes health 0. Believed harmless, not checked.
+- **Reactions.** Strikes on proxies were dropped by the hit filter and only reported, so the game never played its reaction (hit, counter,
+  finisher) on the orc: the likely cause of "no animation when countered or executed" (owner's report). Built `coop_proxy_react` (default
+  on): the strike is reported and also let through; the host's health is written over the damage. A proxy is also left alone for 1.8 s after
+  a strike (no moves, no idle or mirrored action played over the reaction). **Not confirmed by the owner**: in the last sessions the orcs
+  did not attack B, so counters and strikes could not be tried.
+- **Counter prompt missing** on some attacks (owner: at both low and high health, sometimes present at both). Not explained. The client now
+  logs the first 600 attack starts (`coop: attack <record> of proxy <n> aimed at this player=<0|1>, <d> units away, ...`). In one session
+  all 50 logged attacks were aimed at this player (flag 1), 70-160 units away, with no damage message sent.
+- **The orcs stopped attacking B** in the last three sessions (damage messages from the host: 0, 0, 0; earlier today 16, 16, 15). The host
+  shows 4 orcs "engaged" with the decoy as target (`hunt_engaged`), the decoy standing at B's position, but the orcs stand 100-250 units
+  from it. Nothing in the host code changed between the working and the failing sessions except the client-side items above, so this is
+  not explained; the observer `tools/hunt_watch.py` (private repo) prints each hostile's distance to A and B and its target.
+- Pausing a game (the menu on B, a click on A) freezes the probe pipe; the session helper hung and A lost its keeper.
+
+### Unknown
+
+- Why the orcs stopped fighting; whether strike reactions now play; the counter prompt gaps; two-PC behavior; the host's death screen.
+
+### Tools
+
+- Probe `proxies` (owners, health objects, health on the client), `tools/hunt_watch.py`, `tools/hunt_measure.py`.
