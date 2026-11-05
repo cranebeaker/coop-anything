@@ -54,8 +54,10 @@ the PR's `split-screen/README.md`.
 - Memory: each copy took about 8 GB of RAM (16 GB PC, 0.6 GB left with both in game). Keep graphics low.
 - Only player 1 can save (player 2's saves are blocked, since both copies share one save folder).
 - `-Layout split` untested since the `own_pads` change; Xbox pads untested.
-- Couchlink's own launcher does not work for this game yet (stall above); reported as
-  [cranebeaker/couchlink#11](https://github.com/cranebeaker/couchlink/issues/11).
+- Couchlink 0.1.16's own launcher stalled player 2 (above); reported as
+  [cranebeaker/couchlink#11](https://github.com/cranebeaker/couchlink/issues/11). Couchlink 0.1.19 changed its
+  window placement and added `window.place_after`: with the same recipe, player 2 started in 6 of 6 start-up
+  runs (3 without `place_after`, 3 with it on `reframework/data/coopnet_status.txt`). Not played on 0.1.19.
 
 ## Sources
 

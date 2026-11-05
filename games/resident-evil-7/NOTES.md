@@ -124,3 +124,8 @@ Working notes, 2026-11-04. Goal: two players on one PC, one copy of RE7 each, th
   System.Boolean isResultSend, System.Boolean isNewData, app.SaveDataManager.RestartFadeTypeEnum restartType,
   System.Single fadeInTime)`; `get_isAllCharacterReadyToSave()` and `isCantSave()` look like the checks to make
   first. Not tried.
+- 2026-11-05, Couchlink 0.1.19 (window placement waits for a 250 ms answer, style change off the session thread,
+  new `window.place_after`): same re7-coop recipe (locks `*`, settle 15 s, no per-seat helper), both copies side by
+  side on one 1920x1080 screen, seat 2 = DS4Windows twin of the only pad on. Without `place_after` 3/3 OK, with
+  `place_after` {file: reframework/data/coopnet_status.txt} 3/3 OK (first frame 4-5 s, mod ready 9-11 s after
+  seat 2 started). Start-up only; 0.1.16 not re-run under the same conditions. Reported on couchlink#11.
