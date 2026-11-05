@@ -359,6 +359,33 @@ Unknown:
 - Smoothness at 20 Hz presence updates (looked fine in still captures; not measured).
 - Whether an alien kill uses the same death camera (likely the alien's kill animation camera instead).
 
+## Partner body, 2026-11-05 (owner away; bot input)
+
+Correction to the 2026-11-01 experiment: it modded SOLACE, but the test save is in HAB_AIRPORT, so that run proved
+nothing about spawning. Redone on HAB_AIRPORT.
+
+Observed:
+- An actor added to the root composite (Worker_NPC, with and without a model) resolves at runtime. Calling `spawn`
+  (38bd237a) on its inner `NPC_Logic_1/NPC_LOGIC_DUDE` Character returns 1, but no character appears. This was tried
+  with `named_custom_character=CREW_MEDICAL` and `custom_character_type=2` too.
+- The same `spawn` on the mission's own `scared_civvie_01` (path a958c068/bcd8075a/fee8d709/59ba8d60/4af05bfe) spawns
+  it at its level position.
+- `levelmod drivenpc` adds next to that NPC, in M04_Pt01:
+  - `COOP_Target` (PositionMarker, magic position);
+  - `COOP_GoTo` (CMD_GoTo);
+  - `COOP_Bind` (TriggerBindCharacter);
+  - `COOP_Loop` (LogicDelay 0.25 s, ID a51f7823).
+
+  Each ID is the ShortGuid of its name. Triggering `COOP_Loop` and writing positions into the marker's parameter
+  block (one copy in memory) made the NPC walk to each new position: (−91,24) → (−90.8,24.7), (−86,27) →
+  (−86.4,27.5).
+- Overwriting the NPC's own spawn-position parameter block before `spawn` spawned it at that position.
+- coopnet integration, two copies: the body followed the partner (partner (37.7,−12.8), body (38.2,−12.4)) and was
+  visible in the other game.
+
+Next: the same per level, run by the installer; then the shared alien on top (CHALLENGEMAP16 Survivor map is in the
+test copy, with the alien from the start).
+
 ## Taken from PR #156 / fork NOTES.md (not yet verified here)
 - 32-bit x86 PE, ASLR, no SteamStub. Base 0x400000.
 - The game re-execs through Steam when it isn't launched by Steam. A dxgi.dll proxy in the test copy never
