@@ -125,6 +125,11 @@ What carries over to other games:
   screen part with `DwmRegisterThumbnail` from a top-most popup over the game. No capture or streaming is needed, and
   it works for any game. Find the partner's window by the process ID it sends in its packets. Learned on
   Alien: Isolation ([games/alien-isolation](../games/alien-isolation/README.md)): S_OK between two copies at the menu.
+- **Spectating over the network: borrow a script camera.** A first-person engine usually rebuilds the player camera
+  from the character every frame, so writing it does nothing. A scripted or cutscene camera is different: it
+  renders from its own records. While the player is dead, the death camera is already active. Write the partner's
+  pose into its records each frame, and hold the game-over UI call until both are down. Learned on Alien: Isolation
+  (same write-up).
 
 ## Rules
 

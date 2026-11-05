@@ -103,6 +103,9 @@ steamwrap is a replacement `steam_api.dll` for a copy of the game:
   - The mod now leaves the dead player on that menu while they spectate. When both are down it posts Enter
     ("Load Current Save") to both games, and both were back at the checkpoint 0.7 s after the press.
   - Both orders passed.
+  - First-person spectating (same day): the dead player's game renders the partner's view. The mod writes the
+    partner's pose into the death camera's records and holds the game-over menu (UI vtable slot
+    exe 0x1300224) until both are down. The capture matched the partner's screen and followed their turn.
 - Untested: a death by the alien, the alien rules (no save with the alien), keycards and tools in a level,
   running inside Couchlink, two PCs over the internet, and two different Steam accounts.
 

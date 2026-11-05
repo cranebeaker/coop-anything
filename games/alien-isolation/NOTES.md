@@ -324,6 +324,41 @@ Unknown:
 - The bot's title-screen timing still drifts, which once sent it into Survivor Mode. Keys sent after a
   window capture fixed it.
 
+## First-person spectating, 2026-11-04 (owner away; bot input)
+
+Goal: the dead player's own game renders the living partner's first-person view.
+
+Observed:
+- The camera record coopnet reads (`[exe+0x12F0C88]+0x58` -> `+0x78C`) is an output copy. Writing it (y +3 m for 8 s)
+  left the view unchanged; the engine only rewrites it when the camera moves.
+- 512+ copies of the camera position exist in memory, mostly render buffers. Poking all of them changed nothing
+  about the viewpoint, and poking the ones inside AI.exe's .data hung the game.
+- `activate_camera` (a4959e70) on a level `CameraResource` (HAB_AIRPORT `Entrance_Area_Section/CameraResource_1`,
+  9209fab3, path 5e0c1c92/36442079/4af05bfe) switched the render camera. `deactivate_camera` (8701a315) switched
+  back.
+- Its level parameter block (position + Euler degrees after a 0x01824a1c tag) is not read live. Its live state is
+  several camera records: quaternion x,y,z,w | position | FOV | 0.05 | 1000. Found by scanning for its FOV 11.5
+  followed by 0.05 and 1000. Writing a pose into all copies at ~35 kHz moved the view to that pose.
+- While dead, the active camera is the death camera (`Archetypes\Script\Cameras\KillCamera`, in every level).
+  7 to 9 records sit at the death camera's position (matched within 1 m, rescanned at 0.5/1.5/3 s).
+- The game-over menu is opened only through the UI state class vtable (no RTTI) at exe 0x1300200:
+  - slot 0x1300224 = `FUN_00833af0` (hides the HUD, opens the "game_over_menu" movie);
+  - slot 0x1300228 = `FUN_00853830` (closes it).
+
+  Holding the 0x1300224 call keeps the world rendering. `FUN_0056e050` (slot 161 of another 311-slot vtable)
+  also touches game_over_menu but was never called at death.
+- Script dispatch (call_method) stops while dead, so replays don't run then. The held menu is shown from
+  coopnet's thread; it worked in 4 runs.
+- `Death DOF` (bcf22095, `DepthOfFieldSettings` in `Global/systemic_post_processing_1`, path ec75c162/e5ce2e1d)
+  and `Time to Death` start ~0.3 s before TriggerDeath and blur the view. Refusing their `start` (830c2104)
+  keeps the view sharp.
+- Result: p1's dead view matched p2's screen and followed p2's turn. When p2 died, both were back at the checkpoint
+  within 5 s. The final build passed again end to end.
+
+Unknown:
+- Smoothness at 20 Hz presence updates (looked fine in still captures; not measured).
+- Whether an alien kill uses the same death camera (likely the alien's kill animation camera instead).
+
 ## Taken from PR #156 / fork NOTES.md (not yet verified here)
 - 32-bit x86 PE, ASLR, no SteamStub. Base 0x400000.
 - The game re-execs through Steam when it isn't launched by Steam. A dxgi.dll proxy in the test copy never
