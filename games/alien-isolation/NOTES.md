@@ -249,6 +249,49 @@ Not done / unknown:
 - A 3D character for the partner: needs character spawning or NPC repurposing in Cathode. Unknown how.
 - Alien / NPC / doors / items / story sync: not started.
 
+## Co-op horror layer, 2026-11-04 (death, alien director, keycards, Couchlink; no bot input)
+
+Static research (level IDs from `levelmod ids` over every level; type GUIDs = CathodeLib `FunctionType` values):
+- GameOver (type `2f97adee`) lives in `Global` (`GameOver_1`, 86e967bf) and `Archetypes\Misc_Subarchetypes\NPC_Logic`
+  (`GameOver_1`, 5610bef8). The front-end level has none. Checkpoint `3df6ad0f`, CheckpointRestoredNotify `0a1c96f0`.
+- The engine keeps multiplayer leftovers in its type list: `NumDeadPlayers`, `RespawnConfig`, `SyncOnAllPlayers`,
+  `AllPlayersReady`, `IsMultiplayerMode`. No level uses them.
+- The alien is `Archetypes\NPCs\Alien\Xenomorph_NPC` (aba458ad), placed by mission scripts, cutscenes and
+  `Archetypes\Gameplay\BackstagePlayerDetection` (71602656, the vent/backstage withdraw logic).
+- Alien director types: NPC_WithdrawAlien `a8db1715`, NPC_AlienConfig `6bf2edee`, NPC_SetAlienDevelopmentStage
+  `efdb8f4d`.
+- Keycards: `Required_Assets\Pickups\keycard` (f9f99532) -> SetPlayerHasKeycard_1 (9107fd88, type a8f550ea).
+  Tools: `Required_Assets\Archetypes\Equipment\Cutting_Tool` (3c207e36) -> SetPlayerHasGatingTool_1 (85436974,
+  type aa1db15d).
+- `DebugCheckpoint` entities exist in mission scripts (for example `SHORTCUT_M09_Alien_reveal_start` in
+  M09_Pt02). Triggering one by replay could reach an alien scene without a save. Not tried.
+- Character-table tag: CathodeLib's `ALLIANCE_GROUP` (0 NEUTRAL, 1 PLAYER, 2 PLAYER_ALLY, 3 ALIEN, 4 ANDROID,
+  5 CIVILIAN, 6 SECURITY, 7 DEAD) fits the airport save's 5 and 7 (civilians, corpses), but the player is 0, not 1.
+  So the alien guess is tag 3. Not verified.
+
+Built (mod repo 83a2812):
+- The hook holds `trigger` on a GameOver entity when the partner is alive. The dead player spectates. When both are
+  down, the held message runs as the game sent it (`replay_post_raw`, after checking the target is still a GameOver).
+- Life packet (kind 3, 20 bytes): state and epoch. Alien packet (kind 4, 28 bytes): each game's alien record.
+- World-sync rules: keycard, tool, and host-only alien director rules.
+- Motion tracker and sounds. Couchlink recipe (`dist/couchlink`).
+
+Observed in game (two copies on one PC, main menu, started like the recipe does; no bot input):
+- Seat 0 took the host role and seat 1 joined 127.0.0.1:45500. The host learned the joiner from its life packets.
+- Seat profiles were seeded from `coop_saves\default` (5 files each).
+- Spectate on one PC: `DwmRegisterThumbnail` of the partner's game window returned S_OK.
+- Simulated deaths (`AIC_LIFE_TEST`) ran end to end:
+  - hold, then "partner died" on the other copy after 65 ms;
+  - the second death ran at once, and the held one was released 98 ms later.
+- The main-menu camera record is valid at (0,0,0). The overlay now treats that as "not in a level".
+
+Unknown:
+- Whether GameOver reaches `call_method` (so the hold catches it), and what the game shows while the trigger is
+  held (death animation, then frozen? camera?).
+- Whether replaying alien-director triggers on the joiner keeps the two aliens in step.
+- Whether writing the character table moves a character.
+- Whether the Couchlink recipe passes `check_recipe` (`args`/`locks` formats were not in the docs read).
+
 ## Taken from PR #156 / fork NOTES.md (not yet verified here)
 - 32-bit x86 PE, ASLR, no SteamStub. Base 0x400000.
 - The game re-execs through Steam when it isn't launched by Steam. A dxgi.dll proxy in the test copy never

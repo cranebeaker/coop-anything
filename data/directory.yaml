@@ -4433,18 +4433,18 @@
   open_source: 'yes'
   last_activity: 2026-11
   qa: automated
-  notes: Each player runs their own campaign and sees the partner as an overlay marker (name, distance, arrow),
-    not a 3D character. Doors the partner opens, items they pick up and story-mission LogicOnce steps are replayed
-    in your game by entity path through EntityManager::call_method (two copies on one PC, bot-tested). The alien
-    is not shared. A steam_api.dll wrapper
-    (no exe patch) loads coopnet.dll, which reads the camera record and sends it over Steam P2P by Steam ID (relayed, no port forwarding) or
-    direct UDP. A bot drove two copies into a level on one PC and checked marker placement both ways; the Steam path
-    was checked with the real client by loopback to the player's own ID. Two-PC / two-account play untested. Steam
-    build 4940658.
-    MIT. Write-up in games/alien-isolation.
+  notes: Each player runs their own campaign and sees the partner as an overlay marker and on a motion-tracker
+    overlay, not as a 3D character. Doors, picked-up items and story-mission LogicOnce steps are replayed in the
+    partner's game by entity path through EntityManager::call_method (two copies on one PC, bot-tested). Keycards,
+    tools and the host's alien-director events (withdraw, config, stage) use the same path but have not run in a
+    level yet; each game still has its own alien. Co-op death (spectate the partner until both are down, then both
+    reload the checkpoint) was tested between two copies with simulated deaths; holding the real game over is
+    untested. Split screen through a Couchlink recipe (seats tested as two copies, not inside Couchlink). A
+    steam_api.dll wrapper (no exe patch) loads coopnet.dll; Steam P2P by Steam ID (relayed) or direct UDP. Two-PC /
+    two-account play untested. Steam build 4940658. MIT. Write-up in games/alien-isolation.
   sources:
   - https://github.com/phoenixd123/alien-isolation-coop
-  checked: 2026-11-03
+  checked: 2026-11-04
   made_with_coop_anything: true
 - game: Outlast
   year: 2013

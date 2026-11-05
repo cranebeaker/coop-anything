@@ -121,6 +121,10 @@ What carries over to other games:
   PartyDeck on the Steam Deck, and the reverse.
 - Build a modern launcher on PartyDeck's MIT code or a GPL fork of Nucleus.
 - Record each split-screen result in the game's write-up (`games/<slug>/`) with the QA level.
+- **Spectating on one PC is free.** When one player is out (dead, waiting), show the partner's own window in their
+  screen part with `DwmRegisterThumbnail` from a top-most popup over the game. No capture or streaming is needed, and
+  it works for any game. Find the partner's window by the process ID it sends in its packets. Learned on
+  Alien: Isolation ([games/alien-isolation](../games/alien-isolation/README.md)): S_OK between two copies at the menu.
 
 ## Rules
 

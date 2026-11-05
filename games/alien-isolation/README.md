@@ -5,15 +5,22 @@
 | Engine | Cathode (Creative Assembly proprietary), 32-bit x86 |
 | Versions tested | Steam build 4940658, AI.exe SHA-256 `DDE66521798AAE8C39ED4E7A3400F561FCECFFF83619D1426B9E0CEDF5819A90` |
 | Projects | Dropper7894 Survivor Mode co-op (unreleased); Joshiloveyou presence prototype ([#85](https://github.com/cranebeaker/coop-anything/issues/85), PRs #156/#164); [alien-isolation-coop](https://github.com/phoenixd123/alien-isolation-coop) presence prototype (this write-up) |
-| QA level | automated (bot drives two real clients: marker placement; door, pickup and story-step sync) |
-| Last updated | 2026-11-03 |
+| QA level | automated (bot drives two real clients: marker placement; door, pickup and story-step sync; seats and simulated deaths between two copies) |
+| Last updated | 2026-11-04 |
 
 ## Where things stand
 
 Two from-zero efforts reach **presence**: each player runs their own campaign and sees the partner as an
 on-screen marker. This one (alien-isolation-coop) adds host/join over UDP or Steam P2P (by Steam ID, no port
 forwarding), an installer, and the first **shared world**: doors the partner opens, items they pick up and
-mission steps they reach are replayed in your game (tested with two copies on one PC). The alien and a 3D partner
+mission steps they reach are replayed in your game (tested with two copies on one PC). Since 2026-11-04 it also has:
+- co-op death: watch your partner until both are down, then both reload the checkpoint;
+- the host's alien-director events driving the joiner's alien;
+- keycard and tool sharing;
+- a motion-tracker overlay;
+- a Couchlink split-screen recipe.
+
+These mostly have offline tests only; the QA section says what ran in game. A truly shared alien and a 3D partner
 character are not done.
 
 ## Existing work
@@ -85,12 +92,19 @@ steamwrap is a replacement `steam_api.dll` for a copy of the game:
   layout both ways, **24 passed, 0 failed**. With the real Steam client, one copy at the main menu:
   loopback to its own SteamID 1168/1168 packets; to an offline account, `P2PSessionConnectFail_t`
   (error 4) reached our hand-built callback object and the game kept running.
-- Untested: two PCs over the internet, and two different Steam accounts.
+- Couch seats and death rules (2026-11-04, two copies at the main menu, no bot input):
+  - Seat 0 hosted and seat 1 joined over localhost. Empty seat profiles were seeded from `coop_saves\default`.
+  - On one PC the partner's window showed live while spectating (DWM thumbnail, S_OK).
+  - Simulated deaths went through hold, partner told (65 ms), both down, release (98 ms).
+  - Offline: death rules 27/27, tracker math 14/14.
+- Untested: a real death in a level, the alien rules (no save with the alien), keycards and tools in a level,
+  running inside Couchlink, two PCs over the internet, and two different Steam accounts.
 
 ## How to play
 
-Only presence works: you see your partner's marker, and each of you plays your own campaign.
-Install and host/join steps are in the mod repo's README (`install.ps1`, `play-coop.bat`).
+Each of you plays your own campaign. You see your partner's marker and tracker blip, and doors, items, keycards,
+tools and story steps are shared. Install and host/join steps are in the mod repo's README (`install.ps1`,
+`play-coop.bat`). For split screen on one PC, use its Couchlink recipe (`couchlink/alien-isolation-coop.json`).
 
 ## World sync (how it works)
 
@@ -99,7 +113,9 @@ method ShortGuid, the target entity holds its level-file ID at `+0xC`, and follo
 handle `+0xC`) gives a path of entity IDs that is the same on both PCs. The mod hooks call_method, captures a few
 messages, sends (method, entity, type, path), and the other game finds the entity by path and replays the method:
 `IsOpen.set_true` in a Door_Package -> `Door.request_open`; `pickup_common` collected -> its load-time "taken"
-check (hides the item); a story-mission `LogicOnce` -> the same `LogicOnce`. Details in NOTES.md.
+check (hides the item); a story-mission `LogicOnce` -> the same `LogicOnce`; a keycard or cutting tool -> the
+same grant; host only: `NPC_WithdrawAlien` / `NPC_AlienConfig` / `NPC_SetAlienDevelopmentStage` -> the same on the
+joiner. A `GameOver` trigger is held instead while the partner lives (co-op death). Details in NOTES.md.
 
 ## Known issues
 
@@ -112,5 +128,7 @@ check (hides the item); a story-mission `LogicOnce` -> the same `LogicOnce`. Det
 1. Test across two PCs with two Steam accounts (Steam P2P is built; `play-coop.bat steam-host` / `steam-join <SteamID64>`).
 2. A 3D partner character: find how Cathode spawns or moves a human NPC, and drive one from the network.
 3. Coordinate with #85 so the two efforts merge rather than duplicate.
-4. World sync beyond doors/pickups/LogicOnce (unlocks, lifts, cutscenes), then the alien: its record in the
-   character table (`AI.exe + 0x1307AC8`) and host ownership (playbook/actor-ownership.md). See NOTES.md.
+4. The alien: load a save where it appears (M06 or later), or try a mission `DebugCheckpoint` by replay. Confirm
+   its character-table tag, and whether the joiner's alien can be moved (playbook/actor-ownership.md).
+5. A real death in a level, to confirm the game over hold. Run the recipe inside Couchlink.
+6. Online lobbies and invites: planned in the mod repo's `docs/online.md`.
