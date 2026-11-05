@@ -292,6 +292,38 @@ Unknown:
 - Whether writing the character table moves a character.
 - Whether the Couchlink recipe passes `check_recipe` (`args`/`locks` formats were not in the docs read).
 
+## Real deaths in a level, 2026-11-04 (owner away; bot input)
+
+Setup: HAB_AIRPORT save, p1 and p2 on one PC. The kill was a replay of M04_Pt01 `TriggerBindCharacter_114`
+(7160ac8a, type ed4f5413): the mission's own binding of the player to `CMD_Die_1.kill`. M04_Pt01 path
+fee8d709/59ba8d60/4af05bfe.
+
+Observed:
+- The death sequence in the call_method trace:
+  - `CMD_Die_1.kill`, then `CHR_DeathMonitor.callback` (SpawnPositionSelect, Audio_Player_Death_Monitor);
+  - `Health_Damage_Death_1` method `ae498037` = `TriggerDeath` (checked: ShortGuid of "TriggerDeath");
+  - death DOF, fade to black, then the engine's game-over menu ("Load Current Save" / Previous / Mission).
+- The `GameOver` script node did **not** run. In `Global` it is wired only from `HolsterWeaponOnKillAllied`
+  (killed an ally). So the original "hold the GameOver trigger" design never fired.
+- The menu waits: still dead (camera on the floor at y 3.60) 130 s later.
+- A `PostMessage` Enter (WM_KEYDOWN/UP VK_RETURN, scan code 0x1C) to the unfocused game window picks
+  "Load Current Save". The camera was back at the checkpoint (37.28, 5.04, -9.38) within 4 s.
+- No script event marks the reload (no `ResetDeath`). The camera leaving the death spot is used instead.
+- Each death runs TriggerDeath twice, about 0 ms apart.
+- Rebuilt design (mod 54d2ccb), both orders:
+  - first death: that game waits on the menu and spectates; the partner logged "partner died" after 64 ms;
+  - second death: both pressed Load, and both were back 0.7 s after the press (p1 at once, p2 once its menu was up).
+
+Derived:
+- `Required_Assets\Health_Damage_Death` (3f4defe1) is in all 20 levels, so the death signal needs no
+  per-level data.
+
+Unknown:
+- Whether an alien kill also runs `TriggerDeath`.
+- Whether "Load Current Save" in both games lands on the same checkpoint after a long session.
+- The bot's title-screen timing still drifts, which once sent it into Survivor Mode. Keys sent after a
+  window capture fixed it.
+
 ## Taken from PR #156 / fork NOTES.md (not yet verified here)
 - 32-bit x86 PE, ASLR, no SteamStub. Base 0x400000.
 - The game re-execs through Steam when it isn't launched by Steam. A dxgi.dll proxy in the test copy never

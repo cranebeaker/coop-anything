@@ -4438,8 +4438,7 @@
     partner's game by entity path through EntityManager::call_method (two copies on one PC, bot-tested). Keycards,
     tools and the host's alien-director events (withdraw, config, stage) use the same path but have not run in a
     level yet; each game still has its own alien. Co-op death (spectate the partner until both are down, then both
-    reload the checkpoint) was tested between two copies with simulated deaths; holding the real game over is
-    untested. Split screen through a Couchlink recipe (seats tested as two copies, not inside Couchlink). A
+    reload the checkpoint) was tested in a level with real scripted deaths, both orders (two copies on one PC). Split screen through a Couchlink recipe (seats tested as two copies, not inside Couchlink). A
     steam_api.dll wrapper (no exe patch) loads coopnet.dll; Steam P2P by Steam ID (relayed) or direct UDP. Two-PC /
     two-account play untested. Steam build 4940658. MIT. Write-up in games/alien-isolation.
   sources:

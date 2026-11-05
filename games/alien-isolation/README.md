@@ -96,8 +96,14 @@ steamwrap is a replacement `steam_api.dll` for a copy of the game:
   - Seat 0 hosted and seat 1 joined over localhost. Empty seat profiles were seeded from `coop_saves\default`.
   - On one PC the partner's window showed live while spectating (DWM thumbnail, S_OK).
   - Simulated deaths went through hold, partner told (65 ms), both down, release (98 ms).
-  - Offline: death rules 27/27, tracker math 14/14.
-- Untested: a real death in a level, the alien rules (no save with the alien), keycards and tools in a level,
+  - Offline: death rules 31/31, tracker math 14/14.
+- Real deaths (2026-11-04, HAB_AIRPORT, bot-driven, killed by the mission's own `CMD_Die`):
+  - A death runs `TriggerDeath` on `Health_Damage_Death`, and the engine waits on its game-over menu. The
+    `GameOver` script node is only for killing an ally.
+  - The mod now leaves the dead player on that menu while they spectate. When both are down it posts Enter
+    ("Load Current Save") to both games, and both were back at the checkpoint 0.7 s after the press.
+  - Both orders passed.
+- Untested: a death by the alien, the alien rules (no save with the alien), keycards and tools in a level,
   running inside Couchlink, two PCs over the internet, and two different Steam accounts.
 
 ## How to play
@@ -115,7 +121,7 @@ messages, sends (method, entity, type, path), and the other game finds the entit
 `IsOpen.set_true` in a Door_Package -> `Door.request_open`; `pickup_common` collected -> its load-time "taken"
 check (hides the item); a story-mission `LogicOnce` -> the same `LogicOnce`; a keycard or cutting tool -> the
 same grant; host only: `NPC_WithdrawAlien` / `NPC_AlienConfig` / `NPC_SetAlienDevelopmentStage` -> the same on the
-joiner. A `GameOver` trigger is held instead while the partner lives (co-op death). Details in NOTES.md.
+joiner. A death (`TriggerDeath` on `Health_Damage_Death`) feeds the co-op death rules instead. Details in NOTES.md.
 
 ## Known issues
 
@@ -130,5 +136,5 @@ joiner. A `GameOver` trigger is held instead while the partner lives (co-op deat
 3. Coordinate with #85 so the two efforts merge rather than duplicate.
 4. The alien: load a save where it appears (M06 or later), or try a mission `DebugCheckpoint` by replay. Confirm
    its character-table tag, and whether the joiner's alien can be moved (playbook/actor-ownership.md).
-5. A real death in a level, to confirm the game over hold. Run the recipe inside Couchlink.
+5. A death by the alien (does it run `TriggerDeath` too?). Run the recipe inside Couchlink.
 6. Online lobbies and invites: planned in the mod repo's `docs/online.md`.
