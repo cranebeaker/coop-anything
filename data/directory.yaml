@@ -3548,7 +3548,7 @@
   open_source: yes
   last_activity: 2026-11
   qa: none
-  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795), v0.24. The other
+  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795), v0.27. The other
     player appears as a full-body character (Ethan by default; Mia, Clancy, Zoe, Chris or Joe from an in-game
     Lobby) built from the shadow-only "Shadow*" player meshes on a spawned VrDummyPlayer prefab, animated with
     Ethan's motion bank (walk/jog/crouch in 4 directions, idle, head look) and mirroring the moves RE7 plays on
@@ -3562,13 +3562,14 @@
     default; every sharing switch is one setting for both games). A fatal hit downs a player until the other
     revives them. Quick messages, pings, the other player's health and a catch-up after a rejoin are built in.
     Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend
-    in-game (they accept an invite) and jump to their chapter. Two two-player sessions (v0.11 on 2026-11-02,
-    v0.22 on 2026-11-03); v0.23-v0.24 untested. Weapon sounds and puzzles are not shared yet.
+    in-game (they accept an invite) and jump to their chapter. Doors (including pushes, at the same angle) and
+    lockpicked drawers open for both. Three two-player sessions (v0.11, v0.22, v0.24); v0.25-v0.27 tested on one
+    PC. Weapon sounds and puzzles are not shared yet.
     Write-up in games/resident-evil-7.
   sources:
   - https://github.com/xXCroissantXx/coop-re7
   - https://github.com/cranebeaker/coop-anything/tree/main/games/resident-evil-7
-  checked: 2026-11-04
+  checked: 2026-11-05
   made_with_coop_anything: true
 - game: Resident Evil Village
   year: 2021

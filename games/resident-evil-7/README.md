@@ -5,8 +5,8 @@
 | Engine | RE Engine (TDB 70) |
 | Versions tested | Steam, app 418370, buildid 22773795 (RT/DX12 build); REFramework nightly-01433 (d4611ae) with csharp-api |
 | Projects | [coop-re7](https://github.com/xXCroissantXx/coop-re7) (directory entry "Resident Evil 7 biohazard") |
-| QA level | none (bot tests on one PC, plus two two-player sessions by the author and a friend: 2026-11-02 on v0.11 and 2026-11-03 on v0.22; v0.23-v0.24 untested) |
-| Last updated | 2026-11-04 |
+| QA level | none (bot tests and live probes on one PC, plus three two-player sessions by the author and a friend: 2026-11-02 on v0.11, 2026-11-03 on v0.22 and a short one on v0.24; v0.25-v0.27 tested on one PC only) |
+| Last updated | 2026-11-05 |
 
 ## Where things stand
 
@@ -177,6 +177,29 @@ Saving is off by default and can be switched on, with automatic save backups.
 - **An unbound clip on a layer shows the bind pose.** A move from a motion set the copied body doesn't have (Jack
   lifting Ethan, the bathroom scene) gave a T-pose; muting that layer (`set_BlendRate(0)`) leaves the walk or
   idle underneath.
+- **Doors** (`app.DoorPush`, live probes 2026-11-04 on a main-house door, sm1050): `doorState` 0 closed, 2 cracked
+  by the handle, 3 pushed, 4 auto-opening, 5 open, 6 auto-closing. The handle (`app.InteractDoor`, which links its
+  `DoorPush`) calls `DoorPush.setInteract(userObject, isShakable, isDoubleDoors)`; none of the `request*` methods.
+  The one-argument `requestAutoOpen(side)` does nothing on these latched doors (87 of 106 remote opens in the
+  sessions); `requestAutoOpen(side, angle, speed, ease, doFix, doMute)` with the door's own `AutoOpenRotationSpeed`
+  and `AutoOpenEaseType` swings it open in about 1.3 s, `requestAutoClose(speed, ease, doLock, doMute)` shuts it in
+  about 1.8 s, and `requestPush(side, angle, doFix)` holds an exact angle (state 3). `requestOpened` and
+  `requestClosed` snap. `OpenSide`: Front 0, Back 1, Auto 2; side 0 sets `IsOpenFront`. A door shuts by itself
+  (`IsAutoClosable`) on each game's own timer, checking only its own player; `IsAutoClosable` can be set per door
+  and `set_pauseAutoMoving` holds it.
+- **Lua numbers into `System.Single` parameters**: an integer (`tonumber("15")`) reached the game as about 0; add
+  `0.0` first.
+- **Lockpicks** (live, the study desk sm1415_Table09A and a box sm1929_KeyPickBox03A): the lock object carries
+  `app.ItemSelectReaction` (`ReactionSettings`: CylinderKey -> state `SelectSuccess`, Knife -> `SelectFailedSP`) and a
+  `via.fsm.Fsm` (its `FsmObj`). `fsm:setCurrentState("SelectSuccess")` runs the game's own sequence
+  (SelectSuccess -> Gimmick_Open_PauseStart -> Open_End, about 3 s: sound, the locked model `*_KeyOpenBefore`
+  hidden, the opened lock shown, the desk mesh's parts 0-2 enabled, the sibling `InteractDrawer` object switched
+  on), without moving the player or opening a menu. `successInteract()` on the lock instead opens the item-select
+  menu on that player, and changing the pieces by hand is undone by the lock's FSM. In an area the game isn't
+  running the FSM waits in Gimmick_Open_PauseStart.
+- **Loose physics props** (`app.Havok.RigidBodyDynamics`): setting the Transform never moved one (every logged move
+  in the sessions ended where it started); the body is `via.dynamics.RigidBodySet` (`setPosition(index, vec3)`,
+  `setRotation`, velocities, `resetTransform`). Props in an area the game isn't running ignore everything.
 - **Molded wait hidden** and their own AI shows them as they climb out of the wall; a copy with its AI off can
   stay invisible while playing the owner's attacks (seen in the 2026-11-03 session; coop-re7 v0.23 forces the
   copy's mesh on, untested).
@@ -310,6 +333,12 @@ Saving is off by default and can be switched on, with automatic save backups.
   forced visible, 15 enemy snapshots a second with a 0.25 s buffer, a Molded health check-in every 3 s (the
   lower value wins), the friend hidden on ladders, and an optional "heal my friend" that moves the health from a
   healing item to a player within 2.5 m.
+- **v0.25-v0.27.** Doors open and close with the six-argument `requestAutoOpen` / `requestAutoClose`; a push or a
+  cracked door sends its angle 10 times a second (`dang <id> <angle> <side>`) and the other copy glides to it with
+  `requestPush`; whoever opened a door owns its self-close (the other copy's `IsAutoClosable` is off until the close
+  arrives, and the owner's waits while the other player is in the doorway). A remote lockpick sets the lock's FSM to
+  its success state. Pushed props are also moved through their `RigidBodySet`. Weapon copies on the other player's
+  hand are all tracked (one was left behind after a body rebuild and overlapped every later weapon).
 - **Downed and revive.** The player's death goes through `app.PlayerDamageController`
   (`isEnableDieByDamageInfo`, `doDie`, `add_DieHandler`, `playDeadMotion`) and the base
   `DamageController.canDie(DamageInfo)`, then `GameManager.setGameOverFlag` and `app.GameOverScreen`.
@@ -395,11 +424,20 @@ Saving is off by default and can be switched on, with automatic save backups.
   emptied for free; enemies were jittery. A save made earlier with one-sided shared progress hung on Continue
   (an event that never finished) and was recovered with "Go to my friend's chapter". Fixed in v0.23-v0.24,
   untested.
+- **Third session, 2026-11-03** (v0.24, a few minutes): the version check, Share story for both, catch-up and the
+  two-game bug report worked; game exceptions at doors fell from about 565 to 1 per game. Doors and lockpicked
+  drawers didn't sync (see How the game works); a weapon copy stuck on the other player's hand was found in a
+  video.
+- **Doors and lockpicks, 2026-11-04** (v0.27 on one PC, events fed through the normal handlers as if from the
+  other player): a latched door opened and closed smoothly, a replayed body push followed with no stalled frames,
+  the copy didn't shut by itself until the close arrived, and the player's own handle use and pushes were sent. A
+  remote lockpick opened the study desk (lockpick sound, drawer usable, no menu). Untested: the doorway hold, a
+  lockpick box in a running area, props.
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.24), unzip
+latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.27), unzip
 it and run **Install.cmd**.
 Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
 player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other.
@@ -426,7 +464,8 @@ A player starting RE7 for the first time should play the opening alone first. Fu
 ## Next steps
 
 1. A third two-player session with v0.24 and Share story on for both (story, Molded, garage fight).
-2. Share the interactions the v0.23 log names (garage-door button, puzzle unlocks).
+2. Share the interactions the v0.23 log names (garage-door button, puzzle unlocks), and confirm props move through
+   their `RigidBodySet`.
 3. Weapon sounds and muzzle flash (the held weapon's `app.WwiseContainerApp`, `app.EPVExpertMuzzleFlush`; a real
    weapon instance on the copied body froze or crashed the game).
 4. Shared key pickups that run the item's own pickup on the other side, so scripted events fire in both games.
