@@ -3539,29 +3539,37 @@
   status: prototype
   coop_scope:
     players_visible: yes
-    story: no
-    enemies: no
-    world_state: no
-    items: no
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
   players: "2"
   networking: steam-relay
   open_source: yes
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: none
-  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795). The other player
-    appears as a full-body Ethan built from the player's own shadow-only "Shadow*" meshes on a spawned
-    VrDummyPlayer prefab, animated with Ethan's motion bank (walk/jog/crouch in 4 directions, idle) and head
-    look. Position, rotation, look direction and crouch/walk flags go over Steam relay
-    (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
-    extrapolation. Local player cannot walk through the other player. Enemies are
-    shared (early); each runs in the nearest player's game and is copied in the other, with damage and deaths
-    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). A fatal hit downs a player until the other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
-    Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
-    two real players not tested together. Write-up in games/resident-evil-7.
+  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795), v0.27. The other
+    player appears as a full-body character (Ethan by default; Mia, Clancy, Zoe, Chris or Joe from an in-game
+    Lobby) built from the shadow-only "Shadow*" player meshes on a spawned VrDummyPlayer prefab, animated with
+    Ethan's motion bank (walk/jog/crouch in 4 directions, idle, head look) and mirroring the moves RE7 plays on
+    the player's body (blocking, weapon swings with the right weapon's animation set, the held weapon). Movement
+    goes over Steam relay (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with
+    interpolation. Each enemy runs in the nearest player's game and is copied in the other, with damage, deaths
+    and flinches synced; bosses run in each game with shared damage and defeat. Doors, drawers, switches,
+    breakable boxes (each player gets the box's item), one-off interactions and phone calls are shared, also for
+    areas the other player loads later; each player keeps their own supplies (one shared copy is an option), and
+    weapons and keys stay for both. Story cutscenes can be shared between nearby players (experimental, off by
+    default; every sharing switch is one setting for both games). A fatal hit downs a player until the other
+    revives them. Quick messages, pings, the other player's health and a catch-up after a rejoin are built in.
+    Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend
+    in-game (they accept an invite) and jump to their chapter. Doors (including pushes, at the same angle) and
+    lockpicked drawers open for both. Three two-player sessions (v0.11, v0.22, v0.24); v0.25-v0.27 tested on one
+    PC. Weapon sounds and puzzles are not shared yet.
+    Write-up in games/resident-evil-7.
   sources:
   - https://github.com/xXCroissantXx/coop-re7
   - https://github.com/cranebeaker/coop-anything/tree/main/games/resident-evil-7
-  checked: 2026-10-29
+  checked: 2026-11-05
   made_with_coop_anything: true
 - game: Resident Evil Village
   year: 2021
