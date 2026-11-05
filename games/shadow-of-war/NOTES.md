@@ -3944,3 +3944,20 @@ smoothing lagged the free-run start.
 - Whether the mirrored actions look right to the owner (sliding, attack animation, the indicator before an attack: that is the game's
   attack state aimed at the player; the proxies' attacks are not aimed at B's player); the bodies that stay in the air (a dead host enemy's proxy
   is given health 0 and never dies for the game); the finisher on a proxy.
+
+### Session cd, later: the counter prompt and dead bodies
+
+- **Attack aimed at B (for the counter prompt).** The game's attack start `StartAttack(health, node, record, target, ...)` takes the
+  opponent's health object as `target`; the proxies were started with 0. The host now flags an enemy whose target is the client's decoy
+  (`kTargetsClient`, bit 2 of the snapshot record's flags) and the client starts that proxy's attacks with its own player's health object as
+  the target. An AI-off orc started on a record with the player as target did not hurt the player before (notes bp), so no
+  second damage; the host's damage message stays the only one. **Not confirmed on screen:** whether the game then shows the prompt
+  (frames of B showed the "Hold ... for Glaive Attack" hint and the enemies' poses; the red/blue flash was not made out).
+- **Dead bodies.** Writing health 0 left a standing character the game never treats as dead (49 on the client after one session). The
+  game's own death runs when a hit takes the health below 0: `SimKillCharacter` sets the health to 1 and applies a hit from the client's own
+  player (record `PC_NT_L1_D1_F_LL_RL_04`, a player's attack, an enemy's record did no damage) through the hit function, after the proxy
+  is let go (its hits are dropped otherwise). One spawned orc killed that way on a single copy lay on the ground (frame), `health 0`, and was still there
+  after 16 s. The client now kills a proxy this way when its host enemy dies and when it is freed. Live (two copies, four orcs, two killed
+  on the host): `killed=5 kill_failed=0` on the client, 2 characters with health 0 on it afterwards; the frames did not settle whether they lie
+  where they fell. Side effect to check: the hit is the client player's, so the game may credit it a kill (experience, loot).
+- Probe `kill abs:<character>` does the same on any copy.
