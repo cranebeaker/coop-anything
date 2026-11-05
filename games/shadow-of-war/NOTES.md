@@ -3918,3 +3918,29 @@ smoothing lagged the free-run start.
 
 - Whether more than one enemy can be made to attack B at once (the combat circle is per player); why the archers and guards stand in the
   cheer loop; dead-enemy proxies; animation as the owner sees it.
+
+## Session 2026-11-04 cd: the client's enemies play the host's actions
+
+### Observations
+
+- The owner's report after a hand-played session (A idle at the spawn, orcs around it, B played by the owner): the orcs attack both
+  players, but on B they have no animation and no attack or counter indicator, they slide up to B and B takes damage; B can do a finisher
+  but it is a little buggy and the orc disappears; bodies of enemies killed on A stay frozen in the air on B; if B goes down the orcs
+  cannot start a kill attempt (accepted for now).
+- With the proxies' animations guessed from their speed (Idle, WalkForward, Run by name) a lone orc running at B showed a running gait and a
+  swing in window frames, but with several orcs close around B the frames showed the same crouched pose for most of a second and
+  no swing while B's health fell.
+- The animation state machine starts an action with `195988(graph, action)` for every character (the graph's owner is at `[graph+0x28]`,
+  its character at `[owner+0x40]`, the action definition at `[action+0x60]`, which has a name). A stub there (`SimActionTapInstall`) records
+  every start in a 4,096-entry ring (the old `graphwatch` records one graph and cannot run with it).
+- **New: the host sends each announced enemy's started action by name (`ANIM`, 37 bytes, reliable) and the client's proxy starts the
+  same action on its graph by name (`SimProxyPlay`); while actions are coming the speed guess is off (`coop_anim_mirror=off` brings it back).**
+  Live (four orcs around the spawn, B 280 units from A): the host sent 240 starts, the client played 44 and refused 4 in 10 s (plays by guess:
+  2). Window frames of B show the orcs around it changing pose from frame to frame (an arm coming up and down on the nearest). What the
+  owner sees was not checked.
+
+### Unknown
+
+- Whether the mirrored actions look right to the owner (sliding, attack animation, the indicator before an attack: that is the game's
+  attack state aimed at the player; the proxies' attacks are not aimed at B's player); the bodies that stay in the air (a dead host enemy's proxy
+  is given health 0 and never dies for the game); the finisher on a proxy.
