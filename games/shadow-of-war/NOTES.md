@@ -4019,3 +4019,79 @@ smoothing lagged the free-run start.
 ### Tools
 
 - Probe `proxies` (owners, health objects, health on the client), `tools/hunt_watch.py`, `tools/hunt_measure.py`.
+
+## Session 2026-11-04 cg: why the orcs stopped fighting the client (unattended runs)
+
+Both copies on one PC, test save, `coop_enemies=on`, B with `coop_follow_travel=off`; B at the north test spot (24113, 43097, 13094),
+four `Orc_Infantry` spawned on A 420 units around B (`tools/place_measure.py`, private repo). Damage messages = enemy swings that
+reached the client's decoy on the host (`dmg_sent`).
+
+### Observations
+
+- **A tool killed the decoy's registration.** Probe `kill` lets a character go as a proxy before it hits it. A cleanup that killed every
+  leftover 300-health character not within 30 units of B also hit the decoy (a `Gondorian_Soldier`, 300 health, 56 units from B at
+  that moment): the kill failed (the hit filter drops hits on the decoy) but the decoy was out of the proxy table. The tools now skip
+  the host's proxies and stand-in by identity (`live_suite.host_own`). Runs before the fix are not counted below.
+- **Arrows at the decoy.** Two `Orc_Archer` 800 units from B: one took the decoy as its target and stood 422 units from it for 60 s; the
+  decoy stayed 300/300 and the same object; no damage message reached B. Arrows do not go through the hit function (session cf), so
+  the host's archers cannot hurt the client: a gap.
+- **Who hits whom** (new probe `coopset hitlog <n>`: the next n hits that reach the hit function, logged with both characters' types,
+  health and roles). Clean 60 s control, B idle, 22 damage messages: 48 hits. Each orc swing at B's place lands on the stand-in (13)
+  and the decoy (11); the stand-in hit orcs 12 times with the moves it copies from B (`AF7A2273`, `3FD1D5E4`, B's hit reactions);
+  orc on orc 6; the decoy's wake-up pokes 3. No orc lost health.
+- **The client's hit reactions count as its strikes.** With B idle the client reported 8 hits on proxies (`AF7A2273`, its reaction
+  to being hit, touching the orc); the host applied them (0 damage for these records).
+- **Orcs fight orcs around the start.** In one run one orc took others from 300 to 0 in steps of ~73 (`139FD1658`: 300, 227, 155, 82,
+  10, dead) from the moment it was spawned; after the runs a dozen orcs kept fighting each other near the tower. Probably the host's
+  army against the spawned hostiles; it explains orcs that died without B striking in earlier runs.
+- **The stall, reproduced** (before the changes below): B striking every 4 s, after the others died one orc stood 430 units from B
+  with the decoy as its target and made no swing for 50 s. In the hit log the orc that stopped (`5FF1290`) had swung at the decoy
+  again and again until another orc and one of B's strikes (applied with the host's player as the attacker) hit it; it never swung
+  again, its target still read "decoy". A fresh decoy (`coopset decoy off`, `on`) did not start it again (it took the new decoy as
+  its target; 0 damage messages in 30 s).
+- **B's attack moves alone do not stop the orcs**: B swinging at nothing (turned away, 28 presses in 90 s) with four orcs at it: 64
+  damage messages, no stall.
+- **The decoy as the attacker does no damage.** The client's hits applied with the decoy as the attacker left every orc at 300 (12
+  logged), with or without its follower mark cleared during the call.
+- **The host's player died twice in unattended runs** (an orc, then a captain; `ActiveKillPlayer_grunt`, `ActiveGotPlayerInLastChance`):
+  between runs nothing kept it at full health. The death and army screens then stopped the host's world: every orc frozen with no
+  target, the stand-in put back 159 units off every frame. Pressing A on the army screen marks a captain; B (back) leaves it.
+- **Changed** (both switchable live with `coopset`):
+  - `coop_hit_by=poke` (default): the host applies the client's hit as its own player's (the only attacker that does damage), then
+    the decoy pokes the orc (a hit whose damage is given back), so the decoy, the client's place, is the last one that hit it.
+    `decoy` (falls back to poke when it did nothing) and `player` (the old way) remain.
+  - `coop_standin_hits=off` (default): the stand-in's copies of the other player's swings are dropped in the hit function. What the
+    client hits is told by the client; the stand-in's copy hurt the host's orcs a second time.
+  - `coop_hunt_strict` (default off, see below).
+  - `coopset keephealth on`: a test aid that puts this copy's player back at full health every frame.
+- Fresh session, new defaults, B striking every 4 s: 49 damage messages in 90 s, rising steadily (10, 17, 23, 28, 39, 45); orcs B had
+  hurt (204, 108) kept attacking.
+- **A/B in one session** (`tools/ab_hits.py`, alternating, B striking every 4 s, 90 s each): old handling (`hitby player`, stand-in
+  swings on) 52 and 56 damage messages; new (`poke`, stand-in swings off) 69 and 63; no stalled rows in any of the four. The old
+  handling did not stall in this session either, so these runs do not show what cures the stall.
+- **Swapping only the host's player or the decoy** (`coop_hunt_strict`): the hunt's redirect replaced whatever an engaged orc had
+  taken as its target, every frame, so an orc that turned on another orc had that orc overwritten by the decoy (derived from the code;
+  it matches `5FF1290`). Limited to the host's player and the decoy: orcs at B fought each other more (7739 frames left to their own
+  target) and the damage messages fell to 9, 19 and 38 in three strike runs (1, 3, 0 stalled rows). Off by default.
+- **Final check on the default build** (poke, stand-in swings off, unrestricted swap), fresh session: B idle 21 in 60 s; B striking 22
+  (1 stalled row) and 33 in 90 s. Across tonight's sessions the counts spread widely (idle 21-40 in 60 s, striking 9-69 in 90 s):
+  the host's player stands 330-450 units from B, so some orcs go for it, and orcs fight each other near the start.
+- Probe `kill` left some orcs at 1 health standing in one attack record for good (`A7AA....`, stamp unchanged); the cleanup now
+  despawns those.
+
+### Derived (not proven)
+
+- The stall shows up after an engaged orc is hit by someone other than the one it fights (another orc, or the client's strike applied
+  as the host's player's), while the hunt keeps writing the decoy over its target. Seen once in the hit log; not reproduced on demand.
+
+### Unknown
+
+- What cures the stall: neither the poke nor the strict swap is shown to; a measurement that keeps the host's player far away and
+  the orc fights out (another place, or no army) is needed first. The counter prompt gaps and the reactions on B (not looked at
+  tonight); arrows of the host's archers at the client.
+
+### Tools (private repo)
+
+- `place_measure.py` (strikes, `--air`, stall count, attack state per orc, cleanup at the end), `strike_one.py`, `decoy_watch.py`,
+  `dmg_watch.py`, `attack_state.py`, `ab_hits.py`, `pair_ready.py`, `wait_copy.py` (one pipe connection kept: a second open fails while
+  the first is held).
