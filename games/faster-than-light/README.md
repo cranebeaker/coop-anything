@@ -54,7 +54,7 @@ The mod is a Hyperspace fork; the co-op code is in `src/features/coop/`.
   the systems those crew staff; unstaffed systems belong to the captain). Jumps, event choices and the mode are the
   captain's (host's).
 - Commands: crew move, system power, weapon and drone power, fire at target, clear target, autofire, doors, pause,
-  event choice, jump, ship-sharing mode, crew owner.
+  cloaking, battery, hacking (pulse, target), mind control, teleporter, event choice, jump, ship-sharing mode, crew owner.
 - Resync: the host saves, sends the save, and every copy (the host too) reloads it and restarts lockstep. Used after a
   detected desync, for a late joiner, and to continue a saved run (tested: forced resync mid-combat, late join;
   continuing a saved run is untested).
@@ -92,8 +92,10 @@ Not released yet. Developers can build the branch and run it as described in its
 
 - Direct TCP only (default port 27890): internet play needs port forwarding or a VPN. No lobby or invites yet.
 - Configuration is by environment variables or `coop.cfg` next to `FTL.amd64`; no menu yet.
-- Store purchases, upgrades, crew abilities, hacking, mind control, teleporting and sector-exit choices are not yet
-  commands: when a guest uses them only their copy changes, the host detects a desync and resyncs everyone.
+- Store, upgrades, equipment and the crew screen are the captain's: guests' clicks there are ignored, and when the host
+  closes them after a change everyone reloads the host's save (a short pause). Sector-exit choices, crew abilities of
+  Hyperspace races and a few rarer actions are not commands yet; using them makes the host resync everyone.
+- A resync waits for a quiet moment (no jump, no event dialog), so it can take a few seconds.
 - Only tested on Linux 1.6.13 (Steam).
 
 ## Next steps

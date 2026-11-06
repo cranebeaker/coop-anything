@@ -168,3 +168,27 @@ Results: "fight" bot (chaos + weapons kept powered + targeting enemy rooms), 2 c
 | keys (real input path) | 2 | 3600 | 93 | 120 |
 | fake world (core only) | 2-8 | 300-600 | random | 14/14 checks incl. 2 mutation checks |
 Earlier failures and their fixes are listed in the sections above (catch-up desyncs, nebula, store crash, frozen store).
+
+## Special systems, captain screens, resync fixes (2026-11-06, mod commits de60056, 1ded1df)
+- Commands added: cloaking (`CloakingSystem::SetTurnedOn`), battery (`BatterySystem::SetTurnedOn(bool,bool)`, at
+  0x63cf60, added to the map as BatterySystem.zhl), hacking pulse and target (`HackingSystem::InitiatePulse`,
+  `StartHacking`), mind control (`MindSystem::QueueMindControl`, crew sent as indices), teleporter
+  (`CompleteShip::InitiateTeleport`, taken over while `CommandGui::OnLoop` runs, because the UI's teleport selection is
+  consumed there, not in an input handler). Specials bot (systems installed by a test-only command): 2 copies ffa and
+  4 copies ffa PASS, 7200 frames, ~440 special-system commands per 2-copy run. One own-crew run stopped both copies at the
+  same frame (6755) right after a jump; not reproduced on rerun (bot timing changes the game between runs); unknown cause.
+- Store, upgrades, equipment, crew manifest: guests' clicks are ignored; the host edits locally; desyncs while those
+  screens are open are expected; closing them resyncs everyone if the ship changed. Test (captain bot): host upgrades
+  shields with the ship screen open, closes it; after the resync the guest has shields 2/3; last epoch equal (PASS with
+  COOP_ALLOW_RESYNC=1).
+- Bugs found by that test and fixed:
+  - Host crash during the reload: `CustomEquipment::SetPosition` (Hyperspace) read `Equipment::shipManager`, still
+    pointing at the previous game's ShipManager, from `CommandGui::LinkShip` -> `TabbedWindow::AddWindow("equipment")`
+    inside `WorldManager::LoadGame`. Fixed by nulling the ship screens' shipManager pointers before LoadGame.
+  - Pause flags (`bPaused`, `bAutoPaused`) survive a reload and differed between copies: reset after every load.
+  - A resync started inside a lockstep frame (from a UI handler) let that frame's end be counted in the new epoch:
+    frame end is now skipped when the epoch changed during the frame.
+  - Core: `HostCompare` iterated the hash map while a desync callback restarted the session and cleared it (segfault).
+    Mismatches are collected first; a fake-world test restarts from inside OnDesync (old core: exit 139).
+  - A save taken one frame into a jump loaded at different beacons (host location 6, guest 3): resyncs now wait until
+    no jump is armed or running and no dialog is open.
