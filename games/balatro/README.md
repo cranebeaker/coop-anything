@@ -4,9 +4,9 @@
 |---|---|
 | Engine | LÖVE 11 (fused exe: `love.exe` + a zip of Lua sources), LuaJIT, luasteam |
 | Versions tested | Steam, appid 2379780, build 17459173, version 1.0.1o-FULL, `Balatro.exe` SHA-256 `0d75fe164accf3312734d4b37ac98788dd15f0b8e4f9bb8b7f90c4e59de93f47`, Windows 10 x64 |
-| Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.1), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
-| QA level | automated (bot clients, 9 scenarios incl. crashes and restarts) plus playtests to ante 8 |
-| Last updated | 2026-10-30 |
+| Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.2), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
+| QA level | automated (bot clients, 11 scenarios incl. crashes, restarts, tag stacks and boss rerolls) plus playtests to ante 8 |
+| Last updated | 2026-11-06 |
 
 ## Where things stand
 
@@ -62,6 +62,10 @@ found: [NOTES.md](NOTES.md).
   the partner without locking input.
 - Host decides blinds. The guest follows skips by state and the host's boss from the shop on.
   Guest select/skip presses show on the host's screen as a wish.
+- Boss rerolls on both sides (Director's Cut / Retcon button, Boss Tag): the one who rerolls
+  pays, the partner takes the same boss (`boss` message), so both always face one boss.
+- Pack tags open one at a time on both sides: received tags go through the game's own
+  `new_blind_choice` loop, and the guest follows a skip only once the game is idle.
 - Options: shared hand levels (planets or all upgrades), both skip tags to both, shared
   secret hands (their planets enter the partner's pool).
 - Continue after a crash: the co-op state is in `G.GAME.duo` (run id, current round score
@@ -72,16 +76,20 @@ found: [NOTES.md](NOTES.md).
 
 ## QA
 
-- `tools/run_all.ps1` in the mod repo: 9 scenarios, each two bot clients playing real games to
+- `tools/run_all.ps1` in the mod repo: 11 scenarios, each two bot clients playing real games to
   the end of ante 2, logs compared by `tools/check_logs.ps1`. It checks selections, skips,
   targets, equal totals in every round, score sent only after counting, tags, levels and
   wishes.
 - Scenarios: shop lag + planets, host shop lag + secret hands, tag stack (Double + Charm on
   both), guest wishes + slow guest, own decks, host killed at 110 s, guest killed at 45 s,
-  both killed at 130 s, guest killed and reopened by the host.
+  both killed at 130 s, guest killed and reopened by the host, tag stack with bots sitting 6 s
+  in each pack, boss rerolls on both sides. Any run also fails on `ERR two packs at once`.
 - Last full run 2026-10-27 (0.6.0): 9/9 passed (46, 46, 41, 44, 39, 20, 25, 17, 25 checks).
 - 0.6.1 (2026-10-29): scenarios 1-2 (46/46 each); a wish run (47/47); language screenshots
   (`tools/lang_test.ps1`, 15/15).
+- 0.6.2 (2026-11-04): tag stack with slow packs 41/41, boss rerolls 46/46 (host at ante 1,
+  guest at ante 2 paying $10; same boss on both at selection), scenario 1 46/46, host killed
+  20/20. The two-packs detector fired on the 0.5.0 tag behaviour (`-OldNbc`) as a check.
 
 ## How to play
 
@@ -89,15 +97,23 @@ Download the zip from the [releases](https://github.com/dobrodeetel/balatro-duo/
 `Install.cmd`, start Balatro from Steam, main menu -> CO-OP -> Play together (2 windows).
 Host: mouse and keyboard; guest: gamepad #1.
 
+Over the internet: stream the guest window to a friend with a game streaming tool such as
+[Parsec](https://parsec.app) (free for personal use) or
+[Sunshine](https://github.com/LizardByte/Sunshine) + [Moonlight](https://moonlight-stream.org);
+the friend's gamepad shows up on the host's PC and drives the guest window. Only the host needs
+the game. Balatro has no Steam Remote Play Together (not among its Steam features).
+
 ## Known issues
 
 - Gamepad presses in the window without focus are not covered by tests.
-- Boss reroll vouchers and Boss Tag on the guest are not covered by tests.
 - Continue and catch-up were bot-tested on antes 1-2 only.
 - A side that continued an older save replays that round alone (the partner already finished it).
 - Starting a second window from Steam while one runs opens it with the host's profile.
 
 ## Next steps
 
-- Bot scenarios for boss reroll vouchers, Boss Tag and higher antes.
-- Online play (the protocol is plain TCP; the address is in `duo_config.txt`, no UI yet).
+- Bot scenarios for higher antes.
+- Native online play with a copy of the game on each PC: the protocol is plain TCP and the
+  address is in `duo_config.txt`, but there is no join-by-address UI, and window placement and
+  the gamepad split assume one PC. Balatro's `luasteam.dll` has no networking (only overlay,
+  rich presence and user stats), so Steam P2P would mean calling `steam_api64.dll` through FFI.
