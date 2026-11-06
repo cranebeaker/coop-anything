@@ -261,3 +261,20 @@ trigger not).
   SystemBox::MouseClick from the cloaking/teleport buttons instead of inlining it; that one calls IncreasePower). No
   input path skips a hook.
 - Linux and Windows cannot play together; the platform is part of the build id, so the host refuses with a reason.
+
+## Windows build under Proton (2026-11-06, mod cd89dfc)
+Setup: the Windows depot (212681) in a test folder, `FTLGame.exe` rolled back to 1.6.9, Proton Experimental inside the
+Steam Linux Runtime (sniper) under headless gamescope, one Wine prefix per copy (`tests/coop/run_copies.sh` does this
+when the game folder holds `FTLGame.exe`).
+Observed:
+- Without `WINEDLLOVERRIDES="xinput1_4=n,b"` Hyperspace does not load (no zhl.log); with it, it does.
+- Windows FTL reads `settings.ini` from the game folder (Wine `+file` trace: `CreateFileW L"settings.ini"` relative to
+  the game folder), so the language chooser blocked the first runs until the runner put one there.
+- First run found a bug the static checks missed: the random32 state operand is at byte 20 of srandom32, not 21.
+- Two copies sharing one prefix: the guest's connect failed at once (WSAETIMEDOUT) and its loop stopped. Separate
+  prefixes fixed it (each copy runs in its own runtime container with its own wineserver).
+- Results, all PASS: 2 copies fight 3600 frames (872 commands, 120 equal hash checks), 4 fight own-crew, 2 specials
+  (1015 commands), 2 keys, 2 captain ffa and own-crew (with the captain resync; `COOP_ALLOW_RESYNC=1`), 4 chaos (1720),
+  8 chaos 2400 frames (2197), late join after 20 s, 80 ms simulated latency (rtt 183 ms, delay 8).
+- The same batch's captain test fails without `COOP_ALLOW_RESYNC=1`: that is the expected desync inside the captain's
+  ship screen, repaired by the resync when it closes (same as on Linux).
