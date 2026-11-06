@@ -4258,3 +4258,64 @@ keephealth off, its health drops counted; by default B's keephealth stays on so 
 ### Tools (private repo)
 
 `roam_fight.py`, `decoy_origin.py`, `stall_probe.py`, `hot_thread.py`, `death_standin.py`, `despawn_crash.py`.
+
+## Session 2026-11-06 cl: the crashes inside the game's despawn; the client's hang is something else (unattended)
+
+Both copies on one PC, test save, `coop_enemies=on`, B with `coop_follow_travel=off`. New tools (private repo):
+`despawn_ab.py` (runs of `roam_fight.py` per phase, despawn counters, caught access violations, whether a copy still answers),
+`hang_regs.py` (the hung loop's registers and the object it destroys), `unstick_ext.py` (a repair of that loop from outside, test
+only), `rtti_name.py` (vtable names; this exe has none next to its vtables).
+
+### Observations
+
+- **Where it faults.** The game's despawn `1A8BB74(character, 0, 0)`: (1) `100748` releases the character's entry in a 256-entry
+  table by its index at `character+0x2BF8` (entry `+0x10` non-zero: `360EAC`); (2) `361548([character+0x2D10], 0)`, which first
+  calls `377320` (through the thunk `1156A24`): it reads the component's `+8` (then `+0x70` of that) and each pointer of the array
+  `+0x10..+0x18` (then `+0x70` of each) and hands each to `60B484`, which reads a table at `[handle+8]`; (3) it sets the AI data's
+  `+0x910` and `+0x912` to 1 and `+0x914`. Every caught fault was in (2) or below (`3615C7`, `377365`/`376`/`37E`, `60B53F`,
+  `60B615`, `2775D2`, `251C2E`): the component's fields held 8, -1, 0x22 and other non-pointers.
+- **Who asked.** The client asks its own population (what its game ticks that is not a proxy) to go every 1.5 s, and asked the
+  same characters again and again until the game removed them. New counters in the `enemies` status (`despawn_calls`,
+  `_repeats`, `_skipped`, `_faults`, `_repeat_faults`, `_refused`) and a log line per fault ("the game's despawn faulted on ...
+  (asked before: ...)").
+- **A/B** (both copies, 6 roaming fights of 60 s per phase, wild wargs and camp orcs left in, each run starting with the cleanup
+  and teleport that preceded both hangs of session ck):
+  - old way (`coopset despawnonce off`): the client made 3,560 despawn calls, 3,255 of them repeats; **38 faults, all 38 on a
+    repeat ask**; 16 access violations caught. Some repeats read the "asked" byte (`+0x910`) as 232 and 248: the character's
+    memory had been freed and reused.
+  - new way (`despawnonce on`): 297 calls, 7,292 repeats skipped, **0 faults, 0 access violations**.
+- **Fix 1** (both roles, default on; `coopset despawnonce off` for tests): a character is asked once. A call is skipped when its AI
+  data is already marked (`+0x910`) or it was asked in the last 60 s (by address: the population list can still hold a character
+  freed in the last 400 ms).
+- Ten more fights with fix 1 on fresh copies: 434 calls, 9,585 repeats skipped, **2 faults, both on a first ask**, in one frame:
+  two far-off proxies (an `Orc_Defender` spawned 120 s before ~5,000 units away) freed when the host stopped announcing them
+  (`FreeProxy`: the proxy is killed, then asked to go in the same frame).
+- **Fix 2**: before the call, the component is checked the way `377320` will walk it (its `+8` and each array entry 0 or readable,
+  each one's `+0x70` handle 0 or readable, the handle's table 0 or readable); if not, the character is not asked (counted
+  `despawn_refused`, logged). Unit tests 88/88 and 36/36, the guard's offline suite 56/56 (it refuses a test root inside the real
+  `%LOCALAPPDATA%`: run it from `local/`). The final build in 4 fights: 213 calls, 3,548 repeats skipped, 0 faults, 0 refused, 0
+  access violations, no hang, every damage message applied on B (56 of 56).
+- **The client still hung once** (third time in two days), after the third of ten fights with fix 1 and **no fault and no access
+  violation in that session**: the same loop as session ck (`4DD18C`, from `2FA174` <- `2D47E0`). So the despawn faults are not its
+  (only) cause. The registers in the loop (`tools/hang_regs.py`): the object being destroyed has the base vtable `1DB7358` (set by
+  that destructor; the constructor `4DD2E4`/`4DD300` builds three such lists at `+8`, `+0x18`, `+0x28` and is called from dozens of
+  static initializers: an event/signal-like type); its list at `+8` had a last node whose owner has vtable `1DB6BE0` (a link type,
+  61 references in the code) and whose "previous" link pointed at a node outside the list, so unlinking it never empties the list.
+  The other node's owner has vtable `1DAA9D0`, the type `361548` also builds.
+- **A repair is not enough.** Marking that list empty from outside while the thread sat in the loop (`tools/unstick_ext.py`) let the
+  loop end; the game ran on for a moment (queued events, the teleport) and then crashed (unhandled access violation at `15FD40`
+  reading `0x1C0`, from `2D4B56` <- `1F6922` <- `1A89D3` <- `160A29` ... `2FC447`) and closed. A watch doing that inside the mod was
+  built and removed again: it turns a hang into a crash.
+- Closing the client while connected: the host logged "connection lost", kept its stand-in and caught no fault.
+
+### Also seen (not fixed)
+
+- Late in a long session the host's swings fell off (27, 4, 4, 0, 0 per minute in the A/B's second phase) and the client applied
+  fewer of them (`dmg_stale` 164 of 220: messages for host enemies that had no proxy on the client at that moment); with fix 1 on
+  fresh copies the first 4 of 10 runs applied every message (55 of 55), later ones half or less. The client's proxies are freed by
+  its game and spawned again often (up to 11 spawns per 10 s); only 9 of its proxies were killed by its own hits in one session.
+
+### Unknown
+
+- Who breaks the link in the destroyed object's list (a write watch on the node is the next step), and whether the mod's proxies
+  (spawned, adopted, freed and spawned again many times) are part of it.
