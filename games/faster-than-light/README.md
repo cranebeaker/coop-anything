@@ -118,11 +118,13 @@ guests: `role=guest`, `address=<host>:27890`. Host keys: F9 start, F10 resync, F
   closes them after a change everyone reloads the host's save (a short pause). Sector-exit choices, crew abilities of
   Hyperspace races and a few rarer actions are not commands yet; using them makes the host resync everyone.
 - A resync waits for a quiet moment (no jump, no event dialog), so it can take a few seconds.
-- Only tested on Linux 1.6.13 (Steam).
+- Only tested on Linux 1.6.13 (Steam). A Windows 1.6.9 build exists (mod commit 6a9dbce): it compiles and its
+  addresses were checked against the 1.6.9 game file, but it has not been run yet. Windows and Linux players cannot
+  share a game (different programs, so the simulations differ); a Linux player can use the Windows game under Proton.
 
 ## Next steps
 
 - Remaining actions as commands (store, upgrades, teleporter, hacking, mind control, cloaking, crew abilities, sector map).
 - Steam lobbies and relayed P2P instead of direct TCP.
 - An in-game host/join screen; per-player crew markers in own-crew mode.
-- Windows 1.6.9 (Hyperspace supports it; the random32 and menu_pause addresses differ).
+- Run the Windows 1.6.9 build (under Proton on the test PC, then with Windows players).

@@ -242,3 +242,22 @@ trigger not).
 ## Soak (2026-11-06, mod a0f5879)
 - 2 copies fight, 36000 frames (10 minutes of game time): PASS, 8232 commands, 1200 equal hash checks.
 - 4 copies fight own-crew, 21600 frames (6 minutes): PASS, 3776 commands, 720 equal hash checks.
+
+## Windows port (2026-11-06, mod 6a9dbce)
+- Game file: Steam's Windows depot 212681 has 1.6.14 (`FTLGame.exe` SHA-1 c58e5283…). Hyperspace's
+  FTL-Version-Rollback `Steam-1.6.14.bps` turns it into 1.6.9 (SHA-1 eadd0a60…; the patch's source and target CRCs
+  matched). PE32, image base 0x400000, imports `rand`/`srand` from msvcrt.dll.
+- `menu_pause` is CommandGui+0x2e72 on Windows (bPaused +0x2e70, bAutoPaused +0x2e71). CommandGui::OnLoop (0x5220b0) writes
+  it 0, 1, 1 at +0x335, +0x381, +0x3b5, the same pattern as Linux. The mod scans the function for exactly these three
+  7-byte writes and patches only if all three are there.
+- random32 state: 0x828110 (64-bit), read from `srandom32` (0x62f000: `mov dword [state+4],0 … mov [state],eax`).
+- rand/srand: the mod rewrites FTLGame.exe's msvcrt import slots; results are 15-bit (msvcrt RAND_MAX 0x7fff, which
+  the game's code is compiled against).
+- Missing from Hyperspace's win32 map, added: `BatterySystem::SetTurnedOn` (0x608b80, called by BatteryBox::MouseClick
+  with (1, 0)) and `ParticleEmitter::OnUpdate` (0x586c00, called by CrewAnimation::OnUpdateEffects, calls
+  CFPS::GetSpeedFactor 3 times like the Linux one).
+- Static check of every hooked function, direct calls Windows vs Linux: equal or more on Windows, except
+  PowerWeapon (ImportShip inlined it; the click path SelectArmament still calls it) and IncreasePower (Windows calls
+  SystemBox::MouseClick from the cloaking/teleport buttons instead of inlining it; that one calls IncreasePower). No
+  input path skips a hook.
+- Linux and Windows cannot play together; the platform is part of the build id, so the host refuses with a reason.
