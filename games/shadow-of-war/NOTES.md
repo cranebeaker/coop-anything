@@ -4095,3 +4095,40 @@ reached the client's decoy on the host (`dmg_sent`).
 - `place_measure.py` (strikes, `--air`, stall count, attack state per orc, cleanup at the end), `strike_one.py`, `decoy_watch.py`,
   `dmg_watch.py`, `attack_state.py`, `ab_hits.py`, `pair_ready.py`, `wait_copy.py` (one pipe connection kept: a second open fails while
   the first is held).
+
+## Session 2026-11-05 ch: archers at the decoy, strike reactions, a counter, a crash in the AI's goal code (unattended)
+
+Both copies on one PC, test save, `coop_enemies=on`, `coopset keephealth on` on both. Frames are B's window (`tools/shot.ps1`);
+grids kept in `local/logs` (not published).
+
+### Observations
+
+- **The host's archers do not reach the decoy.** New counter: health the decoy loses outside the hit function (`decoy_hurt`). An
+  `Orc_Archer` with the decoy as its target, 370-390 units from it, started its shot (`EB96E382`) every ~4 s; over 60 s hidden and
+  30 s more at full size (`coopset decoyhide off`) the decoy lost nothing, and in 20 s the hit function saw no hit at all
+  (`hitlog`). So no arrow lands on the decoy and the client is never hurt by the host's archers.
+- **Strike reactions on the client** (`tools/strike_frames.py`, B beside one orc, 8 strikes, 14 frames): with `coop_proxy_react=on`
+  the orc doubled over at the first hit, then "Critical Hit" and it was thrown back; from the fifth frame its body lay on the ground.
+  With `off` it showed no reaction and was gone after the fifth frame, no body in view (the owner's "the orc turns invisible").
+  2 and 3 strikes were reported to the host. One run each.
+- **A counter** (`tools/counter_frames.py`, three orcs at B, B pressing Y every 0.25 s for 12 s while they attacked: 7 damage
+  messages): one frame shows the white Y prompt above an attacking orc; the next shows B lunging at that orc with the green wraith
+  flash and the orc thrown back, then "Critical Hit". Most likely a counter with the orc's reaction; seen in one run, from frames only.
+  A red (dodge-only) prompt also showed for another attack. 1 hit of B's was reported in the 12 s.
+- **A crash on the host**: access violation at rva `11AA3A` reading `0x28`, stack `11A4CA 11A288 123C7C 122513 1236A8 1F7360 ...`,
+  4 s after three orcs were spawned, some at the addresses of orcs killed seconds before (first time at this address in either
+  copy's log). The code is the AI's goal-slot code that the hunt's target swap writes into. The swap now skips a dead enemy and a
+  current target that is not a character (`retarget_skipped`); the next run (an idle run and the counter run, the same
+  kill-then-spawn order) had no crash, with 60 swaps skipped. Whether the swap caused the crash is not proven.
+- Probe `kill` left orcs alive at 1 health in most cleanups of this session (6 of 6 in one); the tools despawn those.
+
+### Unknown
+
+- Why no arrow lands on the decoy (it is moved by writing its transform every frame; its physics body may stay behind; not checked);
+  how the client should take the host's archers' arrows.
+- Whether the client's counters always work and show (one run); executions by the client (not tried).
+- The stall from session cg (not looked at again).
+
+### Tools (private repo)
+
+- `clear_hostiles.py`, `counter_frames.py`, `grid.ps1` (frames into one image), `strike_frames.py` (B beside the orc, turned to it).
