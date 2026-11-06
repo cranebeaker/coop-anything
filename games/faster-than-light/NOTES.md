@@ -209,3 +209,19 @@ Earlier failures and their fixes are listed in the sections above (catch-up desy
 - Linux installer `Release Files/Linux/coop-install.sh`: checks FTL.amd64's SHA-256, copies the .so, writes coop.cfg,
   patches data/FTL so only `exec FTL.amd64` gets LD_PRELOAD (as Hyperspace's install notes say); --uninstall restores
   the script byte for byte (checked on a hard-linked test copy; the owner's install was not touched).
+
+## Latency and connecting (2026-11-06, mod commits 08ade05, latest)
+- Test switch FTL_COOP_TEST_LATENCY_MS holds every outgoing message (one-way latency, both directions).
+- Fixed input delay 4 frames (67 ms): 50 ms one-way no cost; 150 ms one-way: 424 host stalls in 1800 frames, 42 s
+  instead of 35 s. A first adaptive version measured the round trip from bundle send to DONE, which includes the input
+  delay itself and ran away (385 ms measured for 120 ms). Now the host pings each guest twice a second and sets
+  delay = ceil(one-way / 16.7 ms) + 2 and window = delay + round trip in frames + 4.
+- With adaptive delay, 2 copies, 1800 frames: 0 ms -> delay 3, 36 s; 100 ms one-way -> rtt 217, delay 9, 35 s, 2 stalls;
+  150 ms one-way -> rtt 317, delay 12, 36 s, 8 stalls. All PASS. Fake world at 60 ms paced at 60 fps: delay 7, 10.4 s for
+  600 frames.
+- Regression after it, all PASS: 4 copies fight own-crew, 8 copies chaos (4051 commands), 2 copies specials, 4 copies at
+  80 ms, forced resync at 60 ms, late join at 50 ms.
+- Ending: the host now quits only after every guest reached the end frame (tests); a guest whose host disappeared stops
+  lockstep and keeps playing the run alone (before: it waited forever).
+- A guest started 15 s before its host retried every 3 s (connect timeout 2 s), connected when the host came up, and the
+  two ran 900 frames in sync.

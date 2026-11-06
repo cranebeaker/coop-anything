@@ -89,6 +89,10 @@ end frame):
 | fight + forced resync at frame 1200 | 4 | free-for-all | 3600 | 2198 |
 | captain (host upgrades in the ship screen, guest blocked) | 2 | free-for-all | 1800 | resync, last epoch equal |
 
+Latency (test switch delaying every message): 2 copies at 0 / 200 / 300 ms round trip run at full speed (35-36 s for
+1800 frames) with an adaptive input delay of 3 / 9 / 12 frames; 4 copies at 160 ms, resync at 120 ms and late join at
+100 ms round trip PASS.
+
 Also PASS on the same day: late join (3rd copy at frame 706), a guest disconnecting (host and the other guest go on,
 80 hash checks equal), continuing a saved run (mid-combat save), the Linux installer (install, launch through the
 game's start script, uninstall restores it). Fake world: 15/15 checks including three mutation checks (double apply,
@@ -104,6 +108,8 @@ guests: `role=guest`, `address=<host>:27890`. Host keys: F9 start, F10 resync, F
 ## Known issues
 
 - Direct TCP only (default port 27890): internet play needs port forwarding or a VPN. No lobby or invites yet.
+  Latency is handled by an input delay the host adapts to the measured round trip (tested up to 300 ms round trip at
+  full speed); at high latency clicks take effect a fraction of a second later.
 - Configuration is by environment variables or `coop.cfg` next to `FTL.amd64`; no menu yet.
 - Store, upgrades, equipment and the crew screen are the captain's: guests' clicks there are ignored, and when the host
   closes them after a change everyone reloads the host's save (a short pause). Sector-exit choices, crew abilities of
