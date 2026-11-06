@@ -238,3 +238,7 @@ jump to a non-neighbouring beacon did not leave the ship at the exit, and that r
 (cause unknown, only in this unusual path). Reverted to keep shipped code tested. Current behaviour: guests cannot pick
 the sector; the host's pick changes only its copy and reaches the others by a resync (resync path tested, this
 trigger not).
+
+## Soak (2026-11-06, mod a0f5879)
+- 2 copies fight, 36000 frames (10 minutes of game time): PASS, 8232 commands, 1200 equal hash checks.
+- 4 copies fight own-crew, 21600 frames (6 minutes): PASS, 3776 commands, 720 equal hash checks.

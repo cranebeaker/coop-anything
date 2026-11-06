@@ -89,6 +89,9 @@ end frame):
 | fight + forced resync at frame 1200 | 4 | free-for-all | 3600 | 2198 |
 | captain (host upgrades in the ship screen, guest blocked) | 2 | free-for-all | 1800 | resync, last epoch equal |
 
+Soak: 2 copies for 10 minutes of game time (8232 commands, 1200 hash checks) and 4 copies own-crew for 6 minutes
+(3776 commands): PASS.
+
 Latency (test switch delaying every message): 2 copies at 0 / 200 / 300 ms round trip run at full speed (35-36 s for
 1800 frames) with an adaptive input delay of 3 / 9 / 12 frames; 4 copies at 160 ms, resync at 120 ms and late join at
 100 ms round trip PASS.
