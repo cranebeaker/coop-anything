@@ -4154,3 +4154,33 @@ grids kept in `local/logs` (not published).
 
 - Whether the watch frees an orc that is stuck the way session cg saw (the log line's count per enemy shows it: one stuck orc
   logged again and again means it does not).
+
+## Session 2026-11-05 cj: a test arena, and why the decoy stopped drawing attacks
+
+### Observations
+
+- **The decoy only works near where it was spawned.** It was moved every frame by writing its transform (what is drawn); the
+  game's navigation and physics kept it at its spawn point. With the decoy spawned at the tower (where the client joins) and the
+  client moved to open ground 5,800 units below, four orcs 540-800 units away took the decoy as target, dropped it and stood
+  repeating one action (`2463C578`): 0 swings in 60 s, and with the host's player 400 units away, 0 in 50 s. After `coopset decoy
+  off` / `on` (a decoy spawned there): 22 in 50 s. This is the likeliest cause of "enemies stop attacking the client" (the
+  client moves away from where its decoy was made) and of the archers' arrows never landing on it (session ch).
+- **Fix** (`coop_decoy_reanchor`, default 150): when the decoy is that far from where the game last put it, the game's own
+  teleport moves it (otherwise the transform is written). A/B in the arena, the client moved 800 units before each run
+  (`tools/ab_decoy.py`): teleported 36 and 20 swings in 50 s, respawned 20 and 19; no stalled rows. A later idle run: 17.
+- **Test arena** (`live_suite.ARENA` = 24000, 37325, 10700; the host at `ARENA_HOST`, 1,500 units west): open flat ground below
+  the tower (x 23,250..25,250, z 9,250..11,250 within 30 units of height), found with `tools/height_map.py` (the player dropped
+  over a grid from a fixed height; landing heights). An orc camp lies south of it (walls at z ~8,500) and sends orcs; the tower's
+  cliff is north. `tools/goto_arena.py` moves A, then B (under 2,500 units apart, never a long jump), keeps both at full health,
+  clears hostile grunts within 3,000, turns both cameras. The tools that used the tower ledge use the arena now.
+- **The Nazgul gear** (owner's note): the test save's Talion wears the Nazgul set, which raises some enemies he kills as undead
+  allies that fight hostile orcs. That fits the orc-on-orc fights and deaths without a strike seen since session cg. Probe `kill`
+  is a hit from the host's player, so the test cleanups made such kills; they now write the orc's health to 0 instead (it stops;
+  no attacker). The game's despawn (`1A8BB74`) removed no living orc near the players, also not after writing it 40,000 units away.
+- Both copies once stayed on "Press A to Continue" although the guard pressed A eight times; presses through the probe's pad got
+  them in. `tools/wait_copy.py` now presses A after 90 s.
+
+### Unknown
+
+- Whether a health-0 orc can still be raised (no attacker: probably not) and whether it is left standing; whether the stand-in
+  itself (also moved by writing) has the same problem for things that target it; the Nazgul set's effect on fights in general.
