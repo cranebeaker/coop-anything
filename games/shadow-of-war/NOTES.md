@@ -4132,3 +4132,25 @@ grids kept in `local/logs` (not published).
 ### Tools (private repo)
 
 - `clear_hostiles.py`, `counter_frames.py`, `grid.ps1` (frames into one image), `strike_frames.py` (B beside the orc, turned to it).
+
+## Session 2026-11-05 ci: a watch for enemies that stop attacking the client
+
+### Observations
+
+- **Built** (host, `coop_stuck_sec`, default 20, 0 off; live `coopset stuck <s>`): an enemy that has the decoy as its target,
+  stands within 600 units of it and has had no swing reach it (the damage reports) for that long is let go by the hunt (its
+  redirect cleared) and poked by the decoy (the wake-up hit, health given back), so the client's place is again the last thing
+  that hit it. Each time is logged (`coop: stuck:` type, distance, health, seconds without a swing, its last attack, how many times
+  for this enemy) and counted (`hunt_unstuck`).
+- With 5 s (to make it fire on orcs waiting their turn): 7 times in 60 s, every poke made, orcs kept swinging (20 damage
+  messages); no crash.
+- With 20 s: two strike runs (B striking every 4 s, four orcs, 90 s): 69 and 68 damage messages, no stalled rows, the watch did
+  not fire. The stall itself did not happen, so whether the poke frees a stuck orc is not known.
+- Four orcs killed with probe `kill` after 12 s of fighting all died this time (no frozen 1-health orc to test the watch on); dead
+  orcs are left alone by it.
+- No new host crash in this session (the guard of session ch in place).
+
+### Unknown
+
+- Whether the watch frees an orc that is stuck the way session cg saw (the log line's count per enemy shows it: one stuck orc
+  logged again and again means it does not).
