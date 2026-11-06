@@ -4184,3 +4184,77 @@ grids kept in `local/logs` (not published).
 
 - Whether a health-0 orc can still be raised (no attacker: probably not) and whether it is left standing; whether the stand-in
   itself (also moved by writing) has the same problem for things that target it; the Nazgul set's effect on fights in general.
+
+## Session 2026-11-05 ck: a roaming fight, the decoy after a long jump, despawn crashes (unattended)
+
+Both copies on one PC, test save, `coop_enemies=on`, B with `coop_follow_travel=off`. New tool `tools/roam_fight.py` (private repo):
+B fights in the arena the way a player does (runs by the stick to random points, then 8-15 s of fighting: turns to the nearest orc
+and strikes 2-3 times or presses Y; walks to it when farther), the host keeps 3 orcs alive near B, and every 30 s it prints the
+damage messages the host sent, those B applied, B's hits the host applied, how many 3-s scans found an orc within 600 of B with
+the decoy as target ("engaged"), decoy reanchors and stuck-watch pokes. A window engaged in most scans with no damage message is a
+stall. Options: `--no-roam` (fight in place), `--idle`, `--no-strike`, `--only-orcs` (wild wargs, ologs and camp orcs near B
+stopped), `--fresh-decoy`, `--spawn-dist`, `--detail` (each orc's distance to the decoy, target, attack), `--feel` (B's own
+keephealth off, its health drops counted; by default B's keephealth stays on so B cannot die).
+
+### Observations
+
+- **Roaming with the 2026-11-05b build: 13 swings in 300 s** (first 300 s of a 10-minute run, cut short), stalls in 2 of 10
+  windows. Standing still, earlier sessions had 17-36 in 50 s.
+- **A decoy made far away draws no attacks after the game's teleport moves it**, the reanchor of session cj included. The decoy is
+  made where the client joins (the tower); the arena is 1,267 units across and 5,705 down. That decoy, moved to the arena: 0 swings
+  in 60 s with orcs spawned 420 units away, 0 at 700, and 0 and 0 in two more 60 s runs after it was remade at the tower on purpose
+  (`tools/decoy_origin.py`). A decoy made in the arena, same place, same spawns: 36, 25 and 13 in 60 s. Session cj's A/B moved it
+  800 units, which works. Orcs with the far-made decoy as target stood 530-840 units away without an attack for 30 s and more; the
+  others repeated `2463C578` with no target.
+- **Fix** (host, `coop_decoy_remake`, default 1000, 0 off; live `coopset remake <d>`): a jump of the client's place longer than
+  that (or 400 up or down) removes the decoy and makes it again there (logged "the client's place jumped ...", counted
+  `decoy_remade`). Redirects that point at a removed decoy are dropped first (`SimRetargetDropTarget`). Unit tests 88/88, 36/36.
+- **With the fix**: the same start (decoy made at the tower, both moved to the arena): 8 and 22 swings in two 60 s runs. The
+  roaming run: 57 swings in 300 s, 38 applied on B, all in the first 90 s, then five stalled windows (longest silence 84 s). The
+  client's death is also a jump: B killed by orcs in the arena respawned at the tower, the decoy was made again there (1,930 units,
+  5,172 up), and the host's stand-in followed B (1 unit off).
+- **Controlled arms** (fresh copies, fresh decoy, `--only-orcs`, orcs spawned 420 units from B, 240 s each, no stall in any):
+  B idle 91 swings, B fighting in place 76, B roaming without strikes 84 (188 decoy teleports). So neither moving nor striking
+  wears the decoy out within 4 minutes when only the test's orcs fight. The stalls of the roaming run had wild wargs
+  (`Warg_Brown`), a camp olog (11,165 health) and camp orcs in the fight; a stalled decoy probed with the hit function's log
+  (`coopset hitlog`, `tools/stall_probe.py`): three orcs 420 units from it made no hit on anything in 30 s; after the decoy was made
+  again, 7 damage messages in 30 s, most from wild wargs. Which of these stops the decoy is not known (the full roam with outsiders
+  could not be run cleanly: see the hangs below).
+- **Archers** (`tools/decoy_watch.py Orc_Archer`, two archers 800 units from B, decoy made in the arena): 12 damage messages in
+  60 s, all applied on B (attacks `408C85AB` and `408C85B1`, the archer then 150-250 units from the decoy). Session ch's shot was
+  `EB96E382`; whether an arrow (not a close attack) reached B is still not shown. The decoy lost no health outside the hit function.
+- **The game's despawn crashes inside, often, on the client.** The guard's handler caught access violations in the game's despawn
+  (`1A8BB74` -> `1A8BBA8` -> `361570` -> `377365` / `377374` -> `60B4A3` -> `60B54E` -> `2775D2`, reading -1, 0x78, 0x49 and other
+  bad pointers): 16 in one client session of this test day, 34-36 in each saved client log. On the client the despawns are
+  `FreeProxy` (the proxy is killed through the hit function, then despawned in the same frame) and the client's own population
+  (every 1.5 s). A quick test on the host (`tools/despawn_crash.py`: probe `despawn` of living orcs, of orcs with health written to
+  0, and of those 6 s later) caught none and despawned none (the probe's despawn waits for "out of sight").
+- **Twice the client hung** (Windows: "Not Responding"; its simulation thread at full speed, the probe still answering): the game's
+  destructor `4DD18C` empties an intrusive list by calling each element's release, and the element never leaves the list; called
+  from `76E1B8` <- `4DBD18` <- `4DBBC8` <- `2FA174` (a pass over pending objects) <- `2D47E0` (main loop). Both times right after a
+  test teleported B back into the arena, just after the host had stopped the orcs fighting B (their proxies despawned on B).
+  Likeliest cause: one of the caught crashes above left a half-removed object in that list. New tool `tools/hot_thread.py <pid>`
+  (the busiest thread's instruction pointer and the exe addresses on its stack).
+- **The host's stand-in got stuck twice**, after the same crash on the host (`377365` in the despawn path) when B died the first
+  time and when the hung B was closed: "puppet ... is gone", a new stand-in spawned when B came back, and from then on every
+  put-back of it ran ("sim: puppet move #N") but it did not move (142-876 units off for minutes); the decoy, made at the stand-in,
+  stayed with it, and no enemy attacked B. A clean death (no crash) did not do it.
+- **The client's hits are the host's player's hits.** In the default hit mode (`coop_hit_by=poke`) the host applies a client's
+  strike as a hit by its own player, then the decoy pokes; an orc the client kills is the host's kill, and the test save's Nazgul set
+  raises some of them as undead allies. Orcs fighting orcs and the host's tamed wargs showed in the runs. Not changed.
+- Also built, off by default (`coop_decoy_stall`, seconds; live `coopset decoystall <s>`; counted `decoy_stall_remade`): when an
+  enemy after the decoy stands within 600 of it and no swing has reached it for that long, the decoy is made again. Not tested.
+- The game sets the client player's maximum health back (708 in the test save) every few seconds, so a written 100,000 is not kept
+  on B. The probe's `kill` cannot kill a copy's own player (it leaves it at 1 health). An idle B with its keephealth off died under
+  three orcs within a minute, and its death and Nemesis screens stopped its world.
+
+### Unknown
+
+- Why the game's despawn crashes on the client (the kill and the despawn in one frame are the first suspect), and whether the
+  hangs and the stuck stand-in come from it (likely, not shown).
+- What stops the decoy in a fight with wild wargs, ologs and camp orcs around (or after a long session).
+- Whether arrows reach the client.
+
+### Tools (private repo)
+
+`roam_fight.py`, `decoy_origin.py`, `stall_probe.py`, `hot_thread.py`, `death_standin.py`, `despawn_crash.py`.
