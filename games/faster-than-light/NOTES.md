@@ -225,3 +225,16 @@ Earlier failures and their fixes are listed in the sections above (catch-up desy
   lockstep and keeps playing the run alone (before: it waited forever).
 - A guest started 15 s before its host retried every 3 s (connect timeout 2 s), connected when the host came up, and the
   two ran 900 frames in sync.
+
+## Sector choice: attempted, reverted (2026-11-06)
+Observed (disassembly of StarMap::OnLoop at 0x61c2e0..): when `bChoosingNewSector` (StarMap+2232) is set and
+`finalSectorChoice` (+3252) is a neighbouring sector (`NeighboringSector`), it calls `SelectNewSector(choice)`,
+`AdvanceWorldLevel()`, sets `readyToTravel`, `potentialLoc = &dummyNewSector`, clears the choice and closes the map.
+A sector click in StarMap::MouseClick sets `finalSectorChoice = potentialSectorChoice` (+3248). StarMap::OnLoop runs only
+while the map window is open (focus-window loop in CommandGui::OnLoop), so a command must repeat that code itself.
+The exit beacon is the location with `Location::beacon` set (Hyperspace StarMap.cpp).
+A C_SECTOR command doing the above plus a test bot (test-only jump to the exit beacon) did not get there: the test
+jump to a non-neighbouring beacon did not leave the ship at the exit, and that run's random state split at frame 2370
+(cause unknown, only in this unusual path). Reverted to keep shipped code tested. Current behaviour: guests cannot pick
+the sector; the host's pick changes only its copy and reaches the others by a resync (resync path tested, this
+trigger not).
