@@ -164,8 +164,8 @@ rounds=5 selects=5 skips=1 early_clicks=4 refused=4 levels host->guest=13/13 gue
      remembers it in `D.peer_known`, and a Lovely patch on the softlock line also accepts
      `DUO_hand_known(hand)`. `played` is left alone, so Supernova and Obelisk are not
      touched.
-   - `D.peer_known` lives in memory only (lost on quit and continue, like the rest of the
-     co-op state).
+   - In 0.5.0 `D.peer_known` lived in memory only; 0.6.0 saves it with the run
+     (`G.GAME.duo.known`), so it survives Continue.
 
 QA 0.5.0:
 - `run_suite.ps1 -HostShopLag 6 -Secret -Planets` (host lingers 6 s per shop; the guest
@@ -189,7 +189,7 @@ rounds=5 selects=5 skips=1 early_clicks=0 refused=0 levels host->guest=13/13 gue
 ## 0.6.0 (2026-10-27), from a playtest of 0.5.0
 Reports and what the code says:
 1. The guest left the shop first and sat on an empty screen while the host was still in
-   the shop (photo, ante 1 round 1).
+   the shop (ante 1, round 1).
    - Unknown why: no logs from that session, and the logs are overwritten on start.
    - Observed: in 0.5.0 the guest only gets a boss when the host is on the blind screen,
      in the shop or in the run start. Any loss of `bos`, a fresh run with an empty
@@ -197,7 +197,7 @@ Reports and what the code says:
    - 0.6.0: the guest asks (`need`) and waits at most 1 s, then shows its blinds with
      its own boss. The adoption (below) swaps in the host's boss when it arrives.
    - The previous log is now kept as `duo_log_prev.txt`.
-2. After a restart the blinds were out of step (photo: guest round 0 with Big up,
+2. After a restart the blinds were out of step (guest round 0 with Big up,
    host round 1 with Big defeated). Each window continued its own save, and the two
    saves were made at different moments.
    - 0.5.0 never compared positions: the host waited for "the same round and blind",
@@ -206,7 +206,7 @@ Reports and what the code says:
 4. Request: check that running out of hands doesn't block everything. 0.5.0 set
    `G.CONTROLLER.locks.duo_wait` while waiting, which blocks all input (jokers,
    consumables, run info).
-5. Crash and broken continue (photo 3).
+5. Crash and broken continue.
    - Both had a Double Tag; the skipped blind gave a Charm Tag (Mega Arcana pack) to
      both. Each side had 3 Charm Tags (own, Double copy, partner's).
    - The host opened two packs at once and crashed when they closed.
@@ -347,13 +347,68 @@ QA 0.6.1:
   not rerun on 0.6.1. Their code paths didn't change after the 0.6.0 run, where all 9
   passed.
 
+## 0.6.2 (2026-11-04), from a playtest of 0.6.1
+1. Two pack tags at once, now on the guest. Host and guest both got a Charm Tag (Mega
+   Arcana) from the skip; the guest opened both packs at once.
+   - Reproduced by bots (`run_suite.ps1 -TestTags -GuestLag 1`). Guest log: the host's tag
+     arrived at 32.93 s, `D.run_pending_nbc` fired it at 33.65 s (`NBC fired tag_charm`), and
+     the guest's own skip ran at 34.07 s, while the first pack was still opening
+     (`SKIP` + `TAG own tag_charm`).
+   - Cause: `guest_actions` ran the host's skip without waiting for the game to be idle.
+     A tag's `yep` animation runs on the blind screen before the pack state starts, so the
+     skip's own `new_blind_choice` loop opened a second pack. With people the window is
+     wide: the host sits in its own pack, so its blind states (`sy` with `p=blind`) come
+     late, and the guest is idle in between.
+   - Fix: `guest_actions` waits for `not D.busy() and not tags_busy()`.
+     `D.run_pending_nbc` does nothing while a host skip is still to follow
+     (`D.guest_skip_pending`): the skip runs the game's loop for every tag, the partner's
+     first, one pack at a time (`end_consumeable` opens the next).
+   - New detector: a booster `use_card` while the previous pack has not reached
+     `end_consumeable` logs `ERR two packs at once`, so every bot run fails on it.
+   - New bot option `--duo-test-pack-lag N` (`-PackLag`): the bot sits N s in each pack
+     like a person.
+2. Boss rerolls on both sides. The boss is shared (it sets the target and the rules).
+   - 0.6.1 refused a guest reroll ("the host picks"); a Boss Tag on the guest was used up
+     for nothing, and the guest's voucher button did nothing.
+   - Now `G.FUNCS.reroll_boss` runs on both sides (Director's Cut / Retcon button, which
+     costs $10 as in vanilla, or a Boss Tag, which is free). `D.reroll_update` waits for the
+     game's `boss_reroll` lock to clear and sends `boss` with the new key.
+   - The partner takes it without cost or animation (`D.peer_boss`: `bosses_used`, then the
+     blind screen is redrawn in place) and shows "Partner rerolled the boss".
+   - For 5 s after a reroll, `align_blinds` does not take the partner's older boss back
+     (`D.boss_override`).
+   - Director's Cut "once per ante" is per player (`boss_rerolled` is not passed on).
+
+QA 0.6.2 (bots):
+- `run_suite.ps1 -TestTags -PackLag 6 -GuestLag 1`: 41/41, 3 packs each one at a time,
+  no `ERR two packs`.
+- `run_suite.ps1 -Reroll`: host rerolls at ante 1 (as Boss Tag), guest at ante 2 (paid).
+  - First run: 45/46; the one failure was a missing log line. The guest already had the
+    host's boss from `sy` when `boss` arrived, and `D.peer_boss` returned silently. It now
+    logs "already ours".
+  - Ante 1: host `bl_window -> bl_goad`, guest `SELBOSS own=bl_goad host=bl_goad`.
+  - Ante 2: guest `bl_mouth -> bl_wall`, dollars 37 -> 27; host `BOSS peer bl_mouth ->
+    bl_wall`; guest `SELBOSS own=bl_wall host=bl_wall`.
+
+## Network play
+- Steam store categories for 2379780 have no Remote Play Together (only Single-player,
+  Full controller support, DualSense, Steam Cloud, Family Sharing...). So Steam does not
+  offer Remote Play Together invites for Balatro.
+- Balatro's `luasteam.dll` exposes only the overlay, rich presence, friends basics and user
+  stats; there are no networking or lobby functions. Steam P2P would mean calling
+  `steam_api64.dll` through LuaJIT FFI (flat API).
+- Works today without code: stream the guest window (Parsec, free for personal use, or
+  Sunshine + Moonlight); the friend's gamepad arrives on the host's PC as a local pad.
+- The mod's protocol is plain TCP and already takes an address (`duo_config.txt`:
+  `address`, `bind`), but there is no UI for it, and same-PC parts (window placement, the
+  gamepad split, the host opening the guest window) assume one PC.
+
 ## Not covered yet
 - Tags with immediate effects other than Double/Meteor, Orbital Tag copy, and pack tags
   opening on the host mid blind screen with a person at the controls.
 - Window placement with two monitors: the test machine shows one display, so only one monitor was checked. Checked by hand there with `tools/win_test.ps1` (separate profile `wt`): first start → both halves; guest moved with SetWindowPos → after a restart `place restore 884x561 at 208,181`. Host switched to Borderless in the game's Video menu → after a restart `place keep Borderless display 1`, guest still restored. The game's Video menu showed "Windowed" after a halves arrange (the old mismatch is gone). The CO-OP menu, the "What is shared..." submenu and its Back button render.
 - Hand levels shared with `all` (Space Joker, Burnt Joker, Orbital Tag) are not bot-tested; only Planet and Black Hole are.
 - Gamepad input in the unfocused window (needs a person pressing buttons).
-- Host boss reroll (Director's Cut / Retcon) and Boss Tag on the guest.
 - Antes past 2, jokers that read the score (Mr. Bones), Hieroglyph/Petroglyph (ante shift).
 - Mid-run quit and continue beyond the antes 1-2 bot runs (Continue itself is covered, see 0.6.0 above).
 - Install into the real game folder.
