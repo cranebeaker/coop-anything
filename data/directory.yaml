@@ -8652,16 +8652,16 @@
   notes: Local couch co-op on one PC for the PC game (TMNTGame.exe 1.0.0.188), two controllers, one shared midpoint camera,
     one game process. Work in progress, not finished. An injected DLL gives player 2 the mission's own registered brother (the real Raphael,
     Michelangelo or Donatello with his own weapon and combos, in 7 of the 16 story missions) or a copy of player 1's turtle in another bandana colour
-    (the other 9), and swaps the game's pad buffer around the input pipeline and player 2's AI tick; shared camera, enemy targeting, revive,
-    team moves started by either player. A scripted smoke test in a test copy starts all 16 missions and checks join, walk, jump, attack,
-    leave/rejoin, restart and crashes (156 of 160 checks passed on 2026-11-04); restarts with a copy as player 2 still crash sometimes (2 of 12),
-    level changes and full playthroughs are untested. Not released.
+    (the other 9), with his own input, shared camera, enemy targeting, revives and team moves started by either player. In scripted tests in a test
+    copy all 16 missions pass 175 of 176 checks (join, movement, input isolation, fights, leave/rejoin, restart, crashes; 2026-11-06), plus mutation,
+    revive, team-move, enemy-damage, death, restart and 20-minute stress runs. Level changes, full playthroughs and real controllers on the
+    current build are untested. Not released.
   sources:
   - https://github.com/cranebeaker/coop-anything/tree/main/games/tmnt-2007
   - https://en.wikipedia.org/wiki/TMNT_(video_game)
   - https://github.com/xan1242/UbiTMNTHax
   - https://github.com/hogsy/jaded
-  checked: '2026-11-04'
+  checked: '2026-11-06'
   made_with_coop_anything: false
 - game: Tony Hawk's Underground 2
   year: 2004

@@ -93,10 +93,23 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
   (made by the duplicate `0x00491C40`) is freed. Checkpoint reloads and restarts also free Generated objects (not
   through this function).
 - A duplicate of player 1 keeps pointers to three of player 1's own objects in its AI block (`+0x6C4`, `+0x930`,
-  `+0xA7C`; `+0x8FC` is its own). Freeing the copy corrupted the heap and the next large allocation crashed in the
-  allocator (`TMNTGame.exe+2ACC92`/`+2ACCCA`), also after those three pointers were cleared. Keeping the copy from
-  being freed (clearing `0x20000` at player 1's death) avoided it; clearing the flag from the start made restarts
-  re-initialise the copy and crash instead (2 of 9).
+  `+0xA7C`; `+0x8FC` is its own), for Raphael and Nightwatcher also the body object at `+0x49C`, and shares his
+  animation data (`[[obj+0x14]] + 0x14/+0x18/+0x34`; `+0x30` is shared only while both play the same animation).
+  Freeing the copy corrupted the heap: the next duplicate crashed in `FUN_006625e0` (`0x006ACCCA`). Clearing the
+  shared animation pointers first crashed at once (still read). Keeping the copy from being freed works: clear the
+  Generated flag `0x20000` before the reload, the reload then only hides it. Clearing the flag at creation made some
+  restarts re-initialise the live copy and crash (2 of 9).
+- Restarts from the pause menu and level changes run `ChangeMap_Execute` (`0x005F4C70`, return address `0x0055CF4B`
+  in the tests; prologue `83 EC 44 A1 90 91 49 01`); it also runs at mission start. Its argument is the calling object;
+  it moves that object's AI `+0xC0` into the mission data and clears it.
+- The game's AI functions take actor codes as well as object pointers: 1 = main actor 0, 2 = main actor 1, 3 = the
+  current object (e.g. `0x005762F0`, `0x0052EC05`). Guard hooks that treated values below `0x00400000` as invalid broke
+  enemy death sequences (a dying enemy with `[obj+0x18] = 0` was still run; crash in `FUN_004fc3f0`, `+FC3F7`).
+- The retail game registers debug input actions (`FUN_005912a0`: `0x16` Death, `0x19` KillAllEnemies, `0x2E`
+  SpecialLoadMapMenu, `0x2F` StartMenu_StartNextMap, ...) but never queries them.
+- The pause menu puts a second turtle into state 18 (downed) within seconds (the brother is parked under the level).
+- Player 1's death (state 24, no brother able to revive him) reloads the checkpoint about 2 s later and frees
+  Generated objects; a kept (non-Generated) copy is re-initialised there as a visible idle turtle.
 - In toxic water the game puts main actor 0 back on safe ground after about 3 s; a second turtle stays in state 26
   until downed. Position writes (`0x004A6150`) to a turtle in state 26 keep z but x/y snap back.
 - Crash `TMNTGame.exe+2B3E91`: `FUN_006b3e80(a, b, flag)` tests `[b+4]`; the AI function at `0x0052EC05` passes main
@@ -112,7 +125,8 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
 
 - Store/edition of the tested copy; whether other builds match.
 - Behaviour of player 2 in boss fights, cutscenes and level transitions; no mission was played to its end.
-- What else a duplicate of player 1 shares with him, and how to make one that shares nothing.
+- How to make a duplicate of player 1 that shares none of his data.
+- How a level change behaves with player 2 (not reached by any test).
 - The `27A2AE` crash (null call) has not been seen since its two known triggers were fixed (Alt held in the background
   starting team moves, and a teleport during restart teardown); its exact cause was not traced.
 
@@ -128,3 +142,7 @@ has SecuROM traces; the game exes carry a RUNASADMIN compatibility flag, so memo
 - 2026-11-03/04, `suite.py` in the test copy: all 16 story missions, 10 pass/fail checks each, judged from the mod's
   log; results and failures are listed in [README.md](README.md#qa). `p1_death.py` (player 1 killed by enemies in Map 8
   with a copy as player 2) and `probe_map.py` (frames of one mission) were used to find the hazard and death crashes.
+- 2026-11-05/06: mutation runs (`suite.py --mutant`), repeated suite runs, `depth.py` (revives, team moves, framing,
+  enemy damage with an idle control), `stress.py` (restarts, leave/join, 20-minute random input), `combo_crash.py`
+  (fights; used to find the guard hooks behind the fight crash by removing them in halves). Results in
+  [README.md](README.md#qa).

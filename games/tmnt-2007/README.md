@@ -1,7 +1,8 @@
 # TMNT (2007, PC)
 
-> **Work in progress, not finished.** Two players can play on one PC and every story mission starts and passes a
-> scripted smoke test, but no mission has been played through with two players, level changes are untested, and
+> **Work in progress, not finished.** Two players can play on one PC, and every story mission starts and passes a
+> scripted test (join, movement, fights, revives, team moves, restarts). No mission has been played through to its end
+> with two players, level changes are untested, real controllers were last checked by hand on an older build, and
 > there is no public release.
 
 | | |
@@ -9,17 +10,16 @@
 | Engine | Ubisoft Jade ("Engine v428-42" in the game's log; gameplay scripts compiled into the exe) |
 | Versions tested | Retail PC, `TMNTGame.exe` 1.0.0.188 (UPX-packed, SecuROM traces), SHA-256 `701d9f00f8c1edf790466f2ecfeb72a64fe7ccdc491f7c370ae11c1942740589`; store/edition unknown |
 | Projects | Local couch co-op by DLL injection (private, in progress; no public repo yet) |
-| QA level | automated (scripted smoke test per mission, see QA) |
-| Last updated | 2026-11-04 |
+| QA level | automated (scripted tests per mission, see QA) |
+| Last updated | 2026-11-06 |
 
 ## Where things stand
 
 A second player controls a second turtle in the same game process, on one screen, with a second controller. Where a
-mission has the other brothers loaded (7 of the 16 story missions in the test), player 2 plays the real Raphael,
-Michelangelo or Donatello with his own weapon and combos; in the other 9 he is a copy of player 1's turtle in another
-bandana colour. All 16 story missions were started with player 2 and pass a scripted smoke test (join, walk, jump,
-attack, leave and rejoin, leave while player 1 is down, restart from the pause menu). Not covered: playing a mission
-to its end, level changes, cutscenes, bosses. Not released.
+mission has the other brothers loaded (7 of the 16 story missions), player 2 plays the real Raphael, Michelangelo or
+Donatello with his own weapon and combos; in the other 9 he is a copy of player 1's turtle in another bandana colour.
+All 16 story missions start with player 2 and pass the scripted checks in the QA section. Not covered: playing a
+mission to its end, level changes, cutscenes, bosses, real controllers on the current build. Not released.
 
 ## Existing work
 
@@ -54,8 +54,8 @@ files are changed on disk.
   and is shown through the engine's control-flag setter (hide, then show). Clearing the hide flag in memory alone left
   him culled: only his weapon and bandana were drawn. A brother that is still not drawn after three tries is skipped
   for that level.
-- **Otherwise a copy of player 1.** In single-turtle levels the engine's object duplicate makes a second Leonardo, with
-  its own skeleton unshared from player 1's. The chosen hero only changes the bandana colour. An earlier version also
+- **Otherwise a copy of player 1.** In single-turtle levels the engine's object duplicate makes a second copy of player
+  1's turtle, with its own skeleton unshared from player 1's. The chosen hero only changes the bandana colour. An earlier version also
   wrote the chosen brother's identity and weapon skeleton into the copy; that made it pull katanas and freeze on its
   first attack, so it was removed.
 - **Independent input.** The pad record and wrapper are swapped around a second pass of the input pipeline and around
@@ -69,36 +69,62 @@ files are changed on disk.
   projection (focal factor `|proj._22| / 2`, 1.27 here); an earlier fixed guess of 1.05 put markers too high near the
   bottom of the screen.
 - **Keyboard only while the game is in front.** Alt is the co-op key; held for Alt+Tab it started team moves in a loop.
-- **Hazards and deaths.** Toxic water (turtle state 26) returns player 1 to safe ground after about 3 s, but player 2
-  stayed in it until he was downed (about 11 s). After 2.5 s in the water he now joins again beside player 1. When
-  player 1 dies (state 24) the checkpoint reload frees spawned objects; a copy of player 1 still shares some of player
-  1's objects, and freeing it corrupted the heap (3 of 4 deaths crashed). At the death the copy is now released and
-  kept out of that free, and used again after the reload.
+- **Player 2 appears on player 1's own spot** (joins, recoveries, team-move returns), with body pushing off until
+  they move apart. A spot beside player 1 could be over a drop: in Level 1 the copy fell, was downed and freed on
+  every join.
+- **The copy is kept, not freed, when a level reloads.** A copy of player 1 still shares some of player 1's data
+  (animation data among it); freeing it corrupted the heap and the next copy crashed the game. Before a restart or
+  level change (`ChangeMap_Execute`, `0x005F4C70`), at player 1's death and when the copy is downed, the copy loses
+  the Generated flag, so the reload only hides it, and it is used again. Restarts with a copy as player 2 crashed 5
+  of 27 times before (Map 14 every time). The Leonardo copy's duplicated katana sheath is no longer attached: kept
+  through a restart it was drawn after being freed.
+- **Hazards.** Toxic water (turtle state 26) returns player 1 to safe ground after about 3 s, but player 2 stayed in
+  it until he was downed (about 11 s). After 2.5 s in the water he now joins again beside player 1.
+- **Six guard hooks from an earlier version removed.** They returned early for any "actor" value below
+  `0x00400000`, but the game's scripts pass actor codes 1, 2 and 3 there (main actor 0, main actor 1, current object).
+  Fighting enemies crashed the game within 3 to 5 combos with them, with player 1 alone too; found by removing the
+  guard hooks in halves.
 - **Main actor 0 is never swapped to null.** Enemies near player 2 target him by swapping main actor 0 around their
   AI. After player 2 left while player 1 was down, that swap wrote null and the next script crashed
   (`TMNTGame.exe+2B3E91`).
 
 ## QA
 
-QA level is `automated`, with this scope: a smoke test per mission, not a playthrough.
+QA level is `automated`: scripted tests drive a real copy of the game. Scope: per-mission checks, stress runs and
+crash hunts; no full playthrough.
 
-- A windowed copy of the game (separate install and saves) runs in the background. A command channel into the mod
-  drives player 2 through the same input path as a real second controller, and player 1 through a virtual pad. The
-  runner (`suite.py`, in the private project) starts a fresh copy for each mission, starts a new game forced to that
-  mission, skips the intro and checks from the mod's log: player 2 joins and is drawn; he walks more than 1.5 units
-  (other directions are tried if one drops him off a ledge); he jumps (state 3 or 4); he attacks (a combat state); he
-  leaves and rejoins; he leaves while player 1 is down; a restart from the pause menu brings both back; the game is
-  still running. Only a game that stopped counts as a crash; exceptions caught by the mod's guards are logged.
-- Result, 2026-11-04 00:56, 16 missions x 10 checks: **156 of 160 pass** (Map n is story mission index n, 0-15).
-  - Map 1: the restart crashed the game (restart and no-crash fail).
-  - Map 8: the attack check got no samples (attack fail; it passed in every other run of Map 8).
-  - Map 12: player 2 walked into a ledge grab (state 6) and the runner did not try another direction (walk fail).
-- Rerun of Maps 1, 8 and 14 after the last change (mod 194): Maps 1 and 8 pass all 10; Map 14's restart crashed.
-- Restarts with a copy as player 2 over these runs: 10 of 12 pass. With a real brother: 7 of 7.
-- Player 1 killed by enemies in Map 8 with a copy as player 2 (`p1_death.py`, mods 192-193): 10 of 10 pass (game running, player 2
-  back after the checkpoint and able to walk), 4 of them followed by a restart that also passed.
-- Not covered by any script: real controllers (last played by hand on an earlier build), level changes, cutscenes,
-  bosses, finishing a mission, the camera beyond the 14-unit leash.
+How it runs: a windowed copy of the game (separate install and saves) runs in the background. A command channel into
+the mod drives player 2 through the same input path as a real second controller, and player 1 through a virtual pad;
+results are judged from the mod's log and the game process. Only a game that stopped counts as a crash. The scripts
+are in the private project (`suite.py`, `depth.py`, `stress.py`, `p1_death.py`, `combo_crash.py`).
+
+- **Per-mission suite, 16 missions x 11 checks** (boot, playable, join and drawn, walk, jump, input isolation both
+  ways, attack, leave and rejoin, leave while player 1 is down, restart from the pause menu, no crash). Last run,
+  2026-11-06 06:00 on the current build: **175 of 176 pass**. The one failure: in Map 8 player 1 was staggered by an
+  enemy when the isolation check asked him to jump. Map n is story mission index n, 0-15.
+- **Does the suite notice breakage?** Five deliberate faults, each on Map 0 (copy) and Map 5 (brother): shared input
+  and a dead stick were caught in both; a skipped player-2 recovery and the old null swap (it reproduced the
+  `2B3E91` crash) were caught where those paths run; skipping the mod's hide on leave was not, because the game hides
+  a turtle that leaves by itself.
+- **Restarts with a copy as player 2** since the restart fix: 65 of 66 in dedicated runs (10 each in Maps 14, 7, 1
+  and 4, 10 more in Map 14, 15 in Map 0). The failure was in Map 0 and led to removing the Leonardo copy's katana
+  sheath; Map 0 then passed 10 of 10. With a real brother: 10 of 10 (Map 5). Plus one restart per mission in every
+  suite run.
+- **Fights:** player 1 alone fighting the opening enemies of Map 8 crashed in 5 of 5 runs within 3 to 5 combos before
+  the guard hooks were removed; 6 of 6 runs of 12 combos without a crash after (player 1 and player 2).
+- **Co-op depth** (`depth.py`): player 1 revives player 2 (Map 5) and player 2 revives player 1 (Maps 5, 0, 8); a
+  team move started by each player, both ending on the ground and in control (Maps 5 and 0; Map 8 has no team moves,
+  player 1 is Nightwatcher there); both in
+  frame with player 2 12-14 units away; player 2's hits kill enemies (Map 8: the opening enemies died in 2 of 2 runs,
+  none in a control run with player 2 idle).
+- **Deaths:** player 1 killed by enemies with a copy as player 2 (Map 8): 14 of 14 pass (game running, player 2 back
+  after the checkpoint and able to walk); 8 of them were followed by a restart, which also passed.
+- **Stress:** 30 leave/join rounds with hero switches, 30 of 30 in Maps 5 and 0; 20 minutes of random input for both
+  players in Maps 0, 5, 8 and 14 without a crash (in Map 8 player 2 is away for a few seconds while player 1 dies and
+  the checkpoint reloads, as designed).
+- **Not covered:** level changes (the retail game never reads its debug actions such as `StartMenu_StartNextMap`, and
+  forcing `ChangeMap_Execute` did not produce a working level change), finishing a mission, cutscenes, bosses,
+  vehicle sections, real controllers on the current build (a 10-step hand checklist is ready for the owner).
 
 ## How to play
 
@@ -106,17 +132,19 @@ Not released.
 
 ## Known issues
 
-- A restart from the pause menu with a copy as player 2 can crash the game (2 of 12 in the test runs, Maps 1 and 14).
-  The copy shares some of player 1's objects; the restart frees it. A clean copy that shares nothing is not done yet.
-- Level changes with player 2 have not been tested; the mod brings player 2 back once player 1 has stood for 3 s, but
-  whether a copy survives the old level being unloaded is unknown.
+- Level changes with player 2 have not been tested; whether the kept copy and player 2's return work across a level
+  end is unknown.
+- A copy of player 1 still shares some of player 1's data. Reloads are handled by keeping the copy instead of freeing
+  it; anything else that frees it would hit the same problem.
 - In missions that load only one turtle, player 2 is a copy of player 1's turtle: same weapons and moves whatever hero
-  is picked; only the bandana colour changes.
+  is picked; only the bandana colour changes. The Leonardo copy has no katana sheath on his back.
+- Player 2 appears on top of player 1 until one of them moves.
 - Cutscenes, bosses and vehicle sections: not checked.
 - Picking or switching heroes while a turtle is climbing, wall-running or in the air can snap positions.
 
 ## Next steps
 
-- A copy of player 1 that shares none of his objects, so a restart or a checkpoint can free it safely.
-- A level-change test (the game's own level end, not a forced mission) and a two-player playthrough of a mission.
+- A level-change test and a two-player playthrough of a mission.
+- A copy of player 1 that shares none of his data.
+- The owner's hand test with real controllers on the current build.
 - Load the other brothers' data into single-turtle missions, so player 2 can be a real brother there too.
