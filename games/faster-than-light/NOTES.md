@@ -192,3 +192,20 @@ Earlier failures and their fixes are listed in the sections above (catch-up desy
     Mismatches are collected first; a fake-world test restarts from inside OnDesync (old core: exit 139).
   - A save taken one frame into a jump loaded at different beacons (host location 6, guest 3): resyncs now wait until
     no jump is armed or running and no dialog is open.
+
+## Freeze found, disconnect, continue, installer (2026-11-06, mod commits b36cb9e, f562511)
+- The "both copies stop at the same frame" freeze (seen twice with the specials bot, ffa seed 104 and own-crew seed 82)
+  came right after a hacking pulse applied while the enemy was destroyed and the ship was jumping. The bot sent commands
+  the game's own buttons would refuse. Commands are now checked like the UI checks them (HackBox: CanPulse;
+  CanHack and a drone part for a target; MindSystem::CanUse; CloakingSystem::Ready; teleporter CanSend/Charged).
+  After that, specials 4/4 PASS including both seeds (derived: the unchecked pulse caused the freeze; not proven by a
+  stack trace).
+- Disconnect: 3 copies own-crew, the last guest quits at frame 900; the host logs LEAVE, gives that player's crew
+  member to the captain (C_ASSIGN_CREW) and host + remaining guest run to frame 2400 with 80 equal hash checks.
+- Continue: a run's host save (8020 bytes, mid-combat) started a new co-op session with FTL_COOP_START=continue; both
+  copies loaded the same state (fuel 13, enemy hull 10); 60 equal hash checks; PASS.
+- Without Hyperspace.ftl, Hyperspace shows a blocking "hyperspace.xml not found" dialog; in co-op mode that error is
+  logged instead (checked: a co-op copy started through the patched start script, no dialog, FTL_HS.log line).
+- Linux installer `Release Files/Linux/coop-install.sh`: checks FTL.amd64's SHA-256, copies the .so, writes coop.cfg,
+  patches data/FTL so only `exec FTL.amd64` gets LD_PRELOAD (as Hyperspace's install notes say); --uninstall restores
+  the script byte for byte (checked on a hard-linked test copy; the owner's install was not touched).

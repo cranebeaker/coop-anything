@@ -74,19 +74,32 @@ Test tools (mod repo, `tests/coop/`):
   input path). Test switches: `FTL_COOP_TEST_HITCH` (a guest falls behind and catches up), `FTL_COOP_RNGTRACE`
   (random32 callers per hash frame, diffed with `trace_diff.py`).
 
-Last results (2026-11-06, mod commit 262a0a7, Linux Steam 1.6.13, one PC; full table in NOTES.md):
-- Fight bot (chaos plus weapons kept powered and fired at enemy rooms), 2, 4 and 8 copies, both sharing modes, up to
-  10800 frames (3 minutes of game time) through jumps, events and fights where ships were destroyed: 6 of 6 runs PASS
-  after the last fix (all hash checks equal, every copy reached the end frame); 8 copies: 6306 commands, 240 hash checks.
-- Chaos bot before the last fix (start beacon, 3600 frames): 2 copies 10/10 seeds, 4 copies own-crew, 8 copies: PASS.
-- Forced resync mid-combat (2 copies) and a late joiner (3rd copy at frame 706): PASS, state kept across the reload.
-- Keys bot through the real input path: 93 commands from hotkeys, PASS.
-- Fake world: 14/14 checks, including two mutation checks that must fail and do.
+Last results (2026-11-06, mod commit b36cb9e, Linux Steam 1.6.13, one PC under headless gamescope; full table and the
+failures that led to fixes in NOTES.md). Final regression batch, 9 of 9 PASS (all hash checks equal, every copy at the
+end frame):
+
+| Bot | Copies | Mode | Frames | Commands |
+|---|---|---|---|---|
+| fight | 2 | free-for-all | 10800 | 4586 |
+| fight | 4 | own crew | 7200 | 1316 |
+| fight | 8 | free-for-all | 7200 | 6557 |
+| specials (cloak, battery, hacking, mind control) | 2 / 4 | own crew / free-for-all | 7200 | 1287 / 4704 |
+| keys (real hotkeys through the input path) | 2 | free-for-all | 3600 | 61 |
+| chaos | 2 | free-for-all | 3600 | 798 |
+| fight + forced resync at frame 1200 | 4 | free-for-all | 3600 | 2198 |
+| captain (host upgrades in the ship screen, guest blocked) | 2 | free-for-all | 1800 | resync, last epoch equal |
+
+Also PASS on the same day: late join (3rd copy at frame 706), a guest disconnecting (host and the other guest go on,
+80 hash checks equal), continuing a saved run (mid-combat save), the Linux installer (install, launch through the
+game's start script, uninstall restores it). Fake world: 15/15 checks including three mutation checks (double apply,
+missing epoch check, restart from inside the desync callback) that fail as they must. Scorer self-test: 12/12.
 
 ## How to play
 
-Not released yet. Developers can build the branch and run it as described in its
-[COOP.md](https://github.com/SCM69/FTL-Hyperspace/blob/coop/COOP.md).
+Not released yet (no prebuilt download). Linux players can build the branch and install it with the included
+`coop-install.sh` (checks the game version, needs no Hyperspace.ftl), see
+[COOP.md](https://github.com/SCM69/FTL-Hyperspace/blob/coop/COOP.md). Host: `role=host`, `players=N` in `coop.cfg`;
+guests: `role=guest`, `address=<host>:27890`. Host keys: F9 start, F10 resync, F11 sharing mode, F7 give crew.
 
 ## Known issues
 
