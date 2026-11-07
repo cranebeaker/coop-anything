@@ -4669,3 +4669,41 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   kill B; not counted). With one of B's proxies as the attacker the kill left B at 1 health and the orcs finished it in 4 s. B
   respawned at the tower ("this player travelled alone (6097 units); back to the host in 3 s"), was taken back to the host, and
   after a 3 s walk the host's stand-in was 0 units from B; B's stand-in of A 6 units from A; no crash, 0 despawn faults.
+- **The AI table, read further** (static reading of the exe on disk with `tools/xref.py` and dumpbin, plus the probe's `trace` and
+  `wtrace` on the running copies; new tools `vtable_scan.py`, `ai_tasks.py`, `ai_lists.py`, `standin_list.py`).
+  - Observed in the code:
+    - The table class (`1FF9F50`) has only two virtual methods; neither touches the count.
+    - `1123CC` is not an add. It is a trim: with more than *n* entries scoring above 0 it lowers the weakest through `1756A8`,
+      which only writes a weight (entry+0x14). It stops the game at a count of 256 because its local scratch array holds 256.
+    - `112354` recomputes the count: the walk `245654` over the entry list (circular, head at table+8, next at +8, the entry 0x40
+      before its node). Each entry adds itself through its method `+0x1C8`, or `+0x1D0` when its byte at +0x560 is set. Then
+      `+0x150` (`7F8560`) clears that byte. So the walk removes nothing: +0x560 is a pending mark, not "finished".
+    - The walk runs from `112100` (via `2FC6B8` ← `2FF40C` ← `1C88270`, a per-character update that returns early while two
+      pointers at +0x618/+0x620 are empty) and after an add through `1C6DE98`. `1C6DE98` is reached from `1BE791C`, which
+      takes the pending object at +0x6958 of the 0xE2C8-byte object.
+    - The entry constructor `3749D8` is called from `373E1C`, which `195988` calls. `195988` is the animation state machine's
+      start-action function, the same one the mod's own plays go through.
+  - Observed live:
+    - Calls to `3749D8` on the client while the host's player struck: 19 in 8 s, all from `373E1C`, and `373E1C` from `195988`.
+    - Real orcs on the host held 1-3 entries.
+    - Each player held 5-6 entries; the client's player once 92-128.
+    - The host's stand-in of the client held 42 entries, with its count equal to its list.
+    - On the client after the client's own death, the new stand-in of the host had **count 0 and a growing list**: 302, then 407
+      after 60 s of the host striking (1.75 a second). Reproduced in a fresh session: right after `death_standin.py` the new
+      stand-in had count 0 with 25 entries.
+    - Setting the +0x560 byte on 299 of its entries released nothing, and its count stayed 0. So the walk does not run on it.
+    - In a fresh session without a death, the stand-in's list rose and fell (50, later 7), and its count followed it.
+  - Derived: the mod's check looked only at the count, so a stand-in in that state was never made again, while its list grew
+    past 256. Session cm's earlier note saw this stand-in's count at 77, so the walk does run on it at times. A walk over such a
+    list would hit the 256 stop.
+  - Unknown: what prunes the list on a normal character, and why the stand-in made after the client's death never runs the walk.
+    A guess: it was spawned while the client's world was loading, so the update `1C88270` never got its two pointers.
+  - **Fix**: the mod now also walks each table's list (at most 512 nodes, read-only, inside an exception guard). It makes a
+    character again when the larger of count and list reaches `coop_proxy_table_max` (`ai_list_max` in the `enemies` status).
+    Checked with `standin_list.py` after the client's death, the host striking for 240 s:
+    - The stand-in was made again at a list of 202 with its count at 0, and later once more at 201. The new one started with 7.
+    - Three enemy pictures were made again at lists of 200-201.
+    - No crash. `standin_list.py`'s RESULT: PASS. Unit tests 93/93 and 36/36, guard suite 52/52.
+  - Seen in passing: while the host's player lunged about some 2,500 units from the client's player, the client's picture of
+    the host trailed 900-1,700 units behind. It stood 173 units off once the host stopped. In the same run on the ledge, with
+    the players close together, it stayed 25-34 units off. Not looked into.

@@ -136,7 +136,8 @@ host starts first, client joins and gets the host's save.
   damage is sent to the client. Archers shoot less at the client than at the host's player.
 - A 256-entry table in the game's AI fills for characters whose AI the mod switches off (the client's enemy pictures, both
   stand-ins) and crashed the client three times; the mod now makes such a character again before its table fills (session cm).
-  Not yet run for hours.
+  Not yet run for hours. The table is the animation state machine's (its entries come from the start-action function); after
+  the client's death its picture of the host kept a growing list the game never counted, so the mod now checks the list too.
 - The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
 - When the host dies, the client is taken to the host's respawn point while the host is still on its death screens, and its
   fight is left behind.
@@ -144,4 +145,4 @@ host starts first, client joins and gets the host's save.
 ## Next steps
 
 - A test between two PCs over a real network (needs a second player).
-- Find what empties the AI table when a character's AI runs, so pictures need not be made again.
+- Find what prunes the AI table's list on a normal character (the walk only counts), so pictures need not be made again.
