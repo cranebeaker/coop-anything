@@ -4546,3 +4546,6 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   completed, 258 damage messages (10.3/min), 256 applied by B, `dmg_stale` 0, 40 of 49 windows engaged, 4 stalled (longest engaged
   silence 59 s), no crash line on either copy. 50 minutes of bot fighting on this build without a crash; the `11244A` check did
   not come back, so its table is still unnamed (the crash line would now carry the registers).
+- **A 10-minute run with per-orc detail** (`--seed=618 --detail`, to see what orcs do in a stalled window): 182 damage messages
+  (18.2/min), all applied, 15 of 19 windows engaged, none stalled (longest engaged silence 14 s), so nothing to look at; stalls
+  stay intermittent (0-4 per 25 minutes in the soaks above).
