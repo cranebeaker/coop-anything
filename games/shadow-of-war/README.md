@@ -141,8 +141,10 @@ host starts first, client joins and gets the host's save.
 - The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
 - When the host dies, the client is taken to the host's respawn point while the host is still on its death screens, and its
   fight is left behind.
+- After a client death the host's picture of the client once stood still 1,600 units off (the game no longer moved it); since
+  session cm the mod moves such a picture by direct writes until the game moves it again. Why it happens is not known.
 
 ## Next steps
 
 - A test between two PCs over a real network (needs a second player).
-- Find what prunes the AI table's list on a normal character (the walk only counts), so pictures need not be made again.
+- Find why the agent update skips some pictures (the pruning of the AI list lives in it; session cm), so pictures need not be made again.
