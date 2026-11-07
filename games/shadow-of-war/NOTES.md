@@ -4613,3 +4613,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 - **25-minute soak with the recycling at its default** (`--seed=618`, 4 orcs): 1,500 s completed, 319 damage messages (12.8/min),
   all applied, `dmg_stale` 0, 0 stalled windows (25 of 49 counted as engaged), no crash on either copy; the largest proxy table
   seen was 92, so no proxy had to be made again. Guard suite 52/52, `net_test` 36/36, `enemy_test` 93/93.
+- **The stand-ins' tables too.** After a 5-minute fight the stand-in's table held 77 on the client (the host's player's picture)
+  and 33 on the host; the host's decoy had none. The same check now runs on both roles for the stand-in: at the limit it is let
+  go (`SimRetirePuppet`: no stand-in, the old one 20,000 units down with health 0 and its tree skipped, asked to despawn) and the
+  usual pick makes a new one (`puppet_recycled`). Checked with the limit at 30: the host's stand-in was made again once (34
+  entries), the client made 21 proxies again, the fight went on (93 of 93 damage messages applied, every window engaged), both
+  copies up. Guard suite 52/52, `net_test` 36/36.
