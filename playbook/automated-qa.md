@@ -138,9 +138,20 @@ animation checker.
 - **The mod's own debug overlay can be the control channel.** A Dear ImGui overlay with a checkpoint list, spawn panel and relay start button let a script drive the game with a few keypresses and clicks at fixed window offsets instead of walking and menus; keep the overlay layout assumptions in one place and re-check them after a mod update (Outlast, OpenOL).
 - **Test what a late joiner receives, without the game, and look for dead code.** A relay can have a complete snapshot feature (store, queue, replay) whose last step is never called from the loop the shipped binary runs. Outlast's standalone relay sent late joiners nothing for pickups and other players' matinee and hero state because the CLI main loop skipped the drain call; the game hid it by asking for doors and enemies itself. A fake peer that sends state, a second peer that joins afterwards and lists what it receives found it in minutes; a debug build with two log lines in the queue and drain functions showed which step was missing. Add a blind-mirror twin so the check is known to fail.
 
-
 ## Menu presentation must preserve automatic startup
 
-A guest-only menu change can break co-op before simulation begins. Preserve native row identifiers and latched-input behavior when hiding host-owned campaign choices. Verify the actual derived menu renderer: a hook on a base implementation may never run for the target screen. If a native render call owns retained-object cleanup, preserve that cleanup and its calling convention rather than skipping the whole call blindly.
+When hiding host-owned campaign choices on the guest, keep the native row IDs
+and the meaning of input already queued by the game. Instrument the renderer
+that actually draws the target menu. A hook on a base implementation can miss
+a derived screen, and bypassing a native draw call can also skip object cleanup.
 
-Test the waiting guest menu, the unaffected host menu and automatic host-selected startup in the same real-client gate. A direct start-together fixture may bypass the waiting state. A cursor move can reinterpret an already-held Accept as another command; a visibility-only filter can avoid changing input semantics. In [Spider-Man: Friend or Foe's documented regression](../games/spider-man-friend-or-foe/NOTES.md#2026-11-01--beta-campaign-in-place-joining-and-launcher-update), a temporary cursor relocation opened Options and stalled startup. After removing it and filtering the correct renderer, the English/Russian pair logged only the guest's two hidden rows, preserved host-selected New Game, and passed 601 matching frames with clean exits. The failed attempt remains failed; unchanged Options/Quit code paths are not an interactive click test.
+Run one real-client test from the waiting menu through host-selected startup.
+Assert that only the guest hides the intended rows, the host can select New Game,
+the guest enters gameplay automatically, and both clients shut down cleanly.
+Start the test with the usual menu flow so it exercises the code used by players.
+
+In Friend or Foe, moving the guest cursor turned a latched Accept into an Options
+selection and stalled startup. Removing the cursor move and filtering the actual
+renderer passed 601 matching frames with clean exits. The run covered automatic
+startup. Guest Options and Quit still needed their own click checks.
+[Friend or Foe regression notes](../games/spider-man-friend-or-foe/NOTES.md#2026-11-01-beta-campaign-in-place-joining-and-launcher-update).

@@ -1,20 +1,20 @@
 # Research notes: Spider-Man: Friend or Foe
 
-Checked 2026-10-21. Implementation and detailed evidence live in the [separate source repository](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online).
+Initial research checked 2026-10-21. Implementation and detailed evidence live in the [separate source repository](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online).
 
 ## Identity and entry relationship
 
-The inspected Windows executable is version 1.0.0.111, SHA-256 `ebd30047d7e58c95bf7dc4bd1fb4a5780e16aa472b61c25a8c421632662083db`. It supports two coherent language packs with shared gameplay content and differing localized files. Other builds are unsupported.
+The initially inspected Windows executable was version 1.0.0.111, SHA-256 `ebd30047d7e58c95bf7dc4bd1fb4a5780e16aa472b61c25a8c421632662083db`. It supports two coherent language packs with shared gameplay content and differing localized files. The original English DVD was added to the supported builds in v1.3.0-beta.
 
-The three directory entries describe official local co-op, this native source prototype, and a previously listed Discord prototype. The latter's relationship to this source and executable is unknown. Earlier labels mixed a developer attribution with an Alchemy engine attribution; neither establishes an engine family for this inspected build. All three now use unknown pending corroboration. The [publisher announcement](https://investor.activision.com/static-files/d8459280-fceb-49b0-9210-86bb7010c3d3) establishes co-op/platform context, not engine identity.
+The three directory entries describe official local co-op, this native online project, and a previously listed Discord prototype. The latter's relationship to this source and executable is unknown. Earlier labels mixed a developer attribution with an Alchemy engine attribution; neither establishes an engine family for this inspected build. All three now use unknown pending corroboration. The [publisher announcement](https://investor.activision.com/static-files/d8459280-fceb-49b0-9210-86bb7010c3d3) establishes co-op/platform context, not engine identity.
 
-## Observed and derived
+## Early prototype observations (2026-10-21)
 
-The current [status record](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/main/docs/STATUS.md) separates successful bounded bot gates, failed precursors and unverified features. Current scenario 11 passed a 7,200-tick three-area fixture, a 3,600-tick pause/combat fixture, and a 361-tick quiet gameplay lifecycle. These used same-machine processes; they do not establish WAN or complete campaign co-op. A one-account lobby smoke carried no game traffic.
+The [status record](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md) separates successful bounded bot gates, failed precursors and unverified features. Scenario 11 passed a 7,200-tick three-area fixture, a 3,600-tick pause/combat fixture, and a 361-tick quiet gameplay lifecycle. These used same-machine processes; they do not establish WAN or complete campaign co-op. A one-account lobby smoke carried no game traffic.
 
 Useful lessons from retained failures: stale exit volumes survived streamed-area changes; a checksum included uninitialized padding and inactive mode history; a fixture changed input after the measured native binding stage. The corrections retain semantic fields and continuous checks rather than suppressing mismatches. A later startup crash exposed an unbounded native key-name lookup. The bounded guard passes current tests, but the original layout/target trigger remains unconfirmed.
 
-## Unknown and next gate
+## Open questions at the prototype stage (2026-10-21)
 
 Retail New Game/Continue, hub and mission selection, native save/resume, localized NIS progression, physical controls and two-PC Steam delivery remain incomplete or unverified. Next is a finite retail New Game to hub to first-mission gate with synchronized native choices and load readiness. No human playthrough, public binary or complete-world oracle is claimed.
 
@@ -36,7 +36,7 @@ Sources: [released v1.1.0-beta](https://github.com/IlkinQafarov/spider-man-frien
 - Real-client bots covered all 20 mission endings and seven bosses in a shortened campaign, host-only tutorial dialogs and native host slot/overwrite choices. This does not prove full-mission playthroughs or shared campaign save recovery.
 - Protocol 6 / scenario 13 is published in v1.1.0-beta. Verified input-journal catch-up admits a guest into the current mission without resetting the host. Cancellation/history-refusal preserve host play. Poor-network first arrival 532 and swapped reconnect 535 matched 1,904 / 1,898 post-admission frames; Doc Ock 548 matched 2,074 replay ticks plus 1,887 subsequent frames. All listed passes closed normally; earlier failures remain failed in project status.
 - New source-only WPF/single-EXE launcher changes passed eleven-language/five-state layout, native fixed-size/no-maximize, accessible-mode/notification and digest/data-preserving upgrade gates. Cross-volume discovery retained Valve signature/export checks and found compatible non-system-drive components without loading them or using an account.
-- Native joiner-menu 005 passed 601 matching frames in English/Russian, with guest row 0/1 hide markers, host no hide markers, automatic host-selected NewGame and game/launcher exits 0. Runs 001/002 failed pre-game under restricted process launching. Run 003 passed 601 frames but did not prove hiding because it intercepted a base renderer.004failed when a temporary cursor relocation entered Options; that change was removed before 005. Options/Quit keep unchanged indices/render paths, with no separate post-hide click test.
+- Native joiner-menu 005 passed 601 matching frames in English/Russian, with guest row 0/1 hide markers, host no hide markers, automatic host-selected NewGame and game/launcher exits 0. Runs 001/002 failed pre-game under restricted process launching. Run 003 passed 601 frames but did not prove hiding because it intercepted a base renderer. Run 004 failed when a temporary cursor relocation entered Options; that change was removed before 005. Options/Quit keep unchanged indices/render paths, with no separate post-hide click test.
 - Owner-reported evidence: first Tokyo mission played with a friend on two PCs over real Steam. Do not promote this to an independently verified WAN/full-campaign gate.
 
 ### Derived
@@ -53,4 +53,18 @@ Shared save/Continue recovery; real controllers; a new two-PC Steam admission ga
 
 ### v1.2.0-beta published later on 1 November
 
-The launcher/menu update above now ships in [v1.2.0-beta](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.2.0-beta), tagged to [09b36a3](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/commit/09b36a3). One EXE plus an optional checksum file is provided. Fresh player smoke passed startup/normal close and bot refusal before attach. The release EXE and its thirteen extracted payload entries passed integrity/privacy/data-preservation checks, and the uploaded/downloaded EXE matched SHA-256 `1f02769240c99b43312df694c9b03ff8c0b6a8dabff8dc51d9efa9bf66c79a52` (13,690,880 bytes). This supersedes only the earlier source-only packaging status; it adds no new two-PC Steam or full-playthrough evidence.
+The launcher/menu update above now ships in [v1.2.0-beta](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.2.0-beta), tagged to [09b36a3](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/commit/09b36a3). One EXE plus an optional checksum file is provided. Fresh player smoke passed startup/normal close and bot refusal before attach. The release EXE and its thirteen extracted payload entries passed integrity/privacy/data-preservation checks, and the uploaded/downloaded EXE matched SHA-256 `1f02769240c99b43312df694c9b03ff8c0b6a8dabff8dc51d9efa9bf66c79a52` (13,690,880 bytes). The release checks covered packaging and player smoke tests.
+
+## 2026-11-04: v1.3.0-beta build compatibility
+
+- **Observed in the release evidence.** Original English DVD pairs matched 608
+  frames and a DVD/Russian pair matched 606. All game and launcher processes
+  exited cleanly. The packaged production DLL passed a peer handshake with bot
+  and fixture flags off. [Release verification](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.3.0-beta).
+- **Derived.** Executable and content checks belong ahead of network diagnosis.
+  When two builds are allowed, test a mixed-build pair as well as matching builds
+  and exercise the packaged player path separately from the harness.
+  [Supported build hashes](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/README.md#compatibility).
+- **Open.** Two-PC Steam admission, physical controllers, complete campaign
+  coverage and shared Continue/save recovery still need evidence.
+  [Status and evidence](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md).
