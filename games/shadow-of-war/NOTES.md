@@ -4638,3 +4638,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   the decoy's (`SendArrowHit`: the nearest announced enemy after the decoy, an archer first, as `AI_Archer_Shoot`; `standin_hurt`,
   `standin_hurt_sent`), and the stand-in is healed. Checked: three archers for 60 s, 3 arrows on the stand-in, 3 sent, 3 applied by
   B (health 504 -> 429), the stand-in back to full each time. Guard suite 52/52, `net_test` 36/36, `enemy_test` 93/93.
+- **Archers in a mixed fight** (`roam_fight.py 540 4 --seed=624 --archer-every=3`: every third orc an archer): the host forwarded 19
+  arrows that hit the stand-in and 1 on the decoy; B applied 135 = 115 swings + 20 arrows; 14 of B's last 32 hits were
+  `AI_Archer_Shoot`. A second run (300 s, `--seed=625`): 10 arrows forwarded, B applied 70 = 60 + 10.
+- **One more despawn guard**: in the first mixed fight B's despawn faulted once (caught; 342 asks) on a character whose vtable was
+  already the base class's (`1DB7358`): it was being deleted. The despawn now refuses such a character (`despawn_refused`, logged
+  "is being deleted"). The second run: 188 despawns on B, 0 faults, 0 refused.
