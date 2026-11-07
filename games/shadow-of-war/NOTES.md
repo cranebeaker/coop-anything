@@ -4362,3 +4362,12 @@ only), `rtti_name.py` (vtable names; this exe has none next to its vtables).
   of ~130 such kills 10 bodies were left, and 2 of 9 bodies were gone 30 s after the kill) and writes health 0 only when the kill
   does not take. `live_suite.raised` lists the host's living orc followers near a place; `goto_arena.go` removes them at each
   run start (they fight the test's orcs). The host's count of stopped (health-0) characters stayed at 10-11 instead of growing.
+
+### Later in cl: a test save without the Nazgul set bonus
+
+- The owner swapped gear in the host's test copy so the Nazgul set bonus is gone, and quit (the game saves on quitting). The new
+  save is the test baseline now (`local/backups/2026-11-06-no-nazgul-set`, used by `prep-pair.ps1`; the old one with the set is
+  kept). With it, `tools/raise_count.py` (rounds of 8 orcs spawned at the host and killed with probe kill, then 20 s): 40 kills,
+  no killed orc alive again and no new orc follower near a kill; an earlier, looser run: 39 kills, no follower left at the end
+  (orc followers already in the save wandered in and out of range). With the set: 2 raised of 9 kills in one check, ~5 of ~130
+  in another. Both copies load the new save and link.
