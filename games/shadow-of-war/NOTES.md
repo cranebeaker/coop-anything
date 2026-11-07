@@ -4513,3 +4513,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   difference.
 - **Crash lines now carry the registers** (`crash registers: rax=... rbx=...[rva:<vtable>]`), for the client's table-full crash at
   `11244A` (its rbx is the table's object).
+- **A second 15-minute soak on the same route** (`--seed=618`, the build with all of the above): 900 s completed, 263 damage
+  messages (17.5/min), all applied by B, `dmg_stale` 0, 23 of 29 windows engaged, 4 stalled (longest engaged silence 51 s), no
+  crash line on either copy (the first soak on this route lost B to the `11244A` check at ~13 min). One run: the table-full crash
+  is not shown to be gone.
