@@ -4785,3 +4785,16 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Derived: the weight comes from elsewhere, likely the animation graph's blending, which keeps a proxy's old actions blended in.
     So ending entries by hand does not let the pruning delete them; the mod keeps making such characters again before the list
     fills.
+- **Old build vs new build, paired** (fresh copies for every run; the session's baseline `2247fd1` against the current build;
+  `roam_fight.py 360 4 --archer-every=3`, seeds 700 and 701, in ABBA order; private script `ab_run.ps1`):
+
+  | run | build | messages/min | applied by B | windows engaged | stalled |
+  |---|---|---|---|---|---|
+  | seed 700 | old | 9.3 (56) | 61 | 11/11 | 2 |
+  | seed 700 | new | 12.1 (73) | 86 | 7/11 | 0 |
+  | seed 701 | new | 10.6 (64) | 80 | 10/11 | 0 |
+  | seed 701 | old | 16.5 (99) | 106 | 9/11 | 0 |
+
+  No crash in any run; owner files unchanged after each. Derived: no sign of weaker fights on the new build (means 11.4 vs
+  12.9/min, with a spread inside each build larger than the gap). The thin 30-minute soak was the long-session effect, not the
+  build. Four runs are too few to rule out a small difference.
