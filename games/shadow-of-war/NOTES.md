@@ -4319,3 +4319,27 @@ only), `rtti_name.py` (vtable names; this exe has none next to its vtables).
 
 - Who breaks the link in the destroyed object's list (a write watch on the node is the next step), and whether the mod's proxies
   (spawned, adopted, freed and spawned again many times) are part of it.
+
+### Later in cl: chasing the client's hang; stopped orcs pile up on the host
+
+- **What is being deleted when the client hangs.** `4DBBC8` walks a pending list (`+0x40`), and for each item calls its pool's
+  destroy (`4DBD18` -> vtable `+0x20`), here `76E1B8`: the destructor `49CEC0`, then a free of `0x3180` bytes. `49CEC0` sets the
+  vtable `1FB3640` (the character class the stand-in also has) and tears down the character's members (`+0x2C70` ... `+0x3168`), then
+  tail-jumps to the base destructor `45FDAC`; the hanging list object (base vtable `1DB7358`) is destroyed somewhere below it (no
+  return address, tail jumps). So a character is being deleted, and a list object inside it has a broken link.
+  `tools/hang_regs.py` now also finds that character on the stack and prints its kind, place and the list object's offset in it:
+  for the next hang.
+- **No quick repro.** `tools/hang_repro.py` repeats what preceded each hang (orcs spawned at B, a fight with B striking, the orcs
+  stopped on the host, B teleported to the arena's centre): 40 cycles, no hang; 20 more with B teleported 3,000 units into the
+  camp and back, none; 15 with archers mixed in, none; the run with the camp's grunts stopped each cycle did not get going (below).
+  Despawn faults stayed at 0 throughout.
+- **Stopped orcs are never removed (a test-tool problem).** The tools stop orcs by writing their health to 0
+  (`live_suite.remove`, so that the Nazgul set raises none). After this day the host held **253 characters at health 0** (230
+  `Orc_Infantry`, 23 `Orc_Archer`), the client 10; the host's game then **created no new orc at all** ("the game created nothing
+  for Orc_Infantry"), and the probe's despawn did not remove them (they are in sight of the player). This likely explains the
+  fights thinning out late in long sessions (sessions ck and cl: swings falling to 0, "the decoy wears out" after many runs, fewer
+  damage messages the client could apply): those were not shown to be the mod's. `goto_arena.go` now counts them and warns above
+  80; restart both copies before a batch of measurements.
+- **The guard's offline tests and Windows' firewall.** The four `coop_peer` cases listen on this PC's real address, and each
+  run's case copy of `test_guard.exe` lives in a new folder, so Windows' firewall asked the owner about each one (the owner
+  allowed them). `SOWGUARD_TEST_NO_PEER=1` skips those four (52 cases) for runs that do not touch the network code (README).
