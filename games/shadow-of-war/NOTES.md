@@ -4596,3 +4596,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   stand-in characters have none, so no tree ran); the guard now skips only a character whose tree ran with the component before
   and finds it gone (being taken apart). Guard suite 52/52; in a 5-minute fight it never fired (`torn_skips` 0 on both copies) and
   the fight went well (137 damage messages, 27.3/min, all applied, every window engaged).
+- **How the AI-table count is made**: `112354` gets it from `114A0A0` -> `245654`, which walks the list at table+8 (through +8 links)
+  and, for each entry, calls the entry's virtual methods `+0x158` and `+0x1C8` on the object 0x40 before the node (a large object:
+  57+ virtual methods; the dead `1DB1CE0` reference seen earlier sits inside it). So the entries are whole game objects, not small
+  references: unlinking them from outside would leak them and skip their own clean-up, so it was not tried. Options for next time:
+  find what the skipped tree does with them (the `+0x158` check is probably "still valid"), or have the client remake a proxy
+  before its table nears 256 (a proxy rarely lives that long under fire; the stand-in's grows slower, ~4 a minute).
