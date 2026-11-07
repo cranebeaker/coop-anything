@@ -4764,3 +4764,14 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     - Not checked: the original stuck state. It did not come back in this session.
   - Also seen: during the test both players once stood on game screens at the same time (neither could walk; the host's player
     had moved ~3,500 units). A few A and back presses freed them. Cause unknown.
+- **A 30-minute soak on the build with the stand-in fallback** (`roam_fight.py 1800 4 --seed=629 --archer-every=3`, fresh copies):
+  - Result: 1,800 s completed, no crash on either copy. The fallback never engaged (`frozen=no/0/0` on both). The client made 2
+    proxies again (largest table 200, list 195); the host's largest was 69.
+  - Swings: only 92 swing messages (3.1/min), the client applying 107 with the arrows (12 off the stand-in, 5 off the decoy).
+    29 of 59 windows stalled; 161 orcs spawned, 31 strayed and stopped.
+  - Two 4-minute fights right after, in the same session: 42 messages (10.5/min, 6 of 7 windows engaged) and 29 (7.2/min, 2 of 7).
+  - Derived: the fights work but their intensity varies a lot between runs (earlier 30-minute soaks: 33.8/min on an older build;
+    the 20-minute one on the list-check build: 11.3/min). The new code only touches the stand-in (not engaged here) and reads the
+    AI lists, so it is not a likely cause. The known thinning of fights in long sessions is.
+  - Unknown: whether engagement differs between builds. A paired comparison (old build vs new, same seed, fresh copies each) was
+    not run.
