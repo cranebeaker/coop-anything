@@ -4823,3 +4823,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - With both copies again (same session as the control): 40 cycles, no crash.
   - Derived: rare (1 of 2 paired runs, 0 of 1 control). It points at the co-op side but proves nothing.
   - Unknown: which Talion-class character that was, and what puts a player-type character into the AI's paths.
+- **A guard for `11AA3A`** (`SimAiParamGuardInstall`; `coop_ai_param_guard`, default on). The call at `11A4C5` (the crash's
+  path) now goes through a guard. When the first argument's first qword points at itself or leads to no AI data, the guard
+  answers as the game does for a call without a target (argument + 0x118, which the caller only reads). Every other call goes on
+  unchanged. The status shows `ai_param_guard=<installed>/<answered>`.
+  - Checked: installed on both copies; 40 kill-and-respawn cycles and a 5-minute fight (58 messages, 11.6/min) with no crash
+    and the guard answering 0 times. Guard suite 52/52, unit tests 93/93 and 36/36.
+  - Not checked: that it stops the crash. The crash did not happen in these runs.
+  - The other crash seen (`190F7C`) is not covered.
