@@ -4631,3 +4631,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   whose target is 0; the count walk's check (`+0x158`, `2458C0`) reads a flag at entry+0x560, so these are large objects; the other
   method (`+0x1C8`, `47C76E0`) is in an obfuscated code region. What removes them when a character's own tree runs is still not
   found; the recycling covers it.
+- **The archers, solved: their arrows hit the stand-in.** The decoy stands where the host's stand-in of B stands (7 units apart
+  in the check); with two archers pointed at the decoy for 50 s the stand-in lost 28 health 7 times (298 -> 120) and the decoy 50
+  once. Arrows do not go through the hit function, so nothing reached the client, and nothing healed the stand-in (arrows would
+  have killed it). **Fix**: on the host, health the stand-in loses outside the hit function is sent to the client the same way as
+  the decoy's (`SendArrowHit`: the nearest announced enemy after the decoy, an archer first, as `AI_Archer_Shoot`; `standin_hurt`,
+  `standin_hurt_sent`), and the stand-in is healed. Checked: three archers for 60 s, 3 arrows on the stand-in, 3 sent, 3 applied by
+  B (health 504 -> 429), the stand-in back to full each time. Guard suite 52/52, `net_test` 36/36, `enemy_test` 93/93.

@@ -130,8 +130,8 @@ host starts first, client joins and gets the host's save.
 ## Known issues
 
 - Never tried on two PCs over a real network.
-- The host's archers do not shoot at the client (they target the client's stand-in ally and keep their distance; the few arrows
-  that land are sent on). Cause unknown.
+- The host's archers' arrows land on the host's picture of the client (it stands where the decoy does); since session cm that
+  damage is sent to the client. Archers shoot less at the client than at the host's player.
 - A 256-entry table in the game's AI fills for characters whose AI the mod switches off (the client's enemy pictures, both
   stand-ins) and crashed the client three times; the mod now makes such a character again before its table fills (session cm).
   Not yet run for hours.
@@ -140,5 +140,4 @@ host starts first, client joins and gets the host's save.
 ## Next steps
 
 - A test between two PCs over a real network (needs a second player).
-- Archers: what they aim at on the decoy (its bones or aim point).
 - Find what empties the AI table when a character's AI runs, so pictures need not be made again.
