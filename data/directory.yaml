@@ -67,11 +67,11 @@
   last_activity: unknown
   qa: none
   notes: "Single-player missions with friends, where players take the role of NPCs who help the protagonist. Only
-    a beta was released and the page says development ended.
+    a beta was released and the page says development ended."
   sources:
   - https://www.moddb.com/mods/roleplay-coop
   - https://www.moddb.com/mods/roleplay-coop/downloads
-  checked: '2026-10-16'"
+  checked: '2026-10-16'
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
@@ -10779,7 +10779,7 @@
   open_source: 'yes'
   last_activity: 2026-11
   qa: automated
-  notes: Co-op planetary battles for Space Rangers HD. Host-authoritative battle simulation over ENet (UDP). Channel A reliable (handshake, orders), channel B unreliable sequenced (pose deltas). Tested headless with two client instances on one PC via localhost. Build source: murgesku/MatrixGame fork with local port fixes. Original install not modified; test copy in local/test-install.
+  notes: "Co-op planetary battles for Space Rangers HD. Host-authoritative battle simulation over ENet (UDP). Channel A reliable (handshake, orders), channel B unreliable sequenced (pose deltas). Tested headless with two client instances on one PC via localhost. Build source: murgesku/MatrixGame fork with local port fixes. Original install not modified; test copy in local/test-install."
   sources:
   - https://store.steampowered.com/app/214730/
   - https://github.com/murgesku/MatrixGame
