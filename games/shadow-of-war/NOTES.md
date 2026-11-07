@@ -4798,3 +4798,28 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   No crash in any run; owner files unchanged after each. Derived: no sign of weaker fights on the new build (means 11.4 vs
   12.9/min, with a spread inside each build larger than the gap). The thin 30-minute soak was the long-session effect, not the
   build. Four runs are too few to rule out a small difference.
+- **Counters and the client's damage** (`tools/counter_rate.py`: three orcs at the client, 60-s phases alternating the client idle
+  and the client pressing Y every 0.25 s).
+  - Observed in two phases before the host crashed (below):
+    - Idle: 227 proxy attacks started, 19 damage messages applied (0.08 per attack).
+    - Pressing Y: 299 attacks, 21 applied (0.07 per attack), and 5 hits of the client sent to the host.
+  - Derived, from one short run: counters don't visibly lower the damage the client takes. That fits the design: the host's orc
+    hits the host's picture of the client whatever the client does on its own screen, and the damage message follows. Not
+    changed; one run is too little.
+- **Host crash `11AA3A` again** (reading 0x28; first seen in session cf), during that run, after the client's counters had
+  killed orcs and new ones were spawned.
+  - The crashing call `11AA18` got as its first argument the value at +0x2CF0 of the character being looked at (caller
+    `11A19C`). That value was the host player's address + 0x2CE8, whose first qword points at itself. Derived: +0x2CE8/+0x2CF0
+    of a player-type character is an empty list head, not an AI object, so the AI's attack-parameter lookup ran on a player-type
+    character as the attacker.
+  - `11AA18` returns a pointer to a block the caller only reads: an array entry, or arg+0x118 when there is no candidate. No
+    guard written yet.
+- **Trying to bring it back** (`tools/kill_spawn.py`: three orcs spawned 250 units around the client, killed after 12 s with the
+  game's own death, the next three at the same spots):
+  - With both copies: the host crashed at cycle 27 at a different place, `190F7C` (reading 0x1, in the AI tick at `2F7ABB`).
+    Its rbx was a Talion-class character (vtable `1FB3640`) that was not the stand-in, and rdx was the host's player. The host's
+    damage messages to the client had stopped growing early in that run.
+  - With the host alone (control: no client, so no stand-in, decoy or target swaps): 40 cycles, no crash.
+  - With both copies again (same session as the control): 40 cycles, no crash.
+  - Derived: rare (1 of 2 paired runs, 0 of 1 control). It points at the co-op side but proves nothing.
+  - Unknown: which Talion-class character that was, and what puts a player-type character into the AI's paths.
