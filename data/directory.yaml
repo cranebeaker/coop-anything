@@ -66,12 +66,12 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: Single-player missions with friends, where players take the role of NPCs who help the protagonist. Only
+  notes: "Single-player missions with friends, where players take the role of NPCs who help the protagonist. Only
     a beta was released and the page says development ended.
   sources:
   - https://www.moddb.com/mods/roleplay-coop
   - https://www.moddb.com/mods/roleplay-coop/downloads
-  checked: '2026-10-16'
+  checked: '2026-10-16'"
 - game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
