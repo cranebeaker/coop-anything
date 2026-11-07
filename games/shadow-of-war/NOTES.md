@@ -4484,3 +4484,24 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   (the host logged 8-14 from other attackers meanwhile), the decoy's health untouched; the same with `coopset decoyhide off`. So the
   host's archers do not attack the client from range. Why (the target being an ally of the player's faction, line of sight, the
   mod's attack-target hook) is not known.
+
+### Later in cm: a 15-minute soak, hits from enemies the client does not show, and the client's AI-table crash
+
+- **Soak on the build with the decoy limbo** (`roam_fight.py 900 3 --seed=618`): 25 rows in 779 s, 23 engaged, no stall; then the
+  client closed: **the same game check as before at `11244A`** (a 256-entry table full; stack `11213E` `2FCD4D` `2FF504` `2FF343`
+  `160BA8`), now the second time in a long fight. The table is at +0x140 of the object the AI manager updates in `2FC6B8` (called
+  from `2FF40C` for each entry of a manager's array, `2FF268`); its count is at +0x1B0 (`112354` sets it from the container at +8;
+  `1123CC` checks it against 0x100).
+- **Hits the client dropped**: B's `dmg_stale` reached 86 in that soak (12, 7, 7, 27, 18, 13 in single 30-s windows): damage messages
+  for host enemies with no proxy on B at that moment, both when a camp joined (21 orcs near B; the host shows 16) and with only 4
+  orcs near (B's proxies come and go). **Fix**: such a swing is applied with the nearest proxy as the attacker (the attack's record
+  gives the damage), counted `dmg_borrowed`, logged `b` in `dmglog`; `coop_dmg_borrow=off` / `coopset dmgborrow off` drops them as
+  before.
+  Not exercised live yet: in a 5-minute fight with 6 orcs (114 of 114 swings applied) and with 20 orcs around B for 90 s (32
+  swings, each with its own proxy) no swing came without a proxy; the host never sends a swing of an enemy it has not announced.
+- **A 15-minute fight with a sampler** (`roam_fight.py --ai-table`): the guess that the table is the character's AI data
+  (`[character+0x2CE8]+0x1B0`) is wrong (garbage for B's player). What the object is: unknown.
+- **The host's stand-in fell behind again on a fresh session** (no crash): after B roamed south to the camp's walls (z ~8,800,
+  outside the arena) the host's stand-in stayed 300-1,700 units off for minutes, "put back" every ~0.85 s without catching up; the
+  decoy follows the stand-in, so the host's enemies went elsewhere and B showed no enemy for 2 minutes. When B stood still the
+  stand-in caught up (0 off), then lagged 150-240 behind small moves; its status line said `walks=0` (it moves by put-backs only).
