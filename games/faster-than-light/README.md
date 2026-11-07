@@ -12,8 +12,9 @@
 
 A lockstep co-op mod for up to 8 players runs in the real game: every copy simulates the same ship, players' commands
 are scheduled by the host and applied on the same frame everywhere, and state hashes agree across 2, 4 and 8 copies
-through jumps, events and fights. It is not released yet: there is no in-game lobby, only direct TCP connections
-(port forwarding or a VPN for internet play), and only Linux 1.6.13 has been tested.
+through jumps, events and fights. Players connect through a friends-only Steam lobby (no addresses or port
+forwarding; direct TCP is the fallback). It is not released yet, and it has not been played between two real Steam
+accounts or on real Windows.
 
 ## Existing work
 
@@ -96,6 +97,14 @@ Latency (test switch delaying every message): 2 copies at 0 / 200 / 300 ms round
 1800 frames) with an adaptive input delay of 3 / 9 / 12 frames; 4 copies at 160 ms, resync at 120 ms and late join at
 100 ms round trip PASS.
 
+Steam transport (mod commits 8495111, 5fd7f2e): `steamnet_test.cpp` with a fake Steam, 12/12 (8 players found
+through the friends list, a 3 MB resync in 128 KB packets with 20% of sends failing and retried, members leaving,
+host leaving, picking the right lobby among a wrong build and a non-co-op lobby, late member-list updates, joining
+by id, full lobby). Real game copies over the Steam transport with `tests/coop/fakesteam_hub.py` standing in for Steam,
+all PASS: Linux 2 fight and 4 chaos own-crew; Windows under Proton 2 fight, 8 chaos own-crew, and a late join with
+80 ms hub lag (resync, rtt 185 ms). Real Steam, one account: lobby created and read back on Linux and on Windows
+under Proton; the friends list reads.
+
 Also PASS on the same day: late join (3rd copy at frame 706), a guest disconnecting (host and the other guest go on,
 80 hash checks equal), continuing a saved run (mid-combat save), the Linux installer (install, launch through the
 game's start script, uninstall restores it). Fake world: 15/15 checks including three mutation checks (double apply,
@@ -106,12 +115,16 @@ missing epoch check, restart from inside the desync callback) that fail as they 
 Not released yet (no prebuilt download). Linux players can build the branch and install it with the included
 `coop-install.sh` (checks the game version, needs no Hyperspace.ftl), see
 [COOP.md](https://github.com/SCM69/FTL-Hyperspace/blob/coop/COOP.md). Host: `role=host`, `players=N` in `coop.cfg`;
-guests: `role=guest`, `address=<host>:27890`. Host keys: F9 start, F10 resync, F11 sharing mode, F7 give crew.
+guests: `role=guest`; the host starts first, guests start the game and join the Steam friend who hosts
+(`friend=<name>` picks one). `net=tcp` with `address=<host>:27890` connects directly instead. Host keys: F9 start,
+F10 resync, F11 sharing mode, F7 give crew.
 
 ## Known issues
 
-- Direct TCP only (default port 27890): internet play needs port forwarding or a VPN. No lobby or invites yet.
-  Latency is handled by an input delay the host adapts to the measured round trip (tested up to 300 ms round trip at
+- Steam lobby (default) or direct TCP. No overlay invites or "Join Game" from the friends list yet: guests start the
+  game themselves and join a hosting friend automatically. Steam has only been checked with one account (lobby
+  create, data, friends list); two-account play is untested. With direct TCP, internet play needs port forwarding or a
+  VPN. Latency is handled by an input delay the host adapts to the measured round trip (tested up to 300 ms round trip at
   full speed); at high latency clicks take effect a fraction of a second later.
 - Configuration is by environment variables or `coop.cfg` next to `FTL.amd64`; no menu yet.
 - Store, upgrades, equipment and the crew screen are the captain's: guests' clicks there are ignored, and when the host
@@ -125,6 +138,6 @@ guests: `role=guest`, `address=<host>:27890`. Host keys: F9 start, F10 resync, F
 ## Next steps
 
 - Remaining actions as commands (store, upgrades, teleporter, hacking, mind control, cloaking, crew abilities, sector map).
-- Steam lobbies and relayed P2P instead of direct TCP.
+- Play over Steam between two real accounts (two PCs); add overlay invites and "Join Game".
 - An in-game host/join screen; per-player crew markers in own-crew mode.
 - Run the Windows 1.6.9 build on real Windows with players.

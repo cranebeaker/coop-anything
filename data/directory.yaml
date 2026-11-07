@@ -10783,7 +10783,7 @@
     sharing is a host setting, free-for-all or each player commands their own crew; jumps and event choices are the
     host's. Desyncs are detected by state hashes and repaired by reloading the host's save, which also lets players
     join a running game. Tested with bots on Linux Steam 1.6.13 and on the Windows 1.6.9 build under Proton, with bots in 2 to 8 real game copies on one PC (results
-    in games/faster-than-light). Not released; direct TCP only. Earlier "FTL multiplayer" repos are stubs or separate games.
+    in games/faster-than-light). Players join through a friends-only Steam lobby (direct TCP as fallback); not yet tested between two real Steam accounts. Not released. Earlier "FTL multiplayer" repos are stubs or separate games.
   sources:
   - https://github.com/SCM69/FTL-Hyperspace/blob/coop/COOP.md
   - https://github.com/FTL-Hyperspace/FTL-Hyperspace

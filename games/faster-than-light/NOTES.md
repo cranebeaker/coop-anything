@@ -278,3 +278,32 @@ Observed:
   8 chaos 2400 frames (2197), late join after 20 s, 80 ms simulated latency (rtt 183 ms, delay 8).
 - The same batch's captain test fails without `COOP_ALLOW_RESYNC=1`: that is the expected desync inside the captain's
   ship screen, repaired by the resync when it closes (same as on Linux).
+
+## Steam lobbies (2026-11-06, mod 8495111 and 5fd7f2e)
+Observed:
+- FTL's Steam library (Linux `data/amd64/libsteam_api.so` and the Windows depot's `steam_api.dll`) is the same 2019
+  Steamworks SDK: interface strings SteamClient019, SteamUser020, SteamUtils009; flat API with the interface pointer
+  first; no `SteamAPI_InitFlat`, no ManualDispatch, no ISteamNetworkingSockets/Messages. ISteamMatchmaking and the
+  older ISteamNetworking P2P calls are there.
+- vtable slots behind the flat functions used (Linux library, from the `mov off(%rax)` in each): CreateLobby 13,
+  JoinLobby 14, LeaveLobby 15, GetNumLobbyMembers 17, GetLobbyMemberByIndex 18, GetLobbyData 19, SetLobbyData 20,
+  GetLobbyOwner 35; SendP2PPacket 0, IsP2PPacketAvailable 1, ReadP2PPacket 2, AcceptP2PSessionWithUser 3,
+  CloseP2PSessionWithUser 4, AllowP2PPacketRelay 7; GetFriendCount 3, GetFriendByIndex 4, GetFriendPersonaName 7,
+  GetFriendGamePlayed 8; IsAPICallCompleted 11, GetAPICallResult 13; GetSteamID 2. These match SteamMatchMaking009,
+  SteamNetworking005, SteamFriends017, SteamUtils009, SteamUser020.
+- Windows FTL 1.6.9 (the rolled-back exe) has no Steam code: it imports no steam DLL and has no Steam strings; the
+  1.6.14 Steam exe loads `steam_wrapper.dll`, which imports `steam_api.dll`. First real-Steam run on Windows failed
+  with every Steam symbol missing for that reason. Fix: the mod loads `steam_api.dll` from the FTL folder, sets
+  `SteamAppId=212680` if unset, calls `SteamAPI_Init` and pumps `SteamAPI_RunCallbacks` each frame.
+- Linux FTL 1.6.13 starts Steam itself; the mod finds the functions with `dlsym(RTLD_DEFAULT, ...)`.
+- With one real account (headless copy, about 60 s): `CreateLobby` result arrived in 0.02-0.2 s through
+  `IsAPICallCompleted`/`GetAPICallResult` (LobbyCreated, 513, size 12 on Linux / 16 on Windows); owner, member count
+  and lobby data read back correctly on both. A guest copy read the friends list (GetFriendCount(4),
+  GetFriendGamePlayed) without errors.
+Derived (not yet tested with two accounts): guests find the host through `FriendGameInfo_t.m_steamIDLobby` (offset 16)
+for app 212680, the same way as the playbook's HXCoop relay. The host accepts P2P sessions only from lobby members.
+Messages are the TCP transport's length-prefixed frames sent as reliable P2P packets of up to 128 KB.
+Unknown: P2P packets between two real accounts (relay or direct), and whether `RunCallbacks` from a game that never
+registers a call result can drop one before `GetAPICallResult` reads it (it did not in the single-account runs).
+Tests: `steamnet_test.cpp` (fake Steam in process, 12/12) and `fakesteam_hub.py` (game copies, `COOP_NET=fakesteam`),
+results in README.md.
