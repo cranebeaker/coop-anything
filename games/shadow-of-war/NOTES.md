@@ -4572,3 +4572,23 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   attack otherwise (`decoy_hurt_sent`; `coop_decoy_hurt_send=off` only counts). Checked by writing the decoy's health 50 lower
   four times with an archer on it: 4 detected, 4 sent as `AI_Archer_Shoot`, 4 applied by B, whose health went 504 -> 390. With no
   enemy on the decoy nothing is sent (seen once). Arrows on the decoy stay rare (above), so this only catches the few that land.
+- **Archers, more ruled out**: no idle-wake pokes happened (`hunt_woken` 0) and waking/hunting off changed nothing; a soldier kept
+  at full health (written every 0.3 s), shrunk (scale 0.01 written every 0.3 s), or adopted as a proxy the moment it spawned was
+  still shot (killed in 21-32 s); the decoy with the archers re-pointed at it every 0.5 s (309-492 units off), and a decoy never
+  teleported (`coopset reanchor 0`), took no arrow. Arrows do not use the hit function at all (a soldier killed by six arrows
+  showed no archer hit in the hit log): they hurt by another path, which on the decoy would show as `decoy_hurt`. Still unknown.
+- **The client's AI-table crash, explained (derived from live reads)**: the crash at `11244A` logged `rbx` = an object of class
+  `1FF9F50` (constructor `1C6D1CC`, inside `1BE03DC`'s 0xE2C8-byte object; the client holds 256 of them, found by `findq` of the
+  vtable), counting the entries of a list at +8 (count at +0x70, the game's check at 256). Each such table belongs (through its
+  reference at +0x40, target at +0x60, an object of class `1DBE008` holding the character at +0x40) to one character. Sampled on B
+  (`roam_fight.py --ai-table`, `tools/agent_table.py`): the large tables were all the **proxies'** (`Orc_Infantry`, `Warg_Tamed`:
+  44-90 entries, growing ~0.5 a second under fire, back to 0 when the proxy goes) and **the host's stand-in on B** (`Talion`, 32
+  after ~8 minutes); B's own player held 5. The entries are references (vtable `1DB1CE0`) whose target is 0 (what they referred to
+  is gone) still linked in the table's list. These are the characters whose behavior tree the mod skips: their own tree would
+  prune such entries. A proxy alive for long enough under fire fills its table and the game crashes. Letting one proxy's tree run
+  for 2 s (probe `adopt ... off`, then `adopt` again) did not empty its table (26 before and after). Not fixed yet: the next step
+  is the game's prune of those entries (the 1DB1CE0 references are built in `1BE1418`, class `2303A30`), to call it for skipped
+  characters, or recycling a proxy before its table fills.
+- **A host crash in a behavior tree** (`37671F` writing `[0+0x528]`: the tree's character, `[tree+8]`, had its `+0x2CD8` component
+  gone; the same field as the `342E1A` crash): the mod's behavior-tree filter now skips the tree of a character whose `+0x2CD8` is 0
+  (`torn_skips` in the `puppet` status; logged).
