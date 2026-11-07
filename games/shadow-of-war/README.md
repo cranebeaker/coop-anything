@@ -6,7 +6,7 @@
 | Versions tested | Steam app 356190, build 3095001 (last update 2018-09-05), `x64\ShadowOfWar.exe` 1.0.8874.0, SHA-256 `ed0d95cabb033cd66aaa99d699374881846c3cb03ec345f1123d82d45e0bdaef` |
 | Projects | [Santonus-not-bot/shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (alpha, MIT); [JustAddMP/ShadowOfWar](https://github.com/JustAddMP/ShadowOfWar) is a placeholder; research here (claim: cranebeaker/coop-anything#93) |
 | QA level | automated: scripted checks with two game copies on one PC and an offline suite; never tried on two PCs |
-| Last updated | 2026-11-01 |
+| Last updated | 2026-11-07 |
 
 ## Where things stand
 
@@ -114,20 +114,30 @@ No co-op changes yet. Tooling for working on the game safely (not published yet)
   second led to the remote-storage block; with it, a session with 16 autosaves left the
   real saves and Steam folder unchanged. One launch crashed because of the first
   debug-print hook (see the playbook lesson on hooking leaf stubs); fixed and tested.
-- Co-op QA: none (nothing to test yet).
+- Co-op QA (session cm, 2026-11-07, two copies on one PC, bot-driven: `tools/roam_fight.py` in the mod's repo moves the client
+  around an arena while the host keeps orcs on it): two 25-minute runs and a 15-minute run on the current build completed with
+  no crash, 258-509 enemy hits on the client per 25 minutes, all applied by the client; the client's freeze (the game's reference
+  list destructor looping, caused by the mod's own write to a captain's member link) and two host crash causes (a removed
+  decoy's AI running on, raw target writes) were found, fixed and checked with negative controls (`tools/jump_cycles.py`,
+  `tools/captain_unlink.py`, unit tests with a looping-list control). Offline: unit tests 93/93 and 36/36, guard suite 52/52.
+  Details and every run in [NOTES.md](NOTES.md).
 
 ## How to play
 
-Nothing to play yet.
+See the player guide in the mod's repo (`release/README-PLAYERS.md`): a co-op copy of the game folder per player, an overlay VPN,
+host starts first, client joins and gets the host's save.
 
 ## Known issues
 
-None (no release).
+- Never tried on two PCs over a real network.
+- The host's archers do not shoot at the client (they target the client's stand-in ally and keep their distance; the few arrows
+  that land are sent on). Cause unknown.
+- A 256-entry table in the game's AI filled up twice on the client in long fights (game check at `11244A`); not seen on the
+  current build in 50 minutes of fighting; crash lines now carry the registers to name it.
+- The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
 
 ## Next steps
 
-- Decide the sync model: host-side event stream from `HandleFactionEventAction` and the
-  death/promotion functions, or host world state through `Faction.Save` / `Faction.Load`.
-- Check whether the LithTech client/server split is real at runtime (`GameServerShell`,
-  `clientmgr`, NetMesh code).
-- Map the player character from `GameClient` (RVA `26FFA98`).
+- A test between two PCs over a real network (needs a second player).
+- Archers: what they aim at on the decoy (its bones or aim point).
+- Name the client's 256-entry AI table from the registers the next time it fills.
