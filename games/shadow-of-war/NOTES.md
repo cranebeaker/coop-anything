@@ -4592,3 +4592,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 - **A host crash in a behavior tree** (`37671F` writing `[0+0x528]`: the tree's character, `[tree+8]`, had its `+0x2CD8` component
   gone; the same field as the `342E1A` crash): the mod's behavior-tree filter now skips the tree of a character whose `+0x2CD8` is 0
   (`torn_skips` in the `puppet` status; logged).
+- **The tree guard, narrowed**: skipping every character without a `+0x2CD8` component failed one guard case (51/52: the suite's
+  stand-in characters have none, so no tree ran); the guard now skips only a character whose tree ran with the component before
+  and finds it gone (being taken apart). Guard suite 52/52; in a 5-minute fight it never fired (`torn_skips` 0 on both copies) and
+  the fight went well (137 damage messages, 27.3/min, all applied, every window engaged).
