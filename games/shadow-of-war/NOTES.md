@@ -4707,3 +4707,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Seen in passing: while the host's player lunged about some 2,500 units from the client's player, the client's picture of
     the host trailed 900-1,700 units behind. It stood 173 units off once the host stopped. In the same run on the ledge, with
     the players close together, it stayed 25-34 units off. Not looked into.
+- **The client's picture of the host, by distance** (`tools/standin_lag.py`, new; the host walks or strikes back and forth for
+  30-40 s with the client placed 300-2,400 units away). Fresh session:
+  - Walking: median 47-71 units off, at most 190.
+  - Striking: median 85-88, at most 209, although the host's lunges carried it 4,500-7,000 units away.
+  - Right after a client death, in the same session: median 7, at most 224. That death's new stand-in counted its table
+    normally (count 11, list 11).
+  - So distance alone does not cause the lag seen earlier (900-1,700 units). That lag came with the stand-in whose table was
+    never counted, which appeared after one client death of two in this build. Unknown what decides it.
