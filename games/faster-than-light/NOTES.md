@@ -307,3 +307,33 @@ Unknown: P2P packets between two real accounts (relay or direct), and whether `R
 registers a call result can drop one before `GetAPICallResult` reads it (it did not in the single-account runs).
 Tests: `steamnet_test.cpp` (fake Steam in process, 12/12) and `fakesteam_hub.py` (game copies, `COOP_NET=fakesteam`),
 results in README.md.
+
+## Before human testing (2026-11-07, mod 83c217a .. f18c5bb)
+Observed (bot runs on one PC, Linux native and Windows build under Proton):
+- Heartbeat: a guest frozen 12 s (`FTL_COOP_TEST_FREEZE`) with `timeout=5` is dropped by the host; host and the other
+  guest reach frame 2400 with 80 equal hash checks; the frozen copy, once awake, sees the host gone. Unit tests:
+  fakeworld 11 (TCP), steamnet 5 (a frozen Steam member stays in the lobby but is not taken back until it rejoins).
+- Hook order in Hyperspace's ZHL: hooks are installed in descending priority and each new detour wraps the previous,
+  so the LOWEST priority is the OUTERMOST hook. A co-op hook at 10000 that was meant to run before Hyperspace's 9999
+  StarMap::OnLoop ran after it; -10000 works.
+- Hyperspace's `StarMap::Open` (CustomEvents.cpp) draws `random32()` twice for the ship icon rotation: a player opening
+  the map moved the shared stream on that copy only (desync on the next hash, found by the sector bot). The co-op mod
+  now saves and restores both random streams around a player's map open/close.
+- Sector choice as a command: world level 0 -> 1 -> 2 -> 3 and fuel -1 per sector on every copy, 7 sector jumps in
+  3600 frames, 0 resyncs (2 and 4 copies, Linux and Windows).
+- Plain game data (no Hyperspace.ftl): `AddCrewMemberFromString("crystal")` and mantis have 0 activated powers. The
+  ability hotkey pressed 450 times in 2 and 4 copies: no desync, no command.
+- Store: `CommandGui::CreateNewStore` (Hyperspace's STORE console command) as a test command; purchases through
+  `StoreBox::Purchase` applied on every copy with equal scrap. Upgrades: an `UpgradeBox` click takes the scrap at once
+  on the clicking copy (Undo returns it), `Accept` applies the levels; the reactor button needs `bHover` before
+  `OnClick`. Opening the ship screen during a jump stopped the host's clock while the jump finished early (arrival
+  event 55 frames apart): the bot now opens screens only when calm, like the game's own button.
+- Windows setup under Proton: Steam 1.6.14 -> 1.6.9 SHA-1 exact, idempotent, uninstall byte-exact, damaged patch and
+  unknown exe refused. WinHTTP download to raw.githubusercontent.com fails under Wine (error 12157, GnuTLS "The request
+  is invalid"): untested on real Windows.
+- FTL-Version-Rollback (commit bce6c003) has no license file, so the setup downloads the patch at install time
+  instead of shipping it. Each patch's footer gives source size and CRC32; all four Steam patches target CRC32 b0d039f4
+  (FTLGame.exe 1.6.9). Steam 1.6.12 and 1.6.22 patches start from a 122-125 MB exe.
+Regression after all of it: Linux 10/10 (shop 2/3, fight 2/8, keys, chaos 4, specials, captain, sector, abilities),
+Windows 5/5 (shop 2/4, fight 2, sector 4, captain 2).
+

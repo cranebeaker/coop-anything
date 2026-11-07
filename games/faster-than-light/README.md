@@ -112,8 +112,9 @@ missing epoch check, restart from inside the desync callback) that fail as they 
 
 ## How to play
 
-Not released yet (no prebuilt download). Linux players can build the branch and install it with the included
-`coop-install.sh` (checks the game version, needs no Hyperspace.ftl), see
+Not released yet (no public download). Windows: `coop-setup.exe` finds Steam FTL, rolls it back to 1.6.9 with the
+matching FTL-Version-Rollback patch (pinned, SHA-256 checked), installs the files and writes `coop.cfg`; Linux:
+`coop-install.sh`. Both default to `role=menu`: on the main menu, H hosts and J joins a Steam friend. See
 [COOP.md](https://github.com/SCM69/FTL-Hyperspace/blob/coop/COOP.md). Host: `role=host`, `players=N` in `coop.cfg`;
 guests: `role=guest`; the host starts first, guests start the game and join the Steam friend who hosts
 (`friend=<name>` picks one). `net=tcp` with `address=<host>:27890` connects directly instead. Host keys: F9 start,
@@ -127,9 +128,10 @@ F10 resync, F11 sharing mode, F7 give crew.
   VPN. Latency is handled by an input delay the host adapts to the measured round trip (tested up to 300 ms round trip at
   full speed); at high latency clicks take effect a fraction of a second later.
 - Configuration is by environment variables or `coop.cfg` next to `FTL.amd64`; no menu yet.
-- Store, upgrades, equipment and the crew screen are the captain's: guests' clicks there are ignored, and when the host
-  closes them after a change everyone reloads the host's save (a short pause). Sector-exit choices, crew abilities of
-  Hyperspace races and a few rarer actions are not commands yet; using them makes the host resync everyone.
+- Store, upgrades, equipment and the crew screen are the captain's (guests' clicks are ignored). Purchases, upgrades
+  and the sector choice are commands; equipment moves, selling, the crew screen and Hyperspace custom store pages
+  still make everyone reload the host's save when the screen closes. Hyperspace crew abilities are a command too, but
+  with the plain game data no race has one, so that path is untested.
 - A resync waits for a quiet moment (no jump, no event dialog), so it can take a few seconds.
 - Only tested on Linux 1.6.13 (Steam). The Windows 1.6.9 build (mod commit cd89dfc) passed the bot tests under
   Proton Experimental on Linux (2 to 8 copies, see NOTES); not yet run on real Windows. Windows and Linux players cannot
@@ -137,7 +139,7 @@ F10 resync, F11 sharing mode, F7 give crew.
 
 ## Next steps
 
-- Remaining actions as commands (store, upgrades, teleporter, hacking, mind control, cloaking, crew abilities, sector map).
+- Remaining actions as commands (equipment moves, selling, crew screen).
 - Play over Steam between two real accounts (two PCs); add overlay invites and "Join Game".
-- An in-game host/join screen; per-player crew markers in own-crew mode.
+- Test the Windows setup's download and Steam folder search on real Windows.
 - Run the Windows 1.6.9 build on real Windows with players.
