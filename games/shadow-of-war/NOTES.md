@@ -4521,3 +4521,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   7 times (29-99 health each) while the nearer archer stood 330-510 units off: out of blade reach, so arrows. Against the decoy
   the same kind of archer kept 1,000-1,500 off and never fired. So arrows work; the archers hold back from the decoy, beyond their
   firing range. Why (the decoy being an ally soldier, its own threat radius) is not known.
+- **Not the follower mark**: two 45-s trials, archers spawned 700 units from B, the decoy's follower byte (`+0x23B8`, set by
+  `SimProxyAdopt`) as the mod sets it and then written 0 every second: the nearest archer came to ~365 units of the decoy (median;
+  the range they shoot the host's player from) in both, and the only report from them in each was one blade hit (110 units). No
+  arrow at the decoy at bow range either.
