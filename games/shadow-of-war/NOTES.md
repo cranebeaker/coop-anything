@@ -4542,3 +4542,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   crash 4 s in on the build before): 1,500 s completed, 509 damage messages (20.4/min), all applied by B, `dmg_stale` 0, 45 of 49
   windows engaged, 0 stalled (longest engaged silence 19 s), no crash line on either copy. Guard tests 52/52 (no-peer), `net_test`
   36/36, `enemy_test` 93/93.
+- **A second 25-minute soak** (`--seed=618`, the route that lost B to the AI-table check at ~13 min on an earlier build): 1,500 s
+  completed, 258 damage messages (10.3/min), 256 applied by B, `dmg_stale` 0, 40 of 49 windows engaged, 4 stalled (longest engaged
+  silence 59 s), no crash line on either copy. 50 minutes of bot fighting on this build without a crash; the `11244A` check did
+  not come back, so its table is still unnamed (the crash line would now carry the registers).
