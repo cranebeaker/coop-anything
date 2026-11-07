@@ -4561,3 +4561,8 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     `decoy_unwritten` counts the frames): 30,258 frames left alone in a 5-minute fight, which went as well as before (99 damage
     messages, 19.8/min, every window engaged; the same route gave 74 earlier). Arrows still did not reach the decoy, also with
     the stand-in made targetable (`puppet targetable on`) and with `decoyhide off`. Cause still unknown.
+  - Ruled out as well: the stand-in's body (with B taken 60 units from a plain soldier, between it and the archers, the archers
+    shot it dead in 27 s, shooting in every sample), and the decoy's shrink (`decoyhide off` and the decoy made again with it off:
+    0 archer reports in 45 s, `decoy_hurt` 1). Archers are noisy: one plain-soldier run had them in their shoot attack in only 19 of
+    266 samples and no hit. Left to try: what the archers aim at on the decoy (its bones or aim point), and whether the arrows
+    that do land (`decoy_hurt`, health lost outside the hit function) should be sent to the client.
