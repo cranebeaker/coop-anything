@@ -4775,3 +4775,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     AI lists, so it is not a likely cause. The known thinning of fights in long sessions is.
   - Unknown: whether engagement differs between builds. A paired comparison (old build vs new, same seed, fresh copies each) was
     not run.
+- **Can the game's pruning empty a proxy's list?** (`tools/ai_end.py`, after a 5-minute fight.)
+  - Observed:
+    - The longest proxy list held 112-116 entries. All were in state 1 (+0x74) with weight above 0 (+0x70); all but the newest
+      had the bytes +0x7C and +0x7D set.
+    - Writing weight 0 and state 2 into all but the newest 8 (108 entries): within a second every weight was back above 0, the
+      state stayed 2, and nothing was deleted in 6 s (list 116, count 116). The proxy stayed and nothing crashed.
+    - The entry's method `+0x40` (`2FB9E8`) only copies a few fields (+0x540 to +0x544 and the like).
+  - Derived: the weight comes from elsewhere, likely the animation graph's blending, which keeps a proxy's old actions blended in.
+    So ending entries by hand does not let the pruning delete them; the mod keeps making such characters again before the list
+    fills.
