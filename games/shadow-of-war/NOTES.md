@@ -4343,3 +4343,22 @@ only), `rtti_name.py` (vtable names; this exe has none next to its vtables).
 - **The guard's offline tests and Windows' firewall.** The four `coop_peer` cases listen on this PC's real address, and each
   run's case copy of `test_guard.exe` lives in a new folder, so Windows' firewall asked the owner about each one (the owner
   allowed them). `SOWGUARD_TEST_NO_PEER=1` skips those four (52 cases) for runs that do not touch the network code (README).
+
+### Later in cl: the Nazgul gear's raise, and real kills in the test cleanups
+
+- **Owner's question: can the raise be turned off in co-op?** Not found yet. What was learned:
+  - The game's strings name a resurrection system that is mostly the Nemesis one (captains coming back, `Faction.Resurrection`,
+    "Chance to resurrect"), and one player-ability marker, `Marker_Resurrected_PlayerAbility_RaiseDead`, checked by the
+    resurrection job's state machine `1C5132C` (state with `1B5B780`, then `106CDC(character, marker)`).
+  - New probe command `watchw <1|2|4|8> <addr> [addr ...]`: hardware write watches (debug registers 0-3) on every thread of the
+    game; `watch` reports up to 16 hits with the writing code and call stack (`SimWatchWrites`).
+  - `tools/raise_watchw.py` (rounds of 4 `Orc_Infantry` killed by probe `kill`, watches on their health): in 21 rounds the health
+    of killed orcs was written again only by the game's spawner sets (`1A93428`, "Spawner set '%s' unable to spawn - already at max
+    AI" -> `1AC414C` -> `1045EC` -> `103819` -> `103917` -> ... `15CEF5`): the game reuses dead characters' memory for new spawns, so
+    "the same character alive again" is not a raise. Raised orcs show as living orc followers of the host's player (byte
+    `+0x23B8` set; health 247 of 300 in one): 5 among ~130 host-player kills earlier in the session, and 2 new among 9 kills in a
+    later check. Branded orcs are followers too, so removing orc followers in the mod would take the player's army with them.
+- **Real kills in the test cleanups.** `live_suite.remove` now kills with probe `kill` (the game's death; the game removes the body:
+  of ~130 such kills 10 bodies were left, and 2 of 9 bodies were gone 30 s after the kill) and writes health 0 only when the kill
+  does not take. `live_suite.raised` lists the host's living orc followers near a place; `goto_arena.go` removes them at each
+  run start (they fight the test's orcs). The host's count of stopped (health-0) characters stayed at 10-11 instead of growing.
