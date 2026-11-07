@@ -4371,3 +4371,82 @@ only), `rtti_name.py` (vtable names; this exe has none next to its vtables).
   no killed orc alive again and no new orc follower near a kill; an earlier, looser run: 39 kills, no follower left at the end
   (orc followers already in the save wandered in and out of range). With the set: 2 raised of 9 kills in one check, ~5 of ~130
   in another. Both copies load the new save and link.
+
+## Session cm (2026-11-06/07): the client's hang found and fixed (the mod's own write); references in the retarget swap
+
+Fresh copies on the new test save (no Nazgul set bonus), real kills in the cleanups. Build 3095001, both copies on one PC.
+
+### Observations
+
+- **The hang came back on fresh copies**, about 2 minutes into a roaming bot fight (`tools/roam_fight.py 900 3 --seed=611`): B stopped
+  applying the host's damage messages, Windows marked it "Not Responding", its simulation thread at full speed in the same loop as
+  sessions ck and cl (`4DD18C` <- `76E1CC` <- `4DBD31` <- `4DBC3C` <- `2FA27C` <- `2D4B6C`).
+- **What the loop is.** `4DD18C` is the destructor of a base class (vtable `1DB7358`) whose objects keep a list of the references
+  that point at them: a circular doubly linked list, head at object+8. A reference is `{ vtable; node: next, prev; the node's owner
+  (the reference itself, +0x18); target (+0x20) }`, its node at reference+8 (constructor `4CA490`: node linked to itself, target 0;
+  copy `4C8F98`; attach `18D80C`: link at the tail of target+8, store the target, no unlink first; the assign functions `3F52B8`,
+  `17B8920`, `1AFA720`, `115E404`: unlink, then attach). The loop takes the last node, calls `18D264` on its owner, then the owner's
+  vfunc 1. **`18D264` unlinks only when the reference's target is set.** The object being destroyed is the 0x3180-byte character
+  (`76E1B8`: the character pool's deleting destructor, `49CEC0` then free 0x3180): its list holds every reference to that character
+  (59 on a fresh host orc, 88 on a client proxy).
+- **The hung list** (`tools/hang_list.py`): ten references, all with target = the character, except the last one (vtable `1DB6BE0`):
+  target 0 while still linked, neighbours pointing back at it. `18D264` skips it, its vfunc 1 (`77E660`) returns 0: the loop never
+  ends. That reference sat at +0x28 of an object with vtable `1FD5EA0`, built by `1BB4C1C` - **the Nemesis member's constructor**
+  (`kMemberCtor` in `simhook.cpp`). So the stuck reference is a member's link to its character, whose target is `member+0x48`.
+- **The mod wrote that field alone**: `SimMemberLink` set `member+0x48` to a captain's proxy (every frame while shown) and to 0 when
+  the proxy was freed, without unlinking or linking. A member reference the game had linked to a character of the client's own
+  world, then rewritten to the proxy and then to 0, stays in that character's list with no target; when the game removes that
+  character, its destructor hangs.
+- **Repair from outside, proper this time** (`tools/unstick_node.py`): unlinking that one reference and linking it to itself (the state
+  `18D264` leaves) let the thread out at once; the client answered, autosaved and ran on for minutes. (Session cl's repair wrote the
+  list head empty and left the stuck reference pointing into the freed character: a crash followed.) After the ~4-minute freeze the
+  host had dropped the client (`ready=0`): a rejoin was needed.
+- **The fix, checked**: `SimMemberLink` now uses the game's assign (`3F52B8`) on the member's reference (checked: self pointer at +0x18,
+  vtable `1DB6BE0`). `tools/captain_unlink.py` (A goes to the captains, B builds a captain's proxy, A leaves): before, on the old
+  build, the member's node stayed linked to itself and its target was written raw (proxy, then another character); with the fix the
+  reference sits in the proxy's list while shown and is unlinked with target 0 when the proxy is freed (3 assigns, 0 raw writes, B ran
+  on; twice).
+- **Defence in depth**: the destructor loop's call at `4DD1BC` goes to a repair (`src/listfix.h`, `SimUnlinkFixInstall`; off with
+  `coop_unlink_fix=off`): with the target set it does what `18D264` does; with it 0 and the reference linked into a list whose
+  neighbours point back at it, it unlinks it and links it to itself (logged, counted `unlink_repaired`). Unit tests (`enemy_test`
+  93/93) include a negative control: with the game's rule a list whose last reference has no target never empties; with the repair
+  it empties in ten rounds. Installed on both copies in every run since; `unlink_repaired` stayed 0 in every run with the member fix.
+- **The host's retarget swap also wrote into references.** `tools/target_refs.py`: an orc targeting the host's player keeps it in
+  six places the swap rewrites; three are character references linked into the player's list (the active goal slot's target
+  `AI data+0x358` = slot `+0x328` + 0x30, `AI data+0x6C0`, `orc+0x2CA8`), three are references to the player's health object linked
+  into its list at health+8. The swap wrote the decoy over them raw, so they stayed in the player's lists: when the decoy is removed
+  (a long jump remakes it), its destructor never clears them. The swap now moves such a field with the game's assign
+  (`retarget_refs` counted; `retarget_raw` for plain pointers; `coop_retarget_refs=off` / `coopset retargetrefs off` restores the
+  raw write). In fights: 51,429 / 16,218 / 9,006 assigns, 0-1 raw writes, no crash line.
+- **A host crash, once** (unhandled access violation at `2FC037` reading `0x18`: `[character+0x2D08]` was 0; stack `2FC00D` `2FBC08`
+  `11BD1B` `11B245` `2F7AD6`, the AI tick's goal code), 5 s after the host made its decoy again (B taken 3000 units off and back).
+  First sighting. Not reproduced since, either way (see Unknown).
+- **Fights on fresh copies with the new save**: 133 damage messages in 420 s (19/min, all applied, 0 stalls), 138 in 300 s (27.5/min,
+  every window engaged), 74 in 300 s, 39 in 180 s; all applied by B, `dmg_stale` 0. The thinning seen late in sessions ck/cl did not
+  show on fresh copies.
+- **A client crash, once**: the game's own fatal check in its page allocator ("CPageAllocator"; `D1FE10`: a 512-entry table full ->
+  `D1EE40` -> `819104` writes to address 0), about a minute after B entered the world, during the arena set-up. First sighting.
+- **Archers**: `tools/archer_range.py` (host spawns `Orc_Archer` 1200-1500 units from B; probe `dmglog` lists each swing that reached
+  the decoy with the attacker's distance): 0 reports in two tries; the archers stood still or died within 30 s (cause not checked).
+- New probe command `dmglog`: the last 32 damage reports (host: attacker, attack id, the attacker's distance from the hit; client: what
+  it did with each message: applied, failed, no proxy).
+- Guard tests: the new byte checks first read outside the tests' smaller stand-in exe (one case failed, 51/52); they now go through
+  `Head` (bounds-checked): 52/52 with `SOWGUARD_TEST_NO_PEER=1`; `net_test` 36/36.
+
+### Test-harness traps (this session)
+
+- A tool that took B 3000 units *west* led the host's orcs to the host's player (the arena host spot is west): it died despite
+  keephealth (`deaths_by_grunts`), respawned at the tower start, and from there its stand-in of B could not be moved into the arena
+  (the game ignored every put-back for minutes). With `coop_follow_travel=off` (the tests) nothing brings the players together again.
+- A jump 3000 units *north* (z 13,700) is ground for the player, but the host's stand-in could not be moved there either.
+- `coopset remake 300` (a remake after a short move) remade the decoy before the orcs reached it: no swing in 240 s.
+- The game does not delete a killed or despawned orc's body on the host within 90 s, also not with the player 2,500 units off;
+  the client deletes its proxies on its own schedule (36 proxies marked in a 7-minute fight: none deleted in that time).
+
+### Unknown
+
+- Who else (besides the old `SimMemberLink`) could leave a reference linked with no target; `unlink_repaired` counts it if anything does.
+- Whether the host crash at `2FC037` came from the raw retarget writes (a guess: a reference left pointing at a removed decoy); the
+  jump test that would show it was spoilt by the traps above.
+- The client's page-allocator crash: cause unknown; seen once.
+- Whether the host's archers' arrows reach the client.
