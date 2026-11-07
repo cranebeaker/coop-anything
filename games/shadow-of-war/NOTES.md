@@ -4715,3 +4715,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     normally (count 11, list 11).
   - So distance alone does not cause the lag seen earlier (900-1,700 units). That lag came with the stand-in whose table was
     never counted, which appeared after one client death of two in this build. Unknown what decides it.
+- **A 20-minute soak on the build with the list check** (`roam_fight.py 1200 4 --seed=627 --archer-every=3`): 1,203 s completed,
+  227 swing messages sent, the client applied them plus the forwarded arrows (35: 31 off the stand-in, 4 off the decoy), 34 of 39
+  windows engaged, 2 stalled, no crash on either copy, nothing made again (largest table 133 on the host, 68 on the client).
+- **The uncounted stand-in table after a client death, again**: after one death the client's stand-in had count 0 with 41
+  entries; after the next death the same stand-in had count 7 with 6 entries. So the state can clear by itself. A first try at
+  reading the per-character update's gate (+0x618/+0x620 and the tick at +0xF7C8 of the object 0x650 before the table's owner)
+  read float data: the object offset assumed there is wrong, so nothing is concluded from it.
