@@ -4623,3 +4623,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   messages (33.8/min), 1,010 applied by B, `dmg_stale` 0, 58 of 59 windows engaged, 0 stalled, no crash on either copy. The
   largest AI table the mod saw: 85 on B, 32 on A (`ai_table_max`), so nothing had to be made again on this route. (The tool's own
   `--ai-table` column stayed at 6 throughout while the mod's counter reached 85: that sampler is not reliable; read the mod's.)
+- **A 20-minute heavy fight** (`roam_fight.py 1200 6 --seed=623 --no-roam`: six orcs, B standing its ground): 1,200 s completed,
+  468 damage messages (23.4/min), 464 applied, `dmg_stale` 0, 37 of 39 windows engaged, 0 stalled, no crash. Largest AI tables 133
+  on B and 70 on A, so the 200 limit was not reached; B made 607 proxies in that time (proxies come and go far more often than a
+  table fills, which is why the crash needed long fights).
+- **The AI-table entries**: all of class `1DB1B08` (constructor `3749D8`), node at +0x40, an inner reference (`1DB1CE0`, at +0x18)
+  whose target is 0; the count walk's check (`+0x158`, `2458C0`) reads a flag at entry+0x560, so these are large objects; the other
+  method (`+0x1C8`, `47C76E0`) is in an obfuscated code region. What removes them when a character's own tree runs is still not
+  found; the recycling covers it.
