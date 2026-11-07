@@ -4566,3 +4566,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     0 archer reports in 45 s, `decoy_hurt` 1). Archers are noisy: one plain-soldier run had them in their shoot attack in only 19 of
     266 samples and no hit. Left to try: what the archers aim at on the decoy (its bones or aim point), and whether the arrows
     that do land (`decoy_hurt`, health lost outside the hit function) should be sent to the client.
+- **Arrows that do land on the decoy now reach the client.** Health the decoy loses outside the hit function (what an arrow does:
+  `decoy_hurt`, which was only counted) is sent to the client as a swing of the nearest announced enemy that has the decoy as its
+  target, an archer first, with `AI_Archer_Shoot` for an archer (its "current attack" can be a taunt) and that enemy's current
+  attack otherwise (`decoy_hurt_sent`; `coop_decoy_hurt_send=off` only counts). Checked by writing the decoy's health 50 lower
+  four times with an archer on it: 4 detected, 4 sent as `AI_Archer_Shoot`, 4 applied by B, whose health went 504 -> 390. With no
+  enemy on the decoy nothing is sent (seen once). Arrows on the decoy stay rare (above), so this only catches the few that land.
