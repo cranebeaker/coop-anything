@@ -4619,3 +4619,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   usual pick makes a new one (`puppet_recycled`). Checked with the limit at 30: the host's stand-in was made again once (34
   entries), the client made 21 proxies again, the fight went on (93 of 93 damage messages applied, every window engaged), both
   copies up. Guard suite 52/52, `net_test` 36/36.
+- **30-minute soak on the build with both recycling checks** (`roam_fight.py 1800 4 --seed=622`): 1,800 s completed, 1,013 damage
+  messages (33.8/min), 1,010 applied by B, `dmg_stale` 0, 58 of 59 windows engaged, 0 stalled, no crash on either copy. The
+  largest AI table the mod saw: 85 on B, 32 on A (`ai_table_max`), so nothing had to be made again on this route. (The tool's own
+  `--ai-table` column stayed at 6 throughout while the mod's counter reached 85: that sampler is not reliable; read the mod's.)
