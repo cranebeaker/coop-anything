@@ -4526,3 +4526,15 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   `SimProxyAdopt`) as the mod sets it and then written 0 every second: the nearest archer came to ~365 units of the decoy (median;
   the range they shoot the host's player from) in both, and the only report from them in each was one blade hit (110 units). No
   arrow at the decoy at bow range either.
+- **The client's other table-full crash is the audio manager's**: the registers logged at the next one (4 s into a soak, again
+  right after B entered the arena) and the code around it: `D1FE10` (`18E634` <- `CGameAudioManagerThread::AddKey`, `18E560`)
+  checks `[r13+0xA1170] == 0x200` and calls `D1EE40`, whose message is "m_vFutureKeys is at capacity of %u. Game will crash. Set
+  convar "GameAudioManager.FatalErrorOnFutureKeyFull" to false to get around this." That convar is the byte `D1EE5C` reads (`cmp
+  byte [rip+x],0` -> rva `26708C5`, 1 by default; 0 skips the crash). **Fix**: the mod writes it 0 in co-op on both roles
+  (`SimAudioKeysNonFatal`, checked against the instruction; `coop_audio_keys_fatal=on` keeps the game's crash); logged "a full
+  audio key queue no longer crashes the game", the byte read 00 on both copies. Why the queue fills on the client (it runs in the
+  background on this PC) is not known.
+- **The dropped-hit fallback, live** (new probe `injectdmg <enemy id> <attack hex>`, client: queues a host damage message for an
+  id it has no proxy for): 3 injected hits were applied with the nearest proxy as attacker (`dmg_borrowed` 3, `dmglog` `b` lines at
+  272-372 units); with `coopset dmgborrow off` the same hit counted `dmg_stale`. Hits through proxies 322 and 1,046 units off took
+  32 and 37 health from B: the attacker's distance does not stop the damage.
