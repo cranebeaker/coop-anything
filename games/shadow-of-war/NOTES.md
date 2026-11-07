@@ -4504,7 +4504,8 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 - **The host's stand-in fell behind again on a fresh session** (no crash): after B roamed south to the camp's walls (z ~8,800,
   outside the arena) the host's stand-in stayed 300-1,700 units off for minutes, "put back" every ~0.85 s without catching up; the
   decoy follows the stand-in, so the host's enemies went elsewhere and B showed no enemy for 2 minutes. When B stood still the
-  stand-in caught up (0 off), then lagged 150-240 behind small moves; its status line said `walks=0` (it moves by put-backs only).
+  stand-in caught up (0 off), then lagged 150-240 behind small moves. (The host runs `coop_puppet_move=anim`: the stand-in moves by
+  the client's animation inputs and is put back when it drifts; `walks` in its status counts the other mode, so 0 is expected.)
 - **The decoy now follows the client's sent place** (its latest packet, under a second old) instead of the stand-in's
   (`coop_decoy_follow=remote`, default; `standin` or `coopset decoyfollow standin` for the old way; `decoy_by_remote` counts frames
   where they were more than 150 apart). Same route (`roam_fight.py 600 3 --seed=619`): the decoy stayed within 21 units of B in
