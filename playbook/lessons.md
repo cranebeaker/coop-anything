@@ -197,3 +197,26 @@ error when the count is 0, and give every patch at least one test that fails wit
 (`Plugin.cs` in superflight-coop, `games/superflight/NOTES.md`).
 
 89. **Battle bots need real player stats, and a person watching catches what asserts miss.** BLACK SOULS II: a bot that skipped the intro played the placeholder actor (about 27 times normal HP and attack), so every fight one-shot, enemy hits showed "not affected", and a battle suite "passed" without exercising multi-turn sync. A tester watching the visible test windows spotted it, and also noticed that auto-battling bots never open the command menu. Load the real starting characters at a realistic level (read the class curves and the damage formula from the data), keep bot runs visible when someone wants to watch, and add one scenario that uses the real input menus instead of auto-battle.
+
+91. **In lockstep, cosmetic code can draw from the simulation's random generator, and how often it draws can depend on
+rendering.** FTL's sprite animations (random flicker frames, random frame sounds), particle emitters and background
+nebula clouds all call the game's one generator (`random32`). Two copies agreed until one fell behind and caught up by
+running several frames without a render in between; then it drew a different number of values and the copies split,
+with no visible state different at first. A forced hitch (a guest skips a few loops every 97, so it must catch up) made
+it reproducible, and a per-caller count of generator calls between hash checks, diffed between copies, named the three
+functions at once. Saving the generator state before each of them and restoring it after fixed it. Count calls per
+caller, cheaply (a small fixed table, not a map: the slower trace hid the bug), and hash the generator state on its
+own so a stream split shows before the game state splits (games/faster-than-light).
+
+92. **A "pause while a window is open" rule breaks lockstep.** FTL pauses its simulation while any window (store, ship
+screen, map, menu) is open, so a player browsing the store froze only their own copy. Make the pause come only from
+shared things (the explicit pause command, event dialogs every copy opens on the same frame) and let private windows
+leave the simulation running (games/faster-than-light).
+
+93. **Resync by reloading a save works only from a quiet moment, and the host must reload too.** FTL co-op repairs a
+desync and admits late joiners by sending the host's save to everyone and having every copy, the host included, reload
+it and restart lockstep. A save taken one frame into a jump loaded at different beacons on host and guest, so a resync
+now waits until no jump is armed or running and no event dialog is open. Reloading also exposed a use-after-free in a
+mod's screen code (a stale pointer to the previous game's ship) that the normal quit-to-menu path never hits; clear
+such pointers before loading. Version restarts with an epoch number so messages from the old run are dropped, and test
+that the drop is needed: without it, hashes from before the restart were compared with the new run (games/faster-than-light).
