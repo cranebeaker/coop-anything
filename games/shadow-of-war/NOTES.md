@@ -4549,3 +4549,15 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 - **A 10-minute run with per-orc detail** (`--seed=618 --detail`, to see what orcs do in a stalled window): 182 damage messages
   (18.2/min), all applied, 15 of 19 windows engaged, none stalled (longest engaged silence 14 s), so nothing to look at; stalls
   stay intermittent (0-4 per 25 minutes in the soaks above).
+- **Archers, closer** (`tools/archer_actions.py`, `tools/archer_vs.py`; the host now names its decoy in the `enemies` status,
+  `decoy=abs:...`, because `live_suite.live_decoy` had been picking an old decoy whose health came back):
+  - Against the real decoy two archers had it as target in nearly every sample, were in their shoot attack (`AI_Archer_Shoot`) in
+    ~45% of samples, but kept an outer ring 670-840 units off (`AI_Bip_CC_Taunt_OutterRing`) and no arrow reached it: no hit of an
+    archer in the hit log (`coopset hitlog 80`), `decoy_hurt` 0. Against the host's player they closed to ~270 and hit it 14 times.
+  - A plain `Gondorian_Soldier` spawned in the arena with two archers pointed at it (`retarget` every 0.5 s) was shot dead in 26 s
+    (six arrows of 50, from 383-977 units); adopted as a proxy (probe `adopt`: behavior tree skipped, follower mark) it was still
+    shot dead in 28 s; with its position written every 0.3 s it took one arrow in 40 s.
+  - So the decoy now is not written while it is within 25 units of its place (`coop_decoy_still`, default 25, 0: the old way;
+    `decoy_unwritten` counts the frames): 30,258 frames left alone in a 5-minute fight, which went as well as before (99 damage
+    messages, 19.8/min, every window engaged; the same route gave 74 earlier). Arrows still did not reach the decoy, also with
+    the stand-in made targetable (`puppet targetable on`) and with `decoyhide off`. Cause still unknown.
