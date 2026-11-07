@@ -4644,3 +4644,28 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 - **One more despawn guard**: in the first mixed fight B's despawn faulted once (caught; 342 asks) on a character whose vtable was
   already the base class's (`1DB7358`): it was being deleted. The despawn now refuses such a character (`despawn_refused`, logged
   "is being deleted"). The second run: 188 despawns on B, 0 faults, 0 refused.
+- **The host's player dies** (`tools/host_death.py`, new; the client keeps `coop_follow_travel` on, as players do). A brought to
+  1 health by the probe's kill and finished by five orcs in 4 s, while B fought nine of the host's enemies in the arena.
+  Observed, two runs:
+  - The game moves the host's dead player to its respawn point (the tower, 2,350-2,700 units away and 57 m up) while the death
+    screens still show: 6 s after the death in one run, 22 s in the other.
+  - The client counts that as the host's long jump and follows it (`travels` +1). Its fight is left behind (the proxies there
+    are dropped).
+  - The host keeps sending its player's state on these screens, so the client never counts it as away (`away` stayed 0). The
+    player guide said the client's enemies vanish after 5 s; that holds for a stop with no states (the pause test), not the
+    death screens.
+  - The host's world itself is stopped there: no enemy snapshots, an orc spawned beside the host does not move, its player and
+    stand-in do not move, a teleport of the stand-in (even 300 units) does not land. The mod's frame hook still runs (the
+    puppet's frame counters rise).
+  - The game frees the host's stand-in of B during the respawn ("puppet ... is gone"); the mod makes a new one (at B's last place
+    the host knew, then moved to B once the host's world runs).
+  - Once A's player walks again (21 s of A presses, with a back press every third): B 100-240 units from A, the host's stand-in 4
+    units from B, the host's enemies shown on B again (5 after spawning 3 orcs near A). `RESULT: PASS`, no crash on either copy.
+  - **Test trap**: after a death the camera answers the stick on screens where the player cannot move yet, so
+    `live_suite.ensure_world` said "back" while A still stood on a screen (the first run's stand-in looked stuck 6,000 units off
+    because of that). New `Copy.can_move()` (1 s of stick, the player must move 20 units) is used by both death tests now.
+- **The client's player dies** (`tools/death_standin.py`, last run in session ck where it broke the host's stand-in). The probe's
+  kill by B's own player no longer takes ("not killed"), and four orcs alone took B to 74 health in 120 s (that run did not
+  kill B; not counted). With one of B's proxies as the attacker the kill left B at 1 health and the orcs finished it in 4 s. B
+  respawned at the tower ("this player travelled alone (6097 units); back to the host in 3 s"), was taken back to the host, and
+  after a 3 s walk the host's stand-in was 0 units from B; B's stand-in of A 6 units from A; no crash, 0 despawn faults.

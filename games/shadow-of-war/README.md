@@ -120,6 +120,8 @@ The co-op mod itself is in its own repo (see "Where things stand"); it grew out 
   list destructor looping, caused by the mod's own write to a captain's member link) and two host crash causes (a removed
   decoy's AI running on, raw target writes) were found, fixed and checked with negative controls (`tools/jump_cycles.py`,
   `tools/captain_unlink.py`, unit tests with a looping-list control). Offline: unit tests 93/93 and 36/36, guard suite 52/52.
+  Each player's death was checked with bots too (`tools/host_death.py`, `tools/death_standin.py`): the client follows the host's
+  respawn, or is taken back to the host after its own, and both pictures follow again; no crash.
   Details and every run in [NOTES.md](NOTES.md).
 
 ## How to play
@@ -136,6 +138,8 @@ host starts first, client joins and gets the host's save.
   stand-ins) and crashed the client three times; the mod now makes such a character again before its table fills (session cm).
   Not yet run for hours.
 - The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
+- When the host dies, the client is taken to the host's respawn point while the host is still on its death screens, and its
+  fight is left behind.
 
 ## Next steps
 
