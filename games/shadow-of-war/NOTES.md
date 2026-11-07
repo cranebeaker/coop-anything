@@ -4538,3 +4538,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   id it has no proxy for): 3 injected hits were applied with the nearest proxy as attacker (`dmg_borrowed` 3, `dmglog` `b` lines at
   272-372 units); with `coopset dmgborrow off` the same hit counted `dmg_stale`. Hits through proxies 322 and 1,046 units off took
   32 and 37 health from B: the attacker's distance does not stop the damage.
+- **25-minute soak on the build with the audio switch** (`roam_fight.py 1500 4 --seed=621`; the same route had lost B to the audio
+  crash 4 s in on the build before): 1,500 s completed, 509 damage messages (20.4/min), all applied by B, `dmg_stale` 0, 45 of 49
+  windows engaged, 0 stalled (longest engaged silence 19 s), no crash line on either copy. Guard tests 52/52 (no-peer), `net_test`
+  36/36, `enemy_test` 93/93.
