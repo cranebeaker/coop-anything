@@ -10759,3 +10759,28 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: Space Rangers HD: A War Apart
+  year: 2011
+  engine: MatrixGame
+  project: Co-op Anything
+  url: https://github.com/murgesku/MatrixGame
+  other_urls:
+  - https://store.steampowered.com/app/214730/
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: unknown
+    enemies: yes
+    world_state: unknown
+    items: unknown
+  players: "2"
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Co-op planetary battles for Space Rangers HD. Host-authoritative battle simulation over ENet (UDP). Channel A reliable (handshake, orders), channel B unreliable sequenced (pose deltas). Tested headless with two client instances on one PC via localhost. Build source: murgesku/MatrixGame fork with local port fixes. Original install not modified; test copy in local/test-install.
+  sources:
+  - https://store.steampowered.com/app/214730/
+  - https://github.com/murgesku/MatrixGame
+  checked: '2026-11-07'
