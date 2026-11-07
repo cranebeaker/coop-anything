@@ -91,7 +91,7 @@ Function table and signatures: NOTES.md, sessions r and s.
 
 ## What we changed
 
-No co-op changes yet. Tooling for working on the game safely (not published yet):
+The co-op mod itself is in its own repo (see "Where things stand"); it grew out of this tooling for working on the game safely:
 
 - **sowguard**, a `bink2w64.dll` proxy for a copied test install: refuses to run outside
   the test folder or on another build; hooks ntdll file calls in the game process to
