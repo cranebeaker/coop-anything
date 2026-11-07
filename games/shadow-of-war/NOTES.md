@@ -4478,3 +4478,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   not pile up bodies; what filled the tables is not known.
 - **The final build** (limbo up to 56, probe `kill` with an attacker): 12 jump cycles, 46 remakes, no crash on either copy, all 46
   old decoys held in limbo; guard tests 52/52 (no-peer), `enemy_test` 93/93, `net_test` 36/36.
+- **Archers** (`tools/archer_range.py`, the decoy picked as the proxy with health above 0: `live_suite.live_decoy`, since the host's
+  proxy list now holds old decoys too): two `Orc_Archer` spawned 700 units from B came to ~400 units of the decoy, then kept
+  1,000-1,500 off with the decoy as their target (`retarget show`), and in 40-120 s **never shot it**: 0 damage reports from them
+  (the host logged 8-14 from other attackers meanwhile), the decoy's health untouched; the same with `coopset decoyhide off`. So the
+  host's archers do not attack the client from range. Why (the target being an ally of the player's faction, line of sight, the
+  mod's attack-target hook) is not known.
