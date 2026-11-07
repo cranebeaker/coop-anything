@@ -4517,3 +4517,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   messages (17.5/min), all applied by B, `dmg_stale` 0, 23 of 29 windows engaged, 4 stalled (longest engaged silence 51 s), no
   crash line on either copy (the first soak on this route lost B to the `11244A` check at ~13 min). One run: the table-full crash
   is not shown to be gone.
+- **Archers against the host's own player** (A alone, keephealth off for 40 s, two `Orc_Archer` spawned 1,000 units off): A was hit
+  7 times (29-99 health each) while the nearer archer stood 330-510 units off: out of blade reach, so arrows. Against the decoy
+  the same kind of archer kept 1,000-1,500 off and never fired. So arrows work; the archers hold back from the decoy, beyond their
+  firing range. Why (the decoy being an ally soldier, its own threat radius) is not known.
