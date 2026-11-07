@@ -4602,3 +4602,14 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   references: unlinking them from outside would leak them and skip their own clean-up, so it was not tried. Options for next time:
   find what the skipped tree does with them (the `+0x158` check is probably "still valid"), or have the client remake a proxy
   before its table nears 256 (a proxy rarely lives that long under fire; the stand-in's grows slower, ~4 a minute).
+- **Fix for the AI-table crash: proxies are made again before their table fills.** A background thread finds the client's AI tables
+  every 15 s (`SimScanHeap` for the vtable `1FF9F50`); every 2 s the client reads each one's count and character, and a proxy whose
+  table holds `coop_proxy_table_max` entries (default 200, below the game's 256; 0: off; `coopset proxytablemax`) is taken 20,000
+  units down, freed the usual way (killed, despawned, kept with its AI off until the game deletes it) and made again where the
+  host's enemy is, with an empty table (status: `proxy_recycled`, `ai_table_max`, `ai_table_scans`; logged "its proxy's AI table
+  held N entries; made again"). Checked with the limit at 20: 30 proxies made again in a 4-minute fight, which went on normally
+  (56 of 56 damage messages applied, every window engaged), both copies up. The host's stand-in on the client also grows (~4 a
+  minute; not handled yet).
+- **25-minute soak with the recycling at its default** (`--seed=618`, 4 orcs): 1,500 s completed, 319 damage messages (12.8/min),
+  all applied, `dmg_stale` 0, 0 stalled windows (25 of 49 counted as engaged), no crash on either copy; the largest proxy table
+  seen was 92, so no proxy had to be made again. Guard suite 52/52, `net_test` 36/36, `enemy_test` 93/93.
