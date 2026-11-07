@@ -4722,3 +4722,45 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   entries; after the next death the same stand-in had count 7 with 6 entries. So the state can clear by itself. A first try at
   reading the per-character update's gate (+0x618/+0x620 and the tick at +0xF7C8 of the object 0x650 before the table's owner)
   read float data: the object offset assumed there is wrong, so nothing is concluded from it.
+- **What prunes the AI list, found** (probe `watchw` on every thread, while the host's player struck; the per-thread `wtrace`
+  missed it because this work runs on a worker thread).
+  - Observed:
+    - On a healthy client stand-in the count is rewritten every frame by the walk: `112354` ← `112100` ← `2FC6B8` ← `2FF40C`
+      ← `2FF268`, on a worker thread.
+    - An entry was linked in by `373E1C` → `1C6D446`, reached from `2C50B8` ← `2FC40F` ← `1CF5B3`.
+    - An entry was unlinked and freed by `3749B8` (the entry's deleting destructor) → `3752B6`/`3752CB`, called from `2FC173`.
+      That is inside `2FC050`, the pruning pass, which `2FC6B8` reaches through `FFF3B0` at `2FCD10`.
+  - From the code:
+    - `2FC050` updates each entry (method `+0x40`). It deletes an entry whose weight (+0x70) is at most 0 and whose state (+0x74)
+      is 2. It also deletes an older entry of the same action (method `+0x138`) unless that one is marked at +0x7C.
+    - `2FF268` loops over a registry of agents (+0x6720) and skips an agent whose byte +0x285 is 0. The agent is the object 0x140
+      before its table; the agent reset `1960C4` clears that byte.
+    - So an agent the update skips is never pruned and never counted. That matches the stand-in seen with count 0 and a growing
+      list.
+  - Live: every healthy agent read had +0x285 = 1: both players, both stand-ins, three proxies (`tools/agent_active.py`). Three
+    client deaths in this session did not bring back the bad state, so +0x285 on a bad stand-in is still unread.
+- **The host's stand-in standing still after client deaths**.
+  - Observed:
+    - After the client died twice, the host's stand-in of the client stood 1,600 units off for minutes. It was put back every
+      frame (36,550 put-backs) without moving, while the host's world ran.
+    - It had been made again after the game freed the old one at the client's death ("is gone").
+    - A stand-in made again at that time (forced through `coopset proxytablemax 2`) stood still at its spawn spot too. With the
+      client standing still at 500-5,000 units east of the host (`tools/standin_range.py`), it followed out to 2,500, stayed at
+      x 25,000 when the client stood at 3,000 and 3,500, and followed again at 4,000-5,000.
+    - A direct write of its position (probe `write` at +0xAC) held, but the stand-in did not follow afterwards.
+    - In a fresh session the same check followed at every distance, and three client deaths and a forced remake there left a
+      stand-in that followed.
+  - Unknown: what puts a stand-in in that state.
+  - **Fallback** (`FrozenPutBack` in `AnimFrame`, both roles): after 30 way-off put-backs in a row that left the stand-in where it
+    was, it is moved by direct writes whenever it is 15 units off, until it is seen moving by itself again. The `remote` status
+    shows it as `frozen=<now>/<spells>/<writes>`.
+  - Checked:
+    - On the host's death screen (host world stopped) the host's fallback engaged once (one write) and let go when the world ran
+      again; `host_death.py` still passes.
+    - On the client it engaged during its own death respawn (56 s) and while both copies stood on game screens (103 s), 51
+      writes in all, and let go both times.
+    - A 5-minute fight with archers after that: no new spell on either copy. 54 swing messages sent, 66 applied by the client
+      with the arrows, 9 arrows sent off the stand-in.
+    - Not checked: the original stuck state. It did not come back in this session.
+  - Also seen: during the test both players once stood on game screens at the same time (neither could walk; the host's player
+    had moved ~3,500 units). A few A and back presses freed them. Cause unknown.
