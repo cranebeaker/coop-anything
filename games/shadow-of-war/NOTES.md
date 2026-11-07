@@ -4505,3 +4505,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   outside the arena) the host's stand-in stayed 300-1,700 units off for minutes, "put back" every ~0.85 s without catching up; the
   decoy follows the stand-in, so the host's enemies went elsewhere and B showed no enemy for 2 minutes. When B stood still the
   stand-in caught up (0 off), then lagged 150-240 behind small moves; its status line said `walks=0` (it moves by put-backs only).
+- **The decoy now follows the client's sent place** (its latest packet, under a second old) instead of the stand-in's
+  (`coop_decoy_follow=remote`, default; `standin` or `coopset decoyfollow standin` for the old way; `decoy_by_remote` counts frames
+  where they were more than 150 apart). Same route (`roam_fight.py 600 3 --seed=619`): the decoy stayed within 21 units of B in
+  all 19 rows and B always had proxies; the old way lost B at 90 s (decoy 369, then 1,693 off, no proxy on B for minutes). Swings
+  in that run: 75 in 600 s (7.5/min, 3 stalled rows): fewer than other routes' 13-27/min; one run each, so not a measured
+  difference.
+- **Crash lines now carry the registers** (`crash registers: rax=... rbx=...[rva:<vtable>]`), for the client's table-full crash at
+  `11244A` (its rbx is the table's object).
