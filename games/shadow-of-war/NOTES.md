@@ -4450,3 +4450,31 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   jump test that would show it was spoilt by the traps above.
 - The client's page-allocator crash: cause unknown; seen once.
 - Whether the host's archers' arrows reach the client.
+
+### Later in cm: host crashes when the decoy is made again, and the removed decoy's AI
+
+- **A jump test that stays in the arena** (`tools/jump_cycles.py --arena`): B jumps between two points of the arena's flat ground
+  2,250 units apart (over `coop_decoy_remake`'s 1000) every 12 s while 3 orcs fight it; the host's player stays at its spot (put
+  back when the fights push it). The host remade its decoy about 4 times per cycle.
+- **The host crashed in both modes of the retarget swap**: with raw writes (`--raw`) after ~6 cycles (the game's own fatal check
+  "Removing an object from a tag that doesn't contain it.", `1128302` <- `6D73B5` <- `4DCF0E` <- `76E1CC`: while deleting a
+  character); with the game's assign after 9 cycles (34 remakes; access violation at `342E1A` reading `0x528`: `[character+0x2CD8]`
+  was 0, in the AI tick `2F5E96` <- `2F7B21`). The first host crash of the session (`2FC037`, `[character+0x2D08]` = 0) was of the
+  same kind: a character's AI ticking while its components are gone.
+- **Cause found (derived)**: `DecoyRemove` wrote the old decoy's health 0, asked the game to despawn it and took it out of the proxy
+  set in the same frame. The proxy set is what skips a proxy's behavior tree (`BrainFilter`), so the old decoy's own AI ran again
+  on a character the despawn was taking apart. The client has kept its freed proxies in the set until the game deletes them
+  (`g_limbo`) since session bh; the host's decoy did not.
+- **Fix**: a removed decoy now stays in the proxy set (AI off) until the game has deleted it (`g_decoy_limbo`, up to 56;
+  `coop_decoy_limbo=off` / `coopset decoylimbo off` for the old way; status `decoy_limbo`, `decoy_limbo_gone`). With it: 16 jump
+  cycles, 61 remakes, no crash (the limbo was then capped at 32). The game never deleted one of them (`decoy_limbo_gone` 0), and
+  after ~10 cycles (~40 old decoys at health 0) the fights stopped: no swing in the last 6 cycles. A kill the game's way did not
+  take on a decoy (probe `kill` now takes an attacker: the host's player, the decoy itself and an orc all gave "not killed"; the
+  mod's own hooks drop hits aimed at the decoy, which may be why). So old decoys stay, AI off; a remake comes with a long jump of
+  the client (joining, a respawn, a fast travel), a few per session in play.
+- **The client crashed twice on full game tables** (not the mod's code paths seen so far): once in the page allocator (512 pages),
+  once in the AI code (`11244A`: a 256-entry table at `[rbx+0x70]`, `1123CC` <- `112100` <- `2FC6B8`), the second during the raw jump
+  test. `tools/char_count.py`: after 4 jump cycles the client held 27 characters (11 dead), the host 70 (26 dead): the client does
+  not pile up bodies; what filled the tables is not known.
+- **The final build** (limbo up to 56, probe `kill` with an attacker): 12 jump cycles, 46 remakes, no crash on either copy, all 46
+  old decoys held in limbo; guard tests 52/52 (no-peer), `enemy_test` 93/93, `net_test` 36/36.
