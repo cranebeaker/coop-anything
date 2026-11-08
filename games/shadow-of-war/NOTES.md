@@ -5173,3 +5173,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     crash on either copy; the stand-in remake did not fire during the deaths.
   - The new stand-in log fired once on the client: its stand-in of the host listed 17 entries with count 0 and the agent byte
     at 1. So an uncounted list can come with the byte on; the byte is not the only cause.
+- **A 75-minute fight that keeps fighting** (`roam_fight.py` 4,500 s, 4 orcs, archers, `--max-spawns=480`; the build with the
+  stand-in remake and the per-attacker de-dup; fresh copies):
+  - No crash on either copy; the owner's files unchanged. 313 orcs spawned, 4-6 alive near the client on average to the end;
+    121 of 149 windows engaged; 1,267 client strikes applied on the host.
+  - The host's swings at the client fell off after the first 15 minutes, in this run and in the 90-minute run on the build
+    before (so not today's changes): 29.5 and 27.4 damage messages a minute in 0-900 s, then 2-4 a minute in this run with
+    orcs still at the decoy. 38 windows stalled (an orc after the decoy in most scans, no swing landed), 36 of them after
+    900 s. The decoy was made only 4 times in the run, so the old pile-up of retired decoys is not it.
+  - `--ai-table` printed a value of 2,777,918,039 for one character from 1,890 s on: the tool's old guess (a dword behind
+    +0x2CE8) reading a freed object. Not a table size; that option is superseded by the mod's own `ai_table_max`.
