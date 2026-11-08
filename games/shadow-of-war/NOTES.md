@@ -5025,3 +5025,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Checked on the stuck session: one press, after which the host's world ran again (the client's pictures back, its strikes
     applied).
   - Also seen: the hunt dropped 664 redirects toward the host's player in segment 1 (`hunt_player_left`).
+- **The 45-minute soak again, with the press-through bot** (same seed 720, fresh copies): completed, no crash. 371 messages
+  (8.2/min), 440 applied by the client with the arrows, 381 of its hits applied on the host, 68 of 89 windows engaged. Before:
+  148 messages, 37 of 89 windows.
+  - The press-through never fired (`host pressed through 0x`): no captain stopped the host this time. So the comparison shows
+    what the earlier run lost, but does not test the press-through. The single press on the stuck session above does.
+  - A different gap showed: 13 stalled windows (orcs engaged near the client, no swing). The longest stretch was 320 s from
+    2,247 s on, while the host's snapshots kept coming. Not looked into yet.
