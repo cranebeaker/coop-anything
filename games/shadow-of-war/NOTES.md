@@ -4937,3 +4937,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   `ActiveKillPlayer_AlreadyNamed` (the captain killed the host's player), `ActiveGotPlayerInLastChance`, then `TimePassed` four
   times and promotions. The client stood on a screen until pressed. Which screen (most likely the captain's presentation) was not
   seen. This is the design (the client runs the host's Nemesis events; `coop_nemesis=share` only logs them); left as it is.
+- **This session's decisions under unit test.** The same-swing de-duplication, the bystander and after-strike gates of the
+  local-damage path, the stock-strike count, the frozen put-back count and the counter give-back now live in `src/coop_rules.h`
+  as game-free functions. The mod uses them, and `enemy_test` checks them (23 new checks, 116 of 116). After the change the
+  runner's fight and duplicate-damage checks passed live (9 of 9 windows engaged; 0 same-swing pairs in 73 sends).
