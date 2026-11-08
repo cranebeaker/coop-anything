@@ -5116,3 +5116,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   | host's death | waited; then 119 units from the host, the stand-in 0 units from the client |
   | client's death | the stand-in follows |
   | kill-and-respawn | no crash |
+- **A 10-second outage in the middle of a fight** (the chaos relay's `disconnect` 100 s into a 4-minute `roam_fight.py` run; the
+  relay on `lan` otherwise):
+  - The client logged the link lost after 5 s of silence, took the host's enemies away ("no state from the host for 5 s"),
+    reconnected by itself when the link came back (the host saw a second hello), and showed them again ("the host is back").
+  - The outage's window showed 0 of 10 pictures and the decoy 1,651 units off (the client's place not updated). The next window
+    had 9 of 10 engaged with 9 pictures, none duplicated.
+  - All 40 host swing messages were applied by the client (none lost across the outage). 47 client strikes were applied on the
+    host. No crash.
