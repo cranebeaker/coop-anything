@@ -5106,3 +5106,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     once).
   - `host_death.py` now checks that the client waited (`travel_waits` rose; `--no-wait` for `coop_travel_wait_host=off`). It
     passed on the rerun.
+- **The runner on the build with the respawn wait**: 6 of 6 passed.
+
+  | check | result |
+  |---|---|
+  | fight | 9 of 9 windows engaged |
+  | duplicate damage | 42 sends, 0 pairs |
+  | exact loss | 300 -> 250.0 -> 0 |
+  | host's death | waited; then 119 units from the host, the stand-in 0 units from the client |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | no crash |
