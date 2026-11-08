@@ -4901,3 +4901,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Now no stock strikes are sent for pictures whose type names a tamed creature, prisoner, slave, captive or follower
     (`local_bystander`). In the check run no such loss happened, so the filter was not exercised. What causes those losses
     (falls after being placed?) is unknown.
+- **A 30-minute soak with this round's fixes** (de-duplicated damage, no stock strikes after a reported strike or on bystanders;
+  `roam_fight.py 1800 4 --seed=711 --archer-every=3`, fresh copies): completed, no crash on either copy. 161 swing messages
+  (5.4/min, duplicates no longer counted); the client applied 204 with the forwarded arrows; 37 of 59 windows engaged, 1 stalled.
+  Owner files unchanged.
