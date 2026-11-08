@@ -4905,3 +4905,14 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   `roam_fight.py 1800 4 --seed=711 --archer-every=3`, fresh copies): completed, no crash on either copy. 161 swing messages
   (5.4/min, duplicates no longer counted); the client applied 204 with the forwarded arrows; 37 of 59 windows engaged, 1 stalled.
   Owner files unchanged.
+- **Live regression runner** (`tools/regress.py`, new). On a running pair it runs this session's live checks in turn and prints
+  PASS/FAIL for each: a 5-minute fight, duplicate damage, the host's death, the client's death, 10 kill-and-respawn cycles.
+  First run on the current build, all passed (5 of 5):
+
+  | check | result |
+  |---|---|
+  | fight | 39 messages, 8 of 9 windows engaged |
+  | duplicate damage | 57 host sends, 0 same-swing pairs |
+  | host's death | the stand-in 51 units from the client, 9 host enemies shown on it |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | no crash |
