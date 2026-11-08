@@ -4958,3 +4958,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   | host's death | the stand-in 32 units from the client, 15 host enemies shown on it |
   | client's death | the stand-in follows |
   | kill-and-respawn | 10 cycles, no crash |
+- **Losses on the client's pictures by themselves** (`tools/proxy_losses.py`: the client idle at the tower, five orcs spawned
+  300-700 units around it, the client's counters and the pictures' heights sampled for 60 s).
+  - Observed, first run: pictures dropped 150-163 units between samples, and a wild warg's picture lost 100.8. The client sent
+    that loss to the host as two of its own strikes.
+  - Observed, rerun: the same kind of drops (one picture 150 units down every 2 s, likely an orc climbing down the ledges), and no
+    loss.
+  - Change: a picture more than 100 units below its highest point of the last 2 s is taken as fallen, and its loss is not sent
+    (`local_fall`; `TrackPeak`/`RecentFall` in `coop_rules.h`, 4 new checks, 120 of 120). The host's enemy falls too and loses
+    its own health. Not exercised live yet.
+  - Unknown: the rerun's `hits_sent` rose by 7 while the client did nothing.
