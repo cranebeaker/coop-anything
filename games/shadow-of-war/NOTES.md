@@ -5002,3 +5002,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 - **45 minutes on the final, published build** (public `6918021`; `roam_fight.py 2700 4 --seed=720 --archer-every=3`, fresh copies):
   completed, no crash on either copy. 148 swing messages, 206 applied by the client with the arrows, 365 of the client's hits
   applied on the host. 37 of 89 windows engaged (the thinning of long runs again), 2 stalled. Owner files unchanged.
+- **Counters, settled.** `counter_log.py 180 3 --real-health` with `coop_counter_heal=on` on the client.
+  - Observed: 8 counter strikes. Four came 0.77-1.36 s after a damage message from the same enemy, and in each the client's
+    health was 504 before that swing and still 504 at the counter: the countered swing did no damage. Other swings in the run did
+    hurt (504 -> 395 -> 287). The other four counters hit enemies whose last swing was 1.6-3.7 s old. Nothing was given back
+    (`counter_heals` 0).
+  - Derived: the game ignores a hit that lands while the client is countering, so counters protect the client by themselves.
+    The give-back stays off; the client's counters are only counted (`counter_strikes`).

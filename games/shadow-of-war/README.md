@@ -146,7 +146,8 @@ host starts first, client joins and gets the host's save.
 - When the host dies, the client is taken to the host's respawn point while the host is still on its death screens, and its
   fight is left behind.
 - A swing that reached both the host's picture of the client and the decoy was sent twice; since session cm it is sent once.
-- A countered swing may still hurt the client (not settled); an experimental give-back is off by default (`coop_counter_heal`).
+- Counters protect the client: a swing it counters does not take its health (checked in session cm), so the experimental
+  give-back (`coop_counter_heal`) stays off.
 - When a captain ambushes the host, the client applies the host's Nemesis events (the presentation, the showdown, a kill of the
   host's player) and also stands on a screen until the player presses on (seen once with bots).
 - After a client death the host's picture of the client once stood still 1,600 units off (the game no longer moved it); since
