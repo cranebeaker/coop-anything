@@ -4858,3 +4858,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - New behavior (off): 60 redirects to the decoy and 359 redirects to the host's player dropped (`hunt_player_left`), no crash.
   - Derived: the new behavior holds up under heavy flipping. The old one did not crash here either, so the crashes' link to the
     redirect is still not shown.
+- **Long runs on the published build** (`29d3634` public, the hunt fix in; fresh copies each):
+  - 45 minutes (`roam_fight.py 2700 4 --seed=710 --archer-every=3`): completed, no crash on either copy. Thin: 141 messages
+    (3.1/min), 22 of 89 windows engaged.
+  - 25 minutes (`--seed=711`): completed, no crash. 363 messages (14.5/min), 417 applied with the arrows, 45 of 49 windows
+    engaged. The 30-second windows held 0-18 messages from start to end, with no decline over time.
+  - Afterwards (`tools/orc_targets.py`, new: each hostile grunt's target from its AI's active goal slot): three grunts within
+    3,000 units of the client's place. Two were after the host's player (1,400 and 2,650 units away), one after another
+    character.
+  - Derived: fight intensity in these runs depends on the seed and route more than on the run's length. The thin 30- and
+    45-minute runs are not a steady decline (the 25-minute one held up).
