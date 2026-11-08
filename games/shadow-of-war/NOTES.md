@@ -5187,3 +5187,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     4 times in the run.
   - `--ai-table` printed a value of 2,777,918,039 for one character from 1,890 s on: the tool's old guess (a dword behind
     +0x2CE8) reading a freed object. Not a table size; that option is superseded by the mod's own `ai_table_max`.
+- **The host's redirect slots** (the hunt points up to 32 enemies at the decoy; `retarget_slots=<used>/<dead>` in `enemies`, new;
+  `tools/slot_watch.py`, new):
+  - From the code: the hunt never checked health, so a dead enemy whose AI still named the decoy kept its slot every frame.
+  - Observed with that left as it was (`coopset huntreleasedead off`, 7 minutes of fighting): 4-7 slots in use, nearly all held
+    by dead enemies, never near 32; they went when the bodies did. With the release on (default): 20 dead enemies' slots let go
+    in 7 minutes, 0-4 in use; damage messages 6-15 a minute either way. So the slots never ran short; the release
+    (`coop_hunt_release_dead`) is tidiness, not a fix for anything measured.
+  - Runner on that build: 6 of 6 (fight 50 messages, 0 stalled; dup_damage 24 sends, 0 pairs; exact loss 300 -> 250 -> 0; both
+    deaths; kill-and-respawn). The stand-in log fired on healthy stand-ins (17-20 entries, count 0, byte 1), so it now needs 64
+    entries past the count.
