@@ -4968,3 +4968,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     (`local_fall`; `TrackPeak`/`RecentFall` in `coop_rules.h`, 4 new checks, 120 of 120). The host's enemy falls too and loses
     its own health. Not exercised live yet.
   - Unknown: the rerun's `hits_sent` rose by 7 while the client did nothing.
+- **The idle client's strikes and the 60.5 losses, explained (likely).**
+  - Observed: in a third idle run the client's damage log (its strikes, `h`) held 7 strikes: `PC_Recoil_Light_U2D_F` and
+    `PC_Recoil_Heavy_U2D_F`, each right after an orc's swing reached the client.
+  - Derived: these are recoil hits, damage the client's gear or skills deal back to an attacker. They are the client's doing and
+    are rightly sent to the host.
+  - Observed: in the same run one orc's picture lost 60.5 twice outside the hit function, the same amount as the tamed wargs and
+    the prisoner before.
+  - Derived (not proven): the 60.5 losses come from the client's own gear (an aura or damage over time), not from falls. Sending
+    them for hostile enemies is right. The bystander filter keeps the host's allies out (on the client their pictures can be
+    caught by the client's effect). The fall skip stays (harmless), but falls were probably not the cause.
