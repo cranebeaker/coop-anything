@@ -5197,3 +5197,24 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Runner on that build: 6 of 6 (fight 50 messages, 0 stalled; dup_damage 24 sends, 0 pairs; exact loss 300 -> 250 -> 0; both
     deaths; kill-and-respawn). The stand-in log fired on healthy stand-ins (17-20 entries, count 0, byte 1), so it now needs 64
     entries past the count.
+- **Deaths and the runner's checks over a bad network** (the chaos relay between the copies; `local/pair_up.ps1 -ClientHost`):
+  - `bad_wifi`: host's death PASS (the client 422 units from the host after, the stand-in 29 from the client); client's death
+    PASS.
+  - `hell` (8% loss in bursts, 330-380 ms): host's death PASS (146 s; 266 and 22 units), client's death PASS (173 s against
+    63-90 s on a direct link), exact loss PASS (300 -> 250 -> 0), kill-and-respawn PASS (no crash). Duplicate damage FAILED
+    with one pair, which the network did not cause (next item).
+- **The host's tamed wargs hurt the client.**
+  - Observed: the pair was attacker id 111, attack `6B15C38E` = `AI_Warg_WhileMoving`, 46 ms apart. With `coopset hitlog`
+    the host logged `Talion [stand-in] <- Warg_Tamed ... 6B15C38E` twice within 125 ms: a tamed warg (the host's ally,
+    600 health, following the host's player) passing through the client's stand-in with its running lunge. Same victim
+    twice, so the de-duplication rightly let both through; both reached the client as damage. The same attack made the
+    109 ms pair in an earlier run.
+  - Change: a hit on the stand-in or the decoy by an attacker of a bystander kind (Tamed, Follower, Prisoner, Slave, Captive,
+    by spawn type) is not sent (`coop_ally_hits`, default off; `ally_hit_drops`). Tamed wargs carry no follower flag at
+    +0x23B8, so the type name is used.
+  - Checked: probe `standinhit` with a spawned `Warg_Tamed` as the attacker: with the default, dropped before the host's damage
+    queue (twice); with `coop_ally_hits=on`, queued (two `u` entries in `dmglog`: a freshly spawned tamed warg is not an
+    announced enemy, so it is not sent either; the one seen in the fight had an enemy id, so it had been announced, likely
+    while wild). Runner fight and duplicate damage passed after.
+  - Not reproduced in a staged fight: `tools/ally_hits.py` (three wild wargs at the client with the hit log on) saw no ally hit
+    on the client's picture in two 60 s runs; the wild wargs went for the host's player and each other.

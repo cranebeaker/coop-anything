@@ -16,7 +16,8 @@ host's Nemesis events (captain fights, kills, promotions) on its own copy of the
 captain as himself (built from its own copy of his Nemesis record; a captain the host makes after the join is an
 ordinary orc there). Hits go both ways with the host's grunts, archers, Olog-hai, berserkers, spearmen, shield orcs and wild
 wargs; the client's arrows and gear effects reach the host's enemies exactly; counters protect the client. Both players' deaths,
-bad networks (a simulated 330-380 ms lossy link) and runs of up to 45 minutes were checked with bots, without a crash. Alpha,
+bad networks (a simulated 330-380 ms lossy link), a 10-second outage mid-fight and runs of up to 90 minutes were checked with
+bots, without a crash. Alpha,
 tested only on one PC. This folder holds the research and reverse-engineering behind it,
 for a from-scratch, host-authoritative co-op: a safe way to run and instrument a test copy,
 a map of the engine's console commands, the Nemesis system's live log output, and the
@@ -125,10 +126,10 @@ The co-op mod itself is in its own repo (see "Where things stand"); it grew out 
   `tools/captain_unlink.py`, unit tests with a looping-list control). Offline: unit tests 93/93 and 36/36, guard suite 52/52.
   Each player's death was checked with bots too (`tools/host_death.py`, `tools/death_standin.py`): the client follows the host's
   respawn, or is taken back to the host after its own, and both pictures follow again; no crash.
-  `tools/regress.py` runs the live checks in one go (a fight, duplicate damage, both deaths, kill-and-respawn): 5 of 5 passed on
-  the latest build. Fights also ran through the hub's chaos relay on bad Wi-Fi, transatlantic and the worst profile (8% loss in
-  bursts, 330-380 ms round trip): hits went both ways, the link never dropped, no crash. Soaks of 25, 30 and 45 minutes on the
-  latest builds completed without a crash.
+  `tools/regress.py` runs the live checks in one go (a fight, duplicate damage, exact losses, both deaths, kill-and-respawn): 6 of 6
+  passed on the latest build (2026-11-08). Fights also ran through the hub's chaos relay on bad Wi-Fi, transatlantic and the worst profile (8% loss in
+  bursts, 330-380 ms round trip): hits went both ways, the link never dropped, no crash; a 10-second outage in a fight recovered by
+  itself. Soaks of 25, 30, 45, 75 and 90 minutes completed without a crash.
   Details and every run in [NOTES.md](NOTES.md).
 
 ## How to play
