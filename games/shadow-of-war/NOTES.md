@@ -4868,3 +4868,22 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     character.
   - Derived: fight intensity in these runs depends on the seed and route more than on the run's length. The thin 30- and
     45-minute runs are not a steady decline (the 25-minute one held up).
+- **Duplicate damage, found and fixed.**
+  - Found with `tools/counter_log.py`: the client's damage log, which since this session also holds its own strikes (`h`).
+  - Observed: 12 of 31 swings reached the client twice, the same attacker and attack 15-63 ms apart, at slightly different
+    distances. The host's log showed two sends for each.
+  - Derived: the decoy stands where the stand-in stands, and a hit on either is reported, so a swing reaching both was sent
+    twice.
+  - Fix: the host drops a second report of the same attacker and attack on the other of the two within 300 ms (`dmg_dups`).
+    Checked: 13 sent, 4 dropped, no same-swing pairs left.
+- **Counters and the client's health.**
+  - Observed:
+    - The client's counter strikes are named `PC_Bip_Sync_Cntr_TimedKill_F/B`, `..._Knockback_B` and `..._Stun_B`. The game's
+      attack table holds 142 attacks named `_Cntr_`.
+    - Run 1: two counters reached the host 0.8 s after a damage message from the same enemy.
+    - Run 2: six did, 0.8-1.4 s after. That build did not log why no give-back happened.
+    - Run 3, logged: three counters hit enemies whose last swing on the client was 3.7, 27 and 38 s old, so the countered swing
+      had sent no damage message. None left a health loss to give back.
+  - Added, off by default (`coop_counter_heal=on`): a counter strike within 1.5 s of that enemy's last swing gives that swing's
+    health back. Not verified.
+  - Unknown: whether a countered swing ever still hurts the client. The countered attacks in run 3 did not.
