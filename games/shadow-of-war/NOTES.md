@@ -5230,3 +5230,24 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - AI tables made again as designed: the client's stand-in twice (200, 201), the host's stand-in once (202), archer
     proxies three times (200). Every one with the agent byte at 1: lists also fill while the agent update runs, so the
     byte explains only one way a list grows. The agent-off remake did not fire; the reused-address guard did not fire.
+- **The respawn wait, redone** (`tools/presentation_flag.py`, new):
+  - From the code: the console command `Combat.SimulatePresentation.Start/Stop` calls `F0F44`, which writes byte +0x1810 of the
+    combat manager (`[exe+26FFB70]`); the game's own caller is `2AFD14` (it also sets a flag on each character of a list),
+    reached from `5D20C4`.
+  - Observed on the host through a death: the flag is 1 during the death cinematic (+5 to +24 s, world running, health 0) and
+    the killer's presentation (+45 to +48 s), 0 on the death and Nemesis screens and in play.
+  - Observed on the client (a logged timeline): the host's player state and snapshots kept coming through the whole death
+    sequence, screens included. So the earlier "the host's world is stopped" wait held only because no enemy was near the
+    respawn point (the host then sent no snapshot); with enemies there, or none at all for two minutes, it would have been
+    wrong.
+  - Change: the host sends a snapshot every tick (a header alone with no enemy near) carrying the presentation flag in its
+    spare byte; after the host's death, a jump waits until the host's player has walked 60 units by itself and no presentation
+    plays (at most 2 minutes).
+  - Checked: `host_death.py` passed; the client stayed in its fight from the respawn (+22 s) through the screens and the
+    killer's presentation and arrived the moment it ended (+64 s). Unit tests for the flag and the header-only snapshot.
+- **A dead enemy's address reused by the same type**: in a failed `exact_loss` run the host's test orc sat at the address of an
+  orc of the same type that had died minutes before; the host's tracker treated a reused address as new only for another type,
+  so the new orc kept the dead one's id, and both of the client's losses for it were dropped as stale (`losses_stale=2`). A
+  living enemy where a dead one was is now a new enemy (GONE, then NEW with another id; unit tests). Runner after: 5 of 6, the
+  failure an `exact_loss` reading 110.5 lost (the 50 cut plus a 60.5 hit of the client's gear effect on the test orc), then
+  `exact_loss` 3 of 3. No crash.
