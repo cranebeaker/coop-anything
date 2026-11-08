@@ -5070,3 +5070,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Open: whether a defender blocks the client as it would block a player. The client's pictures have no AI, so they cannot
     block on the client's screen. In a single check, one reported strike and the host's defender went 360 -> 0 (a kill move or a
     sent loss; not settled).
+- **Shield orcs, compared** (`tools/block_compare.py`: a fresh `Orc_Defender` struck 8 times by the host's player, then a fresh
+  one struck 8 times by the client; two runs):
+  - Host's player: 360 -> 114, and 360 -> 0.
+  - Client: 360 -> 196 and 360 -> 114 on the host, 3 strikes reported each time.
+  - Derived: in these runs defenders did not block a player's plain strikes reliably either. The client did not do more damage
+    than the host's player. No sign that the client bypasses blocks unfairly; the open question above is closed for plain
+    strikes.
