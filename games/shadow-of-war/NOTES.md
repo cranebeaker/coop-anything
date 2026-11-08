@@ -4978,3 +4978,14 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Derived (not proven): the 60.5 losses come from the client's own gear (an aura or damage over time), not from falls. Sending
     them for hostile enemies is right. The bystander filter keeps the host's allies out (on the client their pictures can be
     caught by the client's effect). The fall skip stays (harmless), but falls were probably not the cause.
+- **Exact losses.**
+  - Before: health a client's picture loses outside the hit function (arrows, gear effects such as the 60.5 above) went to the
+    host as stock strikes of about 96 each, one per 90 lost. A 60.5 loss therefore landed as 96.
+  - Now (`coop_exact_losses`, default on): a new event (`kOpLoss`, a hit's layout with the amount in the attack field) carries
+    the exact amount.
+    - The host takes exactly that from its enemy.
+    - When it reaches 0, the host kills it the game's way (`losses_killed`).
+    - After a non-lethal loss the decoy pokes it, as for hits, so it turns to the client.
+  - 5 new checks, 125 of 125.
+  - Live (`tools/exact_loss.py`, the client's picture cut by 50, then to 0): the host's orc went 300 -> 250.0 -> 0, and the
+    second step was the game's own death (`losses_killed=1`).
