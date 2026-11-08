@@ -5032,3 +5032,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     what the earlier run lost, but does not test the press-through. The single press on the stuck session above does.
   - A different gap showed: 13 stalled windows (orcs engaged near the client, no swing). The longest stretch was 320 s from
     2,247 s on, while the host's snapshots kept coming. Not looked into yet.
+- **Stalls looked at** (`roam_fight.py` now lists, for a stalled window, what each grunt within 1,000 units of the client is
+  after). A 30-minute run (`--seed=740 --archer-every=3`, fresh copies):
+  - 263 messages (8.8/min), 372 applied by the client with the arrows, 514 of its hits applied on the host, 54 of 59 windows
+    engaged. No press needed, no crash.
+  - One stall: three grunts at 111, 120 and 376 units, all with the decoy as their target, none swinging in the window.
+  - Derived: they were after the client's place, so this is the game's own attack pacing, not a targeting fault. The 13 stalls
+    of the previous 45-minute run were not repeated.
