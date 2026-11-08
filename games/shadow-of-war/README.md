@@ -122,6 +122,10 @@ The co-op mod itself is in its own repo (see "Where things stand"); it grew out 
   `tools/captain_unlink.py`, unit tests with a looping-list control). Offline: unit tests 93/93 and 36/36, guard suite 52/52.
   Each player's death was checked with bots too (`tools/host_death.py`, `tools/death_standin.py`): the client follows the host's
   respawn, or is taken back to the host after its own, and both pictures follow again; no crash.
+  `tools/regress.py` runs the live checks in one go (a fight, duplicate damage, both deaths, kill-and-respawn): 5 of 5 passed on
+  the latest build. Fights also ran through the hub's chaos relay on bad Wi-Fi, transatlantic and the worst profile (8% loss in
+  bursts, 330-380 ms round trip): hits went both ways, the link never dropped, no crash. Soaks of 25, 30 and 45 minutes on the
+  latest builds completed without a crash.
   Details and every run in [NOTES.md](NOTES.md).
 
 ## How to play
@@ -143,6 +147,8 @@ host starts first, client joins and gets the host's save.
   fight is left behind.
 - A swing that reached both the host's picture of the client and the decoy was sent twice; since session cm it is sent once.
 - A countered swing may still hurt the client (not settled); an experimental give-back is off by default (`coop_counter_heal`).
+- When a captain ambushes the host, the client applies the host's Nemesis events (the presentation, the showdown, a kill of the
+  host's player) and also stands on a screen until the player presses on (seen once with bots).
 - After a client death the host's picture of the client once stood still 1,600 units off (the game no longer moved it); since
   session cm the mod moves such a picture by direct writes until the game moves it again. Why it happens is not known.
 

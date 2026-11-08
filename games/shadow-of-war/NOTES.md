@@ -4932,3 +4932,8 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     client could not strike, so that run showed 0 client strikes; it was not the network. `can_move()` on both copies before a
     run catches this.
   - Still not tried: two PCs, a real VPN.
+- **A captain's ambush, seen from the client.** In the spoilt network run above, the client applied the host's whole sequence:
+  `Ambush_Presented`, `ActiveUnkPresentation`, `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`,
+  `ActiveKillPlayer_AlreadyNamed` (the captain killed the host's player), `ActiveGotPlayerInLastChance`, then `TimePassed` four
+  times and promotions. The client stood on a screen until pressed. Which screen (most likely the captain's presentation) was not
+  seen. This is the design (the client runs the host's Nemesis events; `coop_nemesis=share` only logs them); left as it is.
