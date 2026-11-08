@@ -4916,3 +4916,19 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   | host's death | the stand-in 51 units from the client, 9 host enemies shown on it |
   | client's death | the stand-in follows |
   | kill-and-respawn | no crash |
+- **Fights over a bad network** (the hub's chaos relay, `tools/chaos/chaos.py relay`, between the client and the host on one PC;
+  `coop_host` in the client's ini pointed at the relay; `roam_fight.py` with archers; one session, profiles switched while it ran):
+
+  | profile | round trip | messages sent / applied by the client | client's strikes applied by the host | windows engaged |
+  |---|---|---|---|---|
+  | bad_wifi | 65-87 ms | 39 / 57 | 97 | 9 of 9 |
+  | transatlantic | 183-192 ms | 41 / 51 | 126 | 8 of 9 |
+  | hell (8% loss in bursts, reordering, duplicates, 512 kbit/s) | 334-383 ms | 24 / 25 | 87 | 5 of 5 |
+
+  - The join (the host's 2.3 MB save) worked through `bad_wifi`. The link stayed connected throughout (`away` 0). No stale
+    damage. 13 stale client hits over the session (hits on enemies already gone). No crash.
+  - A spoilt first run, for the record: a captain showdown killed the host's player (`ActiveKillPlayer_AlreadyNamed`), and both
+    copies then stood on game screens (the host's death screens; the client after applying the host's Nemesis events). The
+    client could not strike, so that run showed 0 client strikes; it was not the network. `can_move()` on both copies before a
+    run catches this.
+  - Still not tried: two PCs, a real VPN.
