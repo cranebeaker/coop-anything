@@ -4896,5 +4896,8 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
       frames after the counter strike is reported.
   - Fix: no stock strikes within 2.5 s of a reported strike on that picture (`local_after_strike`). Checked: three counter
     kills, each 300 -> 0 on the host with no strikes after it; 6 losses held back.
-  - Still open: the local-damage path also sent 4 strikes for losses on pictures the client never struck (two of them 600-health
-    characters). It credits any such loss to the client.
+  - The local-damage path also sent 4 strikes for losses on pictures the client never struck: two tamed wargs and an orc
+    prisoner, 60.5 each, near the tower about 80 s into the session. It credits any such loss to the client.
+  - Now no stock strikes are sent for pictures whose type names a tamed creature, prisoner, slave, captive or follower
+    (`local_bystander`). In the check run no such loss happened, so the filter was not exercised. What causes those losses
+    (falls after being placed?) is unknown.
