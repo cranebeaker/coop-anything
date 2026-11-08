@@ -4948,3 +4948,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     (`ai_tick_guard=<installed>/<skipped>`).
   - Live: installed on the host, 0 skipped. The runner's fight (5 of 9 windows engaged) and 10 kill-and-respawn cycles passed.
   - Not shown: that it stops the crash (seen once, before the hunt change).
+- **The runner on the final build** (both guards, the hunt change, the damage fixes; `regress.py` now presses both players free
+  of game screens before each check): 5 of 5 passed.
+
+  | check | result |
+  |---|---|
+  | fight | 9 of 9 windows engaged |
+  | duplicate damage | 43 host sends, 0 same-swing pairs |
+  | host's death | the stand-in 32 units from the client, 15 host enemies shown on it |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | 10 cycles, no crash |
