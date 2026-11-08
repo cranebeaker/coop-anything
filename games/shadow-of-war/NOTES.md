@@ -4989,3 +4989,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - 5 new checks, 125 of 125.
   - Live (`tools/exact_loss.py`, the client's picture cut by 50, then to 0): the host's orc went 300 -> 250.0 -> 0, and the
     second step was the game's own death (`losses_killed=1`).
+- **The runner with exact losses** (six checks now, `exact_loss` added): 6 of 6 passed on the latest build.
+
+  | check | result |
+  |---|---|
+  | fight | 8 of 9 windows engaged |
+  | duplicate damage | 56 sends, 0 pairs |
+  | exact loss | 300 -> 250.0 -> 0 |
+  | host's death | the stand-in 27 units from the client |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | no crash |
