@@ -174,7 +174,7 @@ Read every `*Property` export in `Engine.xxx`, `XCore.xxx` and `Core.xxx` with t
 ## Two copies on one PC (2026-10-30)
 
 Owner's co-op repo: a separate local repo (not public yet). It builds bi_sonde with a forced-include header so
-that `-coopinstance=<i>` gives each copy its own pipe `\.\pipei_sonde_<i>`.
+that `-coopinstance=<i>` gives each copy its own pipe `\\.\pipe\bi_sonde_<i>`.
 
 ### Observed
 
@@ -184,13 +184,13 @@ that `-coopinstance=<i>` gives each copy its own pipe `\.\pipei_sonde_<i>`.
   - `-AllowMultipleInstances` is a switch the start-up code reads (`FUN_00506e40`, before the
     `AnotherInstanceRunning` message), so no patch is needed.
   - `-NOHOMEDIR` (`FUN_004d6aa0`) makes the copy create its `X*.ini` in its own `XGame\Config`.
-- Both copies ran together next to CS2, answered on their own pipes, and each started a new game
+- Both copies ran together, answered on their own pipes, and each started a new game
   (`StartTravel Master_P` through the bridge, the modal screens closed by `bi_pilote.fermer_modales`).
 - SHA-256 of the install files (exe, `d3d11.dll`, `DefaultEngine.ini`, `XCore.xxx`, shader caches) was the same before and after.
 - **But the owner's `Documents\My Games\BioShock Infinite\XGame\Config\XEngine.ini` changed.** It was rewritten
-  at 01:54:50, two seconds after copy 1 wrote its own config (01:54:48). Its `XUserOptions.ini` was rewritten
-  in the same second with identical content. The owner's `ResX/ResY` (2560x1080) and `UseVsync` are still there;
-  what changed is unknown (no earlier copy of the file).
+  two seconds after copy 1 wrote its own config. Its `XUserOptions.ini` was rewritten in the same second with
+  identical content. The owner's own resolution and vsync settings are still there; what changed is unknown (no
+  earlier copy of the file).
 
 ### File guard (second run, same day)
 
@@ -203,7 +203,7 @@ that `-coopinstance=<i>` gives each copy its own pipe `\.\pipei_sonde_<i>`.
 - With the guard, two fresh copies (empty config) started side by side. Every config write
   (`..\..\XGame\Config\X*.ini`, write access, `CREATE_ALWAYS`) went into the copy. There were no refusals, and the owner's
   folder was unchanged (same hashes).
-- The writer of the first incident (owner's `XEngine.ini` at 01:54:50) was not reproduced. It stays unknown, but the
+- The writer of the first incident (the owner's `XEngine.ini` rewrite) was not reproduced. It stays unknown, but the
   game process can no longer write there.
 - The guard's stack capture (`RtlCaptureStackBackTrace`) returns no frames inside the exe, probably because it is built without frame pointers.
 
@@ -211,7 +211,7 @@ that `-coopinstance=<i>` gives each copy its own pipe `\.\pipei_sonde_<i>`.
 
 - `Steam\userdata\<account>\8870\remotecache.vdf` lists the game's cloud files: `profile.bin` and
   `SaveData/S_<map>-0_<date>.sav/.bkm`. They are stored in `Steam\userdata\<account>\8870\remote`.
-- The first two-copy run (new game in both copies at 01:56) **wrote a save and the owner's `profile.bin` into that
+- The first two-copy run (new game in both copies) **wrote a save and the owner's `profile.bin` into that
   folder.** `-NOHOMEDIR` does not cover saves, and the guard cannot see the writes: the Steam client process writes them.
 - **Rule: a test copy must not start a game (only the title world) until saves are isolated.** Candidates: a per-copy
   `steam_appid.txt` with 480 (Spacewar) so remote storage goes to another app, if the game still starts; or hooking
@@ -231,12 +231,12 @@ that `-coopinstance=<i>` gives each copy its own pipe `\.\pipei_sonde_<i>`.
     they never call Steam;
   - entries 24 and up (UGC, Workshop) jump to the real interface through naked x86 thunks (`mov ecx,[ecx+4]; jmp [vtbl+i*4]`).
 - The vtable order (SDK `isteamremotestorage.h`, v014) was checked with a read-only self-test on the real interface:
-  `GetFileCount` (18) = 40, which is the number of files in the owner's cloud folder. `GetFileNameAndSize` (19) gave
-  `profile.bin` 3717 bytes and `SaveData/...` names, and `GetFileSize` (15) and `FileExists` (13) agreed with them.
+  `GetFileCount` (18) matched the number of files in the owner's cloud folder. `GetFileNameAndSize` (19) gave
+  `profile.bin` and `SaveData/...` names with their sizes, and `GetFileSize` (15) and `FileExists` (13) agreed with them.
 - New game in copy 0: the game called `GetFileSize profile.bin` (0, empty cloud), then
   `FileWrite profile.bin` (3518 bytes) and `FileWrite SaveData\S_Light_P-0_<date>.sav/.bkm` (105421 bytes each). It used
   no async or stream calls. All three files are in the copy's `SaveCloud`.
-- The owner's `Steam\userdata\<account>\8870` folder was hashed before the run (41 files): it was identical after the
+- The owner's `Steam\userdata\<account>\8870` folder was hashed before the run: it was identical after the
   new game and after closing the copy. `My Games` and the install were identical too.
 - A copy starts with an empty cloud: a new player profile, no saves. A known save can be seeded by putting files in `SaveCloud`.
 - The fake `GetQuota` must be large: with 100 MB total and 90 MB free, the game shows a "limited storage device" box (it
@@ -331,11 +331,14 @@ to reuse the UE3 reflection, and replaces `Pilote::TickJeu`: the original tick, 
   Tested on test copies: install, reinstall and uninstall restore the original DLL byte for byte. The player build
   started as host and as client with no pipe present. A game cannot be started without the pipe, so only the
   title screen was checked with it.
-- Side note: saves and the owner's `XEngine.ini` changed at 03:22, 03:26 and 03:27 because of another session of
-  the owner that ran the real game through `bi_pilote` (1280x720 windowed). The test copies' saves were all in
-  their own `SaveCloud`. The 01:54:50 incident may have the same cause (not checked).
+- Side note: saves and the owner's `XEngine.ini` changed later that night because of another session of the owner
+  that ran the real game through `bi_pilote` (windowed). The test copies' saves were all in their own `SaveCloud`.
+  The first `XEngine.ini` incident may have the same cause (not checked).
+- Puppet class at the time: `XReactiveSkeletalMeshActor`. Since packet v17 (2026-11-02) it is an
+  `XProtectionObjectiveActor`, which AI can target; the old class is the fallback (see "Host-authoritative enemies").
+  The cause of crash 2 was found then: `XPawn.ActionModel` is never created with a player archetype.
 
-### Not done yet
+### Not done yet (as of that night; most of it is done since, see the sections below)
 
 - Animation (Morpheme): **solved for standing still, not for walking.** An actor spawned with an archetype of the
   same class inherits that archetype's mesh component, including its Morpheme anim tree, and `Booker.Booker_MESH`
@@ -400,7 +403,8 @@ to reuse the UE3 reflection, and replaces `Pilote::TickJeu`: the original tick, 
 
 Design: "twin worlds". Each copy runs its own AI. The co-op module only exchanges damage and deaths. The other
 option, AI on one side only with the partner as a real pawn, is blocked: a second `XHuman` crashes the game
-(milestone 2).
+(milestone 2). (Superseded from 2026-11-02: the puppet became an AI target without being a pawn, and the host now
+drives the client's enemies; see "Host-authoritative enemies" below.)
 
 ### Observed
 
@@ -546,6 +550,8 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
   positions. Soldiers' bodies stay within roughly ±50° of the pawn's yaw, and their aim offsets fix the rest. The
   puppet has no aim offset, so its actor is turned back by the stance angle.
   `essai_arme.py` measures shoulders 0 to 5° from the aim, for both weapons.
+- Superseded on 2026-11-01 (see "Partner puppet, armed"): the weapon now takes the `R_Grip` bone rotation, the body
+  turns so the barrel points at the aim, NPC aim poses are used as frozen frames, and the tests measure the barrel.
 - `Destroy` returns False on spawned `XWeaponModelThirdPerson` actors, and the old pistol kept floating. Instead,
   each model is kept per weapon, hidden (actor and mesh) and reused.
 
@@ -568,14 +574,15 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
   - The body faces the view when standing and when walking backward. Backward plays the forward walk at a negative
     rate unarmed, or `WalkBwd` / `RunBwd` from the MG set when armed. The body faces the movement direction going
     forward, and turns 45° toward the step when strafing, since the game's male sets have no strafe animations.
-  - Results: stalls 0 to 4 %, delay 40 to 50 ms, lag-compensated position error 5 to 12 units on average. The body
-    is 0° off the view walking backward and 45° strafing, and 7° behind when turning on the spot at 120°/s.
+  - First results: stalls 0 to 4 %, delay 40 to 50 ms, lag-compensated position error 5 to 12 units on average. The
+    body is 0° off the view walking backward and 45° strafing, and 7° behind when turning on the spot at 120°/s.
+    These came before the timestamp and root-motion fixes below, which brought the error to 1-5 units at 60-70 ms.
 - Faster test launches: the three startup movies (21 s) were replaced by `LoopingMovieUntilStartupFinishes` in each
   copy's own XEngine.ini.
   - Leaving no startup movie, or naming a missing file, means the press-start screen never comes.
   - `-nomovie` blanks the Scaleform menus.
   - The press-start screen still ignores input for about 7 s while the game finishes starting up.
-  - Copies are now in game 44 s after launch, down from 65 to 70.
+  - Copies are now in game 44 s after launch, down from 65 to 70 (32 s since 2026-11-01, see "Faster test launches").
 - Lag found in hands-on testing: bi_sonde's `Resoudre` compares every object's path, costing 20 to 64 ms per
   command that names an object, on the game thread. The module now rewrites queued pipe lines to `0x` addresses
   through a cache that is re-validated on each use, and such a command costs 4.7 ms. With the bot running, both
@@ -583,6 +590,30 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - Quit crash: a spawned `XWeaponModelThirdPerson` with no `WeaponObject` crashes in its destructor
   (`FUN_00ac0330`, read at +0x8C) during level teardown, even with `bNoDelete`. The partner's weapon is now a plain
   `XReactiveSkeletalMeshActor` carrying the template's mesh.
+
+### Movement sync, follow-up (2026-10-30 evening to 2026-10-31)
+
+- **Teleports were a clock bug.** The send time was a float of `QueryPerformanceCounter` seconds, which counts from PC
+  boot: about 524,000 s after six days of uptime, where a float only has 62.5 ms steps. Pose packet v6 sends integer
+  milliseconds since the first send. The render margin now follows the jitter by at most 5 % of elapsed time (it
+  jumped when a late packet entered the window). Teleports per move went from 7-17 to 0 (one in the whole run);
+  lag-compensated error 1.4 to 2.7 units, delay 60 ms.
+- **The other "teleports" were root motion.** The game's male walk sequences carry their own translation; the
+  puppet's pelvis went up to 418 units ahead of the actor, then snapped back when the sequence restarted.
+  `bZeroRootTranslation` on the puppet's anim nodes keeps the pelvis within 2-12 units (sway).
+- Pose packet v7: the pose is sent at the feet (pawn centre plus the sender's `Mesh.Translation`), with state bits
+  for in air and crouched. Measured root speeds: `WalkFwd` 210, `RunFwd` 691, `SprintFwd` 1,006 units/s; the player
+  moves at 480-680 at normal pace. At normal pace the walk is sped up (at most x2.4, the feet slide a little), above
+  850 units/s it switches to `RunFwd`. In air (`PHYS_Falling`, only after 0.15 s): `Falling_untitled`. Crouched:
+  `CrouchIdle`, `CrouchWalkFwd`/`Bwd` from `GenMale_UA_Crouch_AnimSet` (and the MG crouch set when armed). No
+  landing animation: `LandLight` with root motion cancelled crushed the body; the blend out of the fall is enough.
+- Blends: the extras' tree has an `AnimNodeBlendPerBone` "IsTalking" (child 1 Idle, child 2 Talking). With its 90
+  per-bone weights set to 1, each new sequence starts on the inactive child and `SetBlendTarget` moves to it in 0.2 s.
+- Trot (v0.10): the game has only walk, run and sprint. At normal pace, run and walk play together on the two
+  children of the blend node, at the same step cadence, mixed by speed (20 to 90 % run); the walk is phase-locked to
+  the run with `SetPosition`.
+- `essai_synchro.py` gained jump (`Pawn.DoJump`) and crouch (`ToggleCrouch`) and checks the dominant anim node per
+  move: all OK, error 0.6 to 4.4 units.
 
 ### Pause menu entry, partner collisions, vigors (2026-10-31)
 
@@ -612,18 +643,433 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 - Friendly fire: aim ray vs puppet cylinder on the shooter, damage from the weapon's `XDamageType.DamageStimuli`,
   cumulative value in the pose packet, applied to `XShield` then `XHealth` (clamped at 1) by the victim.
 - `XWeapon.LastTraceShotEndLocation` gives each shot's end point. Third-person tracers are Beam2 emitters whose target
-  is user-set (`SetBeamTargetPoint`, native, not exposed to script): no tracers yet.
+  is user-set (`SetBeamTargetPoint`, native, not exposed to script): no tracers yet. (Later findings: that end point is
+  the end of the weapon's range, not the hit point; and a beam end can be set without the native, see "Vigors,
+  impacts and bullet holes".)
 - Enemy positions: host streams positions per spawner; the other copy snaps an enemy that drifted beyond 250 units, at
   most every 1.5 s. Both AIs keep running, so drift stays 2-10 m in combat (23 m without). Tight sync would need the
-  non-host AI disabled and its pawns driven like the puppet.
+  non-host AI disabled and its pawns driven like the puppet. (Replaced from 2026-11-02, see "Host-authoritative
+  enemies".)
 - Debug tricks: `XWeapon` instances can be granted with Spawn (archetype template) + `AddInventory` +
   `StartGivenTo` + `TryToEquip`; vigor energy is a native int at `XPlayerController+0x510`.
 
-### Not done yet
+## Partner puppet, armed (2026-11-01)
 
-- Only the weapon pitches; the arms stay in the guard pose. No tracer, no world impact effect, no arm gesture for vigors.
-- Enemies only see and shoot the local player; enemy positions are synced loosely (2-10 m in combat).
-- Not tested between two PCs or two Steam accounts.
+### Observed
+
+- At Battleship Bay (save `BW2`) the extras' archetype `Arc_ActorBase.XIdleActor` is not loaded yet when the puppet is
+  due. Spawned without it, the component had only an empty `AnimNodeSequence` and Booker stood in a T-pose. Setting
+  the extras' tree (`Idle_Base_AT`) with `SetAnimTreeTemplate`, or the one-node `SingleAnim_AT` that is always loaded,
+  removed the T-pose, but the one-node tree has no blends or trot and looked stiff, so it was dropped. The puppet now
+  waits for the archetype with no time limit (it arrives when the player walks toward the promenade: 83 s in the
+  test; searched every 5 s after the first minute).
+- Shotgun stance: animation sets [UA, MG, SG], with the NPC shotgun idle and aim (`GenMale_SG_*`) and the MG walk and
+  run.
+- The weapon sat on `R_Grip` but was turned to the partner's view; with the NPC hip poses it came out of the hands.
+  It now takes the full `R_Grip` bone transform, as NPC weapons do. Checked in close-up for shotgun, machine gun and
+  pistol; recoil kept.
+- At rest, the body turns (three-quarters, depending on the stance) so that the barrel points where the partner looks:
+  the barrel yaw (weapon +X on `R_Grip`) is measured relative to the body and smoothed. Walking keeps the fixed
+  shoulder offset; the switch between the two is blended.
+- `AimPoses_untitled` (wrong when played, see "Aiming") works as a source of frozen frames: middle at 4/30 s, up at
+  1/30, down at 7/30, blended by view pitch and corrected from the measured barrel pitch. It is held at rest the whole
+  time with a blend in and out (first only for 1.2 s after a shot). NPC `Fire_untitled` is additive and the tree has
+  no node to play it, so there is no firing gesture.
+- Measured: machine gun, pistol and shotgun at 0, +30 and -30° of pitch, barrel within 5° of the aim. Latest automated
+  runs (2026-11-07): `essai_tirs` 1.1 / 0.9 / 1.5° (shotgun), `essai_arme` 0.2° (pistol) and 0.7° (machine gun).
+- The shotgun muzzle flash did not play: `XEffectSelectorFirstOrThirdPerson` did not recognise the puppet's weapon.
+  The module plays its `ThirdPersonEffect` directly.
+
+### Derived
+
+- A puppet can borrow an NPC aim sheet as a pose library even when the sheet cannot be played as an animation.
+
+## Vigors, impacts and bullet holes (2026-11-01, packets v10 to v14)
+
+### Observed
+
+- Flying effects stayed at the launch point: Possession's `XSkeletalMeshEffectActor` sat on the carrier and is never
+  destroyed, and the Devil's Kiss ball stayed in the puppet's hand. Flying particles are now lit separately and
+  re-attached to the carrier every frame; the Possession actor moves with the carrier, then is hidden. `Destroy` is
+  refused for actors spawned in game, so actors are hidden and carriers reused.
+- Stuck effects play as state effects (`bIsStateEffect`, stopped with `ClientScriptedStopStateEffect`): before, the
+  Possession trap stopped and the Devil's Kiss trap did not show. Packet v10 adds `BounceNum` and `LastHitNormal`, so
+  each Devil's Kiss bounce plays `BouncedEffect` on a carrier turned to the surface.
+- The game turns a stuck effect's X axis along the surface normal, outward (a Possession trap on a wall was upside
+  down otherwise). Shock Jockey traps face into the surface instead.
+- Packet v11: projectile packets carry the send time on the pose clock, and the receiver interpolates between the
+  timestamped points around the puppet's display time. Before, the last packet was extrapolated: the Possession ghost
+  stood still for 0.15 s, then caught up at 10,000 units/s (3,800 on the thrower). After: same speed and animation time
+  as on the thrower, under 40 units apart.
+- The carrier takes the projectile's mesh and materials: Shock Jockey crystal `FX_VoltSwarm.SingleCrystal` (six traps
+  laid, six crystals on the other side). `TrapBoltArmedEffect` plays as a second state effect.
+- Packet v12, Shock Jockey arcs: the thrower reads the `XTrapBoltNetworkManager` connections (an array of pointers to
+  `TrapBoltConnection`) and sends, per trap, the ids of the traps it arcs to. The receiver lights
+  `TrapBoltConnectedBeamEffect` at the trap's attach point. **`SetBeamTargetPoint` is native and not in script, so the
+  beam end is written straight into each emitter instance's `UserSetTargetArray` at +0x210**, after checking that the
+  instance belongs to that beam.
+- Crash: calling `SetStaticMesh(None)` on a carrier before reusing it crashed the copy (read at 0xA0: the Kynapse AI
+  obstacle re-read the mesh). Free carriers are now pooled per mesh and keep it.
+- Packet v13, area effects (`BICZ`): for 2 s after a cast, the thrower lists particle systems that became active in
+  `XEmitterPool` (Bucking Bronco wave, Undertow jet, Return to Sender vortex, Shock Jockey hand sparks) and sends
+  template, position, rotation, scale and end. The receiver lights them at the same place; those born near the
+  thrower's eyes (hand effects seen in first person) follow the puppet's left hand. Filtered out: first-person
+  systems (by name), systems far from the thrower, near a projectile (already mirrored) or near what is shown of the
+  partner (no echo).
+- Crash found on the way: the projectile search read every object's name; during garbage collection, on a
+  half-destroyed object, it crashed, and the engine then raised "Illegal call to StaticFindObject()". The (cached)
+  class is tested first now.
+- Murder of Crows short cast: six `XReactiveSkeletalMeshActor` built from `MOC_CrowFlockActor`, with the player as
+  `Instigator`. They go through the projectile packets as "actor" entries with rotation; the receiver spawns the same
+  template, without its own lifespan, and moves it like on the thrower.
+- Shock Jockey short cast: on the thrower the bolt is made of first-person trails, which stayed short when replayed at
+  the puppet's hand. The receiver draws the vigor's beam (`StEBeamNoLoop_par`, end set as for the arcs) from the
+  puppet's hand to each relayed impact, for 0.35 s.
+- Bullet impacts: `XWeapon.LastTraceShotEndLocation` is the end of the range (3,000 units), not the hit point. The
+  impact particles the shooter's game lights at the real hit point (one per pellet, right material and normal) are
+  relayed through `BICZ` for half a second after a shot, with the weapon's impact sound (not checked by ear: test
+  copies are muted).
+- Packet v14, bullet holes: the shooter diffs `DecalManager.ActiveDecals` (fixed parent material of the fading
+  instance, position, orientation, size, rotation; 30 entries per packet at most). The receiver takes a pooled
+  component (`GetPooledComponent`), sets it with `SetDecalParameters` and attaches it (`AttachComponent`); it is
+  released with `DecalFinished` after 30 s (the game: about 32 s). `SpawnDecal` and `SpawnPooledComponent` set nothing,
+  and the `_FADE` instance used as is stays invisible. A 2 s machine-gun burst gave 19 holes on both sides; the latest
+  `essai_tirs` (2026-11-07) gave 5/5 shotgun holes and 20/20 machine-gun holes.
+
+### Derived
+
+- Writing `UserSetTargetArray` at +0x210 should also give bullet tracers (`TracerThirdPerson_par` beams). Not done.
+- Watching `XEmitterPool` and `DecalManager` on the sender is a generic way to mirror "whatever the game just drew",
+  without knowing each effect's owner.
+
+### Not covered
+
+- No automated test covers vigor projectiles, arcs or area effects; all of the above was checked on captures.
+- Area effects are visual only: the lift, pull or push of enemies is not shared.
+
+## Faster test launches (2026-11-01)
+
+- `relancer.py` stops the copies, drops the freshly built DLLs in, and launches to in-game. Gamepool stagger 5 to 1 s,
+  watch 8 to 3 s. The press-start intro is skipped (its countdown set to 0.01 s).
+- `-coopsansfocus`: a `WH_CBT` hook in the guard `dinput8.dll` refuses activation for 2 minutes except on a click or
+  Alt+Tab, and the game's own activation calls are made non-activating while it is not in front.
+- `-coopmuet`: the module mutes the process's audio sessions on every active output.
+- Measured: 52 s to 32 s from launch to in game, and no copy steals the foreground. The 7 s wait after the key press
+  (2K connection and news) could not be shortened.
+
+## Robust network (2026-11-02, packets v15)
+
+### Observed
+
+- A partner who restarted the game started again at sequence 1, and every packet was rejected as late until the
+  other player restarted too. Every pose now carries a random 32-bit session id drawn at launch. A new session clears
+  the 64-packet history, resets the shot and cast counters, stops and stores the partner's effects, and resets the
+  enemy counters on both sides. Enemy packets (cumulative counters) carry the **receiver's** session as the sender
+  knows it, so counters from before a restart are refused (otherwise re-spawned enemies died at once).
+  Test `essai_relance`: copy 1 restarted alone, copy 0 sees it again with 0 rejected packets, its shots and bullet
+  holes come through (last OK 2026-11-07).
+- Received values are checked: finite positions inside the world (pose, projectiles, area effects, enemy positions),
+  finite and bounded damage, and a projectile's floating section must exist locally (otherwise
+  `MoveToFloatingSection` would crash).
+- The packet version is checked on all six packet types: `BICP` pose, `BICE` enemy damage and deaths, `BICX` enemy
+  positions and state, `BICJ` projectiles, `BICZ` area effects, impacts and decals, `BICT` turrets. A mismatch is
+  logged and shown in the MULTIPLAYER menu. There is no compatibility between versions.
+- Silent or absent partner: projectiles, arcs and area effects are stopped and stored (before, they froze in place).
+  Test: Possession trap laid by copy 1, copy 1 killed, trap removed on copy 0. A projectile not heard of for more
+  than 1 s and then heard again is recreated.
+- An exception in the co-op tick hides the puppet and weapon, stores the effects, forgets everything and restarts
+  5 s later; the third one stops the module. A failed puppet spawn is retried 10 s later (3 times). Not provoked in a
+  test.
+- The JOIN PARTNER menu entry shows why joining is not possible (no connection, absent or elsewhere, other mod
+  version, co-op stopped).
+- Packet sizes stay under Steam's unreliable P2P limit (static asserts in the code): `BICE` 100 entries, `BICX` 18
+  enemies, about 1 KB each.
+
+### Derived
+
+- A per-launch session id, plus "cumulative counters valid only for the receiver's session", lets counter-based sync
+  (deaths and damage per spawner) survive a one-sided restart without a handshake.
+
+### Not covered
+
+- All of this ran over loopback UDP between two copies on one PC. The player modes were last run on 2026-10-30
+  (packets older than v9): host/client over 127.0.0.1, and Steam P2P with one account sending to itself (each process
+  also read some of its own packets, which it rejected). There is still no test between two PCs, two Steam accounts, over the internet, or with
+  simulated latency and loss.
+
+## Skyline (2026-11-02)
+
+### Observed
+
+- The skyline is the "TBar" in the code: native actions (`XAction_TBar_*`); no script field says "on a rail".
+- Mounting through the bridge failed: the target (`XPlayerController.GroundToTBarTarget`) is only computed while the
+  real Space key is held (`XActivateGroundToTBarTransfer`, handled by native input), and rail areas are only loaded
+  when the player gets there (teleported, the player hangs frozen in the air, physics 0).
+- Loaded rails are `SplineComponent`s on `XTBarSpline*` actors (`SplineInfo` points, Hermite curves in world space).
+  The sender sets a `SurRail` state bit when the player is not walking and its centre is under a segment: within
+  70 units horizontally and 0 to 300 units below.
+- The partner hangs from the game's hook (`Transit_Hook.TransitHook_RIG`) on the `L_Grip` bone in the NPC
+  `Tbar_StoppedIdle` pose (`GenMale_UA_SkyLine_AnimSet`; the riding poses are additive), weapon hidden, body facing
+  the ride; without that set in the level, the fall pose.
+
+### Not covered
+
+- Checked only on captures at the station (`TWN3`, where rails are close), with the state forced by a test file. The
+  thresholds are not tuned on a real ride, and no automated test covers it.
+
+## Host-authoritative enemies (2026-11-02 to 2026-11-03, packets v16 to v20)
+
+The design moved from "twin worlds" (milestone 4) to the host deciding for enemies, in steps. All measurements are
+at the `TWN3` station fight (6 enemies), on two copies on one PC.
+
+### Observed
+
+- **v16, steering every frame.** The old snaps left 2.4 m median drift, often 8.5 m, 18 m at worst, with visible
+  jumps. The host now sends position, velocity and yaw 15 times a second (`BICX`). The client slides each enemy toward
+  the host position extrapolated by velocity, takes the host yaw, and snaps beyond 4 m. Measured with
+  `ecart_ennemis.py 30 --combat`: median 24 cm, 90 % under 42 cm, 1.15 m at worst (that tool prints to the console only;
+  no later figure is recorded). Writing `Velocity` does not make a pawn run, with or without physics: its motion comes
+  from its animations. AI on each side still aimed at its own player, so an enemy could run on one screen and aim on
+  the other.
+- **v17, AI sees the partner.** The puppet became an `XCore.XProtectionObjectiveActor` (same family as before, plus a
+  faction: `FactionID` 0 = Players, and `bTargetableForAI`), with the same `Arc_ActorBase.XIdleActor` template. It
+  registers itself with the faction registry. `bTargetableForAI` must be written after spawn (the template has it
+  false), and `bBlockAIVision` set false. Enemies in both copies see it, target it, shoot it, chase it and hit it
+  with the baton, like a player; it never takes damage and bullets pass through it. It stops being a target when
+  hidden or when the partner is on the death screen (pose bit `JoueurMort`); AI drops it within a second. The crash of
+  a second `XHuman` came from `XPawn.ActionModel` never being created with a player archetype. Test `essai_cible`:
+  6 of 6 enemies target it within 8 s; 0 while the partner is dead; 6 again after; with the old class, 0.
+- **v18, brainless enemies on the client.** An enemy is put under host authority (`XAIController.bIsSuspended`,
+  `Physics` 0) when, for 0.5 s, the host says it is steerable (in combat, not in a scripted sequence
+  `PlayingScriptedSequence`, only living one of its spawner, not possessed, partner targetable), the client saw it go
+  on the attack itself with its weapon out (cut earlier, it ran empty-handed), and both sides count the same deaths
+  for its spawner. It then copies the host's position, yaw and speed every frame. It goes back to local AI at once if
+  lifted, thrown or possessed locally, or if it changes section; after 1 s if the host stops proposing it; and when
+  the host has been silent for 1 s. A death from the host wakes it, then kills it. Cost: 0.2 to 0.3 ms per frame in
+  combat. Test `essai_pilote` (2026-11-07): first enemies brainless in 2.2 s, median position gap 0 over 60 samples,
+  host silent: 0 still brainless after 3 s; host back: 6 taken in 1.4 s; killed on the host, dead on the client.
+- **v19, real weapon fire on the client.** For each host shot the host sends its kind (at the partner, at the host,
+  other, melee) and the aim point relative to the target's centre (feet + 90), from the real trace start
+  (`XPawn.GetWeaponStartTraceLocation`, eye height: 105 above the standing centre, 45 crouched). The client calls
+  `XWeapon.StartFireTowardLoc` then `StopFire` in the same frame: one bullet. What it took:
+  - an AI weapon **ignores** the point given to `StartFireTowardLoc`, `AimLocation`, the accuracy model's
+    `ModifiedAimLocation` / `ModifiedAimDirection` and the controller rotation. Suspended, it fires at the point its AI
+    last aimed at;
+  - it fires along the **animation aim tracker**, `ActionModel.AimTracker.CurrentRotationWorld` (and `…WithSaccade`),
+    **and its child trackers** (`ChildTracker`; without them one trace in three still went to the old target). They
+    are steered every frame from the real trace start;
+  - the accuracy model (`bDisableAccuracyModel`) and weapon spread (`SpreadModifierAttrib.CurrentValue`) are off
+    during the shot: the host's spread is already in the aim point;
+  - a per-shooter bias (animation) is corrected shot by shot: half of the measured direction error is removed from the
+    next shots;
+  - the weapon refuses a shot too close to the previous one (fire rate): retried on the next frames (up to 8), then
+    played as effects;
+  - a baton fired this way moves without hurting, so melee damage stays host-decided.
+  Results (`essai_pilote`, 2026-11-07): 197 native shots, 0 refused; client/host bullet ratio 0.81 (0.73 to 0.84 over
+  the 2026-11-06/07 runs); aim offset by 300 units with a test file: median 22 units off (13 to 36 over recent runs);
+  aim point under the floor: 34 of 34 bullets stop at the floor. Remaining aim error: 15 to 35 units at 15 m.
+- Damage: the client's own game now decides hits, with the real hit volumes. About half of the bullets fired at the
+  client's player land (62 % since the child trackers), against about 75 % "hits" counted on the host with a 40-unit
+  cylinder. The client's player loses about 0.35x what the host counts (2214 for 6344 in the last run; 0.33 to 0.38
+  over recent runs).
+- **v20, crouch.** An enemy crouched on the host (`bIsCrouched`, 5 to 12 % of the time at the station) is crouched on
+  the client. The host's cylinder shrinks (135 to 75) and its centre drops 60; the client's cylinder stays standing,
+  so its centre is raised 60 (measured: 60 exactly, feet on the ground). Agreement 33 of 34 samples at the time,
+  12 of 12 in the last run.
+- Fallbacks in `coop.ini`: `ennemis=pilote` (v18 behaviour), `ennemis=cible` (v17 only), `ennemis=jumeaux` (before
+  v17). Automatic fallback to v18 if a weapon never fires in 40 tries or throws.
+
+### Derived
+
+- Shots aimed at an "other" target (possessed enemy, decoy) stay effects only. Client bullets can hit another enemy on
+  their way (AI friendly fire, as in the game), and that death then comes from the client.
+
+## Turrets (2026-11-03, packets v21 and v22)
+
+### Observed
+
+- Destroyed on the host (wreck, `ReplicatedTurretState` 6, `CurrentHealth` 0), the station turret stayed intact on
+  the client and kept firing. Writing health 0 or calling `KilledBy` does not destroy it; only real bullets do.
+- v21: each copy lists its `XTurret`s (same path on both sides; at world arrival, then every 10 s) and sends the dead
+  ones twice a second (`BICT`). The other side writes `CurrentHealth` 0, `ReplicatedTurretState` 6, then calls
+  `XReplicatedEvent ReplicatedTurretState` (the update written for the game's own netcode): dome off, no target, no
+  burst. No explosion or wreck on that side. Test `essai_tourelle`: switched off in 1.2 to 1.4 s at the time, 0.1 s in
+  the last run (2026-11-07).
+- v22: Possession moves the turret to the players' side for about 21 s (`FactionID` 3 to 1, `MesmerizedByPawn`,
+  `HackingData.bHacked`), then the game restores it. `BICT` now also carries possessed turrets and their faction; the
+  other copy writes the faction, and restores it when the partner stops announcing it (or after 3 s of silence).
+- No double damage: bullets from the mirrored turret hit without hurting. An enemy whose `XPawn.LastDamager` is that
+  turret gets back the points it had the frame before. (`TurretDamageModificationInfo.StandardDamageModifier` = 0
+  changed nothing.) Copying the state flags (`StateFlags` 0x280000) crashed the copy at the first bullet the turret
+  received (the game looks for the absent caster), so the green possession veil is not mirrored.
+- Test `essai_possession` (2026-11-07): possessed in 0.2 s, mirrored in 0.4 s, targets enemies only, the enemy placed
+  behind the turret kept 295 of 295 points, 78 hits cancelled, faction restored in 0.3 s. Two earlier failures in
+  full runs (the placed enemy lost 15 to 16 points) are unexplained; the probable cause (a stray shot from another
+  enemy) is not proven. The client-to-host direction was last run on 2026-11-03.
+
+## Enemy actions replayed on the client (2026-11-04 to 2026-11-05, packets v23)
+
+### Observed
+
+- Enemies are animated by a Morpheme network (`XMorphemeNetwork`). Logging each change of `CurrentlyActiveSequences`
+  over 30 s of combat showed that the brainless client enemy walked, crouched and fired like the host's, but reloads,
+  side steps, `MoveToFire_*` manoeuvres, taunts, baton attacks and bullet reactions only played on the host.
+- The host now takes each enemy's action sequence every frame (anything but locomotion, crouch, aim, fire, death and
+  additive clips) and sends a hash of "set:sequence" and an action counter; `BICX` carries 18 enemies instead of 20.
+  The client plays it on the network's Matinee slot (`AnimNodeSlot.PlayCustomAnim` by sequence name) and stops it
+  with `StopCustomAnim`. Sets the client mesh does not have yet (its AI never used them) are grafted into `AnimSets`
+  first. Checked on bones: during a replayed reload the left hand goes from 86 to 33 units from the pelvis.
+- Root motion: clips on the slot keep their root translation in the pose, so the body left its pawn (95 % of samples
+  under 233 to 281 units during gestures, up to 589, against 37 / 134 on the host). The mesh already ignores root
+  motion (`RootMotionMode` 2) and the Morpheme network does not extract it (`OutputRootMotionTranslationX/Y/Z` false;
+  setting them true changes nothing). **`AnimNodeSlot.SetRootBoneAxisOption(1, 1, 0)`** (discard X and Y, keep Z)
+  works: 74 units (max 134, like the host) against 281 (max 554) without. It only applies to the slot's current child
+  (`CustomChildIndex`), and the slot alternates between two children when gestures follow closely, so both are set
+  before each gesture and reset to 0 when the enemy goes back to its AI. `bForceDiscardRootMotion` on the mesh also
+  works, but for the whole body.
+- Tried and dropped: playing the host's walk on that slot too. The slot replaces the whole body (a crouched, aiming
+  soldier stood up and ran with dangling arms).
+- Test `essai_actions` (2026-11-07): 61 actions sent, 55 played, 0 unknown, 0 refused, 7 sets grafted, slot seen
+  playing on all 6 enemies, 95 % of gesture samples under 81 units (max 132). Over the 2026-11-06/07 runs: 27 to 61
+  sent, 21 to 55 played.
+
+## Enemy locomotion, stops and turns on the client (2026-11-05 to 2026-11-07, packets v24 to v26)
+
+### Observed
+
+- An enemy's legs do not follow its velocity. Its action model picks starts, walk, run, backward walk and stops from
+  its movement model (`XPawn.ActionModel.MovementModel`), which the AI keeps up to date. Suspended, the model stayed
+  stale: the old path recomputed every frame, never "arrived", forward pedal. Over 90 s of combat: 148 to 228 starts
+  and as many stops on the client against 16 to 36 on the host, and no backward walking.
+- **v24, gait.** The host sends a gait byte per enemy (pedal type, 2 = backward; move type; arrived; intent). Every
+  frame the client writes on the suspended enemy: idle on the host means `HasArrived` and `bMovementIsFrozen`; moving
+  means `bManualSteeringMode` toward a point 1 s ahead along its velocity, plus the host's pedal, move type, intent
+  and `bManageSmartCombatTrackPedalMoveType`, and the pawn's acceleration. Its yaw slides toward the host's instead of
+  being set 15 times a second (the steps were read as turns). Test `essai_marche`: starts 26/20 and stops 21/40
+  (host/client) at the time; without gait (kill-switch file), 36/176 and 31/178, and the test fails. Tried and
+  dropped: writing `DesiredRotation` (more turns on the spot).
+- **Turns on the spot** (`TurnInPlace`) were left: 29 to 74 in 90 s on the client against 0 to 9 on the host.
+- **v25.** Cause 1: the face tracker target (`ActionModel.FaceTracker`, `TrackTargetEntries`). On the host these
+  enemies have none; on the client they kept the one their local AI picked before suspension (the local player), and
+  the action graph turned them toward it. The client now clears it (null actor, as on the host) and gives it back to
+  the AI. Disabling the entry (`bIsEnabled`) made it worse. Cause 2, late stops: on the host, acceleration drops to 0
+  when the stop sequence starts, at full speed; `HasArrived` comes 0.15 to 0.3 s later or never. The host now sends a
+  "braking" bit; the client treats the enemy as idle as soon as it is set. Stops play 0.03 to 0.06 s after the host
+  instead of 0.53 to 0.57. Unmatched client transitions (starts, stops, turns with no host counterpart within
+  ±0.7 s, three 90 s fights, measured with a tool outside the repo): 119 with nothing, 91 with the target cleared,
+  62 with braking too.
+- **v26.** The turn rule, from the disassembly (below): with a steering direction (`ActionContext.DesiredSteeringParams`
+  non-zero), turn when the heading is more than `MoveDirectionTurnTresholdDeg` (30°) off. That property belongs to the
+  action, is shared by all enemies of a copy, and is **read live**. Without a steering direction, turn toward the face
+  target, else the aim target, else the look target, using the target's `XAnimationTrackerTargetEntry.TurnToThresholdOverride`
+  (+0x58) when positive (it is -1 everywhere), else the action's threshold (aim 50°, look 65°). Now:
+  - the host sends a signs byte: `SignePivote` while the enemy plays a `TurnInPlace` sequence, `SigneFreine` while its
+    acceleration is 0;
+  - while any enemy is steered, the moving threshold of the client's `XAction_TurnTo` is 180° (restored after);
+  - each steered enemy's aim and look targets get a 180° override, except while the host's enemy pivots, when it
+    pivots too; -1 again when it goes back to its AI;
+  - braking holds as long as it lasts: with zero acceleration the host enemy does not walk, even while moving (it stops,
+    or an animation carries it: slow slides of 59 to 121 units/s on the idle pose; 474 samples with zero acceleration
+    and steady speed, never a walk sequence; 301 with acceleration, always one). The client keeps it still as long as
+    the host does not accelerate; the 1 s limit only applies to "arrived" alone.
+
+  | Version | Turns | Stops | Starts | Total unmatched |
+  |---|---|---|---|---|
+  | v25 | 27 | 36 | 11 | 74 |
+  | v26 without the turn block | 18 | 39 | 17 | 74 |
+  | v26 with the block, braking limited to 1 s | 2 | 23 | 7 | 32 |
+  | v26 | 1 | 2 | 2 | 5 |
+
+  Stops play 0.04 to 0.06 s after the host (medians). Tried and dropped: a 1° threshold while the host pivots (11
+  against 5: extra turns); a steering goal 6 or 10 m ahead like the host's; stopping on "arrived" alone.
+- Test `essai_marche` (2026-11-07): starts 25/19, stops 19/17, turns 6/1 (host/client), all within bounds; the host
+  walked backward only twice, so the backward criterion did not apply.
+
+### Disassembly (Ghidra 12.2, exe without ASLR, base 0x400000, addresses valid in the running game)
+
+- `FUN_00bfb790`: validation of `XAction_TurnTo` (rule above).
+- `FUN_00bf7c60`: validation of the start transitions `XAction_IdleMoveTransitionState`. Its thresholds
+  (`IdleToMoveAllowedYawOffsetDeg` 30°, `MaxHeadingYawOffsetDeg` 110°) are shared by all enemies of a copy and
+  precomputed as cosines at load, so writing them later does nothing; not touched.
+- `FUN_00bddfc0`: action model update (`XActionModel`). Calls `FUN_00a197f0` (movement model update), then
+  `FUN_00bd81f0`, which fills the action context (`ActionContext` / `QueryContext`).
+- `FUN_00a13820` writes the remaining path distance (+0x2E4): `FUN_00a12730` (the larger of the Kynapse path and the
+  straight line to `TargetLocation`) if `HasArrived` or `FUN_00a123a0`, else 0. It only chooses walk or run near the
+  goal (`MinDistanceToRun` +0xB8, `CurrentForcedWalkDistance`), so the stale local path was not the cause of the
+  turns.
+- `FUN_00a10620` copies only the move type into the context.
+- `FUN_00964740`: the lower-body turn rule (`InPlaceTurn` beyond `InPlaceTurnThresholdDeg`, 60°, from
+  `TPLowerBodyFacingYaw2B`), called from the pawn tick `FUN_00974140`, but not for these enemies.
+
+### Not covered
+
+- The client replays only part of the host's turns (4 of 7 over three fights; the heading still follows), and
+  backward walking is only partly mirrored (`essai_marche` over the 2026-11-06/07 runs: 0 to 10 backward walks on the
+  client for 2 to 20 on the host, for example 10 for 20 and 2 for 8).
+- One stop seen about 0.3 s late once.
+
+## Automated suite (2026-11-02 to 2026-11-07)
+
+### Observed
+
+- `outils/essai_tout.py [--complet]` runs everything on two copies on one PC, driven through the bridge pipes, with
+  one relaunch per save (`TWN3` is relaunched once more before the enemy-position measurement): `BW2` (Battleship Bay) for `essai_tirs` and `essai_relance`; `TWN2` (Columbia, no enemies)
+  for `essai_synchro`; `TWN3` (station, 6 enemies and a turret) for `essai_arme`, `essai_ennemis`, the
+  `ecart_ennemis` measurement, `essai_cible`, `essai_pilote`, `essai_tourelle`, `essai_possession`,
+  `essai_actions` and `essai_marche`. `--complet` adds `essai_coop` (circle). Each test writes
+  `local/essais/<timestamp>_<name>/resultat.json`; the suite prints one line per step. A `--complet` run takes about
+  24 minutes (its docstring still says ten). 409 run folders exist, 396 with a result.
+- Last full run (2026-11-07): all 12 tests OK in their saved results (the suite's own 14-step summary line is printed,
+  not saved). Nothing has run since. Of 9 full runs reconstructed from the folders
+  since 2026-11-04, 2 were fully green, the latest included.
+- **Test files.** In test copies, a `.essai` file dropped next to the DLL switches a fix off (`sans_allure`,
+  `sans_pivot`, `sans_surplace`, `sans_face`, `sans_arret`, `freine_limite`, `jumeaux`, next to the client DLL) or
+  injects a condition (`muet` next to the host DLL silences it, `decale` offsets the enemies' aim point, `mort`,
+  `rail`). The kill switches were used to check that a test fails without its fix (for example `essai_marche`: 36/176
+  starts host/client without gait sync, `essai_actions` 281 units without the root-motion fix).
+- **Mostly a flaky test, not a flaky mod.** `essai_synchro` failed 23 of 52 recorded runs between 2026-11-02 and
+  2026-11-07 (some early ones on 2026-11-02/03 because the puppet was missing in copy 1). The failures examined (6 of 9
+  runs from 2026-11-05 to 2026-11-07) all came from the test's route, with the puppet following the player: the
+  player strafed into obstacles at a spot that changed from run to run,
+  then got stuck or ran into a wall (the sudden stop counted as a puppet teleport), then jumped under an obstacle (8 to
+  63 units high instead of 200, no fall animation). Rewriting the view every loop also halved the input rate (92
+  units/s instead of about 480 when turning). Fix: reset the player to a fixed start and heading before each move
+  group, write the view at most every 30 ms, compare jumps over a 0.45 s window, and require at least 10 moving
+  samples before counting stutter. 14 recorded passes in a row since (all on 2026-11-07). The mod did not change.
+- The bridge sometimes reads the puppet pose as (0, 0, 0) (once: 68,091 units off, which pushed the circle mean from
+  about 5.5 to 407); such samples are discarded.
+- In the suite, `essai_coop`'s new-game step never completes (the copies are already in game): it waits 240 s and the
+  verdict ignores it.
+- Owner-file protection: every test hashes the Steam Cloud folder for app 8870, `My Games` and key install files
+  before and after, and fails on any difference; `remotecache.vdf` is excluded because Steam rewrites it at every
+  launch. Since the protection exists, one recorded run listed changed owner files: a hand-played session with the bot
+  on 2026-10-30, where real save files and the owner's `XEngine.ini` changed. Its cause is not documented. No change
+  has been recorded since.
+- Reverse engineering: portable Ghidra 12.2 with JDK 25, driven headless by batch files (`analyzeHeadless` import,
+  then a read-only search script), outside the mod repo.
+
+### Not covered by any automated test
+
+- Vigors and projectiles, friendly fire (one hand test on 2026-10-31), skyline, the MULTIPLAYER menu, collisions,
+  no-pause on alt-tab, a mod-version mismatch, tick-exception recovery, real shielded enemies, Steam P2P and IP modes
+  (last run 2026-10-30), two PCs or two Steam accounts, and the player package (still v0.12, built 2026-10-31).
+- `ecart_ennemis.py` prints only; it has no recorded history.
+- The turret and possession tests have been run host to client only since 2026-11-04.
+
+## Not done yet (2026-11-08)
+
+- No bullet tracer; no arm gesture for shots or vigors; the aim pose only plays standing still (fixed shoulder offset
+  while walking).
+- Possession of human enemies is not mirrored (only turrets); Undertow and Bucking Bronco on enemies are visual only;
+  Charge has not been looked at (nothing in the code or the notes).
+- Turrets: same target on both sides, explosion and wreck on the side that did not destroy it, green possession veil.
+- The puppet appears about 35 s after arriving in game (Booker mesh preload). At Battleship Bay it also waits, with no
+  time limit, for the extras' archetype, which only loads when the player walks toward the promenade (83 s in the
+  test).
+- About 9 to 22 % of the enemy actions the host sends are not played on the client (`essai_actions`, 2026-11-06/07:
+  21 to 55 played for 27 to 61 sent, none refused or unknown); the reason is not documented.
+- Not tested between two PCs or two Steam accounts, or in levels other than the test saves; no hand-played session
+  is documented for packets v16 to v26. The player package is still v0.12 and cannot talk to the current build.
 
 ## Open questions
 
@@ -631,28 +1077,39 @@ option, AI on one side only with the partner as a real pawn, is blocked: a secon
 
 - A second copy that travels to `127.0.0.1` may get through the control-channel handshake, but no actors
   would replicate (see the static check).
-- `SetBeamTargetPoint` (third-person tracers) can be reached by calling the native at its address, as the
-  pause-menu hooks do.
+- Writing `UserSetTargetArray` at +0x210 on `TracerThirdPerson_par` instances gives bullet tracers.
+- The client player takes less damage than the host estimates (about 0.35x) because the host counts hits in a wide
+  cylinder; whether the game feels easier for the client is not checked in real play.
 
 ### Answered since
 
 - A second copy runs on the same PC and Steam account: yes, with `-AllowMultipleInstances` (see "Two copies
   on one PC").
 - `CPF_Net` did not survive cooking: set on 0 of 36,042 properties (static check above).
+- Third-person beam ends can be set from script without `SetBeamTargetPoint`: write the emitter instance's
+  `UserSetTargetArray` at +0x210 (Shock Jockey arcs and bolt, 2026-11-01).
+- Enemies can target the partner without a second `XHuman`: the puppet as an `XProtectionObjectiveActor` with
+  `FactionID` 0 and `bTargetableForAI` (2026-11-02). The second `XHuman` crash comes from `XPawn.ActionModel` never
+  being created with a player archetype.
 
 ### Unknown
 
 - Whether `XGameInfoSPChallenge` (DLC challenge mode) or a leftover MP GameInfo class can be the server's game type.
 - How Elizabeth, Songbird and the scripted sequences behave with two players in the same world.
-- Whether enemies can target the partner without a second `XHuman` (which crashes the game).
+- How the jitter buffer, the 2 s silence purge and the 1 s enemy fallback behave with real internet jitter and loss.
+- Why the enemy placed behind the possessed turret lost 15 to 16 points in two full runs.
 
 ## Next steps
 
 Status overview: [README.md](README.md).
 
-1. Test between two PCs and two Steam accounts, with network loss and latency (`playbook/network-chaos-testing.md`).
-2. Tight enemy sync: disable the AI on the non-host copy and drive its pawns like the puppet.
-3. Shared story state: doors, scripted events (`ServerCauseEvent`/`ServerRemoteEvent` names show what the
+1. Rebuild the player package for packet v26, then test between two PCs and two Steam accounts, with network loss
+   and latency (`playbook/network-chaos-testing.md`).
+2. Test in other levels and by hand: enemy damage felt by the client, skyline thresholds on a real ride, collisions,
+   menu and alt-tab with the new puppet class.
+3. Automated tests for vigors and friendly fire; run the turret and possession tests client to host again; record
+   `ecart_ennemis` results.
+4. Shared story state: doors, scripted events (`ServerCauseEvent`/`ServerRemoteEvent` names show what the
    cut co-op synced), level changes, then Elizabeth.
-4. Publish the mod repo (it builds on the owner's private bridge sources: ask first), then the directory
+5. Publish the mod repo (it builds on the owner's private bridge sources: ask first), then the directory
    entry and a "claim a game" issue (owner's GitHub account, owner's OK first).
