@@ -4887,3 +4887,14 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Added, off by default (`coop_counter_heal=on`): a counter strike within 1.5 s of that enemy's last swing gives that swing's
     health back. Not verified.
   - Unknown: whether a countered swing ever still hurts the client. The countered attacks in run 3 did not.
+- **The client's counter kills on the host** (`counter_log.py`, then the host's log of the client's hits).
+  - Observed:
+    - A `PC_Bip_Sync_Cntr_TimedKill_F/B` counter of the client is applied on the host and kills the orc there (227 -> 0,
+      300 -> 0). Stun and knockback counters left the host's orc at full health.
+    - After every counter kill the client also sent 3-4 `PC_NT_L1_D1_F_LL_RL_04` strikes on the dead orc. These came from its
+      local-damage path, which turns health a picture loses outside the hit function into stock strikes: the kill's damage lands
+      frames after the counter strike is reported.
+  - Fix: no stock strikes within 2.5 s of a reported strike on that picture (`local_after_strike`). Checked: three counter
+    kills, each 300 -> 0 on the host with no strikes after it; 6 losses held back.
+  - Still open: the local-damage path also sent 4 strikes for losses on pictures the client never struck (two of them 600-health
+    characters). It credits any such loss to the client.
