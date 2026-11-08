@@ -4941,3 +4941,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   local-damage path, the stock-strike count, the frozen put-back count and the counter give-back now live in `src/coop_rules.h`
   as game-free functions. The mod uses them, and `enemy_test` checks them (23 new checks, 116 of 116). After the change the
   runner's fight and duplicate-damage checks passed live (9 of 9 windows engaged; 0 same-swing pairs in 73 sends).
+- **A guard for the other AI crash (`190F7C`)** (`SimAiTickGuardInstall`, under `coop_ai_param_guard`).
+  - The call at `4990D8` hands `499724` an orc's component from +0x2CF0. `499724` reads the component's owner and the owner's
+    +0x2D18. In the crash that owner was the host's player, whose +0x2D18 holds 1.
+  - The call's result is not used at that site. So for an owner without a component pointer the call is now skipped
+    (`ai_tick_guard=<installed>/<skipped>`).
+  - Live: installed on the host, 0 skipped. The runner's fight (5 of 9 windows engaged) and 10 kill-and-respawn cycles passed.
+  - Not shown: that it stops the crash (seen once, before the hunt change).
