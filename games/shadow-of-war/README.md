@@ -6,7 +6,7 @@
 | Versions tested | Steam app 356190, build 3095001 (last update 2018-09-05), `x64\ShadowOfWar.exe` 1.0.8874.0, SHA-256 `ed0d95cabb033cd66aaa99d699374881846c3cb03ec345f1123d82d45e0bdaef` |
 | Projects | [Santonus-not-bot/shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (alpha, MIT); [JustAddMP/ShadowOfWar](https://github.com/JustAddMP/ShadowOfWar) is a placeholder; research here (claim: cranebeaker/coop-anything#93) |
 | QA level | automated: scripted checks with two game copies on one PC and an offline suite; never tried on two PCs |
-| Last updated | 2026-11-07 |
+| Last updated | 2026-11-08 |
 
 ## Where things stand
 
@@ -14,7 +14,10 @@ The co-op mod is in its own repo, [shadow-of-war-coop](https://github.com/Santon
 client, the client joins the host's save, sees and fights the host's enemies, follows the host's fast travel, and runs the
 host's Nemesis events (captain fights, kills, promotions) on its own copy of the Nemesis world, and shows each
 captain as himself (built from its own copy of his Nemesis record; a captain the host makes after the join is an
-ordinary orc there). Alpha, tested only on one PC. This folder holds the research and reverse-engineering behind it,
+ordinary orc there). Hits go both ways with the host's grunts, archers, Olog-hai, berserkers, spearmen, shield orcs and wild
+wargs; the client's arrows and gear effects reach the host's enemies exactly; counters protect the client. Both players' deaths,
+bad networks (a simulated 330-380 ms lossy link) and runs of up to 45 minutes were checked with bots, without a crash. Alpha,
+tested only on one PC. This folder holds the research and reverse-engineering behind it,
 for a from-scratch, host-authoritative co-op: a safe way to run and instrument a test copy,
 a map of the engine's console commands, the Nemesis system's live log output, and the
 Nemesis event, death, promotion and RNG functions with byte signatures for the Steam
@@ -152,8 +155,17 @@ host starts first, client joins and gets the host's save.
   host's player) and also stands on a screen until the player presses on (seen once with bots).
 - After a client death the host's picture of the client once stood still 1,600 units off (the game no longer moved it); since
   session cm the mod moves such a picture by direct writes until the game moves it again. Why it happens is not known.
+- Two rare host crashes in the game's AI (seen once and twice) both read the host's player as an AI character. The mod no longer
+  points enemies at the host's player, and both crash sites have a narrow guard; neither crash came back, so the fix is not
+  proven.
+- Caragors, graugs and other beasts were not tried (they cannot be spawned in the test region).
+- In bot tests a captain's appearance or the host's death leaves a copy on a screen until a press; the test tools press through
+  (players do so anyway).
 
 ## Next steps
 
 - A test between two PCs over a real network (needs a second player).
 - Find why the agent update skips some pictures (the pruning of the AI list lives in it; session cm), so pictures need not be made again.
+- Fights with beasts (a region whose spawn table has caragors and graugs).
+- Run `tools/regress.py` (in the mod's repo) on every change; it covers a fight, duplicate damage, exact losses, both deaths and
+  kill-and-respawn.
