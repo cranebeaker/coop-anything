@@ -4999,3 +4999,6 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   | host's death | the stand-in 27 units from the client |
   | client's death | the stand-in follows |
   | kill-and-respawn | no crash |
+- **45 minutes on the final, published build** (public `6918021`; `roam_fight.py 2700 4 --seed=720 --archer-every=3`, fresh copies):
+  completed, no crash on either copy. 148 swing messages, 206 applied by the client with the arrows, 365 of the client's hits
+  applied on the host. 37 of 89 windows engaged (the thinning of long runs again), 2 stalled. Owner files unchanged.
