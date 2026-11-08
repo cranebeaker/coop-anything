@@ -4851,3 +4851,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     - With the old behavior and the client 400 units from the host (`kill_spawn.py --near`, 40 cycles): no crash. That run made
       only 19 redirects, so it could not tell the two apart.
   - Not shown: that this stops the crashes.
+- **Swing stress, old vs new hunt** (`kill_spawn.py 40 3 12 --swing`, fresh copies each).
+  - Setup: the orcs are spawned around the host; the client jumps between 450 east and 450 west of the host every 3 s, so the
+    nearer of the decoy and the host's player keeps changing. The orcs are killed and respawned every 12 s.
+  - Old behavior (`hunt-to-player=on`): 77 redirects in 40 cycles, no crash.
+  - New behavior (off): 60 redirects to the decoy and 359 redirects to the host's player dropped (`hunt_player_left`), no crash.
+  - Derived: the new behavior holds up under heavy flipping. The old one did not crash here either, so the crashes' link to the
+    redirect is still not shown.
