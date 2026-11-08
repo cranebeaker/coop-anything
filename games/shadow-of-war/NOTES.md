@@ -5083,3 +5083,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - The `sowguard.ini` it writes differs from the test copies' only in test conveniences (loopback bind, the two-copies mutex
     rename, extra protected folders) and fewer debug-print channels. Everything added in session cm works from defaults, so
     players need no new settings.
+- **The player setup, run for real on a stand-in game folder** (a tiny fake `x64` folder, `-SkipExeCheck`; host with a save and a
+  password, client with a host address):
+  - Both copies got the mod as `bink2w64.dll` (the build's hash), the original kept as `bink2w64_.dll`, `steam_appid.txt` 356190
+    and the profile folders. The host's save landed in the copy's cloud folder; the client had none (it gets the host's).
+    `sowguard.ini` held the role, port or host address and the password.
+  - The stand-in original folder was left unchanged.
+  - Refused as intended: a copy folder inside the game folder, a client without a host address, an exe that is not build 3095001.
+  - The scratch folder was removed after.
