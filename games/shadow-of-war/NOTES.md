@@ -4831,3 +4831,23 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     and the guard answering 0 times. Guard suite 52/52, unit tests 93/93 and 36/36.
   - Not checked: that it stops the crash. The crash did not happen in these runs.
   - The other crash seen (`190F7C`) is not covered.
+- **What links both host AI crashes** (static reading plus live reads on the host).
+  - Observed:
+    - The host's player's +0x2CE8 and +0x2CF0 both hold the player's +0x2CE8 (an empty list head), and its +0x2D18 holds 1. A
+      spawned orc has component pointers in all three, each component starting with a pointer back to the orc.
+    - Crash `11AA3A` read through +0x2CF0 of a character that was the host player or carried the player's list head. Crash
+      `190F7C` ran in an orc's AI tick (`2F7ABB`) on a component (that orc's +0x2CF0) whose first qword was the host player, and
+      read the player's +0x2D18 (1).
+  - The hunt redirects an engaged enemy to whichever of the decoy and the host's player is nearer (`want` in the hunt loop). With
+    `coop_hunt_strict` off (the default), the swap replaces whatever the enemy targets, scanning 0x1400 bytes from the enemy's AI
+    data, 0x80 bytes of the enemy and 0x300 of its health object.
+  - Derived (not proven): a swap toward the host's player writes a non-AI character where the AI expects an AI one, possibly
+    into neighbouring objects the 0x1400-byte scan runs into. Swaps toward the decoy write an AI character.
+  - **Change**: the hunt no longer redirects to the host's player. When the host's player is nearer, the redirect is dropped and
+    the enemy's own AI chooses (`hunt_player_left`; `coop_hunt_to_player=on` restores the old swap).
+  - Checked:
+    - Four fresh-copy fights (seeds 700, 701, 700, 702): 2.5, 12.2, 11.0 and 8.5 messages a minute, within the earlier builds'
+      spread (the 2.5 did not repeat on the same seed).
+    - With the old behavior and the client 400 units from the host (`kill_spawn.py --near`, 40 cycles): no crash. That run made
+      only 19 redirects, so it could not tell the two apart.
+  - Not shown: that this stops the crashes.
