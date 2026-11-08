@@ -5124,3 +5124,52 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     had 9 of 10 engaged with 9 pictures, none duplicated.
   - All 40 host swing messages were applied by the client (none lost across the outage). 47 client strikes were applied on the
     host. No crash.
+- **A 90-minute fight** (`roam_fight.py` 5,400 s, 4 orcs, every third an archer, `--ai-table`, fresh copies):
+  - No crash on either copy. The client made one Olog-hai picture again (its AI table at 200) and its stand-in of the host
+    once (200), as designed. 1,041 swing messages sent, 1,459 damage messages applied on the client (exact losses included),
+    617 client strikes applied on the host; 87 of 179 windows engaged, 5 stalled, the longest engaged silence 57 s.
+  - Fights thinned out after ~2,300 s. Cause: the tool itself. `roam_fight.py` spawns at most 40 orcs per slot (160 here) and
+    reached that cap; from then on only stray orcs fought. The cap is now `--max-spawns=<k>`.
+  - The largest AI table on the client stayed at exactly 200 for the last 40 minutes: the retired Olog-hai picture, kept with
+    its AI off until the game deletes it. It did not grow.
+- **The agent's switch, the AI list and a stand-in that slides** (`tools/agent_off.py`, `tools/agent_anim.py`, new).
+  - From the code:
+    - The agent update `2FF268` skips an agent whose byte +0x285 is 0. Three writes set that byte. The agent's file binding
+      `193704` sets it to 1 (it refuses a second binding: "File already bound"). The agent reset `1960C4` sets it to 0. `1141FC`
+      writes 1 to +0x285 of some object after copying 16 bytes to its +0x1E0, but that object is reached through +0x24A0 of a
+      component and may be another class.
+    - `415D5C` shuts an agent down: it clears +0x284, calls the reset, and empties the AI table at +0x140 (`113954`).
+    - Two neighbouring vtable slots (`1FFBDA0` and `1FFBDA8`) lead to the binding (through `4896EC`) and to the reset.
+  - Observed on the host's stand-in of the client (probe write of the byte to 0, then back to 1):
+    - With the byte at 0 the list grew while the count stood still (7, then 31, then 55 entries; count 7). With the byte back
+      at 1 the game pruned and counted it again (16 and 16). So this byte gates the pruning.
+    - With the byte at 0 the stand-in no longer walked by itself. While the client ran for 6 s, the stand-in moved in only
+      6 of 29 samples, in 153-unit jumps, all of them the mod's put-backs (8). With the byte at 1 it moved in 27-28 of 29
+      samples in 46-unit steps, with 0-1 put-backs. On the host's screen the client's picture slides and jumps instead of
+      walking.
+    - It still followed the client. So the byte does not explain the stand-in seen standing still after client deaths, whose
+      put-backs did not land at all.
+  - **Change**: a stand-in whose agent stays switched off for 6 s is made again (`coop_standin_agent_off`, seconds, default 6,
+    0 turns it off; live `coopset standinagentoff <s>`; counted `puppet_agent_off`). An AI table whose list runs 16 entries
+    past its count is logged once with the agent's byte (`ai_uncounted=<tables>/<of those with the byte at 0>`).
+  - Checked: with the byte written to 0, the host made a new stand-in 6 s later. The new stand-in walked by itself (22 of 29
+    samples moving in 46-unit steps, 1 put-back).
+  - Unknown: what switches a stand-in's agent off in play (the uncounted lists seen after client deaths suggest a death, not
+    shown). Writing the byte back to 1 also worked in the test, but a real shutdown also clears the agent's other state, so the
+    mod makes a new stand-in instead.
+- **The runner on the build with the stand-in remake** (fresh pair):
+  - First run 4 of 6. `exact_loss` and a rerun of both failed checks read "a player cannot walk (b)". A screenshot showed the
+    client in the world, facing a door: `can_move()` pushed the stick forward only. It now tries four directions.
+  - `dup_damage` failed with 3 same-swing pairs, twice. Reading the pairs: they were 13-18 minutes old (the host's damage log
+    keeps 128 entries, and the check counted the earlier fight's entries too). The check now counts only its own window.
+  - The pairs were still a real gap. Two orcs (ids 84 and 85) landed the same attack 31 ms apart. Their reports interleaved
+    (orc 1 on the stand-in, orc 2 on the stand-in, orc 1 on the decoy, orc 2 on the decoy), and the de-duplication remembered
+    only the last report, so both second reports were sent. It now remembers each attacker's last report (8 slots; unit tests
+    for the interleaved case and for more attackers than slots).
+  - `exact_loss` failed once more with the host's orc losing 0: the client logged no local loss for that picture, whose
+    address the game had used for two earlier pictures. It passed alone right after and in the next full run. Cause unknown.
+  - Second full run: 5 of 6. `dup_damage` found 0 host sends in its 45 s (a weak fight, no evidence either way); it passed on
+    the two reruns (15 sends, 0 pairs each). Over the session the host dropped 95 duplicate reports against 132 sends. No
+    crash on either copy; the stand-in remake did not fire during the deaths.
+  - The new stand-in log fired once on the client: its stand-in of the host listed 17 entries with count 0 and the agent byte
+    at 1. So an uncounted list can come with the byte on; the byte is not the only cause.

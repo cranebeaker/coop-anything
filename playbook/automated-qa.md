@@ -112,6 +112,11 @@ animation checker.
 - **Compare builds on fresh copies, in ABBA order.** Fight intensity in bot runs varied 3-16 hits a minute between runs of the
   same build, more than any change tested. To ask "is the new build weaker", run old, new, new, old on freshly started copies
   with the same seeds, and believe only a gap larger than the spread inside each build ([Shadow of War](../games/shadow-of-war/NOTES.md)).
+- **Make each check read only its own evidence.** In one regression run two checks failed partly for the tools' own reasons:
+  a duplicate-damage check read the host's whole 128-entry log and counted pairs from the fight check before it, and a "can
+  the player walk" check pushed the stick forward only while the player stood facing a door. Count only entries from the
+  check's own time window, and try several directions before calling a player stuck. (The old pairs were still a real bug,
+  found by reading them: [Shadow of War](../games/shadow-of-war/NOTES.md).)
 - **Measure leaks with memory held after a full collection.** .NET's `GCMemoryInfo.HeapSizeBytes` includes garbage not yet collected, so it rises with the allocation rate and flagged long two-player runs as leaking. `GC.GetTotalMemory(true)` once a minute showed a flat 11 MB ([MiSide](../games/miside/README.md)).
 
 ## Testing online features on one PC

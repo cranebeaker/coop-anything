@@ -524,6 +524,9 @@ attack the picture itself; [notes](../games/shadow-of-war/NOTES.md), session cm)
 - **One swing, two victims, two damage messages.** A swing that reaches both stand-ins is reported
   once per victim, and the remote player takes it twice (12 of 31 swings in one test). Drop a second
   report of the same attacker and attack on the other stand-in within a few hundred milliseconds.
+  Remember the last report of each attacker, not one report overall: two enemies landing the same
+  attack in the same frames interleave their reports (one, two, one, two), and a single remembered
+  report let both duplicates through.
 - **Send the amount, not a stand-in attack.** Damage the remote side's enemy pictures take outside
   the hit function (arrows, gear effects) was first replayed on the host as a few stock sword
   strikes, so a 60.5 loss landed as 96. A message with the exact amount, applied as a health

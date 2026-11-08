@@ -155,6 +155,8 @@ host starts first, client joins and gets the host's save.
   host's player) and also stands on a screen until the player presses on (seen once with bots).
 - After a client death the host's picture of the client once stood still 1,600 units off (the game no longer moved it); since
   session cm the mod moves such a picture by direct writes until the game moves it again. Why it happens is not known.
+- A picture whose AI update the game has switched off slides and jumps (moved only by the mod's put-backs) and its AI list is
+  never emptied; since session cm such a picture is made again after 6 s. What switches it off in play is not known.
 - Two rare host crashes in the game's AI (seen once and twice) both read the host's player as an AI character. The mod no longer
   points enemies at the host's player, and both crash sites have a narrow guard; neither crash came back, so the fix is not
   proven.
@@ -165,7 +167,8 @@ host starts first, client joins and gets the host's save.
 ## Next steps
 
 - A test between two PCs over a real network (needs a second player).
-- Find why the agent update skips some pictures (the pruning of the AI list lives in it; session cm), so pictures need not be made again.
+- Find what switches a picture's AI update off in play (the byte at +0x285 of its agent: set by the agent's binding `193704`,
+  cleared by its shutdown `415D5C`; session cm), so pictures need not be made again.
 - Fights with beasts (a region whose spawn table has caragors and graugs).
 - Run `tools/regress.py` (in the mod's repo) on every change; it covers a fight, duplicate damage, exact losses, both deaths and
   kill-and-respawn.
