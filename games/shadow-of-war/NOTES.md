@@ -5222,3 +5222,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   address had served two earlier enemies' proxies): an old record still holding it would drive the same object and its health
   write would hide the loss. A guard now makes such a record let go (`proxy_handle_reused`). In a full runner pass on that
   build (6 of 6, 202 proxies spawned) it never fired, so the idea is not shown and the cause stays unknown.
+- **A 60-minute fight on the final build of the day** (`roam_fight.py` 3,600 s, 4 orcs, archers, `--max-spawns=400`; the agent
+  remake, per-attacker de-dup, ally drop, slot release and reused-address guard all in; fresh copies):
+  - No crash on either copy; the owner's files unchanged. 299 orcs spawned, 3.7-4.5 alive near the client on average;
+    111 of 119 windows engaged, 11 stalled; 982 client strikes applied on the host.
+  - Damage messages per 15 minutes: 6.8, 5.8, 4.0, 8.3 a minute. No early burst in this run (seed 813) and no decline.
+  - AI tables made again as designed: the client's stand-in twice (200, 201), the host's stand-in once (202), archer
+    proxies three times (200). Every one with the agent byte at 1: lists also fill while the agent update runs, so the
+    byte explains only one way a list grows. The agent-off remake did not fire; the reused-address guard did not fire.
