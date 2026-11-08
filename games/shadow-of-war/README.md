@@ -146,8 +146,8 @@ host starts first, client joins and gets the host's save.
   Not yet run for hours. The table is the animation state machine's (its entries come from the start-action function); after
   the client's death its picture of the host kept a growing list the game never counted, so the mod now checks the list too.
 - The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
-- When the host dies, the client is taken to the host's respawn point while the host is still on its death screens, and its
-  fight is left behind.
+- When the host dies, the client now stays where it is through the host's death screens and is taken to the respawn point once
+  the host plays on (session cm; it was pulled away at once before).
 - A swing that reached both the host's picture of the client and the decoy was sent twice; since session cm it is sent once.
 - Counters protect the client: a swing it counters does not take its health (checked in session cm), so the experimental
   give-back (`coop_counter_heal`) stays off.

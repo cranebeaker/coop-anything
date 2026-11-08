@@ -5091,3 +5091,10 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - The stand-in original folder was left unchanged.
   - Refused as intended: a copy folder inside the game folder, a client without a host address, an exe that is not build 3095001.
   - The scratch folder was removed after.
+- **The client waits for the host's respawn** (`coop_travel_wait_host`, default on).
+  - Before: the host's long jump while its world is stopped (the game moves a dead host's player to the respawn point 6-22 s
+    after the death) was followed at once, pulling the client out of its fight while the host still sat on its death screens.
+  - Now: while no enemy snapshot has come for 1.5 s (at most two minutes), the client waits and follows once the host's world
+    runs.
+  - Checked: `host_death.py` passed. The client stayed in the arena through 28 s of death screens and arrived 97 units from the
+    host when it walked again (`travel_waits=1`). The client's death and a fight still pass.
