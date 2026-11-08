@@ -5251,3 +5251,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   living enemy where a dead one was is now a new enemy (GONE, then NEW with another id; unit tests). Runner after: 5 of 6, the
   failure an `exact_loss` reading 110.5 lost (the 50 cut plus a 60.5 hit of the client's gear effect on the test orc), then
   `exact_loss` 3 of 3. No crash.
+- **A release package** (`release/make_package.py` in the mod's repo, new): the public build of `bink2w64.dll`, the setup and
+  launch scripts, the player guide and the licence with a `SHA256SUMS.txt`, in `shadow-of-war-coop-<version>.zip`. It refuses a
+  DLL with the private tree's two-copies-on-one-PC test code. Checked on a candidate (0.1.0-rc1, not published): built from a
+  public export (unit tests 140/140, guard suite 49/49), unpacked with every hash matching, the setup script's dry run ran from
+  it, and its DLL took a lone host copy into the world with the exe check passing and the saves redirected. The public build
+  cannot run two copies on one PC, so co-op with it waits for the two-PC test.
