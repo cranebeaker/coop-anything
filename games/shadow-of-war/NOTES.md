@@ -5009,3 +5009,19 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     (`counter_heals` 0).
   - Derived: the game ignores a hit that lands while the client is countering, so counters protect the client by themselves.
     The give-back stays off; the client's counters are only counted (`counter_strikes`).
+- **The thinning of long runs, explained: a test artifact.** Three 15-minute fights back to back in one session, with
+  `tools/host_state.py` (new: hunt and decoy counters plus what the grunts near the client are after) between them.
+  - Observed:
+    - Segment 1 fought (82 messages, 16 of 29 windows engaged). Segments 2 and 3 had no fight at all: 0 messages, no living grunt
+      near the client, no pictures on the client.
+    - The host's log: a captain appeared to the host about 4 minutes in (`ActiveShowdownGiven_Distance`,
+      `ActiveInitialPlayerThreat`); later its stand-in was freed (the world reloading).
+    - Afterwards the host's player could not walk, and its tracker saw no enemies (`host_known=0`) although a fresh orc stood 300
+      units from the client.
+  - Derived: the host's world stood still on a screen waiting for a press. A player would give it; the bot gave none. The thin
+    30- and 45-minute runs are this, not the mod.
+  - Change to the bot: `roam_fight.py` now presses A and back on the host when no enemy snapshot arrives in a whole 30-s window
+    (`host pressed through Nx` in its final line).
+  - Checked on the stuck session: one press, after which the host's world ran again (the client's pictures back, its strikes
+    applied).
+  - Also seen: the hunt dropped 664 redirects toward the host's player in segment 1 (`hunt_player_left`).
