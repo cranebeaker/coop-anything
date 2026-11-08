@@ -5098,3 +5098,11 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     runs.
   - Checked: `host_death.py` passed. The client stayed in the arena through 28 s of death screens and arrived 97 units from the
     host when it walked again (`travel_waits=1`). The client's death and a fight still pass.
+- **The respawn wait, a nuance.**
+  - Observed: in a second host-death run the client waited (`travel_waits=1`) but arrived about 30 s into the death sequence,
+    while the host's player still could not walk. The host's world runs again during the killer's Nemesis presentation, before
+    the host presses on, and its state starts coming again.
+  - Derived: the wait ends when the host's world runs, not when the host is back in control. That is still later than before (at
+    once).
+  - `host_death.py` now checks that the client waited (`travel_waits` rose; `--no-wait` for `coop_travel_wait_host=off`). It
+    passed on the rerun.
