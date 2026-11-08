@@ -5061,3 +5061,12 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
 
   No stale or failed hits. The first attempt was spoilt: the client got stuck on a screen after the Olog-hai and showed 0
   strikes for the rest. The tool now frees both players before each kind.
+- **More kinds.**
+  - In this region only `Orc_Defender` could be spawned of 19 guessed names. No caragor, graug, ghul or uruk is in its spawn
+    table, so those need another region. The probe's `scan` covers only the game's image, not its data, so names cannot be listed
+    that way.
+  - Shield orcs (`enemy_kinds.py Orc_Defender`): one swing message reached the client and was applied; 13 client strikes were
+    reported and applied on the host.
+  - Open: whether a defender blocks the client as it would block a player. The client's pictures have no AI, so they cannot
+    block on the client's screen. In a single check, one reported strike and the host's defender went 360 -> 0 (a kill move or a
+    sent loss; not settled).
