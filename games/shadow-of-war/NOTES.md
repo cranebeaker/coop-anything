@@ -5048,3 +5048,16 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     noticed the previous copy end. A start about 20 s later works (`launch-retry.ps1`). A player starting one copy rarely meets
     it.
   - The change was not kept.
+- **Other enemy kinds against the client** (`tools/enemy_kinds.py`, new: two of a kind spawned at the client for 40 s while it
+  strikes back):
+
+  | kind | host swing messages / applied by the client | client strikes reported / applied on the host |
+  |---|---|---|
+  | `OlogHai_Infantry` | 3 / 3 | 7 applied (first run) |
+  | `Orc_Berserker` | 5 / 5 | 6 / 6 |
+  | `Orc_Spearman` | 21 / 34 (forwarded arrows from the camp's archers added) | 3 / 3 |
+  | `Warg_Brown` | 1 / 1 | 2 / 2 |
+  | `Orc_Infantry` | 3 / 3 | 8 / 8 |
+
+  No stale or failed hits. The first attempt was spoilt: the client got stuck on a screen after the Olog-hai and showed 0
+  strikes for the rest. The tool now frees both players before each kind.
