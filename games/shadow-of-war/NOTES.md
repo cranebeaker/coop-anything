@@ -5077,3 +5077,9 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - Derived: in these runs defenders did not block a player's plain strikes reliably either. The client did not do more damage
     than the host's player. No sign that the client bypasses blocks unfairly; the open question above is closed for plain
     strikes.
+- **The player setup with the current build** (`release/setup-copy.ps1 -DryRun`, read-only against the Steam install, client role):
+  - The exe was recognised as the expected build. The game is 109.6 GB, with enough free space. Each step was listed (copy,
+    the mod in, the profile folder, `sowguard.ini`) and nothing was created.
+  - The `sowguard.ini` it writes differs from the test copies' only in test conveniences (loopback bind, the two-copies mutex
+    rename, extra protected folders) and fewer debug-print channels. Everything added in session cm works from defaults, so
+    players need no new settings.
