@@ -5218,3 +5218,7 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     while wild). Runner fight and duplicate damage passed after.
   - Not reproduced in a staged fight: `tools/ally_hits.py` (three wild wargs at the client with the hit log on) saw no ally hit
     on the client's picture in two 60 s runs; the wild wargs went for the host's player and each other.
+- **The `exact_loss` miss, chased**: six runs in a row passed, so it is rare. One idea from the failing run's log (that proxy's
+  address had served two earlier enemies' proxies): an old record still holding it would drive the same object and its health
+  write would hide the loss. A guard now makes such a record let go (`proxy_handle_reused`). In a full runner pass on that
+  build (6 of 6, 202 proxies spawned) it never fired, so the idea is not shown and the cause stays unknown.
