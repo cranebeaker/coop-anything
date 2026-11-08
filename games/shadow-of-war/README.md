@@ -149,7 +149,10 @@ host starts first, client joins and gets the host's save.
 - The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
 - When the host dies, the client now stays where it is while the host's game stands still and is taken to the respawn point once
   that game runs again, which can be during the killer's presentation (session cm; it was pulled away at once before).
-- A swing that reached both the host's picture of the client and the decoy was sent twice; since session cm it is sent once.
+- A swing that reached both the host's picture of the client and the decoy was sent twice; since session cm it is sent once,
+  also when two enemies land the same attack at once.
+- The host's tamed wargs hurt the client when their running lunge passed through its picture; since session cm hits by the
+  host's tamed wargs and followers are not sent (seen once in a fight; the drop was checked with a staged hit).
 - Counters protect the client: a swing it counters does not take its health (checked in session cm), so the experimental
   give-back (`coop_counter_heal`) stays off.
 - When a captain ambushes the host, the client applies the host's Nemesis events (the presentation, the showdown, a kill of the

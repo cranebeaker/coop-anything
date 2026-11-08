@@ -537,6 +537,10 @@ attack the picture itself; [notes](../games/shadow-of-war/NOTES.md), session cm)
 - **Credit only what the remote player did.** The remote side's gear (an aura, recoil) also hurts
   pictures of the host's allies, and falls cost health too; forward only losses of hostile enemies,
   and not right after a fall.
+- **Only enemies hurt the remote player.** The host's own allies brush its stand-ins too: a tamed
+  wolf's running lunge passed through one and was forwarded as damage, twice in 125 ms. Check the
+  attacker's side before forwarding a hit on a stand-in (the follower flag did not cover tamed
+  beasts there; the spawn type did).
 
 ### Stage 4: world and quest state
 
