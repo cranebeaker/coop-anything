@@ -5039,3 +5039,12 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   - One stall: three grunts at 111, 120 and 376 units, all with the decoy as their target, none swinging in the window.
   - Derived: they were after the client's place, so this is the game's own attack pacing, not a targeting fault. The 13 stalls
     of the previous 45-minute run were not repeated.
+- **The guard's Steam start check (`0xC0DE0006`), looked at.**
+  - Observed: tonight every retry of a host start failed for a while, until a clean relaunch.
+  - Tried: asking Steam for the remote-storage interface again every 10 ms for up to 5 s instead of stopping at once. Six host
+    starts (four launches with `launch-retry`): two still failed after the full 5 s; the other four got the interface at once.
+    Both failures were the first start right after a game copy had been closed.
+  - Derived (not proven): when it fails, Steam does not give that process the interface at all, likely because it has not yet
+    noticed the previous copy end. A start about 20 s later works (`launch-retry.ps1`). A player starting one copy rarely meets
+    it.
+  - The change was not kept.
