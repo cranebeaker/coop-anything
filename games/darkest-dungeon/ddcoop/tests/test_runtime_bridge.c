@@ -491,6 +491,7 @@ static void hook_machine_code(void) {
 #include "runtime_battle_fixture.inc"
 #include "runtime_desync_fixture.inc"
 #include "runtime_formation_fixture.inc"
+#include "runtime_fresh_raid_fixture.inc"
 #include "runtime_hunger_fixture.inc"
 #include "runtime_quest_return_fixture.inc"
 #include "dd_focus.h"
@@ -689,6 +690,7 @@ int main(void) {
     battle_transactions();
     desync_regressions();
     formation_checks();
+    fresh_raid_checks();
     hunger_transactions();
     quest_return_transactions();
     activity_transactions();

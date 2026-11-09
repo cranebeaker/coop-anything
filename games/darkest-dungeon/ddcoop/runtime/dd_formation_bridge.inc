@@ -75,7 +75,7 @@ static void __fastcall hook_formation_reset(void *display) {
     if(!memcmp(a.u.formation.before,a.u.formation.after,16))return;
     if(!dd_action_valid(&a)) {
         dd_log("Formation: default order has different or unknown members; not shared");
-        shop_notice("De standaard partyvolgorde kon niet worden gecontroleerd. Er is niets verplaatst; stuur de logs mee.");
+        shop_notice("The default party order could not be verified. Nothing moved; send the logs.");
         return;
     }
     dd_log("Formation: reset requested area=%08x before=%u,%u,%u,%u after=%u,%u,%u,%u (role=%s)",v.area,

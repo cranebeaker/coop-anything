@@ -155,8 +155,8 @@ static int hamlet_local_active(void) {
 static int hamlet_input_ready(void) {
     if (runtime_shared_blocked()) return 0;
     if (InterlockedCompareExchange(&g_session_ready, 0, 0) && !g_town.needs_resync) return 1;
-    shop_notice("Wacht tot beide spellen verbonden zijn. Bij een synchronisatiefout: sluit beide spellen en "
-                "start de co-op sessie opnieuw.");
+    shop_notice("Wait until both games are connected. After a synchronization error, close both games and "
+                "restart the co-op session.");
     return 0;
 }
 static int hamlet_fail(const char *why, int changed) {
@@ -178,10 +178,10 @@ static int hamlet_submit(dd_action *a) {
     }
     int ok = a->kind == DD_ACT_DISMISS ? hamlet_dismiss_begin(a, 1) : dd_town_host_local(&g_town, a);
     if (!ok)
-        shop_notice(g_town.needs_resync ? "De wijziging kon niet volledig worden gecontroleerd. Sluit beide "
-                                          "spellen en start de co-op sessie opnieuw. Stuur de logs mee."
-                                        : "De wijziging is geweigerd: de gegevens zijn intussen veranderd of "
-                                          "de game staat deze actie nu niet toe.");
+        shop_notice(g_town.needs_resync ? "The change could not be fully verified. Close both "
+                                          "games and restart the co-op session. Send the logs."
+                                        : "The change was refused: the state has changed, or "
+                                          "the game does not currently allow this action.");
     return ok;
 }
 static void hamlet_request_done(uint32_t request, int rejected) {
@@ -199,8 +199,8 @@ static void hamlet_request_done(uint32_t request, int rejected) {
         if (request && g_hamlet_requests[i] == request) {
             g_hamlet_requests[i] = 0;
             if (rejected)
-                shop_notice("De host heeft deze wijziging geweigerd. Controleer de huidige gegevens en "
-                            "probeer de actie opnieuw.");
+                shop_notice("The host refused this change. Check the current state and "
+                            "try the action again.");
         }
 }
 static int hamlet_skill_apply(const dd_hamlet *s, const dd_action *a) {
@@ -274,17 +274,17 @@ static int hamlet_roster_ids(const dd_hamlet *s, uint32_t ids[DD_HAMLET_HEROES],
 static const char *hamlet_dismiss_problem(const dd_hamlet *s, uint32_t id, dd_hamlet_hero *hero) {
     uint32_t party[4];
     if (dd_hamlet_find(s, id, hero) != 1)
-        return "DDCoop kon deze held niet in het roster controleren. Open het roster opnieuw.";
+        return "DDCoop could not verify this hero in the roster. Reopen the roster.";
     if (hero->location > 1)
-        return "Deze held zit in een gebouw of is niet beschikbaar. Je kunt deze held nu niet ontslaan.";
+        return "This hero is in a building or unavailable and cannot be dismissed now.";
     if (!dd_hamlet_party(s, party))
-        return "DDCoop kon de partygegevens niet controleren. Open het expeditiescherm en stuur de logs mee "
-               "als dit blijft gebeuren.";
+        return "DDCoop could not verify the party. Open the expedition screen and send the logs "
+               "if this persists.";
     for (unsigned i = 0; i < 4; i++)
         if (party[i] == id)
-            return "Haal deze held eerst uit de expeditieparty. Daarna kun je de held ontslaan.";
+            return "Remove this hero from the expedition party first, then dismiss them.";
     if (hero->location != 0) /* 1 = still in a party slot, whatever the remembered vector says. */
-        return "Haal deze held eerst uit de expeditieparty. Daarna kun je de held ontslaan.";
+        return "Remove this hero from the expedition party first, then dismiss them.";
     return NULL;
 }
 static int hamlet_dismiss_begin(const dd_action *a, int local) {
@@ -361,8 +361,8 @@ static int hamlet_dismiss_poll(void) {
                     ? "dismiss timed out; queued native event may still run"
                     : "dismiss changed unexpected roster/campaign state",
                 1);
-    shop_notice("Het ontslag kon niet volledig worden gecontroleerd. Gedeelde acties zijn gestopt. "
-                "Sluit beide spellen en start een nieuwe co-op sessie. Stuur de logs mee.");
+    shop_notice("Dismissal could not be fully verified. Shared actions have stopped. "
+                "Close both games and start a new co-op session. Send the logs.");
     return 1;
 }
 static int hamlet_dismiss_gate(const dd_msg *m) {
@@ -579,7 +579,7 @@ static int hamlet_apply(const dd_action *a) {
         /* From the raid's loot or bag, on the guest: the copies differ, but only by that item, and the expedition can go on. A hero's trinket in town still stops: that is the campaign. */
         if (!moved && g_cfg.role == DD_ROLE_GUEST && !g_town.needs_resync && (a->u.move.src_hero >= DD_TRINKET_LOOT || a->u.move.dst_hero >= DD_TRINKET_LOOT)) {
             dd_log("Hamlet: the host's trinket from raid inventory %u slot %u could not be done here", a->u.move.src_hero, a->u.move.src_slot);
-            shop_notice("Een trinket uit de loot kon hier niet worden overgenomen, dus jullie uitrusting kan nu verschillen. Je kunt gewoon verder; stuur na afloop de logs mee.");
+            shop_notice("A loot trinket could not be applied here, so equipment may differ. You may continue; send the logs afterwards.");
             return 1;
         }
         return moved;
@@ -706,8 +706,8 @@ static void __fastcall hook_hamlet_dismiss(void *panel, uint32_t id) {
     uint64_t canonical = 0;
     if (!g_hamlet_open_model(&s) || dd_hamlet_panel(&s, 0xec00a0, &canonical) != 1 ||
         canonical != (uintptr_t)panel) {
-        shop_notice("DDCoop kon het roster niet controleren. Open het roster opnieuw en stuur de logs mee "
-                    "als dit blijft gebeuren.");
+        shop_notice("DDCoop could not verify the roster. Reopen it and send the logs "
+                    "if this persists.");
         return;
     }
     dd_hamlet_hero hero;
@@ -756,7 +756,7 @@ static void __fastcall hook_hamlet_party_slot(void *slot, void *pointer) {
             g_hamlet_party_slot(slot, pointer);
         else
             shop_notice(
-                "DDCoop kon de partyvakken niet controleren. Open het expeditiescherm en probeer opnieuw.");
+                "DDCoop could not verify the party slots. Open the expedition screen and try again.");
         return;
     }
     g_party_failure = 0;
@@ -766,7 +766,7 @@ static void __fastcall hook_hamlet_party_slot(void *slot, void *pointer) {
         g_cfg.role == DD_ROLE_GUEST && g_party_intent_valid && g_party_intent[rank] != id && party_input;
     if (current[rank] == id && !restoring_intent) {
         /* The screen opens empty while the party is remembered (slot+28 holds what is shown). Dragging a hero back to the rank it is remembered at changed nothing in
-         * memory, so nothing was sent, and the other copy stayed empty until a real change (owner's runs: "na een paar seconden en wijzigingen"). */
+         * memory, so nothing was sent, and the other copy stayed empty until a real change (owner's runs: "after a few seconds and changes"). */
         uint64_t shown = 0;
         if (id && party_input && safe_read((uintptr_t)slot + 0x28, &shown, 8) && shown != (uintptr_t)pointer && InterlockedCompareExchange(&g_session_ready, 0, 0) &&
             !runtime_shared_blocked()) {
@@ -788,7 +788,7 @@ static void __fastcall hook_hamlet_party_slot(void *slot, void *pointer) {
         return;
     }
     if (g_cfg.role == DD_ROLE_GUEST && g_party_request_count >= DD_QUEUE_CAP) {
-        shop_notice("Wacht even tot de vorige partywijzigingen bevestigd zijn.");
+        shop_notice("Wait until previous party changes are confirmed.");
         return;
     }
     dd_action a = {0};
@@ -867,8 +867,8 @@ static void hamlet_trinket_pickup(unsigned kind, void *ui, void *arg2, void *arg
                 g_trinket_drag.ui = (uintptr_t)ui;
                 g_trinket_drag.data = (uintptr_t)data;
                 g_trinket_drag.valid = 3;
-                shop_notice("DDCoop kon deze trinketbron niet controleren. Annuleer de sleepactie en stuur "
-                            "de logs mee.");
+                shop_notice("DDCoop could not verify this trinket source. Cancel the drag and send "
+                            "the logs.");
             }
         }
     }
@@ -959,8 +959,8 @@ static int __fastcall hook_trinket_area_inventory(void *a, void *b, void *c) {
 }
 static void hamlet_bulk(unsigned kind, void *capture) {
     if (!g_game_apply_depth && hamlet_local_active()) {
-        shop_notice("Automatisch sorteren en 'alles uitrusting uitdoen' zijn nog niet gekoppeld. Verplaats "
-                    "trinkets in deze test een voor een door te slepen.");
+        shop_notice("Automatic sorting and 'unequip all' are not synchronized yet. Move "
+                    "trinkets individually by dragging in this test.");
         return;
     }
     if (g_hamlet_bulk[kind]) g_hamlet_bulk[kind](capture);

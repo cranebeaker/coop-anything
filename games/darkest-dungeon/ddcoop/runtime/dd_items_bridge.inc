@@ -637,7 +637,7 @@ static int bag_drag_refused(void *ui, int on_shop) {
     }
     memset(&g_supply_drag, 0, sizeof g_supply_drag);
     dd_log("Item: a drag in the provisions screen is refused");
-    shop_notice("Schuiven binnen de tas werkt in het voorraadscherm niet samen. Sleep van de winkel naar de tas om te kopen, of van de tas naar de winkel om terug te verkopen.");
+    shop_notice("Rearranging the bag is not synchronized in provisions. Drag from shop to bag to buy, or bag to shop to return an item.");
     return 1;
 }
 /* 7ef6d0: an item dropped on the shop: the provisions screen's own way to sell back. */
@@ -673,8 +673,8 @@ static void __fastcall hook_supply_stack_return(void *capture, int index) {
         return;
     }
     dd_log("Supplies: a stack return (slot %d) is refused; it is not shared", index);
-    shop_notice("Een hele stapel tegelijk terugverkopen werkt in co-op nog niet. Klik op een item in de tas om er een terug te "
-                "verkopen, of sleep het naar de winkel.");
+    shop_notice("Returning an entire stack is not supported in co-op yet. Click an item to return one, "
+                "or drag it to the shop.");
 }
 DD_BAG_HOOK(hook_bag_throw_a, g_bag_throw_a)
 DD_BAG_HOOK(hook_bag_throw_b, g_bag_throw_b)
@@ -967,8 +967,8 @@ static int town_check_apply(const dd_action *a) {
     dd_log("Town: differs from the host after the raid: currencies %08x/%08x, heroes %08x/%08x, count %u/%u (here/host)", d[0], a->u.item.type, d[1],
            a->u.item.id, d[2], a->u.item.round);
     shop_notice(d[2] != a->u.item.round || d[1] != a->u.item.id
-                    ? "Na de raid verschillen de helden van die van de host. De save van de host telt; start bij twijfel de sessie opnieuw en stuur de logs mee."
-                    : "Na de raid verschilt het goud of de erfstukken van die van de host. De save van de host telt; start bij twijfel de sessie opnieuw en stuur de logs mee.");
+                    ? "The heroes differ from the host after the raid. The host save is authoritative; restart the session if unsure and send the logs."
+                    : "Gold or heirlooms differ from the host after the raid. The host save is authoritative; restart the session if unsure and send the logs.");
     return 1;
 }
 static int item_gate(const dd_msg *m) {
@@ -1183,7 +1183,7 @@ static int item_apply(const dd_action *a) {
             if (g_cfg.role == DD_ROLE_HOST) return 0;
             /* The rest of the expedition need not stop for it. The bag is compared at the next door; it is said here, and this window can be closed. */
             if (loot_open(&v)) g_loot_escape = 1;
-            shop_notice("Een lootactie van de host kon hier niet worden uitgevoerd: het lootscherm was niet gereed. De loot kan nu verschillen. Je kunt gewoon verder; stuur na afloop de logs mee.");
+            shop_notice("A host loot action could not run here because the loot screen was not ready. Loot may differ. You may continue; send the logs afterwards.");
             return 1;
         }
         dd_log("Item: loot op=%u slot=%d (role=%s)", a->u.item.op, a->u.item.slot, dd_role_name(g_cfg.role));

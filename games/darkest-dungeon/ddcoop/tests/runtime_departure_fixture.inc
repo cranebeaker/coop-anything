@@ -152,14 +152,14 @@ static void departure_transactions(void) {
     dp_starts = dp_maps = 0;
     hook_raid_start(dp_app);
     CHECK(dp_maps == 1 && dp_map_seed[0] != order.u.departure.seed && dp_native_calls == 1 && dp_reseeds == 1);
-    /* Another mission or party still gets the shared seed, and shows in the log. */
+    /* A different mission/party may not start even with an approved seed. */
     dp_reset(DD_ROLE_GUEST);
     sw_push_apply(1, 0, &order);
     dd_runtime_poll();
     dd_runtime_poll();
     dp_world(0x62626262, 20);
     hook_raid_start(dp_app);
-    CHECK(dp_map_seed[0] == order.u.departure.seed && !g_town.needs_resync);
+    CHECK(!dp_starts && !dp_maps && g_town.needs_resync);
     /* A guest embarking first has no seed, and sends nothing. */
     dp_reset(DD_ROLE_GUEST);
     hook_raid_start(dp_app);

@@ -566,7 +566,7 @@ static int walk_party_compare(uint64_t raid, const dd_action *a) {
             dd_log("Walk: hero %u trinkets differ at the door: here %08x, host %08x", ids[i], trinkets[i], a->u.travel.trinkets[i]);
             if (!g_walk_trinket_told) {
                 g_walk_trinket_told = 1;
-                shop_notice("De trinkets van een held verschillen van die bij de host. Speel door als je wilt, en stuur na afloop de logs mee.");
+                shop_notice("A hero's trinkets differ from the host. You may continue; send the logs afterwards.");
             }
         }
     }
@@ -713,8 +713,8 @@ static int walk_travel_apply(const dd_action *a) {
     if (g_cfg.role == DD_ROLE_HOST && (v.battle || v.state <= 1 || v.state == 6 || v.state == 7)) return 0;
     if (a->u.travel.has_from && !walk_area_pointer(v.raid, a->u.travel.from_area, &from)) {
         dd_log("Walk: this copy has no area %08x", a->u.travel.from_area);
-        shop_notice("Deze kopie heeft niet dezelfde kaart als de host. Sluit beide spellen en start de sessie opnieuw; "
-                    "stuur de logs mee.");
+        shop_notice("This copy does not have the same map as the host. Close both games and restart the session; "
+                    "send the logs.");
         return 0;
     }
     dd_log("Walk: travel to area %08x tile %u (role=%s)", a->u.travel.dest[0], a->u.travel.dest[1], dd_role_name(g_cfg.role));
@@ -742,7 +742,7 @@ static int walk_travel_apply(const dd_action *a) {
             /* The host's bag is the truth: it sends every slot. Still different at the next door means that could not repair it. */
             if (g_walk_bag_asked && !g_walk_bag_told) {
                 g_walk_bag_told = 1;
-                shop_notice("De inventory verschilt van die van de host en dat kon niet worden hersteld. Speel door als je wilt, en stuur na afloop de logs mee.");
+                shop_notice("The inventory differs from the host and could not be repaired. You may continue; send the logs afterwards.");
             }
             g_walk_bag_asked = 1;
             memset(&ask, 0, sizeof ask);

@@ -230,7 +230,7 @@ static void supply_dispatch(const dd_action *a,unsigned tries) {
     if(g_cfg.role==DD_ROLE_GUEST) {
         g_supply_request=dd_town_guest_local(&g_town,a);g_supply_request_op=a->u.supplies.op;
         g_supply_sent.op=a->u.supplies.op;g_supply_sent.tries=tries;g_supply_sent.type=a->u.supplies.type;g_supply_sent.id=a->u.supplies.id;
-    } else if(!dd_town_host_local(&g_town,a))shop_notice("DDCoop kon deze voorraadactie niet uitvoeren. Controleer het geld en de voorraad; stuur de logs bij een fout.");
+    } else if(!dd_town_host_local(&g_town,a))shop_notice("DDCoop could not perform this provisions action. Check funds and stock; send the logs if this fails.");
 }
 /* An unanswered request or a waiting order: this click follows it. */
 static int supply_click_later(unsigned op,uint32_t type,uint32_t id) {
@@ -305,7 +305,7 @@ static void __fastcall hook_supply_cancel(void) {
     }
     if(g_supply_request || provisions_busy()) { /* Only a forced close: the button waits in hook_supply_back. */
         supply_fail("Back while a purchase/return was still pending",1);
-        shop_notice("Er liep nog een voorraadactie tijdens Terug. Sluit beide spellen en start opnieuw; stuur de logs mee.");return;
+        shop_notice("A provisions action was still pending during Back. Close both games and restart; send the logs.");return;
     }
     dd_action a;
     if(!supply_quote(&m,&s,DD_SUPPLY_CANCEL,0,&a)) {
@@ -335,7 +335,7 @@ static void __fastcall hook_supply_back(void *capture) {
     }
     if(g_supply_back)g_supply_back(capture);
 }
-static const char g_supply_stuck[] = "Een voorraadactie van de andere speler kan hier nog niet worden verwerkt. Sluit het scherm dat nu openstaat; blijft dit staan, stuur dan de logs mee.";
+static const char g_supply_stuck[] = "A provisions action from the other player cannot be processed here yet. Close the current screen; send the logs if this persists.";
 static void supply_wait_over(void) {
     if(g_supply_wait)shop_notice_clear(g_supply_stuck);
     g_supply_wait=0;g_supply_wait_flags=0;g_supply_wait_since=0;
@@ -411,7 +411,7 @@ static void provisions_request_done(uint32_t request,int rejected) {
         g_supply_clicks[0]=g_supply_sent;g_supply_clicks[0].tries++;g_supply_click_count++;
         return;
     }
-    shop_notice("De host heeft deze voorraadactie geweigerd. Controleer of jullie voorraad en missie gelijk zijn; stuur de logs bij een fout.");
+    shop_notice("The host refused this provisions action. Check that your supplies and mission match; send the logs if this fails.");
 }
 static const hamlet_hook_spec g_supply_hooks[]={
     {"provisions_buy",(uintptr_t)hook_supply_buy,&g_supply_buy,16},

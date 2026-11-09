@@ -17,7 +17,7 @@
 #include "dd_duo.h"
 #endif
 
-#define DD_FW_VERSION "0.5.0-test57"
+#define DD_FW_VERSION "0.5.0-test58"
 /* Save storage (runtime test 8): global StorageManager*; the loaded campaign is the device mounted in
  * device slot 5 (manager + 0x10 + slot * 8, StorageManager::IO_MountDevice 0x14024a820); a device's name
  * is at device + 0x20 (StorageDevice constructor). Valid for the known build only. */

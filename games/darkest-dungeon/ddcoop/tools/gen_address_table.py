@@ -128,6 +128,7 @@ FUNCTIONS = [
     ("party_select", 0x140606450, "Party selects a hero (party, index)"),
     ("raid_travel", 0x140770080, "RaidDisplay move to another area (display, dest, from area, flip, extra)"),
     ("party_move", 0x140604af0, "Party move (party, direction); the game's input passes (+-1,0,0)"),
+    ("raid_restore", 0x14060eee0, "Raid::Restore from persist.quest/raid; only skipped during an approved fresh co-op departure"),
     ("raid_map_generate", 0x1405f1ff0, "Raid map generator (a, b, c); seeds a local prng from rand_s at 0x5f2164"),
     ("hunger_show", 0x140712080, "Normal Overlay_Event::ShowHunger (overlay, RaidDisplay), per-frame prompt identity"),
     ("hunger_eat", 0x140713bf0, "Hunger eat callback (std::_Func: overlay +8, food float +10)"),

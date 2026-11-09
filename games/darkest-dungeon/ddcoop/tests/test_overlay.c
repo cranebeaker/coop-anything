@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
         s->heroes[i].mine = i % 2;
         snprintf(s->heroes[i].name, 64, "Hero %u", i + 1);
         strcpy(s->heroes[i].cls, i % 2 ? "vestal" : "crusader");
-        strcpy(s->heroes[i].owner, i % 2 ? "jij" : "host");
+        strcpy(s->heroes[i].owner, i % 2 ? "you" : "host");
     }
     for (unsigned i = 0; i < DD_OVERLAY_CHECKS; i++) {
         s->check_ok[i] = 1;
@@ -236,11 +236,11 @@ int main(int argc, char **argv) {
     O.visible = 0;
     /* The connection line comes from the runtime, not from the launcher's own connection. */
     dd_overlay_session(DD_OVERLAY_WAITING);
-    CHECK(!strcmp(session_text(), "Wacht op de andere speler"));
+    CHECK(!strcmp(session_text(), "Waiting for the other player"));
     dd_overlay_session(DD_OVERLAY_CONNECTED);
     CHECK(!strcmp(session_text(), "Spelers verbonden"));
     dd_overlay_session(DD_OVERLAY_LOST);
-    CHECK(strstr(session_text(), "Verbroken") != NULL);
+    CHECK(strstr(session_text(), "Disconnected") != NULL);
     dd_overlay_session(DD_OVERLAY_REFUSED);
     CHECK(strstr(session_text(), "Host") != NULL);
     /* Without a launcher the panel still tells the connection; it does not claim the campaign is not loaded. */
@@ -250,12 +250,12 @@ int main(int argc, char **argv) {
         O.fresh = 0;
         O.snapshot.runtime[0] = 0;
         dd_overlay_session(DD_OVERLAY_CONNECTED);
-        CHECK(strstr(status_text(), "launcher") != NULL && !strcmp(session_text(), "Spelers verbonden") && !strcmp(sync_text(), "De gedeelde sessie loopt."));
+        CHECK(strstr(status_text(), "launcher") != NULL && !strcmp(session_text(), "Spelers verbonden") && !strcmp(sync_text(), "The shared session is active."));
         dd_overlay_session(DD_OVERLAY_WAITING);
-        CHECK(strstr(sync_text(), "Wacht tot") != NULL);
+        CHECK(strstr(sync_text(), "Wait") != NULL);
         O.fresh = 1;
-        strcpy(O.snapshot.status, "klaar");
-        CHECK(!strcmp(status_text(), "klaar"));
+        strcpy(O.snapshot.status, "ready");
+        CHECK(!strcmp(status_text(), "ready"));
         strcpy(O.snapshot.runtime, "regel");
         CHECK(!strcmp(sync_text(), "regel"));
         O.fresh = fresh;

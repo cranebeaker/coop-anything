@@ -90,7 +90,7 @@ static uint8_t hero_owners_load(const uint32_t ids[4], uint32_t *revision) {
     g_hero_owner_revision = *revision;
     if (!g_hero_owner_read_ok) dd_log("Heroes: no valid host ownership file at departure; host defaults retained");
     /* No file is normal. A file that cannot be read means someone's choices are being ignored: say so. */
-    if (read < 0) shop_notice("De lijst met helden per speler is niet leesbaar. Deze expeditie zijn alle helden van de host.");
+    if (read < 0) shop_notice("The hero ownership list is unreadable. All heroes belong to the host for this expedition.");
     return mask;
 }
 static void hero_owners_set(const uint32_t ids[4], uint8_t mask) {

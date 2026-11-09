@@ -314,17 +314,17 @@ static void party_marks(void) {
 static const char *session_text(void) {
     switch (O.session) {
     case DD_OVERLAY_CONNECTED: return "Spelers verbonden";
-    case DD_OVERLAY_LOST: return "Verbroken: sluit het spel, start opnieuw";
-    case DD_OVERLAY_REFUSED: return "Host antwoordt niet";
-    case DD_OVERLAY_WAITING: return "Wacht op de andere speler";
-    default: return "Geen gedeelde verbinding";
+    case DD_OVERLAY_LOST: return "Disconnected: close the game and restart";
+    case DD_OVERLAY_REFUSED: return "Host not responding";
+    case DD_OVERLAY_WAITING: return "Waiting for the other player";
+    default: return "No shared connection";
     }
 }
 /* The connection comes from the runtime, so it is known without a launcher too: a window started by hand has none. */
-static const char *status_text(void) { return O.fresh ? O.snapshot.status : "Geen launcher bij dit venster. Mis je die? Zie de taakbalk."; }
+static const char *status_text(void) { return O.fresh ? O.snapshot.status : "No launcher is attached to this window. Check the taskbar if it is missing."; }
 static const char *sync_text(void) {
     if (O.snapshot.runtime[0]) return O.snapshot.runtime;
-    return O.session == DD_OVERLAY_CONNECTED ? "De gedeelde sessie loopt." : "Wacht tot de co-op campagne geladen is.";
+    return O.session == DD_OVERLAY_CONNECTED ? "The shared session is active." : "Wait for the co-op campaign to load.";
 }
 int dd_overlay_notice(const char *utf8) {
     if (O.gl_failed || !utf8 || !*utf8) return 0;
@@ -497,21 +497,21 @@ static void raster(void) {
         text(PANEL_W / 2 - 10, ok + 7, 60, 24, "OK", white, 1);
         goto footer;
     }
-    const char *sections[] = {"Verbinding", "Helden", "Controles"};
+    const char *sections[] = {"Connection", "Heroes", "Controles"};
     for (int i = 0; i < 3; i++) {
         fill(i * 123 + 4, 95, 119, 30, O.section == i ? RGB(52, 78, 107) : RGB(34, 43, 56));
         text(i * 123 + 14, 101, 102, 22, sections[i], white, 1);
     }
     if (O.section == 0) {
-        text(12, 144, 345, 28, "Verbinding en synchronisatie", gold, 1);
+        text(12, 144, 345, 28, "Connection and synchronization", gold, 1);
         text(12, 178, 345, 96, sync_text(), white, 0);
         text(12, 290, 345, 80,
-             "De host bewaart de voortgang. Bij de gast wordt de eigen campagne na afloop automatisch "
-             "teruggezet.",
+             "The host saves progress. The guest's own campaign is restored automatically "
+             "afterwards.",
              muted, 0);
         text(12, 385, 345, 100,
-             "Host/Join en uitnodigen blijven beschikbaar in de launcher. Hier kun je tijdens het spelen "
-             "helden toewijzen en controles bekijken.",
+             "Host/Join and invitations remain in the launcher. During gameplay you can "
+             "assign heroes and check session status here.",
              muted, 0);
     } else if (O.section == 1) {
         int rows = content_rows();
@@ -526,7 +526,7 @@ static void raster(void) {
             text(45, y + 23, 220, 20, h->cls, muted, 0);
             text(285, y + 7, 65, 24, h->owner, white, 0);
         }
-        text(12, O.height - 63, 345, 24, "Klik: jij bestuurt deze held. Party staat bovenaan.", muted, 0);
+        text(12, O.height - 63, 345, 24, "Click: you control this hero. Current party is shown first.", muted, 0);
     } else {
         int saved = SaveDC(O.dc), y = 140 - O.scroll[2];
         IntersectClipRect(O.dc, 0, 136, PANEL_W, O.height - 68);
@@ -545,7 +545,7 @@ static void raster(void) {
     }
 footer:
     fill(4, O.height - 36, PANEL_W - 8, 32, RGB(34, 43, 56));
-    text(18, O.height - 29, 100, 24, "Logs kopieren", white, 0);
+    text(18, O.height - 29, 100, 24, "Copy logs", white, 0);
     text(135, O.height - 29, 100, 24, "Kopieer code", white, 0);
     text(263, O.height - 29, 98, 24, "Launcher", white, 0);
     GdiFlush();

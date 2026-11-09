@@ -1006,7 +1006,7 @@ static void hm_busy_remembered_party(void) {
         CHECK(!hm_native && !sent && strstr(g_shop_notice, "party"));
         putint(hm_entries[2] + 0x15b0, 2);
         hook_hamlet_dismiss(hm_roster_panel, 3);
-        CHECK(!hm_native && !sent && strstr(g_shop_notice, "gebouw"));
+        CHECK(!hm_native && !sent && strstr(g_shop_notice, "building"));
     }
     puts("Remembered party: busy old member can be cleared/replaced without leaving building; "
          "spare dismissal completes on both copies; blocked dismissal explains why");

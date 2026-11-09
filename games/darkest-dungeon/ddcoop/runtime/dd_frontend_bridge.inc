@@ -38,9 +38,9 @@ static int g_fe_done, g_fe_mode_done, g_fe_clicked, g_fe_waiting;
 static uint64_t g_fe_load_sent_at;
 static void (*g_frontend_transport)(void) = runtime_transport_start;
 static int (*g_frontend_departure_ready)(void) = departure_start_ready;
-static const char g_fe_wait_text[] = "DDCoop wacht tot het spel van de andere speler ook in het savescherm staat. Dan laden jullie de "
-                                     "campagne tegelijk, zodat alles gelijk begint. (Zelf op het slot klikken kan ook, maar dan loopt het "
-                                     "misschien niet gelijk.)";
+static const char g_fe_wait_text[] = "DDCoop is waiting for the other game to reach the campaign list. Both games then load the "
+                                     "campaign together so they start in sync. (Clicking the slot manually is possible, but it "
+                                     "may not stay in sync.)";
 static int32_t g_fe_state_seen = -1;
 static uint64_t g_fe_state_at, g_fe_give_up_at;
 static void frontend_reset(void) {
@@ -194,8 +194,8 @@ static void frontend_poll(void) {
         if (!alone && InterlockedCompareExchange(&g_session_ready, 0, 0) &&
             (!g_frontend_departure_ready || !g_frontend_departure_ready())) {
             frontend_stop("RaidStart/Rules could not be prepared; campaign not loaded");
-            shop_notice("DDCoop kon het samen laden niet voorbereiden. De campagne is niet geladen. "
-                        "Sluit beide spellen en stuur de logs mee.");
+            shop_notice("DDCoop could not prepare synchronized loading. The campaign was not loaded. "
+                        "Close both games and send the logs.");
             return;
         }
         if (!alone && !frontend_together(slot, now)) return;

@@ -51,7 +51,7 @@ static void __fastcall hook_prepare_open(void *functor) {
         return;
     }
     if (!g_prepare_read(&v) || !safe_read((uintptr_t)functor + 8, &town, 8) || town != v.town || (!g_supply_quest_known && (v.quest < 0 || !v.key))) {
-        shop_notice("Het voorraadscherm kon niet gezamenlijk worden geopend. Kies eerst een missie en probeer opnieuw.");
+        shop_notice("Provisions could not be opened together. Select a mission first and try again.");
         return;
     }
     if (supply_cancel_pending()) {
@@ -69,7 +69,7 @@ static void __fastcall hook_prepare_open(void *functor) {
     } else {
         g_prepare_host_click = 1;
         if (!dd_town_host_local(&g_town, &a))
-            shop_notice("Het voorraadscherm kon niet worden geopend. Controleer de missie en stuur de logs bij een fout.");
+            shop_notice("Provisions could not open. Check the mission and send the logs if this fails.");
         g_prepare_host_click = 0;
     }
 }

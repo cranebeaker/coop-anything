@@ -34,7 +34,7 @@ static int embark_apply(const dd_action *a) {
 static void embark_request_done(uint32_t request) {
     if (request && request == g_embark_request) {
         g_embark_request = 0;
-        shop_notice("Het gezamenlijke vertrek is geweigerd. Controleer de missie en party; stuur de logs als dit blijft gebeuren.");
+        shop_notice("Shared departure was refused. Check the mission and party; send the logs if this persists.");
     }
 }
 static void embark_poll(void) {
@@ -42,7 +42,7 @@ static void embark_poll(void) {
     if (!supply_active()) { g_embark_local_pending = 0; return; }
     if (GetTickCount64() > g_embark_wait_until) {
         g_embark_local_pending = 0;
-        shop_notice("Het vertrek wachtte te lang op een gedeelde actie. Sluit beide spellen en start de sessie opnieuw; stuur de logs mee.");
+        shop_notice("Departure waited too long for a shared action. Close both games and restart the session; send the logs.");
         return;
     }
     if (runtime_shared_blocked()) return;
@@ -50,7 +50,7 @@ static void embark_poll(void) {
     dd_log("Embark: shared departure chosen (role=%s)", dd_role_name(g_cfg.role));
     if (g_cfg.role == DD_ROLE_GUEST) g_embark_request = dd_town_guest_local(&g_town, &g_embark_local);
     else if (!dd_town_host_local(&g_town, &g_embark_local))
-        shop_notice("Het gezamenlijke vertrek kon niet worden gestart. Controleer de missie en party; stuur de logs mee.");
+        shop_notice("Shared departure could not start. Check the mission and party; send the logs.");
 }
 static void __fastcall hook_town_depart(void) {
     if (!g_town_depart) return;
@@ -61,7 +61,7 @@ static void __fastcall hook_town_depart(void) {
     if (g_embark_leaving || g_embark_request || g_embark_local_pending) return;
     depart_view v;
     if (!g_prepare_read(&v) || v.raid || !g_supply_quest_known) {
-        shop_notice("Het vertrek kon hier niet worden gecontroleerd. Open de voorraad voor dezelfde missie en probeer opnieuw.");
+        shop_notice("Departure could not be verified here. Open provisions for the same mission and try again.");
         return;
     }
     memset(&g_embark_local, 0, sizeof g_embark_local);

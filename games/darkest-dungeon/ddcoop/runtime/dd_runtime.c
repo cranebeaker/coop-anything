@@ -254,8 +254,8 @@ static int shop_refuse(const dd_action *a, const char *why) {
 
 /* A disconnected stream cannot resume ordered authority without a fresh host snapshot. The worker
  * only latches flags; all model/UI state and notices stay on the game thread. */
-static const char g_wait_for_peer[] = "Wacht tot beide spellen verbonden zijn: deze wijziging is niet uitgevoerd, "
-                                      "anders lopen jullie uit de pas. Staat hieronder geen melding meer, probeer het dan opnieuw.";
+static const char g_wait_for_peer[] = "Wait until both games are connected: this change was not applied, "
+                                      "because it would cause a desync. If this message has cleared, try again.";
 /* A real player action with no session yet. It would change only this copy, without a trace. The save load itself
  * and everything else the game does on its own keep running. A solo test build has no second player to wait for. */
 static int runtime_waiting_for_peer(void) {
@@ -283,8 +283,8 @@ static int runtime_shared_blocked(void) {
         if (!g_session_loss_notified) {
             g_session_loss_notified = 1;
             dd_log("shared actions stopped after live session loss; restart both games for a fresh snapshot");
-            shop_notice("De verbinding met de andere speler is verbroken. Gedeelde acties zijn gestopt. "
-                        "Sluit beide spellen en start een nieuwe co-op sessie via de launcher.");
+            shop_notice("The connection to the other player was lost. Shared actions have stopped. "
+                        "Close both games and start a new co-op session through the launcher.");
         }
     }
     return 1;
@@ -292,17 +292,17 @@ static int runtime_shared_blocked(void) {
 
 static void shop_refusal_notice(const dd_action *a) {
     if (g_town.needs_resync) {
-        shop_notice("De trinketaankoop kon niet volledig worden gecontroleerd. Sluit beide spellen en start de co-op "
-                    "sessie opnieuw. Stuur de logs mee.");
+        shop_notice("The trinket purchase could not be fully verified. Close both games and restart the co-op "
+                    "session. Send the logs.");
     } else if (g_shop_refusal && strcmp(g_shop_refusal, "insufficient gold") == 0) {
         char message[180];
-        snprintf(message, sizeof message, "Onvoldoende goud voor deze trinket: nodig %u, beschikbaar %d.",
+        snprintf(message, sizeof message, "Not enough gold for this trinket: need %u, available %d.",
                  a->u.items.cost, g_shop_before_gold);
         shop_notice(message);
     } else if (g_shop_refusal && strcmp(g_shop_refusal, "game declined") == 0) {
-        shop_notice("De game heeft deze aankoop geweigerd. Controleer of er plaats is in de trinketinventaris.");
+        shop_notice("The game refused this purchase. Check for space in the trinket inventory.");
     } else {
-        shop_notice("DDCoop kon deze aankoop niet afronden. Controleer de winkelvoorraad. Stuur de logs mee als de "
+        shop_notice("DDCoop could not complete this purchase. Check shop stock. Send the logs if the "
                     "aankoop blijft mislukken.");
     }
 }
@@ -411,14 +411,14 @@ static void __fastcall hook_wagon_sell(const void *capture) {
     }
     if (runtime_shared_blocked()) return;
     if(!InterlockedCompareExchange(&g_session_ready,0,0) || g_town.needs_resync) {
-        shop_notice("Wacht met verkopen tot beide spellen verbonden zijn. Bij een synchronisatiefout: start beide spellen opnieuw.");return;
+        shop_notice("Wait until both games are connected before selling. After a synchronization error, restart both games.");return;
     }
     dd_shop s;dd_shop_item item;sale_request request={0};uint32_t amount=0;
     if(!safe_read((uintptr_t)capture,&request,sizeof request) || !g_sale_open_model(&s) || request.inventory!=s.estate ||
        request.slot>=DD_SHOP_MAX_STORAGE || !dd_shop_estate_slot(&s,(uint16_t)request.slot,&item) ||
        !sale_quote(&s,&item,&amount) || request.gold!=(int32_t)amount) {
         dd_log("Trinket sale held: invalid source or quote; only normal estate storage is supported");
-        shop_notice("DDCoop kon deze verkoop niet controleren. Verkoop één gewone trinket vanuit de gedeelde voorraad. Stuur de logs mee als dit blijft gebeuren.");return;
+        shop_notice("DDCoop could not verify this sale. Sell one normal trinket from shared storage. Send the logs if this persists.");return;
     }
     dd_action a={0};a.kind=DD_ACT_WAGON_SELL;a.u.items.slot=item.physical;a.u.items.count=1;
     a.u.items.type=item.type;a.u.items.id=item.id;a.u.items.cost=amount;
@@ -426,8 +426,8 @@ static void __fastcall hook_wagon_sell(const void *capture) {
         g_sell_request=dd_town_guest_local(&g_town,&a);
         dd_log("guest sent trinket sale before mutation request=%u slot=%u item=%08x proceeds=%u",g_sell_request,item.physical,item.id,amount);
     } else if(!dd_town_host_local(&g_town,&a)) {
-        shop_notice(g_town.needs_resync?"De verkoop kon niet volledig worden gecontroleerd. Sluit beide spellen en start de co-op sessie opnieuw. Stuur de logs mee.":
-                    "De verkoop is geweigerd. Controleer of de trinket nog in de voorraad staat.");
+        shop_notice(g_town.needs_resync?"The sale could not be fully verified. Close both games and restart the co-op session. Send the logs.":
+                    "The sale was refused. Check that the trinket is still in storage.");
     }
 }
 
@@ -440,8 +440,8 @@ static void __fastcall hook_wagon_buy(void *context, int visible_index) {
     if (runtime_shared_blocked()) return;
     if (!InterlockedCompareExchange(&g_session_ready, 0, 0) || g_town.needs_resync) {
         dd_log("Nomad local purchase held: session unavailable or resync required");
-        shop_notice("Wacht tot beide spelers verbonden zijn. Als de verbinding al werkte: sluit beide spellen en start "
-                    "de co-op sessie opnieuw.");
+        shop_notice("Wait until both players are connected. If the connection previously worked, close both games and restart "
+                    "the co-op session.");
         return;
     }
     dd_shop s;
@@ -453,8 +453,8 @@ static void __fastcall hook_wagon_buy(void *context, int visible_index) {
         source != s.stock || destination != s.estate || !dd_shop_visible(&s, (uint16_t)visible_index, &item) ||
         !shop_quote(&s, &item, &price)) {
         dd_log("Nomad local purchase held: stock/context validation failed");
-        shop_notice("DDCoop kan deze winkel nog niet veilig synchroniseren. De aankoop is niet uitgevoerd. Sluit het "
-                    "spel en stuur de logs mee.");
+        shop_notice("DDCoop cannot safely synchronize this shop yet. The purchase was not applied. Close the "
+                    "game and send the logs.");
         return;
     }
     dd_action a = {0};
@@ -587,14 +587,14 @@ static int __fastcall hook_roster_drop(void *target,void *position,void *drag) {
     if(!candidate)return g_original_roster_drop(target,position,drag); /* ordinary roster reordering */
     uint32_t special_limit=0;
     if(!safe_read((uintptr_t)entry+0x144c,&special_limit,4) || special_limit) {
-        shop_notice("Deze kandidaat gebruikt een speciale rosterlimiet. Die wordt in deze testkit nog niet ondersteund.");return 0;
+        shop_notice("This candidate uses a special roster limit that is not supported in this kit yet.");return 0;
     }
     if(!InterlockedCompareExchange(&g_session_ready,0,0) || g_town.needs_resync) {
-        shop_notice("Wacht met recruiten tot beide spellen verbonden zijn. Bij een synchronisatiefout: start beide spellen opnieuw.");return 0;
+        shop_notice("Wait until both games are connected before recruiting. After a synchronization error, restart both games.");return 0;
     }
     if(g_cfg.role==DD_ROLE_HOST)return g_original_roster_drop(target,position,drag);
     if(!dd_recruit_resolve(&s,g_recruit_panel,id,&choice) || !choice.enabled) {
-        shop_notice("Open de Stagecoach en kies een beschikbare kandidaat.");return 0;
+        shop_notice("Open the Stagecoach and select an available candidate.");return 0;
     }
     dd_action a={0};a.kind=DD_ACT_RECRUIT;a.u.hero.hero_id=id;
     g_recruit_request=dd_town_guest_local(&g_town,&a);
@@ -616,7 +616,7 @@ static void __fastcall hook_recruit(void *capture,void *hero,uint32_t index) {
        !dd_recruit_resolve(&s,panel,id,&choice) || choice.hero!=(uintptr_t)hero || choice.index!=index || !choice.enabled) {
         dd_log("Stagecoach local recruit refused: context/candidate/row invalid or disabled");
         g_town.needs_resync=1;
-        shop_notice("De recruit kon niet volledig worden gecontroleerd. Sluit beide spellen en start de co-op sessie opnieuw. Stuur de logs mee.");return;
+        shop_notice("Recruitment could not be fully verified. Close both games and restart the co-op session. Send the logs.");return;
     }
     g_original_recruit(capture,hero,index);
     dd_recruit_choice after;unsigned count=0;
@@ -627,7 +627,7 @@ static void __fastcall hook_recruit(void *capture,void *hero,uint32_t index) {
         dd_log("host committed Stagecoach recruit hero=%u available=1->0 roster=%u",id,count);
     } else {
         g_town.needs_resync=1;dd_log("host Stagecoach completion did not match live roster; rejoin required");
-        shop_notice("De recruit kon niet volledig worden gecontroleerd. Sluit beide spellen en start de co-op sessie opnieuw. Stuur de logs mee.");
+        shop_notice("Recruitment could not be fully verified. Close both games and restart the co-op session. Send the logs.");
     }
 }
 
@@ -793,7 +793,7 @@ static void runtime_stop_shared(uint32_t reason, int notify) {
     if (!g_sync_stop_sent) {
         g_sync_stop_sent = 1;
         if (notify) { dd_msg m = {0}; m.type = DD_MSG_SYNC_STOP; m.u.load.slot = reason; outgoing_send(NULL, 0, &m); }
-        shop_notice("De spellen lopen niet meer gelijk. Gedeelde acties zijn bij beide spelers gestopt. Sluit beide spellen en start een nieuwe sessie; stuur de logs mee.");
+        shop_notice("The games are no longer in sync. Shared actions have stopped for both players. Close both games and start a new session; send the logs.");
     }
 }
 static void runtime_sync_stop(uint32_t reason) { runtime_stop_shared(reason, 1); }
@@ -1049,7 +1049,7 @@ static void hello_message(dd_msg *m, const char *name) {
     memset(m, 0, sizeof *m);
     m->type = DD_MSG_HELLO;
     m->u.hello.protocol = DD_PROTO_VERSION;
-    memcpy(m->u.hello.mod_version, "0.5.0-test57", sizeof "0.5.0-test57");
+    memcpy(m->u.hello.mod_version, "0.5.0-test58", sizeof "0.5.0-test58");
     memcpy(m->u.hello.build, g_build_id, sizeof g_build_id);
     size_t n = strlen(name);
     if (n >= sizeof m->u.hello.name) n = sizeof m->u.hello.name - 1;
@@ -1219,11 +1219,11 @@ static void runtime_transport_start(void) {
 
 /* A guest that never reached a host. Nothing listened in the owner's run of 7 Nov 17:40: the host's game had been started alone,
  * for a new campaign, so it had no session, and the guest's window sat in town for minutes without a word. */
-static const char g_host_absent[] = "Nog geen verbinding met de host. Draait het spel van de host via Host in DDCoop, met deze campagne geladen? "
-                                    "Een spel dat alleen is gestart om een nieuwe campagne te maken, deelt niets: de host sluit het en klikt op Host.";
+static const char g_host_absent[] = "Not connected to the host yet. Did the host start through Host in DDCoop and load this campaign? "
+                                    "A game started only to create a campaign does not share actions: the host must close it and click Host.";
 #define DD_HOST_ABSENT_MS 20000u
-static const char g_host_silent[] = "Het spel van de host antwoordt niet. Heeft de host de co-op campagne al geladen? Zo ja: de host sluit het "
-                                    "spel en klikt opnieuw op Host, daarna join je opnieuw.";
+static const char g_host_silent[] = "The host game is not responding. Has the host loaded the co-op campaign? If so, the host must close the "
+                                    "game and click Host again; then join the new session.";
 /* What the F9 panel says, from the runtime itself: the launcher only knows its own connection. */
 static void runtime_publish_state(void) {
     int state = DD_OVERLAY_WAITING;
@@ -1247,8 +1247,8 @@ static void runtime_publish_state(void) {
  * once the tutorial is over. In the owner's run of 7 Nov 17:37-17:42 the tutorial was played out, the guest's window was started
  * while this game was still running, and two recruits stayed on this side. So once the town is on screen (its display there, no
  * raid, for a few seconds: the tutorial ends in town), say what to do. Once per game. */
-static const char g_alone_done[] = "Je bent in het dorp: de tutorial is klaar. Dit spel is alleen gestart om de campagne te maken en deelt niets "
-                                   "met je vriend. Sluit het spel en klik in DDCoop op Host om samen te spelen.";
+static const char g_alone_done[] = "You reached the Hamlet: the tutorial is complete. This game only created the campaign and is not sharing "
+                                   "with your friend. Close it and click Host in DDCoop to play together.";
 #define DD_ALONE_TOWN_MS 3000u
 static uint64_t g_alone_town_since;
 static int g_alone_told;
@@ -1317,7 +1317,7 @@ static void runtime_poll_once(void) {
     if (!InterlockedCompareExchange(&g_session_ready, 0, 0)) return;
     if(InterlockedExchange(&g_queue_failed,0)) {
         g_town.needs_resync=1;
-        shop_notice("De gedeelde actiewachtrij is vol. Sluit beide spellen en start de co-op sessie opnieuw.");
+        shop_notice("The shared action queue is full. Close both games and restart the co-op session.");
     }
     if(g_town.needs_resync)return;
     if(hamlet_dismiss_poll())return;
@@ -1355,7 +1355,7 @@ static void runtime_poll_once(void) {
             else if (g_town.rejected != rejected_before)
                 log_town_action("host rejected guest town request", &m.u.town.action, m.u.town.request_id, 0);
             if(g_town.needs_resync) {
-                shop_notice("De gedeelde actie kon niet volledig worden gecontroleerd. Sluit beide spellen en start de co-op sessie opnieuw. Stuur de logs mee.");
+                shop_notice("The shared action could not be fully verified. Close both games and restart the co-op session. Send the logs.");
                 break;
             }
         } else if (g_cfg.role == DD_ROLE_GUEST && m.type == DD_MSG_TOWN_APPLY) {
@@ -1365,14 +1365,14 @@ static void runtime_poll_once(void) {
                                 m.seq);
                 dd_log("town apply sequence or local game check failed; this copy needs a resync");
                 if(m.u.town.action.kind==DD_ACT_WAGON_BUY)
-                    shop_notice("De trinketaankoop kon hier niet gelijk worden toegepast. Sluit beide spellen en start de co-op sessie opnieuw. Stuur daarna de logs mee.");
+                    shop_notice("The trinket purchase could not be applied identically here. Close both games and restart the co-op session. Send the logs.");
                 else if(m.u.town.action.kind==DD_ACT_RECRUIT)
-                    shop_notice("De recruit kon hier niet gelijk worden toegepast. Sluit beide spellen en start de co-op sessie opnieuw. Stuur de logs mee.");
+                    shop_notice("The recruit could not be applied identically here. Close both games and restart the co-op session. Send the logs.");
                 else if(m.u.town.action.kind==DD_ACT_WAGON_SELL)
-                    shop_notice("De verkoop kon hier niet gelijk worden toegepast. Sluit beide spellen en start de co-op sessie opnieuw. Stuur de logs mee.");
+                    shop_notice("The sale could not be applied identically here. Close both games and restart the co-op session. Send the logs.");
                 else
-                    shop_notice("Een gedeelde wijziging kon hier niet gelijk worden toegepast. Gedeelde acties zijn gestopt. "
-                                "Sluit beide spellen en start een nieuwe co-op sessie. Stuur de logs mee.");
+                    shop_notice("A shared change could not be applied identically here. Shared actions have stopped. "
+                                "Close both games and start a new co-op session. Send the logs.");
                 break;
             }
             log_town_action("guest applied host town action", &m.u.town.action, m.u.town.request_id, m.seq);
@@ -1395,16 +1395,16 @@ static void runtime_poll_once(void) {
             provisions_request_done(m.u.reject.request_id,1);
             if (g_shop_request && m.u.reject.request_id == g_shop_request) {
                 g_shop_request = 0;
-                shop_notice("De host heeft deze trinketaankoop geweigerd. Controleer het goud en de winkelvoorraad; "
-                            "probeer daarna opnieuw. Stuur de logs mee als dit blijft gebeuren.");
+                shop_notice("The host refused this trinket purchase. Check gold and shop stock; "
+                            "then try again. Send the logs if this persists.");
             }
             if(g_recruit_request && m.u.reject.request_id==g_recruit_request) {
                 g_recruit_request=0;
-                shop_notice("De host kon deze held niet recruiten. Controleer of de kandidaat nog beschikbaar is en het roster plaats heeft.");
+                shop_notice("The host could not recruit this hero. Check that the candidate is available and the roster has room.");
             }
             if(g_sell_request && m.u.reject.request_id==g_sell_request) {
                 g_sell_request=0;
-                shop_notice("De host heeft deze verkoop geweigerd. Controleer of de trinket nog beschikbaar is en de verkoopprijs klopt.");
+                shop_notice("The host refused this sale. Check the trinket is still available and the price is correct.");
             }
         }
     }

@@ -8,6 +8,10 @@ typedef uintptr_t(__fastcall *raid_start_fn)(void *);
 typedef uintptr_t(__fastcall *raid_map_fn)(void *, void *, void *);
 typedef int(__cdecl *rand_s_fn)(unsigned int *);
 typedef void(__fastcall *named_seed_fn)(void *, uint32_t);
+typedef uint8_t(__fastcall *raid_restore_fn)(void);
+static raid_restore_fn g_raid_restore;
+static int g_departure_fresh;
+static unsigned g_departure_fresh_maps;
 typedef struct {
     uint32_t quest, heroes[4], supplies;
 } departure_view;
@@ -31,6 +35,7 @@ static void prepare_reset(void);
 static void embark_reset(void);
 
 static void departure_reset(void) {
+    g_departure_fresh = 0; g_departure_fresh_maps = 0;
     prepare_reset();
     embark_reset();
     g_departure_seed = g_departure_rules = g_departure_open_supplies = 0;
@@ -74,12 +79,24 @@ static int __cdecl hook_rand_s(unsigned int *out) {
     return g_rand_s_native(out);
 }
 static uintptr_t __fastcall hook_raid_map(void *a, void *b, void *c) {
+    if (g_departure_fresh) g_departure_fresh_maps++;
     g_departure_forcing = g_departure_seed != 0;
     uintptr_t result = g_raid_map(a, b, c);
     if (!g_departure_forcing && InterlockedCompareExchange(&g_session_ready, 0, 0))
         dd_log("Departure: map made without a shared seed; this copy's map will differ");
     g_departure_forcing = 0;
     return result;
+}
+/* Darkest::RaidStart first tries Raid::Restore from persist.raid/persist.map
+ * when its resume flag is still set. A -nosave guest still has the session's
+ * initial checkpoint there. Only an approved fresh departure may skip that
+ * optional restore; initial campaign loading and all other callers stay native. */
+static uint8_t __fastcall hook_raid_restore(void) {
+    if (g_departure_fresh) {
+        dd_log("Departure: approved fresh mission; initial disk checkpoint is not resumed");
+        return 0;
+    }
+    return g_raid_restore ? g_raid_restore() : 0;
 }
 #ifdef DD_SOLO_MAP_SEED
 /* Separate test build only (never a player kit): can one seed make one map, without a second player?
@@ -141,8 +158,8 @@ static int depart_set_quest(const depart_view *v, uint32_t index, uint32_t key) 
     if (!key || index == UINT32_MAX) return 1;
     if (!depart_quest_key(v->campaign, (int32_t)index, &mine) || mine != key) {
         dd_log("Departure: mission %u of the host is %08x here, this copy has %08x", index, key, mine);
-        shop_notice("Deze kopie heeft niet dezelfde missie als de host. Sluit beide spellen en start de sessie opnieuw; "
-                    "stuur de logs mee.");
+        shop_notice("This copy does not have the same mission as the host. Close both games and restart the session; "
+                    "send the logs.");
         return 0;
     }
     memcpy((void *)(uintptr_t)(v->campaign + 0x1248), &index, 4);
@@ -275,6 +292,17 @@ static uintptr_t __fastcall hook_raid_start(void *app) {
     quest_return_reset();
     embark_reset();
     departure_begin(app);
+    departure_view fresh;
+    int shared = g_cfg.role != DD_ROLE_OFF && InterlockedCompareExchange(&g_session_ready,0,0) && !g_town.needs_resync;
+    g_departure_fresh = shared && g_departure_seed && g_departure_rules && departure_read(app,&fresh);
+    if (g_departure_fresh && g_cfg.role==DD_ROLE_GUEST && (!g_departure_have_host ||
+        fresh.quest!=g_departure_host.quest || memcmp(fresh.heroes,g_departure_host.heroes,sizeof fresh.heroes))) {
+        g_departure_fresh=0;
+        runtime_sync_stop(1);
+        dd_log("Departure: new mission identity did not match host; native start refused");
+        return 0;
+    }
+    g_departure_fresh_maps=0;
     provisions_leave_town();
     g_party_pending_mask = 0;
     if (g_departure_rules && g_rules_reseed) {
@@ -282,6 +310,11 @@ static uintptr_t __fastcall hook_raid_start(void *app) {
         dd_log("Departure: Rules seed %u set", g_departure_rules);
     }
     uintptr_t result = g_raid_start(app);
+    if (g_departure_fresh && !g_departure_fresh_maps) {
+        dd_log("Departure: approved fresh mission did not generate a map; shared actions stop");
+        runtime_sync_stop(1);
+    }
+    g_departure_fresh=0;
     /* One seed makes one map. Another expedition gets a new one. */
     g_departure_seed = g_departure_rules = 0;
     g_departure_have_host = 0;
@@ -303,13 +336,13 @@ static int departure_apply(const dd_action *a) {
     dd_log("Departure: host embarked; map seed %u and Rules seed %u stored", g_departure_seed, g_departure_rules);
     if (!g_town_depart || !g_depart_view(&view) || !view.town || view.raid) {
         dd_log("Departure: cannot follow from here");
-        shop_notice("De host is vertrokken. Klik OK, kies dezelfde missie en party en vertrek nu ook.");
+        shop_notice("The host has departed. Click OK, select the same mission and party, then depart too.");
         return 1;
     }
     if (!depart_set_quest(&view, a->u.departure.quest_index, a->u.departure.quest)) return 0;
     if (!g_depart_party()) {
         dd_log("Departure: the party could not be prepared; not following");
-        shop_notice("De host is vertrokken, maar deze kopie kon de party niet klaarzetten. Sluit beide spellen en stuur de logs mee.");
+        shop_notice("The host departed, but this copy could not prepare the party. Close both games and send the logs.");
         return 0;
     }
     dd_log("Departure: following the host");
@@ -319,6 +352,7 @@ static int departure_apply(const dd_action *a) {
     return 1;
 }
 static const hamlet_hook_spec g_departure_hooks[] = {
+    {"raid_restore", (uintptr_t)hook_raid_restore, &g_raid_restore, 13},
     {"provision_open", (uintptr_t)hook_prepare_open, &g_prepare_open, 13},
     {"raid_map_generate", (uintptr_t)hook_raid_map, &g_raid_map, 16},
 };
