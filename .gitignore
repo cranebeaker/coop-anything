@@ -2,3 +2,6 @@
 __pycache__/
 build/
 coop-bots-out/
+Mod/bin/
+Mod/obj/
+local/
