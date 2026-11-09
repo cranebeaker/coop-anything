@@ -1,4 +1,4 @@
-"""Builds DDCoop-install.zip: the .bat files, LEESMIJ.txt and files\\ (DDCoop.exe + Codex's bootstrap and runtime).
+"""Builds DDCoop-install.zip: the .bat files, README.txt and files\\ (DDCoop.exe + Codex's bootstrap and runtime).
 
     python3 -I tools/make_dropkit.py <codex kit dir> <out.zip> [version]
 
@@ -47,7 +47,7 @@ def main():
             sys.exit(f'{name} has hash {sha(path)}, lr_hashes.h expects {want[name]}: refusing to build the kit')
     kit = os.path.join(ROOT, 'launcher', 'kit')
     lines = [f'  {name:20} {sha(path)}' for name, path in files.items()]
-    readme = crlf(os.path.join(kit, 'LEESMIJ.txt')).decode('utf-8')
+    readme = crlf(os.path.join(kit, 'README.txt')).decode('utf-8')
     readme = readme.replace('{VERSION}', version).replace('{HASHES}', '\r\n'.join(lines))
     tmp = out + '.tmp'
     with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -57,7 +57,7 @@ def main():
                 data = crlf(os.path.join(kit, bat))
                 data.decode('ascii')  # cmd.exe reads .bat files in the OEM code page: keep them ASCII
                 z.writestr(top + bat, data)
-        z.writestr(top + 'LEESMIJ.txt', '﻿'.encode('utf-8') + readme.encode('utf-8'))
+        z.writestr(top + 'README.txt', '﻿'.encode('utf-8') + readme.encode('utf-8'))
         for name in sorted(os.listdir(kit)):
             if name.startswith('TESTSTAPPEN') and name.endswith('.txt'):
                 z.writestr(top + name, b'\xef\xbb\xbf' + crlf(os.path.join(kit, name)))

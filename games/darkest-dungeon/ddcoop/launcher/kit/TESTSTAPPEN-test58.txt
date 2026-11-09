@@ -1,0 +1,21 @@
+DDCoop test58 - a second expedition, English UI and animated mascot
+=================================================================
+
+1. Install test58 on BOTH PCs and start a fresh session. Use a campaign currently
+   saved in a dungeon, if available. Let both games resume it automatically.
+2. Complete or abandon that expedition together. Go through results to the Hamlet.
+3. Change the party if possible, choose a different mission and buy supplies.
+   Either player may initiate departure. Both games should enter the NEW dungeon.
+4. Compare the mission/map, starting room, four heroes and supplies. Neither game
+   should return to the previous saved battle. Play at least the first new fight.
+5. If possible, return to the Hamlet and repeat with a third expedition.
+6. Check the English launcher/notices and the animated mascot. Buttons, scrolling
+   checks and the hero ownership table should remain usable. F9 remains available.
+7. After any disconnect, BOTH players must close the game. Host starts a NEW
+   session, then guest joins. Joining the old running host is intentionally refused.
+8. Close both games, let automatic guest recovery finish, then Copy logs on BOTH
+   launchers. Send both bundles. For a mismatch, note the last action and room.
+
+Duo41 provides the same changes for two windows on one PC. Guest always -nosave;
+host follows Save progress when hosting. Both players must use the same kit.
+No new real-game test has been run by the automated fixtures.

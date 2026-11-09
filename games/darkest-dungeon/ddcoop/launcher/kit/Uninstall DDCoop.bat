@@ -8,8 +8,8 @@ exit /b %errorlevel%
 
 :not_unpacked
 echo.
-echo  De map "files" ontbreekt naast dit bestand.
-echo  Pak eerst de HELE zip uit: rechtsklik op DDCoop-install.zip ^> Alles uitpakken.
+echo  The "files" folder is missing next to this file.
+echo  Extract the ENTIRE zip first: right-click DDCoop-install.zip ^> Extract All.
 echo.
 pause
 exit /b 1
