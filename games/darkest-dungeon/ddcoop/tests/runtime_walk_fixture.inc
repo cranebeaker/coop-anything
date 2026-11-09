@@ -637,7 +637,7 @@ static void walk_party_door(void) {
         dd_runtime_poll();
         CHECK((unsigned)alerts == before + 1);
     }
-    /* Another hero at a rank: reported once, and that rank's numbers are not touched. */
+    /* Different hero at a rank: stop before entering the next fight or touching HP. */
     wk_reset(DD_ROLE_GUEST);
     wk_party_state(25.0f, 40.0f, 0x600);
     {
@@ -648,7 +648,7 @@ static void walk_party_door(void) {
         wk_push(1, &travel);
         dd_runtime_poll();
         memcpy(&hp, wk_heroes[0] + DD_HERO_HP, 4);
-        CHECK(hp == 25.0f && g_walk_party_told && (unsigned)alerts == before + 1);
+        CHECK(hp == 25.0f && g_walk_party_told && (unsigned)alerts >= before + 1 && !wk_travels && g_town.needs_resync && !g_town.applied_seq);
     }
     /* A host that could not read its party sends no ids: nothing compared. */
     wk_reset(DD_ROLE_GUEST);

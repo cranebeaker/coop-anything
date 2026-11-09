@@ -53,6 +53,7 @@ static size_t action_body_size(uint8_t kind) {
     case DD_ACT_SKILL: return 1+4+4+4;
     case DD_ACT_TRINKET_MOVE: return 1+4*6+2*2;
     case DD_ACT_PARTY: return 1+4*8+1;
+    case DD_ACT_FORMATION_RESET: return 1+4*9;
     case DD_ACT_SUPPLIES: return 1+1+2+4*4+32;
     case DD_ACT_DEPARTURE: return 1+4*10+1;
     case DD_ACT_TRAVEL: return 1+4*24+3;
@@ -75,6 +76,22 @@ static int party_ids_valid(const uint32_t ids[4]) {
 }
 int dd_action_valid(const dd_action *a) {
     switch (a->kind) {
+    case DD_ACT_FORMATION_RESET: {
+        const uint32_t *before=a->u.formation.before,*after=a->u.formation.after;
+        unsigned count=0;
+        if (!party_ids_valid(before) || !party_ids_valid(after) || !memcmp(before,after,16)) return 0;
+        for(unsigned i=0;i<4;i++) {
+            unsigned j=0;
+            if(before[i])count++;
+            for(;j<4;j++)if(after[j]==before[i])break;
+            if(j==4)return 0;
+        }
+        for(unsigned i=0;i<4;i++) {
+            unsigned j=0;for(;j<4;j++)if(before[j]==after[i])break;
+            if(j==4)return 0;
+        }
+        return count>0;
+    }
     case DD_ACT_ASSIGN_HERO:
         return a->u.assign.activity < DD_ACTIVITY_COUNT_ && a->u.assign.slot < 3 && a->u.assign.hero_id != 0;
     case DD_ACT_BUY_UPGRADE: {
@@ -139,6 +156,10 @@ int dd_action_valid(const dd_action *a) {
 static void w_action(wr *w, const dd_action *a) {
     w_u8(w, a->kind);
     switch (a->kind) {
+    case DD_ACT_FORMATION_RESET:
+        w_u32(w,a->u.formation.area);
+        for(unsigned i=0;i<4;i++)w_u32(w,a->u.formation.before[i]);
+        for(unsigned i=0;i<4;i++)w_u32(w,a->u.formation.after[i]);break;
     case DD_ACT_EMBARK:
     case DD_ACT_PREPARE: w_u32(w,a->u.prepare.index);w_u32(w,a->u.prepare.key);break;
     case DD_ACT_OWNERS:
@@ -197,6 +218,10 @@ static void r_action(rd *r, dd_action *a) {
     memset(a, 0, sizeof *a);
     a->kind = r_u8(r);
     switch (a->kind) {
+    case DD_ACT_FORMATION_RESET:
+        a->u.formation.area=r_u32(r);
+        for(unsigned i=0;i<4;i++)a->u.formation.before[i]=r_u32(r);
+        for(unsigned i=0;i<4;i++)a->u.formation.after[i]=r_u32(r);break;
     case DD_ACT_EMBARK:
     case DD_ACT_PREPARE: a->u.prepare.index=r_u32(r);a->u.prepare.key=r_u32(r);break;
     case DD_ACT_OWNERS:

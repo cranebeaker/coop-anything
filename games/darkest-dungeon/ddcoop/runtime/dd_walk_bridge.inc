@@ -55,7 +55,9 @@ static int walk_read(walk_view *v) {
 }
 static int (*g_walk_view)(walk_view *) = walk_read;
 static void battle_reset_hook(void);
+static void formation_reset(void);
 static void walk_reset(void) {
+    formation_reset();
     InterlockedExchange64(&g_walk_target, 0);
     InterlockedExchange(&g_walk_intent, 0);
     InterlockedExchange64(&g_walk_intent_at, 0);
@@ -123,6 +125,7 @@ static void walk_send_intent(int direction) {
 static void __fastcall hook_raid_move(void *display, float *out) {
     walk_view v;
     if (!g_raid_move) return;
+    if (!g_game_apply_depth && walk_shared() && formation_busy()) { memset(out,0,3*sizeof *out); return; }
     if (walk_following()) {
         g_walk_capture = 1;
         g_walk_captured = 0;
@@ -247,6 +250,7 @@ static uint8_t __fastcall hook_raid_use(void *display, void *prop, int32_t optio
     uint64_t hero = 0;
     dd_action a;
     if (!g_raid_use) return 0;
+    if (!g_game_apply_depth && walk_shared() && formation_busy()) return 0;
     if (g_game_apply_depth || !walk_shared() || !safe_read((uintptr_t)prop + 0x124, &overlay, 1)) return g_raid_use(display, prop, option, flag);
     if (walk_is_door((uintptr_t)prop)) {
         if (g_cfg.role == DD_ROLE_HOST) {
@@ -527,26 +531,24 @@ static int walk_party_read(uint64_t raid, uint64_t heroes[4], uint32_t ids[4], u
     }
     return 1;
 }
-/* On the guest, at a door: the host's party is the truth. HP and stress are one number each, so they are taken over, like
- * the torch; another hero at a rank or other trinkets can only be reported. */
-static void walk_party_compare(uint64_t raid, const dd_action *a) {
+/* At a door: verify the same formation before any HP/stress correction or travel.
+ * Different hero order stops both peers before a new fight can generate turns. */
+#include "dd_formation_bridge.inc"
+static int walk_party_compare(uint64_t raid, const dd_action *a) {
     uint64_t heroes[4];
     uint32_t ids[4], hp[4], stress[4], trinkets[4];
-    if (!(a->u.travel.ids[0] | a->u.travel.ids[1] | a->u.travel.ids[2] | a->u.travel.ids[3])) return;
+    if (!(a->u.travel.ids[0] | a->u.travel.ids[1] | a->u.travel.ids[2] | a->u.travel.ids[3])) return 1;
     if (!walk_party_read(raid, heroes, ids, hp, stress, trinkets)) {
         dd_log("Walk: party not readable at the door; not compared");
-        return;
+        runtime_sync_stop(1); return 0;
+    }
+    if (memcmp(ids,a->u.travel.ids,sizeof ids)) {
+        for(unsigned i=0;i<4;i++)dd_log("Formation before travel: rank=%u local=%u expected=%u",i,ids[i],a->u.travel.ids[i]);
+        g_walk_party_told=1;
+        runtime_sync_stop(1); return 0; /* Never enter a new fight with another actor order. */
     }
     for (unsigned i = 0; i < 4; i++) {
         float mine, theirs;
-        if (ids[i] != a->u.travel.ids[i]) {
-            dd_log("Walk: rank %u is hero %u here, hero %u at the host", i, ids[i], a->u.travel.ids[i]);
-            if (!g_walk_party_told) {
-                g_walk_party_told = 1;
-                shop_notice("De volgorde van de helden verschilt van die van de host. Speel door als je wilt, en stuur na afloop de logs mee.");
-            }
-            continue;
-        }
         if (!ids[i]) continue;
         if (hp[i] != a->u.travel.hp[i]) {
             memcpy(&mine, &hp[i], 4);
@@ -568,6 +570,7 @@ static void walk_party_compare(uint64_t raid, const dd_action *a) {
             }
         }
     }
+    return 1;
 }
 static void __fastcall hook_raid_travel(void *display, const uint32_t *dest, void *from, uint8_t flip, uint8_t extra) {
 #ifdef _MSC_VER
@@ -582,6 +585,7 @@ static void __fastcall hook_raid_travel(void *display, const uint32_t *dest, voi
         g_raid_travel(display, dest, from, flip, extra);
         return;
     }
+    if (formation_busy()) return;
     {
         /* The game does not check: an area it cannot find is a crash at 77014c. In a shared game a callback can outlive its area. */
         walk_view v;
@@ -703,7 +707,7 @@ static int walk_travel_apply(const dd_action *a) {
     if (!g_raid_travel || !g_walk_view(&v)) return 0;
     if (v.area == a->u.travel.dest[0]) { /* The game's own call got here first. */
         dd_log("Walk: already in area %08x", v.area);
-        return 1;
+        return g_cfg.role==DD_ROLE_GUEST ? walk_party_compare(v.raid,a) : 1;
     }
     /* On the host this is the guest's wish. The game's call would do nothing in these states while the order still went out. */
     if (g_cfg.role == DD_ROLE_HOST && (v.battle || v.state <= 1 || v.state == 6 || v.state == 7)) return 0;
@@ -749,7 +753,7 @@ static int walk_travel_apply(const dd_action *a) {
         } else {
             g_walk_bag_asked = 0;
         }
-        walk_party_compare(v.raid, a);
+        if (!walk_party_compare(v.raid, a)) return 0;
     }
     g_raid_travel((void *)(uintptr_t)v.display, a->u.travel.dest, (void *)(uintptr_t)from, a->u.travel.flip, a->u.travel.extra);
     return 1;
@@ -888,6 +892,7 @@ static int __fastcall hook_game_assert(const char *expression, const char *funct
     return g_game_assert ? g_game_assert(expression, function, file, line, format, a, b, c, d) : 1;
 }
 static const hamlet_hook_spec g_walk_hooks[] = {
+    {"formation_reset", (uintptr_t)hook_formation_reset, &g_formation_native, 11},
     {"raid_move_input", (uintptr_t)hook_raid_move, &g_raid_move, 10},
     {"party_move", (uintptr_t)hook_party_move, &g_party_move, 7},
     {"raid_use_prop", (uintptr_t)hook_raid_use, &g_raid_use, 11},

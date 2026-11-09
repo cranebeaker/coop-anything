@@ -123,6 +123,8 @@ FUNCTIONS = [
     ("curio_tool", 0x14070ff50, "Curio overlay: use a tool on it (shovel on rubble). Capture: overlay at +0, a copy of the item at +8"),
     ("curio_button", 0x140714360, "Curio overlay button: runs the curio with the picked item (functor with the overlay at +8)"),
     ("overlay_use", 0x140714770, "Curio overlay button: interacts with the open prop and closes (functor with the overlay at +8)"),
+    ("formation_reset", 0x14076f060, "RaidDisplay restores default party order; normal button and keyboard, display only"),
+    ("formation_default", 0x140614cb0, "Raid::GetDefaultPartyOrder (raid, array of four Hero pointers), true means already default"),
     ("party_select", 0x140606450, "Party selects a hero (party, index)"),
     ("raid_travel", 0x140770080, "RaidDisplay move to another area (display, dest, from area, flip, extra)"),
     ("party_move", 0x140604af0, "Party move (party, direction); the game's input passes (+-1,0,0)"),

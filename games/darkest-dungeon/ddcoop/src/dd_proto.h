@@ -15,7 +15,7 @@
 #include "dd_trinket.h"
 
 #define DD_PROTO_MAGIC 0x50434444u /* "DDCP" */
-#define DD_PROTO_VERSION 26 /* stable battle actors, checked bag repair and peer sync stop */
+#define DD_PROTO_VERSION 27 /* stable battle actors, checked bag repair and peer sync stop */
 #define DD_PROTO_HEADER 16
 #define DD_PROTO_MAX_BODY 256
 
@@ -55,6 +55,7 @@ typedef enum {
     DD_ACT_OWNERS = 20, /* host -> guest: live party ownership, ordered with choices */
     DD_ACT_PREPARE = 21, /* open normal provisions together, same selected mission */
     DD_ACT_EMBARK = 22, /* request normal departure; only the host supplies seeds via DEPARTURE */
+    DD_ACT_FORMATION_RESET = 23, /* dungeon default order, same stable IDs before/after */
     DD_ACT_COUNT_
 } dd_action_kind;
 
@@ -84,6 +85,7 @@ typedef struct {
         struct {uint32_t area,pos,round,turn,rules,amount,type,id;int32_t slot;uint8_t op,state,hero,inv,flag;} item; /* state 0: outside a fight; hero 255: none; inv 0 the bag, 1 the loot */
         struct {uint32_t heroes[4],revision;uint8_t mask;} owners;
         struct {uint32_t index,key;} prepare; /* PREPARE or EMBARK: shared mission identity */
+        struct {uint32_t area,before[4],after[4];} formation;
     } u;
 } dd_action;
 enum { DD_SUPPLY_BUY=1, DD_SUPPLY_RETURN=2, DD_SUPPLY_CANCEL=3 };

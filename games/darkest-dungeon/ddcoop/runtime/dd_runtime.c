@@ -24,6 +24,8 @@ static volatile LONG g_peer_sync_stop;
 static int g_sync_stop_sent;
 static void runtime_sync_stop(uint32_t reason);
 static int bag_repair_busy(void);
+static int formation_busy(void);
+static int formation_apply(const dd_action *a);
 static int hamlet_apply(const dd_action *a);
 static void hamlet_reset(void);
 static void hamlet_refresh_schedule(uint32_t id);
@@ -275,7 +277,7 @@ static int runtime_shared_blocked(void) {
     int lost = InterlockedCompareExchange(&g_session_lost, 0, 0) ||
                (InterlockedCompareExchange(&g_session_seen, 0, 0) &&
                 !InterlockedCompareExchange(&g_session_ready, 0, 0));
-    if (!lost && !g_town.needs_resync) return hamlet_dismiss_busy() || hamlet_party_busy() || provisions_busy() || bag_repair_busy();
+    if (!lost && !g_town.needs_resync) return hamlet_dismiss_busy() || hamlet_party_busy() || provisions_busy() || bag_repair_busy() || formation_busy();
     if (lost) {
         g_town.needs_resync = 1;
         if (!g_session_loss_notified) {
@@ -826,6 +828,7 @@ static int prepare_apply(const dd_action *a);
 static int runtime_apply_inner(void *unused, const dd_action *a) {
     (void)unused;
     if (!a || !dd_action_valid(a)) return 0;
+    if(a->kind==DD_ACT_FORMATION_RESET)return formation_apply(a);
     if(a->kind==DD_ACT_OWNERS)return hero_owners_apply(a);
     if(a->kind==DD_ACT_PREPARE)return prepare_apply(a);
     if(a->kind==DD_ACT_EMBARK)return embark_apply(a);
@@ -990,7 +993,7 @@ static int install_hooks(void) {
 #define RUNTIME_HOOK_SPEC(i) ((i)<hamlet_count?&g_hamlet_hooks[i]:(i)<hamlet_count+supply_count?\
     &g_supply_hooks[(i)-hamlet_count]:(i)<hamlet_count+supply_count+departure_count?\
     &g_departure_hooks[(i)-hamlet_count-supply_count]:&g_walk_hooks[(i)-hamlet_count-supply_count-departure_count])
-    if(total>sizeof h/sizeof *h || !departure_start_ready() || !hamlet_bind_native() || !supplies_bind_native())return 0;
+    if(total>sizeof h/sizeof *h || !departure_start_ready() || !hamlet_bind_native() || !supplies_bind_native() || !formation_bind())return 0;
     uintptr_t targets[] = {g_assign_va, g_widget_ctor_va, g_buy_upgrade_va, g_wagon_va,g_recruit_va,g_recruit_show_va,g_recruit_hide_va,g_roster_drop_va,g_sell_va};
     uintptr_t hooks[] = {(uintptr_t)hook_assign_hero, (uintptr_t)hook_slot_widget_ctor, (uintptr_t)hook_buy_upgrade,
                          (uintptr_t)hook_wagon_buy,(uintptr_t)hook_recruit,(uintptr_t)hook_recruit_show,(uintptr_t)hook_recruit_hide,(uintptr_t)hook_roster_drop,(uintptr_t)hook_wagon_sell};
@@ -1046,7 +1049,7 @@ static void hello_message(dd_msg *m, const char *name) {
     memset(m, 0, sizeof *m);
     m->type = DD_MSG_HELLO;
     m->u.hello.protocol = DD_PROTO_VERSION;
-    memcpy(m->u.hello.mod_version, "0.5.0-test56", sizeof "0.5.0-test56");
+    memcpy(m->u.hello.mod_version, "0.5.0-test57", sizeof "0.5.0-test57");
     memcpy(m->u.hello.build, g_build_id, sizeof g_build_id);
     size_t n = strlen(name);
     if (n >= sizeof m->u.hello.name) n = sizeof m->u.hello.name - 1;
@@ -1324,6 +1327,7 @@ static void runtime_poll_once(void) {
     walk_poll();
     dd_msg m;
     while (queue_peek(&g_incoming, &m)) {
+        if (formation_gate(&m)) break;
         if (prepare_gate(&m)) break;
         if (hero_owners_gate(&m)) break;
         if (walk_gate(&m)) break;
@@ -1373,6 +1377,7 @@ static void runtime_poll_once(void) {
             }
             log_town_action("guest applied host town action", &m.u.town.action, m.u.town.request_id, m.seq);
             hamlet_request_done(m.u.town.request_id,0);
+            formation_request_done(m.u.town.request_id);
             hunger_request_done(m.u.town.request_id);
             quest_return_request_done(m.u.town.request_id);
             provisions_request_done(m.u.town.request_id,0);
@@ -1384,6 +1389,7 @@ static void runtime_poll_once(void) {
             hamlet_request_done(m.u.reject.request_id,1);
             hunger_request_done(m.u.reject.request_id);
             quest_return_request_done(m.u.reject.request_id);
+            formation_request_done(m.u.reject.request_id);
             embark_request_done(m.u.reject.request_id);
             loot_request_done(m.u.reject.request_id);
             provisions_request_done(m.u.reject.request_id,1);

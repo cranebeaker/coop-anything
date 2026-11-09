@@ -48,6 +48,7 @@ static dd_action act(uint8_t kind) {
     case DD_ACT_RENAME: a.u.rename.hero_id=1;strcpy(a.u.rename.before,"Hero");strcpy(a.u.rename.after,"Hero B");break;
     case DD_ACT_SKILL: a.u.skill.hero_id=1;a.u.skill.after=1;break;
     case DD_ACT_TRINKET_MOVE: a.u.move.src_type=1;a.u.move.src_id=1;a.u.move.dst_slot=1;break;
+    case DD_ACT_FORMATION_RESET: a.u.formation.area=7;a.u.formation.before[0]=1;a.u.formation.before[1]=2;a.u.formation.after[0]=2;a.u.formation.after[1]=1;break;
     case DD_ACT_PARTY: a.u.party.before[0]=1;a.u.party.after[1]=1;break;
     case DD_ACT_SUPPLIES: a.u.supplies.op=DD_SUPPLY_BUY;a.u.supplies.type=0x72f14069;
         a.u.supplies.gold=75;memset(a.u.supplies.before,0x5a,32);break;
@@ -304,6 +305,14 @@ static void test_desync_wire(void) {
     m.u.town.action.u.battle.target_id = 19;
     m.u.town.action.u.battle.actor_id = UINT32_MAX;
     CHECK(!dd_encode(&m, wire, sizeof wire), "invalid actor ID refused");
+    m = town(DD_MSG_TOWN_APPLY,act(DD_ACT_FORMATION_RESET));
+    n=dd_encode(&m,wire,sizeof wire);
+    CHECK(n && dd_decode(wire,n,&out,&used)==DD_DECODE_OK && out.u.town.action.u.formation.after[0]==2,"formation wire round trip");
+    m.u.town.action.u.formation.after[0]=3;
+    CHECK(!dd_encode(&m,wire,sizeof wire),"formation cannot introduce another hero");
+    m.u.town.action=act(DD_ACT_FORMATION_RESET);
+    m.u.town.action.u.formation.after[1]=2;
+    CHECK(!dd_encode(&m,wire,sizeof wire),"duplicate formation ID refused");
 }
 int main(void) {
     test_desync_wire();
