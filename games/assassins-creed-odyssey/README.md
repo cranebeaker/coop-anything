@@ -4,21 +4,21 @@
 |---|---|
 | Engine | AnvilNext 2.0 (Ubisoft, proprietary) |
 | Versions tested | Steam app 812140, build 17083392; `ACOdyssey.exe` x64, 286,453,072 bytes, SHA-256 `ac327dad2cbbdd72a3fda8e99cbeab9d12af328363e4f09bc5674bdd36b8c483` |
-| Projects | none published; directory entry "Assassin's Creed Origins, Odyssey and Valhalla" (gap) |
-| QA level | none (no co-op playthrough yet) |
+| Projects | [odyssey-ghost-coop](https://github.com/xXCroissantXx/odyssey-ghost-coop) (prototype, MIT) |
+| QA level | automated (bot tests); no co-op playthrough with a second real player yet |
 | Last updated | 2026-11-09 |
 
 ## Where things stand
 
 The story can't be played together today. Static reverse engineering is ruled out by the
 exe's DRM. A read-only runtime route does work, and it is enough for "ghost" co-op: each
-player runs their own game, and positions are shared onto a minimap. An unpublished
-prototype does this.
+player runs their own game, and positions are shared onto a minimap. That is what
+[odyssey-ghost-coop](https://github.com/xXCroissantXx/odyssey-ghost-coop) does.
 
 ## Existing work
 
-No published co-op mod or fork was found. The directory search on 2026-10-16 covered
-GitHub, Nexus, ModDB and Steam. The nearest series option is Assassin's Creed Unity,
+Before this project, no co-op mod or fork was found. The directory search on 2026-10-16
+covered GitHub, Nexus, ModDB and Steam. The nearest series option is Assassin's Creed Unity,
 which has official co-op side missions.
 
 ## How the game works (for co-op)
@@ -50,13 +50,13 @@ which has official co-op side missions.
 
 ## What we changed
 
-Nothing in the game. A separate prototype tool (unpublished) reads the position, syncs
+Nothing in the game. [odyssey-ghost-coop](https://github.com/xXCroissantXx/odyssey-ghost-coop) reads the position, syncs
 it over UDP (one host relays at 20 Hz), and draws other players on an always-on-top
 minimap. That needs borderless-window mode.
 
 ## QA
 
-- The prototype's automated bot tests use dummy processes and bot players: the float
+- Automated bot tests (`python tests/test_bots.py`, `python tests/test_pointers.py`) use dummy processes and bot players: the float
   scan, the pointer scan on a 3-level chain, and 3-player UDP sync with timeouts.
 - In-game checks by the owner on build 17083392: position tracking, axis directions,
   pointer paths across a restart, and a minimap with a bot friend.
@@ -64,8 +64,12 @@ minimap. That needs borderless-window mode.
 
 ## How to play
 
-There is no published co-op build. The streaming fallback is Parsec or Steam Remote
-Play, which shares one game session.
+See the project README. In short: `pip install -r requirements.txt`, then run `scan` and
+`pointers` once per game build (or copy `local/paths.json` from a friend on the same build).
+After that, one player runs `python -m odyssey_coop host --name A`, and the others run
+`python -m odyssey_coop join <host-ip> --name B`. Over the internet, forward UDP 27015 or
+use Tailscale/ZeroTier. Players who want a shared session instead can stream one game
+with Parsec or Steam Remote Play.
 
 ## Known issues
 
@@ -75,6 +79,6 @@ Play, which shares one game session.
 
 ## Next steps
 
-Publish the prototype as its own repo and link it here, run a real two-player session,
+Run a real two-player session,
 then look for camera data to draw markers in the game view. Origins and Valhalla are
 probably blocked the same way, but nobody has checked yet.
