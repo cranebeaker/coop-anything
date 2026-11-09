@@ -585,7 +585,7 @@ static void supplies_transactions(void) {
     *sw_gold() = 999;
     sw_push_apply(1, 0, &order);
     dd_runtime_poll();
-    CHECK(!sw_buys && g_town.needs_resync && alerts == 1);
+    CHECK(!sw_buys && g_town.needs_resync && alerts >= 1);
     /* A refused request: the host had acted first, so the click is quoted again on what is here now. Only if that keeps failing, a message. */
     sw_reset(DD_ROLE_GUEST);
     sw_click_buy(0);

@@ -69,6 +69,7 @@ static void reset(int role) {
     g_initialized = g_campaign_active = g_session_ready = g_hooks_installed = 1;
     g_session_seen = 1; g_session_lost = g_session_loss_notified = 0;
     g_queue_failed = 0;
+    g_peer_sync_stop = g_sync_stop_sent = 0;
     g_recruit_waiting = 0;
     g_shop_notice[0] = 0;
     g_sell_request = 0;
@@ -488,6 +489,7 @@ static void hook_machine_code(void) {
 #include "runtime_walk_fixture.inc"
 #include "runtime_party_fixture.inc"
 #include "runtime_battle_fixture.inc"
+#include "runtime_desync_fixture.inc"
 #include "runtime_hunger_fixture.inc"
 #include "runtime_quest_return_fixture.inc"
 #include "dd_focus.h"
@@ -684,6 +686,7 @@ int main(void) {
     walk_transactions();
     party_publication_checks();
     battle_transactions();
+    desync_regressions();
     hunger_transactions();
     quest_return_transactions();
     activity_transactions();

@@ -1,6 +1,0 @@
-DDCoop test55: live party highlighting
-
-Install the same kit on both PCs. The launcher/F9 should mark only the
-current party. Change hero owners, formation and the next expedition party.
-Collect both runtime logs if any marking or ownership is wrong.
-Guest always -nosave; host follows the save-progress checkbox.

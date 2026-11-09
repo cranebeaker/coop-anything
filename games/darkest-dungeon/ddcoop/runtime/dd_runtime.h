@@ -23,5 +23,6 @@ void dd_runtime_poll(void);
 void dd_runtime_frontend_early(const dd_config *cfg);
 
 int dd_runtime_session_ready(void);
+int dd_runtime_input_stopped(void);
 
 #endif

@@ -57,7 +57,7 @@ static size_t action_body_size(uint8_t kind) {
     case DD_ACT_DEPARTURE: return 1+4*10+1;
     case DD_ACT_TRAVEL: return 1+4*24+3;
     case DD_ACT_USE: return 1+4*7+3;
-    case DD_ACT_BATTLE: return 1+4*4+6;
+    case DD_ACT_BATTLE: return 1+4*6+6;
     case DD_ACT_ITEM: return 1+4*9+5;
     case DD_ACT_OWNERS: return 1+4*5+1;
     case DD_ACT_EMBARK:
@@ -118,13 +118,16 @@ int dd_action_valid(const dd_action *a) {
         (a->u.travel.has_from || !a->u.travel.from_area);
     case DD_ACT_USE: return a->u.use.prop<4096 && a->u.use.option<16 && a->u.use.hero<4 && a->u.use.flag<=1 && a->u.use.door<=4 &&
         (a->u.use.pos & 0x7f800000u) != 0x7f800000u;
-    case DD_ACT_BATTLE: return a->u.battle.op<=DD_BATTLE_OP_MOVE && (a->u.battle.state==0x1d || a->u.battle.state==0x1e) && a->u.battle.hero<4 && a->u.battle.flag<=1 &&
+    case DD_ACT_BATTLE: return a->u.battle.actor_id && a->u.battle.actor_id!=UINT32_MAX && a->u.battle.target_id!=UINT32_MAX &&
+        ((a->u.battle.op!=DD_BATTLE_OP_ENEMY && a->u.battle.op!=DD_BATTLE_OP_FRIEND) || a->u.battle.side || a->u.battle.target_id) &&
+        a->u.battle.op<=DD_BATTLE_OP_MOVE && (a->u.battle.state==0x1d || a->u.battle.state==0x1e) && a->u.battle.hero<4 && a->u.battle.flag<=1 &&
         a->u.battle.side<=1 && a->u.battle.place<16 && a->u.battle.value>=-1 && a->u.battle.value<16;
     case DD_ACT_EMBARK:
     case DD_ACT_PREPARE: return a->u.prepare.index<4096 && a->u.prepare.key;
     case DD_ACT_OWNERS: return a->u.owners.mask<16 && party_ids_valid(a->u.owners.heroes) &&
         (a->u.owners.heroes[0] || a->u.owners.heroes[1] || a->u.owners.heroes[2] || a->u.owners.heroes[3]);
-    case DD_ACT_ITEM: return a->u.item.op<=DD_ITEM_OP_QUEST_RETURN && (a->u.item.hero<4 || a->u.item.hero==255) && a->u.item.inv<=1 && a->u.item.flag<=1 &&
+    case DD_ACT_ITEM: return a->u.item.op<=DD_ITEM_OP_BAG_CHECK && (a->u.item.hero<4 || a->u.item.hero==255) && a->u.item.inv<=1 && a->u.item.flag<=1 &&
+        (a->u.item.op!=DD_ITEM_OP_BAG_CHECK || (!a->u.item.state && a->u.item.hero==255 && !a->u.item.inv)) &&
         (a->u.item.op!=DD_ITEM_OP_QUEST_RETURN || (!a->u.item.state && a->u.item.hero==255 && !a->u.item.flag)) &&
         (a->u.item.op!=DD_ITEM_OP_HUNGER || (a->u.item.round && !a->u.item.state && a->u.item.hero==255 && a->u.item.type && a->u.item.amount<=0x42800000u)) &&
         (!a->u.item.state || a->u.item.state==0x1d || a->u.item.state==0x1e) && a->u.item.slot>=0 && a->u.item.slot<4096 &&
@@ -181,7 +184,7 @@ static void w_action(wr *w, const dd_action *a) {
         w_u32(w,a->u.use.area);w_u32(w,a->u.use.prop);w_u32(w,a->u.use.prop_kind);w_u32(w,a->u.use.pos);w_u32(w,a->u.use.option);w_u32(w,a->u.use.item_type);w_u32(w,a->u.use.item_id);
         w_u8(w,a->u.use.hero);w_u8(w,a->u.use.flag);w_u8(w,a->u.use.door);break;
     case DD_ACT_BATTLE:
-        w_u32(w,a->u.battle.round);w_u32(w,a->u.battle.turn);w_u32(w,a->u.battle.rules);w_u32(w,(uint32_t)a->u.battle.value);
+        w_u32(w,a->u.battle.round);w_u32(w,a->u.battle.turn);w_u32(w,a->u.battle.rules);w_u32(w,(uint32_t)a->u.battle.value);w_u32(w,a->u.battle.actor_id);w_u32(w,a->u.battle.target_id);
         w_u8(w,a->u.battle.op);w_u8(w,a->u.battle.state);w_u8(w,a->u.battle.hero);w_u8(w,a->u.battle.flag);w_u8(w,a->u.battle.side);w_u8(w,a->u.battle.place);break;
     case DD_ACT_ITEM:
         w_u32(w,a->u.item.area);w_u32(w,a->u.item.pos);w_u32(w,a->u.item.round);w_u32(w,a->u.item.turn);w_u32(w,a->u.item.rules);w_u32(w,a->u.item.amount);w_u32(w,a->u.item.type);w_u32(w,a->u.item.id);w_u32(w,(uint32_t)a->u.item.slot);
@@ -239,7 +242,7 @@ static void r_action(rd *r, dd_action *a) {
         a->u.use.area=r_u32(r);a->u.use.prop=r_u32(r);a->u.use.prop_kind=r_u32(r);a->u.use.pos=r_u32(r);a->u.use.option=r_u32(r);a->u.use.item_type=r_u32(r);a->u.use.item_id=r_u32(r);
         a->u.use.hero=r_u8(r);a->u.use.flag=r_u8(r);a->u.use.door=r_u8(r);break;
     case DD_ACT_BATTLE:
-        a->u.battle.round=r_u32(r);a->u.battle.turn=r_u32(r);a->u.battle.rules=r_u32(r);a->u.battle.value=(int32_t)r_u32(r);
+        a->u.battle.round=r_u32(r);a->u.battle.turn=r_u32(r);a->u.battle.rules=r_u32(r);a->u.battle.value=(int32_t)r_u32(r);a->u.battle.actor_id=r_u32(r);a->u.battle.target_id=r_u32(r);
         a->u.battle.op=r_u8(r);a->u.battle.state=r_u8(r);a->u.battle.hero=r_u8(r);a->u.battle.flag=r_u8(r);a->u.battle.side=r_u8(r);a->u.battle.place=r_u8(r);break;
     case DD_ACT_ITEM:
         a->u.item.area=r_u32(r);a->u.item.pos=r_u32(r);a->u.item.round=r_u32(r);a->u.item.turn=r_u32(r);a->u.item.rules=r_u32(r);a->u.item.amount=r_u32(r);a->u.item.type=r_u32(r);a->u.item.id=r_u32(r);a->u.item.slot=(int32_t)r_u32(r);
@@ -260,6 +263,7 @@ static size_t body_size(const dd_msg *m) {
     case DD_MSG_PONG: return 8;
     case DD_MSG_WALK: return 8;
     case DD_MSG_WALK_INTENT: return 4;
+    case DD_MSG_SYNC_STOP:
     case DD_MSG_LOAD: return 4;
     default: return 0;
     }
@@ -268,6 +272,7 @@ static size_t body_size(const dd_msg *m) {
 size_t dd_encode(const dd_msg *m, uint8_t *buf, size_t cap) {
     size_t body = body_size(m);
     if (body == 0 || body > DD_PROTO_MAX_BODY) return 0;
+    if (m->type == DD_MSG_SYNC_STOP && (!m->u.load.slot || m->u.load.slot > 3)) return 0;
     if ((m->type == DD_MSG_TOWN_REQUEST || m->type == DD_MSG_TOWN_APPLY) && !dd_action_valid(&m->u.town.action)) return 0;
     wr w = {buf, cap, 0, 0};
     w_u32(&w, DD_PROTO_MAGIC);
@@ -298,6 +303,7 @@ size_t dd_encode(const dd_msg *m, uint8_t *buf, size_t cap) {
     case DD_MSG_WALK_INTENT:
         w_u32(&w, (uint32_t)m->u.intent.direction);
         break;
+    case DD_MSG_SYNC_STOP:
     case DD_MSG_LOAD:
         w_u32(&w, m->u.load.slot);
         break;
@@ -316,7 +322,7 @@ dd_decode_result dd_decode(const uint8_t *buf, size_t len, dd_msg *m, size_t *us
     m->type = r_u16(&h);
     m->seq = r_u32(&h);
     uint32_t body = r_u32(&h);
-    if (m->type < DD_MSG_HELLO || m->type > DD_MSG_LOAD) return DD_DECODE_BAD_TYPE;
+    if (m->type < DD_MSG_HELLO || m->type > DD_MSG_SYNC_STOP) return DD_DECODE_BAD_TYPE;
     if (body == 0 || body > DD_PROTO_MAX_BODY) return DD_DECODE_BAD_LENGTH;
     if (len < DD_PROTO_HEADER + (size_t)body) return DD_DECODE_SHORT;
 
@@ -351,6 +357,10 @@ dd_decode_result dd_decode(const uint8_t *buf, size_t len, dd_msg *m, size_t *us
     case DD_MSG_WALK_INTENT:
         m->u.intent.direction = (int32_t)r_u32(&r);
         if (!r.bad && (m->u.intent.direction < -1 || m->u.intent.direction > 1)) return DD_DECODE_BAD_VALUE;
+        break;
+    case DD_MSG_SYNC_STOP:
+        m->u.load.slot = r_u32(&r);
+        if (!r.bad && (m->u.load.slot < 1 || m->u.load.slot > 3)) return DD_DECODE_BAD_VALUE;
         break;
     case DD_MSG_LOAD:
         m->u.load.slot = r_u32(&r);

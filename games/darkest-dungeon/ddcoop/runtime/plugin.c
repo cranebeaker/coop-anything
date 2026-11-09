@@ -17,7 +17,7 @@
 #include "dd_duo.h"
 #endif
 
-#define DD_FW_VERSION "0.5.0-test55"
+#define DD_FW_VERSION "0.5.0-test56"
 /* Save storage (runtime test 8): global StorageManager*; the loaded campaign is the device mounted in
  * device slot 5 (manager + 0x10 + slot * 8, StorageManager::IO_MountDevice 0x14024a820); a device's name
  * is at device + 0x20 (StorageDevice constructor). Valid for the known build only. */
@@ -287,7 +287,8 @@ __declspec(dllexport) int ddcoop_event(const void *event){
         dd_overlay_event(event); /* The panel still closes. */
         return 1;
     }
-    return dd_overlay_event(event);
+    if (dd_overlay_event(event)) return 1;
+    return dd_runtime_input_stopped() && dd_gameplay_input(event);
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {

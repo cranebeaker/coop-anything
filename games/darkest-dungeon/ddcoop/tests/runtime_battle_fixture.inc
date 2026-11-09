@@ -754,8 +754,8 @@ static void second_copy_checks(void) {
         m.u.town.action = ask;
         CHECK(queue_push(&g_incoming, &m));
         dd_runtime_poll();
-        CHECK(sent == 4 && sent_messages[0].u.town.action.u.item.op == DD_ITEM_OP_BAG_SLOT && sent_messages[0].u.town.action.u.item.slot == 1 && sent_messages[0].u.town.action.u.item.amount == 2 && sent_messages[1].u.town.action.u.item.slot == 0 && !sent_messages[1].u.town.action.u.item.amount && sent_messages[3].u.town.action.u.item.op == DD_ITEM_OP_BAG_ASK);
-        order = sent_messages[0].u.town.action;
+        CHECK(sent == 6 && sent_messages[0].u.town.action.u.item.op == DD_ITEM_OP_BAG_CHECK && sent_messages[1].u.town.action.u.item.slot == 1 && sent_messages[1].u.town.action.u.item.amount == 2 && sent_messages[2].u.town.action.u.item.slot == 0 && !sent_messages[2].u.town.action.u.item.amount && sent_messages[4].u.town.action.u.item.op == DD_ITEM_OP_BAG_CHECK && sent_messages[5].u.town.action.u.item.op == DD_ITEM_OP_BAG_ASK);
+        order = sent_messages[1].u.town.action;
         it_reset(DD_ROLE_GUEST);
         SC_BAG();
         {
@@ -1133,12 +1133,12 @@ static void item_transactions(void) {
     /* Another inventory is not guessed at. */
     it_reset(DD_ROLE_GUEST);
     CHECK(hook_item_use((void *)(uintptr_t)0x1234, hero, wk_display, 2, 1) == 1 && it_uses == 1 && !sent);
-    /* Not near that spot yet: it waits, then runs. */
+    /* Inventory use is independent of corridor pixel position; waiting for it caused late battle replay. */
     it_reset(DD_ROLE_GUEST);
     wk_view.pos = 2000.0f;
     wk_push(1, &use);
     dd_runtime_poll();
-    CHECK(!it_uses && g_incoming.count == 1);
+    CHECK(it_uses == 1 && !g_incoming.count);
     wk_view.pos = 500.0f;
     dd_runtime_poll();
     CHECK(it_uses == 1 && !g_incoming.count);
@@ -1687,7 +1687,7 @@ static void battle_transactions(void) {
     bt_at(2, 2, DD_BATTLE_CHOOSE_TARGET_STATE);
     wk_push(1, &skill_order);
     dd_runtime_poll();
-    CHECK(!bt_picks && g_town.applied_seq == 1 && !g_town.needs_resync && !g_incoming.count);
+    CHECK(!bt_picks && !g_town.applied_seq && g_town.needs_resync && !g_incoming.count && g_sync_stop_sent);
     /* After 30 s of waiting it gives up the same way. */
     bt_reset(DD_ROLE_GUEST);
     wk_view.battle = 0;
@@ -1696,7 +1696,7 @@ static void battle_transactions(void) {
     CHECK(g_incoming.count == 1 && g_battle_wait_until);
     g_battle_wait_until = 1;
     dd_runtime_poll();
-    CHECK(!bt_picks && g_town.applied_seq == 1 && !g_incoming.count && !g_battle_wait_until);
+    CHECK(!bt_picks && !g_town.applied_seq && !g_incoming.count && !g_battle_wait_until && g_town.needs_resync);
     /* Target on the enemy, host: native with the click's arguments; the order names the place. */
     bt_reset(DD_ROLE_HOST);
     CHECK(hook_battle_enemy(battle, bt_skill, (void *)(uintptr_t)bt_party[2], (void *)(uintptr_t)bt_foes[3]) == 6 && bt_enemies == 1 && sent == 1);
@@ -1726,7 +1726,7 @@ static void battle_transactions(void) {
     memset(bt_heroes[2] + 0x8e0, 0, 8);
     wk_push(1, &enemy_order);
     dd_runtime_poll();
-    CHECK(!bt_enemies && g_town.applied_seq == 1 && !g_town.needs_resync);
+    CHECK(!bt_enemies && !g_town.applied_seq && g_town.needs_resync);
     /* Move and Pass. */
     bt_reset(DD_ROLE_HOST);
     CHECK(hook_battle_move(battle, (void *)(uintptr_t)bt_party[2], 1, 0, 0) == 8 && bt_moves == 1 && bt_move_rank == 1 && sent == 1);

@@ -116,7 +116,7 @@ static dd_action random_action(void) {
     case DD_ACT_PREPARE: a.u.prepare.index=1;a.u.prepare.key=8;break;
     case DD_ACT_OWNERS: a.u.owners.heroes[0]=1;a.u.owners.mask=1;a.u.owners.revision=5;break;
     case DD_ACT_ITEM: a.u.item.slot=2;a.u.item.hero=255;break;
-    case DD_ACT_BATTLE: a.u.battle.round=1;a.u.battle.state=0x1d;a.u.battle.hero=2;break;
+    case DD_ACT_BATTLE: a.u.battle.actor_id=13;a.u.battle.round=1;a.u.battle.state=0x1d;a.u.battle.hero=2;break;
     case DD_ACT_WAGON_BUY:
     case DD_ACT_WAGON_SELL:
         a.u.items.slot=(uint16_t)(rnd()%8); a.u.items.count=1;

@@ -1,8 +1,9 @@
-# 0.5.0-test55
+# 0.5.0-test56
 
-Live party IDs are published by the runtime through an own-PID read-only
-launcher mapping. Launcher/F9 sort and mark actual party members independently
-of ownership revision. Stale/unknown reports remove markers.
+Battle actions carry persistent actor/friendly-target IDs. Door/loading blocks
+outside-combat item use; inventory use has no walking-pixel delay. Bag repairs
+verify their final hash. Apply failure sends a peer stop outside the FIFO.
+See runtime/DESYNC.md; this stops divergence, not an automatic combat repair.
 
 Validation performed locally on Windows x64: native protocol/fuzz/town/runtime
 bridge tests, isolated OpenGL overlay, MSVC ASan runtime bridge, launcher tests
@@ -17,3 +18,7 @@ guest always-nosave. Both players must use the same runtime kit. Builds use /MT.
 
 Per-kit GitHub source commits are now part of delivery. Source and test evidence
 are published; player ZIPs/binaries remain outside git.
+
+Companion build: **0.5.0-duo39** uses the same gameplay source with DD_DUO,
+its separate runtime pin and launcher version. RELEASES.json records both
+kits and their exact binary/ZIP hashes; binaries remain outside git.

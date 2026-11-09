@@ -1,0 +1,25 @@
+DDCoop test56 - inventaris en gevechtsbeurten
+===========================================
+
+1. Sluit beide spellen, laat DDCoop afronden en installeer test56 op beide pcs.
+   Start een nieuwe sessie in dezelfde campagne; gebruik een normale basegame-missie.
+2. Ga samen door een paar deuren. Probeer vlak tijdens de overgang een item te
+   gebruiken: dit mag dan even niets doen. Gebruik het opnieuw wanneer je stilstaat.
+   Vergelijk het aantal items en HP op beide pcs.
+3. Speel meerdere gevechten, met helden verdeeld over beide spelers. Probeer een
+   skill die de formatie wijzigt, een vriendelijke target-skill en verplaatsen/pass.
+   De beurt moet steeds op beide pcs dezelfde held zijn en de eigenaar mag kiezen.
+4. Vergelijk na loot en verplaatsen de hele inventaris: soort, aantal en slot.
+   Ga door een deur en vergelijk opnieuw. Let ook op de actuele party in F9.
+5. Verschijnt een melding dat de spellen niet meer gelijk lopen: stop de test,
+   sluit beide spellen, laat automatisch herstel afronden en kopieer beide logs.
+   Noteer de laatste actie. Deze kit herstelt een verkeerde gevechtsbeurt niet
+   automatisch; hij stopt beide spelers zodat ze niet verder uiteenlopen.
+6. Sluit na de test beide spellen en laat DDCoop afronden. Stuur beide runtime-logs
+   en de launcherlog, ook wanneer alles goed ging.
+
+Protocol26: beide spelers moeten deze kit gebruiken. Voor twee vensters op dezelfde
+pc is er duo39. GAST altijd -nosave; HOST volgt het vinkje voor voortgang opslaan.
+Eerdere Hamlet-, dungeon- en partyverbeteringen blijven aanwezig. DLC-voorwerk voor
+Color of Madness, Shieldbreaker en Musketeer blijft behouden; volledige DLC-support
+is nog niet gevalideerd. Deze reparatie is automatisch getest, nog niet live getest.

@@ -232,6 +232,20 @@ static uint64_t battle_target_at(uint64_t raid, uint8_t side, uint8_t place) {
         return 0;
     return p;
 }
+static uint32_t battle_hero_id(uint64_t hero) {
+    uint32_t id = 0;
+    if (hero) safe_read((uintptr_t)hero + 0x137c, &id, 4);
+    return id;
+}
+static uint64_t battle_hero_by_id(uint64_t raid, uint32_t id) {
+    uint64_t found = 0;
+    if (!id) return 0;
+    for (uint8_t i = 0; i < 4; i++) {
+        uint64_t hero = battle_target_at(raid, 0, i);
+        if (hero && battle_hero_id(hero) == id) { if (found) return 0; found = hero; }
+    }
+    return found;
+}
 static uint32_t battle_rules(void) {
     uint32_t rules = 0;
     if (g_rules_object) safe_read((uintptr_t)g_rules_object + 8, &rules, 4);
@@ -258,11 +272,13 @@ static int battle_order(uint8_t op, uint64_t hero, dd_action *a) {
     a->u.battle.turn = b.turn;
     a->u.battle.state = (uint8_t)b.state;
     a->u.battle.rules = battle_rules();
+    a->u.battle.actor_id = battle_hero_id(hero);
+    if (!a->u.battle.actor_id) return 0;
     return 1;
 }
 static void battle_send(const dd_action *a) {
-    dd_log("Battle: choice op=%u round=%u turn=%u state=%u hero=%u value=%d side=%u place=%u rules=%08x (role=%s)", a->u.battle.op, a->u.battle.round, a->u.battle.turn,
-           a->u.battle.state, a->u.battle.hero, a->u.battle.value, a->u.battle.side, a->u.battle.place, a->u.battle.rules, dd_role_name(g_cfg.role));
+    dd_log("Battle: choice op=%u round=%u turn=%u state=%u hero=%u value=%d side=%u place=%u rules=%08x (role=%s) actor_id=%u target_id=%u", a->u.battle.op, a->u.battle.round, a->u.battle.turn,
+           a->u.battle.state, a->u.battle.hero, a->u.battle.value, a->u.battle.side, a->u.battle.place, a->u.battle.rules, dd_role_name(g_cfg.role), a->u.battle.actor_id, a->u.battle.target_id);
     if (g_cfg.role == DD_ROLE_GUEST) dd_town_guest_local(&g_town, a);
     else dd_town_host_observed(&g_town, a);
 }
@@ -298,6 +314,10 @@ static uint64_t battle_target_choice(battle_target_fn native, uint8_t op, void *
     if (!g_walk_view(&v) || !battle_target_place(v.raid, (uintptr_t)target, &a.u.battle.side, &a.u.battle.place)) {
         dd_log("Battle: target not found in party or monsters; dropped");
         return 0;
+    }
+    if (!a.u.battle.side) {
+        a.u.battle.target_id = battle_hero_id((uintptr_t)target);
+        if (!a.u.battle.target_id) return 0;
     }
     battle_send(&a);
     return g_cfg.role == DD_ROLE_HOST ? native(battle, skill, actor, target) : 0;
@@ -380,13 +400,16 @@ static int battle_apply(const dd_action *a) {
     battle_view b = {0};
     uint64_t hero = 0, skill = 0, begin = 0, end = 0;
     /* The host may simply say no: the guest's click then did nothing. The guest must not: the host has already done it. */
-    int refused = g_cfg.role == DD_ROLE_HOST ? 0 : 1;
-    if (!g_walk_view(&v) || !battle_read(&v, &b) || battle_compare(&b, a) || !(hero = battle_target_at(v.raid, 0, a->u.battle.hero)) || hero != b.actor) {
+    int refused = 0;
+    if (!g_walk_view(&v) || !battle_read(&v, &b) || battle_compare(&b, a) ||
+        battle_hero_id(b.actor) != a->u.battle.actor_id || !battle_hero_by_id(v.raid, a->u.battle.actor_id)) {
         dd_log("Battle: order op=%u round=%u turn=%u state=%u does not fit here (round=%u turn=%u state=%u)", a->u.battle.op, a->u.battle.round, a->u.battle.turn, a->u.battle.state,
                b.round, b.turn, b.state);
-        if (refused) shop_notice("Het gevecht loopt niet meer gelijk met de host. Sluit beide spellen en stuur de logs mee.");
+        dd_log("Battle identity: wanted=%u current=%u rank=%u", a->u.battle.actor_id, battle_hero_id(b.actor), a->u.battle.hero);
+        if (g_cfg.role == DD_ROLE_GUEST) runtime_sync_stop(1);
         return refused;
     }
+    hero = b.actor;
     if (g_cfg.role == DD_ROLE_HOST && hero_owner(hero) != 1) {
         dd_log("Battle: the guest asked for a hero that is not theirs");
         return 0;
@@ -406,7 +429,8 @@ static int battle_apply(const dd_action *a) {
     case DD_BATTLE_OP_ENEMY:
     case DD_BATTLE_OP_FRIEND: {
         battle_target_fn native = a->u.battle.op == DD_BATTLE_OP_ENEMY ? g_battle_enemy : g_battle_friend;
-        uint64_t target = battle_target_at(v.raid, a->u.battle.side, a->u.battle.place);
+        uint64_t target = !a->u.battle.side && a->u.battle.target_id ? battle_hero_by_id(v.raid, a->u.battle.target_id) :
+            battle_target_at(v.raid, a->u.battle.side, a->u.battle.place);
         if (!native || !target || !safe_read((uintptr_t)hero + 0x8e0, &skill, 8) || !skill) {
             dd_log("Battle: no skill or target here for this order");
             return refused;

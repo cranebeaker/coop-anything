@@ -20,6 +20,10 @@
 #include "dd_supplies.h"
 #include "dd_overlay.h"
 static unsigned g_game_apply_depth;
+static volatile LONG g_peer_sync_stop;
+static int g_sync_stop_sent;
+static void runtime_sync_stop(uint32_t reason);
+static int bag_repair_busy(void);
 static int hamlet_apply(const dd_action *a);
 static void hamlet_reset(void);
 static void hamlet_refresh_schedule(uint32_t id);
@@ -271,7 +275,7 @@ static int runtime_shared_blocked(void) {
     int lost = InterlockedCompareExchange(&g_session_lost, 0, 0) ||
                (InterlockedCompareExchange(&g_session_seen, 0, 0) &&
                 !InterlockedCompareExchange(&g_session_ready, 0, 0));
-    if (!lost && !g_town.needs_resync) return hamlet_dismiss_busy() || hamlet_party_busy() || provisions_busy();
+    if (!lost && !g_town.needs_resync) return hamlet_dismiss_busy() || hamlet_party_busy() || provisions_busy() || bag_repair_busy();
     if (lost) {
         g_town.needs_resync = 1;
         if (!g_session_loss_notified) {
@@ -779,6 +783,18 @@ static void outgoing_send(void *unused, int to, const dd_msg *m) {
         InterlockedExchange(&g_queue_failed,1);dd_log("town outbound queue full; rejoin required");
     }
 }
+static void runtime_stop_shared(uint32_t reason, int notify) {
+    g_town.needs_resync = 1;
+    dd_overlay_turn(DD_OVERLAY_TURN_NONE);
+    dd_overlay_session(DD_OVERLAY_REFUSED);
+    dd_log("Sync stop: reason=%u role=%s peer=%d", reason, dd_role_name(g_cfg.role), !notify);
+    if (!g_sync_stop_sent) {
+        g_sync_stop_sent = 1;
+        if (notify) { dd_msg m = {0}; m.type = DD_MSG_SYNC_STOP; m.u.load.slot = reason; outgoing_send(NULL, 0, &m); }
+        shop_notice("De spellen lopen niet meer gelijk. Gedeelde acties zijn bij beide spelers gestopt. Sluit beide spellen en start een nieuwe sessie; stuur de logs mee.");
+    }
+}
+static void runtime_sync_stop(uint32_t reason) { runtime_stop_shared(reason, 1); }
 
 static void log_town_action(const char *phase, const dd_action *a, uint32_t request_id, uint32_t sequence) {
     if (!a) return;
@@ -1030,7 +1046,7 @@ static void hello_message(dd_msg *m, const char *name) {
     memset(m, 0, sizeof *m);
     m->type = DD_MSG_HELLO;
     m->u.hello.protocol = DD_PROTO_VERSION;
-    memcpy(m->u.hello.mod_version, "0.5.0-test55", sizeof "0.5.0-test55");
+    memcpy(m->u.hello.mod_version, "0.5.0-test56", sizeof "0.5.0-test56");
     memcpy(m->u.hello.build, g_build_id, sizeof g_build_id);
     size_t n = strlen(name);
     if (n >= sizeof m->u.hello.name) n = sizeof m->u.hello.name - 1;
@@ -1073,6 +1089,7 @@ static int session_loop(dd_conn *c, int host) {
         dd_poll_result p = dd_conn_poll(c, 20, &m);
         if (p == DD_POLL_CLOSED) return 0;
         if (p != DD_POLL_MSG) continue;
+        if (m.type == DD_MSG_SYNC_STOP) { InterlockedExchange(&g_peer_sync_stop, (LONG)m.u.load.slot); continue; }
         if (!host && m.type == DD_MSG_WALK) {
             walk_receive(&m);
             continue;
@@ -1263,6 +1280,8 @@ void dd_runtime_poll(void) {
 }
 static void runtime_poll_once(void) {
     if (!InterlockedCompareExchange(&g_initialized, 0, 0)) return;
+    LONG peer_stop = InterlockedExchange(&g_peer_sync_stop, 0);
+    if (peer_stop) runtime_stop_shared((uint32_t)peer_stop, 0);
     frontend_poll();
     runtime_publish_state();
     alone_town_poll();
@@ -1337,6 +1356,7 @@ static void runtime_poll_once(void) {
             }
         } else if (g_cfg.role == DD_ROLE_GUEST && m.type == DD_MSG_TOWN_APPLY) {
             if (!dd_town_guest_apply(&g_town, &m)) {
+                runtime_sync_stop(1);
                 log_town_action("guest failed to apply host town action", &m.u.town.action, m.u.town.request_id,
                                 m.seq);
                 dd_log("town apply sequence or local game check failed; this copy needs a resync");
@@ -1385,3 +1405,6 @@ static void runtime_poll_once(void) {
 }
 
 int dd_runtime_session_ready(void) { return InterlockedCompareExchange(&g_session_ready, 0, 0) != 0; }
+int dd_runtime_input_stopped(void) {
+    return g_cfg.role != DD_ROLE_OFF && InterlockedCompareExchange(&g_campaign_active, 0, 0) && g_town.needs_resync;
+}

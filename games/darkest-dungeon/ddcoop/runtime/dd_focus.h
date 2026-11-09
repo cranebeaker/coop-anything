@@ -17,5 +17,15 @@ static int dd_focus_lost(const void *event) {
     memcpy(&what, (const uint8_t *)event + 12, 1); /* SDL_WindowEvent.event; the game reads the same byte (372067). */
     return type == DD_FOCUS_SDL_WINDOWEVENT && what == DD_FOCUS_SDL_LOST;
 }
+/* SDL input only: leave window close/quit and system events available after a
+ * sync stop. The overlay gets first refusal, so F9 and its controls still work. */
+static int dd_gameplay_input(const void *event) {
+    uint32_t type = 0;
+    if (!event) return 0;
+    memcpy(&type, event, 4);
+    return (type >= 0x300 && type <= 0x303) || (type >= 0x400 && type <= 0x403) ||
+        (type >= 0x600 && type <= 0x606) || (type >= 0x650 && type <= 0x653) ||
+        (type >= 0x700 && type <= 0x702);
+}
 
 #endif

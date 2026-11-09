@@ -1,6 +1,6 @@
 # DDCoop — Darkest Dungeon co-op
 
-Development snapshot **0.5.0-test55**, runtime protocol25. The project owner
+Development snapshot **0.5.0-test56**, runtime protocol26. The project owner
 selected this repository for per-kit source commits. Work is isolated on
 `game/darkest-dungeon-ddcoop` under this directory; the shared playbook/main branch is unchanged.
 

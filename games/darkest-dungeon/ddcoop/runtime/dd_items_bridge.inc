@@ -22,6 +22,11 @@ static uint64_t item_controller(void) {
     safe_read(image_base() + DD_ITEM_CONTROLLER_RVA, &controller, 8);
     return controller;
 }
+static int item_use_phase(const walk_view *v) {
+    uint64_t now = GetTickCount64();
+    return !v->battle && v->state > 1 && v->state != 6 && v->state != 7 &&
+        (!g_walk_door_pending || now >= g_walk_door_pending) && now >= g_walk_door_until;
+}
 static uint64_t (*g_item_controller)(void) = item_controller;
 static void results_bag_reset(void);
 static void hunger_reset(void);
@@ -49,6 +54,10 @@ static int item_order(uint8_t op, dd_action *a, walk_view *v) {
     a->u.item.op = op;
     a->u.item.hero = 255;
     if (!g_walk_view(v)) return 0;
+    if (op == DD_ITEM_OP_USE && !v->battle && !item_use_phase(v)) {
+        dd_log("Item: use waits until door/loading has finished");
+        return 0;
+    }
     a->u.item.area = v->area;
     memcpy(&a->u.item.pos, &v->pos, 4);
     a->u.item.rules = battle_rules();
@@ -69,6 +78,15 @@ static void item_send(const dd_action *a) {
     if (g_cfg.role == DD_ROLE_GUEST) dd_town_guest_local(&g_town, a);
     else dd_town_host_observed(&g_town, a);
 }
+/* Inventory uses need the same area/phase, not the same walking pixel. Other prop
+ * choices retain their stricter positional Rules barrier. */
+static void item_use_rules_send(const walk_view *v) {
+    if (g_cfg.role != DD_ROLE_HOST || v->battle || !g_rules_object) return;
+    dd_action a = {0};
+    a.kind = DD_ACT_ITEM; a.u.item.op = DD_ITEM_OP_RULES; a.u.item.hero = 255;
+    a.u.item.area = v->area; a.u.item.rules = battle_rules(); a.u.item.flag = 1;
+    dd_town_host_observed(&g_town, &a);
+}
 #include "dd_hunger_bridge.inc"
 /* 429750 DungeonController::HeroUseItem (controller, hero, inventory, slot, 1): the panel's click, the loot window's, the controller's. */
 static uint64_t __fastcall hook_item_use(void *controller, void *hero, void *inventory, int32_t slot, uint32_t flag) {
@@ -76,6 +94,7 @@ static uint64_t __fastcall hook_item_use(void *controller, void *hero, void *inv
     dd_action a;
     if (!g_item_use) return 0;
     if (g_game_apply_depth || !walk_shared()) return g_item_use(controller, hero, inventory, slot, flag);
+    if (runtime_shared_blocked()) return 0;
     if (!item_order(DD_ITEM_OP_USE, &a, &v)) return 0;
     if ((uintptr_t)inventory == v.raid + DD_WALK_RAID_INVENTORY) a.u.item.inv = 0;
     else if ((uintptr_t)inventory == v.raid + DD_WALK_RAID_LOOT) a.u.item.inv = 1;
@@ -102,7 +121,7 @@ static uint64_t __fastcall hook_item_use(void *controller, void *hero, void *inv
         }
         g_item_use_asked_at = now;
     }
-    walk_rules_send(&v);
+    item_use_rules_send(&v);
     item_send(&a); /* Sent whatever the game says: it decides the same on both. */
     return g_cfg.role == DD_ROLE_HOST ? g_item_use(controller, hero, inventory, slot, flag) : 0;
 }
@@ -528,6 +547,9 @@ static item_clear_fn g_item_clear;
 static bag_slot g_bag_seen[2][DD_BAG_SLOTS];
 static unsigned g_bag_seen_count[2];
 static int g_bag_moved, g_bag_seen_valid;
+static int g_bag_repairing;
+static uint32_t g_bag_repair_hash;
+static int bag_repair_busy(void) { return g_bag_repairing; }
 /* These three inventory callbacks are the SAME functions as the trinket
  * drop/finish/cancel callbacks. Their single installed hook dispatches both
  * jobs; a second hook at the same address silently replaced trinket safety. */
@@ -667,6 +689,7 @@ static void item_take_one(const walk_view *v, uint64_t item) {
     dd_log("Item: one taken from the bag for the curio, %d left (role=%s)", count, dd_role_name(g_cfg.role));
 }
 static void bag_state_reset(void) {
+    g_bag_repairing = 0; g_bag_repair_hash = 0;
     g_bag_moved = g_bag_seen_valid = 0;
     g_bag_seen_count[0] = g_bag_seen_count[1] = 0;
 }
@@ -721,9 +744,15 @@ static void bag_send_all(const walk_view *v) {
     for (unsigned i = 0; i < count; i++)
         if (!bag_read_slot(begin + (uint64_t)i * DD_ITEM_SIZE, &s[i])) return;
     dd_log("Item: the guest asks for the bag; %u slots go out", count);
+    dd_action check = {0};
+    check.kind = DD_ACT_ITEM; check.u.item.op = DD_ITEM_OP_BAG_CHECK; check.u.item.hero = 255;
+    check.u.item.type = walk_bag_hash(v->raid);
+    dd_town_host_observed(&g_town, &check);
     for (int empties = 0; empties < 2; empties++)
         for (unsigned i = 0; i < count; i++)
             if ((s[i].count <= 0) == (empties != 0)) bag_send_slot(v, 0, i, &s[i]);
+    check.u.item.flag = 1;
+    dd_town_host_observed(&g_town, &check);
 }
 static void bag_poll(const walk_view *v) {
     bag_slot now[2][DD_BAG_SLOTS];
@@ -958,6 +987,9 @@ static int item_gate(const dd_msg *m) {
     if (trinket) {
         limit = 30000;
         go = have && (loot_ready(&v) || loot_settled(&v));
+    } else if (a->u.item.op == DD_ITEM_OP_RULES && a->u.item.flag) {
+        limit = 10000;
+        go = have && item_use_phase(&v) && v.area == a->u.item.area;
     } else if (a->u.item.op == DD_ITEM_OP_RULES && a->u.item.area && have && !v.battle && v.area == a->u.item.area) {
         /* Before a use: taken over at that spot, or the tiles this copy still passes draw on top of it. */
         float pos, delta;
@@ -966,6 +998,11 @@ static int item_gate(const dd_msg *m) {
         go = delta < DD_WALK_USE_NEAR && delta > -DD_WALK_USE_NEAR;
     } else if (a->u.item.op == DD_ITEM_OP_RULES || a->u.item.op == DD_ITEM_OP_BAG_SLOT || a->u.item.op == DD_ITEM_OP_BAG_ASK) {
         go = 1;
+    } else if (a->u.item.op == DD_ITEM_OP_BAG_CHECK) {
+        limit = 10000; go = have;
+    } else if (a->u.item.op == DD_ITEM_OP_USE && !a->u.item.state) {
+        limit = 10000;
+        go = have && item_use_phase(&v) && v.area == a->u.item.area;
     } else if (a->u.item.op == DD_ITEM_OP_QUEST_RETURN) {
         limit = 30000;
         go = g_quest_return_done || (have && quest_return_gate_ready(&v));
@@ -1027,6 +1064,10 @@ static int item_apply(const dd_action *a) {
     uint64_t overlay;
     uint8_t one = 1;
     if (a->u.item.op == DD_ITEM_OP_RULES) {
+        if (a->u.item.flag && (!g_walk_view(&v) || !item_use_phase(&v) || v.area != a->u.item.area)) {
+            if (g_cfg.role == DD_ROLE_GUEST) runtime_sync_stop(3);
+            return 0;
+        }
         uint32_t here = battle_rules();
         if (g_cfg.role == DD_ROLE_GUEST && g_rules_object && a->u.item.rules && here != a->u.item.rules) {
             dd_log("Item: Rules differed: here %08x, host %08x; taken over from the host", here, a->u.item.rules);
@@ -1046,7 +1087,27 @@ static int item_apply(const dd_action *a) {
         g_results_next((void *)(uintptr_t)g_results_display);
         return 1;
     }
-    if (!g_walk_view(&v)) return refused;
+    if (!g_walk_view(&v)) {
+        if (a->u.item.op == DD_ITEM_OP_BAG_CHECK) { runtime_sync_stop(2); return 0; }
+        return refused;
+    }
+    if (a->u.item.op == DD_ITEM_OP_BAG_CHECK) {
+        if (g_cfg.role != DD_ROLE_GUEST) return 0;
+        if (!a->u.item.flag) { g_bag_repairing = 1; g_bag_repair_hash = a->u.item.type; return 1; }
+        uint32_t actual = walk_bag_hash(v.raid);
+        if (!g_bag_repairing || a->u.item.type != g_bag_repair_hash || actual != a->u.item.type) {
+            dd_log("Bag repair failed: expected=%08x actual=%08x", a->u.item.type, actual);
+            runtime_sync_stop(2); return 0;
+        }
+        g_bag_repairing = 0; g_bag_repair_hash = 0;
+        dd_log("Bag repair verified: %08x", actual);
+        return 1;
+    }
+    if (a->u.item.op == DD_ITEM_OP_USE && !a->u.item.state && (!item_use_phase(&v) || v.area != a->u.item.area)) {
+        dd_log("Item: delayed outside-fight use rejected after transition (battle=%u)", v.battle);
+        if (g_cfg.role == DD_ROLE_GUEST) runtime_sync_stop(3);
+        return 0;
+    }
     if (a->u.item.op == DD_ITEM_OP_BAG_SLOT) return bag_apply(&v, a);
     overlay = v.display + DD_WALK_LOOT_OVERLAY;
     if (a->u.item.op == DD_ITEM_OP_SELECT) {

@@ -58,7 +58,7 @@ static dd_action act(uint8_t kind) {
     case DD_ACT_PREPARE: a.u.prepare.index=1;a.u.prepare.key=8;break;
     case DD_ACT_OWNERS: a.u.owners.heroes[0]=1;a.u.owners.mask=1;a.u.owners.revision=5;break;
     case DD_ACT_ITEM: a.u.item.area=77;a.u.item.pos=0x43fa0000;a.u.item.round=2;a.u.item.turn=5;a.u.item.rules=9;a.u.item.amount=0xc0c00000;a.u.item.type=4;a.u.item.id=6;a.u.item.slot=3;a.u.item.op=DD_ITEM_OP_TORCH;a.u.item.state=0x1e;a.u.item.hero=255;a.u.item.inv=1;a.u.item.flag=1;break;
-    case DD_ACT_BATTLE: a.u.battle.round=2;a.u.battle.turn=5;a.u.battle.rules=0x12345;a.u.battle.value=-1;a.u.battle.op=DD_BATTLE_OP_ENEMY;a.u.battle.state=0x1e;a.u.battle.hero=3;a.u.battle.flag=1;a.u.battle.side=1;a.u.battle.place=2;break;
+    case DD_ACT_BATTLE: a.u.battle.actor_id=13;a.u.battle.round=2;a.u.battle.turn=5;a.u.battle.rules=0x12345;a.u.battle.value=-1;a.u.battle.op=DD_BATTLE_OP_ENEMY;a.u.battle.state=0x1e;a.u.battle.hero=3;a.u.battle.flag=1;a.u.battle.side=1;a.u.battle.place=2;break;
     case DD_ACT_WAGON_BUY:
     case DD_ACT_WAGON_SELL:
         a.u.items.slot=3; a.u.items.count=1; a.u.items.type=1; a.u.items.id=4; a.u.items.cost=500;
@@ -282,7 +282,31 @@ static void fuzz(void) {
     printf("fuzz: 1000000 inputs, %ld accepted, all re-checked\n", accepted);
 }
 
+static void test_desync_wire(void) {
+    uint8_t wire[512]; dd_msg out, m = {0}; size_t used = 0;
+    m.type = DD_MSG_SYNC_STOP;
+    for (unsigned reason = 1; reason <= 3; reason++) {
+        m.u.load.slot = reason;
+        size_t n = dd_encode(&m, wire, sizeof wire);
+        CHECK(n && dd_decode(wire, n, &out, &used) == DD_DECODE_OK && out.u.load.slot == reason, "sync stop round trip");
+        wire[DD_PROTO_HEADER] = 0;
+        CHECK(dd_decode(wire, n, &out, &used) != DD_DECODE_OK, "invalid stop reason refused");
+    }
+    m.u.load.slot = 4;
+    CHECK(!dd_encode(&m, wire, sizeof wire), "invalid stop encode refused");
+    m = town(DD_MSG_TOWN_APPLY, act(DD_ACT_BATTLE));
+    m.u.town.action.u.battle.side = 0;
+    m.u.town.action.u.battle.target_id = 19;
+    size_t n = dd_encode(&m, wire, sizeof wire);
+    CHECK(n && dd_decode(wire, n, &out, &used) == DD_DECODE_OK && out.u.town.action.u.battle.actor_id == 13 && out.u.town.action.u.battle.target_id == 19, "stable hero IDs round trip");
+    m.u.town.action.u.battle.target_id = 0;
+    CHECK(!dd_encode(&m, wire, sizeof wire), "friendly target requires persistent ID");
+    m.u.town.action.u.battle.target_id = 19;
+    m.u.town.action.u.battle.actor_id = UINT32_MAX;
+    CHECK(!dd_encode(&m, wire, sizeof wire), "invalid actor ID refused");
+}
 int main(void) {
+    test_desync_wire();
     test_roundtrip();
     test_invalid_encode();
     test_decode_errors();

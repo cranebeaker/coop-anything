@@ -1,0 +1,18 @@
+[
+  {
+    "version": "0.5.0-test56",
+    "runtime_protocol": 26,
+    "runtime_sha256": "d34cdfe445defcd4a1a4f5622a4611544a7dc8f50bf62b958f52388d5cfa61e4",
+    "launcher_sha256": "8ff3f41e75f3ac170ff11eac256ef3b68fcd0901bb96e8b0db0b631680ff4407",
+    "kit_sha256": "1e0cf0b77741d76df258b8846af102267201b2753959cbfb2f736dcd56424f5d",
+    "source_variant": "ordinary"
+  },
+  {
+    "version": "0.5.0-duo39",
+    "runtime_protocol": 26,
+    "runtime_sha256": "b81fe106f52313de0480fbe3941313f0e1582efa29ff5a751aaf28fffe0bbda9",
+    "launcher_sha256": "05621ddbda3723f9d533b3ff37d8f1d02d86a244d6e7d0970051f13d592b8206",
+    "kit_sha256": "e1ff5bfa2739dd07e79e0056ebdd51dded37c297023f977e6c85481e568a8467",
+    "source_variant": "DD_DUO + matching runtime pin/launcher version"
+  }
+]

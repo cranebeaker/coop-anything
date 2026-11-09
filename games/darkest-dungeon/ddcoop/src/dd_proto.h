@@ -15,7 +15,7 @@
 #include "dd_trinket.h"
 
 #define DD_PROTO_MAGIC 0x50434444u /* "DDCP" */
-#define DD_PROTO_VERSION 25 /* guest requests normal expedition departure */
+#define DD_PROTO_VERSION 26 /* stable battle actors, checked bag repair and peer sync stop */
 #define DD_PROTO_HEADER 16
 #define DD_PROTO_MAX_BODY 256
 
@@ -28,6 +28,7 @@ typedef enum {
     DD_MSG_PONG = 6,
     DD_MSG_WALK = 7,         /* host -> guest: newest party position; no order, no answer */
     DD_MSG_WALK_INTENT = 8,  /* guest -> host: the direction its keys ask for; no order, no answer */
+    DD_MSG_SYNC_STOP = 10, /* either peer: shared gameplay must stop; u.load.slot is bounded reason1..3 */
     DD_MSG_LOAD = 9,         /* both directions: this copy waits at the save screen to load menu slot u.load.slot */
 } dd_msg_type;
 
@@ -79,7 +80,7 @@ typedef struct {
         struct {uint32_t seed,rules,quest,quest_index,heroes[4],supplies,revision;uint8_t owners;} departure; /* owners: bit i, heroes[i] belongs to the guest */
         struct {uint32_t dest[4],from_area,rules,torch,bag,ids[4],hp[4],stress[4],trinkets[4];uint8_t has_from,flip,extra;} travel; /* rules, torch, bag and the party by rank (id 0: none; hp and stress the bits of a float; trinkets a hash): the host's state as it leaves, rules 0 unknown */
         struct {uint32_t area,prop,prop_kind,pos,option,item_type,item_id;uint8_t hero,flag,door;} use; /* door: 0 use, 1 a trap, 4 a curio's item button, 2 a door, 3 the curio's button */
-        struct {uint32_t round,turn,rules;int32_t value;uint8_t op,state,hero,flag,side,place;} battle; /* value: skill slot or -1, or a rank; side and place: the target */
+        struct {uint32_t round,turn,rules,actor_id,target_id;int32_t value;uint8_t op,state,hero,flag,side,place;} battle; /* value: skill slot or -1, or a rank; side and place: the target */
         struct {uint32_t area,pos,round,turn,rules,amount,type,id;int32_t slot;uint8_t op,state,hero,inv,flag;} item; /* state 0: outside a fight; hero 255: none; inv 0 the bag, 1 the loot */
         struct {uint32_t heroes[4],revision;uint8_t mask;} owners;
         struct {uint32_t index,key;} prepare; /* PREPARE or EMBARK: shared mission identity */
@@ -87,7 +88,7 @@ typedef struct {
 } dd_action;
 enum { DD_SUPPLY_BUY=1, DD_SUPPLY_RETURN=2, DD_SUPPLY_CANCEL=3 };
 enum { DD_BATTLE_OP_SKILL = 0, DD_BATTLE_OP_ENEMY = 1, DD_BATTLE_OP_FRIEND = 2, DD_BATTLE_OP_MOVE = 3 };
-enum { DD_ITEM_OP_USE = 0, DD_ITEM_OP_TORCH = 1, DD_ITEM_OP_LOOT_ALL = 2, DD_ITEM_OP_LOOT_CLOSE = 3, DD_ITEM_OP_LOOT_ITEM = 4, DD_ITEM_OP_CURIO = 5, DD_ITEM_OP_SELECT = 6, DD_ITEM_OP_TUTORIAL = 7, DD_ITEM_OP_RETREAT = 8, DD_ITEM_OP_CAMP_MEAL = 9, DD_ITEM_OP_CAMP_SKILL = 10, DD_ITEM_OP_CAMP_LEAVE = 11, DD_ITEM_OP_QUEST_ONE = 12, DD_ITEM_OP_QUEST_TWO = 13, DD_ITEM_OP_RULES = 14, DD_ITEM_OP_RESULTS_NEXT = 15, DD_ITEM_OP_BAG_SLOT = 16, DD_ITEM_OP_BAG_ASK = 17, DD_ITEM_OP_TOWN = 18, DD_ITEM_OP_HUNGER = 19, DD_ITEM_OP_QUEST_RETURN = 20 }; /* TOWN: host -> guest after a raid; type currencies, id heroes, round count (hashes) */
+enum { DD_ITEM_OP_USE = 0, DD_ITEM_OP_TORCH = 1, DD_ITEM_OP_LOOT_ALL = 2, DD_ITEM_OP_LOOT_CLOSE = 3, DD_ITEM_OP_LOOT_ITEM = 4, DD_ITEM_OP_CURIO = 5, DD_ITEM_OP_SELECT = 6, DD_ITEM_OP_TUTORIAL = 7, DD_ITEM_OP_RETREAT = 8, DD_ITEM_OP_CAMP_MEAL = 9, DD_ITEM_OP_CAMP_SKILL = 10, DD_ITEM_OP_CAMP_LEAVE = 11, DD_ITEM_OP_QUEST_ONE = 12, DD_ITEM_OP_QUEST_TWO = 13, DD_ITEM_OP_RULES = 14, DD_ITEM_OP_RESULTS_NEXT = 15, DD_ITEM_OP_BAG_SLOT = 16, DD_ITEM_OP_BAG_ASK = 17, DD_ITEM_OP_TOWN = 18, DD_ITEM_OP_HUNGER = 19, DD_ITEM_OP_QUEST_RETURN = 20, DD_ITEM_OP_BAG_CHECK = 21 }; /* TOWN: host -> guest after a raid; type currencies, id heroes, round count (hashes) */
 
 typedef struct {
     uint32_t protocol;

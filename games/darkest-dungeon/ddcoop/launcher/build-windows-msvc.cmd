@@ -8,7 +8,7 @@ if errorlevel 1 (
 )
 pushd "%~dp0.."
 if not exist build\win mkdir build\win
-if not defined DDC_VERSION set "DDC_VERSION=0.5.0-test55"
+if not defined DDC_VERSION set "DDC_VERSION=0.5.0-test56"
 if not defined DDC_TEST_NOSAVE set "DDC_TEST_NOSAVE=0"
 rc /nologo /I launcher\src /fo build\win\ddcoop.res launcher\src\ddcoop.rc
 if errorlevel 1 goto failed
