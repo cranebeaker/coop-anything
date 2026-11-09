@@ -5106,19 +5106,26 @@
     items: unknown
   players: unknown
   networking: unknown
-  open_source: unknown
+  open_source: 'no'
   last_activity: unknown
   qa: none
-  notes: No campaign co-op mod found for any recent entry; Unity has official side-mission co-op with a chat-fix
-    mod, and Brotherhood and Revelations only have multiplayer NPC overhauls. Reddit could not be searched with
-    my tool.
+  notes: No published campaign co-op mod for any recent entry. Odyssey (Steam app 812140, build 17083392)
+    ships a VMProtect + Denuvo exe, so static reverse engineering is out of scope, and the game has no
+    netcode. A read-only runtime route does work, though. Reading process memory found the player position
+    (float x east, y north, z up, in metres), and pointer paths from the exe's static data survived a
+    full restart and followed the player in-game (2026-11-09). An unpublished prototype syncs these
+    positions over UDP to a friends minimap. Visible remote players would need runtime hooks and are
+    not attempted. Unity has official side-mission co-op with a chat-fix mod; Brotherhood and
+    Revelations only have multiplayer NPC overhauls.
   sources:
   - https://www.nexusmods.com/assassinscreedunity/mods/448
   - https://steamcommunity.com/app/289650/discussions/0/811335793676585721/
   - https://www.gamerevolution.com/?p=666369
-  checked: 2026-10-16
+  checked: 2026-11-09
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+  - read-only scan of a Steam install of Odyssey (build 17083392) with detect_engine and game_identity, 2026-11-09
+  - runtime memory scan and pointer scan of Odyssey build 17083392, verified across a restart, 2026-11-09
 - game: Dead Space (2023 remake)
   year: 2023
   engine: Frostbite
