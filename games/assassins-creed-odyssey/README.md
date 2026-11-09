@@ -45,6 +45,15 @@ which has official co-op side missions.
   that start at the exe's static data. After a full game restart, 249 still agreed on
   the player's position, including all 27 one-jump paths, and they followed a 30 m
   walk exactly.
+- **Loading screens and menus:** while the player is not in the world, the pointer
+  paths still resolve, but to fake positions. Every loading screen (fast travel or
+  loading a save) reports exactly (-94.7, 33.8, -4.3). The main menu reports its
+  animated background character near (-47, -15, 0), at exactly z = 0. A mod must
+  treat these as "loading", or friends will see the player teleport about 5 km away.
+  Checked across 3 loads and a restart; the filter flagged all 164 such samples and
+  none of the 916 real ones.
+- **Restarts:** the exe can start twice in quick succession at launch, so a mod should
+  keep checking for a new process instead of attaching once.
 - **Anti-cheat:** none seen. Opening the process with `PROCESS_VM_READ` works, and
   nothing is written or injected.
 
@@ -60,6 +69,14 @@ minimap. That needs borderless-window mode.
   scan, the pointer scan on a 3-level chain, and 3-player UDP sync with timeouts.
 - In-game checks by the owner on build 17083392: position tracking, axis directions,
   pointer paths across a restart, and a minimap with a bot friend.
+- In-game bot-friend session (9.5 min) on build 17083392: the host ran from the real game,
+  with two bot peers over UDP. One followed the real path 3 s behind; the other circled at
+  25 m. Both were fresh in every sample, through two fast travels and a game restart
+  mid-session (the mod re-attached by itself).
+- Bad-network tests: 20% loss, 80±60 ms jitter and 10% duplicates. There were no backwards
+  jumps, and players were fresh in 120 of 120 samples. Removing the ordering check makes the
+  test fail. The tests also cover outages, host restart, junk packets, duplicate names and a
+  version mismatch, plus a 10-minute soak with 5 peers (no dropouts, no memory growth).
 - No co-op session with a second real player yet.
 
 ## How to play
