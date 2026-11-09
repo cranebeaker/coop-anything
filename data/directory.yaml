@@ -5127,7 +5127,7 @@
   url: https://github.com/xXCroissantXx/odyssey-ghost-coop
   other_urls: []
   kind: mod
-  status: prototype
+  status: abandoned
   coop_scope:
     story: false
     enemies: false
@@ -5139,8 +5139,8 @@
   open_source: 'yes'
   last_activity: '2026-11-09'
   qa: automated
-  notes: 'Ghost co-op only: each player runs their own single-player game, and positions are shared onto an
-    always-on-top minimap. Nobody sees other players in the 3D world, and story, enemies and items do not
+  notes: 'Abandoned 2026-11-09: the goal was friends shown as real player heroes, which needs code injection into the VMProtect + Denuvo exe (out of scope). What exists and works is ghost co-op only: each player runs their own single-player game, and positions are shared onto an
+    always-on-top minimap and drawn as see-through animated original figures in the game view (camera read from memory; no occlusion). Nobody sees other players in the 3D world, and story, enemies and items do not
     sync. Read-only runtime approach for Steam build 17083392: the exe is VMProtect + Denuvo, so there is no
     static RE, no injection and no writes. The player position (x east, y north, z up) is found by a float
     scan, and pointer paths from the exe''s static data survive restarts. UDP host relay at 20 Hz. Automated

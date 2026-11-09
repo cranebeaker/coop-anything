@@ -4,11 +4,15 @@
 |---|---|
 | Engine | AnvilNext 2.0 (Ubisoft, proprietary) |
 | Versions tested | Steam app 812140, build 17083392; `ACOdyssey.exe` x64, 286,453,072 bytes, SHA-256 `ac327dad2cbbdd72a3fda8e99cbeab9d12af328363e4f09bc5674bdd36b8c483` |
-| Projects | [odyssey-ghost-coop](https://github.com/xXCroissantXx/odyssey-ghost-coop) (prototype, MIT) |
+| Projects | [odyssey-ghost-coop](https://github.com/xXCroissantXx/odyssey-ghost-coop) (abandoned, MIT) |
 | QA level | automated (bot tests); no co-op playthrough with a second real player yet |
 | Last updated | 2026-11-09 |
 
 ## Where things stand
+
+**Abandoned 2026-11-09.** The owner's goal was co-op where friends appear as real player
+heroes in each other's worlds. On this build that would need code injection into the
+protected exe, so the project stopped at its read-only ceiling, described below.
 
 The story can't be played together today. Static reverse engineering is ruled out by the
 exe's DRM. A read-only runtime route does work, and it is enough for "ghost" co-op: each
@@ -60,8 +64,20 @@ which has official co-op side missions.
 ## What we changed
 
 Nothing in the game. [odyssey-ghost-coop](https://github.com/xXCroissantXx/odyssey-ghost-coop) reads the position, syncs
-it over UDP (one host relays at 20 Hz), and draws other players on an always-on-top
-minimap. That needs borderless-window mode.
+it over UDP (one host relays at 20 Hz, up to 16 players), and draws other players on an
+always-on-top minimap. It also reads the game camera and draws each friend as an animated,
+see-through original figure in the game view. That needs borderless-window mode.
+
+- **Camera (build 17083392):** a block holds the camera position, then a row-vector view
+  matrix at +32 and a reverse-Z projection at +96 (vertical FOV about 50 degrees, 16:9). It is
+  found by scanning for float triples that orbit a still player while the camera swings.
+  603 pointer paths to it were found.
+- **Limits of an overlay:** figures cannot be hidden behind walls, because the depth
+  buffer is only reachable by hooking the renderer. They also cannot use the game's own
+  character models or animations. Synthetic test bots that move away from the player's
+  path float, because there is no terrain data; real players' own positions do not.
+- **Overlay speed:** Tk timers follow the 15.6 ms Windows tick, which capped the overlay
+  at about 24 fps. `timeBeginPeriod(1)` lifts it to about 31 fps.
 
 ## QA
 
@@ -96,6 +112,7 @@ with Parsec or Steam Remote Play.
 
 ## Next steps
 
-Run a real two-player session,
-then look for camera data to draw markers in the game view. Origins and Valhalla are
-probably blocked the same way, but nobody has checked yet.
+Nobody is working on this. Showing real heroes would need an injection route that this
+project rules out. Within read-only limits, the remaining ideas are: gear colours, combat
+and quest status, and opt-in data writes for teleport-to-friend and time sync (not
+started). Origins and Valhalla are probably blocked the same way, but nobody has checked yet.
