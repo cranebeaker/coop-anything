@@ -1,0 +1,24 @@
+DDCoop test57 - partyvolgorde herstellen op beide pcs
+===================================================
+
+1. Sluit beide spellen en laat DDCoop afronden. Installeer test57 op beide pcs
+   en start een nieuwe sessie in dezelfde campagne.
+2. Laat tijdens een gevecht de volgorde veranderen door een enemy of een eigen
+   skill. Controleer dat beide dezelfde helden op dezelfde plaatsen zien.
+3. Druk na het gevecht alleen als HOST op de knop naast de kaart die de party
+   terugzet. De GAST doet niets: ook daar moet de volgorde vanzelf herstellen.
+4. Speel daarna een nieuw gevecht en controleer dat dezelfde held aan de beurt
+   is en de juiste eigenaar kan kiezen.
+5. Herhaal het terugzetten met alleen de GAST. Test ook de bijbehorende sneltoets
+   als je die gebruikt. Er hoeft maar een speler op de knop te drukken.
+6. Tijdens het terugzetten wacht bewegen kort op de animatie. Dubbel klikken
+   mag niet tot extra wijzigingen leiden. Controleer de vier markeringen in F9.
+7. Sluit beide spellen en laat automatisch herstel afronden. Stuur beide
+   runtime-logs en de launcherlog. Verschijnt een sync-stop, sluit dan beide
+   spellen en noteer de laatste actie; speel die sessie niet verder.
+
+Protocol27: dezelfde kit op beide pcs. Duo40 is dezelfde reparatie voor twee
+vensters op een pc. GAST altijd -nosave; HOST volgt het vinkje voor opslaan.
+De vorige inventaris/held-ID-reparaties en DLC-voorwerk blijven aanwezig.
+Automatische tests gebruiken nagebootste gamefuncties; de nieuwe knop-sync moet
+nog in de echte game getest worden. Dit voegt geen automatische combat-resync toe.

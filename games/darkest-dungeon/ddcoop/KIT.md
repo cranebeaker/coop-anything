@@ -1,4 +1,4 @@
-# 0.5.0-test56
+# 0.5.0-test57
 
 Battle actions carry persistent actor/friendly-target IDs. Door/loading blocks
 outside-combat item use; inventory use has no walking-pixel delay. Bag repairs
@@ -7,7 +7,7 @@ See runtime/DESYNC.md; this stops divergence, not an automatic combat repair.
 
 Validation performed locally on Windows x64: native protocol/fuzz/town/runtime
 bridge tests, isolated OpenGL overlay, MSVC ASan runtime bridge, launcher tests
-including live-party IPC and fake-Steam preparation/restore. All117 game address
+including live-party IPC and fake-Steam preparation/restore. All119 game address
 patterns match the pinned executable. Prior native ABI/read-only DLC checks pass.
 No real game, installer, owner save or Steam account was launched by these tests.
 
@@ -19,6 +19,13 @@ guest always-nosave. Both players must use the same runtime kit. Builds use /MT.
 Per-kit GitHub source commits are now part of delivery. Source and test evidence
 are published; player ZIPs/binaries remain outside git.
 
-Companion build: **0.5.0-duo39** uses the same gameplay source with DD_DUO,
+Companion build: **0.5.0-duo40** uses the same gameplay source with DD_DUO,
 its separate runtime pin and launcher version. RELEASES.json records both
 kits and their exact binary/ZIP hashes; binaries remain outside git.
+
+Test57 adds the shared dungeon default-order button and keyboard shortcut. Either
+player may initiate it; actual native reset, default and post-state are checked on
+both copies. Repeated/crossed clicks and animation delays are covered by bridge
+fixtures. A formation difference stops before new travel. See runtime/FORMATION.md
+and tests/test_formation_layout.py for the exact native ABI proof. Manual dungeon
+formation drags are not newly synchronized. Real two-PC validation remains pending.
