@@ -17,7 +17,7 @@ typedef struct {
     int online;
     int hosting;      /* plays Spacewar in a lobby, or advertises a DDCoop lobby in rich presence */
     uint64_t lobby;   /* the lobby to join when hosting */
-    int in_game;      /* plays any game (shown as "in een spel") */
+    int in_game;      /* plays any game (shown as "in a game") */
 } lr_friend;
 
 typedef enum {

@@ -146,9 +146,9 @@ int lr_list_campaigns(const char *remote_dir, lr_campaign_entry out[9]);
 
 /* Dutch, for the window: why a campaign in this state cannot be hosted. */
 #define LR_TUTORIAL_TEXT                                                                                     \
-    "slot %d staat nog aan het begin van de tutorial (nooit opgeslagen); je vriend krijgt dan een lege "     \
-    "campagne. Start het spel gewoon via Steam, speel de tutorial uit tot in het dorp, sluit af en klik "    \
-    "opnieuw op Host."
+    "Slot %d is still at the start of the tutorial (never saved); your friend would receive an empty "     \
+    "campaign. Start through Steam, complete the tutorial to reach the Hamlet, close the game and click "    \
+    "Host again."
 
 const char *lr_state_name(lr_state s);
 

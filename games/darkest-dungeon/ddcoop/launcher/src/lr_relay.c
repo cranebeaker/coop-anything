@@ -114,7 +114,7 @@ void lr_relay_on_message(lr_relay *r, uint64_t peer, const lr_msg *m, uint64_t n
         }
         s->give_up_at = now_ms + LR_CONNECT_PATIENCE_MS;
         s->next_try_at = now_ms;
-        event(r, "vriend opent verbinding", m->id);
+        event(r, "Friend is connecting.", m->id);
         break;
     case LR_STREAM_DATA:
         if (!s) return;
@@ -157,7 +157,7 @@ static void accept_local(lr_relay *r) {
         s->connected = 1;
         r->game_connected = 1;
         send_simple(r, s->peer, LR_STREAM_OPEN, s->id);
-        event(r, "spel verbonden met DDCoop", s->id);
+        event(r, "Game connected to DDCoop.", s->id);
     }
 }
 
@@ -167,7 +167,7 @@ static void host_connect(lr_relay *r, lr_stream *s, uint64_t now_ms) {
         if (c == 1) {
             s->connected = 1;
             r->game_connected = 1;
-            event(r, "verbonden met het spel", s->id);
+            event(r, "Connected to game.", s->id);
             return;
         }
         if (c == 0) return;
@@ -176,7 +176,7 @@ static void host_connect(lr_relay *r, lr_stream *s, uint64_t now_ms) {
         s->next_try_at = now_ms + RETRY_MS;
     }
     if (now_ms >= s->give_up_at) {
-        fail_stream(r, s, "het spel van de host luisterde niet");
+        fail_stream(r, s, "The host game was not listening.");
         return;
     }
     if (now_ms >= s->next_try_at) {
@@ -190,7 +190,7 @@ static void pump(lr_relay *r, lr_stream *s) {
     while (s->to_local_len > 0) {
         int n = lr_send_nb(s->sock, s->to_local, s->to_local_len);
         if (n < 0) {
-            fail_stream(r, s, "spelverbinding verbroken");
+            fail_stream(r, s, "Game connection lost");
             return;
         }
         if (n == 0) break;
@@ -219,7 +219,7 @@ static void pump(lr_relay *r, lr_stream *s) {
             s->local_closed = 1;
             m.type = LR_STREAM_CLOSE;
             m.id = s->id;
-            event(r, "spel sloot de verbinding", s->id);
+            event(r, "Game closed the connection.", s->id);
         } else {
             r->bytes_to_peer += (uint64_t)n;
             m.type = LR_STREAM_DATA;

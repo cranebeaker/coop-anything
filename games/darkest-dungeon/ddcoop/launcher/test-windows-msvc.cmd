@@ -5,6 +5,8 @@ if errorlevel 1 exit /b 1
 pushd "%~dp0.."
 if not exist build\win\tests\fake-steam mkdir build\win\tests\fake-steam
 set "DDC_CC=cl /nologo /std:c11 /O2 /MT /W4 /D_CRT_SECURE_NO_WARNINGS /Ilauncher\src /Fobuild\win\tests\"
+%DDC_CC% /Febuild\win\tests\test_lr_mascot.exe launcher\tests\test_lr_mascot.c build\win\ddcoop.res /link gdiplus.lib ole32.lib user32.lib gdi32.lib
+if errorlevel 1 goto failed
 %DDC_CC% /Febuild\win\tests\test_lr_wire.exe launcher\tests\test_lr_wire.c launcher\src\lr_wire.c
 if errorlevel 1 goto failed
 %DDC_CC% /Febuild\win\tests\test_lr_roster.exe launcher\tests\test_lr_roster.c launcher\src\lr_roster.c
@@ -21,7 +23,7 @@ if errorlevel 1 goto failed
 if errorlevel 1 goto failed
 %DDC_CC% /Febuild\win\tests\test_lr_prepare_win.exe launcher\tests\test_lr_prepare_win.c launcher\src\lr_snapshot.c launcher\src\lr_files.c launcher\src\lr_wire.c
 if errorlevel 1 goto failed
-for %%t in (wire roster owners live_party_win core) do (
+for %%t in (wire roster owners live_party_win mascot core) do (
   build\win\tests\test_lr_%%t.exe
   if errorlevel 1 goto failed
 )

@@ -492,7 +492,7 @@ int main(void) {
     /* 5. a second friend is told the host is full */
     CHECK(lr_core_guest_join(&guest2.core, 1, now_ms()));
     CHECK(run_until(&host, &guest2, failed, &guest2, 3000));
-    CHECK(strstr(guest2.core.error, "1 vriend"));
+    CHECK(strstr(guest2.core.error, "one friend"));
 
     /* 6. the games: the host's runtime listens only after 1.5 s of "loading" */
     host_game hg = {LR_NOSOCK, LR_NOSOCK, host.core.game_port, now_ms() + 1500, 0, 0};
@@ -545,7 +545,7 @@ int main(void) {
     corrupt_chunks = 1;
     CHECK(lr_core_guest_join(&guest2.core, 1, now_ms()));
     CHECK(run_until(&host, &guest2, state_is, &guest2, 5000));
-    CHECK(guest2.core.state == LR_ST_FAILED && strstr(guest2.core.error, "onvolledig"));
+    CHECK(guest2.core.state == LR_ST_FAILED && strstr(guest2.core.error, "incomplete"));
     lr_join(b, sizeof b, guest2.core.cfg.remote_dir, "profile_2");
     lr_join(a, sizeof a, b, "persist.extra.json");
     CHECK(lr_file_exists(a));
@@ -558,7 +558,7 @@ int main(void) {
     guest2.core.cfg.build = 0x12345678;
     CHECK(lr_core_guest_join(&guest2.core, 1, now_ms()));
     CHECK(run_until(&host, &guest2, failed, &guest2, 3000));
-    CHECK(strstr(guest2.core.error, "versies"));
+    CHECK(strstr(guest2.core.error, "versions"));
 
     /* 10b. another DDCoop kit (another runtime) is refused with a message the friend can act on */
     lr_core_free(&guest2.core);
@@ -566,14 +566,14 @@ int main(void) {
     guest2.core.cfg.kit = 0x9d760035;
     CHECK(lr_core_guest_join(&guest2.core, 1, now_ms()));
     CHECK(run_until(&host, &guest2, failed, &guest2, 3000));
-    CHECK(strstr(guest2.core.error, "DDCoop-versies"));
+    CHECK(strstr(guest2.core.error, "DDCoop versions"));
 
     /* 11. joining with the game already open is refused before anything is touched */
     lr_core_free(&guest2.core);
     setup_node(&guest2, 4, "guest5");
     guest2.game_running = 1;
     CHECK(!lr_core_guest_join(&guest2.core, 1, now_ms()));
-    CHECK(strstr(guest2.core.error, "sluit eerst"));
+    CHECK(strstr(guest2.core.error, "Close Darkest Dungeon first"));
 
     /* 11b. a guest without the campaign's DLC is refused before its own save is touched (the game would call
      * the campaign corrupted and start a new one in that slot) */
@@ -609,10 +609,10 @@ int main(void) {
     setup_node(&guest2, 4, "guest7");
     make_guest_campaign(guest2.core.cfg.remote_dir);
     lr_core_host_spent(&host.core);
-    CHECK(host.core.host_spent && strstr(host.core.status, "opnieuw op Host"));
+    CHECK(host.core.host_spent && strstr(host.core.status, "Host again"));
     CHECK(lr_core_guest_join(&guest2.core, 1, now_ms()));
     CHECK(run_until(&host, &guest2, failed, &guest2, 3000));
-    CHECK(strstr(guest2.core.error, "opnieuw op Host") && host.core.peer == 0);
+    CHECK(strstr(guest2.core.error, "Host again") && host.core.peer == 0);
     lr_join(b, sizeof b, guest2.core.cfg.remote_dir, "profile_2");
     lr_join(a, sizeof a, b, "persist.extra.json");
     CHECK(lr_file_exists(a) && !guest2.core.backup_path[0]); /* Nothing of the friend's touched. */

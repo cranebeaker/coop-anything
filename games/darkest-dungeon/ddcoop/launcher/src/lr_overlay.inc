@@ -62,9 +62,9 @@ static void overlay_publish(void) {
         snprintf(row->name, sizeof row->name, "%s", h->name);
         snprintf(row->cls, sizeof row->cls, "%s", h->cls);
         snprintf(row->owner, sizeof row->owner, "%s",
-                 row->mine                                  ? "jij"
+                 row->mine                                  ? "you"
                  : G.core.owners.owner[i] == LR_PLAYER_HOST ? "host"
-                                                            : "vriend");
+                                                            : "friend");
     }
     InterlockedIncrement((volatile LONG *)&g_overlay_view->sequence);
     memcpy((uint8_t *)g_overlay_view + sizeof next.sequence, (uint8_t *)&next + sizeof next.sequence,

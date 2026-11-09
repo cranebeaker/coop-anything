@@ -207,7 +207,7 @@ int lr_steam_start(const wchar_t *dll_path, const lr_steam_callbacks *cb, char *
     SetEnvironmentVariableW(L"SteamGameId", L"480");
     S.dll = LoadLibraryW(dll_path);
     if (!S.dll) {
-        snprintf(err, cap, "steam_api64.dll niet gevonden naast DDCoop.exe. Draai Repair DDCoop.bat.");
+        snprintf(err, cap, "steam_api64.dll is missing next to DDCoop.exe. Run Repair DDCoop.bat.");
         return 0;
     }
     LOAD(Init, "SteamAPI_Init");
@@ -260,7 +260,7 @@ int lr_steam_start(const wchar_t *dll_path, const lr_steam_callbacks *cb, char *
     LOAD(CallFailureReason, "SteamAPI_ISteamUtils_GetAPICallFailureReason");
 
     if (!S.Init()) {
-        snprintf(err, cap, "Steam reageert niet. Start Steam, log in, en open DDCoop opnieuw.");
+        snprintf(err, cap, "Steam is not responding. Start Steam, sign in and reopen DDCoop.");
         return 0;
     }
     /* steam_api.h: "must be called after SteamAPI_Init". Before it (1.0.0-1.0.2) Init reset the mode and not one
@@ -273,7 +273,7 @@ int lr_steam_start(const wchar_t *dll_path, const lr_steam_callbacks *cb, char *
     S.msgs = S.Messages();
     S.utils = S.UtilsIface();
     if (!S.user || !S.friends || !S.mm || !S.msgs || !S.utils) {
-        snprintf(err, cap, "Steam gaf niet alle onderdelen (versie?). Draai Repair DDCoop.bat.");
+        snprintf(err, cap, "Steam did not provide all required interfaces. Run Repair DDCoop.bat.");
         S.Shutdown();
         return 0;
     }
@@ -345,7 +345,7 @@ static void set_presence(void) {
 static void lobby_created(const LobbyCreated *lc) {
     if (lc->result != RESULT_OK || lc->lobby == 0) {
         char t[160];
-        snprintf(t, sizeof t, "Steam kon geen lobby maken (code %d). Probeer het zo opnieuw.", lc->result);
+        snprintf(t, sizeof t, "Steam could not create a lobby (code %d). Try again shortly.", lc->result);
         emit(LR_EV_LOBBY_FAILED, 0, 0, t);
         return;
     }
@@ -371,7 +371,7 @@ static void lobby_entered(const LobbyEnter *le) {
     S.join_call = 0;
     if (le->response != 1) {
         char t[160];
-        snprintf(t, sizeof t, "Kon de lobby niet binnen (code %u): vol, gesloten of de host is weg.", le->response);
+        snprintf(t, sizeof t, "Could not enter lobby (code %u): full, closed or host unavailable.", le->response);
         emit(LR_EV_LOBBY_FAILED, le->lobby, 0, t);
         S.lobby = 0;
         return;
@@ -380,7 +380,7 @@ static void lobby_entered(const LobbyEnter *le) {
     if (!v || strcmp(v, LOBBY_VALUE) != 0) {
         S.LeaveLobby(S.mm, le->lobby);
         S.lobby = 0;
-        emit(LR_EV_LOBBY_FAILED, le->lobby, 0, "Dat is geen DDCoop-spel (iemand speelt gewoon Spacewar).");
+        emit(LR_EV_LOBBY_FAILED, le->lobby, 0, "This is not a DDCoop session (the player is running Spacewar normally).");
         return;
     }
     S.lobby = le->lobby;
@@ -458,8 +458,8 @@ void lr_steam_pump(void) {
                      done->callback, done->param_size, !got ? "could not be read" : failed ? "FAILED" : "ok");
             if (got) {
                 if (!failed) handle(done->callback, buf);
-                else if (done->call == S.create_call) emit(LR_EV_LOBBY_FAILED, 0, 0, "Steam kon geen lobby maken.");
-                else if (done->call == S.join_call) emit(LR_EV_LOBBY_FAILED, 0, 0, "Kon de lobby niet binnen.");
+                else if (done->call == S.create_call) emit(LR_EV_LOBBY_FAILED, 0, 0, "Steam could not create a lobby.");
+                else if (done->call == S.join_call) emit(LR_EV_LOBBY_FAILED, 0, 0, "Could not enter the lobby.");
             }
             free(buf);
         } else {

@@ -230,15 +230,15 @@ int lr_decode(const uint8_t *buf, size_t len, int channel, lr_msg *out) {
 
 const char *lr_bye_text(uint32_t reason) {
     switch (reason) {
-    case LR_BYE_QUIT: return "de ander heeft de sessie gesloten";
-    case LR_BYE_FULL: return "de host speelt al met iemand (deze versie: 1 vriend tegelijk)";
-    case LR_BYE_VERSION: return "jullie DDCoop-versies verschillen; installeer allebei dezelfde zip";
-    case LR_BYE_BUILD: return "jullie Darkest Dungeon-versies verschillen; laat Steam het spel bijwerken";
-    case LR_BYE_SAVE: return "de campagne kon niet worden overgezet";
-    case LR_BYE_GAME_RUNNING: return "sluit eerst Darkest Dungeon, en join daarna opnieuw";
+    case LR_BYE_QUIT: return "The other player closed the session.";
+    case LR_BYE_FULL: return "The host already has a player (this version supports one friend at a time).";
+    case LR_BYE_VERSION: return "Your DDCoop versions differ; install the same ZIP on both PCs.";
+    case LR_BYE_BUILD: return "Your Darkest Dungeon versions differ; update the game through Steam.";
+    case LR_BYE_SAVE: return "The campaign could not be transferred.";
+    case LR_BYE_GAME_RUNNING: return "Close Darkest Dungeon first, then join again.";
     case LR_BYE_PROTOCOL: return "onverwacht bericht (verschillende versies?)";
-    case LR_BYE_RESTART: return "de host moet eerst zijn spel sluiten en opnieuw op Host klikken; join daarna opnieuw";
-    case LR_BYE_DLC: return "je vriend mist DLC die deze campagne gebruikt (zie het venster van je vriend)";
-    default: return "onbekende reden";
+    case LR_BYE_RESTART: return "The host must close the game and click Host again first; then join the new session.";
+    case LR_BYE_DLC: return "Your friend is missing DLC required by this campaign (see their launcher).";
+    default: return "unknown reason";
     }
 }

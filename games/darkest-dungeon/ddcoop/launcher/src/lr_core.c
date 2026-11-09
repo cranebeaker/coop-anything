@@ -25,7 +25,7 @@ static void set_status(lr_core *c, const char *text) {
 static void fail(lr_core *c, const char *text) {
     snprintf(c->error, sizeof c->error, "%s", text);
     c->state = LR_ST_FAILED;
-    logf_(c, "FOUT: %s", text);
+    logf_(c, "ERROR: %s", text);
 }
 
 const char *lr_state_name(lr_state s) {
@@ -49,7 +49,7 @@ void lr_core_init(lr_core *c, const lr_config *cfg) {
     memset(c, 0, sizeof *c);
     c->cfg = *cfg;
     if (c->cfg.coop_slot < 1 || c->cfg.coop_slot > 9) c->cfg.coop_slot = 3;
-    set_status(c, "klaar");
+    set_status(c, "ready");
 }
 
 void lr_core_free(lr_core *c) {
@@ -495,7 +495,7 @@ static int store_campaign(lr_core *c) {
 
 /* ---- host ---- */
 
-#define LR_HOST_RESTART_TEXT "je vriend is weg. Sluit het spel en klik opnieuw op Host voor een nieuwe sessie."
+#define LR_HOST_RESTART_TEXT "Your friend left. Close the game and click Host again to start a new session."
 void lr_core_host_spent(lr_core *c) {
     if (c->role != LR_ROLE_HOST || c->host_spent) return;
     c->host_spent = 1;
@@ -514,15 +514,15 @@ int lr_core_host_start(lr_core *c, uint64_t now_ms) {
     if (!lr_find_save_folder(c->cfg.remote_dir, c->cfg.coop_slot, c->save_folder, sizeof c->save_folder)) {
         char msg[256];
         snprintf(msg, sizeof msg,
-                 "geen campagne in slot %d gevonden. Start Darkest Dungeon gewoon via Steam, maak of laad een "
-                 "campagne in slot %d, sluit af, en probeer opnieuw.",
+                 "No campaign found in slot %d. Start Darkest Dungeon through Steam, create or load a "
+                 "campaign in slot %d, close the game and try again.",
                  c->cfg.coop_slot, c->cfg.coop_slot);
         fail(c, msg);
         return 0;
     }
     /* Freeze the host's campaign before its game starts. Never read a moving Steam save during a join. */
     if (!load_campaign(c)) {
-        fail(c, "kon de campagne niet veilig inlezen; er is niets verstuurd (zie DDCoop-launcher.log)");
+        fail(c, "Could not safely read the campaign; nothing was sent (see DDCoop-launcher.log).");
         return 0;
     }
     lr_game_info game;
@@ -546,18 +546,18 @@ int lr_core_host_start(lr_core *c, uint64_t now_ms) {
     while (!lr_port_free(c->game_port) && c->game_port < LR_DEFAULT_GAME_PORT + 50) c->game_port++;
     make_password(c);
     if (!lr_write_ini(c->cfg.ini_path, "host", c->game_port, c->password, c->cfg.coop_slot)) {
-        fail(c, "kon ddcoop.ini niet schrijven (staat het spel in een beveiligde map? draai Repair DDCoop.bat)");
+        fail(c, "Could not write ddcoop.ini. Check folder permissions or run Repair DDCoop.bat.");
         return 0;
     }
     if (!lr_relay_init(&c->relay, LR_ROLE_HOST, c->game_port, relay_send, c)) {
-        fail(c, "kon de relay niet starten");
+        fail(c, "Could not start the relay.");
         return 0;
     }
     c->relay_up = 1;
     c->state = LR_ST_HOST_WAITING;
     c->last_rx = c->last_tx = now_ms;
     logf_(c, "host: port %d, campaign folder %s", c->game_port, c->save_folder);
-    set_status(c, "spel start; wacht tot een vriend joint");
+    set_status(c, "Game starting; waiting for a friend to join.");
     return 1;
 }
 
@@ -591,12 +591,12 @@ static void host_accept(lr_core *c, uint64_t peer, const lr_msg *hello, uint64_t
     if (c->file_count == 0) {
         send_simple_to(c, peer, LR_BYE, LR_BYE_SAVE);
         c->peer = 0;
-        set_status(c, "de campaign-snapshot ontbreekt; vriend afgewezen (zie DDCoop-launcher.log)");
+        set_status(c, "The campaign snapshot is missing; friend refused (see DDCoop-launcher.log).");
         return;
     }
     c->send_phase = SP_HELLO;
     c->state = LR_ST_HOST_SENDING;
-    set_status(c, "vriend gevonden; campagne wordt verstuurd");
+    set_status(c, "Friend found; sending campaign.");
 }
 
 /* Sends HELLO, SESSION and the campaign, as much as the transport takes right now. */
@@ -645,7 +645,7 @@ static void host_send_campaign(lr_core *c) {
         int r = send_msg(c, &m);
         if (r == 0) return; /* full: continue next tick */
         if (r < 0) {
-            set_status(c, "vriend onbereikbaar tijdens het versturen");
+            set_status(c, "Friend became unreachable during transfer.");
             return;
         }
         if (c->send_phase <= SP_BEGIN) {
@@ -684,7 +684,7 @@ int lr_core_guest_join(lr_core *c, uint64_t host_peer, uint64_t now_ms) {
         return 0;
     }
     if (!lr_relay_init(&c->relay, LR_ROLE_GUEST, 0, relay_send, c)) {
-        fail(c, "kon geen lokale poort openen voor het spel");
+        fail(c, "Could not open a local game port.");
         return 0;
     }
     c->relay_up = 1;
@@ -694,7 +694,7 @@ int lr_core_guest_join(lr_core *c, uint64_t host_peer, uint64_t now_ms) {
     c->state = LR_ST_GUEST_HELLO;
     c->last_rx = c->last_tx = now_ms;
     logf_(c, "guest: relay port %d, HELLO sent", c->game_port);
-    set_status(c, "verbinden met de host...");
+    set_status(c, "Connecting to host...");
     return 1;
 }
 
@@ -725,8 +725,8 @@ static int guest_dlc_ok(lr_core *c) {
     if (!k) return 1;
     char msg[sizeof c->error];
     snprintf(msg, sizeof msg,
-             "de campagne van de host gebruikt DLC die jij niet hebt: %s. Voeg die toe in Steam en join opnieuw; "
-             "je eigen save is niet aangeraakt.",
+             "The host campaign requires DLC you do not have: %s. Install it through Steam and join again; "
+             "your own save has not been changed.",
              missing);
     fail(c, msg);
     return 0;
@@ -739,14 +739,14 @@ static void guest_save_message(lr_core *c, const lr_msg *m) {
         int slot = 0;
         if (!lr_slot_folder_ok(m->text, &slot) || slot != c->cfg.coop_slot) {
             send_simple_to(c, c->peer, LR_SAVE_RESULT, LR_BYE_PROTOCOL);
-            fail(c, "de host stuurde een onverwachte savemap");
+            fail(c, "The host sent an unexpected save folder.");
             return;
         }
         snprintf(c->save_folder, sizeof c->save_folder, "%s", m->text);
         c->file_count = m->a;
         c->total = m->b;
         c->state = LR_ST_GUEST_RECEIVING;
-        set_status(c, "campagne van de host ontvangen...");
+        set_status(c, "Receiving host campaign...");
         return;
     }
     if (c->state != LR_ST_GUEST_RECEIVING) return;
@@ -756,7 +756,7 @@ static void guest_save_message(lr_core *c, const lr_msg *m) {
         free(f->data);
         f->data = malloc(m->a ? m->a : 1);
         if (!f->data) {
-            fail(c, "te weinig geheugen voor de campagne");
+            fail(c, "Not enough memory for the campaign.");
             return;
         }
         snprintf(f->name, sizeof f->name, "%s", m->text);
@@ -770,7 +770,7 @@ static void guest_save_message(lr_core *c, const lr_msg *m) {
         lr_file *f = &c->files[m->id];
         if (!f->data || m->a != f->received || m->a + m->len > f->size) {
             send_simple_to(c, c->peer, LR_SAVE_RESULT, LR_BYE_SAVE);
-            fail(c, "de campagne kwam beschadigd aan; probeer opnieuw te joinen");
+            fail(c, "The campaign arrived corrupted; try joining again.");
             return;
         }
         memcpy(f->data + m->a, m->data, m->len);
@@ -784,7 +784,7 @@ static void guest_save_message(lr_core *c, const lr_msg *m) {
             lr_file *f = &c->files[i];
             if (!f->name[0] || f->received != f->size || lr_crc32(0, f->data, f->size) != f->crc) {
                 send_simple_to(c, c->peer, LR_SAVE_RESULT, LR_BYE_SAVE);
-                fail(c, "de campagne kwam onvolledig aan; probeer opnieuw te joinen");
+                fail(c, "The campaign transfer was incomplete; try joining again.");
                 return;
             }
             logf_(c, "campaign file received: %s: %u bytes crc=%08x (verified)", f->name, f->size, f->crc);
@@ -792,7 +792,7 @@ static void guest_save_message(lr_core *c, const lr_msg *m) {
         }
         if (sum != c->total) {
             send_simple_to(c, c->peer, LR_SAVE_RESULT, LR_BYE_SAVE);
-            fail(c, "de campagne kwam onvolledig aan; probeer opnieuw te joinen");
+            fail(c, "The campaign transfer was incomplete; try joining again.");
             return;
         }
         if (c->cfg.game_running && c->cfg.game_running(c->cfg.ctx)) {
@@ -806,20 +806,20 @@ static void guest_save_message(lr_core *c, const lr_msg *m) {
         }
         if (!store_campaign(c)) {
             send_simple_to(c, c->peer, LR_SAVE_RESULT, LR_BYE_SAVE);
-            fail(c, "kon de campagne niet opslaan (zie DDCoop-launcher.log); je eigen save is niet aangeraakt "
+            fail(c, "Could not save the campaign (see DDCoop-launcher.log); your own save has not been changed. "
                     "of staat in DDCoop-backups");
             return;
         }
         if (!lr_write_ini(c->cfg.ini_path, "guest", c->game_port, c->password, c->cfg.coop_slot)) {
             send_simple_to(c, c->peer, LR_SAVE_RESULT, LR_BYE_SAVE);
-            fail(c, "kon ddcoop.ini niet schrijven (draai Repair DDCoop.bat)");
+            fail(c, "Could not write ddcoop.ini (run Repair DDCoop.bat).");
             return;
         }
         send_simple_to(c, c->peer, LR_SAVE_RESULT, 0);
         c->state = LR_ST_GUEST_LAUNCH;
         {
             char msg[160];
-            snprintf(msg, sizeof msg, "campagne staat klaar; spel start en opent vanzelf slot %d. Je eigen slot %d wordt na afloop teruggezet.", c->cfg.coop_slot, c->cfg.coop_slot);
+            snprintf(msg, sizeof msg, "Campaign ready; the game will open slot %d automatically. Your own slot %d will be restored afterwards.", c->cfg.coop_slot, c->cfg.coop_slot);
             set_status(c, msg);
         }
     }
@@ -862,7 +862,7 @@ void lr_core_on_message(lr_core *c, uint64_t peer, int channel, const uint8_t *b
             if (m.a == 0) {
                 c->state = LR_ST_HOST_PLAYING;
                 char msg[120];
-                snprintf(msg, sizeof msg, "vriend heeft de campagne; het spel van je vriend start. Beide spellen openen vanzelf slot %d.", c->cfg.coop_slot);
+                snprintf(msg, sizeof msg, "Your friend has the campaign. Both games will open slot %d automatically.", c->cfg.coop_slot);
                 set_status(c, msg);
             } else {
                 set_status(c, lr_bye_text(m.a));
@@ -878,8 +878,8 @@ void lr_core_on_message(lr_core *c, uint64_t peer, int channel, const uint8_t *b
             }
         } else if (m.type == LR_BYE) {
             char msg[256];
-            snprintf(msg, sizeof msg, c->host_spent ? "vriend vertrokken: %s. Sluit het spel en klik opnieuw op Host." :
-                     "vriend vertrokken: %s; wacht op een nieuwe vriend", lr_bye_text(m.a));
+            snprintf(msg, sizeof msg, c->host_spent ? "Friend left: %s. Close the game and click Host again." :
+                     "Friend left: %s; waiting for another friend.", lr_bye_text(m.a));
             lr_relay_drop_peer(&c->relay, peer);
             c->peer = 0;
             c->state = LR_ST_HOST_WAITING;
@@ -907,7 +907,7 @@ void lr_core_on_message(lr_core *c, uint64_t peer, int channel, const uint8_t *b
             break;
         case LR_BYE: {
             char msg[256];
-            snprintf(msg, sizeof msg, "de host sloot de verbinding: %s", lr_bye_text(m.a));
+            snprintf(msg, sizeof msg, "The host closed the connection: %s", lr_bye_text(m.a));
             fail(c, msg);
             break;
         }
@@ -925,7 +925,7 @@ void lr_core_on_message(lr_core *c, uint64_t peer, int channel, const uint8_t *b
         case LR_SAVE_CHUNK:
         case LR_SAVE_END:
             if (!c->password[0]) {
-                fail(c, "de host stuurde de campagne zonder sessie");
+                fail(c, "The host sent a campaign without a session.");
                 return;
             }
             if (c->state == LR_ST_GUEST_HELLO || c->state == LR_ST_GUEST_RECEIVING) guest_save_message(c, &m);
@@ -942,9 +942,9 @@ void lr_core_peer_left(lr_core *c, uint64_t peer) {
     if (c->role == LR_ROLE_HOST) {
         c->peer = 0;
         c->state = LR_ST_HOST_WAITING;
-        set_status(c, c->host_spent ? LR_HOST_RESTART_TEXT : "vriend heeft de sessie verlaten; wacht op een nieuwe vriend");
+        set_status(c, c->host_spent ? LR_HOST_RESTART_TEXT : "Friend left the session; waiting for another friend.");
     } else if (c->state != LR_ST_FAILED) {
-        fail(c, "de host heeft de sessie verlaten");
+        fail(c, "The host left the session.");
     }
 }
 
@@ -963,7 +963,7 @@ void lr_core_tick(lr_core *c, uint64_t now_ms) {
     if (c->peer && now_ms >= c->last_rx && now_ms - c->last_rx > LR_PEER_TIMEOUT_MS) {
         logf_(c, "peer silent for %d s", LR_PEER_TIMEOUT_MS / 1000);
         lr_core_peer_left(c, c->peer);
-        if (c->state == LR_ST_FAILED) snprintf(c->error, sizeof c->error, "geen contact meer met de host (20 s)");
+        if (c->state == LR_ST_FAILED) snprintf(c->error, sizeof c->error, "Lost contact with the host (20 s).");
         return;
     }
     if (c->state == LR_ST_HOST_SENDING) host_send_campaign(c);
@@ -982,5 +982,5 @@ void lr_core_stop(lr_core *c) {
     lr_owners_init(&c->owners); /* ddcoop-heroes.ini stays: the host restores its choices next session */
     c->owners_sent = 0;
     c->claim_count = 0;
-    set_status(c, "gestopt");
+    set_status(c, "stopped");
 }

@@ -17,7 +17,7 @@
 #include "lr_files.h"
 #include "lr_hashes.h"
 
-#define TITLE L"DDCoop installatie"
+#define TITLE L"DDCoop installation"
 #define REG_KEY L"Software\\DDCoop"
 
 static char g_report[8192];
@@ -49,7 +49,7 @@ static int fail(const char *fmt, ...) {
     vsnprintf(text, sizeof text, fmt, ap);
     va_end(ap);
     char all[12000];
-    snprintf(all, sizeof all, "%s%sFOUT: %s\r\n\r\nEr is niets kapotgemaakt; je kunt het gewoon opnieuw proberen.", g_report,
+    snprintf(all, sizeof all, "%s%sERROR: %s\r\n\r\nNothing was damaged; you can try again.", g_report,
              g_report[0] ? "\r\n" : "", text);
     MessageBoxW(NULL, W(all), TITLE, MB_OK | MB_ICONERROR);
     return 1;
@@ -179,12 +179,12 @@ static int find_in_steam(char *out, size_t cap) {
 }
 
 static int ask_folder(char *out, size_t cap) {
-    MessageBoxW(NULL, L"Darkest Dungeon is niet automatisch gevonden.\r\n\r\nKies in het volgende venster de map van het "
-                      L"spel (de map met daarin '_windows'). In Steam: rechtsklik Darkest Dungeon > Beheren > Lokale "
-                      L"bestanden doorbladeren.", TITLE, MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(NULL, L"Darkest Dungeon was not found automatically.\r\n\r\nSelect the game folder in the next window "
+                      L"(the folder containing '_windows'). In Steam: right-click Darkest Dungeon > Manage > Browse local "
+                      L"files.", TITLE, MB_OK | MB_ICONINFORMATION);
     CoInitialize(NULL);
     BROWSEINFOW bi = {0};
-    bi.lpszTitle = L"Kies de map van Darkest Dungeon";
+    bi.lpszTitle = L"Select the Darkest Dungeon folder";
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
     PIDLIST_ABSOLUTE pidl = SHBrowseForFolderW(&bi);
     if (!pidl) return 0;
@@ -247,19 +247,19 @@ static void desktop_shortcut(const char *target, const char *workdir, int create
 
 static int install(const char *kit, int repair) {
     char game[LR_PATH_MAX];
-    if (process_running(L"Darkest.exe")) return fail("Darkest Dungeon draait nog. Sluit het spel en probeer opnieuw.");
+    if (process_running(L"Darkest.exe")) return fail("Darkest Dungeon is still running. Close it and try again.");
     if (process_running(L"DDCoop.exe"))
-        return fail("DDCoop is nog open. Sluit het DDCoop-venster en probeer opnieuw.");
+        return fail("DDCoop is still running. Close its window and try again.");
     char files[LR_PATH_MAX], src_boot[LR_PATH_MAX], src_rt[LR_PATH_MAX], src_exe[LR_PATH_MAX];
     snprintf(files, sizeof files, "%s", kit);
     lr_join(src_boot, sizeof src_boot, files, "SDL2.dll");
     lr_join(src_rt, sizeof src_rt, files, "ddcoop-runtime.dll");
     lr_join(src_exe, sizeof src_exe, files, "DDCoop.exe");
     if (!has_hash(src_boot, LR_HASH_BOOTSTRAP) || !has_hash(src_rt, LR_HASH_RUNTIME))
-        return fail("De bestanden in deze zip zijn niet compleet of beschadigd. Pak de zip opnieuw uit (alles, niet "
-                    "alleen de .bat) en probeer opnieuw.");
-    if (!find_game(kit, game, sizeof game)) return fail("Darkest Dungeon niet gevonden. Is het geïnstalleerd via Steam?");
-    note("Spel gevonden: %s", game);
+        return fail("Files in this ZIP are missing or damaged. Extract the entire ZIP again, "
+                    "including all files, and try again.");
+    if (!find_game(kit, game, sizeof game)) return fail("Darkest Dungeon was not found. Is it installed through Steam?");
+    note("Game found: %s", game);
 
     char bin[LR_PATH_MAX], exe[LR_PATH_MAX], sdl[LR_PATH_MAX], orig[LR_PATH_MAX];
     lr_join(bin, sizeof bin, game, "_windows\\win64");
@@ -267,51 +267,51 @@ static int install(const char *kit, int repair) {
     lr_join(sdl, sizeof sdl, bin, "SDL2.dll");
     lr_join(orig, sizeof orig, bin, "SDL2_orig.dll");
     if (!has_hash(exe, LR_HASH_GAME))
-        return fail("Deze Darkest Dungeon-versie kent DDCoop niet (misschien een Steam-update). Er is een nieuwe DDCoop "
-                    "nodig; er is niets veranderd.");
-    note("OK  spelversie klopt");
+        return fail("This Darkest Dungeon version is not supported (possibly a Steam update). An updated DDCoop "
+                    "build is required; nothing was changed.");
+    note("OK  game version verified");
 
     /* SDL2: the original becomes SDL2_orig.dll, the bootstrap takes its place. */
     if (has_hash(sdl, LR_HASH_SDL2_ORIGINAL)) {
-        if (!copy_file(sdl, orig)) return fail("Kon SDL2_orig.dll niet maken in %s (rechten?).", bin);
-        if (!copy_file(src_boot, sdl)) return fail("Kon SDL2.dll niet vervangen in %s.", bin);
-        note("OK  opstartbestand geplaatst (origineel bewaard als SDL2_orig.dll)");
+        if (!copy_file(sdl, orig)) return fail("Could not create SDL2_orig.dll in %s (permissions?).", bin);
+        if (!copy_file(src_boot, sdl)) return fail("Could not replace SDL2.dll in %s.", bin);
+        note("OK  bootstrap installed (original kept as SDL2_orig.dll)");
     } else if (has_hash(sdl, LR_HASH_TOWN_PROBE_V12) || has_hash(sdl,LR_HASH_BOOTSTRAP_TEST11)) {
         if (!has_hash(orig, LR_HASH_SDL2_ORIGINAL))
-            return fail("De onderzoeksprobe staat nog in SDL2.dll, maar SDL2_orig.dll mist of is onbekend. Herstel eerst "
-                        "de originele gamebestanden; er is niets veranderd.");
-        if (!copy_file(src_boot, sdl)) return fail("Kon de onderzoeksprobe niet door het DDCoop-opstartbestand vervangen.");
+            return fail("SDL2.dll still contains a research probe, but SDL2_orig.dll is missing or unknown. Restore "
+                        "the original game files first; nothing was changed.");
+        if (!copy_file(src_boot, sdl)) return fail("Could not replace the research probe with the DDCoop bootstrap.");
         note("OK  bekend vorig opstartbestand vervangen; SDL2_orig.dll is intact");
     } else if (has_hash(sdl, LR_HASH_BOOTSTRAP)) {
         if (!has_hash(orig, LR_HASH_SDL2_ORIGINAL))
-            return fail("SDL2_orig.dll ontbreekt. Laat Steam de bestanden controleren (rechtsklik Darkest Dungeon > "
-                        "Eigenschappen > Geïnstalleerde bestanden > Integriteit controleren) en draai daarna Repair.");
+            return fail("SDL2_orig.dll is missing. Ask Steam to verify game files (right-click Darkest Dungeon > "
+                        "Properties > Installed Files > Verify integrity), then run Repair.");
         note("OK  opstartbestand stond er al");
     } else {
-        return fail("SDL2.dll in de spelmap is onbekend (een andere mod?). Laat Steam de bestanden controleren en "
-                    "probeer opnieuw.");
+        return fail("The game's SDL2.dll is unknown (another mod?). Ask Steam to verify game files and "
+                    "try again.");
     }
 
     char mods[LR_PATH_MAX], launcher[LR_PATH_MAX], dst[LR_PATH_MAX];
     lr_join(mods, sizeof mods, game, "mods\\DDCoop");
     lr_join(launcher, sizeof launcher, mods, "launcher");
-    if (!lr_make_dirs(launcher)) return fail("Kon de map %s niet maken.", launcher);
+    if (!lr_make_dirs(launcher)) return fail("Could not create folder %s.", launcher);
     lr_join(dst, sizeof dst, mods, "SDL2-bootstrap.dll");
     if (!copy_file(src_boot, dst) || !has_hash(dst, LR_HASH_BOOTSTRAP))
-        return fail("Kon automatische bootstrap-reparatie niet klaarzetten.");
+        return fail("Could not prepare automatic bootstrap repair.");
     lr_join(dst, sizeof dst, mods, "ddcoop-runtime.dll");
-    if (!copy_file(src_rt, dst)) return fail("Kon %s niet schrijven.", dst);
+    if (!copy_file(src_rt, dst)) return fail("Could not write %s.", dst);
     lr_join(dst, sizeof dst, launcher, "DDCoop.exe");
-    if (_stricmp(src_exe, dst) != 0 && !copy_file(src_exe, dst)) return fail("Kon %s niet schrijven.", dst);
+    if (_stricmp(src_exe, dst) != 0 && !copy_file(src_exe, dst)) return fail("Could not write %s.", dst);
     char steam_src[LR_PATH_MAX];
     lr_join(steam_src, sizeof steam_src, bin, "steam_api64.dll");
     lr_join(dst, sizeof dst, launcher, "steam_api64.dll");
-    if (!copy_file(steam_src, dst)) return fail("Kon steam_api64.dll niet kopiëren.");
+    if (!copy_file(steam_src, dst)) return fail("Could not copy steam_api64.dll.");
     lr_join(dst, sizeof dst, launcher, "steam_appid.txt");
-    if (!lr_write_file(dst, (const uint8_t *)"480", 3)) return fail("Kon steam_appid.txt niet schrijven.");
+    if (!lr_write_file(dst, (const uint8_t *)"480", 3)) return fail("Could not write steam_appid.txt.");
     lr_join(dst, sizeof dst, mods, "ddcoop.ini");
     if (!lr_write_ini(dst, "off", LR_DEFAULT_GAME_PORT, "unused-until-ddcoop-starts", 3))
-        return fail("Kon ddcoop.ini niet schrijven.");
+        return fail("Could not write ddcoop.ini.");
     note("OK  DDCoop geplaatst in %s", mods);
 
     HKEY key;
@@ -324,10 +324,10 @@ static int install(const char *kit, int repair) {
     char target[LR_PATH_MAX];
     lr_join(target, sizeof target, launcher, "DDCoop.exe");
     desktop_shortcut(target, launcher, 1);
-    note("OK  snelkoppeling 'DDCoop' op het bureaublad");
+    note("OK  DDCoop desktop shortcut created");
     note("");
-    note("Gewoon spelen via Steam blijft werken zoals altijd (dan is co-op uit).");
-    note("Co-op: open DDCoop (bureaublad). Wil je DDCoop nu openen?");
+    note("Starting normally through Steam still works as before (co-op is then off).");
+    note("For co-op, open DDCoop from the desktop. Open it now?");
     if (MessageBoxW(NULL, W(g_report), repair ? L"DDCoop gerepareerd" : L"DDCoop geïnstalleerd", MB_YESNO | MB_ICONINFORMATION) == IDYES)
         ShellExecuteW(NULL, L"open", W(target), NULL, W(launcher), SW_SHOWNORMAL);
     return 0;
@@ -335,25 +335,25 @@ static int install(const char *kit, int repair) {
 
 static int uninstall(const char *kit) {
     char game[LR_PATH_MAX];
-    if (process_running(L"Darkest.exe")) return fail("Darkest Dungeon draait nog. Sluit het spel en probeer opnieuw.");
-    if (process_running(L"DDCoop.exe")) return fail("DDCoop is nog open. Sluit het DDCoop-venster en probeer opnieuw.");
-    if (!find_game(kit, game, sizeof game)) return fail("Darkest Dungeon niet gevonden.");
+    if (process_running(L"Darkest.exe")) return fail("Darkest Dungeon is still running. Close it and try again.");
+    if (process_running(L"DDCoop.exe")) return fail("DDCoop is still running. Close its window and try again.");
+    if (!find_game(kit, game, sizeof game)) return fail("Darkest Dungeon was not found.");
     char bin[LR_PATH_MAX], sdl[LR_PATH_MAX], orig[LR_PATH_MAX], mods[LR_PATH_MAX], gone[LR_PATH_MAX];
     lr_join(mods, sizeof mods, game, "mods\\DDCoop");
     lr_join(gone, sizeof gone, mods, "ddcoop-guest-original.bin");
     if (lr_file_exists(gone))
-        return fail("Er staat nog een gastcampagne klaar om te herstellen. Open DDCoop eerst; het zet je eigen "
-                    "campagne automatisch terug.");
+        return fail("A guest campaign still needs recovery. Open DDCoop first; it will restore your own "
+                    "campaign automatically.");
     lr_join(bin, sizeof bin, game, "_windows\\win64");
     lr_join(sdl, sizeof sdl, bin, "SDL2.dll");
     lr_join(orig, sizeof orig, bin, "SDL2_orig.dll");
     if (has_hash(orig, LR_HASH_SDL2_ORIGINAL)) {
-        if (!move_file(orig, sdl)) return fail("Kon SDL2.dll niet terugzetten.");
-        note("OK  originele SDL2.dll teruggezet");
+        if (!move_file(orig, sdl)) return fail("Could not restore SDL2.dll.");
+        note("OK  original SDL2.dll restored");
     } else if (has_hash(sdl, LR_HASH_SDL2_ORIGINAL)) {
-        note("OK  SDL2.dll was al het origineel");
+        note("OK  SDL2.dll was already the original");
     } else {
-        return fail("Het origineel van SDL2.dll ontbreekt. Laat Steam de bestanden controleren; dat zet het terug.");
+        return fail("The original SDL2.dll is missing. Ask Steam to verify game files to restore it.");
     }
     lr_join(mods, sizeof mods, game, "mods\\DDCoop");
     lr_join(gone, sizeof gone, game, "mods\\DDCoop.verwijderd");
@@ -368,25 +368,25 @@ static int uninstall(const char *kit) {
         op.pFrom = from; /* an older DDCoop.verwijderd goes first */
         op.fFlags = FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
         if (lr_dir_exists(gone)) SHFileOperationW(&op);
-        if (!MoveFileW(a, b)) return fail("Kon mods\\DDCoop niet weghalen (staat er een venster open?).");
-        note("OK  mods\\DDCoop weggezet als mods\\DDCoop.verwijderd (logs blijven daar)");
+        if (!MoveFileW(a, b)) return fail("Could not move mods\\DDCoop (is a window still open?).");
+        note("OK  mods\\DDCoop moved to mods\\DDCoop.verwijderd (logs retained there)");
     }
     desktop_shortcut(NULL, NULL, 0);
     RegDeleteKeyW(HKEY_CURRENT_USER, REG_KEY);
-    note("OK  snelkoppeling verwijderd");
+    note("OK  desktop shortcut removed");
     note("");
-    note("Darkest Dungeon is weer helemaal zoals Steam het leverde. Saves zijn niet aangeraakt; backups van co-op "
-         "sessies staan in je gebruikersmap onder DDCoop-backups.");
-    MessageBoxW(NULL, W(g_report), L"DDCoop verwijderd", MB_OK | MB_ICONINFORMATION);
+    note("Darkest Dungeon is back to its Steam state. Saves were not changed; co-op backups "
+         "are in DDCoop-backups under your user folder.");
+    MessageBoxW(NULL, W(g_report), L"DDCoop removed", MB_OK | MB_ICONINFORMATION);
     return 0;
 }
 
 static int start(const char *kit) {
     char game[LR_PATH_MAX], target[LR_PATH_MAX], dir[LR_PATH_MAX];
-    if (!find_game(kit, game, sizeof game)) return fail("Darkest Dungeon niet gevonden. Draai eerst Install DDCoop.bat.");
+    if (!find_game(kit, game, sizeof game)) return fail("Darkest Dungeon was not found. Run Install DDCoop.bat first.");
     lr_join(dir, sizeof dir, game, "mods\\DDCoop\\launcher");
     lr_join(target, sizeof target, dir, "DDCoop.exe");
-    if (!lr_file_exists(target)) return fail("DDCoop is nog niet geïnstalleerd. Draai eerst Install DDCoop.bat.");
+    if (!lr_file_exists(target)) return fail("DDCoop is not installed. Run Install DDCoop.bat first.");
     ShellExecuteW(NULL, L"open", W(target), NULL, W(dir), SW_SHOWNORMAL);
     return 0;
 }

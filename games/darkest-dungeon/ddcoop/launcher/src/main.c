@@ -26,6 +26,7 @@
 #include "lr_snapshot.h"
 #include "lr_prepare_win.h"
 #include "lr_steam.h"
+#include "lr_mascot.h"
 
 /* How long a session waits for Steam to serve a save the game just wrote (LR_PREPARE_UNREAD), trying every 3 s. */
 #define LR_STEAM_WAIT_MS 90000u
@@ -300,18 +301,18 @@ static void check_install(void) {
     char exe[LR_PATH_MAX], hex[65];
     lr_join(exe, sizeof exe, G.bin, "Darkest.exe");
     if (!lr_file_exists(exe)) {
-        set_check(CHK_GAME, 0, "Spel niet gevonden. DDCoop hoort in <Darkest Dungeon>\\mods\\DDCoop\\launcher. Draai "
-                               "Install DDCoop.bat opnieuw.");
-        set_check(CHK_VERSION, 0, "Versie: niet te controleren");
-        set_check(CHK_MOD, 0, "Modbestanden: niet te controleren");
+        set_check(CHK_GAME, 0, "Game not found. DDCoop belongs in <Darkest Dungeon>\\mods\\DDCoop\\launcher. Run "
+                               "Install DDCoop.bat again.");
+        set_check(CHK_VERSION, 0, "Version: unable to verify");
+        set_check(CHK_MOD, 0, "Mod files: unable to verify");
         return;
     }
-    set_check(CHK_GAME, 1, "Spel gevonden: %s", G.root);
+    set_check(CHK_GAME, 1, "Game found: %s", G.root);
     if (sha256_file(exe, hex) && strcmp(hex, LR_HASH_GAME) == 0)
-        set_check(CHK_VERSION, 1, "Spelversie klopt");
+        set_check(CHK_VERSION, 1, "Game version verified");
     else
-        set_check(CHK_VERSION, 0, "Andere Darkest Dungeon-versie dan deze DDCoop kent. Is er een Steam-update geweest? "
-                                  "Dan is er een nieuwe DDCoop nodig.");
+        set_check(CHK_VERSION, 0, "This Darkest Dungeon version is not supported. Was there a Steam update? "
+                                  "An updated DDCoop build is required.");
     char boot[LR_PATH_MAX], orig[LR_PATH_MAX], runtime[LR_PATH_MAX], h2[65];
     lr_join(boot, sizeof boot, G.bin, "SDL2.dll");
     lr_join(orig, sizeof orig, G.bin, "SDL2_orig.dll");
@@ -322,11 +323,11 @@ static void check_install(void) {
     int rt_ok = sha256_file(runtime, h2) && strcmp(h2, LR_HASH_RUNTIME) == 0;
     int orig_ok = sha256_file(orig, h2) && strcmp(h2, LR_HASH_SDL2_ORIGINAL) == 0;
     if (boot_ok && rt_ok && orig_ok)
-        set_check(CHK_MOD, 1, "Modbestanden compleet");
+        set_check(CHK_MOD, 1, "Mod files complete");
     else
-        set_check(CHK_MOD, 0, "Modbestanden %s. Draai Repair DDCoop.bat (bijvoorbeeld na een Steam-update of "
-                              "'bestanden controleren').",
-                  !boot_ok ? "missen (SDL2.dll is teruggezet)" : !rt_ok ? "beschadigd (runtime)" : "missen (SDL2_orig.dll)");
+        set_check(CHK_MOD, 0, "Mod files %s. Run Repair DDCoop.bat (for example after a Steam update or "
+                              "'Verify integrity').",
+                  !boot_ok ? "missing (SDL2.dll was restored)" : !rt_ok ? "corrupted (runtime)" : "missen (SDL2_orig.dll)");
     G.install_ok = G.ok[CHK_GAME] && G.ok[CHK_VERSION] && G.ok[CHK_MOD];
 }
 
@@ -426,8 +427,8 @@ static void slot_fill(void) {
         wchar_t name[64] = L"", line[128];
         MultiByteToWideChar(CP_UTF8, 0, list[i].estate, -1, name, 64);
         if (list[i].empty) swprintf(line, 128, L"Slot %d: leeg", list[i].slot);
-        else if (list[i].unreadable) swprintf(line, 128, L"Slot %d: niet leesbaar", list[i].slot);
-        else swprintf(line, 128, L"Slot %d: %ls%ls", list[i].slot, name[0] ? name : L"(naamloos)", list[i].tutorial ? L"  (tutorial nog niet uitgespeeld)" : L"");
+        else if (list[i].unreadable) swprintf(line, 128, L"Slot %d: unreadable", list[i].slot);
+        else swprintf(line, 128, L"Slot %d: %ls%ls", list[i].slot, name[0] ? name : L"(naamloos)", list[i].tutorial ? L"  (tutorial not completed)" : L"");
         LRESULT at = SendMessageW(G.slot, CB_ADDSTRING, 0, (LPARAM)line);
         SendMessageW(G.slot, CB_SETITEMDATA, (WPARAM)at, list[i].slot);
     }
@@ -446,7 +447,7 @@ static int slot_cannot_host(int slot, char *why, size_t cap) {
     lr_campaign_entry list[9];
     lr_list_campaigns(G.core.cfg.remote_dir, list);
     if (slot < 1 || slot > 9 || (!list[slot - 1].empty && !list[slot - 1].unreadable)) return 0;
-    if (why) snprintf(why, cap, "De save in slot %d is niet leesbaar. Kies een ander slot, of open dit slot eerst gewoon via Steam.", slot);
+    if (why) snprintf(why, cap, "The save in slot %d is unreadable. Choose another slot, or open this slot through Steam first.", slot);
     return 1;
 }
 /* A campaign is made by the game itself, alone, and saved as always: its tutorial comes before there is anything to share. Only this process gets to know the slot. */
@@ -454,7 +455,7 @@ static void new_campaign_start(int slot) {
     char exe[LR_PATH_MAX];
     wchar_t value[2] = {(wchar_t)(L'0' + slot), 0};
     int ok;
-    stop_session("nieuwe campagne");
+    stop_session("new campaign");
     G.core.cfg.coop_slot = slot;
     lr_write_ini(G.core.cfg.ini_path, "off", LR_DEFAULT_GAME_PORT, "unused-until-ddcoop-starts", slot);
     lr_join(exe, sizeof exe, G.bin, "Darkest.exe");
@@ -464,7 +465,7 @@ static void new_campaign_start(int slot) {
     if (!ok) return;
     G.new_campaign_slot = slot;
     logline("game started alone for a campaign in slot %d (pid %lu)", slot, GetProcessId(G.game));
-    snprintf(G.core.status, sizeof G.core.status, "Maak je campagne in slot %d en speel de tutorial uit tot in het dorp. Sluit dan het spel en klik Host.", slot);
+    snprintf(G.core.status, sizeof G.core.status, "Create a campaign in slot %d and complete the tutorial to reach the Hamlet. Close the game, then click Host.", slot);
 }
 /* Host on a slot without a playable campaign yet. 1 = dealt with here. */
 static int new_campaign_offer(int slot) {
@@ -473,9 +474,9 @@ static int new_campaign_offer(int slot) {
     lr_list_campaigns(G.core.cfg.remote_dir, list);
     if (slot < 1 || slot > 9 || (!list[slot - 1].empty && !list[slot - 1].tutorial)) return 0;
     if (list[slot - 1].empty)
-        swprintf(text, 400, L"Slot %d is nog leeg. Nieuwe campagne maken?\n\nHet spel start zonder je vriend. Je kiest een naam en speelt de tutorial uit tot in het dorp; dat wordt gewoon opgeslagen in slot %d. Sluit daarna het spel en klik Host.", slot, slot);
+        swprintf(text, 400, L"Slot %d is empty. Create a new campaign?\n\nThe game starts without your friend. Choose a name and finish the tutorial to reach the Hamlet; progress is saved in slot %d. Close the game afterwards and click Host.", slot, slot);
     else
-        swprintf(text, 400, L"De campagne in slot %d staat nog in de tutorial. Verder spelen?\n\nHet spel start zonder je vriend. Speel de tutorial uit tot in het dorp; dat wordt gewoon opgeslagen. Sluit daarna het spel en klik Host.", slot);
+        swprintf(text, 400, L"The campaign in slot %d is still in the tutorial. Continue playing?\n\nThe game starts without your friend. Complete the tutorial to reach the Hamlet; progress is saved. Close the game afterwards and click Host.", slot);
     if (MessageBoxW(G.wnd, text, L"DDCoop", MB_YESNO | MB_ICONQUESTION) == IDYES) new_campaign_start(slot);
     return 1;
 }
@@ -494,12 +495,12 @@ static void check_slot(void) {
     lr_game_info game;
     if (G.core.cfg.remote_dir[0] && lr_find_save_folder(G.core.cfg.remote_dir, G.core.cfg.coop_slot, name, sizeof name) && !slot_cannot_host(G.core.cfg.coop_slot, NULL, 0)) {
         if (lr_read_game_info(G.core.cfg.remote_dir, name, &game) && (game.text || game.tutorial))
-            set_check(CHK_SLOT, 1, "Campagne in slot %d staat nog in de tutorial. Als jij host, speel je die eerst uit: klik Host.",
+            set_check(CHK_SLOT, 1, "Campaign in slot %d is still in the tutorial. To host it, complete the tutorial first: click Host.",
                       G.core.cfg.coop_slot);
         else
-            set_check(CHK_SLOT, 1, "Co-op campagne in slot %d gevonden (%s)", G.core.cfg.coop_slot, name);
+            set_check(CHK_SLOT, 1, "Co-op campaign found in slot %d (%s)", G.core.cfg.coop_slot, name);
     } else
-        set_check(CHK_SLOT, 1, "Slot %d is leeg. Als jij host, maak je daar eerst een nieuwe campagne: klik Host.", G.core.cfg.coop_slot);
+        set_check(CHK_SLOT, 1, "Slot %d is empty. To host, create a campaign there first: click Host.", G.core.cfg.coop_slot);
 }
 
 /* ---- the game ---- */
@@ -552,7 +553,7 @@ static int spawn_game_process(const char *exe, const char *args, HANDLE *process
     free(out);
     if (!ok) {
         logline("CreateProcess failed: %lu", GetLastError());
-        message("Kon Darkest Dungeon niet starten. Zie DDCoop-launcher.log.", MB_ICONERROR);
+        message("Could not start Darkest Dungeon. See DDCoop-launcher.log.", MB_ICONERROR);
         return 0;
     }
     CloseHandle(pi.hThread);
@@ -586,9 +587,9 @@ static int begin_prepare(const char *bundle, int restore, int nosave) {
     G.prepare_nosave = nosave;
     G.prepare_since = now_ms();
     snprintf(G.core.status, sizeof G.core.status,
-             restore == 2 ? "De back-up wordt teruggezet via Steam. Even wachten..."
-             : restore    ? "Je eigen campagne wordt automatisch teruggezet. Even wachten..."
-                          : "Campagne voorbereiden en controleren via Steam. Even wachten...");
+             restore == 2 ? "Restoring the backup through Steam. Please wait..."
+             : restore    ? "Restoring your own campaign automatically. Please wait..."
+                          : "Preparing and verifying the campaign through Steam. Please wait...");
     logline("Steam %s helper started; game stays closed", restore == 2 ? "undo" : restore ? "restore" : "prepare");
     return 1;
 }
@@ -598,7 +599,7 @@ static int launch_game(int nosave) {
     if (!G.install_ok) return 0;
     G.auto_logdir[0]=0;
     if (G.prepare || G.game || darkest_running()) {
-        message("Darkest Dungeon draait al, of DDCoop is nog bezig met voorbereiden/herstellen. Even wachten.",
+        message("Darkest Dungeon is running, or DDCoop is preparing/restoring a campaign. Please wait.",
                 MB_ICONWARNING);
         return 0;
     }
@@ -669,7 +670,7 @@ static int newest_backup(int slot, char *out, size_t cap, char *when, size_t whe
         SYSTEMTIME u, t;
         FileTimeToSystemTime(&best, &u);
         SystemTimeToTzSpecificLocalTime(NULL, &u, &t);
-        snprintf(when, when_cap, "%u-%u-%04u om %02u:%02u", t.wDay, t.wMonth, t.wYear, t.wHour, t.wMinute);
+        snprintf(when, when_cap, "%u-%u-%04u at %02u:%02u", t.wDay, t.wMonth, t.wYear, t.wHour, t.wMinute);
     }
     return found;
 }
@@ -678,41 +679,41 @@ static void do_undo(void) {
     char path[LR_PATH_MAX], when[64];
     wchar_t text[600];
     if (G.prepare || restore_pending() || session_active() || G.game) {
-        message("Dit kan alleen als er geen sessie loopt en het spel dicht is.", MB_ICONINFORMATION);
+        message("This is only available with no active session and the game closed.", MB_ICONINFORMATION);
         return;
     }
     if (!G.install_ok || !G.steam_ok) {
-        message("Eerst moeten alle punten bovenaan groen zijn (OK).", MB_ICONWARNING);
+        message("All checks above must be green (OK) first.", MB_ICONWARNING);
         return;
     }
     if (darkest_running()) {
-        message("Sluit Darkest Dungeon eerst.", MB_ICONWARNING);
+        message("Close Darkest Dungeon first.", MB_ICONWARNING);
         return;
     }
     if (!newest_backup(G.chosen_slot, path, sizeof path, when, sizeof when)) {
-        message("DDCoop heeft nog geen back-up van dit slot.", MB_ICONINFORMATION);
+        message("DDCoop has no backup of this slot yet.", MB_ICONINFORMATION);
         return;
     }
-    swprintf(text, 600, L"Slot %d terugzetten zoals het was vlak voor de laatste DDCoop-sessie in dat slot (%hs)?\n\n"
-             L"Alles wat daarna in dit slot is opgeslagen, verdwijnt uit het spel. DDCoop bewaart het wel eerst als "
-             L"nieuwe back-up in je map DDCoop-backups.", G.chosen_slot, when);
+    swprintf(text, 600, L"Restore slot %d to its state before the last DDCoop session in this slot (%hs)?\n\n"
+             L"Progress saved since then will be replaced. DDCoop first keeps it as a "
+             L"new backup in your DDCoop-backups folder.", G.chosen_slot, when);
     if (MessageBoxW(G.wnd, text, L"DDCoop", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) != IDYES) return;
     logline("putting slot %d back from %s", G.chosen_slot, path);
-    if (!begin_prepare(path, 2, 1)) message("Terugzetten kon niet starten. Er is niets veranderd.", MB_ICONWARNING);
+    if (!begin_prepare(path, 2, 1)) message("Restore could not start. Nothing was changed.", MB_ICONWARNING);
 }
 
 static void do_host(void) {
     if (G.prepare || restore_pending()) {
-        message("DDCoop moet eerst je eigen campagne terugzetten. Sluit een eventueel open gastspel en wacht even.",
+        message("DDCoop must restore your own campaign first. Close any guest game and wait for recovery.",
                 MB_ICONINFORMATION);
         return;
     }
     if (!G.install_ok || !G.steam_ok) {
-        message("Eerst moeten alle punten bovenaan groen zijn (OK).", MB_ICONWARNING);
+        message("All checks above must be green (OK) first.", MB_ICONWARNING);
         return;
     }
     if (darkest_running()) {
-        message("Sluit Darkest Dungeon eerst. DDCoop start het spel zelf, met co-op aan.", MB_ICONWARNING);
+        message("Close Darkest Dungeon first. DDCoop starts the game with co-op enabled.", MB_ICONWARNING);
         return;
     }
     if (new_campaign_offer(G.chosen_slot)) return;
@@ -723,7 +724,7 @@ static void do_host(void) {
             return;
         }
     }
-    stop_session("nieuwe sessie");
+    stop_session("new session");
     G.core.cfg.coop_slot = G.chosen_slot;
     {
         /* Where this game's log lines will start. */
@@ -739,36 +740,36 @@ static void do_host(void) {
         return;
     }
     if (!lr_steam_host_lobby()) {
-        stop_session("Steam kon geen lobby maken");
-        message("Steam kon geen lobby maken. Probeer het zo opnieuw.", MB_ICONWARNING);
+        stop_session("Steam could not create a lobby");
+        message("Steam could not create a lobby. Try again shortly.", MB_ICONWARNING);
         return;
     }
     G.hosting_pending = 1;
     G.hosting_since = now_ms();
-    snprintf(G.core.status, sizeof G.core.status, "lobby wordt gemaakt...");
+    snprintf(G.core.status, sizeof G.core.status, "Creating lobby...");
 }
 
 static void join_lobby(uint64_t lobby) {
     if (G.prepare || restore_pending()) {
-        message("DDCoop moet eerst je eigen campagne terugzetten. Sluit een eventueel open gastspel en wacht even.",
+        message("DDCoop must restore your own campaign first. Close any guest game and wait for recovery.",
                 MB_ICONINFORMATION);
         return;
     }
     if (!G.install_ok || !G.steam_ok) {
-        message("Eerst moeten alle punten bovenaan groen zijn (OK).", MB_ICONWARNING);
+        message("All checks above must be green (OK) first.", MB_ICONWARNING);
         return;
     }
     if (darkest_running()) {
-        message("Sluit Darkest Dungeon eerst. DDCoop zet de campagne van de host klaar en start daarna het spel zelf.",
+        message("Close Darkest Dungeon first. DDCoop prepares the host campaign, then starts the game.",
                 MB_ICONWARNING);
         return;
     }
-    stop_session("nieuwe sessie");
+    stop_session("new session");
     if (!lr_steam_join_lobby(lobby)) {
-        message("Kon de lobby niet openen.", MB_ICONWARNING);
+        message("Could not open the lobby.", MB_ICONWARNING);
         return;
     }
-    snprintf(G.core.status, sizeof G.core.status, "lobby van de host binnengaan...");
+    snprintf(G.core.status, sizeof G.core.status, "Entering host lobby...");
     logline("joining lobby %llu", (unsigned long long)lobby);
 }
 
@@ -782,11 +783,11 @@ static lr_friend *selected_friend(void) {
 static void do_join_selected(void) {
     lr_friend *f = selected_friend();
     if (!f) {
-        message("Kies eerst een vriend in de lijst.", MB_ICONINFORMATION);
+        message("Select a friend in the list first.", MB_ICONINFORMATION);
         return;
     }
     if (!f->hosting) {
-        message("Deze vriend host (nog) geen DDCoop-spel. Vraag je vriend op Host te klikken, of je uit te nodigen.",
+        message("This friend is not hosting DDCoop yet. Ask them to click Host or invite you.",
                 MB_ICONINFORMATION);
         return;
     }
@@ -796,20 +797,20 @@ static void do_join_selected(void) {
 static void do_invite_selected(void) {
     lr_friend *f = selected_friend();
     if (!f) {
-        message("Kies eerst een vriend in de lijst.", MB_ICONINFORMATION);
+        message("Select a friend in the list first.", MB_ICONINFORMATION);
         return;
     }
     if (G.core.role != LR_ROLE_HOST || !lr_steam_lobby()) {
-        message("Klik eerst op 'Host een spel'; daarna kun je vrienden uitnodigen.", MB_ICONINFORMATION);
+        message("Click 'Host a game' first; then you can invite friends.", MB_ICONINFORMATION);
         return;
     }
     if (lr_steam_invite(f->id)) {
         char t[256];
-        snprintf(t, sizeof t, "Uitnodiging verstuurd naar %.64s. Je vriend moet DDCoop open hebben en de uitnodiging in Steam "
-                              "accepteren (of jou kiezen en op Join klikken).", f->name);
+        snprintf(t, sizeof t, "Invitation sent to %.64s. Your friend must have DDCoop open and accept the Steam invitation "
+                              "(or select you and click Join).", f->name);
         message(t, MB_ICONINFORMATION);
     } else {
-        message("Steam kon de uitnodiging niet versturen.", MB_ICONWARNING);
+        message("Steam could not send the invitation.", MB_ICONWARNING);
     }
 }
 
@@ -822,7 +823,7 @@ static void do_join_code(void) {
     while (*p == ' ') p++;
     uint64_t lobby = _strtoui64(p, NULL, 10);
     if (!lobby) {
-        message("Plak eerst de code van de host in het vak (alleen cijfers).", MB_ICONINFORMATION);
+        message("Paste the host code into the box first (digits only).", MB_ICONINFORMATION);
         return;
     }
     join_lobby(lobby);
@@ -831,7 +832,7 @@ static void do_join_code(void) {
 static void do_copy_code(void) {
     uint64_t lobby = lr_steam_lobby();
     if (G.core.role != LR_ROLE_HOST || !lobby) {
-        message("Je hebt pas een code als je host. Klik eerst op 'Host een spel'.", MB_ICONINFORMATION);
+        message("A code is available after hosting. Click 'Host a game' first.", MB_ICONINFORMATION);
         return;
     }
     char code[32];
@@ -845,7 +846,7 @@ static void do_copy_code(void) {
         CloseClipboard();
     }
     char t[160];
-    snprintf(t, sizeof t, "Code %s staat op het klembord. Stuur de code naar je vriend; die plakt hem in het codevak.", code);
+    snprintf(t, sizeof t, "Code %s copied to clipboard. Send it to your friend to paste into the code box.", code);
     message(t, MB_ICONINFORMATION);
 }
 
@@ -927,8 +928,8 @@ static void preparation_tick(void) {
             G.prepare_undo = 0;
             logline("backup put back: %s (exit %lu)", code == 0 ? "verified" : "FAILED", code);
             snprintf(G.core.status, sizeof G.core.status, code == 0
-                     ? "De back-up staat terug in slot %d. Wat er tot net in stond, is ook bewaard."
-                     : "Terugzetten is niet gelukt; slot %d is onveranderd of teruggedraaid. De back-up is bewaard.",
+                     ? "Backup restored to slot %d. The slot's previous contents were also kept."
+                     : "Restore failed; slot %d was left unchanged or rolled back. The backup was retained.",
                      G.chosen_slot);
             if (code != 0) collect_logs(0);
         } else if (G.prepare_restore) {
@@ -936,16 +937,16 @@ static void preparation_tick(void) {
                 G.restore_failed = 0;
                 logline("guest original campaign restored through Steam and verified; recovery journal cleared");
                 snprintf(G.core.status, sizeof G.core.status,
-                         "Je eigen campagne is teruggezet. Klaar voor een nieuwe sessie.");
+                         "Your own campaign has been restored. Ready for a new session.");
                 collect_logs(0);
             } else {
                 G.restore_failed = 1;
                 G.want_close = 0;
                 logline("guest restore failed (exit %lu); recovery journal retained", code);
                 snprintf(G.core.status, sizeof G.core.status,
-                         "Herstel nog niet voltooid. Je back-up is bewaard; start DDCoop opnieuw om te herstellen.");
-                message("Je eigen campagne kon nog niet volledig worden teruggezet. De back-up is bewaard. Sluit het "
-                        "spel en start DDCoop opnieuw. Stuur de automatisch verzamelde logs als dit terugkomt.",
+                         "Recovery is not complete. Your backup is safe; restart DDCoop to finish recovery.");
+                message("Your own campaign could not yet be fully restored. The backup is safe. Close the "
+                        "game and restart DDCoop. Send the automatically collected logs if this persists.",
                         MB_ICONWARNING);
                 collect_logs(0);
             }
@@ -957,13 +958,13 @@ static void preparation_tick(void) {
             G.prepare_retry_at = now_ms() + 3000;
             logline("Steam does not serve slot %d yet; trying again in 3 seconds", G.core.cfg.coop_slot);
             snprintf(G.core.status, sizeof G.core.status,
-                     "Steam is nog bezig met het opslaan van slot %d (dat kan na het sluiten van het spel even duren). "
-                     "DDCoop wacht en probeert het vanzelf opnieuw; het spel start zodra Steam klaar is.", G.core.cfg.coop_slot);
+                     "Steam is still saving slot %d (this may take a little while after closing the game). "
+                     "DDCoop waits and retries automatically; the game starts when Steam is ready.", G.core.cfg.coop_slot);
         } else if (code != 0) {
             logline("preparation refused launch (exit %lu)", code);
-            stop_session("Campagnevoorbereiding mislukt; het spel is niet gestart.");
-            message("De campagne kon niet betrouwbaar worden voorbereid. DDCoop start het spel niet. Een eventuele "
-                    "gast-back-up wordt automatisch teruggezet. De diagnose wordt op je bureaublad verzameld.",
+            stop_session("Campaign preparation failed; the game was not started.");
+            message("The campaign could not be prepared reliably. DDCoop will not start the game. Any "
+                    "guest backup is restored automatically. Diagnostic logs are collected on your desktop.",
                     MB_ICONWARNING);
             collect_logs(0);
         } else if (session_active() && !G.want_close) {
@@ -974,21 +975,21 @@ static void preparation_tick(void) {
                 G.runtime_line[0] = 0;
                 logline("game started%s after Steam save verification (pid %lu)",
                         G.prepare_nosave ? " with -nosave" : " (host saving enabled)", GetProcessId(G.game));
-                snprintf(G.core.status, sizeof G.core.status, "Campagne gecontroleerd; het spel start en opent vanzelf slot %d.", G.core.cfg.coop_slot);
+                snprintf(G.core.status, sizeof G.core.status, "Campaign verified; the game starts and opens slot %d automatically.", G.core.cfg.coop_slot);
             } else
-                stop_session("Het spel kon niet starten; gast-herstel wordt uitgevoerd.");
+                stop_session("The game could not start; recovering the guest campaign.");
         }
     }
     if (G.prepare_retry_at && !G.prepare && now_ms() >= G.prepare_retry_at) {
         G.prepare_retry_at = 0;
         if (session_active() && !G.want_close && !G.game) {
             if (darkest_running())
-                stop_session("Darkest Dungeon draait al; sluit het en klik opnieuw op Host of Join.");
+                stop_session("Darkest Dungeon is running; close it, then click Host or Join again.");
             else if (!begin_prepare(G.prepare_bundle, 0, G.prepare_nosave))
-                stop_session("Campagnevoorbereiding kon niet opnieuw starten; het spel is niet gestart.");
+                stop_session("Campaign preparation could not restart; the game was not started.");
             else
                 snprintf(G.core.status, sizeof G.core.status,
-                         "Steam is nog bezig met het opslaan van slot %d. DDCoop probeert het opnieuw (%llu s)...",
+                         "Steam is still saving slot %d. DDCoop will retry (%llu s)...",
                          G.core.cfg.coop_slot, (unsigned long long)((now_ms() - G.prepare_wait_since) / 1000));
         }
     }
@@ -996,20 +997,20 @@ static void preparation_tick(void) {
         G.prepare_since = 0;
         logline("Steam storage helper still running after 30 seconds; not terminating a possible save write");
         snprintf(G.core.status, sizeof G.core.status,
-                 "Steam is nog bezig met de campagne. Even wachten; het spel blijft gesloten.");
+                 "Steam is still saving the campaign. Please wait; the game remains closed.");
     }
     if (!G.prepare && !G.game && !session_active() && restore_pending() && !G.restore_failed && G.steam_ok) {
         if (!darkest_running()) {
-            if(G.core.state==LR_ST_FAILED)stop_session("Gastcampagne herstellen na afgebroken sessie...");
+            if(G.core.state==LR_ST_FAILED)stop_session("Recovering your campaign after an interrupted session...");
             if (!begin_prepare(G.core.cfg.restore_path, 1, 1)) {
                 G.restore_failed = 1;
-                message("DDCoop kon het herstel niet starten. De oorspronkelijke campagne is bewaard. Sluit het spel "
-                        "en start DDCoop opnieuw.",
+                message("DDCoop could not start recovery. Your original campaign is safe. Close the game "
+                        "and restart DDCoop.",
                         MB_ICONWARNING);
             }
         } else
             snprintf(G.core.status, sizeof G.core.status,
-                     "Sluit eerst Darkest Dungeon; daarna zet DDCoop je eigen campagne terug.");
+                     "Close Darkest Dungeon first; DDCoop will then restore your own campaign.");
     }
     if (G.want_close && !G.prepare && !restore_pending() && !G.game) DestroyWindow(G.wnd);
     static uint64_t close_at;
@@ -1044,7 +1045,7 @@ static void on_event(void *ctx, const lr_steam_event *ev) {
         if (G.hosting_pending) {
             G.hosting_pending = 0;
             if (!launch_game(!G.saving)) {
-                stop_session("spel kon niet starten");
+                stop_session("The game could not start.");
                 return;
             }
             /* launch_game queues verified preparation; its status stays visible until the child finishes. */
@@ -1073,7 +1074,7 @@ static void on_event(void *ctx, const lr_steam_event *ev) {
     case LR_EV_JOIN_REQUESTED:
         logline("steam: join requested for lobby %llu", (unsigned long long)ev->lobby);
         if (session_active()) {
-            message("Je zit al in een sessie. Klik eerst op Stop als je naar deze vriend wilt.", MB_ICONINFORMATION);
+            message("A session is already active. Click Stop before joining this friend.", MB_ICONINFORMATION);
             return;
         }
         ShowWindow(G.wnd, SW_SHOWNORMAL);
@@ -1089,27 +1090,27 @@ static void update_checks(void) {
     lr_state s = G.core.state;
     int host = G.core.role == LR_ROLE_HOST, guest = G.core.role == LR_ROLE_GUEST;
     if (lr_steam_lobby())
-        set_check(CHK_LOBBY, 1, host ? "Lobby open (vrienden kunnen joinen)" : "In de lobby van de host");
+        set_check(CHK_LOBBY, 1, host ? "Lobby open (friends can join)" : "In the host lobby");
     else
-        set_check(CHK_LOBBY, 0, "Lobby: nog niet (klik Host, of join een vriend)");
+        set_check(CHK_LOBBY, 0, "Lobby: not open (click Host or join a friend)");
     if ((host && (s == LR_ST_HOST_SENDING || s == LR_ST_HOST_PLAYING)) || (guest && s >= LR_ST_GUEST_RECEIVING && s != LR_ST_FAILED))
-        set_check(CHK_FRIEND, 1, host ? "Vriend verbonden via Steam" : "Verbonden met de host via Steam");
+        set_check(CHK_FRIEND, 1, host ? "Friend connected through Steam" : "Connected to host through Steam");
     else
-        set_check(CHK_FRIEND, 0, "Vriend: nog niet verbonden");
+        set_check(CHK_FRIEND, 0, "Friend: not connected");
     if (strstr(G.runtime_line, "framework OFF"))
-        set_check(CHK_RUNTIME, 0, "Co-op in het spel staat UIT: de runtime herkent dit spel niet volledig en doet niets "
-                                  "(het spel draait gewoon). Er is een nieuwe ddcoop-runtime.dll nodig.");
+        set_check(CHK_RUNTIME, 0, "In-game co-op is OFF: the runtime does not fully recognize this game and makes no changes "
+                                  "(the game runs normally). An updated ddcoop-runtime.dll is required.");
     else if (G.core.host_spent)
-        set_check(CHK_RUNTIME, 0, "De sessie van dit spel is afgelopen. Sluit het spel en klik opnieuw op Host.");
+        set_check(CHK_RUNTIME, 0, "This game session has ended. Close the game and click Host again.");
     else if (strstr(G.runtime_line, "host rejected or protocol"))
-        set_check(CHK_RUNTIME, 0, "Het spel van de host antwoordt niet. Heeft de host slot %d geladen? Zo ja: de host sluit "
-                                  "het spel en klikt opnieuw op Host.", G.core.cfg.coop_slot);
+        set_check(CHK_RUNTIME, 0, "The host game is not responding. Has the host loaded slot %d? If so, the host must close "
+                                  "the game and click Host again.", G.core.cfg.coop_slot);
     else if (G.core.relay_up && G.core.relay.game_connected && strstr(G.runtime_line, "ready"))
-        set_check(CHK_RUNTIME, 1, "Co-op in het spel actief. Laad allebei slot %d.", G.core.cfg.coop_slot);
+        set_check(CHK_RUNTIME, 1, "In-game co-op active. Both players should load slot %d.", G.core.cfg.coop_slot);
     else if (G.core.relay_up && G.core.relay.game_connected)
-        set_check(CHK_RUNTIME, 1, "Spellen verbonden via DDCoop (%s)", G.runtime_line[0] ? G.runtime_line : "wacht op runtime");
+        set_check(CHK_RUNTIME, 1, "Games connected through DDCoop (%s)", G.runtime_line[0] ? G.runtime_line : "waiting for runtime");
     else
-        set_check(CHK_RUNTIME, 0, "Spellen: nog niet verbonden%s%s", G.runtime_line[0] ? " - laatste regel: " : "",
+        set_check(CHK_RUNTIME, 0, "Games: not connected%s%s", G.runtime_line[0] ? " - laatste regel: " : "",
                   G.runtime_line);
 
     char text[4096];
@@ -1153,12 +1154,12 @@ static void update_friends(void) {
     for (int i = 0; i < n; i++) {
         char line[256];
         snprintf(line, sizeof line, "%s   %s", list[i].name,
-                 list[i].hosting ? "<< HOST DDCOOP - klik Join" : list[i].in_game ? "(in een spel)" : "(online)");
+                 list[i].hosting ? "<< HOST DDCOOP - klik Join" : list[i].in_game ? "(in a game)" : "(online)");
         LRESULT idx = SendMessageW(G.friends, LB_ADDSTRING, 0, (LPARAM)W(line));
         SendMessageW(G.friends, LB_SETITEMDATA, (WPARAM)idx, i);
         if (list[i].id == selected) SendMessageW(G.friends, LB_SETCURSEL, (WPARAM)idx, 0);
     }
-    if (n == 0) SendMessageW(G.friends, LB_ADDSTRING, 0, (LPARAM)L"(geen vrienden online)");
+    if (n == 0) SendMessageW(G.friends, LB_ADDSTRING, 0, (LPARAM)L"(no friends online)");
     SendMessageW(G.friends, WM_SETREDRAW, TRUE, 0);
     InvalidateRect(G.friends, NULL, TRUE);
 }
@@ -1232,7 +1233,7 @@ static void update_heroes(void) {
         for (char *c = cls; *c; c++)
             if (*c == '_') *c = ' ';
         snprintf(level, sizeof level, "%d", lr_hero_level(h->xp));
-        const char *by = o->owner[i] == me ? "jij" : o->owner[i] == LR_PLAYER_HOST ? "host" : "vriend";
+        const char *by = o->owner[i] == me ? "you" : o->owner[i] == LR_PLAYER_HOST ? "host" : "friend";
         LVITEMW it = {0};
         it.mask = LVIF_TEXT | LVIF_PARAM;
         it.iItem = position;
@@ -1255,13 +1256,13 @@ static void update_heroes(void) {
     G.heroes_filling = 0;
     if (t < G.heroes_hint_until) return; /* a message about the last click stays a moment */
     if (!role)
-        set_heroes_hint("Host een spel of join een vriend; dan staan hier de helden van de co-op campagne.");
+        set_heroes_hint("Host a game or join a friend to see the co-op campaign heroes here.");
     else if (o->count == 0)
-        set_heroes_hint(role == LR_ROLE_HOST ? "Geen helden gevonden in de campagne (zie DDCoop-launcher.log)."
-                                             : "Wacht op de heldenlijst van de host...");
+        set_heroes_hint(role == LR_ROLE_HOST ? "No heroes found in the campaign (see DDCoop-launcher.log)."
+                                             : "Waiting for the host hero list...");
     else
-        set_heroes_hint("\xe2\x97\x8f = actuele party uit het spel; deze staat bovenaan. Vink aan welke helden jij bestuurt; "
-                        "wijzigingen gaan in zodra het spel een nieuwe keuze toestaat.");
+        set_heroes_hint("\xe2\x97\x8f = current in-game party, shown first. Tick the heroes you control; "
+                        "changes apply at the next supported choice boundary.");
 }
 
 /* A tick box was clicked: ask lr_core (the host decides). The list then follows the table again: the host's
@@ -1274,7 +1275,7 @@ static void on_hero_checked(const NMLISTVIEW *nm) {
     int claim = new_state == 2;
     logline("hero %u %s by this player", (unsigned)id, claim ? "ticked" : "unticked");
     if (!lr_core_claim(&G.core, id, claim)) {
-        set_heroes_hint("Dat lukte niet; de lijst toont weer wie welke held heeft.");
+        set_heroes_hint("That did not work; the list shows the current owners again.");
         G.heroes_hint_until = now_ms() + 4000;
         G.heroes_shown = 0xFFFFFFFFu;
     } else if (G.core.role == LR_ROLE_GUEST) {
@@ -1334,14 +1335,14 @@ static void tick_body(void) {
         collect_logs(0);
     }
     if (lr_core_take_launch(&G.core)) {
-        if (!launch_game(1)) stop_session("spel kon niet starten");
+        if (!launch_game(1)) stop_session("The game could not start.");
     }
     if (G.hosting_pending && t - G.hosting_since > 20000) {
         logline("lobby: no answer from Steam in 20 s");
-        stop_session("Steam gaf binnen 20 seconden geen lobby.");
+        stop_session("Steam did not create a lobby within 20 seconds.");
         message(lr_steam_logged_on()
-                    ? "Steam gaf binnen 20 seconden geen lobby. Probeer nog eens; lukt het weer niet, klik dan 'Logs kopiëren' en stuur de map."
-                    : "Steam staat in offline-modus, dan kan er geen lobby gemaakt worden. Zet Steam online (menu Steam > Ga online) en probeer opnieuw.",
+                    ? "Steam did not create a lobby within 20 seconds. Try again; if this persists, click 'Copy logs' and send the folder."
+                    : "Steam is offline, so a lobby cannot be created. Set Steam online (Steam menu > Go Online) and try again.",
                 MB_ICONWARNING);
     }
     if (G.game && WaitForSingleObject(G.game, 0) == WAIT_OBJECT_0) {
@@ -1352,16 +1353,16 @@ static void tick_body(void) {
         CloseHandle(G.game);
         G.game = NULL;
         G.hotkey_ok=RegisterHotKey(G.wnd,ID_HOTKEY,MOD_NOREPEAT,VK_F9);
-        stop_session("Darkest Dungeon is gesloten; sessie beëindigd. Klik Host of Join voor een nieuwe sessie.");
+        stop_session("Darkest Dungeon closed; session ended. Click Host or Join for a new session.");
         if (G.new_campaign_slot) {
             int slot = G.new_campaign_slot;
             lr_campaign_entry list[9];
             G.new_campaign_slot = 0;
             lr_list_campaigns(G.core.cfg.remote_dir, list);
             snprintf(G.core.status, sizeof G.core.status,
-                     list[slot - 1].empty ? "Er staat nog geen campagne in slot %d. Klik Host om het opnieuw te proberen." :
-                     list[slot - 1].tutorial ? "Slot %d staat nog in de tutorial. Klik Host om verder te spelen." :
-                     "De campagne in slot %d is klaar. Klik Host om samen te spelen. Is Steam nog bezig met opslaan, dan wacht DDCoop daar vanzelf op.", slot);
+                     list[slot - 1].empty ? "There is no campaign in slot %d yet. Click Host to try again." :
+                     list[slot - 1].tutorial ? "Slot %d is still in the tutorial. Click Host to continue playing." :
+                     "The campaign in slot %d is ready. Click Host to play together. DDCoop waits automatically if Steam is still saving.", slot);
         }
         if (guest) collect_logs(0);
     }
@@ -1423,31 +1424,32 @@ static void build_window(void) {
     G.checks = control(L"EDIT", L"", WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL |
                        ES_READONLY | ES_NOHIDESEL, 14, y, 640, 150, 0, G.font);
     y += 156;
-    control(L"STATIC", L"Campagne om te hosten:", SS_LEFT, 14, y + 5, 170, 20, 0, G.font);
+    control(L"STATIC", L"Campaign to host:", SS_LEFT, 14, y + 5, 170, 20, 0, G.font);
     G.slot = control(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, 190, y, 464, 240, ID_SLOT, G.font);
     y += 36;
-    G.host = control(L"BUTTON", L"Host een spel", BS_PUSHBUTTON, 14, y, 200, 34, ID_HOST, G.font);
-    G.stop = control(L"BUTTON", L"Stop sessie", BS_PUSHBUTTON, 224, y, 140, 34, ID_STOP, G.font);
-    G.logs = control(L"BUTTON", L"Logs kopiëren", BS_PUSHBUTTON, 374, y, 140, 34, ID_LOGS, G.font);
+    G.host = control(L"BUTTON", L"Host a game", BS_PUSHBUTTON, 14, y, 200, 34, ID_HOST, G.font);
+    G.stop = control(L"BUTTON", L"Stop session", BS_PUSHBUTTON, 224, y, 140, 34, ID_STOP, G.font);
+    G.logs = control(L"BUTTON", L"Copy logs", BS_PUSHBUTTON, 374, y, 140, 34, ID_LOGS, G.font);
     y += 42;
-    G.save_box = control(L"BUTTON", L"Voortgang opslaan als ik host", BS_AUTOCHECKBOX | WS_TABSTOP, 14, y, 300, 26, ID_SAVE, G.font);
-    G.undo = control(L"BUTTON", L"Back-up van dit slot terugzetten...", BS_PUSHBUTTON, 374, y - 2, 280, 30, ID_UNDO, G.font);
+    G.save_box = control(L"BUTTON", L"Save progress when hosting", BS_AUTOCHECKBOX | WS_TABSTOP, 14, y, 300, 26, ID_SAVE, G.font);
+    G.undo = control(L"BUTTON", L"Restore this slot's backup...", BS_PUSHBUTTON, 374, y - 2, 280, 30, ID_UNDO, G.font);
     y += 36;
-    control(L"STATIC", L"Steam-vrienden (een host staat bovenaan):", SS_LEFT, 14, y, 400, 20, 0, G.font);
+    control(L"STATIC", L"Steam friends (hosts shown first):", SS_LEFT, 14, y, 400, 20, 0, G.font);
     y += 22;
     G.friends = control(WC_LISTBOXW, L"", LBS_NOTIFY | WS_VSCROLL | LBS_NOINTEGRALHEIGHT, 14, y, 460, 170, ID_FRIENDS, G.font);
-    G.join = control(L"BUTTON", L"Join deze vriend", BS_PUSHBUTTON, 484, y, 170, 34, ID_JOIN, G.font);
-    G.invite = control(L"BUTTON", L"Nodig uit", BS_PUSHBUTTON, 484, y + 42, 170, 34, ID_INVITE, G.font);
+    G.join = control(L"BUTTON", L"Join friend", BS_PUSHBUTTON, 484, y, 170, 34, ID_JOIN, G.font);
+    G.invite = control(L"BUTTON", L"Invite", BS_PUSHBUTTON, 484, y + 42, 170, 34, ID_INVITE, G.font);
     y += 180;
-    control(L"STATIC", L"Of met een code:", SS_LEFT, 14, y + 6, 120, 20, 0, G.font);
+    control(L"STATIC", L"Or use a code:", SS_LEFT, 14, y + 6, 120, 20, 0, G.font);
     G.code = control(L"EDIT", L"", ES_AUTOHSCROLL, 140, y, 200, 28, ID_CODE, G.font);
     G.join_code = control(L"BUTTON", L"Join code", BS_PUSHBUTTON, 350, y, 124, 28, ID_JOIN_CODE, G.font);
-    G.copy_code = control(L"BUTTON", L"Kopieer mijn code", BS_PUSHBUTTON, 484, y, 170, 28, ID_COPY_CODE, G.font);
-    y += 40;
-    G.hint = control(L"STATIC", L"", SS_LEFT, 14, y, 640, 40, 0, G.font);
+    G.copy_code = control(L"BUTTON", L"Copy my code", BS_PUSHBUTTON, 140, y + 40, 200, 28, ID_COPY_CODE, G.font);
+    lr_mascot_create(GetModuleHandleW(NULL),G.wnd,D(494),D(438),D(150),D(150));
+    y += 80;
+    G.hint = control(L"STATIC", L"", SS_LEFT, 14, y, 640, 70, 0, G.font);
 
     /* right column: the heroes of the co-op campaign */
-    control(L"STATIC", L"Wie bestuurt welke held?", SS_LEFT, 674, 12, 370, 22, 0, G.big);
+    control(L"STATIC", L"Who controls each hero?", SS_LEFT, 674, 12, 370, 22, 0, G.big);
     G.heroes = CreateWindowExW(WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
                                WS_CHILD | WS_VISIBLE | WS_TABSTOP | LVS_REPORT | LVS_SINGLESEL | LVS_NOSORTHEADER |
                                    LVS_SHOWSELALWAYS,
@@ -1459,7 +1461,7 @@ static void build_window(void) {
     }
     ListView_SetExtendedListViewStyle(G.heroes, LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
     static const struct { const wchar_t *name; int width; } cols[] = {
-        {L"Held", 112}, {L"Klasse", 120}, {L"Niv.", 44}, {L"Speler", 60}};
+        {L"Hero", 112}, {L"Class", 120}, {L"Lvl.", 44}, {L"Player", 60}};
     for (int i = 0; i < 4; i++) {
         LVCOLUMNW c = {0};
         c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
@@ -1471,8 +1473,8 @@ static void build_window(void) {
     G.heroes_hint = control(L"STATIC", L"", SS_LEFT, 674, 624, 370, 90, 0, G.font);
     G.heroes_shown = 0xFFFFFFFFu;
     wchar_t hint[400];
-    swprintf(hint, 400, L"%ls  Werkt het best met Darkest Dungeon in venster of 'borderless'. DDCoop %hs",
-             G.hotkey_ok ? L"F9 = dit venster tonen of verbergen, ook midden in het spel." : L"F9 is bezet door een ander programma; gebruik het DDCoop-icoon in de taakbalk.",
+    swprintf(hint, 400, L"%ls  Works best with Darkest Dungeon in windowed or borderless mode. DDCoop %hs",
+             G.hotkey_ok ? L"F9 = show or hide this window, including during gameplay." : L"F9 is used by another program; use the DDCoop taskbar icon.",
              DDC_VERSION);
     SetWindowTextW(G.hint, hint);
 }
@@ -1509,7 +1511,7 @@ static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
             }
             break;
         case ID_STOP:
-            stop_session("gestopt. Klik Host of Join voor een nieuwe sessie.");
+            stop_session("Stopped. Click Host or Join for a new session.");
             if (G.game) request_game_close();
             break;
         case ID_FRIENDS:
@@ -1556,12 +1558,12 @@ static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CLOSE:
         if ((G.prepare || G.game || restore_pending()) && !G.restore_failed) {
             G.want_close = 1;
-            stop_session("Spel afsluiten en eigen campagne herstellen voordat DDCoop sluit...");
+            stop_session("Closing game and restoring your own campaign before DDCoop exits...");
             request_game_close();
             return 0;
         }
         if (session_active() && G.game &&
-            MessageBoxW(h, L"Er loopt een co-op sessie. Als je DDCoop sluit, stopt de verbinding met je vriend. Toch sluiten?",
+            MessageBoxW(h, L"A co-op session is active. Closing DDCoop disconnects your friend. Close anyway?",
                         L"DDCoop", MB_YESNO | MB_ICONQUESTION) != IDYES)
             return 0;
         DestroyWindow(h);
@@ -1684,7 +1686,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show) {
     if (G.steam_ok) {
         cfg.steam_user = lr_steam_me();
         if (lr_steam_logged_on())
-            set_check(CHK_STEAM, 1, "Steam: ingelogd als %s", lr_steam_my_name());
+            set_check(CHK_STEAM, 1, "Steam: signed in as %s", lr_steam_my_name());
         else
             set_check(CHK_STEAM, 0, "Steam staat in offline-modus (%s). Zet Steam online: menu Steam > Ga online.",
                       lr_steam_my_name());
@@ -1706,8 +1708,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show) {
     lr_write_ini(cfg.ini_path, "off", LR_DEFAULT_GAME_PORT, "unused-until-ddcoop-starts", cfg.coop_slot);
     logline("startup: ini reset to role=off");
     snprintf(G.core.status, sizeof G.core.status,
-             G.install_ok && G.steam_ok ? "Klaar. Host een spel, of kies een vriend die host en klik Join."
-                                        : "Nog niet klaar: los eerst de punten met [ - ] hieronder op.");
+             G.install_ok && G.steam_ok ? "Ready. Host a game, or select a hosting friend and click Join."
+                                        : "Not ready: resolve the checks marked [ - ] below first.");
     PHASE("startup: checks");
     check_slot();
     update_checks();
