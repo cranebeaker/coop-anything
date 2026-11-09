@@ -1,0 +1,111 @@
+DDCoop - co-op testversie {VERSION}
+=================================
+
+Nieuw in test52
+- Eat nothing werkt nu ook met te weinig of helemaal geen voedsel, vanuit HOST en GAST. De weigering werd eerder door een verkeerde controle van de knopgegevens tegengehouden.
+- De gedeelde hunger-keuzes en de lagere fps van de solo-variant blijven erin.
+
+Eerder, test51
+- De hunger-keuze wordt gedeeld: eten of weigeren in HOST of GAST werkt bij allebei, met eenmalig voedselverbruik en dezelfde normale gevolgen. De andere kopie wacht zo nodig op haar hunger-scherm.
+- Alleen de solo-variant duo34 begrenst het tekenen tot ongeveer 60 fps per venster, om de grafische belasting van twee spellen te beperken. De gemelde driver-timeout is daarmee nog niet bewezen opgelost.
+
+Eerder, test50
+- Ook bij een heel snelle hervatting wordt de gedeelde toevalswaarde ingesteld voordat de opgeslagen dungeon begint. Dit richt zich op verschillende loot na een hervat gevecht.
+- De vroege laadkoppeling wordt eenmalig aangebracht; de latere initialisatie gebruikt dezelfde koppeling.
+
+Eerder, test49
+- Een opgeslagen dungeon hervatten neemt nu ook de heldentoewijzing van HOST over. GAST kan daardoor zijn eigen helden bedienen in combat.
+- De vier kleine balkjes tonen eigendom op de huidige positie: groen jouw held, oranje de ander. Ze volgen de held bij verplaatsen of een shuffle; de grote balk toont alleen de huidige beurt.
+- Tijdens het wachten op de eerste toewijzing zijn de kleine balkjes grijs.
+
+Eerder, test48
+- Beide spellen wachten bij het rijtje campagnes totdat de andere kopie daar ook klaarstaat voor hetzelfde slot. Klik de save tijdens deze controle niet zelf aan.
+- Een hervatte dungeon gebruikt bij beide spellen dezelfde Rules-startwaarde. Dit richt zich op het verschil zoals Selfish tegenover Stalwart na laden van een gevecht.
+- De knop Opnieuw synchroniseren is nog niet aanwezig. Eerst deze laadcontrole testen.
+
+Nieuw in test47
+- Een wapen-, pantser- of vaardigheidsupgrade geldt nu bij allebei, ook als de ander dat gebouw niet open had. Eerst deed de held alleen bij de koper meer schade, en liep het gevecht uiteen.
+
+Nieuw in test46
+- Na een sleepactie in het voorraadscherm hield de speler die sleepte soms de hele stapel nog. Nu blijft de tas bij allebei gelijk.
+
+Nieuw in test45
+- Een item uit de tas op een vakje van de winkel slepen verkoopt het nu bij allebei terug. Eerst gebeurde dat alleen bij jou, waarna de gedeelde acties stopten.
+
+Nieuw in test44
+- Is Steam na het sluiten van het spel nog bezig met opslaan, dan wacht de launcher daar vanzelf op (tot anderhalve minuut, met een melding) in plaats van te weigeren.
+
+Nieuw in test43
+- Een spel dat alleen is gestart om een nieuwe campagne te maken, zegt in het dorp dat de tutorial klaar is: sluit het en klik Host. Dat spel deelt niets met je vriend.
+- Vindt de gast na twintig seconden geen host, dan zegt het spel dat.
+
+Nieuw in test42
+- Slepen in het voorraadscherm: van de winkel naar de tas koopt er een, van de tas naar de winkel geeft er een terug, net als klikken, en bij allebei gelijk.
+
+Nieuw in test41
+- De host kan opslaan: vinkje "Voortgang opslaan als ik host" in de launcher (staat uit), en een knop om het slot terug te zetten van voor de laatste sessie.
+- Een held in een gebouw zetten werkt ook als de ander dat gebouw nog niet open had.
+- In de dungeon: blokjes linksboven in de kleur van de eigenaar, met de stress.
+- Een stapel splitsen in de tas loopt gelijk. Bij elke deur worden de helden vergeleken, na een raid het dorp.
+
+Nieuw in test40
+- Recruiten werkt zonder dat de ander in de Stagecoach zit, en ontslaan zonder dat de ander de heldenlijst ziet. Geen melding meer.
+
+Nieuw in test39
+- De party loopt gelijk zonder dat de ander in het expeditiescherm zit. Opent die het later, dan staat de party er al.
+- Voorraad: wie op Voorraad klikt gaat daarheen, de ander blijft waar die is en ziet geen melding. Wat er gekocht wordt, staat er als die het later opent. Terug sluit de winkel voor allebei en betaalt alles terug.
+- Snel achter elkaar klikken bij het kopen telt nu elke klik, ook tegelijk met de ander.
+- Kopen werkt in elk slot; het kon door een fout alleen in slot 3.
+
+Nieuw in test38
+- De lijst toont alle negen slots, ook de lege. Host op een leeg slot maakt een nieuwe campagne: het spel start alleen, je kiest een naam en speelt de tutorial uit, en dat wordt gewoon opgeslagen in dat slot. Daarna kun je het hosten.
+
+Nieuw in test37
+- Het spel slaat de opening over en opent het gekozen slot vanzelf, bij host en gast. Start je het spel gewoon via Steam, dan is alles zoals altijd.
+
+Nieuw in test36
+- Kies in de launcher, boven Host, welke campagne je host: alle saveslots staan er met hun naam in.
+  De gast gebruikt hetzelfde nummer; het eigen slot van de gast wordt tijdelijk vervangen en daarna teruggezet.
+
+Nieuw in test35
+- Dubbelklikken of tegelijk klikken op Alles pakken zet het spel niet meer stil.
+- Een trinket uit de kist wacht tot de kist ook bij de ander open is.
+- Kan een lootactie toch niet worden overgenomen, dan krijg je een melding en gaat het spel door.
+
+Nieuw in test34
+- Als iemand op Voorraad klikt, wordt het normale voorraadscherm ook bij de ander geopend.
+  De gekozen missie wordt gecontroleerd en overgenomen. Dit moet nog live worden getest.
+- Wijzigingen onder Helden in F9 worden tijdens de dungeon doorgegeven.
+  Een lopende aanval wordt eerst afgemaakt; bij de volgende keuze geldt de nieuwe eigenaar.
+- Alles pakken wacht totdat het lootscherm van de ander echt klaar is.
+- Trinkets uit dungeonloot kunnen via de gecontroleerde gedeelde route worden uitgerust.
+
+Dit is een nieuwe testkit. Alle correcties zijn automatisch getest, nog niet in het echte spel.
+Beide spelers gebruiken deze versie. Ook de HOST draait met -nosave: voortgang wordt niet bewaard.
+
+Installeren op BEIDE pc's
+1. Sluit beide games. Laat DDCoop bij de gast eerst de eigen save terugzetten en sluit dan DDCoop.
+2. Pak de hele zip uit. Open DDCoop-install en dubbelklik Install DDCoop.bat.
+3. De installer zoekt de ondersteunde Steam-game en installeert de bestanden in mods\DDCoop.
+   DLL's hoeven niet handmatig gekopieerd te worden. De originele SDL2.dll blijft bewaard.
+4. Start een nieuwe Host/Join-sessie; het spel opent het gekozen slot vanzelf (gebeurt dat niet, klik het dan zelf aan). Wacht op Spelers verbonden in F9.
+
+Gerichte test
+Zie TESTSTAPPEN-test47.txt in deze map. Begin met Voorraad, test daarna F9-eigenaarschap,
+loot accepteren en een trinket direct uit een kist op een held slepen.
+Als een partywijziging wacht op het expeditiescherm: open dat scherm om de wachtrij af te ronden.
+
+Beperkingen
+- Twee spelers, ondersteunde base-game-build28385 en normale twee trinketvakken per held.
+- Stapels splitsen, automatisch trinkets sorteren en alles tegelijk uitdoen zijn nog niet ondersteund.
+- Andere schermovergangen dan Voorraad volgen nog niet allemaal vanzelf.
+- Een complete terugkeer naar de Hamlet en een tweede missie moeten verder worden getest.
+- Bij verbindingsverlies sluit je beide games en begin je een nieuwe sessie.
+
+Afronden
+Sluit beide games en laat het automatische gast-herstel afronden. Repair.bat is daarvoor niet nodig.
+Klik op beide pc's Logs kopieren en stuur beide bundels. Noteer bij een fout de laatste actie.
+Backups staan onder je gebruikersmap in DDCoop-backups; alleen het gekozen slot wordt gebruikt.
+
+Bestanden (SHA-256)
+{HASHES}

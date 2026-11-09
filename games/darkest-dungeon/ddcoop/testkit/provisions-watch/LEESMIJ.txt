@@ -1,0 +1,54 @@
+DDCoop voorraadmeting test14b - ALLEEN LEZEN, naast test13b
+
+Herstel van test14a: eten heeft in de originele game een lege item-ID.
+Dit wordt nu via de echte itemdefinities herkend. Ook de gecorrigeerde
+vensterpositie uit14a is behouden. Sluit het oude meetprogramma en pak
+deze versie in een aparte map uit.
+
+Dit is een losse meting, geen nieuwe installatie van de mod.
+Kopen/terugverkopen in dit scherm is nog NIET gesynchroniseerd.
+Er wordt niets in je game, mod of saves geschreven door dit programma.
+Je hebt geen compiler, PowerShell of administratorrechten nodig.
+
+1. Houd op beide pc's de werkende test13b. Pak dit ZIP-bestand uit op
+   de GAST-PC, bijvoorbeeld op het bureaublad. Niet in de gamemap.
+2. Start een NIEUWE Host/Join-sessie. Wacht tot de gast de campagne van
+   de host in de Hamlet ziet. Gebruik uitsluitend campagne-slot 3.
+3. Stel samen een beschikbare party in en open aan beide kanten het
+   expeditiescherm zodat de bekende party-wachtrij kan afronden.
+   Ga allebei terug naar de Hamlet. De host doet daarna niets meer.
+4. Start DDCoop-voorraadmeting.exe op de GAST-PC. Je moet minimaal een
+   opgeslagen meting zien. Bij 'unrecognised-layout' of als er geen
+   metingen verschijnen: stop en stuur de log; ga niet verder.
+5. Alleen de gast: open het expeditiescherm, kies een gewone missie en
+   ga naar het voorraadscherm. START DE MISSIE NIET.
+   Kijk even in het meetvenster: er moet nu een nieuwe opgeslagen meting
+   staan met 'voorraadscherm open'. Bij een layoutfout: stop en stuur de log.
+   Wacht steeds minstens twee seconden tussen de volgende acties:
+   - koop 1 eten, daarna nog 1 eten;
+   - koop 1 fakkel en 1 schep;
+   - verkoop 1 eten terug aan de voorraadwinkel;
+   - ga met Terug terug naar het expeditiescherm;
+   - open hetzelfde voorraadscherm opnieuw;
+   - koop nog 1 fakkel en ga weer met Terug terug.
+   Niet genoeg geld? Stop op dat punt en meld welke stap nog lukte.
+   Gebruik tijdens deze meting geen andere Hamlet-aankopen of debugon.
+6. Ga terug naar het meetvenster en druk op Q. Je log staat op het
+   bureaublad in DDCoop-metingen. Stuur die log en de gebruikelijke
+   host/gast-logbundels. Vermeld als je een andere actie hebt gedaan.
+7. Sluit BEIDE games en wacht bij de gast op het automatische herstel
+   van diens oorspronkelijke save. Laat de launcher daarvoor open.
+   Dit is NIET Repair.bat. Begin daarna pas een nieuwe co-op sessie:
+   de lokale voorraadacties van deze meting worden dan opnieuw vervangen
+   door de opgeslagen toestand van de host.
+
+Als de bekende melding vraagt om het expeditiescherm te openen, doe dat
+eerst ook op de andere pc. Bij een melding dat gedeelde acties zijn
+gestopt: stop de test, sluit beide games en stuur de logs.
+
+De meting weigert een host, andere slot, andere gameversie of andere
+geladen runtime dan test13b. Zij leest alleen normale Hamlet-voorraden,
+itemcodes, aantallen en geldstanden. Geen Steam-identiteiten, wachtwoord,
+savebestanden of dungeon-/gevechtsdata. Twee gelijke uitlezingen helpen
+overgangsruis te beperken, maar vormen geen atomaire engine-snapshot.
+Er wordt geen DLL geladen/geinjecteerd en geen spelproces gestart.
