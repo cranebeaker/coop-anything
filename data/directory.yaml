@@ -10759,3 +10759,45 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: Ultimate Trial (Ocarina of Time ROM hack)
+  year: 2024
+  engine: Ocarina of Time engine (N64, closed-source ROM hack)
+  project: ut-coop
+  url: https://github.com/TheeDeb/ut-coop
+  other_urls:
+  - https://github.com/TheeDeb/gopher64
+  - https://github.com/TheeDeb/ut-coop/releases/tag/v0.1.0
+  - https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1
+  - https://github.com/cranebeaker/coop-anything/issues/342
+  kind: emulator-netplay
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: "2"
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Client plus a gopher64 fork, released as ut-coop v0.1.0 and a fork build. Two emulator
+    instances exchange 30 Hz UDP snapshots of position, rotation, appearance and the 24-limb joint
+    table; the peer is rendered as a second Link that moves and animates and is re-injected after
+    actor-list rebuilds. Scenes are gated by scene id and a joining side replays the host's entrance
+    index to load the same scene. Automated tests cover a Python node with the packaged client over
+    loopback, forced and followed scene transitions (41 to 42 and back), and a chaos relay
+    (16 of 286 packets dropped, puppet still exact). Scene follow is validated between the
+    starting scenes 41 and 42 but is experimental and off by default; v0.1.2 guards puppet
+    injection around scene loads after a real session froze at transitions. Story, enemy,
+    world-state and item sync are not implemented. GPL-3.0, no game data distributed.
+  sources:
+  - https://github.com/TheeDeb/ut-coop
+  - https://github.com/TheeDeb/gopher64
+  - https://github.com/TheeDeb/ut-coop/releases/tag/v0.1.0
+  - https://github.com/RichieUltimate/ultimate-trial
+  - https://github.com/RichieUltimate/ultimate-trial/issues/19
+  - https://github.com/cranebeaker/coop-anything/issues/342
+  checked: '2026-11-09'
+  made_with_coop_anything: true
