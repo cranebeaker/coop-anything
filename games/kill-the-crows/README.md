@@ -14,7 +14,9 @@ No co-op existed for this game anywhere before this project. A first playable
 two-player co-op mod now exists and was verified with two real game clients on one
 machine (LAN loopback):
 
-- Both clients connect over UDP 7777 (handshake → Welcome → modifier sync).
+- Both clients connect over UDP 7777 (handshake → Welcome → modifier sync);
+  hotkeys: F9 host LAN / F10 join LAN / F6 host Steam lobby / F7 join Steam lobby
+  / F11 disconnect.
 - The host's run (Scene_Ingame) pulls the client in via scene-sync; both pick their
   own loadout in Scene_Loadout independently (weapon/showdown/passives are per-player).
 - Enemy spawning is host-authoritative; the client renders proxies built from the
@@ -32,14 +34,22 @@ machine (LAN loopback):
   and zero disconnects**, ~107 shared kills ↔ 107 client-side proxy deaths, client
   death → `ClientDied` → spectate → both dead → shared game over, all observed in logs.
 
-Not done yet (v2 candidates): Steam lobbies/P2P (Steamworks.NET ships with the game,
-so the hooks are there), revival instead of shared game-over, reconnect support, and
-the modifier set belongs to the host's run (client's own equipped modifiers are
-overridden for the shared simulation). Fixed since v0.1: both players now see each
-other (bidirectional ghost sync + host fire tracers), the dead player's camera
-spectates the surviving partner, the client's loadout (bullet prefab, explosive
-params, showdown data, passives) is applied to its ghost on the host, and after a
-shared game-over the client can navigate menus freely again.
+A friends-only **Steam lobby path** also exists now (host F6 creates the lobby,
+client F7 searches and joins; version-filtered lobby data keeps mod versions from
+mixing). Steam itself blocks a full local test on one machine — a user's own lobbies
+are excluded from matchmaking search and self-P2P is not allowed — so the lobby code
+is boot-tested only (create/join callbacks, handshake wiring verified in logs with
+auto-retry); a real session needs two distinct Steam accounts. The LAN path below is
+the fully tested one. Remaining v2 candidates: revival instead of shared game-over,
+reconnect support, and the modifier set still belongs to the host's run (client's
+own equipped modifiers are overridden for the shared simulation).
+
+Fixed since v0.1: both players now see each other (bidirectional ghost sync + host
+fire tracers), the dead player's camera spectates the surviving partner, the
+client's loadout (bullet prefab, explosive params, showdown data, passives) is
+applied to its ghost on the host, and after a shared game-over the client can
+navigate menus freely again. The auto-test host also refuses to start a run before
+the client has actually handshaked.
 
 ## How the game works (for co-op)
 
