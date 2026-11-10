@@ -580,6 +580,13 @@ fresh readbacks, 0.0 position error, both puppets drawn 1/1).
 Still open: the remote model can render squished. Workarounds are `--no-anim` (static
 pose) or `--no-puppet` (hide it); the pose/model fix is pending.
 
+Follow-up session on v0.1.2: no freezes, but on one side `recv` stopped increasing
+while the game kept running. No exception was visible in the captured lines. Likely
+causes to separate next time: the peer's client stopped sending (its emulator paused or
+its client exited), the VPN dropped, or the local bridge stalled. Next client build
+should print sent count, error count and "last packet age", and warn when the peer is
+silent for more than a few seconds.
+
 
 
 
