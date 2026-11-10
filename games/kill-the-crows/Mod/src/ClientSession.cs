@@ -438,6 +438,19 @@ namespace KtcCoop
             p.gunPivot2?.GetComponent<Animator>()?.SetTrigger("Reload");
         }
 
+        public void OnRevive()
+        {
+            var p = Player.instance;
+            if (p == null) return;
+            var gp = HostGhostView?.Player;
+            Vector3 at = Coop.Cfg.ReviveAtPartner && gp != null && gp.isAlive
+                ? gp.transform.position
+                : p.transform.position;
+            _ownDeathReported = false;
+            Revive.Perform(p, at, Coop.Cfg.ReviveInvulnSec);
+            Plugin.Flog("[client] revived by partner at " + at);
+        }
+
         /// <summary>Spectate the surviving partner after our own death.</summary>
         public void UpdateSpectateCamera()
         {

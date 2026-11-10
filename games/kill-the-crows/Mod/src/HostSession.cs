@@ -27,12 +27,18 @@ namespace KtcCoop
         private int _sdOwner; // 0 = host, 1 = client
 
         private bool _clientAlive = true;
-        private bool _clientDeadOnce;
 
         private Protocol.HelloRec _loadout;
 
         public bool ClientAlive => _clientAlive;
         public bool HasClient { get; private set; }
+        public int RevivesLeft { get; private set; }
+        public float ClientInvulnUntil => _clientInvulnUntil;
+
+        private float _reviveClientAt = -1f;
+        private float _reviveHostAt = -1f;
+        private float _clientInvulnUntil = -1f;
+        private bool _finalized;
         public Player Ghost => _ghostView?.Player;
         public int TrackedCount => _byId.Count;
 
@@ -120,8 +126,12 @@ namespace KtcCoop
                 out bool dodging, out bool invDodge, out bool moving, out bool alive,
                 out float sdScale, out ushort animHash, out float animNorm);
 
+            bool wasAlive = _clientAlive;
             _clientAlive = alive;
-            if (!alive && !_clientDeadOnce) { _clientDeadOnce = true; OnClientDied(); }
+            // UDP reordering can deliver a stale alive=true after the death packet —
+            // ignore resurrections that we did not send (pending revive owns that)
+            if (alive && _reviveClientAt > 0f) return;
+            if (wasAlive && !alive) OnClientDied(); // every death, not just the first
 
             if (_ghostView == null) return;
             _ghostView.Apply(pos, yaw, aim, flip, dodging, invDodge, moving, alive, sdScale, animHash, animNorm);
@@ -216,22 +226,43 @@ namespace KtcCoop
 
         public void OnClientDied()
         {
+            if (_reviveClientAt > 0f) return; // already down, revive pending
             _clientAlive = false;
             if (_ghostView?.Player != null) _ghostView.Player.isAlive = false;
             Debug.Log("[KTC-Coop] Client player died.");
-            CheckGameOver();
+            if (_reviveHostAt > 0f) _reviveHostAt = -1f; // host died mid-window
+            if (Player.instance != null && Player.instance.isAlive && RevivesLeft > 0)
+            {
+                RevivesLeft--;
+                _reviveClientAt = Time.unscaledTime + Coop.Cfg.ReviveDelaySec;
+                Plugin.Flog("[revive] client down, reviving in " + Coop.Cfg.ReviveDelaySec + "s");
+            }
+            else
+            {
+                FinalizeRun();
+            }
         }
 
-        public void CheckGameOver()
+        /// <summary>Team wipe: show the result panel on both sides and stop the run.</summary>
+        public void FinalizeRun()
         {
-            // run ends when every player is dead
-            if (!_clientAlive && Player.instance != null && !Player.instance.isAlive && !Player.instance.isRestartAvailable)
+            if (_finalized) return;
+            _finalized = true;
+            var wm = WaveManager.instance;
+            if (wm != null) wm.spawnDisable = true;
+            var p = Player.instance;
+            if (p != null)
             {
-                // both dead — reveal host result panel (suppressed earlier) and tell client
-                var rp = UnityEngine.Object.FindObjectsOfType<ResultPanel>(true);
-                if (rp.Length > 0) rp[0].gameObject.SetActive(true);
-                Coop.Net.SendReliable(Op.GameOver, new byte[0]);
+                var rps = UnityEngine.Object.FindObjectsOfType<ResultPanel>(true);
+                CameraProfileChanger.instance?.DeathTransition();
+                if (rps.Length > 0)
+                {
+                    rps[0].Init(p.killCount, p.accuracy, (int)TimeManager.instance.gameTime, DeathByCharacterKey.Gunman);
+                    rps[0].gameObject.SetActive(true);
+                }
+                p.isRestartAvailable = false;
             }
+            Coop.Net.SendReliable(Op.GameOver, new byte[0]);
         }
 
         // ---------------- per-frame ----------------
@@ -240,6 +271,39 @@ namespace KtcCoop
         {
             EnsureGhost();
             RetargetEnemies();
+
+            float now = Time.unscaledTime;
+            if (_reviveClientAt > 0f && now >= _reviveClientAt)
+            {
+                _reviveClientAt = -1f;
+                if (_ghostView?.Player != null) _ghostView.Player.isAlive = true;
+                _clientInvulnUntil = now + Coop.Cfg.ReviveInvulnSec;
+                Coop.Net.SendReliable(Op.Revive, new byte[0]);
+                Plugin.Flog("[revive] client brought back (" + RevivesLeft + " left)");
+            }
+            if (_reviveHostAt > 0f && now >= _reviveHostAt)
+            {
+                _reviveHostAt = -1f;
+                var gp = _ghostView?.Player;
+                Revive.Perform(Player.instance, gp != null && gp.isAlive ? gp.transform.position : Player.instance.transform.position, Coop.Cfg.ReviveInvulnSec);
+                Plugin.Flog("[revive] host brought back (" + RevivesLeft + " left)");
+            }
+        }
+
+        /// <summary>Host player died: schedule a revive or end the run.</summary>
+        public void OnHostDeath()
+        {
+            if (_reviveClientAt > 0f) _reviveClientAt = -1f; // partner died mid-window
+            if (ClientAlive && RevivesLeft > 0)
+            {
+                RevivesLeft--;
+                _reviveHostAt = Time.unscaledTime + Coop.Cfg.ReviveDelaySec;
+                Plugin.Flog("[revive] host down, reviving in " + Coop.Cfg.ReviveDelaySec + "s");
+            }
+            else
+            {
+                FinalizeRun();
+            }
         }
 
         private void EnsureGhost()
@@ -250,6 +314,8 @@ namespace KtcCoop
 
             _ghostView = GhostView.Create(Player.instance, "CoopGhostPlayer");
             ApplyClientLoadout(_ghostView.Player);
+            RevivesLeft = Coop.Cfg.RevivesPerRun;
+            _finalized = false;
             Plugin.Flog("[host] ghost player spawned for client");
         }
 

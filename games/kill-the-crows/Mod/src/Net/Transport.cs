@@ -313,5 +313,6 @@ namespace KtcCoop.Net
         public const byte GunAnim = 21;
         public const byte HostState = 22;
         public const byte HostFire = 23;
+        public const byte Revive = 24;
     }
 }

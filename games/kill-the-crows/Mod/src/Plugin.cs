@@ -46,6 +46,10 @@ namespace KtcCoop
             Coop.Cfg.HostIp = _cfgHostIpFile.Value;
             Coop.Cfg.StateRateHz = Config.Bind("Net", "PlayerStateRateHz", 30, "Player state packets per second").Value;
             Coop.Cfg.EnemyRateHz = Config.Bind("Net", "EnemyStateRateHz", 20, "Enemy state packets per second").Value;
+            Coop.Cfg.RevivesPerRun = Config.Bind("Coop", "RevivesPerRun", 3, "Shared revive pool per run (0 = run ends on first death)").Value;
+            Coop.Cfg.ReviveDelaySec = Config.Bind("Coop", "ReviveDelaySec", 5f, "Seconds before a downed player comes back").Value;
+            Coop.Cfg.ReviveInvulnSec = Config.Bind("Coop", "ReviveInvulnSec", 2f, "Invulnerability window after revive").Value;
+            Coop.Cfg.ReviveAtPartner = Config.Bind("Coop", "ReviveAtPartner", true, "Revive next to the surviving partner (false = at the death spot)").Value;
 
             _logFile = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "ktc-mod.log");
             foreach (var a in Environment.GetCommandLineArgs())
@@ -66,7 +70,7 @@ namespace KtcCoop
             KtcCoop.Net.SteamTransport.RegisterCallbacks();
             Coop.HookSceneLoads();
             Coop.EnsurePumpPublic();
-            var mode = AutoHost ? "HOST" : AutoClient ? "CLIENT" : "manual";
+            var mode = AutoSteamHost ? "STEAM-HOST" : AutoSteamClient ? "STEAM-CLIENT" : AutoHost ? "HOST" : AutoClient ? "CLIENT" : "manual";
             var msg = $"{PluginName} {PluginVersion} loaded (mode: {mode}). F9 = host, F10 = join, F11 = disconnect.";
             Logger.LogInfo(msg);
             Flog(msg);

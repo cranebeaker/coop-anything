@@ -57,9 +57,15 @@ namespace KtcCoop
             // client never applies damage locally — host decides
             if (Coop.IsClient) return false;
 
+            // host own player inside the revive-invulnerability window
+            if (Coop.IsHost && __instance == Player.instance && Revive.IsInvulnerable(__instance))
+                return false;
+
             // host: ghost was hit by an enemy bullet -> route damage to the client
             if (Coop.IsHost && __instance == Ghost && bullet != null)
             {
+                if (Time.unscaledTime < Coop.Host.ClientInvulnUntil)
+                    return false;
                 var dir = bullet.direction == Vector3.zero ? Vector3.back : bullet.direction.normalized;
                 Coop.Net.SendReliable(Op.DamagePlayer, Protocol.DamagePlayer(bullet.info.damage, dir, bullet.info));
                 // blood feedback for the host viewer
@@ -90,15 +96,15 @@ namespace KtcCoop
             if (!Coop.IsHost || !Coop.Active || __instance != Player.instance) return;
             if (Coop.Host.ClientAlive)
             {
-                // partner still alive: suppress the result panel until both are dead
+                // partner still alive: hide the panel — a revive may bring us back
                 var rp = Object.FindObjectsOfType<ResultPanel>(true);
                 if (rp.Length > 0) rp[0].gameObject.SetActive(false);
                 __instance.isRestartAvailable = false;
+                Coop.Host.OnHostDeath();
             }
             else
             {
-                // both dead — the panel is up, inform the client
-                Coop.Net.SendReliable(Op.GameOver, new byte[0]);
+                Coop.Host.OnHostDeath(); // schedules revive only if credits remain
             }
         }
 

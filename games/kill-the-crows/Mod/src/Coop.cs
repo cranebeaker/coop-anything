@@ -40,6 +40,10 @@ namespace KtcCoop
             public string HostIp = "127.0.0.1";
             public int StateRateHz = 30;
             public int EnemyRateHz = 20;
+            public int RevivesPerRun = 3;
+            public float ReviveDelaySec = 5f;
+            public float ReviveInvulnSec = 2f;
+            public bool ReviveAtPartner = true;
         }
 
         public static void RunOnMainThread(Action a) => MainThreadQueue.Enqueue(a);
@@ -199,6 +203,9 @@ namespace KtcCoop
                 try { a(); } catch (Exception e) { Plugin.Flog("[coop] task error: " + e); }
             }
 
+            // expire revive-protection windows on both roles
+            if (Player.instance != null) Revive.IsInvulnerable(Player.instance);
+
             if (Net == null || !Net.Connected) return;
 
             while (Net.Inbox.TryDequeue(out var msg))
@@ -234,6 +241,7 @@ namespace KtcCoop
                             break;
                         case Op.HostState: Client?.OnHostState(msg.Data); break;
                         case Op.HostFire: Client?.OnHostFire(msg.Data); break;
+                        case Op.Revive: Client?.OnRevive(); break;
                     }
                 }
                 catch (Exception e)
@@ -341,7 +349,8 @@ namespace KtcCoop
             if (Active && SceneManager.GetActiveScene().name == "Scene_Ingame")
             {
                 if (Player.instance != null)
-                    Player.instance.isGodMode = true; // bots must survive the automated test
+                    Player.instance.isGodMode = Plugin.AutoHost; // host bot survives, client bot dies (exercises revives)
+                if (Plugin.AutoHost) Cfg.ReviveAtPartner = false; // test bots: revive at the death spot so the client keeps dying
                 // vanilla edge: killing a deathPrefab boss leaves the camera on a
                 // destroyed transform until EndCutScene fires — heal it
                 var cm = CameraManager.instance;
