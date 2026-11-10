@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Nintendo 64, Ocarina of Time engine (closed-source total-conversion ROM hack) |
-| Versions tested | none yet. Target: Ultimate Trial v1.2.3 (BPS patch SHA-256 `CD15868E2700F821A8F3342651D40B995F9A9C48B6DAD5F55025032CC86FB526`) on gopher64 (Simple64 lineage; the UT team lists Simple64 as supported) |
+| Versions tested | Ultimate Trial v1.2.3 (BPS patch SHA-256 `CD15868E2700F821A8F3342651D40B995F9A9C48B6DAD5F55025032CC86FB526`) on a gopher64 fork: boots and runs, memory bridge live. No co-op yet |
 | Projects | none yet. Claimed in [issue 342](https://github.com/cranebeaker/coop-anything/issues/342); working notes in [NOTES.md](NOTES.md) |
 | QA level | none |
 | Last updated | 2026-11-09 |
@@ -50,22 +50,31 @@ player's own UT-patched ROM.
 
 ## What we changed
 
-No code shipped yet. Done so far (details and sources in [NOTES.md](NOTES.md)):
+No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md)):
 
 - Verified the game's identity and the base ROM (OoT USA 1.0, md5 `5bd1fe107bf8106b2ab6650abecd54d6`)
-  and wrote a BPS applier that verifies source and target CRC32 both ways.
+  and wrote a BPS applier that verifies source and target CRC32 both ways. The patched
+  test ROM has CRC32 `627C0746` and boots.
 - Parsed the official patch block by block and recorded what survives from vanilla (see above).
 - Picked the emulator host: gopher64 (Rust, GPL-3.0, active, Simple64 lineage). Verified in its source
   where the per-frame hook (`vertical_interrupt_event`), the guest RAM (`device.rdram.mem`) and the
   controller-input injection point (`JCMD_CONTROLLER_READ`) live. The fork stays a separate GPL-3.0
   derivative; gopher64 does not accept AI-authored upstream PRs.
+- Built the fork and added a local TCP memory bridge (`--coop-port`): batched READ/WRITE/INPUT/STAT
+  against live RDRAM, executed at VI frame boundaries, with per-connection response tags and input
+  overrides that are released on disconnect.
+- Booted Ultimate Trial v1.2.3 on the fork and confirmed it renders and runs (UT's fan-made-games
+  warning screen captured, VI frame counter advancing, 8 MiB RDRAM served over the socket).
 
 ## QA
 
-- Run so far: `cargo test --release --lib` in the emulator fork (2026-11-09) gives
-  `1 passed; 0 failed`. The test exercises the real per-frame hook against a fake 8 MiB
-  RDRAM: WRITE then READ round trip, input override state, and STAT (frame counter and
-  RDRAM size). It does not involve the game, so the QA level stays `none`.
+- Emulator protocol test: `cargo test --release --lib` in the fork, 2026-11-09 ->
+  `1 passed; 0 failed`. It drives the real per-frame hook against a fake 8 MiB RDRAM:
+  WRITE then READ round trip, input override state, and STAT (frame counter, RDRAM size).
+- Game boot smoke test: `python local/smoke_ut.py` (2026-11-09) -> `frames: 18 -> 140;
+  rdram 0x800000`; a full 8 MiB RDRAM dump through the socket also succeeded. This proves
+  the game runs on the fork and the bridge is live; it does not test co-op.
+- Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
   per frame.

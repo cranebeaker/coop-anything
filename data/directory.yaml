@@ -10785,6 +10785,8 @@
     Claimed 2026-11 by TheeDeb (issue 342), with notes in games/ultimate-trial. Planned route is
     the Skyward Sword memory-sync pattern (two emulator instances, UDP bridge, puppet actor injected
     by a patch-only BPS on top of the player's own UT-patched ROM, gopher64 fork as bridge host).
+    On 2026-11-09 UT v1.2.3 booted on the gopher64 fork with a working RDRAM/input bridge, but no
+    co-op exists yet.
   sources:
   - https://github.com/RichieUltimate/ultimate-trial
   - https://www.romhacking.net/hacks/8640

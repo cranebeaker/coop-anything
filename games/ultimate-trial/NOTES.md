@@ -195,6 +195,23 @@ Build environment on this Windows machine (installed with owner approval):
   it cannot execute it (the clone is shallow with no tags, so the `--always` fallback
   reports the commit hash).
 
+### Verified end to end on the real ROM (2026-11-09)
+
+- Owner's dump was found in Downloads and copied to `local/rom/base_ot.z64`; md5
+  `5bd1fe107bf8106b2ab6650abecd54d6` matches OoT US 1.0. `local/patch_rom.ps1`
+  produced `local/rom/ultimate_trial.z64`: CRC32 `627C0746` (matches the patch target),
+  SHA-256 `7802EB8F...F3E142`, header magic `NZL`.
+- `gopher64.exe local\rom\ultimate_trial.z64 --coop-port 47903` boots, renders UT's
+  fan-made-games warning screen (window capture `local/logs/ut_window4.png`), and
+  answers STAT: frame counter 358 after about 10 s, RDRAM size 8 MiB.
+- `local/smoke_ut.py` automates that check. Last run: `frames: 18 -> 140; rdram 0x800000`.
+- `local/scan_rdram.py` read all 8 MiB live through the socket (72% nonzero) into
+  `local/dumps/rdram_boot.bin`.
+- Real protocol bug found while testing and fixed: responses from a disconnected batch
+  leaked into the next connection (a stale INPUT ack was read as a STAT reply). Every
+  command and response now carries a connection id and stale responses are discarded;
+  disconnect clears use id 0. Unit test still passes after the change.
+
 ## Phase 3 approach — revised after block-level analysis (2026-11-09)
 
 Re-checked the BPS block list with Python over `local/ut_bps_blocks.csv` (337,478 blocks):
