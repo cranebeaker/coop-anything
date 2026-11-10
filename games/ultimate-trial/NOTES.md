@@ -153,6 +153,45 @@ Fork changes planned (all additive, behind a `coop` feature/flag so upstream mer
 QA bot plan (playbook/automated-qa.md): a Python harness opens both coop sockets, drives both
 instances' input, and asserts on RDRAM (positions, flags) per frame.
 
+### Fork changes implemented (2026-11-09)
+
+All wiring is additive and lives behind the new `--coop-port` flag:
+
+- `src/coop.rs` (new): TCP server on `127.0.0.1:PORT`, one client at a time, batching
+  protocol (READ/WRITE/INPUT/STAT) executed at a frame boundary; disconnect clears all
+  input overrides so a closed bridge never leaves a stuck button.
+- `src/lib.rs`: `pub mod coop;`, `--coop-port PORT` argument, passed through `run()`.
+- `src/device.rs`: `#[serde(skip)] coop: Option<coop::Coop>` field, started right after
+  `rdram::init` (so the 8 MiB buffer exists).
+- `src/device/vi.rs`: `coop::on_frame(device)` is the first line of
+  `vertical_interrupt_event`.
+- `src/device/controller.rs`: override order is netplay, then coop bot input, then
+  physical input.
+- Unit test `bridge_serves_read_write_input_and_stat` in `src/coop.rs` drives the real
+  `on_frame` entry point against a fake 8 MiB buffer. It needs no ROM, so the wire
+  protocol can be validated before the owner's dump is available.
+- `local/coop_bridge.py` (owner workspace, never committed): Python client and CLI for
+  the same protocol, for the QA harness and the eventual game bridge.
+
+Controller word (from `ui/input.rs`, verified): button bits 0-13 using the
+`input_profile` indices (0 R dpad, 1 L dpad, 2 D dpad, 3 U dpad, 4 Start, 5 Z,
+6 B, 7 A, 8 R C, 9 L C, 10 D C, 11 U C, 12 R trigger, 13 L trigger); signed X
+axis in bits 16-23, signed Y axis in bits 24-31. The INPUT opcode takes this word
+directly, so bots can drive a player without SDL or a keyboard.
+
+Build environment on this Windows machine (installed with owner approval):
+
+- Rust 1.99.1 via rustup; VS 2022 Build Tools 17.14.44 with the VCTools workload
+  (cl/link/rc and the Windows SDK).
+- LLVM 23.1.1 portable, matching rustc's own LLVM, from the official llvm-project
+  release. SHA-256 `c54ac814...9264c3` verified against the release's signed SLSA
+  provenance, extracted under `<workspace>/local/tools`. Needed because
+  `gopher64/.cargo/config.toml` sets `CC=clang` globally and `build.rs` passes
+  clang-style flags.
+- `git` must be on PATH at build time: `build.rs` runs `git describe` and panics when
+  it cannot execute it (the clone is shallow with no tags, so the `--always` fallback
+  reports the commit hash).
+
 ## Phase 3 approach — revised after block-level analysis (2026-11-09)
 
 Re-checked the BPS block list with Python over `local/ut_bps_blocks.csv` (337,478 blocks):
