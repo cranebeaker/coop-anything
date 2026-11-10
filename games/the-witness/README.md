@@ -6,7 +6,7 @@
 | Versions tested | Steam build `11370412` (app `210970`), `witness64_d3d11.exe` SHA-256 `8d672d444df6a6df7130f25a517bdab1af92731fe2138dc5b324d519561d55a5`, Windows. The mod refuses any other exe |
 | Projects | [witness-coop](https://github.com/TommoDotCommo/witness-coop) (MIT, public beta [v0.3.0-beta.1](https://github.com/TommoDotCommo/witness-coop/releases/tag/v0.3.0-beta.1), directory entry "The Witness"). Related tooling: [witness-randomizer](https://github.com/jbzdarkid/witness-randomizer) (MIT), [witness-trainer](https://github.com/jbzdarkid/witness-trainer) (MIT) |
 | QA level | automated (see QA for what ran when, and what has never been tested) |
-| Last updated | 2026-11-10 |
+| Last updated | 2026-11-11 |
 
 ## Where things stand
 
@@ -115,10 +115,22 @@ tools/t0.sh
 51 tests, 0 failed, 288 s wall
 ```
 
-The two-game suite (40 scenarios at this tag) was **not** re-run as a whole for this write-up: the test PC did not have
-the free memory for a pair of games on 2026-11-10. Its scenarios were run as each feature landed, and the mod's
-[docs/DEVELOPMENT.md](https://github.com/TommoDotCommo/witness-coop/blob/v0.3.0-beta.1/docs/DEVELOPMENT.md) records each
-with its mutants. The last whole-suite summary pasted here is the prototype's, below.
+Last two-game run (2026-11-11, same tag, one PC, four parallel shards, 28 minutes):
+
+```
+tools/qa.sh
+40 scenarios: 39 PASS, 1 FAIL
+  17 clean scenarios, 16 PASS: baseline, lost first send, 30% random loss, second tutorial door, panel power chain,
+     cable chain, peer restart catch-up, late join, same-process reload, save point restore, preset apply (twice),
+     bot-free effects, partner view, dev menu, your puzzles sent by the lobby, your puzzles alone continued
+  23 MUTANT scenarios, 23 PASS (each broken build was caught)
+  FAIL: your puzzles in the game
+```
+
+The failure was the test bot, on one of that scenario's ten puzzles: it could not steer the editor's solution to the
+end of the line on panel `0x295` ("steering: the end stub was not reached"); the other nine were judged alike by the
+game and the editor's rules and reached the second game. Re-run alone straight after, the scenario passed, with that
+puzzle accepted. So the bot's drawing on that panel is intermittent; why is not diagnosed.
 
 Never tested: two PCs with two Steam accounts (the steps are written in the mod's `docs/STEAM.md`; no result is
 recorded), a real Steam Deck or Linux PC, a person speaking into a real microphone, sixteen real game clients at once,
