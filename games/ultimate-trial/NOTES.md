@@ -416,9 +416,27 @@ ids match again. Test: override A to scene 999; both puppets gated off (gate cou
 Caveat resolved: a real transition was observed on 2026-11-09. The intro moved from
 the fountain (scene 42, segment `0x806AD070`, draw config 9) to the canyon/start area
 (scene 41, segment `0x806A9000`, draw config 0). Walking around the canyon kept scene 41.
-This confirms `sceneId` tracks real scene loads and gives two distinct values. Trials
-(other scene ids) still need to be reached, and forcing the peer to load a scene is not
-implemented yet.
+This confirms `sceneId` tracks real scene loads and gives two distinct values.
+
+### Exploration bot and canyon result (2026-11-09, negative)
+
+`local/explore.py` was built to reach a third scene automatically. It scans the actor
+lists, resolves overlay names, selects `En_Scene_Change` / `En_Holl` / `En_Door` /
+`Door_Shutter`, calibrates the camera-relative stick mapping from measured world deltas,
+closed-loop steers Link to the target, polls `sceneId` and dumps RDRAM on any change.
+
+Result in scene 41 (canyon), after the intro:
+
+- The room at the intro exit loads only 5 actors and contains no door/scene-change actor.
+- An ~80 s wander covered roughly x -2000..-1100, z 3000..5800 with no scene change.
+  Positions included the canyon path and the upper ledges.
+- One fall respawned Link at (0,0,0) and briefly invalidated the actor-list shape scan
+  (the bot needs retry handling during loads).
+
+Conclusion: the canyon's exit is not a door actor in the visited rooms; it is likely a
+scene border/loading zone at a specific spot not yet reached. Next options: visual
+waypoint navigation using captures along the route, parsing transition actor spawn lists
+from the scene segment, or static RE of the scene-transition path.
 
 
 
