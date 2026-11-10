@@ -270,6 +270,40 @@ this game). Back it up before bot runs that save.
 rescans RDRAM if the cached address stops validating. The address has been
 `0x80289550` on every boot so far, but do not rely on that alone.
 
+## Two-instance sync prototype (2026-11-09, PASS on loopback)
+
+Fork change: `GOPHER64_DATA_DIR` overrides the data/config/cache roots, so two
+instances on one PC keep separate saves, states and config. Normal players are
+unaffected (the variable is unset).
+
+`local/sync_proto.py`
+- Each side reads its player actor with one batched READ+STAT round trip per tick
+  (the earlier six-read version could not hold 30 Hz).
+- Sends a 48-byte UDP snapshot: magic, version, flags, seq, VI frame, position,
+  rotation, speed, scene.
+- Tracks receive count, sequence gaps and errors; reconnects the emulator socket
+  after three consecutive failures.
+- Optional `--remote-buf` writes the last received snapshot into a reserved RDRAM
+  buffer (default candidate `0x807FF000`), which is the handoff the future puppet
+  actor will read. Off by default until the buffer is proven unused.
+- Input is queued through the node so only one thread ever uses the emulator socket.
+
+`local/sync_test.py`
+- Launches two gopher64 instances with separate data dirs, copies the same save into
+  each, boots both to controllable gameplay (control-checked, retries intro taps),
+  runs a node per side over UDP loopback, then moves A and B in turn.
+- Pass criteria: each player moves, the peer receives the matching position, error
+  under 5 units, more than 20 packets each.
+
+Result 2026-11-09: **PASS**. A moved 418.2 units and B received its position with
+0.0 error; B moved 153.9 units and A received with 0.0 error; 129 packets each,
+0 gaps, 0 socket errors. This is loopback on one machine with no packet loss
+injection yet, and it does not render a second player.
+
+Next: puppet actor. Reserve and verify the RDRAM handoff buffer, then design the
+patch-only injection that spawns a visible second Player actor driven by the remote
+snapshot.
+
 
 ## Phase 3 approach — revised after block-level analysis (2026-11-09)
 

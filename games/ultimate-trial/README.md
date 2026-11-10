@@ -70,6 +70,10 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   The actor is validated through its `overlayEntry` pointer. A scripted bot now boots from power-on
   to controllable gameplay, reads the player, and moves it with the bridge (verified: 144.7 units
   of movement).
+- Built a two-instance sync prototype: 48-byte UDP snapshots of player position/rotation/speed at
+  up to 30 Hz, sequence-gap and error tracking, and a QA harness that boots two emulator instances
+  and checks that each receives the other's moved position. Loopback test passes (129 packets
+  each, 0 gaps, 0 errors, 0.0 position error). No second player is rendered yet.
 
 ## QA
 
@@ -81,6 +85,10 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
 - Boot-to-gameplay test: `python local/boot_to_gameplay.py --port 47921` (cold boot,
   2026-11-09) -> player position `(408.97, 0.0, -2864.51)`, then holding the stick
   forward moved it 144.7 units. Scripted input reaches real gameplay.
+- Two-instance sync test: `python local/sync_test.py` (2026-11-09) -> PASS. Two
+  instances booted to gameplay, exchanged 129 UDP snapshots each with 0 gaps and 0
+  socket errors; each side received the other's moved position with 0.0 error
+  (A moved 418.2 units, B moved 153.9). Loopback only; no second player is rendered yet.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags

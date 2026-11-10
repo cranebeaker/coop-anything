@@ -10786,8 +10786,9 @@
     the Skyward Sword memory-sync pattern (two emulator instances, UDP bridge, puppet actor injected
     by a patch-only BPS on top of the player's own UT-patched ROM, gopher64 fork as bridge host).
     On 2026-11-09 UT v1.2.3 booted on the gopher64 fork with a working RDRAM/input bridge;
-    scripted input reached gameplay, and the player actor plus the actor overlay table were
-    located at runtime. No co-op exists yet.
+    scripted input reached gameplay, the player actor plus the actor overlay table were located
+    at runtime, and a two-instance UDP state-sync prototype passed its loopback QA test. No co-op
+    is playable yet.
   sources:
   - https://github.com/RichieUltimate/ultimate-trial
   - https://www.romhacking.net/hacks/8640
