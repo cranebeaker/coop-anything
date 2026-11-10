@@ -5,28 +5,30 @@
 | Engine | RE Engine (TDB 70) |
 | Versions tested | Steam, app 418370, buildid 22773795 (RT/DX12 build); REFramework nightly-01433 (d4611ae) with csharp-api |
 | Projects | [coop-re7](https://github.com/xXCroissantXx/coop-re7) (directory entry "Resident Evil 7 biohazard") |
-| QA level | none (bot tests and live probes on one PC, plus three two-player sessions by the author and a friend: 2026-11-02 on v0.11, 2026-11-03 on v0.22 and a short one on v0.24; v0.25-v0.27 tested on one PC only) |
-| Last updated | 2026-11-05 |
+| QA level | none (bot tests and live probes on one PC, plus six two-player sessions by the author and a friend: 2026-11-02 on v0.11, 2026-11-03 on v0.22 and a short one on v0.24, and three on 2026-11-08 on v0.29-v0.31; v0.32-v0.43 tested on one PC and in stand-in games only) |
+| Last updated | 2026-11-09 |
 
 ## Where things stand
 
-Two players can play through the start of the game together, each in their own world: the first real session
-went from the opening to the first save point after Chapter 3 and fought Mia together. Each player sees the other
-as a full-body character (Ethan, or Mia, Clancy, Zoe, Chris or Joe picked in a Lobby) who walks, jogs, crouches,
-sidesteps, looks around, blocks and swings their weapon (shown in hand) where the other player does, with
-footstep sounds, over Steam relay. Players
-install with one script, pick each other from a Steam friends list in an in-game window (the other player gets an
-invite to accept), and can jump to the other player's chapter with one click.
-Enemies are shared: each enemy is run by the game of the player nearest to it and copied in the other game,
-damage, deaths and flinches go both ways, a paused player's enemies move to the other game, and bosses (Jack's
-garage fight onward) run in each game with shared damage and defeat. Doors (unlock, open, close), drawers,
-switches, one-off interactions (the fridge, the van), pushed physics objects, breakable boxes (each player gets
-the box's item) and phone calls are shared, including for areas the other player reaches later; each player gets
-their own supplies (one shared copy is an option), and weapons, keys, files and maps stay for both.
-Story cutscenes can be shared between players close together (experimental, off by default); every sharing
-switch is one setting for both games. A fatal hit puts a player down until the other stands next to them for 3
-seconds. Quick messages and pings (F5-F8), the other player's health, and a catch-up after a rejoin are built
-in. Item boxes, puzzles and weapon sounds are not shared.
+Two players (up to four, tested with bots) can play the start of the game together, each in their own world:
+the sessions so far went from the opening through the Mia fight into Chapter 3. Each player sees the others as
+full-body characters (Ethan, or Mia, Clancy, Zoe, Chris or Joe) who walk, jog, crouch, sidestep, look around,
+block, swing and shoot their weapon (shown in hand) where that player does, with their footsteps, gunshots (each
+gun's own sound, muzzle flash and smoke), reloads, swings and voice (hits, blocks, landings, death), over Steam
+relay. Players install with one script. A co-op screen in the style of the game's Options sheets opens from a
+CO-OP row added to the title screen's tape recorder menu (F9 or L3+R3 in play), with keyboard, controller or
+mouse: invite Steam friends, host a lobby that starts everyone together at a chosen chapter or at the host's save,
+kick or disconnect, quick messages, give ammo, healing and materials to a friend, session stats and options.
+Enemies are shared: each enemy is run by the game of the player nearest to it and copied in the others, damage,
+deaths and flinches go both ways, and bosses (Jack's garage fight onward) run in each game with shared damage
+and defeat. Doors (unlock, open, close, pushes at the same angle), lockpicked drawers, switches, chains cut with
+the bolt cutters, one-off interactions, pushed physics objects, breakable boxes and phone calls are shared,
+including for areas a player reaches later. Each player gets their own supplies (one shared copy is an option);
+weapons, keys, files and maps stay for both, a player behind in the story gets the key items and weapons the
+host has, and a one-time key item (the VHS tape) takes everyone along. Story cutscenes can be shared
+(experimental); every sharing switch is one setting for all games. A fatal hit puts a player down until another
+stands next to them for 3 seconds. Item boxes and puzzles are not shared. Most of v0.32-v0.43 has not been
+played in a real two-player session yet.
 Saving is off by default and can be switched on, with automatic save backups.
 
 ## Existing work
@@ -348,6 +350,29 @@ Saving is off by default and can be switched on, with automatic save backups.
   `PlayerOrder.switchPlayerOperatable(false, OperationLayer.Base)` and `PlayerOrder.setDamageGUIMonochrome(true)`;
   `PlayerOrder.setReserveProne()` did nothing visible. The friend within 2.8 m for 3 s revives (35% health).
   Both down, or 90 s alone, lets a real death through (a self-hit via `newFakeDamageInfo`).
+- **v0.28-v0.43.** Up to four players (v0.29). Gunshots: the shooter's game hooks `WeaponGun.shoot` and `reload`,
+  and the other games play that weapon's Wwise sound and its muzzle flash and smoke at the copy's gun. The co-op
+  screen is drawn with REFramework's `draw` and holds the game with `MenuManager.setPlayerOperatableFlag`,
+  `setCameraOperatableFlag` and `setInputLevel`.
+  The title screen's tape recorder is `app.TitleSubMenu` on `GUI_menu`. Its rows are `_StepParam` (newgame,
+  continue, loadgame, extragame, specialfeature, option, quit), shown by `_MainList._Element`, a looping
+  `via.gui.ScrollList` (3 rows visible, `ItemMax` 7). Each `via.gui.SelectItem` slot says which row it shows by
+  `ListIndex` and writes it through a child `via.gui.Text` named `m_name`. A created `app.TitleSubMenu.StepParam`
+  (`Step` 0: nothing runs when it's picked) plus `ItemMax + 1` adds a row. A literal `set_Message` wins over the
+  `MessageId`, and a slot that scrolls on needs `set_Message(nil)` and its row's `ElemMsgID` back. The game fills
+  the list over several frames: a row added too early lands before EXIT (v0.41-v0.42), so v0.43 waits until the
+  row count equals `ItemMax` and has held for a second, and moves its row to the end if one comes after it.
+  Player voice: `app.PlayerDamageController` picks every damage, guard and death motion in its own methods
+  (`playDamageSMotion` / `M` / `L`, `playGuardDamageMotion`, `playDeadMotion`, ...), and
+  `PlayerMovement.processLand` / `processClimbOn` run on those motion tags. The voice events are Wwise triggers
+  (`SND_MOT_PL_V_DMG_S` and so on, the same names for Ethan and Mia) whose IDs are MurmurHash3 x86_32 of the
+  UTF-16LE name with seed 0xFFFFFFFF. They play on the player's own `WwiseContainer` at the other player's
+  object with `trigger(id, GameObject)`.
+  Inventory: `_ItemList` holds `app.Inventory.ItemInfo` with only `Owner`, `Item` and `Gun`; the id and count
+  are on `Item` (`ItemDataID`, `getStackNum` / `setStackNum`). `ItemManager.createItemInstance(owner, id)` plus
+  `Inventory.addItem` gives an item (`AddItemResult`: Put 0, Integration 1, IntegrationAndNoPut 2, NoPut 3,
+  LimitOver 4). Give items waits for the receiver's count before the giver's copy goes (`reduceItem`).
+  Difficulty: `GameManager.get_gameDifficulty()` (0 Casual, 1 Normal, 2 Madhouse).
 
 ## QA
 
@@ -433,14 +458,24 @@ Saving is off by default and can be switched on, with automatic save backups.
   the copy didn't shut by itself until the close arrived, and the player's own handle use and pushes were sent. A
   remote lockpick opened the study desk (lockpick sound, drawer usable, no menu). Untested: the doorway hold, a
   lockpick box in a running area, props.
+- **Sessions 4-6, 2026-11-08** (v0.29-v0.31, two players). Their fixes went into v0.30-v0.32. The last went from
+  the Mia fight into Chapter 3, where Jack was missing for both players. Fixes since then (v0.33-v0.43, including
+  a crash when Mia throws Ethan through the wall) are untested in a session.
+- **Title screen row, 2026-11-09** (v0.41-v0.42 on one PC): CO-OP showed on the tape recorder and opened the
+  co-op screen, but took EXIT's place with a blank line under it. The game's log said `added as row 7 of 7` with
+  7 rows of its own, so the row went in before the list was complete; fixed in v0.43.
+- **Stand-in games** (v0.39-v0.43): scripted two- to four-game runs of the Lua scripts against fakes of the
+  game's objects: the menu and lobby (78 checks, including a title list filled over several frames and the
+  mouse), giving items (20), the voice (14), the flashlight (11) and story steps.
 
 ## How to play
 
 Both players need RE7 on Steam (current build) and the .NET 10 runtime. Download the
-latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.27), unzip
+latest release from the [coop-re7 releases](https://github.com/xXCroissantXx/coop-re7/releases) (v0.43), unzip
 it and run **Install.cmd**.
-Start **Start RE7 Co-op**, press Insert, and in the **RE7 Co-op** window click **Connect** next to the other
-player's name; they click **Accept**. To meet up, click **Go to my friend's chapter**, then walk to each other.
+Start **Start RE7 Co-op** and choose **CO-OP** on the title screen's tape recorder (F9 in play). Under **Friends**,
+invite the other player; they accept in their co-op screen. Under **Lobby** the host picks where to start (a
+chapter, or Continue from their save) and everyone starts together.
 A player starting RE7 for the first time should play the opening alone first. Full steps are in the
 [coop-re7 README](https://github.com/xXCroissantXx/coop-re7).
 
@@ -457,15 +492,18 @@ A player starting RE7 for the first time should play the opening alone first. Fu
 - Mia (non-ship) has a gap on her left side and dark eyes with the full-model mod; Joe may have no hands.
 - Being downed has no fall or kneel animation (a forced crouch stands in for it).
 - Saving is off by default; with it off, nothing from a session is kept.
-- The face doesn't animate. Only footsteps are heard from the other player.
+- The face doesn't animate. The other player's voice uses the listener's own character sounds placed at the
+  other player, and may sound as if it's their own (untested live).
+- Three or four players are tested with bots only. The mouse on the co-op screen is untested in play (the game
+  may keep the mouse to itself), and the other player's flashlight is experimental (off by default).
 - Tested on the current ray-tracing build only; the older non-RT build (Steam beta `dx11_non-rt`) is untried.
   The installer warns about it (it reads `BetaKey` from `appmanifest_418370.acf`).
 
 ## Next steps
 
-1. A third two-player session with v0.24 and Share story on for both (story, Molded, garage fight).
-2. Share the interactions the v0.23 log names (garage-door button, puzzle unlocks), and confirm props move through
-   their `RigidBodySet`.
-3. Weapon sounds and muzzle flash (the held weapon's `app.WwiseContainerApp`, `app.EPVExpertMuzzleFlush`; a real
-   weapon instance on the copied body froze or crashed the game).
+1. A two-player session on v0.43: the title-screen CO-OP row, a lobby start and Continue, Chapter 3 with Jack,
+   the voice, gunshots and Give items.
+2. Share item boxes and puzzles (the shadow puzzle), and the switches the logs name.
+3. The other player's flashlight on by default once it's seen working, and a marker for them on the in-game map
+   (`app.MapManager.getMapPos`).
 4. Shared key pickups that run the item's own pickup on the other side, so scripted events fire in both games.
