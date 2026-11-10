@@ -85,8 +85,11 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   (segment `0x806AD070`) and the canyon/start area is scene 41 (segment `0x806A9000`).
 - Found and verified forced scene transitions: `transitionTrigger` at `0x80288DC1` (write 20)
   and `nextEntranceIndex` at `0x80288DC6`. Writing entrance `0x0712` + trigger in scene 41
-  faded the game and respawned Link at that entrance ~2.9 s later. The host can broadcast the
-  entrance index it used so the peer loads the same scene.
+  faded the game and respawned Link at that entrance ~2.9 s later.
+- Implemented follow-host scene sync: snapshots carry the scene id and the host's actual entrance
+  index; when the peer's scene differs it writes that entrance + trigger and reloads. Test passes
+  (fake mismatch -> both reload -> scenes match, puppets restored and drawn). No entrance table is
+  needed because the peer replays the host's own entrance index.
 - Added scene gating: the puppet is hidden when the two players report different scene ids and
   restored when they match (tested with a forced 42 vs 999 mismatch).
   Known limits: polled re-injection (about a second gap after a scene load), no interpolation,
@@ -112,10 +115,10 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   forcing A to report scene 999 hid both puppets (gate counters 0 -> 1 each) and clearing
   it restored them with exact positions and `isDrawn = 1`.
 - Co-op QA level stays `none`: this is a loopback prototype (no internet, no packet
-  loss testing). The intro transition 42 -> 41 was observed, and a forced local transition
-  (entrance `0x0712` + trigger) faded and respawned the player in ~2.9 s, but trial scenes
-  and forcing a peer to follow are not yet automated; re-injection can leave a ~1 s gap, and
-  no shippable client exists.
+  loss testing). Scene follow is verified with a faked mismatch (both sides replay entrance
+  `0x712`, reload, puppets restored), and a forced local transition (entrance `0x0712` +
+  trigger) faded and respawned the player in ~2.9 s. A true trial-to-trial follow, network
+  hardening and a shippable client are still missing.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
@@ -142,8 +145,8 @@ dump in the emulator of your choice.
    `sceneSegment`; camera and save flags still to map.
 3. ~~Prove a reserved RDRAM handoff buffer and a visible animated puppet.~~ Done, with
    scene gating and re-injection after actor-list rebuilds.
-4. Implement follow-host scene transitions using the host's actual entrance index
-   (`0x11E46`) and trigger (`0x11E41`), then reach a trial scene to test it end to end.
+4. Reach a trial scene and run a true scene-to-scene follow (different scene ids), then
+   network hardening and a shippable client.
 5. Harden the UDP bridge with chaos testing (delay, loss, jitter), add interpolation and
    close the scene-transition gap; port to a shippable client and run full two-player bot
    QA across scenes and saves.

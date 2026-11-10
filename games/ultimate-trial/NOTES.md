@@ -484,6 +484,23 @@ Follow-host design (next implementation): snapshots carry the scene id and the c
 `nextEntranceIndex`; when the peer's scene differs, write the remote entrance index and
 trigger 20, then gate puppets until the scene ids match.
 
+### Follow-host implemented and verified (2026-11-09)
+
+- Snapshot v3 adds `entrance` (the current scene's `nextEntranceIndex`).
+- Each node reads scene id, trigger and entrance from `PlayState` every tick.
+- On a scene mismatch with a valid remote entrance (`0 < entrance < 0x1000`), the node
+  writes that entrance and trigger 20 locally, with a 4 s cooldown. Puppets stay gated
+  until the scene ids match.
+- Test `local/follow_test.py`: boots both instances into scene 41, fakes A's scene id to
+  999, and requires B to replay A's entrance `0x712` and reload. Result **PASS**:
+  follows `1/1`, final scenes `41/41`, both puppets active with `isDrawn = 1`.
+- The faked mismatch keeps the target scene the same; the natural 42 -> 41 transition was
+  confirmed separately. For real travel, the host's actual entrance index travels in the
+  snapshot, so no entrance table is required: the peer replays what the host used.
+
+Remaining: reach a trial scene (different id) to exercise a true scene-to-scene follow,
+then network hardening (loss/jitter), interpolation, and a shippable client.
+
 
 
 
