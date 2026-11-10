@@ -170,6 +170,9 @@ All wiring is additive and lives behind the new `--coop-port` flag:
 - Unit test `bridge_serves_read_write_input_and_stat` in `src/coop.rs` drives the real
   `on_frame` entry point against a fake 8 MiB buffer. It needs no ROM, so the wire
   protocol can be validated before the owner's dump is available.
+  **Ran 2026-11-09**: `cargo test --release --lib` -> 1 passed, 0 failed. It checks a
+  WRITE then READ round trip, the input override, and STAT (frame counter and RDRAM
+  size). Protocol only; no game involved.
 - `local/coop_bridge.py` (owner workspace, never committed): Python client and CLI for
   the same protocol, for the QA harness and the eventual game bridge.
 

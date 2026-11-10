@@ -62,7 +62,10 @@ No code shipped yet. Done so far (details and sources in [NOTES.md](NOTES.md)):
 
 ## QA
 
-- No tests have run. There is no build yet.
+- Run so far: `cargo test --release --lib` in the emulator fork (2026-11-09) gives
+  `1 passed; 0 failed`. The test exercises the real per-frame hook against a fake 8 MiB
+  RDRAM: WRITE then READ round trip, input override state, and STAT (frame counter and
+  RDRAM size). It does not involve the game, so the QA level stays `none`.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
   per frame.
