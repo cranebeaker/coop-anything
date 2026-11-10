@@ -10789,7 +10789,8 @@
     index to load the same scene. Automated tests cover a Python node with the packaged client over
     loopback, forced and followed scene transitions (41 to 42 and back), and a chaos relay
     (16 of 286 packets dropped, puppet still exact). Scene follow is validated between the
-    starting scenes 41 and 42; broader trial travel is lightly tested. Story, enemy,
+    starting scenes 41 and 42 but is experimental and off by default; v0.1.2 guards puppet
+    injection around scene loads after a real session froze at transitions. Story, enemy,
     world-state and item sync are not implemented. GPL-3.0, no game data distributed.
   sources:
   - https://github.com/TheeDeb/ut-coop

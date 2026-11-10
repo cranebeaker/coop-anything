@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Nintendo 64, Ocarina of Time engine (closed-source total-conversion ROM hack) |
-| Versions tested | Ultimate Trial v1.2.3 (BPS patch SHA-256 `CD15868E2700F821A8F3342651D40B995F9A9C48B6DAD5F55025032CC86FB526`) with [ut-coop](https://github.com/TheeDeb/ut-coop/releases/latest) (v0.1.1) and the [gopher64 co-op fork](https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1) |
+| Versions tested | Ultimate Trial v1.2.3 (BPS patch SHA-256 `CD15868E2700F821A8F3342651D40B995F9A9C48B6DAD5F55025032CC86FB526`) with [ut-coop](https://github.com/TheeDeb/ut-coop/releases/latest) (v0.1.2, setup wizard) and the [gopher64 co-op fork](https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1) |
 | Projects | [ut-coop](https://github.com/TheeDeb/ut-coop) (client, GPL-3.0) and the [gopher64 fork](https://github.com/TheeDeb/gopher64) (GPL-3.0). Claimed in [issue 342](https://github.com/cranebeaker/coop-anything/issues/342); raw notes in [NOTES.md](NOTES.md) |
 | QA level | automated (prototype, same-area co-op) |
 | Last updated | 2026-11-09 |
@@ -106,6 +106,11 @@ Details, offsets and sources are in [NOTES.md](NOTES.md).
   joiner followed the host's `0x0712` back to 41 -> follow count 1, scenes 41/41, fresh puppet
   readbacks, 0.0 position error. PASS. The entrance table was located in RAM at `0x8010dc80`
   (2048 entries, 129 scenes), so scene travel does not need ROM reverse engineering.
+- Real two-player session (VPN): connection and puppets worked, but both games froze at scene
+  transitions. Logs showed the freeze began when one side loaded a new scene. v0.1.2 fixes it by
+  never injecting during a transition or within 6 s of a scene change, and makes scene following
+  opt-in (off by default). The scene-follow regression test still passes after the guard
+  (follows 1, scenes 41/41, both puppets drawn 1/1).
 - QA level is `automated` for this prototype: scripted two-client tests assert shared state. No human
   playthrough; same-area co-op only, no trial-to-trial run yet.
 
@@ -113,16 +118,19 @@ Details, offsets and sources are in [NOTES.md](NOTES.md).
 
 1. Dump your own Ocarina of Time (USA 1.0) cartridge (md5 `5bd1fe107bf8106b2ab6650abecd54d6`) and
    apply the official Ultimate Trial v1.2.3 BPS patch. No game files are distributed here.
-2. Download [ut-coop](https://github.com/TheeDeb/ut-coop/releases/latest) and the
-   [gopher64 co-op fork](https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1).
+2. Download [ut-coop](https://github.com/TheeDeb/ut-coop/releases/latest) (the bundle contains
+   the client and the emulator) and extract it.
 3. Create a save in File 1 once in the emulator.
 4. Run `ut-coop.exe` with no arguments and answer the wizard (host/join, IP, session).
-   Advanced users can pass `--emulator`, `--rom`, `--peer`, `--bind` and `--session` directly.
+   Scene following is off by default; add `--follow` only on the joining side if you want
+   to experiment with scene travel. Advanced users can pass all flags directly.
 
 ## Known issues
 
-- Same-area co-op only; trial-to-trial travel is not yet validated end to end.
+- Same-area co-op only in practice; scene following exists but is experimental and off by default.
 - Story, enemy, world-state and item state are not synced.
+- The remote Link's model can render distorted (squished); use `--no-anim` for a static pose or
+  `--no-puppet` to hide it until fixed.
 - Puppet animation steps at the snapshot rate (no interpolation).
 - After a scene load the puppet can be missing for about a second before re-injection.
 - Boot automation taps through the intro and assumes a File 1 save; it can take about a minute.

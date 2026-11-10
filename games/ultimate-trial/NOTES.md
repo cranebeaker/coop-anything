@@ -552,6 +552,34 @@ of on-screen drawing; rendering was verified separately.
 
 Client v0.1.1 adds the setup wizard and is published.
 
+### Real two-player session and v0.1.2 stability fix (2026-11-09)
+
+The first remote session connected over a VPN and both sides saw the other's puppet.
+Then the games froze at scene transitions:
+
+- Friend log: scene 42 -> 41, then `recv` froze at 1073; puppet gated off.
+- Host log: kept receiving to 1577 while the friend was stuck, then froze too.
+- Both follow counters were 0, so this was not the follow loop.
+
+Diagnosis: v0.1.1 re-injected the puppet during the scene-load window. The transition
+trigger is 20 during the fade, then 0 for about 2.5 s while the scene loads, then -20
+during the arrival fade; guarding only on `trigger != 0` is not enough. Injection during
+that window corrupts the running game.
+
+v0.1.2 fixes:
+
+- never inject/re-inject while `transitionTrigger != 0`, and skip for 6 s after a local
+  scene id change (scene settled),
+- scene follow is opt-in (`--follow`) and off by default; the host should not follow,
+- follow attempts are capped at 5, then the client stays put,
+- `--no-anim` keeps the puppet's pose static for testing the model issue.
+
+Regression after the change: `scene_follow_test` still passes (follows 1, scenes 41/41,
+fresh readbacks, 0.0 position error, both puppets drawn 1/1).
+
+Still open: the remote model can render squished. Workarounds are `--no-anim` (static
+pose) or `--no-puppet` (hide it); the pose/model fix is pending.
+
 
 
 
