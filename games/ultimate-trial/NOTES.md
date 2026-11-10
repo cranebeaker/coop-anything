@@ -394,6 +394,30 @@ Remaining limits:
 - Python prototype over UDP; no shippable client, no internet play, no packet-loss
   injection yet.
 
+### Scene state and gating (2026-11-09)
+
+`PlayState` found without any vanilla assumptions: 36 pointers into the plausible range
+behind the actor-list array converge on base `0x80276f80`. Validated fields:
+
+- `sceneId` at `+0xA4` (`0x80277024`) = 42 in both dumps of the starting hub
+- `sceneDrawConfig` at `+0xA6` = 9
+- `sceneSegment` at `+0xB0` = `0x806ad070`; its contents start with `0x15...`, a valid
+  `SCmdRoomList`, so it is real loaded scene data
+
+The actor-list array sits at `PlayState+0x1C2C` (vanilla `+0x1C30`), so UT's layout is
+4 bytes smaller somewhere before it. Vanilla `roomCtx` / `gameplayFrames` offsets did
+not read as plausible values, so only the fields above are trusted.
+
+Scene gating is implemented: the snapshot carries the scene id, and a node hides
+(unlinks) its puppet when the peer reports a different scene, then re-injects when the
+ids match again. Test: override A to scene 999; both puppets gated off (gate counters
+0 -> 1 each); clear the override; both recovered with exact position and `isDrawn = 1`.
+
+Caveat: a real scene load has not been triggered yet. The starting hub stayed scene 42
+through the intro and its teleports. The next step is to drive the player out of the hub
+(or find the scene transition function) to confirm the id changes, then implement
+forcing the peer into the same scene.
+
 
 
 

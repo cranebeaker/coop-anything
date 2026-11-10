@@ -80,6 +80,10 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   snapshots. Snapshots now carry appearance and the 24-limb joint table, so the puppet moves and
   animates; a watchdog re-injects it after a scene transition. Two-instance test passes with 0.0
   position error, matching joint data that changes over time, and re-injection 0 -> 1 per side.
+- Located the engine scene state: `PlayState` base `0x80276f80`, `sceneId` at `0x80277024`
+  (42 in the starting hub), `sceneSegment` at `0x80277030` pointing at valid scene command data.
+  Added scene gating: the puppet is hidden when the two players report different scene ids and
+  restored when they match (tested with a forced 42 vs 999 mismatch).
   Known limits: polled re-injection (about a second gap after a scene load), no interpolation,
   Python prototype only.
 
@@ -97,13 +101,14 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   The harness boots two instances into gameplay, injects a puppet actor on each side,
   teleports each real player and checks delivery. Each side's puppet read back exactly
   the snapshot it last applied (0.0 position error), the streamed joint table matched
-  the written bytes and changed over time, and `isDrawn = 1` on both sides; 62/60 UDP
+  the written bytes and changed over time, and `isDrawn = 1` on both sides; 83/79 UDP
   snapshots, 0 gaps, 0 socket errors. Detaching both puppets made the watchdog restore
-  them (0 -> 1 re-injection per side, position exact). A separate capture showed a
-  second Link rendered in the world.
+  them (0 -> 1 re-injection per side, position exact). Scene gating: both read scene 42;
+  forcing A to report scene 999 hid both puppets (gate counters 0 -> 1 each) and clearing
+  it restored them with exact positions and `isDrawn = 1`.
 - Co-op QA level stays `none`: this is a loopback prototype (no internet, no packet
-  loss testing), re-injection can leave a ~1 s gap after scene loads, and no shippable
-  client exists yet.
+  loss testing), a real scene-to-scene load has not been exercised yet, re-injection can
+  leave a ~1 s gap, and no shippable client exists.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
@@ -126,12 +131,12 @@ dump in the emulator of your choice.
 
 1. ~~Build a stock gopher64 and confirm UT v1.2.3 boots headless.~~ Done; the fork adds
    `--coop-port` and boots to controllable gameplay with scripted input.
-2. ~~Find GlobalContext, the player actor, and the overlay table.~~ Player actor and
-   actor overlay table found and validated; camera, scene id and save flags still to map.
-3. ~~Prove a reserved RDRAM handoff buffer and a visible puppet.~~ Done: a second Link
-   renders, moves, animates from streamed joint data, and is re-injected after the actor
-   list is rebuilt.
-4. Harden the UDP bridge with chaos testing (delay, loss, jitter), add interpolation and
-   close the scene-transition gap.
-5. Port the prototype to a shippable client (host/join, no Python) and run full two-player
-   bot QA across scene transitions and saves.
+2. ~~Find the player actor and overlay table.~~ Done, plus `PlayState`, `sceneId` and
+   `sceneSegment`; camera and save flags still to map.
+3. ~~Prove a reserved RDRAM handoff buffer and a visible animated puppet.~~ Done, with
+   scene gating and re-injection after actor-list rebuilds.
+4. Drive the player out of the starting hub to confirm a real scene-id change, then make
+   the peer load the same scene (or deny travel with an in-game message).
+5. Harden the UDP bridge with chaos testing (delay, loss, jitter), add interpolation and
+   close the scene-transition gap; port to a shippable client and run full two-player bot
+   QA across scenes and saves.
