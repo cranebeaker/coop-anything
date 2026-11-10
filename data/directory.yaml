@@ -10787,9 +10787,10 @@
     table; the peer is rendered as a second Link that moves and animates and is re-injected after
     actor-list rebuilds. Scenes are gated by scene id and a joining side replays the host's entrance
     index to load the same scene. Automated tests cover a Python node with the packaged client over
-    loopback, forced and followed scene transitions, and a chaos relay (16 of 286 packets dropped,
-    puppet still exact). Same-area co-op only so far; story, enemy, world-state and item sync are
-    not implemented. GPL-3.0, no game data distributed.
+    loopback, forced and followed scene transitions (41 to 42 and back), and a chaos relay
+    (16 of 286 packets dropped, puppet still exact). Scene follow is validated between the
+    starting scenes 41 and 42; broader trial travel is lightly tested. Story, enemy,
+    world-state and item sync are not implemented. GPL-3.0, no game data distributed.
   sources:
   - https://github.com/TheeDeb/ut-coop
   - https://github.com/TheeDeb/gopher64

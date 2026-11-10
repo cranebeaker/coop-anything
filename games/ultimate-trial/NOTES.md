@@ -535,6 +535,23 @@ through the intro (about a minute). Same-area co-op only so far.
 - Still to do: true internet path (NAT/port forwarding), interpolation for smoother
   motion at low rates, and packaging the emulator fork with the client.
 
+### Entrance table and true scene-to-scene follow (2026-11-09)
+
+The entrance table is in RAM at `0x8010dc80`: 2048 entries of 4 bytes
+`{s8 sceneId, s8 spawn, u16 field}`, 129 distinct scene ids. Useful entries:
+`0x0712` -> scene 41 (canyon), `0x0716` -> scene 42 (fountain), `0x071e` -> scene 43.
+This removes the need for any ROM-side entrance reverse engineering.
+
+True follow test: both instances booted into scene 41. B was forced to scene 42 with
+entrance `0x0716` (readback confirmed scene 42). Then nodes ran with the host (A) not
+following and the joiner (B) following. B saw A's scene 41 plus entrance `0x0712`,
+replayed it and loaded scene 41. Result: follow count 1, final scenes 41/41, fresh puppet
+readbacks with 0.0 position error on both sides. B's `isDrawn` was 0 at that instant
+(the puppet was off-camera), so the test asserts fresh puppet state and position instead
+of on-screen drawing; rendering was verified separately.
+
+Client v0.1.1 adds the setup wizard and is published.
+
 
 
 

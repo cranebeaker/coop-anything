@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Nintendo 64, Ocarina of Time engine (closed-source total-conversion ROM hack) |
-| Versions tested | Ultimate Trial v1.2.3 (BPS patch SHA-256 `CD15868E2700F821A8F3342651D40B995F9A9C48B6DAD5F55025032CC86FB526`) with [ut-coop v0.1.0](https://github.com/TheeDeb/ut-coop/releases/tag/v0.1.0) and the [gopher64 co-op fork](https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1) |
+| Versions tested | Ultimate Trial v1.2.3 (BPS patch SHA-256 `CD15868E2700F821A8F3342651D40B995F9A9C48B6DAD5F55025032CC86FB526`) with [ut-coop](https://github.com/TheeDeb/ut-coop/releases/latest) (v0.1.1) and the [gopher64 co-op fork](https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1) |
 | Projects | [ut-coop](https://github.com/TheeDeb/ut-coop) (client, GPL-3.0) and the [gopher64 fork](https://github.com/TheeDeb/gopher64) (GPL-3.0). Claimed in [issue 342](https://github.com/cranebeaker/coop-anything/issues/342); raw notes in [NOTES.md](NOTES.md) |
 | QA level | automated (prototype, same-area co-op) |
 | Last updated | 2026-11-09 |
@@ -13,7 +13,9 @@
 A prototype exists and is playable as same-area co-op: two emulator instances exchange
 player snapshots over UDP, and each side renders the other player as a second Link that
 moves and animates. Puppets are hidden when the two players are in different scenes, and
-a joining side replays the host's entrance index to load the same scene.
+a joining side replays the host's entrance index to load the same scene. Scene following
+was verified between the starting scenes 41 and 42; broader trial-to-trial travel is
+lightly tested.
 
 Not done yet: story, enemy, world-state and item sync; a verified trial-to-trial
 playthrough. No ROMs or game data are distributed; each player applies the official BPS
@@ -100,6 +102,10 @@ Details, offsets and sources are in [NOTES.md](NOTES.md).
   drawn. PASS.
 - Scene transition: a real 42 -> 41 load was observed; a forced entrance `0x0712` + trigger faded and
   respawned the player in ~2.9 s; follow-host replay of the entrance passed.
+- True scene-to-scene follow: both booted in 41, B forced to 42 via entrance `0x0716`, then the
+  joiner followed the host's `0x0712` back to 41 -> follow count 1, scenes 41/41, fresh puppet
+  readbacks, 0.0 position error. PASS. The entrance table was located in RAM at `0x8010dc80`
+  (2048 entries, 129 scenes), so scene travel does not need ROM reverse engineering.
 - QA level is `automated` for this prototype: scripted two-client tests assert shared state. No human
   playthrough; same-area co-op only, no trial-to-trial run yet.
 
@@ -107,15 +113,11 @@ Details, offsets and sources are in [NOTES.md](NOTES.md).
 
 1. Dump your own Ocarina of Time (USA 1.0) cartridge (md5 `5bd1fe107bf8106b2ab6650abecd54d6`) and
    apply the official Ultimate Trial v1.2.3 BPS patch. No game files are distributed here.
-2. Download [ut-coop v0.1.0](https://github.com/TheeDeb/ut-coop/releases/tag/v0.1.0) and the
+2. Download [ut-coop](https://github.com/TheeDeb/ut-coop/releases/latest) and the
    [gopher64 co-op fork](https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1).
 3. Create a save in File 1 once in the emulator.
-4. Host:
-   `ut-coop.exe --emulator gopher64.exe --rom ultimate_trial.z64 --coop-port 47900 --bind 0.0.0.0:49001 --peer CLIENT_IP:49002 --session 0x1234`
-5. Join:
-   `ut-coop.exe --emulator gopher64.exe --rom ultimate_trial.z64 --coop-port 47901 --bind 0.0.0.0:49002 --peer HOST_IP:49001 --session 0x1234`
-
-Use the same nonzero session on both sides and forward the UDP ports (or use a VPN).
+4. Run `ut-coop.exe` with no arguments and answer the wizard (host/join, IP, session).
+   Advanced users can pass `--emulator`, `--rom`, `--peer`, `--bind` and `--session` directly.
 
 ## Known issues
 
@@ -132,6 +134,8 @@ Use the same nonzero session on both sides and forward the UDP ports (or use a V
 1. ~~Build the fork, bridge, boot automation and address discovery.~~ Done.
 2. ~~Render and animate a remote Link; gate by scene and re-inject after loads.~~ Done.
 3. ~~Verify forced scene transitions and follow-host scene loading.~~ Done.
-4. Reach a trial scene and run a true scene-to-scene follow with different scene ids.
-5. Add interpolation, close the scene-load gap, and run full two-player bot QA across scenes and saves.
+4. ~~Verify a true scene-to-scene follow.~~ Done between scenes 41 and 42. Validate broader
+   trial-to-trial travel next.
+5. Add interpolation, close the scene-load gap, and run full two-player bot QA across scenes
+   and saves.
 6. Port the client to Rust, add a relay/NAT story, and test a real internet session.
