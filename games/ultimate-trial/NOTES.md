@@ -461,6 +461,29 @@ fading, 0 when idle) to locate the field by value, or find the entrance table an
 transition code by static RE. Once located, a scene change for the peer is: write
 `nextEntranceIndex`, set `transitionTrigger = 20`, and let the engine load.
 
+### Forced scene transition, verified (2026-11-09)
+
+A 12 Hz capture of `PlayState` through the 42 -> 41 intro fade found exactly one byte
+that follows the trigger pattern 0 -> 20 -> 0 -> -20 (0xEC):
+
+- `transitionTrigger` = `PlayState + 0x11E41` (`0x80288DC1`), s8. 20 for about a second
+  before the load, -20 after arrival.
+- `nextEntranceIndex` = `PlayState + 0x11E46` (`0x80288DC6`), u16. It holds `0x0712`
+  after entering the canyon (scene 41).
+
+Forced-transition test: in scene 41, wrote entrance `0x0712` and trigger 20 through the
+bridge. The game faded, the player position read (0,0,0) at ~1.5 s, and Link respawned
+at the scene 41 entrance at ~2.9 s. So scene transitions can be driven entirely from RAM.
+
+The vanilla entrance table is `{s8 sceneId, s8 spawn, u16 field}` (`EntranceInfo`), but a
+ROM scan for a table whose entry 0x712 is scene 41 found nothing; UT's table is likely
+compressed, relocated or indirect. This is not needed for co-op: the host can broadcast
+the entrance index it actually used, and the peer can replay it.
+
+Follow-host design (next implementation): snapshots carry the scene id and the current
+`nextEntranceIndex`; when the peer's scene differs, write the remote entrance index and
+trigger 20, then gate puppets until the scene ids match.
+
 
 
 
