@@ -369,18 +369,26 @@ where each head's actor category matches its index. On this build it is
 Verified: the puppet has `isDrawn = 1`, projects on screen, and renders as a second
 Link. Floating it 120 units above the real player made it unmistakable in a capture.
 
-Sync integration: each node writes every received snapshot's position/rotation into
-its local puppet (`+0x24`, `+0xB4`) and updates focus/prev periodically, then reads
-the puppet back. Two-instance test 2026-11-09: **PASS**. Each side's puppet equalled
-the snapshot it last applied exactly (0.0 error) with `isDrawn = 1`; 24/21 packets,
-0 gaps, 0 socket errors.
+Sync integration: each node writes every received snapshot's position/rotation,
+appearance (tunic/sword/shield/boots/model group/mask) and the 24-limb joint table
+(144 bytes) into its local puppet, then reads the puppet back. Two-instance test
+2026-11-09: **PASS**. Each side's puppet equalled the snapshot it last applied exactly
+(0.0 position error), the joint table read back matched the bytes written and changed
+over time (4-5 changes observed, so the puppet animates), and `isDrawn = 1` on both
+sides; 62/60 packets, 0 gaps, 0 socket errors.
 
-Known limits:
-- The puppet's pose is frozen at the copied frame (no animation update yet).
-- It is dropped on scene transitions because the actor lists are rebuilt; it must be
-  re-injected after a scene load until an engine-side hook exists.
-- The automated test moves the real player by teleport because the interactive intro
-  can ignore pad input; normal movement already works once gameplay is stable.
+Scene persistence: a watchdog runs every 30 snapshots. It revalidates the player
+actor, checks the player list and re-injects the puppet if it is no longer linked.
+The test detaches both puppets (`force_unlink`) and requires the watchdog to restore
+them: observed 0 -> 1 re-injection per side, position exact, `isDrawn = 1`.
+
+Remaining limits:
+- Re-injection is polled, so after a scene load the puppet can be absent for up to
+  the watchdog interval (about a second) before it reappears.
+- No interpolation: the puppet steps to the received joint table, so its animation is
+  as smooth as the snapshot rate (about 15-25 Hz on loopback).
+- Python prototype over UDP; no shippable client, no internet play, no packet-loss
+  injection yet.
 
 
 

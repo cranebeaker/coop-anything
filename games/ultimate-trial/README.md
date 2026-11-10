@@ -77,8 +77,11 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
 - Emulator-side puppet prototype: the bridge copies the live Player struct into reserved RDRAM,
   links it into the player actor list tail and points it at the resident Player draw code. A second
   Link renders on each instance at the other player's position, driven entirely by the received
-  snapshots. Two-instance test passes with 0.0 puppet error and `isDrawn = 1` on both sides.
-  Known limits: frozen pose, dropped on scene transitions, no shipping client yet.
+  snapshots. Snapshots now carry appearance and the 24-limb joint table, so the puppet moves and
+  animates; a watchdog re-injects it after a scene transition. Two-instance test passes with 0.0
+  position error, matching joint data that changes over time, and re-injection 0 -> 1 per side.
+  Known limits: polled re-injection (about a second gap after a scene load), no interpolation,
+  Python prototype only.
 
 ## QA
 
@@ -92,12 +95,15 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   forward moved it 144.7 units. Scripted input reaches real gameplay.
 - Two-instance sync + puppet test: `python local/sync_test.py` (2026-11-09) -> PASS.
   The harness boots two instances into gameplay, injects a puppet actor on each side,
-  teleports each real player and checks delivery. Each side received the other's moved
-  position and its puppet read back exactly the snapshot it last applied (0.0 error,
-  `isDrawn = 1` on both sides); 24/21 UDP snapshots, 0 gaps, 0 socket errors. A separate
-  capture showed a second Link rendered in the world.
-- Co-op QA level stays `none`: this is a loopback prototype, the puppet pose is frozen,
-  it is dropped on scene transitions, and no shippable client exists yet.
+  teleports each real player and checks delivery. Each side's puppet read back exactly
+  the snapshot it last applied (0.0 position error), the streamed joint table matched
+  the written bytes and changed over time, and `isDrawn = 1` on both sides; 62/60 UDP
+  snapshots, 0 gaps, 0 socket errors. Detaching both puppets made the watchdog restore
+  them (0 -> 1 re-injection per side, position exact). A separate capture showed a
+  second Link rendered in the world.
+- Co-op QA level stays `none`: this is a loopback prototype (no internet, no packet
+  loss testing), re-injection can leave a ~1 s gap after scene loads, and no shippable
+  client exists yet.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
@@ -122,8 +128,10 @@ dump in the emulator of your choice.
    `--coop-port` and boots to controllable gameplay with scripted input.
 2. ~~Find GlobalContext, the player actor, and the overlay table.~~ Player actor and
    actor overlay table found and validated; camera, scene id and save flags still to map.
-3. Prove a reserved RDRAM handoff buffer that survives the game loop, then build the
-   puppet actor (emulator-side injection first, patch-only overlay as fallback).
-4. Harden the UDP bridge (loss, latency, jitter), then port the prototype to a
-   shippable client.
-5. Bot QA for two players: movement, scene transitions, save/load, and desync checks.
+3. ~~Prove a reserved RDRAM handoff buffer and a visible puppet.~~ Done: a second Link
+   renders, moves, animates from streamed joint data, and is re-injected after the actor
+   list is rebuilt.
+4. Harden the UDP bridge with chaos testing (delay, loss, jitter), add interpolation and
+   close the scene-transition gap.
+5. Port the prototype to a shippable client (host/join, no Python) and run full two-player
+   bot QA across scene transitions and saves.
