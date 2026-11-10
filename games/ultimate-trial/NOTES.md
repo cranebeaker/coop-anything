@@ -512,9 +512,11 @@ then network hardening (loss/jitter), interpolation, and a shippable client.
 - It can launch the gopher64 fork with `--coop-port`, wait for the bridge, tap through
   the menu/intro once (`--no-boot` to skip), then run the sync node and print status.
 - Built with PyInstaller 6.22.3 -> `ut-coop/dist/ut-coop.exe` (7.6 MB).
-- Interoperability test: Python sync node on instance A plus the packaged client on B.
-  A received 201+ snapshots with 0 gaps and exact positions; A's puppet matched B and
-  B's puppet matched A, both `isDrawn = 1`. PASS.
+- Snapshot protocol v4 adds a 32-bit session id; a node with a nonzero session drops
+  snapshots that do not match.
+- Interoperability test: Python sync node on instance A plus the packaged client on B,
+  both with session `0x1234`. A received 281 snapshots with 0 gaps and exact positions;
+  A's puppet matched B and B's puppet matched A, both `isDrawn = 1`. PASS.
 
 Known limits of this client: Python-packaged (Rust port still pending), no session id
 or handshake yet (UDP ports must be dedicated), manual port forwarding, both players
