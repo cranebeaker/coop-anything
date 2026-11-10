@@ -72,8 +72,13 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   of movement).
 - Built a two-instance sync prototype: 48-byte UDP snapshots of player position/rotation/speed at
   up to 30 Hz, sequence-gap and error tracking, and a QA harness that boots two emulator instances
-  and checks that each receives the other's moved position. Loopback test passes (129 packets
-  each, 0 gaps, 0 errors, 0.0 position error). No second player is rendered yet.
+  and checks that each receives the other's moved position. Loopback test passes (24/21 packets,
+  0 gaps, 0 errors, 0.0 position error).
+- Emulator-side puppet prototype: the bridge copies the live Player struct into reserved RDRAM,
+  links it into the player actor list tail and points it at the resident Player draw code. A second
+  Link renders on each instance at the other player's position, driven entirely by the received
+  snapshots. Two-instance test passes with 0.0 puppet error and `isDrawn = 1` on both sides.
+  Known limits: frozen pose, dropped on scene transitions, no shipping client yet.
 
 ## QA
 
@@ -85,12 +90,14 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
 - Boot-to-gameplay test: `python local/boot_to_gameplay.py --port 47921` (cold boot,
   2026-11-09) -> player position `(408.97, 0.0, -2864.51)`, then holding the stick
   forward moved it 144.7 units. Scripted input reaches real gameplay.
-- Two-instance sync test: `python local/sync_test.py` (2026-11-09) -> PASS. Two
-  instances booted to gameplay, exchanged 110 and 106 UDP snapshots with 0 gaps and 0
-  socket errors; each side received the other's moved position with 0.0 error
-  (A moved 418.2 units, B moved 123.1). The received snapshot was mirrored into a
-  reserved 4 KiB RDRAM buffer and read back successfully 10/10 times per side.
-  Loopback only; no second player is rendered yet.
+- Two-instance sync + puppet test: `python local/sync_test.py` (2026-11-09) -> PASS.
+  The harness boots two instances into gameplay, injects a puppet actor on each side,
+  teleports each real player and checks delivery. Each side received the other's moved
+  position and its puppet read back exactly the snapshot it last applied (0.0 error,
+  `isDrawn = 1` on both sides); 24/21 UDP snapshots, 0 gaps, 0 socket errors. A separate
+  capture showed a second Link rendered in the world.
+- Co-op QA level stays `none`: this is a loopback prototype, the puppet pose is frozen,
+  it is dropped on scene transitions, and no shippable client exists yet.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags

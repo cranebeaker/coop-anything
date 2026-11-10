@@ -348,6 +348,41 @@ Recommendation: try route 1 for the first visible puppet; keep route 2 as the
 shipping-clean fallback. Either way the next concrete step is to prove a reserved
 RDRAM handoff buffer that the game side can read every frame.
 
+### Emulator-side puppet prototype (2026-11-09, verified)
+
+Injection recipe (all from the bridge, no ROM change):
+
+1. Copy the live `Player` struct (0xA94 bytes) from `0x80289550` to `0x807FF100`.
+2. Rebase `skelAnime.jointTable` (Player+0x1D4) and `skelAnime.morphTable`
+   (Player+0x1D8) to the replica's own tables at +0x1F8 and +0x288.
+3. Clear self/object links: giObjectSegment, heldActor, unk_3C4, doorActor,
+   parent/child.
+4. Point init/destroy/update at a resident `jr ra; nop` (found at `0x80001cc0`);
+   keep draw = real `Player_Draw` (`0x800a1070`).
+5. Append to the category-2 actor list tail: real player stays the head, so
+   `GET_PLAYER()` still returns the human-controlled Link; list length becomes 2.
+
+The actor list array is located by shape scan: 12 entries of {s32 length, Actor* head}
+where each head's actor category matches its index. On this build it is
+`0x80278bac` (category 2 head `0x80289550`, category 7 head `0x802981d0`).
+
+Verified: the puppet has `isDrawn = 1`, projects on screen, and renders as a second
+Link. Floating it 120 units above the real player made it unmistakable in a capture.
+
+Sync integration: each node writes every received snapshot's position/rotation into
+its local puppet (`+0x24`, `+0xB4`) and updates focus/prev periodically, then reads
+the puppet back. Two-instance test 2026-11-09: **PASS**. Each side's puppet equalled
+the snapshot it last applied exactly (0.0 error) with `isDrawn = 1`; 24/21 packets,
+0 gaps, 0 socket errors.
+
+Known limits:
+- The puppet's pose is frozen at the copied frame (no animation update yet).
+- It is dropped on scene transitions because the actor lists are rebuilt; it must be
+  re-injected after a scene load until an engine-side hook exists.
+- The automated test moves the real player by teleport because the interactive intro
+  can ignore pad input; normal movement already works once gameplay is stable.
+
+
 
 
 ## Phase 3 approach — revised after block-level analysis (2026-11-09)
