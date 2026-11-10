@@ -83,10 +83,14 @@ Route B details (if chosen):
 ## Unknowns
 
 - Whether the UT team would cooperate or accept a co-op patch (needs owner decision to ask).
-- Whether UT's randologic/achievements systems complicate determinism or state sync (probably
-  fine — flags are flags — but unverified).
+- **Scene/area synchronization is the next major unknown.** UT's `PlayState` layout does not
+  match vanilla OoT: a first attempt to derive `play` from the actor-list address and read
+  `sceneId` at the vanilla `+0xA4` gave 0, and the `GameState.gfxCtx` slot was not a valid
+  pointer. Needs runtime discovery with differential dumps across a real scene load, then a
+  policy: force both instances into the same scene or hide the puppet when scene ids differ.
+- How to sync quest/scene flags, save state and cutscene progress (needed before story co-op).
+- Whether UT's randologic/achievements systems complicate determinism (probably fine, but unverified).
 - Whether the Wii VC patch of UT behaves under Dolphin for a two-instance test rig.
-- Emulator choice for the bridge host: needs hands-on testing on the owner's machine.
 
 ## Route chosen (owner decision, 2026-11-09)
 
