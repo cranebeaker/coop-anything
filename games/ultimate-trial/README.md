@@ -86,9 +86,11 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   2026-11-09) -> player position `(408.97, 0.0, -2864.51)`, then holding the stick
   forward moved it 144.7 units. Scripted input reaches real gameplay.
 - Two-instance sync test: `python local/sync_test.py` (2026-11-09) -> PASS. Two
-  instances booted to gameplay, exchanged 129 UDP snapshots each with 0 gaps and 0
+  instances booted to gameplay, exchanged 110 and 106 UDP snapshots with 0 gaps and 0
   socket errors; each side received the other's moved position with 0.0 error
-  (A moved 418.2 units, B moved 153.9). Loopback only; no second player is rendered yet.
+  (A moved 418.2 units, B moved 123.1). The received snapshot was mirrored into a
+  reserved 4 KiB RDRAM buffer and read back successfully 10/10 times per side.
+  Loopback only; no second player is rendered yet.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags

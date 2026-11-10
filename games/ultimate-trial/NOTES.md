@@ -296,13 +296,25 @@ unaffected (the variable is unset).
   under 5 units, more than 20 packets each.
 
 Result 2026-11-09: **PASS**. A moved 418.2 units and B received its position with
-0.0 error; B moved 153.9 units and A received with 0.0 error; 129 packets each,
+0.0 error; B moved 123.1 units and A received with 0.0 error; 110/106 packets,
 0 gaps, 0 socket errors. This is loopback on one machine with no packet loss
 injection yet, and it does not render a second player.
 
-Next: puppet actor. Reserve and verify the RDRAM handoff buffer, then design the
-patch-only injection that spawns a visible second Player actor driven by the remote
-snapshot.
+### RDRAM handoff buffer (verified 2026-11-09)
+
+- Candidate buffer: `0x807FF000`, 4 KiB at the top of 8 MiB RDRAM.
+- Wrote a 0x100 pattern, waited 5 s, read it back: unchanged. The game kept
+  running and the player still moved 74.0 units afterward. Original bytes were
+  restored.
+- Sync nodes now write every received snapshot to that buffer (enabled in the QA
+  test) and read it back every 10th packet. Result: 10/10 read-backs matched on
+  both instances, 0 mismatches, with the game running.
+- Caveat: this is verified in the starting scene only. Re-check it across scene
+  transitions before trusting it for the final puppet; if the game starts using
+  it, move the buffer or reserve space in the eventual code patch.
+
+Next: puppet actor. The handoff side is now proven, so the remaining question is
+how to create a second visible actor.
 
 ### Overlay table layout and the puppet decision (verified 2026-11-09)
 
