@@ -171,6 +171,11 @@ namespace KtcCoop
 
             if (rec.Go == null) return;
             var enemy = rec.Enemy;
+            // the proxy's Character component is disabled since spawn, so Unity
+            // will not fire OnDisable on destroy and it would leak into
+            // Character.Characters (crashing showdown targeting) — remove by hand
+            if (enemy != null)
+                Character.Characters.Remove(enemy);
             if (enemy != null)
             {
                 var hb = enemy.GetComponentInChildren<Hurtbox>();
