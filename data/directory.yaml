@@ -10762,47 +10762,40 @@
 - game: Ultimate Trial (Ocarina of Time ROM hack)
   year: 2024
   engine: Ocarina of Time engine (N64, closed-source ROM hack)
-  project: (none found)
-  url: ''
-  other_urls: []
-  kind: gap
-  status: none
+  project: ut-coop
+  url: https://github.com/TheeDeb/ut-coop
+  other_urls:
+  - https://github.com/TheeDeb/gopher64
+  - https://github.com/TheeDeb/ut-coop/releases/tag/v0.1.0
+  - https://github.com/TheeDeb/gopher64/releases/tag/v1.2.0-utcoop1
+  - https://github.com/cranebeaker/coop-anything/issues/342
+  kind: emulator-netplay
+  status: prototype
   coop_scope:
-    players_visible: unknown
-    story: unknown
-    enemies: unknown
-    world_state: unknown
-    items: unknown
-  players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
-  qa: none
-  notes: Total-conversion ROM hack of OoT US 1.0, shipped as a BPS patch; no co-op or multiplayer
-    exists for it. Its own parse of the BPS shows ~90% of the ROM is new bytes, so every vanilla-OoT
-    co-op stack (Z64Online/ModLoader64, Ship of Harkinian/Anchor ports, Zelda64 recomps, which only
-    accept the vanilla ROM) is unusable, and the hack's source is closed per its own issue tracker.
-    Claimed 2026-11 by TheeDeb (issue 342), with notes in games/ultimate-trial. Planned route is
-    the Skyward Sword memory-sync pattern (two emulator instances, UDP bridge, puppet actor injected
-    by a patch-only BPS on top of the player's own UT-patched ROM, gopher64 fork as bridge host).
-    On 2026-11-09 UT v1.2.3 booted on the gopher64 fork with a working RDRAM/input bridge;
-    scripted input reached gameplay, the player actor plus the actor overlay table were located
-    at runtime, and a two-instance UDP prototype rendered an animated second Link driven by the
-    other player's snapshots (re-injected after actor-list rebuilds, gated by scene id). A real
-    scene transition (fountain scene 42 to canyon scene 41) confirmed the scene-id field, forced
-    scene transitions from RAM were verified (entrance index + trigger), follow-host scene sync
-    passed its test (the peer replays the host's entrance and reloads), a standalone session-
-    tagged client was built and interop-tested, and a chaos-relay run (16/286 packets dropped)
-    still kept the puppet exact. No co-op is playable by players yet.
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: "2"
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Client plus a gopher64 fork, released as ut-coop v0.1.0 and a fork build. Two emulator
+    instances exchange 30 Hz UDP snapshots of position, rotation, appearance and the 24-limb joint
+    table; the peer is rendered as a second Link that moves and animates and is re-injected after
+    actor-list rebuilds. Scenes are gated by scene id and a joining side replays the host's entrance
+    index to load the same scene. Automated tests cover a Python node with the packaged client over
+    loopback, forced and followed scene transitions, and a chaos relay (16 of 286 packets dropped,
+    puppet still exact). Same-area co-op only so far; story, enemy, world-state and item sync are
+    not implemented. GPL-3.0, no game data distributed.
   sources:
+  - https://github.com/TheeDeb/ut-coop
+  - https://github.com/TheeDeb/gopher64
+  - https://github.com/TheeDeb/ut-coop/releases/tag/v0.1.0
   - https://github.com/RichieUltimate/ultimate-trial
-  - https://www.romhacking.net/hacks/8640
   - https://github.com/RichieUltimate/ultimate-trial/issues/19
   - https://github.com/cranebeaker/coop-anything/issues/342
   checked: '2026-11-09'
-  searched:
-  - 'WebSearch: "Ultimate Trial" Ocarina of Time romhack multiplayer co-op mod, 2026-11-09 (nothing
-    found)'
-  - 'GitHub search: cranebeaker/coop-anything issues for "ultimate trial", 2026-11-09 (0 results)'
-  - 'GitHub search: hylian-modding/Z64Online issues for ROM-hack compatibility beyond the randomizer,
-    2026-11-09 (0 results)'
+  made_with_coop_anything: true
