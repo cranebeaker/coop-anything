@@ -65,6 +65,11 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   overrides that are released on disconnect.
 - Booted Ultimate Trial v1.2.3 on the fork and confirmed it renders and runs (UT's fan-made-games
   warning screen captured, VI frame counter advancing, 8 MiB RDRAM served over the socket).
+- Found the runtime structures co-op needs: actor overlay table at `0x800fa7f0` (513 entries,
+  entry 0 is `Player`), and the live player actor at `0x80289550` with world position at `+0x24`.
+  The actor is validated through its `overlayEntry` pointer. A scripted bot now boots from power-on
+  to controllable gameplay, reads the player, and moves it with the bridge (verified: 144.7 units
+  of movement).
 
 ## QA
 
@@ -72,8 +77,10 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   `1 passed; 0 failed`. It drives the real per-frame hook against a fake 8 MiB RDRAM:
   WRITE then READ round trip, input override state, and STAT (frame counter, RDRAM size).
 - Game boot smoke test: `python local/smoke_ut.py` (2026-11-09) -> `frames: 18 -> 140;
-  rdram 0x800000`; a full 8 MiB RDRAM dump through the socket also succeeded. This proves
-  the game runs on the fork and the bridge is live; it does not test co-op.
+  rdram 0x800000`; a full 8 MiB RDRAM dump through the socket also succeeded.
+- Boot-to-gameplay test: `python local/boot_to_gameplay.py --port 47921` (cold boot,
+  2026-11-09) -> player position `(408.97, 0.0, -2864.51)`, then holding the stick
+  forward moved it 144.7 units. Scripted input reaches real gameplay.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags

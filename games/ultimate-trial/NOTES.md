@@ -212,6 +212,65 @@ Build environment on this Windows machine (installed with owner approval):
   command and response now carries a connection id and stale responses are discarded;
   disconnect clears use id 0. Unit test still passes after the change.
 
+## Address discovery, first pass (2026-11-09, verified in live RDRAM)
+
+The gopher64 socket makes runtime structure scanning practical. Findings from the
+title-screen dump:
+
+- **Actor overlay table**: base `0x800fa7f0`, 513 entries of 0x20 bytes, entry 0 is
+  `Player` (initInfo `0x801113d0`), entry 1 is `En_Zol`, and so on. The table is in the
+  resident code segment, so it is present before gameplay. The name strings live at
+  `0x8011d700` (`Player`), `0x8011d708` (`En_Zol`), ...
+- **Actor struct offsets** (from the local zeldaret/oot decomp, `include/actor.h`):
+  id +0x00, category +0x02, room +0x03, flags +0x04, world pos +0x24, world rot +0x30,
+  focus +0x38, velocity +0x5C, speed +0x68, prevPos +0x100, next +0x124, init +0x128,
+  destroy +0x12C, update +0x130, draw +0x134, overlayEntry +0x138. Size 0x14C.
+- **Player instance**: scanning for a u32 pointing at `0x800fa7f0` (entry 0) found
+  `0x80289550` with id 0, category 2, room -1, update `0x800a1040`, draw `0x800a1070`,
+  world pos `(389.0, -211.0, 1029.3)`. This is the title-screen Link; it does not move.
+  The same scan also returned live door actors (table index 35) and a few others, so the
+  `overlayEntry` pointer is the reliable anchor.
+- **Do not hardcode the actor address.** Allocation varies with boot path. The co-op host
+  should scan for `overlayEntry == 0x800fa7f0 && id == 0` (cheap if limited to the heap
+  region, or cached and re-validated per frame).
+
+Menu/input facts learned while getting there:
+
+- The title screen requires Start/A; the file select and name entry respond to A.
+- The D-pad bits are ignored by the name-entry grid; the analog stick works. On the
+  stick, +X is right and +Y is up; holding repeats, so frame-exact single-frame pulses
+  (toggle, wait one VI, release) move exactly one cell.
+- UT has a custom Options menu: Randologic (Disabled/Thematic/Chaotic), Interface
+  Version (GameCube/N64), Aspect Ratio (4:3/16:9).
+
+### Boot-to-gameplay flow, verified end to end (2026-11-09)
+
+`local/boot_to_gameplay.py` now drives a fresh instance into controllable gameplay:
+
+1. Wait for the title screen (~12 s), then tap A+Start on all four channels.
+   The title advances to Select File.
+2. A opens File 1. On a brand-new save this enters name entry; a file only becomes
+   real after the name is confirmed. Name entry is navigated with the analog stick
+   (frame-exact pulses); END, then the custom Options screen; **Start** leaves Options
+   and returns to Select File with the file created.
+3. A on the file, then A on "Yes" in the Open File dialog, then eight A taps with
+   ~0.8 s gaps to clear the intro.
+
+Verified run (cold boot, port 47921): player actor at `0x80289550`, position
+`(408.97, 0.0, -2864.51)`, then holding the stick forward moved it 144.7 units. So
+scripted input reaches gameplay and the player actor is writable/readable.
+
+Save file location: `%APPDATA%\gopher64\saves\<rom-name>-<sha256>.sra` (32 KiB for
+this game). Back it up before bot runs that save.
+
+### Player state helper
+
+`local/player_state.py` reads and validates the player actor. Validation is
+`id == 0 && category == 2 && overlayEntry` points at table entry 0. `find_player`
+rescans RDRAM if the cached address stops validating. The address has been
+`0x80289550` on every boot so far, but do not rely on that alone.
+
+
 ## Phase 3 approach — revised after block-level analysis (2026-11-09)
 
 Re-checked the BPS block list with Python over `local/ut_bps_blocks.csv` (337,478 blocks):
