@@ -3,19 +3,22 @@
 | | |
 |---|---|
 | Engine | In-house engine (Thekla). Family not confirmed: `detect_engine` matched no signature |
-| Versions tested | Steam build `11370412` (app `210970`), `witness64_d3d11.exe` SHA-256 `8d672d444df6a6df7130f25a517bdab1af92731fe2138dc5b324d519561d55a5`, Windows |
-| Projects | [witness-coop](https://github.com/TommoDotCommo/witness-coop) (MIT, dev preview). Related tooling: [witness-randomizer](https://github.com/jbzdarkid/witness-randomizer) (MIT), [witness-trainer](https://github.com/jbzdarkid/witness-trainer) (MIT) |
-| QA level | automated (narrow: three tutorial puzzles, localhost, see QA) |
-| Last updated | 2026-10-22 |
+| Versions tested | Steam build `11370412` (app `210970`), `witness64_d3d11.exe` SHA-256 `8d672d444df6a6df7130f25a517bdab1af92731fe2138dc5b324d519561d55a5`, Windows. The mod refuses any other exe |
+| Projects | [witness-coop](https://github.com/TommoDotCommo/witness-coop) (MIT, public beta [v0.3.0-beta.1](https://github.com/TommoDotCommo/witness-coop/releases/tag/v0.3.0-beta.1), directory entry "The Witness"). Related tooling: [witness-randomizer](https://github.com/jbzdarkid/witness-randomizer) (MIT), [witness-trainer](https://github.com/jbzdarkid/witness-trainer) (MIT) |
+| QA level | automated (see QA for what ran when, and what has never been tested) |
+| Last updated | 2026-11-10 |
 
 ## Where things stand
 
-No other co-op for The Witness was found. [witness-coop](https://github.com/TommoDotCommo/witness-coop) is a dev-preview prototype that runs on one PC with two copies of the game:
-each player sees the other as a puppet drawn through a Direct3D 11 overlay, and when one player solves a panel the other
-game marks it solved and the door it gates opens, started by the game's own door function. The detector watches all 594
-panels and 327 doors, but only three tutorial puzzles have automated natural solves and state comparisons: the first two door
-puzzles and a black/white puzzle that powers a following panel. Panel power-on progression syncs separately from solved state,
-and one cable (lit by a tutorial maze) is verified. A fresh peer (restart or first-time late join) and a same-process save reload both resync from the other game's state. Power-off switching, other cable types, lasers, plates and bridges remain unsynced.
+People can play The Witness together today. [witness-coop](https://github.com/TommoDotCommo/witness-coop) is in public
+beta (v0.3.0-beta.1, 2026-11-10): each player runs their own copy, up to 16 in a lobby, and everyone walks the same
+island as an animated character. A panel one player solves is solved for everyone, with the line in the solver's colour,
+and what it sets going (doors, cables, lasers, bridges, elevators, ramps, water levels) moves in every game. Friends
+join through a Steam friends-only lobby or directly, and can join a game already under way. It installs with one Setup
+file and starts from a launcher.
+
+What is not established: nobody has recorded a full co-op playthrough to the credits, a session between two PCs with
+two Steam accounts has no recorded result, and Steam Deck and Linux support is untested on real hardware.
 
 ## Existing work
 
@@ -47,21 +50,82 @@ Observed on build 11370412 (details and sources in [NOTES.md](NOTES.md)):
   target door and its group node, and the transforms of the door parts. Writing those fields into another game did **not**
   open its door; the opening starts from a function call (`base + 0x8E4B0`, the one the trainer calls).
 - Launching: the exe shows a graphics options dialog first. `-skip_config_dialog -windowed -new_game` start the world with no input.
-- A proxy `AnselSDK64.dll` (the exe loads it from its own folder) loads our code into the game. It hooks `IDXGISwapChain::Present`
+- A proxy DLL in the game folder (first `AnselSDK64.dll`, now `dsound.dll`) loads our code into the game. It hooks `IDXGISwapChain::Present`
   and draws screen quads at world positions (camera model: z up, vertical field of view about 60 degrees, checked against
   screenshots at two headings and while walking). Moving a panel entity's position field does not move it on screen.
 
-Not known: how to sync cables and powered panels, other entity effects, saves and new games, and whether other store builds
-differ (the randomizer already knows two builds with different offsets).
+- The exe imports `DSOUND.dll` and the game folder does not ship it, so a `dsound.dll` there is loaded at start and can
+  forward to the system copy. Under Wine the built-in `dsound` wins unless overridden for the exe.
+- After the solved fields, the solve handler runs name-keyed behaviours (`exe+0xB7F80`) that read the drawn line, and
+  tells the panel's `Bridge` entity; see NOTES.md, "from prototype to public beta".
+- Saves go to `%APPDATA%\The Witness` whatever folder the exe runs from; video options are a text file there.
+
+Not known: whether other store builds differ (the randomizer already knows two builds with different offsets).
 
 ## What we changed
 
-Nothing in the game files; the real install was never modified. In disposable copies we added a proxy DLL with: pose exchange
-and puppet overlay, a detector for solved panels and opened doors, a reliable event layer (numbered, acknowledged, resent,
-applied once and in order, with epochs and a full resend when a peer restarts), and an applier on the render thread with an
-echo guard. The source is in [witness-coop](https://github.com/TommoDotCommo/witness-coop).
+Nothing in the game's files. The mod is a proxy `dsound.dll` (a system DLL the exe imports and the game does not ship)
+plus a launcher and a models folder; the source and the evidence for each item are in
+[witness-coop](https://github.com/TommoDotCommo/witness-coop) and [NOTES.md](NOTES.md).
+
+- **Other players as characters.** A hook on Direct3D 11 `Present` draws each remote player as a skinned, animated
+  model, hidden behind walls with the game's own depth buffer. First it was a flat rectangle that showed through walls.
+- **Shared progress as reliable events.** Solved panels, doors, panel power, cables and lasers are numbered,
+  acknowledged and resent events with epochs, an echo guard and a full-state resync for a peer that restarts, joins
+  late or reloads a save. Doors and power are started by the game's own functions; writing the fields did not open a
+  door.
+- **A remote solve runs what the solver's solve ran.** The game's solve handler runs about 70 behaviours chosen by the
+  panel's name, and several read the drawn line. Marking a panel solved left bridges, ramps and water levels behind.
+  The fix writes the solver's line into the panel's trace, runs the reactions, and guards what they change from
+  being echoed (`tools/qa.sh react`, `bridge`, with twins that must fail).
+- **Doors are reported when told to move, not on arrival.** A sliding bridge used to reach the other game 40 s late.
+- **Groups.** One remote peer became a roster of up to 16, with per-recipient acknowledgements and versioned
+  events for reversible state (cables). Found by an eight-world test: one peer's ACK must not retire an event for
+  everyone, and a time-only echo guard swallows a genuine quick reversal.
+- **Loading.** The proxy moved from replacing the game's `AnselSDK64.dll` (Steam restores it on every update, mod
+  managers cannot install it) to `dsound.dll`, so installing is a file copy and no game file changes.
+- **Playing with friends.** A launcher with a lobby (chat, voice, ready, co-op or race, new game with parts of the
+  island done), Steam friends-only lobbies over the game's own Steam connection, direct UDP with LAN and Tailscale
+  discovery and invite codes, a version check and an updater that verifies a SHA-256.
+- **Social layer.** Text chat, pings, proximity voice with channels, an emote wheel, drawing on the world, watching
+  another player's view, a hold-Tab player panel, and controller support.
+- **New puzzles.** Community randomizers (MIT) built into the launcher, and an editor for the player's own puzzles;
+  in a lobby the host's choice, seed and puzzle set reach everyone before the game starts.
+- **Shipping.** One `Witness-Coop-Setup.exe` that finds the game, checks the build hash and writes a receipt per
+  file; a zip for manual installs, a Vortex extension, a Mod Organizer 2 plug-in and a Linux/Proton install script.
 
 ## QA
+
+Three tiers, all in witness-coop. Each protection has a mutant (a deliberately broken build or switch) that the test
+must fail.
+
+- **Game-free** (`tools/t0.sh`): the sync core in the hub's fuzzer over a lossy link with bug twins, the group and
+  Steam transports, lobby, launcher, updater, randomizers, voice mixer, playthrough planner and installer logic.
+- **Two real games** (`tools/qa.sh [scenario]`): a bot inside the game (no window focus, no desktop input) plays, and
+  solved panels, doors, power and cables are compared from both games' memory. Scenarios cover the baseline solve, lost
+  and random packet loss, peer restart, late join, save reload, power chains, cables, bridges and solve reactions,
+  shared lines, lobby and launcher flows, race mode, voice, randomizers and the puzzle editor.
+- **N real games** (`tools/playthrough.sh N`): bots play the island in the order of Archipelago's logic and every solve
+  must appear in every other world.
+
+Last game-free run (2026-11-10, at tag `v0.3.0-beta.1`, commit `be974a7`):
+
+```
+tools/t0.sh
+51 tests, 0 failed, 288 s wall
+```
+
+The two-game suite (40 scenarios at this tag) was **not** re-run as a whole for this write-up: the test PC did not have
+the free memory for a pair of games on 2026-11-10. Its scenarios were run as each feature landed, and the mod's
+[docs/DEVELOPMENT.md](https://github.com/TommoDotCommo/witness-coop/blob/v0.3.0-beta.1/docs/DEVELOPMENT.md) records each
+with its mutants. The last whole-suite summary pasted here is the prototype's, below.
+
+Never tested: two PCs with two Steam accounts (the steps are written in the mod's `docs/STEAM.md`; no result is
+recorded), a real Steam Deck or Linux PC, a person speaking into a real microphone, sixteen real game clients at once,
+a bot run that reaches the credits, stores other than Steam.
+
+<details>
+<summary>The prototype's suite results of 2026-10-22 (first three tutorial puzzles, localhost)</summary>
 
 A scripted suite (`tools/qa.sh` in witness-coop) restarts both games, has a bot play player A through the mod's in-process control
 (no window focused, no desktop input: teleport to the first panel, aim, click to enter it, trace the line, click to finish), and compares the solved panels and open doors
@@ -120,22 +184,43 @@ Verified so far: the first three tutorial puzzles (two door gates and one black/
 Not tested: a real network, more than two players, any other puzzle, other cable or gate types, WAN, fullscreen, non-16:9 windows.
 The probes and test scripts are in witness-coop.
 
+</details>
+
 ## How to play
 
-Not playable together yet (prototype only, two copies on one PC). There is no installer or release; the dev setup is in the [witness-coop README](https://github.com/TommoDotCommo/witness-coop).
+Every player needs their own copy of The Witness on Steam (build 11370412) and the same version of the mod.
+
+1. Download `Witness-Coop-Setup.exe` from the [latest release](https://github.com/TommoDotCommo/witness-coop/releases)
+   and run it. It finds the game, checks its version and installs; it changes none of the game's files.
+2. Press Play on The Witness in Steam. The co-op launcher opens first.
+3. Host: **Host a game**, **Through Steam**, **Open lobby**, then invite friends through Steam. Friends accept the
+   invite, or paste the lobby number into **Join a friend**. Direct play on one network or over Tailscale is the
+   **Direct** choice.
+
+Details, keys, controller setup and Linux: the [mod's README](https://github.com/TommoDotCommo/witness-coop#readme).
 
 ## Known issues
 
-- Solved panels, opened doors, panel power-on progression and one verified cable are synced. Power-off switching, other cable types, plates, lasers and bridges remain unsynced. Reversible state still needs an authority/conflict policy.
-- The puppet is a flat rectangle with a facing dot; it shows through walls (no depth test).
-- Same-process save reload is detected by a heuristic (a known open door closing, or two or more known panels unsolved) and resynced; a game where doors close in normal play would trigger a harmless extra resync. Loading a different save slot is untested.
-- Test hazard for the next agent: the game keeps saves in `%APPDATA%\The Witness` whatever
-  folder the exe runs from. Starting a New Game from a copied install rewrote the player's
-  latest existing save and settings file there. Back up and hash that folder first.
+- The files are not code-signed, so Windows SmartScreen warns before the first run.
+- Each player calls and rides their own boat and plays the theatre's videos for themselves. The ending and final
+  elevator, the timed challenge and the sound-room birds are not run by a remote solve.
+- Only the current Steam build works. After a game update co-op switches itself off until the mod is updated; GOG and
+  Epic copies are refused.
+- Everyone in a lobby needs the same mod version; the launcher says so and offers the update.
+- A mod that replaces DirectSound completely cannot run beside it (one that is a `dsound.dll` proxy can be chained).
+- Steam Deck and Linux through Proton are untested on real hardware.
 
 ## Next steps
 
-1. Extend sync to the other cable-driving panels, plates, lasers and bridges, power-off switching and more puzzles. Check each with a natural solve and a state diff; define authority for reversible state.
-2. Real networking (Steam relay or direct IP), then lag runs with the chaos tool (random loss is already covered on localhost).
-3. Occlusion and a real puppet model instead of a flat rectangle.
-4. Widen the suite to more puzzles and gate types and keep the QA level honest; add an installer and a release; read the Archipelago client for another view of the same hooks; finish the unchecked searches.
+1. Run and record the two-PC, two-account Steam session from the mod's `docs/STEAM.md`, then a lag run with the chaos
+   tool over that path.
+2. A recorded co-op playthrough to the credits (the bot route is 238 panels), which is what `verified-playthrough`
+   needs.
+3. A real Steam Deck or Linux run of `install-linux.sh` and the launcher in Game Mode.
+4. Sync what a remote solve still leaves out (boat, theatre, challenge); `tools/react_sweep.py` lists every entity
+   field that differs after a solve.
+5. Finish the unchecked searches for other co-op work (Nexus, ModDB, Reddit, archive.org, Discords).
+
+Test hazard for the next agent: the game keeps saves in `%APPDATA%\The Witness` whatever folder the exe runs from.
+Starting a New Game from a copied install rewrote the player's latest save and settings file there. Back that folder
+up and hash it first, or use the mod's `save_dir=instance` redirect.

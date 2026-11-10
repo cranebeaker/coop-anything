@@ -8323,28 +8323,33 @@
   url: https://github.com/TommoDotCommo/witness-coop
   other_urls: []
   kind: mod
-  status: prototype
+  status: playable
   coop_scope:
     players_visible: 'yes'
-    world_state: partial
-  players: 2 (two copies on one PC)
-  networking: direct-ip
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: up to 16 (showcase run with 8 real games)
+  networking: steam-relay
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: Dev preview, not playable with friends yet (no installer or release; localhost only). A proxy AnselSDK64.dll loaded by the game hooks Direct3D 11 Present
-    and draws the other player as a puppet; two game copies exchange camera pose over UDP. Solving a panel in one game marks it solved in the other and opens
-    the gated door by calling the game's own door function (events are numbered, acknowledged and resent). Tested on two tutorial door puzzles and one panel power-on chain, Steam build 11370412.
-    Panel power-on progression and one cable lit by a tutorial maze use their own reliable events; a fresh or reloaded game resyncs from its peer. Power-off switching, other cables, plates, lasers and bridges remain unsynced. QA is an in-process bot (no focus, no desktop input) with a state diff over all panels and doors
-    and baseline, loss, mutant, peer-restart, late-join, save-reload, second-door, power-on and cable scenarios. Coverage remains narrow, three tutorial puzzles (see games/the-witness). No other co-op work
-    was found; the MIT-licensed witness-randomizer and witness-trainer, which read and write the running game, were the starting point.
+  notes: Public beta v0.3.0-beta.1 for Steam build 11370412, MIT. Each player runs their own copy and sees the others as animated characters. Solved panels,
+    the solver's line, doors, panel power, cables, lasers and what a puzzle moves (bridges, elevators, ramps, water levels) are shared; friends can join a game
+    under way. The game has no enemies or items. Steam friends-only lobbies (no port forwarding) or direct UDP with LAN and Tailscale discovery, from a launcher with a lobby, text chat,
+    proximity voice, pings, emotes and a race mode. Built-in community randomizers and a puzzle editor. One Setup file that checks the build hash and changes no game file
+    (a dsound.dll proxy); Vortex, Mod Organizer 2 and a Linux/Proton script. QA is a game-free suite (51 tests, fuzzer with bug twins) plus scenarios with two real games driven by an
+    in-process bot and compared from memory, each with a mutant. Not tested - two PCs with two Steam accounts, a real Steam Deck, a full playthrough to the credits. Each player has
+    their own boat and theatre videos. See games/the-witness.
   sources:
   - https://github.com/TommoDotCommo/witness-coop
+  - https://github.com/TommoDotCommo/witness-coop/releases/tag/v0.3.0-beta.1
   - https://github.com/jbzdarkid/witness-randomizer
   - https://github.com/jbzdarkid/witness-trainer
   - https://store.steampowered.com/app/210970/
   - https://en.wikipedia.org/wiki/The_Witness_(2016_video_game)
-  checked: '2026-10-22'
+  checked: '2026-11-10'
   made_with_coop_anything: true
   searched:
   - 'Repo DIRECTORY.md, games/, playbook, and public GitHub issues and PRs for The Witness (nothing), 2026-10-22'
