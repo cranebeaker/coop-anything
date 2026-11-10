@@ -7067,23 +7067,27 @@
   last_activity: 2026-11
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Version 0.3.0 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
+    split screen. Version 0.3.2 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
     player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
-    display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
+    display mode, refresh rate and split screen fill in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
     releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
     Spacewar), in a dinput8.dll proxy (two engine faults handled in memory, a split screen crash and a NULL read at
     the last boss; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes,
     powers, doors, breakable and movable objects and saves; each fire team follows its own player. The whole
-    campaign runs in automated tests over a LAN between two PCs, every story split with a real host and client; a
+    campaign runs in automated tests over a LAN between two PCs (last run on 0.3.0), every story split with a real host and client; a
     first human session over Steam (missions 1-8) was fixed up in 0.2.2, a full human playthrough is still to come.
-    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees (the Bull's wind-up, second-weapon triggers, magazines), adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
+    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees, adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe.
+    0.3.1 (2026-11-07) fixes split screen player 2's attacks in Chapter 1 reported by a tester, fills the split screen halves and adds a one-click log zip. 0.3.2 (2026-11-09) passes nicknames as UTF-8 between games in different languages, puts the mod's remaining English texts into the player's language, keeps other mods' dinput8.dll (ASI loaders) off and restored on removal, and hints how to get SMOD to use the game's language.
+    0.3.1 and 0.3.2 are lab-tested only (offline tests and a live check on one test PC, no whole-campaign rerun); nobody outside the lab has played them. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
     0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
   - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.0
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.1
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.2
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-11-01'
+  checked: '2026-11-10'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
