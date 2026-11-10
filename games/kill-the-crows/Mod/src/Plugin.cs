@@ -21,6 +21,8 @@ namespace KtcCoop
         // auto-test (command line: -ktcHost / -ktcClient)
         public static bool AutoHost;
         public static bool AutoClient;
+        public static bool AutoSteamHost;
+        public static bool AutoSteamClient;
         public static float AutoBootTime = -1f;
         public static float AutoConnectTime = -1f;
         public static bool AutoStarted;
@@ -50,6 +52,8 @@ namespace KtcCoop
             {
                 if (a == "-ktcHost") AutoHost = true;
                 if (a == "-ktcClient") AutoClient = true;
+                if (a == "-ktcSteamHost") AutoSteamHost = true;
+                if (a == "-ktcSteamClient") AutoSteamClient = true;
                 if (a.StartsWith("-ktcLog=")) _logFile = a.Substring(8);
             }
             AutoBootTime = Time.unscaledTime;
@@ -59,6 +63,7 @@ namespace KtcCoop
 
             // the game kills DontDestroyOnLoad roots between scene loads —
             // recreate our pump object every time (session state is static)
+            KtcCoop.Net.SteamTransport.RegisterCallbacks();
             Coop.HookSceneLoads();
             Coop.EnsurePumpPublic();
             var mode = AutoHost ? "HOST" : AutoClient ? "CLIENT" : "manual";

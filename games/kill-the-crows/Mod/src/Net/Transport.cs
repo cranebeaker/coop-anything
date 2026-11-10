@@ -13,7 +13,7 @@ namespace KtcCoop.Net
     /// reliable event channel (seq + ack + resend). One datagram == one message.
     /// Frame: [u32 seq][u8 op][payload...]  (seq == 0 means unreliable)
     /// </summary>
-    public class Transport : IDisposable
+    public class Transport : INetChannel, IDisposable
     {
         public const int Port = 7777;
         private const int ResendMs = 150;
@@ -44,14 +44,7 @@ namespace KtcCoop.Net
         private readonly ConcurrentQueue<uint[]> _ackQueue = new ConcurrentQueue<uint[]>();
 
         // received messages for main thread
-        public readonly ConcurrentQueue<InMsg> Inbox = new ConcurrentQueue<InMsg>();
-
-        public struct InMsg
-        {
-            public byte Op;
-            public byte[] Data;   // payload only (seq stripped)
-            public bool Reliable;
-        }
+        public ConcurrentQueue<NetMsg> Inbox { get; } = new ConcurrentQueue<NetMsg>();
 
         private struct OutMsg
         {
@@ -184,7 +177,7 @@ namespace KtcCoop.Net
                     int payloadLen = datagram.Length - 5;
                     var payload = new byte[payloadLen];
                     Buffer.BlockCopy(datagram, 5, payload, 0, payloadLen);
-                    Inbox.Enqueue(new InMsg { Op = op, Data = payload, Reliable = reliable });
+                    Inbox.Enqueue(new NetMsg { Op = op, Data = payload, Reliable = reliable });
                 }
                 catch (SocketException)
                 {
@@ -270,7 +263,7 @@ namespace KtcCoop.Net
                     if (now - LastReceiveTicks > TimeoutMs * TicksPerMs)
                     {
                         Debug.LogWarning("[KTC-Coop] Timeout, disconnecting.");
-                        Inbox.Enqueue(new InMsg { Op = Op.Timeouted, Data = Array.Empty<byte>(), Reliable = false });
+                        Inbox.Enqueue(new NetMsg { Op = Op.Timeouted, Data = Array.Empty<byte>(), Reliable = false });
                         LastReceiveTicks = now; // fire once
                     }
                     else

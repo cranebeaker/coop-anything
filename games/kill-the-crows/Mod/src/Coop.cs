@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using KtcCoop.Net;
+using Steamworks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -18,13 +19,14 @@ namespace KtcCoop
         // ---- session state survives pump recreation ----
         public enum Role { None, Host, Client }
         public static Role CurrentRole;
-        public static Transport Net;
+        public static INetChannel Net;
         public static HostSession Host;
         public static ClientSession Client;
         private static readonly ConcurrentQueue<Action> MainThreadQueue = new ConcurrentQueue<Action>();
         private static float _stateTimer;
         private static float _enemyTimer;
         private static float _hostStateTimer;
+        private static float _steamSearchTime;
         private static bool _sceneHooked;
 
         public static bool Active => Net != null && Net.Connected;
@@ -88,7 +90,7 @@ namespace KtcCoop
             {
                 Plugin.Flog("[host] FAILED: " + e);
                 CurrentRole = Role.None;
-                Net?.Dispose();
+                (Net as IDisposable)?.Dispose();
                 Net = null;
             }
         }
@@ -109,7 +111,7 @@ namespace KtcCoop
             {
                 Plugin.Flog("[coop] connect failed: " + e.Message);
                 CurrentRole = Role.None;
-                Net?.Dispose();
+                (Net as IDisposable)?.Dispose();
                 Net = null;
             }
         }
@@ -123,11 +125,50 @@ namespace KtcCoop
 
         private static void ResetSession()
         {
-            Net?.Dispose();
+            (Net as IDisposable)?.Dispose();
             Net = null;
             Host = null;
             Client = null;
             CurrentRole = Role.None;
+        }
+
+        // ---------------- Steam lobby path ----------------
+
+        public static void StartHostSteam()
+        {
+            if (Net != null) return;
+            if (!SteamManager.Initialized) { Plugin.Flog("[steam] Steam not ready"); return; }
+            Plugin.Flog("[steam] creating lobby…");
+            SteamTransport.BeginHost();
+        }
+
+        public static void StartClientSteam()
+        {
+            if (Net != null) return;
+            if (!SteamManager.Initialized) { Plugin.Flog("[steam] Steam not ready"); return; }
+            Plugin.Flog("[steam] searching lobbies…");
+            SteamTransport.BeginJoin();
+        }
+
+        private static void AdoptSteamPending()
+        {
+            var p = SteamTransport.Pending;
+            if (p == null || Net != null || p.LobbyId == CSteamID.Nil) return;
+            if (p.IsHostMode)
+            {
+                Net = p;
+                CurrentRole = Role.Host;
+                Host = new HostSession();
+                Plugin.Flog("[coop] steam host adopted");
+            }
+            else if (p.Connected)
+            {
+                Net = p;
+                CurrentRole = Role.Client;
+                Client = new ClientSession();
+                Client.SendHello();
+                Plugin.Flog("[coop] steam client adopted");
+            }
         }
 
         private void OnDestroy()
@@ -142,9 +183,14 @@ namespace KtcCoop
             {
                 if (Input.GetKeyDown(KeyCode.F9)) StartHost();
                 if (Input.GetKeyDown(KeyCode.F10)) StartClient();
+                if (Input.GetKeyDown(KeyCode.F6)) StartHostSteam();
+                if (Input.GetKeyDown(KeyCode.F7)) StartClientSteam();
                 if (Input.GetKeyDown(KeyCode.F11) && Active) Disconnect();
             }
             catch (Exception e) { Plugin.Flog("[coop] input error: " + e.Message); }
+
+            AdoptSteamPending();
+            (Net as SteamTransport)?.Tick();
 
             RunAutoTest();
 
@@ -289,7 +335,7 @@ namespace KtcCoop
 
         private void RunAutoTest()
         {
-            if (!Plugin.AutoHost && !Plugin.AutoClient) return;
+            if (!Plugin.AutoHost && !Plugin.AutoClient && !Plugin.AutoSteamHost && !Plugin.AutoSteamClient) return;
             float t = Time.unscaledTime;
 
             if (Active && SceneManager.GetActiveScene().name == "Scene_Ingame")
@@ -307,12 +353,22 @@ namespace KtcCoop
             if (!Plugin.AutoStarted && t - Plugin.AutoBootTime > 4f)
             {
                 Plugin.AutoStarted = true;
-                if (Plugin.AutoHost) { Plugin.Flog("[auto] hosting"); StartHost(); }
+                if (Plugin.AutoSteamHost) { Plugin.Flog("[auto] steam hosting"); StartHostSteam(); }
+                else if (Plugin.AutoSteamClient) { Plugin.Flog("[auto] steam joining"); StartClientSteam(); }
+                else if (Plugin.AutoHost) { Plugin.Flog("[auto] hosting"); StartHost(); }
                 else { Plugin.Flog("[auto] joining " + Cfg.HostIp); StartClient(); }
             }
-            if (Plugin.AutoHost && Active && !Plugin.AutoRunStarted)
+            // steam client retries lobby search until found
+            if (Plugin.AutoSteamClient && Net == null && t - _steamSearchTime > 6f)
+            {
+                _steamSearchTime = t;
+                StartClientSteam();
+            }
+            if ((Plugin.AutoHost || Plugin.AutoSteamHost) && Active && !Plugin.AutoRunStarted)
             {
                 if (Plugin.AutoConnectTime < 0f) Plugin.AutoConnectTime = t;
+                // never start the run before the client actually handshaked
+                if (!IsHost || !(Host?.HasClient ?? false)) return;
                 if (t - Plugin.AutoConnectTime > 6f && SceneManager.GetActiveScene().name == "Scene_Main")
                 {
                     Plugin.AutoRunStarted = true;

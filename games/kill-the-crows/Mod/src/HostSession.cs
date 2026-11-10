@@ -32,6 +32,7 @@ namespace KtcCoop
         private Protocol.HelloRec _loadout;
 
         public bool ClientAlive => _clientAlive;
+        public bool HasClient { get; private set; }
         public Player Ghost => _ghostView?.Player;
         public int TrackedCount => _byId.Count;
 
@@ -53,6 +54,7 @@ namespace KtcCoop
         public void OnHello(byte[] data)
         {
             _loadout = Protocol.ReadHello(data);
+            HasClient = true;
             Debug.Log($"[KTC-Coop] Client '{_loadout.Name}' connected (revolver={_loadout.Rev}).");
             var mods = ModifierMask();
             Coop.Net.SendReliable(Op.Welcome, Protocol.Welcome(PrefManager.ProgressCurrentDifficultyLevel, mods));
