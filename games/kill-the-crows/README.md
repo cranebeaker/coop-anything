@@ -33,6 +33,10 @@ machine (LAN loopback):
 - Automated two-instance test with input bots: 2.5–3 min runs with **zero exceptions
   and zero disconnects**, ~107 shared kills ↔ 107 client-side proxy deaths, client
   death → `ClientDied` → spectate → both dead → shared game over, all observed in logs.
+- Revive cycle (client bot without god-mode): three full death → 5 s → revive rounds
+  (pool 2 → 1 → 0), each returning the client to the fight, then the final death with
+  an empty pool stopped wave spawning (`FinalizeRun`) and ended the run on both sides;
+  zero exceptions across the whole 5.5 min run.
 
 A friends-only **Steam lobby path** also exists now (host F6 creates the lobby,
 client F7 searches and joins; version-filtered lobby data keeps mod versions from
@@ -40,9 +44,15 @@ mixing). Steam itself blocks a full local test on one machine — a user's own l
 are excluded from matchmaking search and self-P2P is not allowed — so the lobby code
 is boot-tested only (create/join callbacks, handshake wiring verified in logs with
 auto-retry); a real session needs two distinct Steam accounts. The LAN path below is
-the fully tested one. Remaining v2 candidates: revival instead of shared game-over,
-reconnect support, and the modifier set still belongs to the host's run (client's
-own equipped modifiers are overridden for the shared simulation).
+the fully tested one.
+
+**Partner revive** is in (v0.3): a shared pool (default 3, config `RevivesPerRun`) of
+revives per run. A downed player comes back after `ReviveDelaySec` (default 5 s) next
+to the survivor (`ReviveAtPartner`, configurable) with a `ReviveInvulnSec`
+invulnerability window; the run finalizes only when a death cannot be paid for
+(empty pool) or the partner is already down. Remaining v2 candidates: reconnect
+support, and the modifier set still belongs to the host's run (client's own equipped
+modifiers are overridden for the shared simulation).
 
 Fixed since v0.1: both players now see each other (bidirectional ghost sync + host
 fire tracers), the dead player's camera spectates the surviving partner, the

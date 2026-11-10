@@ -44,4 +44,17 @@
 
 ## Status
 
-Playable v0.1 on LAN, automated QA pass, not yet published (no Steam lobby path).
+v0.3: LAN co-op + Steam lobby path (boot-tested) + partner revive (full cycle
+automated-tested). PR #351 open against cranebeaker/coop-anything.
+
+## Extra incidents
+
+- Revive shipped with a ValueTuple field again (Revive._invuln) - same
+  TypeLoadException; replaced with a small struct. Rule: no tuples, ever, in this
+  runtime.
+- Revive-protection used Player.isInvincibleOneCoinMore with a timed reset that only
+  the host's damage path evaluated - the client stayed invulnerable forever after
+  its first revive. Expired unconditionally in the pump update.
+- UDP reordering can replay a stale alive=true after the death packet, which
+  re-triggered the death edge and double-charged a revive credit; stale
+  resurrections are ignored while a revive is pending.
