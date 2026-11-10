@@ -124,17 +124,75 @@ Key pieces to build:
    detection (mass-clear brake), interpolation.
 6. QA harness: two gopher64 instances, loopback, bot via scripted input + RDRAM asserts.
 
+## gopher64 fork plan (verified against source, commit of clone 2026-11-09)
+
+Verified architecture facts (all read from `<workspace>/gopher64`):
+
+| What | Where | Notes |
+|---|---|---|
+| RDRAM | `device.rdram.mem: Vec<u8>` (`src/device/rdram.rs`), masked `& RDRAM_MASK (0xFFFFFF)` | default size `0x800000` = 8 MiB (`Device::new`, device.rs:458); `--disable-expansion-pak` drops to 4 MiB. UT requires the Pak → run with default. `rdram::init` hands the raw pointer to RA the same way our bridge can |
+| Byte order | `device.byte_swap` = 3 on little-endian hosts (`device.rs:314-320`); cheats do `addr ^ byte_swap` per byte (`src/cheats.rs:93-132`) | RDRAM bytes are stored host-endian; XOR each game-address byte with 3 to get the big-endian game view. Our fork's TCP server will apply this once so the wire protocol is plain big-endian game-order bytes |
+| Main loop | `cpu::run` (`src/device/cpu.rs:261`) — interpreter, one opcode per iteration | gopher64 is interpreter-only (no recompiler), which also matches UT's PJ64-recompiler-crash context |
+| Per-frame hook | `vertical_interrupt_event` (`src/device/vi.rs:164`) | cheats execute + `retroachievements::do_frame()` run here — same place for our bridge frame callback |
+| Input injection | `controller.rs:57-63`: `JCMD_CONTROLLER_READ` → `ui::input::get(&mut device.ui, channel)` unless netplay overrides with `netplay.inputs[channel]` | PIF channel model; netplay's override pattern is exactly what our bot input + remote-player input override will copy |
+| Threading | tokio runtime created in `main` via `create_runtime()` + `handle.enter()` (`src/lib.rs:109`, `src/main.rs`) | tokio already a dependency (RA, netplay use it) → bridge socket adds no new top-level deps; emulator thread runs with runtime context entered, so `tokio::spawn` from emulation works |
+| Savestates | `device.rs:296` `self.rdram.clone_from(&device.rdram)` etc. | full-device serde serialize; useful for QA bot determinism checks |
+| Cheats | `cheats.rs` — RDRAM read/write helpers + conditionals keyed by ROM CRC (`ui::storage::get_game_crc`) | gopher64 keeps per-game cheat DB; our fork can reuse the same CRC gating for UT-specific hooks |
+| No existing socket server | only WebRTC netplay (matchbox/ggrs, `src/netplay.rs`) | our TCP RDRAM server is new code, no conflict |
+
+Fork changes planned (all additive, behind a `coop` feature/flag so upstream merge stays trivial):
+
+1. `src/coop.rs` — new module: TCP server (`127.0.0.1:port`) with a small binary protocol:
+   - `read {addr, len}` / `write {addr, bytes}` RDRAM (XOR `byte_swap` handled server-side),
+   - `frame` notification per VI (pushed from `vertical_interrupt_event`),
+   - `input set {channel, u32}` override (checked in `controller.rs` before `ui::input::get`),
+   - `state save/load` passthrough for QA.
+2. CLI flag `--coop-port N` in `Args` (`src/lib.rs` `run()`), plus `--coop-input` to force keyboard-free headless input.
+3. Keep GPL-3.0, keep our fork separate, **no PRs upstream** (gopher64 bans AI-authored PRs).
+
+QA bot plan (playbook/automated-qa.md): a Python harness opens both coop sockets, drives both
+instances' input, and asserts on RDRAM (positions, flags) per frame.
+
+## Phase 3 approach — revised after block-level analysis (2026-11-09)
+
+Re-checked the BPS block list with Python over `local/ut_bps_blocks.csv` (337,478 blocks):
+only **74,602 vanilla bytes** survive, in two ranges ≥ 64 bytes:
+
+- `0x40–0x1003` (IPL3 boot code) — expected; hacks keep IPL3
+- `0x8124CF–0x81250F` (64 bytes, in the dmadata region)
+
+**Consequence:** signature-scanning UT's ROM against *vanilla* byte patterns is dead — there
+is nothing vanilla left to anchor on. Address discovery must instead be:
+
+1. **Runtime structure scanning in RDRAM** (via the gopher64 fork socket, once a UT ROM is
+   running): identify the actor overlay table by shape (OoT 1.0 has ~472 entries, terminated;
+   entries are 32-byte structs with vram/rom addresses and a load flag — see
+   `oot/include/z_actor_dlftbls.h`), then the GlobalContext pointer and `gSaveContext` by
+   their persistent-region layouts.
+2. **Parse UT's own dmadata table from its ROM** (segment table → code segment address →
+   overlay table location). UT is 90.5% new bytes but it is still an OoT-engine ROM with an
+   OoT-style file table.
+3. **Cross-check with the decomp**: UT's credits overlap the Hylian Modding/decomp scene, so
+   struct layouts likely match `zeldaret/oot` — treat as a guess until verified in RAM.
+
 ## Owner state (private, `local/`)
 
 - `local/ultimate_trial_v1.2.3_n64.bps` — official patch, hash above.
 - `local/bps_scan.cs`, `local/run_bps_scan.ps1`, `local/ut_bps_blocks.csv` — patch analysis.
-- Machine: Windows 11, PowerShell, no git/python/gh yet.
+- `local/patch_rom.ps1` — applies UT to the owner's dump (CRC-verified both ways).
+- Toolchain installed (approved): git 2.56.0, Python 3.13.17, gh 2.103.3 (logged in as
+  TheeDeb), Rust 1.99.1 via rustup; VS 2022 Build Tools with C++ workload installing.
+- Workspace: `<workspace>/gopher64` (clone with submodules), `<workspace>/oot` (decomp).
+- Claim issue: cranebeaker/coop-anything#342. Fork: TheeDeb/coop-anything, branch
+  `game/ultimate-trial`.
 
 ## Next steps
 
-1. Owner decision: route (B recommended), plus permission to install toolchain
-   (git, python, VS Build Tools or Docker, an N64 emulator to fork).
-2. Owner provides their own OoT US 1.0 dump for local testing (never committed anywhere).
-3. Open a "claim a game" issue on cranebeaker/coop-anything (needs owner's GitHub).
-4. Phase 2: workspace setup, then RE of UT ROM (address discovery) with the decomp as
-   reference.
+1. ~~Owner decisions, toolchain~~ — done (route B, 2 players online, installs approved).
+2. ~~Claim issue~~ — done, cranebeaker/coop-anything#342.
+3. Owner places their OoT US 1.0 dump at `local/rom/base_ot.z64`, then run
+   `local/patch_rom.ps1` → `local/rom/ultimate_trial.z64`.
+4. Build stock gopher64 once VS Build Tools finishes; verify UT runs on it headless (CLI).
+5. Fork changes: `src/coop.rs` TCP server + `--coop-port` + input override.
+6. Phase 3 address discovery on the live UT ROM (runtime scanning per above).
+7. Phase 8 give-back (directory entry + README) at the next milestone.
