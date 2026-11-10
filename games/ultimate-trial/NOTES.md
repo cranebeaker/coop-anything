@@ -501,6 +501,26 @@ trigger 20, then gate puppets until the scene ids match.
 Remaining: reach a trial scene (different id) to exercise a true scene-to-scene follow,
 then network hardening (loss/jitter), interpolation, and a shippable client.
 
+### Standalone client prototype (2026-11-09, interop PASS)
+
+`ut-coop/` (workspace) packages the proven prototype into a single Windows client:
+
+- `client.py` plus `utcoop/`: bridge client, player/scene/puppet logic, sync node,
+  boot automation and CLI.
+- Flags: `--emulator`, `--rom`, `--coop-port`, `--bind`, `--peer`, `--rate`,
+  `--no-puppet`, `--no-follow`, `--no-launch`, `--no-boot`, `--seconds`.
+- It can launch the gopher64 fork with `--coop-port`, wait for the bridge, tap through
+  the menu/intro once (`--no-boot` to skip), then run the sync node and print status.
+- Built with PyInstaller 6.22.3 -> `ut-coop/dist/ut-coop.exe` (7.6 MB).
+- Interoperability test: Python sync node on instance A plus the packaged client on B.
+  A received 201+ snapshots with 0 gaps and exact positions; A's puppet matched B and
+  B's puppet matched A, both `isDrawn = 1`. PASS.
+
+Known limits of this client: Python-packaged (Rust port still pending), no session id
+or handshake yet (UDP ports must be dedicated), manual port forwarding, both players
+need a File 1 save, the emulator binary ships separately, and boot automation taps
+through the intro (about a minute). Same-area co-op only so far.
+
 
 
 

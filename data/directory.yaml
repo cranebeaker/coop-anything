@@ -10790,9 +10790,9 @@
     at runtime, and a two-instance UDP prototype rendered an animated second Link driven by the
     other player's snapshots (re-injected after actor-list rebuilds, gated by scene id). A real
     scene transition (fountain scene 42 to canyon scene 41) confirmed the scene-id field, forced
-    scene transitions from RAM were verified (entrance index + trigger), and follow-host scene sync
-    passed its test (the peer replays the host's entrance and reloads). No co-op is playable by
-    players yet.
+    scene transitions from RAM were verified (entrance index + trigger), follow-host scene sync
+    passed its test (the peer replays the host's entrance and reloads), and a standalone client
+    was built and interop-tested. No co-op is playable by players yet.
   sources:
   - https://github.com/RichieUltimate/ultimate-trial
   - https://www.romhacking.net/hacks/8640
