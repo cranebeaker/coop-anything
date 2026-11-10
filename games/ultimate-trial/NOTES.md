@@ -413,10 +413,12 @@ Scene gating is implemented: the snapshot carries the scene id, and a node hides
 ids match again. Test: override A to scene 999; both puppets gated off (gate counters
 0 -> 1 each); clear the override; both recovered with exact position and `isDrawn = 1`.
 
-Caveat: a real scene load has not been triggered yet. The starting hub stayed scene 42
-through the intro and its teleports. The next step is to drive the player out of the hub
-(or find the scene transition function) to confirm the id changes, then implement
-forcing the peer into the same scene.
+Caveat resolved: a real transition was observed on 2026-11-09. The intro moved from
+the fountain (scene 42, segment `0x806AD070`, draw config 9) to the canyon/start area
+(scene 41, segment `0x806A9000`, draw config 0). Walking around the canyon kept scene 41.
+This confirms `sceneId` tracks real scene loads and gives two distinct values. Trials
+(other scene ids) still need to be reached, and forcing the peer to load a scene is not
+implemented yet.
 
 
 

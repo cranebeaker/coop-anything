@@ -80,8 +80,9 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   snapshots. Snapshots now carry appearance and the 24-limb joint table, so the puppet moves and
   animates; a watchdog re-injects it after a scene transition. Two-instance test passes with 0.0
   position error, matching joint data that changes over time, and re-injection 0 -> 1 per side.
-- Located the engine scene state: `PlayState` base `0x80276f80`, `sceneId` at `0x80277024`
-  (42 in the starting hub), `sceneSegment` at `0x80277030` pointing at valid scene command data.
+- Located the engine scene state: `PlayState` base `0x80276f80`, `sceneId` at `0x80277024`,
+  `sceneSegment` at `0x80277030`. Confirmed on a real transition: the fountain is scene 42
+  (segment `0x806AD070`) and the canyon/start area is scene 41 (segment `0x806A9000`).
   Added scene gating: the puppet is hidden when the two players report different scene ids and
   restored when they match (tested with a forced 42 vs 999 mismatch).
   Known limits: polled re-injection (about a second gap after a scene load), no interpolation,
@@ -107,8 +108,9 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   forcing A to report scene 999 hid both puppets (gate counters 0 -> 1 each) and clearing
   it restored them with exact positions and `isDrawn = 1`.
 - Co-op QA level stays `none`: this is a loopback prototype (no internet, no packet
-  loss testing), a real scene-to-scene load has not been exercised yet, re-injection can
-  leave a ~1 s gap, and no shippable client exists.
+  loss testing). The intro transition 42 -> 41 was observed, but trial scenes and forcing
+  a peer into the same scene are untested; re-injection can leave a ~1 s gap, and no
+  shippable client exists.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
@@ -135,8 +137,8 @@ dump in the emulator of your choice.
    `sceneSegment`; camera and save flags still to map.
 3. ~~Prove a reserved RDRAM handoff buffer and a visible animated puppet.~~ Done, with
    scene gating and re-injection after actor-list rebuilds.
-4. Drive the player out of the starting hub to confirm a real scene-id change, then make
-   the peer load the same scene (or deny travel with an in-game message).
+4. Reach another scene (a trial) and confirm more scene ids, then make the peer load the
+   same scene (or deny travel with an in-game message).
 5. Harden the UDP bridge with chaos testing (delay, loss, jitter), add interpolation and
    close the scene-transition gap; port to a shippable client and run full two-player bot
    QA across scenes and saves.
