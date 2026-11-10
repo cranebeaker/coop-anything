@@ -438,6 +438,29 @@ scene border/loading zone at a specific spot not yet reached. Next options: visu
 waypoint navigation using captures along the route, parsing transition actor spawn lists
 from the scene segment, or static RE of the scene-transition path.
 
+### Scene transition mechanism, partial map (2026-11-09)
+
+From the decomp, OoT does not store a `nextSceneId` in `PlayState`. Transitions use:
+
+- `transitionTrigger` (s8) at vanilla `+0x11E15`: `TRANS_TRIGGER_START` = 20 starts the
+  exit fade, `TRANS_TRIGGER_END` = -20 ends it on arrival.
+- `nextEntranceIndex` (s16) at vanilla `+0x11E1A`: entrances map to scenes, so a target
+  scene is reached by writing its entrance index and starting the trigger.
+
+Matched dumps of scene 42 and scene 41 from the same process (`PlayState` base
+`0x80276f80` in both) show that:
+
+- Only one u16 across `PlayState` takes the values 42 then 41: `sceneId` at `+0xA4`.
+- The vanilla transition-field offsets do not line up: `+0x11E10` contains floats
+  (`0x3f28b200` etc.) in UT, and a simple -4 shift from the actor-list difference does
+  not produce a valid `transitionTrigger`/`nextEntranceIndex` pair.
+
+So UT's `PlayState` diverges from vanilla by more than the 4-byte actorCtx shift. Two
+ways forward: capture `PlayState` during the fade itself (the trigger is 20 while
+fading, 0 when idle) to locate the field by value, or find the entrance table and
+transition code by static RE. Once located, a scene change for the peer is: write
+`nextEntranceIndex`, set `transitionTrigger = 20`, and let the engine load.
+
 
 
 
