@@ -10117,19 +10117,26 @@
   qa: automated
   notes: Whole story campaign over the game's own netcode (host plays the story, clients replay it), 2 to 4 players on a LAN or by
     direct IP (the Internet list is revived through OpenSpy, not yet tested between two homes), and two players on one PC
-    in split screen. Version 0.1.1; a dinput8.dll proxy plus data built at install time from the player's own archives
+    in split screen. Version 0.1.4 (2026-11-09); a dinput8.dll proxy plus data built at install time from the player's own archives
     (no game files in the repo); needs patch 1.2, Steam copies (patch 1.0) are brought to 1.2 only with the player's
-    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse, AI on
-    clients (deaths, corpses, shots and their sound), levers, mounted guns and quad on clients, Regroup, gate hints, Continue with
-    the real loadout of the host and each client. One-file setup exe, installer in six languages and a shortcut that
-    installs newer releases from GitHub before each start. A bot runs a host and a client through all 24 levels with the
-    level changes; a whole campaign played by people, Internet play and sound judged by ear are still to come. Soldiers'
-    voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
+    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse (the level 2
+    walkway follows the host's rewind), AI on clients (deaths, corpses, shots and their sound), levers, mounted guns and quad
+    on clients, Regroup, gate hints, Continue with the real loadout of the host and each client. After 0.1.1, 0.1.2 fixed
+    the walking speed in split screen, 0.1.3 the split-screen respawn loop and player 2's time-power locks, 0.1.4 adds
+    the partner on the HUD radar, a Ready step (the game's own warm-up) before the first chapter, start fixes that survive
+    other mods' ASI loaders (the installer keeps an Ultimate ASI Loader running as winmm.dll) and texts in all nine languages
+    of the game. One-file setup exe, installer in nine languages, a one-click bug-report collector and a shortcut that installs
+    newer releases from GitHub before each start. QA is automated only (a bot ran a host and a client through all 24 levels
+    with the level changes (last full run on 0.1.3); 0.1.4 was checked in lab sessions on test PCs and by offline tests);
+    nobody has played 0.1.4 by hand, and a whole campaign played by people, Internet play and sound judged by ear are still
+    to come. Open in 0.1.4, a split-screen player 2 in a network game is not held by the ready room, the Tab table in the room
+    is unchecked. Soldiers' voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
   sources:
   - https://github.com/dolbaras/timeshift-coop
   - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.1
+  - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.4
   - https://github.com/cranebeaker/coop-anything/issues/191
-  checked: '2026-11-01'
+  checked: '2026-11-10'
 - game: 'Alien: Isolation'
   year: 2014
   engine: Creative Assembly proprietary
