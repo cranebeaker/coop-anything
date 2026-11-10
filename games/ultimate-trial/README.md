@@ -109,7 +109,12 @@ dump in the emulator of your choice.
 
 ## Next steps
 
-1. Build a stock gopher64 and confirm UT v1.2.3 boots and runs headless.
-2. Add the RAM socket and scripted-input hooks to our fork (verified hook points are in NOTES.md).
-3. Find GlobalContext, the player actor, SaveContext and scene flags in UT's RAM.
-4. Puppet actor patch (BPS delta on top of UT), then the UDP bridge, then bot QA.
+1. ~~Build a stock gopher64 and confirm UT v1.2.3 boots headless.~~ Done; the fork adds
+   `--coop-port` and boots to controllable gameplay with scripted input.
+2. ~~Find GlobalContext, the player actor, and the overlay table.~~ Player actor and
+   actor overlay table found and validated; camera, scene id and save flags still to map.
+3. Prove a reserved RDRAM handoff buffer that survives the game loop, then build the
+   puppet actor (emulator-side injection first, patch-only overlay as fallback).
+4. Harden the UDP bridge (loss, latency, jitter), then port the prototype to a
+   shippable client.
+5. Bot QA for two players: movement, scene transitions, save/load, and desync checks.

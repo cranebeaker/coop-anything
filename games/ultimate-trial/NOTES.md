@@ -304,6 +304,39 @@ Next: puppet actor. Reserve and verify the RDRAM handoff buffer, then design the
 patch-only injection that spawns a visible second Player actor driven by the remote
 snapshot.
 
+### Overlay table layout and the puppet decision (verified 2026-11-09)
+
+The runtime `ActorOverlay` entry layout is confirmed against live entries:
+
+- +0x00 vromStart, +0x04 vromEnd
+- +0x08 vramStart, +0x0C vramEnd (fake VRAM >= `0x80800000`)
+- +0x10 loadedRamAddr: 0 until the overlay is loaded, then the real RAM address
+  (e.g. entry 24 -> `0x80290290`, entry 151 -> `0x80295470`)
+- +0x14 initInfo (VRAM), +0x18 name, +0x1C numLoaded (u16), +0x1E allocType
+
+Overlays are compiled at fake VRAM and relocated to their allocated address at load
+(see `oot/src/libu64/loadfragment2_n64.c`). So the table's vram values must not be
+treated as real RAM addresses; use `loadedRamAddr`.
+
+Two puppet routes:
+
+1. **Emulator-side actor injection.** The player is not an overlay: its update/draw
+   pointers are resident at `0x800a1040` / `0x800a1070`. In principle the bridge can
+   allocate a second Actor plus a copy of the `Player` struct in RDRAM, link it into
+   an actor list and point it at the resident player code. No ROM change at all, and
+   it keeps distribution to our own code. Risk: engine systems assume one player
+   (camera, attention, save context), and the Player update expects a fully valid
+   `Player` struct.
+2. **Patch-only ROM overlay.** Add a new relocated overlay and actor-table entry plus
+   a spawn hook. Cleaner for a shipped patch, but the runtime table is not
+   byte-identical in ROM (the code segment is likely compressed/relocated), so this
+   needs the loader's own structures reverse engineered first.
+
+Recommendation: try route 1 for the first visible puppet; keep route 2 as the
+shipping-clean fallback. Either way the next concrete step is to prove a reserved
+RDRAM handoff buffer that the game side can read every frame.
+
+
 
 ## Phase 3 approach — revised after block-level analysis (2026-11-09)
 
