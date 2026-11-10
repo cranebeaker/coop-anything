@@ -523,6 +523,18 @@ or handshake yet (UDP ports must be dedicated), manual port forwarding, both pla
 need a File 1 save, the emulator binary ships separately, and boot automation taps
 through the intro (about a minute). Same-area co-op only so far.
 
+### Network hardening (2026-11-09)
+
+- Snapshot protocol v4 carries a 32-bit session id; a node with a nonzero session drops
+  mismatched snapshots. Client interop with session `0x1234`: 281 snapshots, 0 gaps.
+- Chaos test through `coop-anything/tools/chaos` with the `bad_wifi` profile on the
+  A -> B path. Relay stats: 286 seen, 270 forwarded, 16 dropped (3 loss, 13 burst),
+  5 duplicated, 0 errors. A was teleported 120 units; B's puppet still ended at A's exact
+  position (0.0 error) and was drawn. Snapshot-style sync is loss tolerant because each
+  packet is a complete latest-state snapshot.
+- Still to do: true internet path (NAT/port forwarding), interpolation for smoother
+  motion at low rates, and packaging the emulator fork with the client.
+
 
 
 

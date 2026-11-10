@@ -94,6 +94,8 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
   sync node with host/join flags. Packaged as a single Windows exe with PyInstaller, with a
   32-bit session id in the snapshot to drop foreign traffic, and tested against the Python node
   (281 snapshots, 0 gaps, exact puppets, both drawn).
+- Hardened the transport: the repo's chaos relay (`bad_wifi`, 16/286 packets dropped, 5
+  duplicated) still left the client's puppet at the host's exact position, drawn.
 - Added scene gating: the puppet is hidden when the two players report different scene ids and
   restored when they match (tested with a forced 42 vs 999 mismatch).
   Known limits: polled re-injection (about a second gap after a scene load), no interpolation,
@@ -121,11 +123,14 @@ No co-op code ships yet. Done so far (details and sources in [NOTES.md](NOTES.md
 - Client interop test: packaged `ut-coop.exe` on B plus the Python sync node on A,
   both with session `0x1234` (2026-11-09) -> PASS. 281 snapshots with 0 gaps and exact
   positions; A's puppet matched B and B's puppet matched A, both `isDrawn = 1`.
-- Co-op QA level stays `none`: this is a loopback prototype (no internet, no packet
-  loss testing). Scene follow is verified with a faked mismatch (both sides replay entrance
+- Chaos test: the repo's UDP relay (`bad_wifi`) on the A->B path dropped 16 of 286
+  packets (3 loss, 13 burst) and duplicated 5. After teleporting A, B's puppet still
+  ended at A's exact position (0.0 error) and was drawn. PASS.
+- Co-op QA level stays `none`: this is still a loopback prototype (no real internet/NAT
+  path). Scene follow is verified with a faked mismatch (both sides replay entrance
   `0x712`, reload, puppets restored), and a forced local transition (entrance `0x0712` +
-  trigger) faded and respawned the player in ~2.9 s. A true trial-to-trial follow, network
-  hardening and a Rust client are still missing.
+  trigger) faded and respawned the player in ~2.9 s. A true trial-to-trial follow and a
+  Rust client are still missing.
 - Co-op QA level stays `none`: no second player exists yet.
 - Plan (from [automated-qa.md](../../playbook/automated-qa.md)): two gopher64 instances on one PC over
   loopback, driven through the fork's RAM socket and scripted input, asserting on positions and flags
@@ -153,8 +158,8 @@ dump in the emulator of your choice.
 3. ~~Prove a reserved RDRAM handoff buffer and a visible animated puppet.~~ Done, with
    scene gating and re-injection after actor-list rebuilds.
 4. Reach a trial scene and run a true scene-to-scene follow (different scene ids).
-5. Harden and ship the client: packet-loss/jitter tests (chaos relay), package the
-   gopher64 fork with it, publish the client repo (owner approval), and port to Rust.
+5. Ship the client: package the gopher64 fork with it, publish the client repo (owner
+   approval), add interpolation, and port to Rust.
 5. Harden the UDP bridge with chaos testing (delay, loss, jitter), add interpolation and
    close the scene-transition gap; port to a shippable client and run full two-player bot
    QA across scenes and saves.
