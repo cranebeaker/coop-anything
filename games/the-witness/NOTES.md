@@ -811,7 +811,7 @@ Evidence commit for rapid cable intent and its tests: `f611b21`.
 
 - The tester's preferred final character art direction beyond the Enshrouded quality reference.
 
-### Second pass — pose, drape and scalp
+### Second pass - pose, drape and scalp
 
 #### Observations
 

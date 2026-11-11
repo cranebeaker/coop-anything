@@ -3539,29 +3539,37 @@
   status: prototype
   coop_scope:
     players_visible: yes
-    story: no
-    enemies: no
-    world_state: no
-    items: no
-  players: "2"
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: "2-4"
   networking: steam-relay
   open_source: yes
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: none
-  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795). The other player
-    appears as a full-body Ethan built from the player's own shadow-only "Shadow*" meshes on a spawned
-    VrDummyPlayer prefab, animated with Ethan's motion bank (walk/jog/crouch in 4 directions, idle) and head
-    look. Position, rotation, look direction and crouch/walk flags go over Steam relay
-    (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation and short
-    extrapolation. Local player cannot walk through the other player. Enemies are
-    shared (early); each runs in the nearest player's game and is copied in the other, with damage and deaths
-    synced. Door unlocks and openings and supply pickups are shared too (keys stay for both), and story cutscenes and progress (early). A fatal hit downs a player until the other revives them. Saving is optional (off by default, with automatic backups). One-click installer; pick a Steam friend in-game (they accept an invite) and jump to their chapter.
-    Tested on one PC only, against a bot peer with simulated 80 ms latency, 30 ms jitter and 5% loss;
-    two real players not tested together. Write-up in games/resident-evil-7.
+  notes: REFramework Lua + C# source plugin for the Steam RT/DX12 build (buildid 22773795), v0.43. The other
+    players appear as full-body characters (Ethan by default; Mia, Clancy, Zoe, Chris or Joe) built from the
+    shadow-only "Shadow*" player meshes on a spawned VrDummyPlayer prefab, animated with Ethan's motion bank and
+    mirroring the moves RE7 plays on the player's body (blocking, swings, the held weapon), with their footsteps,
+    gunshots (each gun's sound, muzzle flash and smoke), reloads and voice. Movement goes over Steam relay
+    (ISteamNetworkingMessages, P/Invoked from the game's steam_api64.dll) with interpolation; up to four players
+    (three and four tested with bots). Each enemy runs in the nearest player's game and is copied in the others,
+    with damage, deaths and flinches synced; bosses run in each game with shared damage and defeat. Doors (with
+    pushes), lockpicked drawers, switches, cut chains, breakable boxes, one-off interactions and phone calls are
+    shared, also for areas a player loads later; each player keeps their own supplies (one shared copy is an
+    option), weapons and keys stay for both, a player behind gets the host's key items and weapons, and items can
+    be given to a friend. Story cutscenes can be shared (experimental). A fatal hit downs a player until another
+    revives them. A co-op screen in the game's style opens from a CO-OP row added to the title screen's tape
+    recorder (or F9 in play) with Steam friends, invites, lobbies that start everyone at a chapter or the host's
+    save, kick and disconnect, quick messages and session stats, for keyboard, controller and mouse. Saving is
+    optional (off by default, with automatic backups). Six two-player sessions (v0.11, v0.22, v0.24,
+    v0.29-v0.31); v0.32-v0.43 tested on one PC and in stand-in games. Item boxes and puzzles are not shared yet.
+    Write-up in games/resident-evil-7.
   sources:
   - https://github.com/xXCroissantXx/coop-re7
   - https://github.com/cranebeaker/coop-anything/tree/main/games/resident-evil-7
-  checked: 2026-10-29
+  checked: 2026-11-09
   made_with_coop_anything: true
 - game: Resident Evil Village
   year: 2021
@@ -4417,44 +4425,13 @@
 - game: Outlast
   year: 2013
   engine: Unreal Engine 3
-  project: OpenOL (multiplayer beta, with OpenOL-Relay)
+  project: OpenOL (multiplayer, with OpenOL-Relay)
   url: https://github.com/ShyKiss/OpenOL
   other_urls:
   - https://github.com/ShyKiss/OpenOL-Relay
+  - https://github.com/ShyKiss/OpenOL/releases/tag/2.2.0
   kind: mod
-  status: alpha
-  coop_scope:
-    players_visible: 'yes'
-    story: partial
-    enemies: partial
-    world_state: partial
-    items: unknown
-  players: unknown
-  networking: hosted-relay
-  open_source: partial
-  last_activity: 2026-08
-  qa: automated
-  notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
-    beta since 2.0.1, release 2.1.0 (2026-08-29). Source is public but no license is stated. Joining works through
-    the standalone OpenOL-Relay 2.1.0 (room PUBLIC); the relay source embedded in the OpenOL repo uses the old packet
-    format. Two-client tests show players, doors, player-spawned enemies (attacks, death, respawn) and story triggers
-    synced; checkpoint loads are not synced, triggers fire for everyone wherever they are, and map enemies are
-    duplicated (every client runs its own copy). Open upstream issues report that connect and Start Server do nothing.
-    A scripted suite (two real clients plus protocol tests, 67 pass, 4 known-bug expectations) and three small relay patches (out-of-context triggers, enemy packet ids, late-join snapshots) is in the own fork https://github.com/G3RKA/OpenOL (tools/outlast-coop); details in games/outlast.
-  sources:
-  - https://github.com/ShyKiss/OpenOL
-  - https://github.com/ShyKiss/OpenOL-Relay
-  - https://github.com/ShyKiss/OpenOL/issues/7
-  - https://github.com/ShyKiss/OpenOL/issues/8
-  checked: 2026-10-21
-- game: Outlast
-  year: 2013
-  engine: Unreal Engine 3
-  project: OpenOL fork with a native enemy patch, play kit and tests (own development)
-  url: https://github.com/G3RKA/OpenOL
-  other_urls: []
-  kind: mod
-  status: alpha
+  status: partial
   coop_scope:
     players_visible: 'yes'
     story: partial
@@ -4464,18 +4441,53 @@
   players: unknown
   networking: hosted-relay
   open_source: partial
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: A fork of OpenOL with its own work in tools/outlast-coop (the upstream has no license, the folder is MIT). A native patch
-    of OpenOL 2.1.0's OLGame.exe keeps one real copy of every map enemy (the lower player id wins) instead of two,
-    the same rule is written in EnemyChannel.cpp (not compiled), plus host and join scripts, three relay patches as files and an
-    automated suite with real clients (67 pass, 4 known-bug expectations; menu path, New Game and rejoin 6 of 6). Tested on one PC
-    with two copies of the game; two PCs, the internet and three players are untested. Checkpoint loads are still not shared and
-    story triggers still fire for everyone wherever they are.
+  notes: Rebuilt OLGame.exe plus packages dropped over a licensed Steam install (needs the Whistleblower DLC), multiplayer
+    since 2.0.1. Release 2.2.0 (2026-11-02) rewrote the multiplayer with encrypted and authenticated UDP, a pinned server
+    key and room passwords, a server that owns the world session and arbitrates limited-use triggers, one AI owner per
+    room that hands over when the owner leaves, checkpoint loads shared through a session travel, and enemy animations shown
+    to the other players. Everyone needs the same game and relay version. Hosting through the embedded relay (in-game
+    menu, Steam P2P) or the standalone OpenOL-Relay (the commit pinned by the OpenOL submodule). Source is public but no
+    license is stated. Tested on 2026-11-04 on one PC with two clients and the standalone relay (release 2.2.0, relay 69998e7).
+    At 17 checkpoints of the Prison, Admin, Lab and Male groups the enemies were spawned by one client and shown as puppets on the other,
+    with their animations playing on both. Owner handover, rejoin, a relay restart, joining and leaving 5 times and 10 minutes idle
+    ran without errors (games/outlast/NOTES.md). Two PCs, Steam P2P, three players and the other checkpoint groups are untested.
+  sources:
+  - https://github.com/ShyKiss/OpenOL
+  - https://github.com/ShyKiss/OpenOL-Relay
+  - https://github.com/ShyKiss/OpenOL/releases/tag/2.2.0
+  checked: 2026-11-04
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL 2.1.0 fork with a native enemy patch, relay patches, play kit and tests (own development, archived)
+  url: https://github.com/G3RKA/OpenOL
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: partial
+  last_activity: 2026-11
+  qa: automated
+  notes: Archived on 2026-11-04 (tag legacy-2.1.0-final). The work was for OpenOL 2.1.0, and what it added (one real copy of every map
+    enemy, shared checkpoint loads, enemy idle poses, arbitration of triggers) is part of OpenOL 2.2.0 itself, so the recommended
+    setup is the OpenOL entry above. What stays in tools/outlast-coop (MIT, the rest of the fork is the upstream code under its own
+    terms) is a native patch of 2.1.0's OLGame.exe (one owner for every map enemy, shared checkpoint loads, enemy idle poses, a trigger
+    distance gate), host and join scripts, three relay patches, an automated suite with real clients (83 checks pass on patch v7),
+    hands-free tests (a sweep of 95 checkpoints, soaks) and scripts that test 2.2.0 without mouse or keyboard. Tested on one PC
+    with two copies of the game; two PCs, the internet and three players are untested.
   sources:
   - https://github.com/G3RKA/OpenOL
   - https://github.com/ShyKiss/OpenOL
-  checked: 2026-10-22
+  checked: 2026-11-04
 - game: Outlast
   year: 2013
   engine: Unreal Engine 3
@@ -7067,23 +7079,29 @@
   last_activity: 2026-11
   qa: automated
   notes: Whole campaign, each player controls one squad member, AI keeps the rest; two players can share one PC in
-    split screen. Version 0.3.0 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
+    split screen. Version 0.3.3 (called Jericho Co-op before 0.2.4); the host is Ross's soul and the second
     player Jones's astral projection, both switching bodies as in the original, players 3-4 keep their character;
-    display mode and refresh rate in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
+    display mode, refresh rate and split screen fill in the game's Video settings; starts without a mouse. Installer window and a shortcut that installs newer
     releases from GitHub before each start, in six languages. LAN/direct IP over ENet or Steam lobbies (runs as
     Spacewar), in a dinput8.dll proxy (two engine faults handled in memory, a split screen crash and a NULL read at
     the last boss; the exe file only gets the large-address-aware flag); host-authoritative enemies, story, scenes,
     powers, doors, breakable and movable objects and saves; each fire team follows its own player. The whole
-    campaign runs in automated tests over a LAN between two PCs, every story split with a real host and client; a
+    campaign runs in automated tests over a LAN between two PCs (last run on 0.3.0), every story split with a real host and client; a
     first human session over Steam (missions 1-8) was fixed up in 0.2.2, a full human playthrough is still to come.
-    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees (the Bull's wind-up, second-weapon triggers, magazines), adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
+    0.3.0 goes through every weapon, fire mode, reload, melee strike and power of the seven playable characters and checks on screen what the watching player sees, adds gestures for actions without a third-person animation, SMOD Add-ons compatibility and a single-file setup exe.
+    0.3.1 (2026-11-07) fixes split screen player 2's attacks in Chapter 1 reported by a tester, fills the split screen halves and adds a one-click log zip. 0.3.2 (2026-11-09) passes nicknames as UTF-8 between games in different languages, puts the mod's remaining English texts into the player's language, keeps other mods' dinput8.dll (ASI loaders) off and restored on removal, and hints how to get SMOD to use the game's language.
+    0.3.3 (2026-11-11) changes only texts on the 0.3.2 DLL, every text reviewed in all six languages (the Russian texts now speak of Church, Cole and Black as women, one form of address per language, the game's own names), and the bug-report collector's window and the setup exe's messages in 16 languages.
+    0.3.1 to 0.3.3 are lab-tested only (offline tests and live checks on one test PC, no whole-campaign rerun); nobody outside the lab has played them. MIT. The MAK-PIVO fork's (no longer public) Steam, shared QTE, sync and boss/power work was merged back in
     0.2.1. Write-up in games/clive-barkers-jericho.
   sources:
   - https://github.com/dolbaras/jericho-coop
   - https://github.com/dolbaras/jericho-coop/releases
   - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.0
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.1
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.2
+  - https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.3
   - https://github.com/cranebeaker/coop-anything/issues/27
-  checked: '2026-11-01'
+  checked: '2026-11-11'
 - game: Poppy Playtime
   year: 2021
   engine: Unreal Engine 4
@@ -7962,7 +7980,7 @@
   url: https://github.com/TommoDotCommo/mdk2-coop
   other_urls: []
   kind: mod
-  status: alpha
+  status: playable
   coop_scope:
     players_visible: 'yes'
     story: partial
@@ -7972,18 +7990,18 @@
   players: up to 16 (tested with 8)
   networking: steam-relay
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: Native dinput8.dll bridge plus Lua injected through settings.lua. The host runs the world; clients mirror
-    enemies, replay shots including delayed Doganboy grenades, share pickups, doors and checkpoints, follow level loads, and revive at a partner when
-    they go down. Cutscenes start together with a skip vote. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP, chosen in
-    a launcher. Co-op saves and reconnect after a crash. Text chat, pings, proximity voice, difficulty and controls presets, character and emote wheels,
-    couch (split-screen) co-op. Public alpha v0.2.0-alpha with an installer; before it, an automated ladder of 31 gates including all 96
-    checkpoints with two real clients and a host/client state diff.
+  notes: Native dinput8.dll bridge plus Lua injected through settings.lua, for the Steam build and the Overhaul Games build. The host runs the
+    world; clients mirror enemies, replay shots, share pickups, doors, checkpoints and item uses, follow level loads, and revive at a partner when
+    they go down. Cutscenes start together with a skip vote. Steam friends-only lobbies or direct UDP with a list of nearby hosts and invite codes,
+    chosen in a launcher. Co-op saves and reconnect after a crash. Text chat, pings, proximity voice, difficulty and controls presets, pad support,
+    couch co-op. Public beta v0.4.0-beta.1 with a one-file Setup. Automated ladder of 109 gates including all 96 checkpoints with two real
+    clients; one full run passed 105, three of the rest passed alone and one gate is intermittent. Nobody has finished the campaign in co-op yet.
   sources:
   - https://github.com/TommoDotCommo/mdk2-coop
   - https://store.steampowered.com/app/213350/
-  checked: '2026-10-23'
+  checked: '2026-11-11'
   made_with_coop_anything: true
 - game: Resident Evil 2 (2019 remake)
   year: 2019
@@ -8652,18 +8670,21 @@
   players: '2'
   networking: unknown
   open_source: 'no'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
   notes: Local couch co-op on one PC for the PC game (TMNTGame.exe 1.0.0.188), two controllers, one shared midpoint camera,
-    one game process. Work in progress, not stable. An injected DLL spawns an idle brother (or clones player 1's turtle and unshares its skeleton in solo-turtle levels like Level 1)
-    and swaps the game's 584-byte pad and wrapper buffer around the input pipeline and player 2's AI tick when a second pad is connected; enemies target player 2, it has a health bar, and air leapfrog plus ground charged team attacks work with player 2 as partner.
-    The partner's single-player exit leap after a team move is cut at the release frame, so it lands where it stands instead of flying off and snapping back. Rough edges remain (the cloned turtle in solo levels misses its katana scabbards, looks identical to Leonardo and uses a slightly different attack combo index, and scripted self-tests only cover the start of Level 1). Not released.
+    one game process. Work in progress, not finished. An injected DLL gives player 2 the mission's own registered brother (the real Raphael,
+    Michelangelo or Donatello with his own weapon and combos, in 7 of the 16 story missions) or a copy of player 1's turtle in another bandana colour
+    (the other 9), with his own input, shared camera, enemy targeting, revives and team moves started by either player. In scripted tests in a test
+    copy all 16 missions pass 175 of 176 checks (join, movement, input isolation, fights, leave/rejoin, restart, crashes; 2026-11-06), plus mutation,
+    revive, team-move, enemy-damage, death, restart and 20-minute stress runs. Level changes, full playthroughs and real controllers on the
+    current build are untested. Not released.
   sources:
   - https://github.com/cranebeaker/coop-anything/tree/main/games/tmnt-2007
   - https://en.wikipedia.org/wiki/TMNT_(video_game)
   - https://github.com/xan1242/UbiTMNTHax
   - https://github.com/hogsy/jaded
-  checked: '2026-10-27'
+  checked: '2026-11-06'
   made_with_coop_anything: false
 - game: Tony Hawk's Underground 2
   year: 2004
@@ -10122,19 +10143,29 @@
   qa: automated
   notes: Whole story campaign over the game's own netcode (host plays the story, clients replay it), 2 to 4 players on a LAN or by
     direct IP (the Internet list is revived through OpenSpy, not yet tested between two homes), and two players on one PC
-    in split screen. Version 0.1.1; a dinput8.dll proxy plus data built at install time from the player's own archives
+    in split screen. Version 0.1.5 (2026-11-11); a dinput8.dll proxy plus data built at install time from the player's own archives
     (no game files in the repo); needs patch 1.2, Steam copies (patch 1.0) are brought to 1.2 only with the player's
-    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse, AI on
-    clients (deaths, corpses, shots and their sound), levers, mounted guns and quad on clients, Regroup, gate hints, Continue with
-    the real loadout of the host and each client. One-file setup exe, installer in six languages and a shortcut that
-    installs newer releases from GitHub before each start. A bot runs a host and a client through all 24 levels with the
-    level changes; a whole campaign played by people, Internet play and sound judged by ear are still to come. Soldiers'
-    voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
+    explicit consent and their own community update package. Slow and stop time powers for everyone, reverse (the level 2
+    walkway follows the host's rewind), AI on clients (deaths, corpses, shots and their sound), levers, mounted guns and quad
+    on clients, Regroup, gate hints, Continue with the real loadout of the host and each client. After 0.1.1, 0.1.2 fixed
+    the walking speed in split screen, 0.1.3 the split-screen respawn loop and player 2's time-power locks, 0.1.4 adds
+    the partner on the HUD radar, a Ready step (the game's own warm-up) before the first chapter, start fixes that survive
+    other mods' ASI loaders (the installer keeps an Ultimate ASI Loader running as winmm.dll) and texts in all nine languages
+    of the game. 0.1.5 changes texts only (reviewed in all nine languages for the game's own words, one word for each thing
+    and one form of address per language; the bug-report collector's window and the setup exe's messages in 16 languages).
+    One-file setup exe, installer in nine languages, a one-click bug-report collector and a shortcut that installs
+    newer releases from GitHub before each start. QA is automated only (a bot ran a host and a client through all 24 levels
+    with the level changes (last full run on 0.1.3); 0.1.4 and 0.1.5 were checked in lab sessions on test PCs and by offline
+    tests); nobody has played 0.1.4 or 0.1.5 by hand, and a whole campaign played by people, Internet play and sound judged by
+    ear are still to come. Still open in 0.1.5, a split-screen player 2 in a network game is not held by the ready room, the
+    Tab table in the room is unchecked. Soldiers' voices and gibbing sounds are host-only. MIT. Write-up in games/timeshift.
   sources:
   - https://github.com/dolbaras/timeshift-coop
   - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.1
+  - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.4
+  - https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.5
   - https://github.com/cranebeaker/coop-anything/issues/191
-  checked: '2026-11-01'
+  checked: '2026-11-11'
 - game: 'Alien: Isolation'
   year: 2014
   engine: Creative Assembly proprietary
@@ -10764,3 +10795,148 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=3614515422
   checked: '2026-10-30'
   made_with_coop_anything: true
+- game: The Evil Within
+  year: 2014
+  engine: id Tech 5 (Tango STEM)
+  project: EvilWithThem (evil-within-coop)
+  url: https://github.com/kennedypoopson/evil-within-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: no
+    enemies: partial
+    world_state: no
+    items: per-player
+  players: "2"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: none
+  notes: "MIT. DLL injected into Steam build 2708258. A second idPlayer is driven by the remote's input over UDP (Source-style 100 ms interpolation); camera, body facing and weapons sync; first version replays enemy damage by entity name. Each game still runs its own enemy AI and world. Hand-tested with two game copies on one PC only. Write-up in games/the-evil-within."
+  sources:
+    - https://github.com/kennedypoopson/evil-within-coop
+  checked: 2026-11-09
+  made_with_coop_anything: true
+- game: Resident Evil Revelations
+  year: 2012
+  engine: MT Framework
+  project: Resident Evil Revelations Co-op
+  url: https://github.com/dolbaras/revelations-coop
+  other_urls:
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: 'Version 0.1.0 (2026-11-10), PC/Steam build 13298487, a dinput8.dll proxy; the second human takes over the
+    campaign''s AI partner. Split screen on one PC with two gamepads covers the whole campaign. Network co-op (two PCs,
+    Steam friends or direct IP on UDP 28410, ENet) covers Episode 1 only (Jill and Parker): host-run enemies, doors, key
+    items and pickups in step, shared game over and Continue, downed/revive, partner on the minimap. A co-op save of its
+    own never touches the solo save; a "Co-Op Play" row in the game''s main menu, installer and self-updating shortcut,
+    13 languages. Tests: offline C suites and a headless bot, plus lab sessions on two PCs (both role orders, to the end
+    of Episode 1, partly driven by lab scripts; section 1-2 was skipped by a lab command, so it has not been played in
+    network co-op); split screen driven with two virtual pads. Nobody outside the lab has played it; not tried between
+    two different networks; Episodes 2+ over the network not offered. Raid is never touched, and the mod uses its own
+    transport, not the game''s. CORRECTED 2026-10-22, still true: the game ships no campaign co-op. Its only two-player
+    mode is Raid; the mode field at *(sGameSystems+0x24)+0x20 reads 0 in the campaign menus and 1 in Raid, and the
+    binary''s network layer and type registry serve Raid only. An earlier write-up here (PR #126) called them a dormant
+    campaign co-op; that thesis is withdrawn. MIT. Write-up in games/resident-evil-revelations.'
+  sources:
+  - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
+  - https://github.com/cranebeaker/coop-anything/issues/299
+  - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
+  checked: '2026-11-10'
+- game: Resident Evil Revelations 2
+  year: 2015
+  engine: MT Framework (32-bit, Direct3D 9)
+  project: Resident Evil Revelations 2 Co-op
+  url: https://github.com/dolbaras/revelations2-coop
+  other_urls:
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: >-
+    Network co-op for Episode 1 of the story campaign only (both halves, Claire and Moira, Barry and Natalia),
+    2 players on 2 PCs, each with their own copy of the game and the mod. Version 0.2.1 (GitHub Latest, published
+    2026-11-10; pre-releases 0.1.0 and 0.1.1, first full release 0.2.0): a dinput8.dll proxy loaded through the
+    exe's import table that patches import slots and COM vtables in memory and changes no game file (Steam build
+    3658995 only). ENet over UDP with a direct IP (port 28410), or Steam lobbies and invites; a room where each
+    player picks a character and presses Ready; host-authoritative enemies as replicas on the other PC with kill
+    credit for the player who made the kill, scenario flags, co-op doors, boxes and slides, a stage-change gate
+    and loader mirror, the end of a half at the radio, per-player achievements, downed and revive (host's choice,
+    on by default), the partner on the minimap, and (0.2.1) a co-op game keeps its own save with a Continue row.
+    Installer and a shortcut that installs newer GitHub releases before each start; 12 languages in the co-op
+    screens. MIT. QA: C test suites and an installer suite, plus scripted two-PC lab sessions with real game
+    clients (lobby by IP and by Steam on one LAN, every checkpoint of both halves, retry, revive, co-op save and
+    update through the real release feed). The lab routes use console warps and teleports, not a walk on foot by
+    two people. Nobody outside the lab has played it; two different networks (Steam relay) are untried. Episodes
+    2-4, the bonus episodes, Survival, Invisible and Raid are not offered (Raid is not touched). Steam
+    achievements are not blocked in a player's game. Write-up in games/resident-evil-revelations-2.
+  sources:
+  - https://github.com/dolbaras/revelations2-coop
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.0
+  - https://github.com/dolbaras/revelations2-coop/blob/main/docs/world.md
+  - https://github.com/dolbaras/revelations2-coop/blob/main/docs/steam-transport.md
+  - https://store.steampowered.com/app/287290/
+  - https://github.com/cranebeaker/coop-anything/issues/298
+  checked: '2026-11-10'
+  made_with_coop_anything: true
+- game: 'Spider-Man: Friend or Foe'
+  year: 2007
+  engine: unknown
+  project: Friend or Foe Online (native Windows)
+  url: https://github.com/IlkinQafarov/spider-man-friend-or-foe-online
+  other_urls:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: '2026-11'
+  qa: automated
+  made_with_coop_anything: true
+  notes: >-
+    Windows v1.3.0-beta supports the original English DVD and the known
+    English/Russian build. Automated two-client checks cover shortened campaign
+    endings, bosses and in-place mission joining. The first Tokyo mission over
+    two-PC Steam is owner-reported. Shared save recovery, controllers and
+    mid-mission admission over two-PC Steam remain unverified.
+  sources:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.3.0-beta
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/TESTING.md
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  checked: '2026-11-07'
+  up_for_adoption: false
