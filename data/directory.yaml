@@ -11003,3 +11003,46 @@
   - https://store.steampowered.com/app/214730/
   - https://github.com/murgesku/MatrixGame
   checked: '2026-11-07'
+- game: Star Fox 64
+  year: 1997
+  engine: N64 decompilation port (Starship, libultraship)
+  project: Starship Co-op
+  url: https://github.com/Clodmony/starship-coop
+  other_urls:
+  - https://github.com/HarbourMasters/Starship
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: "2 played; up to 4 in the code, 3 in scripted network tests"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Online campaign co-op for the Starship PC port, each player on their own PC. Deterministic lockstep (inputs
+    over UDP, 3 frames of input delay) with a state hash compared on every frame and a desync report. On 2026-11-09
+    and 2026-11-10 two people, a Windows host and a Linux joining player on a direct connection over a VPN, played
+    one route from Corneria to the ending in 66 minutes with no desync; later sessions found two more faults, both
+    fixed, the second not yet replayed on two PCs, and the code merged on 2026-11-11 has not been played by hand.
+    In scripted runs on one Linux PC a 53-step test gate passes on the merged code, and all 17 levels stayed equal
+    from start to end with two clients (the test pilot is invincible and has unlimited bombs in two levels).
+    Players share the level, enemies, bosses and path; items go to the player who takes them, the team shares lives
+    and gold rings, and the host steers the route, cutscenes and radio. No release or download, you build from source
+    with your own US ROM. When the host's ship goes down it is refilled in place for a life; a desync or a lost player
+    starts the level again for everyone from the host's state (tested by scripts only, a real connection drop not
+    tried), and what a session earns is not saved. The project calls itself pre-alpha. License CC0 1.0.
+  sources:
+  - https://github.com/Clodmony/starship-coop
+  - https://github.com/Clodmony/starship-coop#what-a-real-run-showed-observed
+  - https://github.com/Clodmony/starship-coop/issues/2
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/QA.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0002-sync-model.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0009-vehicles-cutscenes-save.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0014-the-session-survives.md
+  - https://github.com/Clodmony/starship-coop/pull/265
+  checked: '2026-11-11'
+  made_with_coop_anything: true
