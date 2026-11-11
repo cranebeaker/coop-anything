@@ -3,17 +3,17 @@
 | | |
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
-| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host |
+| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 to 0.3.3 on a Windows 10 test PC with a Russian game copy (0.3.2 also with Ultimate ASI Loader 10.0.2, 0.3.3 also on a copy with the SMOD Add-ons' German texts) |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
-| QA level | automated (whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client); a first human session over Steam (missions 1-8) |
-| Last updated | 2026-11-01 (0.3.0) |
+| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 to 0.3.3: offline tests plus live checks on one test PC); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1, 0.3.2 or 0.3.3 |
+| Last updated | 2026-11-11 (0.3.3) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.2.7 at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.3.3 at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
@@ -42,7 +42,21 @@ flying or snapping back and forth" storm. 0.3.0 goes through every weapon, fire 
 melee strike, power and ability of the seven playable characters, held by a person and by the
 AI, and checks on screen what the watching player sees; it adds gestures for actions that
 have no animation in the game, a compatibility layer for SMOD Add-ons, and a single-file
-setup exe next to the zip. A whole campaign played through by people is still to come.
+setup exe next to the zip. 0.3.1 fixes what a tester reported on 0.3.0 in split screen
+(two players on one PC): player 2 could not attack in Chapter 1, and each half of the screen
+was small (it is now filled by default, with a setting in the Video screen); it also adds a
+one-click log zip for bug reports. 0.3.2 passes nicknames as Unicode (UTF-8) so every game shows
+them in its own font, puts the mod's remaining English texts into the player's language, tells
+the player what happens to another mod's `dinput8.dll` (an ASI loader is kept and switched off
+while co-op is installed, and restored on removal), and adds a hint for SMOD's forced English.
+0.3.3 changes only texts (the DLL is the 0.3.2 one): every text the mod adds was reviewed in all
+six languages (the Russian story texts now speak of Church, Cole and Black as women, German uses
+"Sie" and Spanish "tú" throughout, French and Italian the feminine forms, every language the
+game's own names), and the bug-report collector's window and the setup exe's messages come in 16
+languages. Honest status: 0.3.1 to 0.3.3 were checked by offline tests and by live checks on one
+test PC (below); the whole-campaign regression over two PCs was last run on 0.3.0, and nobody has
+played 0.3.1, 0.3.2 or 0.3.3 by hand outside the lab. A whole campaign played through by people is
+still to come.
 
 ## Existing work
 
@@ -276,8 +290,83 @@ restored on uninstall.
   The add-on's balance changes and third person inside a session are not synced unless every
   player has it, and that is not a priority. SMOD (SkacikPL) and its Add-ons (PHM2D) are
   credited in the mod's readme; none of their files is in the mod.
+- **Player 2's attacks in Act 1 (0.3.1):** in the chapters before Ross's death the mod builds the
+  first-person weapons of every squad member except Ross for the level. Such a first-person model,
+  given to player 2, played none of its actions until the screen had once been whole after it was
+  made: the shots left the gun but there was no shot, reload or sabre animation, so the first
+  magazine was the last and Rawlings did not fire at all. Now, when player 2 takes such a squad
+  member, the screen is whole for about a second (each gamepad keeps driving its own player). Three
+  smaller faults on that path went with it: the wrong first-person model passed to the game inside
+  player 2's attacks, a squad member player 2 takes keeps what its AI was doing, and player 2's HUD
+  is built again when the game turns the crosshair and ammo counter on.
+- **Filled split screen halves (0.3.1):** on 16:9, 16:10 and 4:3 screens each half used to show the
+  whole normal picture at half size with black bars at its sides. Each half is now filled by
+  default, without stretching: the view in a half is wider and less high than the whole screen's.
+  A new row in the game's Video screen, **Split screen**, has *Fill* (default), *Fill (closer)* and
+  *Whole picture* (the old look); it is kept with the aspect ratio, applies after Accept and is in
+  all six languages. The name over the other player sits over their character again, and the mod's
+  Video rows no longer run off the right edge on 4:3 and 5:4 screens (shorter texts, a test checks
+  the length in every language).
+- **Bug report in one click (0.3.1):** `coop\Collect logs.bat` in the game folder puts one zip on the
+  desktop: the mod's logs of the last five sessions, the game's log, the install record, versions
+  and file hashes, Windows and graphics card and driver, and the names (not contents) of the mod's
+  files. Windows user and computer names, folder paths, player and Steam names, Steam IDs, e-mail
+  and MAC addresses and public IP addresses are removed; nothing is sent anywhere.
+- **Nicknames as UTF-8 (0.3.2):** nicknames travel as Unicode and each game shows them in its own
+  font: a Russian nickname appears in Latin letters on a German, French, Spanish or Italian game
+  ("Борис" as "Boris"), "Jürgen" as "Jurgen" on the Russian one. Before, a nickname typed in
+  Russian kept only a few letters, and `|`, `;` and `:` could get into a nickname and break the
+  lobby's messages (they cannot now). A player without a nickname is named by each screen in its
+  own language (lobby, nameplates, squad choice cards).
+- **Texts in the player's language (0.3.2):** the "character needed here" request, the squad choice
+  cards, the reason why Steam is unavailable, the shortcut's "update could not be installed"
+  message and the installer's error lines were in English or in the host's language; they follow
+  the player's language now, and a test checks every text the mod adds in all six languages.
+- **Other mods' DLLs (0.3.2):** another mod's `bin\dinput8.dll` (an ASI loader such as Ultimate ASI
+  Loader, or any other) is kept in `coop-backup` and is off while co-op is installed, and the
+  installer's result says so (for an ASI loader also that its plugins are off). The loader cannot be
+  chained under another name for Jericho, see the lesson below. A `dinput8.dll` another mod puts
+  over the co-op one later is kept by the next update and left in place by the uninstaller (up to
+  0.3.1 the update overwrote it and the uninstaller deleted it). Other mods' `d3d9.dll`,
+  `dsound.dll`, `version.dll`, `xinput1_3.dll` and `winmm.dll` are never touched. The zip's file
+  names use `/` (some unzip tools warned about the backslash names of 0.3.0 and 0.3.1).
+- **SMOD and the game's language (0.3.2):** SMOD sets the game's language itself at every start
+  (`SelectedLanguage = "English"` in its `autoexec.lua`, and it skips the language screen), so with
+  SMOD the game and the co-op texts are English. The mod does not change SMOD's files; a German,
+  French, Spanish or Italian installer tells the player which word to write on that line.
+- **Texts reviewed in all six languages (0.3.3):** Church, Cole and Black are women, and the
+  Russian story texts now decline them so (up to 0.3.2 they were declined as men); names are
+  written as the game writes them, and the mod's in-game texts use no « » and no long dash, as the
+  game's own Russian texts use none and its font may lack them. German says "Sie" and Spanish "tú"
+  everywhere (some lines, the SMOD hint and the setup exe said "du" / "usted"), French and Italian
+  use the feminine forms for the three women, the translations use the game's own names (the
+  Firstborn, Alpha and Omega, the squad), and French and Spanish one name for each place. The text test checks every text in the six languages (format directives, the game's code
+  page, quotes).
+- **Bug-report collector and setup exe in 16 languages (0.3.3):** the window of
+  `coop\Collect logs.bat` (where the zip went, what it holds, what was removed, the Issues link,
+  the error messages) follows the game's language, which the mod's log now names at every start,
+  else Windows' language; the report inside the zip stays in English for the developers. The setup
+  exe's messages (a damaged download, PowerShell blocked, the installer window not started) follow
+  Windows' language in 16 languages instead of six.
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
+
+### Lesson: an ASI loader renamed to `winmm.dll` can never work for a game that Windows shims
+
+Ultimate ASI Loader picks its role by its file name and also serves `winmm.dll`, which
+`Jericho.exe` imports before `dinput8.dll`; so chaining a foreign loader under that name (our
+`dinput8.dll` first, the loader as `bin\winmm.dll`) looked like a way to keep other mods' ASI
+plugins running next to co-op. It cannot work here: Windows applies its compatibility settings to
+`Jericho.exe` (`apphelp.dll`, `AcLayers.dll` and `AcSpecfc.dll` load first and import WINMM) and
+maps the system's `winmm.dll` before the exe's own imports are resolved, so a `bin\winmm.dll` is
+never loaded, with co-op or without it. Seen on two PCs: on Windows 10 (LTSC 19044) the game's
+module list showed `SYSTEM32\WINMM.dll` and no `bin\winmm.dll`, and a test plugin behind the
+loader never ran (as `bin\dinput8.dll` it did); on Windows 11 (build 28000) a debugger's
+load-order view of the exe showed the same order. A chain built that way (a pre-release build
+copied the loader to `bin\winmm.dll`) was never released; 0.3.2 keeps the foreign loader off and
+says so. Check a game's load order before promising a chain; a game without shims is different (the
+same chain works for TimeShift in our tests). Source:
+[docs/releasing.md](https://github.com/dolbaras/jericho-coop/blob/main/docs/releasing.md).
 
 ## QA
 
@@ -285,6 +374,67 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.3.3 (2026-11-11), the test PC of 0.3.2 below (Windows 10, Russian game copies), nothing
+played by hand:
+
+- Offline: the Lua mock tests (15 files), the text test (1219 checks: every text in the six
+  languages, the same format directives, the game's code page, the quotes), the installer tests
+  (56 checks, among them the 0.3.2 release installed over an ASI loader and then updated by this
+  installer), the ASI loader test (13), the setup exe's self-test (87 files equal to the zip) and
+  the bug-report collector's own test (114 checks). The DLL is the published 0.3.2 one.
+- The update: the published 0.3.2, installed into a test folder with two shortcut folders, updated
+  itself to 0.3.3 through its own launcher (the download checked against its SHA-256, both shortcuts
+  kept and refreshed), then was removed back to the folder as it was.
+- Live, the Russian game: the Co-op menu, Host, the lobby, the session settings, Join, the Video
+  menu, the hint lines and three squad choice screens; every letter drawn, nothing cut off; the log
+  names the language as the collector reads it.
+- Live, German on a copy with the SMOD Add-ons' German texts: the rows and the choice cards fit.
+  That copy draws with the Russian edition's font, so its umlauts (the game's own German texts too)
+  came out as Cyrillic letters.
+- `Collect logs.bat` in a Windows 10 console window: Russian, German, Polish, Czech and Hungarian
+  drawn letter for letter; Japanese prints its English lines too where the console's font has no
+  Japanese.
+- Not run: the whole-campaign and two-PC regression, split screen, Steam. German, French, Spanish
+  and Italian letters on their own editions are proven by the text test, not by eye.
+
+Results for 0.3.2 (2026-11-09), one test PC (Windows 10, the game in Russian), a clean copy of the
+game, nothing played by hand:
+
+- Offline: the Lua mock tests (15 files, including the nickname test, 146 checks), the installer
+  tests (including an update from 0.3.1), the text test over all six languages (1245 checks) and the
+  ASI loader stand-in tests (15 of 15). The package was built from a clean clone, 87 zip entries, none
+  with a backslash in its name, and scanned for personal data.
+- Live, with Ultimate ASI Loader 10.0.2 and a test plugin: as `bin\dinput8.dll` alone the plugin
+  loads; co-op installed over it starts to the menu, the loader is kept in `coop-backup`, the result
+  page says so, and removal puts every file back (no difference beyond the game's own log files). With
+  the loader as `bin\winmm.dll` (alone and with co-op) the plugin never runs and co-op starts with
+  the file untouched.
+- Live, a session with the mod's test client as the second player: the host "Борис Х" and the
+  client "Jürgen Ёж" intact in both lobbies, Ready, start at Rom_Tepidarium, the client's nameplate
+  on the host's Russian screen as "Jurgen Ёж" (a German game shows "Jürgen Yozh"; read from the HUD
+  item's state, the captures of this PC came out black), removal.
+- Not run: the whole-campaign and two-PC regression, split screen, Steam. The rest of the mod is
+  the 0.3.1 code.
+
+Results for 0.3.1 (2026-11-07), the same test PC, two gamepads, the Russian game, as a player does it:
+
+- Installed with the setup exe into a clean copy, started through the "Jericho Co-op+" shortcut
+  (its launcher found no newer release and started the game), Co-op, Host, Chapter 1 with player 1 as
+  Black and player 2 as Church, the opening scenes played in full. Player 2 emptied the submachine
+  gun's magazine, reloaded, fired again and struck with the sabre (F11 clips); the screen was whole
+  for about a second when player 2 took Church. With the fix switched off the same run is stuck after
+  the first magazine.
+- The three split screen views chosen in the Video screen of the main and pause menus (Accept keeps,
+  Cancel drops, kept after a restart); the Video rows fit on a 1280x1024 screen after a text
+  shortening this check found; `Collect logs.bat` made its zip; the game's own exit.
+- The update 0.3.0 to 0.3.1 through a 0.3.0 install's shortcut (from a local copy of the release:
+  download, checksum, installer window, game start) and the removal (the folder equal to the clean
+  game again).
+- Offline: 13 Lua simulation test files, the log collector's tests 95 of 95, a personal-data scan of
+  the zip's text files.
+- Not run as a player: a body change of player 2 inside Chapter 1 (covered by lab runs), the
+  whole-campaign regression.
 
 Results for 0.3.0 (2026-11-01):
 
@@ -426,21 +576,30 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 
 ## Known issues
 
-- One human session so far (missions 1-8 over Steam); the full campaign has been run by
-  scripts, not finished by people. A report from that session (a cutscene taking a client's
+- One human session over Steam so far (missions 1-8, on 0.2.x); a tester's split screen report on
+  0.3.0 led to 0.3.1. The full campaign has been run by scripts, not finished by people, and
+  0.3.1 to 0.3.3 were only checked on one test PC. A report from that session (a cutscene taking a client's
   controls while the host walked) could not be reproduced.
+- The 0.3.3 texts were seen in the running game in Russian; German only on a copy that draws with
+  the Russian edition's font, so German, French, Spanish and Italian letters on their own editions
+  are proven by the text test, not by eye.
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
   Join Game auto-launch (game not running) are not tested yet.
 - Animations seen by the watching player were checked on screen for the main weapons and powers
   of each character; a few first-person-only actions (real levers, doors, the pillbox, Cole's
   mines, Rawlings' calm) are shown as a gesture that was only fired from the console, not on
   the real object. The pose of a fall is the engine's.
+- Other mods' ASI plugins do not run next to co-op (see the lesson above); only a loader under a
+  name that Windows does not shim for the game could change that, and none is known for Jericho.
+- With SMOD the game starts in English unless SMOD's `autoexec.lua` is edited (see 0.3.2 above).
 - Split screen draws the two views on alternate frames, so each runs at half the frame rate.
 - The "own eyes" cutscene view is experimental: the sets were built for one camera, and it
   falls back to the original camera where a character cannot see the scene.
 
 ## Next steps
 
+- Possible later: other names a loader serves that the game loads late (`msacm32.dll`, `msvfw32.dll`
+  are not preloaded by the shims), only with a live check that the plugins load.
 - Fix what human playthroughs report (real gamepads, Steam between real accounts); open items
   are tracked in the mod repo's issues.
 - A full co-op playthrough by people, written up, would move this to `verified-playthrough`.

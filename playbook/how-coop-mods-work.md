@@ -206,8 +206,36 @@ A joining client must be brought to the current state. Seen approaches:
 - Skyrim Together Reborn: joiner follows the leader's world
   ([Wabbanode](https://wabbanode.com/help/skyrim-together/understanding-parties-in-skyrim-together-reborn)).
 
-Build "snapshot on join" (full state dump, then deltas) early. It also doubles as your
-reconnect path and your test oracle.
+For a state-replication design, build "snapshot on join" (full state dump, then deltas)
+early. It also doubles as your reconnect path and your test oracle.
+
+#### Late join with an input journal
+
+If a game already runs in input lockstep and both clients can reproduce the same
+mission start, replay can bring a guest up to the host's current tick. First prove
+that a recorded mission segment can cross an area boundary on a second client.
+Include semantic state such as area, player roles and campaign flags in the comparison.
+Exclude process-specific addresses and uninitialized padding from checksums.
+[Friend or Foe's lockstep and state checks](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/ARCHITECTURE.md#input-lockstep).
+
+1. Retain a bounded, tick-indexed journal of the inputs and simulation decisions
+   needed to replay from the agreed mission start. Set a retention limit and a
+   catch-up deadline so the host has a predictable wait.
+2. Start the incoming client from the same mission state. During catch-up, check
+   sampled state and record when the native game loads an area or releases
+   controls. Friend or Foe found that matching RNG could still coincide with
+   early guest controls after a streamed transition.
+3. Hand over the companion only after both clients agree on the replay tick and
+   sampled state and reach ordinary gameplay. If history is missing, the guest
+   cancels, or replay disagrees, refuse admission and let the host resume play.
+   [Friend or Foe's admission results and failed attempts](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md#v110-beta-mid-mission-joining).
+
+Start the regression suite with two actual game instances. Exercise first arrival
+with simulated delay and stalls, reconnect after a seat swap, and admission after
+a native area transition or cutscene. Count matching frames after control passes to
+the guest. Separately cancel a join and try one with exhausted history, then assert
+that the host can keep playing. Report local and two-PC transport checks separately.
+[Friend or Foe's test procedures](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/TESTING.md).
 
 ---
 
