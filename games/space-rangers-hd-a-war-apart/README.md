@@ -1,4 +1,4 @@
-# Space Rangers HD: A War Apart — Co-op Mod
+# Space Rangers HD: A War Apart - Co-op Mod
 
 Co-op planetary battles for Space Rangers HD: A War Apart (Steam appid 214730, build 20648864).
 
@@ -32,7 +32,7 @@ Copy `build\MatrixGame\Release\MatrixGame.dll` to `local\test-install\MatrixGame
 
 ### Run (one PC, two windows)
 
-**Window 1 — Host:**
+**Window 1 - Host:**
 
 ```cmd
 cd local\test-install
@@ -44,7 +44,7 @@ set SR_SMOKE_BATTLE=1
 Rangers.exe Matrix\Map\Boarding.cmap
 ```
 
-**Window 2 — Guest:**
+**Window 2 - Guest:**
 
 ```cmd
 cd local\test-install

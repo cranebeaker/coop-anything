@@ -1,4 +1,4 @@
-# Space Rangers HD: A War Apart — agent notes
+# Space Rangers HD: A War Apart - agent notes
 
 Observed facts, inferences and unknowns are kept in separate lists per the ground rules.
 Sources are local file inspection of the owner's install unless a URL is given.
@@ -9,16 +9,16 @@ Sources are local file inspection of the owner's install unless a URL is given.
   appmanifest_214730.acf), build 20648864.
 - `Rangers.exe`, 4,995,584 bytes, SHA-256 83300344af802bc51e64389c58f047e5afdf195c133048098be3881fae29ed98,
   product 2.1.2500.0, 32-bit PE32, Borland-style section set (`.itext` present).
-- Install root holds `MatrixGame.dll` (1.5 MB) and `okgf.dll` — matching shows Space Rangers 2 /
+- Install root holds `MatrixGame.dll` (1.5 MB) and `okgf.dll` - matching shows Space Rangers 2 /
   HD is the bespoke "Matrix" engine, not any family in playbook/engine-families.md.
 - `DATA/` contains proprietary archives: `*.pkg` (form/archive bundles, e.g. scripts.pkg 153 KB,
   common.pkg 307 MB, questsRus.pkg 3.9 MB) and `*.vdo` (video). Format probe of scripts.pkg:
-  starts `04 00 00 00 AA 00 00 00 01 00 00 00 9E 00 …` then tag `DATA` — custom container,
+  starts `04 00 00 00 AA 00 00 00 01 00 00 00 9E 00 …` then tag `DATA` - custom container,
   not a known archive magic; needs a format write-up before any game-data reads.
 - `CFG.TXT` is plain-text key=value config with a rich set of documented keys
   (Debug=YES exists, ShowFPS, RobotRefreshRate…). `Debug=No` is currently set.
 - Built-in mod loader: `Mods/ModCFG.txt` + `Mods/Tweaks/<name>/{ModuleInfo.txt, CFG/, DATA/*.pkg}`.
-  Shipped tweaks (German localization, ship packs) are pure CFG/DATA override mods —
+  Shipped tweaks (German localization, ship packs) are pure CFG/DATA override mods -
   no script hook or scripting layer.
 
 ## Inferred (derived, not directly confirmed)
@@ -42,7 +42,7 @@ holder's permission. Verified via GitHub API + local clone
 (`local/MatrixGame`, clone of https://github.com/murgesku/MatrixGame, HEAD 06e4d32
 "Fix undervalued head modules for AI"):
 
-- Canonical, active: **murgesku/MatrixGame** — "Space Rangers 2 Planetary Battles Engine",
+- Canonical, active: **murgesku/MatrixGame** - "Space Rangers 2 Planetary Battles Engine",
   C++/CMake, GPL-2.0, pushed 2025-09, 27★, 18 forks. Sources README credits
   http://snk-games.net/matrixgame.tar.gz as origin; archived mirror: twoweeks/MatrixGame
   (archived, pushed 2022-11, description: «Исходный код движка планетарных битв из Space Rangers 2»).
@@ -52,14 +52,14 @@ holder's permission. Verified via GitHub API + local clone
   independently** or a **library for connecting directly to the SR2 engine**". The second
   product is the documented hook point for a mod: connect our DLL build in place of/via the
   shipped MatrixGame.dll. (`okgf.dll` remains unexamined.)
-- Claimed architecture match — all found by grep in the local clone:
-  - `CMatrixMapLogic::Takt(int step)` — MatrixLogic.cpp:2469 (the logic tick)
-  - `CMatrixMap::Takt(int step)` — MatrixMap.cpp:2488 (render tick runs after logic tick,
+- Claimed architecture match - all found by grep in the local clone:
+  - `CMatrixMapLogic::Takt(int step)` - MatrixLogic.cpp:2469 (the logic tick)
+  - `CMatrixMap::Takt(int step)` - MatrixMap.cpp:2488 (render tick runs after logic tick,
     called from MatrixLogic.cpp:2761)
-  - `CMatrixFlyer` — MatrixFlyer.cpp (flying units' class; SMatrixFlyerUnit::Takt per-part)
+  - `CMatrixFlyer` - MatrixFlyer.cpp (flying units' class; SMatrixFlyerUnit::Takt per-part)
   - `CMatrixRobotAI`, `CMatrixSideUnit`, `CMatrixBuilding`, `CMatrixMapStatic`, `CMatrixGroup`
-    — the planetary-battle entity set (Logic/ headers)
-  - Code references `SpaceRangersHD` install path (MatrixGame.cpp:827) — engine supports HD's data.
+    - the planetary-battle entity set (Logic/ headers)
+  - Code references `SpaceRangersHD` install path (MatrixGame.cpp:827) - engine supports HD's data.
 - Scope limit (README + class set): MatrixGame is ONLY the planetary-battles engine.
   Galaxy simulation, dividers/arcade hyperspace flight, text quests live in the closed
   `Rangers.exe` and are NOT covered by this source.
@@ -68,7 +68,7 @@ holder's permission. Verified via GitHub API + local clone
 ## Corrections to the earlier report
 
 - Canonical repo is **murgesku/MatrixGame**, not vladislavrv (that is a fork).
-- `CFormMatrixGame::Takt()` — NOT found in murgesku master. `CMatrixCamera::Takt(float ms)`
+- `CFormMatrixGame::Takt()` - NOT found in murgesku master. `CMatrixCamera::Takt(float ms)`
   and per-effect Takt calls exist; record as unverified until the refactoring branch is grepped.
 
 ## Observed escalation 2: the exact HD ↔ engine ABI (verified 2026-11-03)
@@ -83,7 +83,7 @@ The open source defines both halves of the ABI in `MatrixGame/src/MatrixGameDll.
 - `GetRobotInterface()` returns `SMGDRobotInterface` with 4 pointers: `m_Init(ri)`,
   `m_Deinit()`, `m_Support()` (ESupportError: OK/DirectX/video driver/video hardware),
   `m_Run(HINSTANCE, HWND, wchar* map, SRobotsSettings*, wchar* lang, txt_start, txt_win,
-  txt_loss, wchar* planet, SRobotGameState*)` — a whole planetary battle runs to completion
+  txt_loss, wchar* planet, SRobotGameState*)` - a whole planetary battle runs to completion
   inside `m_Run` and returns the party's built/killed robot, turret, building tallies and
   `SRobotGameState` (m_BuildRobot, m_KillRobot, m_BuildTurret, m_KillTurret, m_KillBuilding,
   m_Time) to the galaxy sim.
@@ -99,10 +99,10 @@ The open source defines both halves of the ABI in `MatrixGame/src/MatrixGameDll.
 - **`MatrixOverride`**: a unique UTF-16 string in Rangers.exe immediately next to `Robot`,
   `RobotsMap`, `Note`. `CfgOverride` also appears elsewhere (4:09-file offset list:
   Robot / RobotsMap / MatrixOverride / Robot.Support()= / robot text / RobotPath / RobotsMap /
-  CfgOverride / Lang). Looks like a config key that chooses the MatrixGame.dll path/name —
+  CfgOverride / Lang). Looks like a config key that chooses the MatrixGame.dll path/name -
   i.e. the game itself may ship a supported way to patch a different engine DLL.
   Not found in CFG.TXT or ModCFG.txt; the actual key Consumer and value location are
-  still unknown (CFG\Main.dat is a binary/encrypted container — 96526 bytes, first 64
+  still unknown (CFG\Main.dat is a binary/encrypted container - 96526 bytes, first 64
   bytes high-entropy). This is the first reverse-engineering target.
 
 Worked plan implication: no binary patch of Rangers.exe should be needed for planetary-battles
@@ -116,7 +116,7 @@ The .pkg archive format is fully documented by the GPL source
 
 - header: dword root-folder offset; folder = SFolderRec {size, recnum, recsize};
   record = SFileRec {size, realsize, char name[63], char realname[63],
-  type, ntype, free, date, offset} — sizeof(SFileRec)=158, folder types recurse.
+  type, ntype, free, date, offset} - sizeof(SFileRec)=158, folder types recurse.
 - compression (type 2 files): chain of blocks [dword restSize]
   [dword blockCompSize]['ZL02'][dword blockUnpackedSize=65536][zlib stream], loop
   while restSize>0; zlib decompress to concatenated raw file. Verified by
@@ -132,14 +132,14 @@ The .pkg archive format is fully documented by the GPL source
   catalog tree: every battle map ships WITH companions `.opt` (logic/layout data,
   same size class as the map) and some `.raw` (heights/lighting? multi-MB), plus
   16 stored `.jpg` map thumbnails (type 1 = uncompressed files in the same folder).
-  46 companion files extracted to `local/analysis/maps/full/` — smoke/battle tests
+  46 companion files extracted to `local/analysis/maps/full/` - smoke/battle tests
   need `.map + .opt` (and `.raw` where present) together.
   Tool: `local/analysis/pkg_tool.py` (tree walk + record scan +  block-chain
   extractor).
 - Term side of the standalone smoke test: MatrixGame.exe (MATRIXGAME_BUILD_DLL=OFF
   build) with a map arg runs MatrixGameInit → CalcVis → writes `calcvis.log`
-  (`<map> ... done`) and exits — a headless smoke test of the whole engine init,
-  config load (`cfg\robots.dat` — note: test-install has it only under `CFG\Rus\`,
+  (`<map> ... done`) and exits - a headless smoke test of the whole engine init,
+  config load (`cfg\robots.dat` - note: test-install has it only under `CFG\Rus\`,
   copied for the standalone) and map+asset loading, WITHOUT Rangers.exe.
 
 Netting-layer design drafted (was a gap): see `DESIGN-netlayer.md` next to this
@@ -148,9 +148,9 @@ built-in 4-side set, SOrder reliable stream + per-tick pose deltas, hook points
 CMatrixMapLogic::Takt / CMatrixSideUnit ownership flags; ENet vendored; M1..M4
 milestones. Design facts verified in source while drafting: `m_Side[]` supports
 4 sides + neutral (ASSERT(cnt == 5), MatrixMap.cpp:1003-1038) and `PLAYER_SIDE`
-is the id constant 1 (MatrixSide.hpp:16) — co-op needs NO extra side slots.
+is the id constant 1 (MatrixSide.hpp:16) - co-op needs NO extra side slots.
 
-  5. `MatrixLib/3G/src/3g.cpp` `L3GInitAsEXE` — UPSTREAM BUG (2026-11-04): the exe
+  5. `MatrixLib/3G/src/3g.cpp` `L3GInitAsEXE` - UPSTREAM BUG (2026-11-04): the exe
      path never calls Direct3DCreate9/CreateDevice; `g_D3D`/`g_D3DD` are only set in
      the DLL path (`L3GInitAsDLL` receives them from the host game). First use
      `g_D3DD->GetRenderTarget` (3g.cpp:185) AVs with g_D3DD==NULL; verified by
@@ -161,24 +161,24 @@ is the id constant 1 (MatrixSide.hpp:16) — co-op needs NO extra side slots.
 ## Observed escalation 6: ENGINE BUILD SUCCESS (verified 2026-11-03)
 
 `cmake --build build --config Release` produces `MatrixGame.dll` (2,033,664 B,
-`build/MatrixGame/Release/`) — the FIRST complete modern-MSVC rebuild of the GPL engine.
+`build/MatrixGame/Release/`) - the FIRST complete modern-MSVC rebuild of the GPL engine.
 ABI parity with the shipped DLL confirmed by pefile:
 - exports: exactly one, `GetRobotInterface` (both)
 - ImageBase 0x10000000, subsystem GUI (both)
 - import set identical except advapi32 (shipped-only; likely registry config path unused
   in the built thread)
-- section layout differs (historical vs new linker) — irrelevant for the ABI.
+- section layout differs (historical vs new linker) - irrelevant for the ABI.
 
 Build stages and their fixes (details above in escalation 5):
 - Configure: pass 1 clean (SEE DXSDK_DIR), pass 2 uncovered stale-cache MATRIXGAME_BUILD_DLL=OFF
   → whole loop built an .exe; fixed by -DMATRIXGAME_BUILD_DLL=ON explicit reconfigure.
-- Compile:只有一个 ICE TU per probing — MatrixLogic.cpp (the co-op hot file!); bisect table
+- Compile:只有一个 ICE TU per probing - MatrixLogic.cpp (the co-op hot file!); bisect table
   in MatrixGame/CMakeLists comments; fixed with whole-target /Ob1 + per-file /Od.
 - Link: /SAFESEH:NO for the unmarked MASM TU; legacy_stdio_definitions for DxErr's
   __vsnwprintf; upstream-missing includes in MatrixMapGroup/MatrixMapTrace/MatrixMultiSelection
   (IsLiveCannon/IsLiveBuilding are __forceinline in MatrixObjectCannon.hpp/MatrixObjectBuilding.hpp).
 
-Ready state: isolated test install — copying via robocopy into
+Ready state: isolated test install - copying via robocopy into
 `local/test-install/` (2.61 GB, robocopy /MT:8) in progress. Next: drop-in replace
 MatrixGame.dll there, run Rangers.exe, verify `Load MatrixGame.dll .... ok` path and
 battle entry, then start the netting layer design.
@@ -186,7 +186,7 @@ battle entry, then start the netting layer design.
 ## Observed escalation 5: the engine build setup (verified 2026-11-03)
 
 - Toolchain installed (owner-approved): VS Build Tools 2022 17.14 (MSVC 14.44, ml.exe
-  x86/x64 present, Windows SDK 10.0.26100). no standalone CMake — using the bunded one.
+  x86/x64 present, Windows SDK 10.0.26100). no standalone CMake - using the bunded one.
 - DirectX SDK June 2010 (9.29.1962.1) obtained from the official MS download page (id=6812,
   https://download.microsoft.com/download/a/e/7/ae743f1f-632b-4809-87a9-aa1bb3458e31/DXSDK_Jun10.exe),
   571.7 MB, SHA-256 705271DC83BFEE54D9B94E028426E288D5F070784B7446D164F48ECFBB2A02CB
@@ -195,17 +195,17 @@ battle entry, then start the netting layer design.
   (extract path: `<opencode temp>/dxsdk/extract/DXSDK`). This avoids the known installer
   failures on modern Windows (S1023, .NET 3.5 requirement).
 - CMake configure (VS 2022, -A Win32, Release DLL default MATRIXGAME_BUILD_DLL=ON):
-  passed clean — VC tools found, DIRECTX9 found, ASM_MASM (ml.exe) found, project generated.
+  passed clean - VC tools found, DIRECTX9 found, ASM_MASM (ml.exe) found, project generated.
   MatrixGame builds as a MODULE (DLL) with `GetRobotInterface`, MatrixLib(+MASM file) and
   ZLib as static libs; Extras/MaxExp is not in the root build (needs 3DS Max SDK, irrelevant).
 - binaries: `cmake --build build --config Release` (log: `local/analysis/build_release.log`).
 - Port fixes so far (all local, candidates for an upstream PR):
   1. `CMakeLists.txt` (root) + `MatrixLib/FilePNG/CMakeLists.txt`: define
-     `WINDOWS_IGNORE_PACKING_MISMATCH` — /Zp1 vs winnt.h static_assert of SDK 10.0.26100.
+     `WINDOWS_IGNORE_PACKING_MISMATCH` - /Zp1 vs winnt.h static_assert of SDK 10.0.26100.
   2. `MatrixGame/CMakeLists.txt`: per-file `/Ob1 /Od` for `src/MatrixLogic.cpp`
-     (MSVC 14.44 optimizer ICE; bisection table in the comment — every other flag
+     (MSVC 14.44 optimizer ICE; bisection table in the comment - every other flag
      dimension eliminated), whole-target `/Ob1` after the same ICE hit more TUs.
-  3. Root `LINK_OPTIONS`: `/SAFESEH:NO` — MASM `asharpen.asm` is not SAFESEH-marked;
+  3. Root `LINK_OPTIONS`: `/SAFESEH:NO` - MASM `asharpen.asm` is not SAFESEH-marked;
      the 2010 targets shipped with `/DYNAMICBASE:NO` anyway, so opt-out matches. Plus
      `legacy_stdio_definitions` link for `__vsnwprintf` (referenced by legacy DxErr.lib;
      documented MS substitute).
@@ -221,14 +221,14 @@ battle entry, then start the netting layer design.
 ## Observed escalation 4: how manual robot control actually works (verified 2026-11-03)
 
 - Robot control is order-driven: `SOrder { OrderType m_OrderType; OrderPhase m_OrderPhase;
-  float m_Param1..3; … }` (`MatrixRobot.hpp:123-164`). Manual driving is NOT a special state —
+  float m_Param1..3; … }` (`MatrixRobot.hpp:123-164`). Manual driving is NOT a special state -
   the interface produces the same orders: `ROT_MOVE_TO(x,y)` (+params), `ROT_MOVE_TO_BACK`,
   `ROT_STOP_MOVE`, `ROT_FIRE`, `ROT_STOP_FIRE`, `ROT_CAPTURE_FACTORY`, `ROT_STOP_CAPTURE`.
   `OrderPhase` marks the executing stage (`ROP_MOVING`, `ROP_FIRING`, `ROP_CAPTURING`, …).
 - `ROBOT_FLAG_DISABLE_MANUAL` (`MatrixRobot.hpp:357`) removes a bot from manual takeover;
   `CInterface.cpp:1512/1516` checks `IsDisableManual()` + `player_side->IsArcadeMode()`
   before steering, and all side-group logic in `MatrixSide.cpp` (lines 6573+) skips
-  DISABLE_MANUAL bots from group orders — i.e. the engine already separates «bot under
+  DISABLE_MANUAL bots from group orders - i.e. the engine already separates «bot under
   player control» from «bot under AI».
 - `CMatrixSideUnit` is a per-side commander object (sides exist as a first-class list);
   friendly-fire damage is configurable per weapon (`m_FlyerDamages.friend_damage`,
@@ -238,7 +238,7 @@ Design implication for co-op: multiple humans = multiple `CMatrixSideUnit`s (all
 or same side), each client feeds its OWN robot with local orders; the remote player's robot
 gets its `SOrder` stream synchronized over the network (same input the interface would send).
 Sync granularity = orders + per-tick pose deltas, not raw input. Open risk: `player_side`
-may be a global singleton pointer that CInterface assumes — must be checked at runtime.
+may be a global singleton pointer that CInterface assumes - must be checked at runtime.
 
 ## Observed escalation 3: config container formats (verified 2026-11-03)
 
@@ -247,11 +247,11 @@ Engine config format identified from the open source itself
 version dword (1 = ZL03-compressed) + records; v1 payload is a zlib stream
 (`ZL03_Compression/UnCompress`, magic 78 DA) of [record count + records].
 
-- `CFG\Rus\robots.dat` (77,184 B): starts `STRG 01 00 00 00 ZL03 …78 DA` — decompresses
+- `CFG\Rus\robots.dat` (77,184 B): starts `STRG 01 00 00 00 ZL03 …78 DA` - decompresses
   cleanly (65,000 B) with plain `zlib.decompress(d[20:])`. It is the Matrix engine's
   runtime config (`FILE_CONFIGURATION = L"robots.dat"`, `FileConfigurationLocation = cfg\`,
   StringConstants.hpp:9-10; read by `g_MatrixData->BlockGet(...)` in MatrixConfig.cpp).
-- German Tweaks mod (` Mods/Tweaks/German/CFG/robots.dat`, 75,588 B) uses the SAME format —
+- German Tweaks mod (` Mods/Tweaks/German/CFG/robots.dat`, 75,588 B) uses the SAME format -
   mods ship STRG/ZL03 files as plain drop-in replacements for engine config. Interface layout,
   robot parts, weapon descriptions all live there (decompressed copy:
   `local/analysis/robots_decomp.txt`).
@@ -261,12 +261,12 @@ version dword (1 = ZL03-compressed) + records; v1 payload is a zlib stream
   key seed), the rest is contained/scrambled. Mods DO ship partial Main.dat overrides, so
   partial-record override is supported, just not solvable without cryptanalysis.
   Engine-side, `MatrixOverride`/`CfgOverride` (Rangers.exe strings) most likely select
-  paths for `robots.dat`/CFG — meaning the game plausibly supports pointing the engine-DLL
+  paths for `robots.dat`/CFG - meaning the game plausibly supports pointing the engine-DLL
   and cfg outside the install dir. Exact consumer still unknown.
 
 ## Unknowns (current open list)
 
-- `MatrixOverride` — new verified context (2026-11-04,idl file offset 4093528 in
+- `MatrixOverride` - new verified context (2026-11-04,idl file offset 4093528 in
   Rangers.exe): it is a UTF-16 Pascal-string entry (len=0x1C) sitting in a string
   table BETWEEN the config-like keys `Robot` and `RobotsMap`, with ASCII neighbors
   `MatrixGame.dll`, `GetRobotInterface`, `Load MatrixGame.dll .... ok` and
@@ -304,7 +304,7 @@ version dword (1 = ZL03-compressed) + records; v1 payload is a zlib stream
    standalone MatrixGame.exe rebuild + headless CalcVis smoke on Map_1.map
    (`local/analysis/smoke_matrixgame.ps1`).  → DONE 2026-11-05, escalation 8
    (now: Boarding.cmap from DATA/robots.pkg; Map_1.map is closed-format 'abwm').
-4. Add the networking layer inside the engine — DESIGN DRAFTED
+4. Add the networking layer inside the engine - DESIGN DRAFTED
    (`DESIGN-netlayer.md`): host-authoritative, guest = side 2 of the built-in
    4-side set, SOrder reliable stream + per-tick pose deltas, ENet vendored;
    M1 (invisible harness) → M4. Instruments `fakeworld`/`flight` from tools/ still
@@ -446,7 +446,7 @@ by M1 smoke).
 
 
 ================================================================
-2026-11-07 — M2 session: crash fixed, handshake works, M2 gate in place
+2026-11-07 - M2 session: crash fixed, handshake works, M2 gate in place
 ================================================================
 
 Start point: session 2026-11-06 ended blocked on two unknowns: (a) host AV
@@ -480,7 +480,7 @@ FACTS (all verified by runs/disasm this session):
    dumpbin /disasm window around 00505C.. shows the compiled reads
    (movzx byte [esp+8] for channelID, mov [esp+0Dh] for packet) matching ONLY
    the /Zp1 view.
-   FIX: CMakeLists.txt — ENet target now gets /Zp1 (plus
+   FIX: CMakeLists.txt - ENet target now gets /Zp1 (plus
    WINDOWS_IGNORE_PACKING_MISMATCH to silence winnt.h static_asserts, same
    opt-out the game target already uses). Both sides of every shared struct
    agree now. ENet objs rebuilt (host.obj 2026-11-07 09:28), exe relinked.
@@ -503,7 +503,7 @@ FACTS (all verified by runs/disasm this session):
 
 5. Regression gates after every change today: smoke_matrixgame.ps1 PASS
    (Boarding.cmap SHA unchanged 8DEF…51DA), smoke_coop_m1.ps1 PASS (A/B/C).
-   New: local/analysis/smoke_coop_m2.ps1 — M2 handshake gate (host+guest
+   New: local/analysis/smoke_coop_m2.ps1 - M2 handshake gate (host+guest
    battle-smoke pair; PASS criteria in script header). Verified PASS twice.
 
 6. Artifacts after this session:
@@ -525,7 +525,7 @@ FACTS (all verified by runs/disasm this session):
 
 CONCLUSIONS:
 - Milestone M2 handshake CLOSED and gated. Phase-2 + M1 gates still PASS.
-- The 2026-11-06 crash was NOT heap corruption nor a race — a struct layout
+- The 2026-11-06 crash was NOT heap corruption nor a race - a struct layout
   skew (/Zp1) between compilation units. Encode "ENet must be /Zp1 too" in
   CMake so it cannot regress silently (done, with comment).
 
@@ -536,14 +536,14 @@ NEXT (M2 remainder, see HANDOFF sec 10):
   poses are also sent from SRNetPumpHooked() via SRNetSendPosesFromTick().
   Guest receives in SRNetPump() RECEIVE branch and applies to m_Side[1]->
   m_Robots[] in CMatrixMapLogic::Takt(). smoke_coop_m2.ps1 extended with
-  ">=1 PKT_POSE" criterion — PASS.
+  ">=1 PKT_POSE" criterion - PASS.
 - channel A (reliable): PKT_ORDER guest->host, applied same-Takt. CLOSED
   (2026-11-07): guest sends PKT_ORDER {unitId, orderType, orderPhase,
   param1-3, param4} from side-2 robots' orders every Takt via
   SRNetSendOrderPod(); host receives in SRNetPump() RECEIVE branch
   (SRNetHandleOrder()) and applies to m_Side[2]->m_Robots[] in
   CMatrixMapLogic::Takt(). smoke_coop_m2.ps1 extended with ">=1 PKT_ORDER"
-  criterion — PASS.
+  criterion - PASS.
 
 ---
 2026-11-07 Session: M2 шаги 3 и 4 §10 (каналы B и A) DONE and gated.
@@ -555,7 +555,7 @@ FACTS:
   called (menu/idle), poses are also sent from SRNetPumpHooked() via
   SRNetSendPosesFromTick(). Host builds packet from g_MatrixMap->m_Side[1]->
   m_Robots[] (side 1 = host). Empty slots (m_Robot == NULL) skipped. count can
-  be 0 (map has no robots on side 1 — Boarding.cmap case); packet still sent
+  be 0 (map has no robots on side 1 - Boarding.cmap case); packet still sent
   with count=0 so channel stays warm.
 - Guest receives in SRNetPump() RECEIVE branch on channel 1, validates type/
   side/count/length, stores into static SPKTPoseEntry buffer, logs
@@ -607,6 +607,6 @@ FACTS:
 - Boarding.cmap has count=0 robots on both sides (empty battle map), so pose/order
   counts are 0 but the protocol channels are confirmed functional.
 
-NEXT: M4 (upstream-PR ready) — install gh CLI, port-fix commits, README,
+NEXT: M4 (upstream-PR ready) - install gh CLI, port-fix commits, README,
 regression scripts. Optional: test M3 with a map that has actual robots for
 visual confirmation of pose replication.
