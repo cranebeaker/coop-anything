@@ -1,6 +1,6 @@
 # Death Stranding research notes
 
-## 2026-10-25 — initial public-source reconnaissance
+## 2026-10-25 - initial public-source reconnaissance
 
 ### Observations
 
@@ -32,7 +32,7 @@
 
 - Public-source reads, GitHub metadata/tree searches and hub issue/PR searches only. No binary downloads, builds, game launches or co-op tests.
 
-## 2026-10-25 — source audit and search ledger
+## 2026-10-25 - source audit and search ledger
 
 ### Observations
 

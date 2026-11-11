@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | Engine | Unity 2017.2.0, Mono scripting backend |
-| Versions tested | Steam build 2304714 (2025-07-13); direct IP tested automatically, Steam lobby code built, two-account Steam run pending |
+| Versions tested | Steam build 2304714 (2025-07-13); direct IP tested automatically, Steam lobby hosting tested on one copy, two-account Steam run not tested |
 | Projects | [SuperflightMP](https://github.com/carlgoodtoseeyu/superflightmp) (directory entry: Superflight / SuperflightMP, built here); [SFMF Multiplayer by Phlarfl](https://github.com/Phlarfl/SFMF/tree/master/Multiplayer/Multiplayer) (directory entry: Superflight / SFMF Multiplayer) |
 | QA level | automated (two real copies on one PC, direct IP; see QA) |
-| Last updated | 2026-10-30 |
+| Last updated | 2026-11-05 |
 
 ## Where things stand
 
@@ -14,7 +14,7 @@ A new BepInEx plugin ([SuperflightMP](https://github.com/carlgoodtoseeyu/superfl
 IP, each visible as a tinted copy of the wingsuit with name and score; two automated
 two-copy suites pass. Steam friend invites without port forwarding are built on the game's
 own Steamworks.NET (friends-only lobby, P2P with relay, overlay invite, `+connect_lobby`);
-what one PC and one account can test is scripted, the two-account run is pending. The
+what one PC and one account can test is scripted; a two-account run is not tested. The
 2018 SFMF Multiplayer mod it replaces is abandoned (its author doubts it still works).
 
 ## Existing work
@@ -106,7 +106,7 @@ the source audit found (details in NOTES.md):
 - `python -I tests\run_steam.py ...`: one copy, Steam client signed in: Steam API ready,
   lobby created, session hosting over the Steam transport, one member, leave tears it down.
   `--join CODE` on a second PC and account: joins, gets the host's world, state and puppet
-  arrive. Host mode ran on the owner's PC with their OK: `RESULT: PASS`, 15 checks (lobby
+  arrive. Host mode ran on one PC: `RESULT: PASS`, 15 checks (lobby
   created, hosting over the Steam transport, teardown). The join mode has not run yet.
 - Last results, 2026-10-29, Steam build 2304714: run_two and run_portal `RESULT: PASS`
   (run_two: 377 and 399 states in 20 s, 10 puppet renderers each side; run_portal: 40
@@ -128,7 +128,7 @@ is on the [v0.2.0 release page](https://github.com/carlgoodtoseeyu/superflightmp
 ## Known issues
 
 - The Steam path has not been run between two accounts yet; direct IP (forwarded UDP port
-  or VPN) is the tested fallback. Friends-list "Join Game" via rich presence: unverified.
+  or VPN) is the tested fallback. Friends-list "Join Game" via rich presence: not tested.
 - Remote wingsuits do not animate (still mesh copy).
 - No shared scoring mode; each player keeps their own run. The choice screen's scoreboard
   shows everyone's current run score.
@@ -136,6 +136,6 @@ is on the [v0.2.0 release page](https://github.com/carlgoodtoseeyu/superflightmp
 
 ## Next steps
 
-1. Steam: a real two-account run over the internet (owner plus a friend through the overlay
-   invite, or `tests/run_steam.py --join CODE` on a second PC with another account).
+1. Steam: a real two-account run over the internet (two PCs with two accounts, through the
+   overlay invite, or `tests/run_steam.py --join CODE` on the second PC).
 2. Chaos runs with `tools/chaos` (lag, loss) and a three-player run.
