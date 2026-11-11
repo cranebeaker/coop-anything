@@ -29,6 +29,13 @@ build on its author's own build server. Say "not found by search X" and keep goi
 
 ## What to record for each find
 
+Compare the README's feature list against the relevant source branch before calling a tool
+limited to one purpose. Record source-only capabilities separately from released and tested
+features. For example, [Death Stranding research](../games/death-stranding/README.md) found
+entity tracking and Lua bindings in DeathStrandingModLoader beyond its README's emulator
+focus, and a `dsdc-injector` branch of decima-native outside the default branch. Neither
+source finding establishes compatibility with a player's current executable.
+
 - Link, author handle, license (or "none stated").
 - Last activity you can confirm (commit, release, post date), not the "updated" badge.
 - What it **really** syncs. Separate "players can see each other" from shared enemies,

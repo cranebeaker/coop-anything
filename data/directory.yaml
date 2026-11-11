@@ -10940,3 +10940,41 @@
   - https://github.com/cranebeaker/coop-anything/issues/71
   checked: '2026-11-07'
   up_for_adoption: false
+- game: Death Stranding
+  year: 2020
+  engine: Decima
+  project: death-stranding-coop
+  url: https://github.com/TommoDotCommo/death-stranding-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: partial
+    items: partial
+  players: 2 (two copies on one PC)
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Prototype for the Director's Cut (2022, Steam app 1850570, build 13300582), not playable, no release, MIT. Base PC release year shown. Two copies on one PC, kept offline -
+    each player sees the other as a second Sam (walking, running, crouching, jumping, in the other's gear, riding a bike or truck, with a name label and map pin). Cargo put down or
+    picked up and ladders built or dismantled reach the other world. No shared story, enemies, orders or cutscenes; two PCs are built but untried. A loader proxy isolates each copy
+    (saves, single-instance guard, no connection to the game's online service). QA is a game-free core with a fuzzer and mutants plus live two-copy runs with state read from the
+    processes. Tooling by others - DeathStrandingModLoader, Decima Workshop, decima-native (dsdc-injector branch); none has multiplayer. See games/death-stranding.
+  sources:
+  - https://github.com/TommoDotCommo/death-stranding-coop
+  - https://github.com/NRTnarathip/DeathStrandingModLoader
+  - https://github.com/ShadelessFox/decima-native/tree/dsdc-injector
+  - https://github.com/ShadelessFox/decima-workshop
+  - https://store.steampowered.com/app/1850570/DEATH_STRANDING_DIRECTORS_CUT/
+  - https://www.kojimaproductions.jp/en/death-stranding-directors-cut-beginners-guide
+  checked: '2026-11-10'
+  made_with_coop_anything: true
+  searched:
+  - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+  - Hub issues and PRs including closed, GitHub repository search for Death Stranding coop and multiplayer, 2026-10-25; no matches
+  - Web search English co-op and multiplayer variants; Japanese and Russian variants; Nexus, ModDB, Steam and archive.org site queries, 2026-10-25; no usable implementation identified
+  - Public Reddit search results include a multiplayer proposal, not a verified build; private Discords and full mod listings not inspected
