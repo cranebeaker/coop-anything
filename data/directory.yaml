@@ -10889,3 +10889,38 @@
   - https://github.com/cranebeaker/coop-anything/issues/298
   checked: '2026-11-10'
   made_with_coop_anything: true
+- game: 'Spider-Man: Friend or Foe'
+  year: 2007
+  engine: unknown
+  project: Friend or Foe Online (native Windows)
+  url: https://github.com/IlkinQafarov/spider-man-friend-or-foe-online
+  other_urls:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: '2026-11'
+  qa: automated
+  made_with_coop_anything: true
+  notes: >-
+    Windows v1.3.0-beta supports the original English DVD and the known
+    English/Russian build. Automated two-client checks cover shortened campaign
+    endings, bosses and in-place mission joining. The first Tokyo mission over
+    two-PC Steam is owner-reported. Shared save recovery, controllers and
+    mid-mission admission over two-PC Steam remain unverified.
+  sources:
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/releases/tag/v1.3.0-beta
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md
+  - https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/TESTING.md
+  - https://github.com/cranebeaker/coop-anything/issues/71
+  checked: '2026-11-07'
+  up_for_adoption: false
