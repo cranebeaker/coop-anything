@@ -5,8 +5,8 @@
 | Engine | Saber3D (Saber Interactive), Direct3D 9, Havok, FMOD, Bink; its own typed, event-driven level scripts; GameSpy-era client-server multiplayer |
 | Versions tested | PC patch 1.2 (menu "Ver 1.02"), 32-bit `bin\TimeShift.exe` SHA-256 `689c63da36cd5902edcad2abe1111d4697a92b12c4e17fe0659b856752641be4`, and the community's pre-patched exe of the same code; Windows 10 and 11. Steam copies are patch 1.0 and need a community 1.2 update package that the player supplies (simulated Steam folder tested, a real Steam install not yet) |
 | Projects | [TimeShift Co-op](https://github.com/dolbaras/timeshift-coop) (directory entry "TimeShift Co-op") |
-| QA level | automated (a bot drives a host and a client through all 24 campaign levels with the level changes; menus, split screen and the installer are driven by scripts). Nobody has played 0.1.4 by hand |
-| Last updated | 2026-11-10 (0.1.4, published 2026-11-09) |
+| QA level | automated (a bot drives a host and a client through all 24 campaign levels with the level changes; menus, split screen and the installer are driven by scripts). Nobody has played 0.1.4 or 0.1.5 by hand |
+| Last updated | 2026-11-11 (0.1.5, published 2026-11-11) |
 
 ## Where things stand
 
@@ -14,11 +14,13 @@ Two to four players can play the story campaign together over a local network (t
 and direct IP is written but not yet tested between two real homes), and two players can share one PC in split screen.
 The mod is a `dinput8.dll` proxy plus data built on the player's own machine from their own game archives; it
 uses the game's own network code, not a second one. A bot has run a host and a client through all 24 levels, with the
-level changes, for 0.1.0, 0.1.1 and 0.1.3 (the last full run); 0.1.4 was checked in lab sessions on test PCs and by
-offline tests (see QA), and nobody has played it by hand yet. A whole campaign played by people is still to come, and
+level changes, for 0.1.0, 0.1.1 and 0.1.3 (the last full run); 0.1.4 and 0.1.5 were checked in lab sessions on test PCs
+and by offline tests (see QA), and nobody has played them by hand yet. A whole campaign played by people is still to come, and
 sound has only been checked in logs, not by ear. Releases come with a one-file setup exe or a zip, and the "TimeShift Co-op" shortcut
 installs a newer release from GitHub before each start ([releases](https://github.com/dolbaras/timeshift-coop/releases)).
-The newest release is [0.1.4](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.4) (2026-11-09).
+The newest release is [0.1.5](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.5) (2026-11-11); it changes
+texts only: every text reviewed in all nine languages, and the bug-report collector's window and the setup exe's messages
+in 16 languages.
 
 ## Existing work
 
@@ -62,7 +64,8 @@ The newest release is [0.1.4](https://github.com/dolbaras/timeshift-coop/release
 
 Added after 0.1.1 (release notes: [0.1.2](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.2),
 [0.1.3](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.3),
-[0.1.4](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.4)):
+[0.1.4](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.4),
+[0.1.5](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.5)):
 
 - **Walking speed in split screen (0.1.2):** the game smooths the walk through two values that both local players shared:
   player 1 raised them every update and the idle player 2 took them back, so player 1 crept along. Each player has its own
@@ -98,6 +101,16 @@ Added after 0.1.1 (release notes: [0.1.2](https://github.com/dolbaras/timeshift-
   Czech and Hungarian added); the controls screen's pad page names the stick directions with the game's own words.
 - **Hints:** the game's `ShowGamePlayHint` shows nothing in this build; the mod shows its hints with `$player.ShowMsg`
   (forwarded to clients), found by an on-screen check in 9 languages.
+- **Texts reviewed in all nine languages (0.1.5):** where the game names a thing, the mod uses the game's word in that
+  language ("health" instead of "life" in all nine, the game's words for the checkpoint and the controller); one word for
+  each thing (the host, the mod) and one form of address per language (German "Sie" as the game says it, Spanish "tú" also
+  in the setup exe); wrong meanings fixed (the Italian Regroup messages, the Polish and Czech setup exe message, a
+  Hungarian grammar slip). The text test checks the nine languages, the placeholders and that only characters of the
+  game's font are used.
+- **Bug-report collector and setup exe in 16 languages (0.1.5):** the collector's window (where the zip went, what it
+  holds, what was removed, the Issues link, the error messages) follows the game's language (`bin\steamwars.ini`), else
+  Windows' language; the report inside the zip stays in English for the developers. The setup exe's messages (a damaged
+  download, PowerShell blocked, the installer window not started) follow Windows' language in 16 languages instead of nine.
 - **Steam and installer:** the installer recognises a Steam copy, asks for explicit consent, applies the player's 1.2 package
   with a backup and restores it exactly on uninstall; a single-file setup exe; a bug-report collector that removes user
   names, computer names and the public IP.
@@ -116,6 +129,14 @@ Added after 0.1.1 (release notes: [0.1.2](https://github.com/dolbaras/timeshift-
 - 0.1.4: offline tests all pass (texts in nine languages, radar, ready room, ASI-loader stand-ins, installer and update from
   0.1.3); a host and a client on a test PC (Co-op menu, ready room, radar, a level exit into the next chapter); a PC with 12 CPU
   threads (the ASI-loader cases and the controls screen). These are scripted checks and lab sessions, not a playthrough.
+- 0.1.5: offline tests all pass (the text test, 41 checks: nine languages, placeholders, only characters of the game's
+  font, the setup exe's 16 languages; the native tests; the installer test, 51 checks, among them the 0.1.4 release
+  installed over an ASI loader and then updated; the setup exe's self-test; the collector's test, 114 checks); the published
+  0.1.4 updated itself to 0.1.5 through its own launcher (download checked against its SHA-256) and was uninstalled back to
+  the folder as it was; on a test PC the Co-op menu, the Host and Split screen frames and the Video options in Russian,
+  Polish, Czech and Hungarian, every letter drawn; `Collect logs.bat` in a Windows 10 console window in Russian, German,
+  Polish, Czech and Hungarian (Japanese prints its English lines too where the console's font has no Japanese). The ready
+  room was not run live in 0.1.5.
 - Per-level results are in `docs/campaign-audit.md` in the mod repository.
 
 ## How to play
@@ -128,8 +149,11 @@ Co-op in the main menu to host a chapter or join by LAN list, Internet list or a
 
 - Soldiers' voices and gibbing sounds are heard only by the host.
 - Joining over a very bad link (around 30 % loss) can need a second click on Join.
-- Ready step (0.1.4): a split-screen player 2 in a network game is not held in the ready room and does not take part in the
-  ready check; the Tab table during the ready room was not checked.
+- Ready step (0.1.4, still in 0.1.5): a split-screen player 2 in a network game is not held in the ready room and does not
+  take part in the ready check; the Tab table during the ready room was not checked.
+- Texts (0.1.5): seen in the running game in Russian, Polish, Czech and Hungarian only; German, French, Italian and Spanish
+  are proven by the text test (their letters are in the game's font), not by eye. In the Host frame the row labels are
+  narrow: in several languages "Max. players" (and the game's own "Server type" / "Difficulty") touches its value's arrow.
 - ASI loaders (0.1.4): tested with Ultimate ASI Loader 10.0.2 and a test plugin only; a loader renamed to another DLL name was
   not tried.
 - After the host's rewind, clients take the rewound machinery's state from the host on level 2 (the walkway) only.
@@ -144,7 +168,7 @@ Co-op in the main menu to host a chapter or join by LAN list, Internet list or a
 
 ## Next steps
 
-- A whole campaign played by people (nobody has played 0.1.4 by hand), and the Internet between two homes.
+- A whole campaign played by people (nobody has played 0.1.4 or 0.1.5 by hand), and the Internet between two homes.
 - Hold a split-screen player 2 in the ready room of a network game; check the Tab table there.
 - Rewound machinery on levels other than level 2.
 - Soldiers' voices and gibbing sounds on clients.
