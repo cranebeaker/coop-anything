@@ -13,7 +13,7 @@
 - **Цель:** кооперативные планетарные бои (2+ человек) в Space Rangers HD: A War Apart.
   MVP = только бои движка MatrixGame. Галактика/аркада/квесты (закрытый `Rangers.exe`) — фаза L2, не билдится.
 - **Канонический исходник движка:** `murgesku/MatrixGame` (GPL-2.0+, HEAD 06e4d32),
-  локальная копия с локальными порт-фиксами: `C:\Users\norbi\coop-anything\local\MatrixGame\`.
+  локальная копия с локальными порт-фиксами: `<repo>\local\MatrixGame\`.
   Fork `vladislavrv` (branch refactoring) — форк, не канон.
 - **Точки входа движка:** единственный экспорт DLL `GetRobotInterface()` →
   `SMGDRobotInterface { m_Init(SMGDRangersInterface*), m_Deinit, m_Support, m_Run(inst,hwnd,map,SRobotsSettings*,lang,txt_start/txt_win/txt_loss,planet,SRobotGameState*) }`.

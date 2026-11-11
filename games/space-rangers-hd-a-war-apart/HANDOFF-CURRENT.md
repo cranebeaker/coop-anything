@@ -30,7 +30,7 @@ murgesku/MatrixGame (GPL-2.0). Host-authoritative: хост=side 1 (полный
   (StackWalk64+SymFromAddr → smoke_crash.log, exit 3) — им и ловился краш.
 
 ## 3. Артефакты и пути
-- Исходник с фиксами: `C:\Users\norbi\coop-anything\local\MatrixGame\`
+- Исходник с фиксами: `<repo>\local\MatrixGame\`
   (root CMakeLists.txt, MatrixGame\, MatrixLib\, ThirdParty\ENet\).
 - DLL:  `local\MatrixGame\build\MatrixGame\Release\MatrixGame.dll`
   (2 082 304 B, SHA256 9F32E43D…), скопирована в `local\test-install\`.
@@ -95,7 +95,7 @@ smoke_coop_m2.ps1 с визуальной проверкой. Все шаги M2
 - канал A (приказы): СДЕЛАНО, гейт PASS.
 
 ## 7. Путь к проекту
-- Корень кооп-артефактов: `C:\Users\norbi\coop-anything\`
+- Корень кооп-артефактов: `<repo>\`
 - Документы:      `games\space-rangers-hd-a-war-apart\`
 - Исходник:       `local\MatrixGame\` (два билд-дерева: build=dll, build-exe=exe)
 - Смоуки/анализ:  `local\analysis\`
