@@ -3,17 +3,17 @@
 | | |
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
-| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 and 0.3.2 on a Windows 10 test PC with a Russian game copy and Ultimate ASI Loader 10.0.2 |
+| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 to 0.3.3 on a Windows 10 test PC with a Russian game copy (0.3.2 also with Ultimate ASI Loader 10.0.2, 0.3.3 also on a copy with the SMOD Add-ons' German texts) |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
-| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 and 0.3.2: offline tests plus a live check on one test PC); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1 or 0.3.2 |
-| Last updated | 2026-11-10 (0.3.2) |
+| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 to 0.3.3: offline tests plus live checks on one test PC); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1, 0.3.2 or 0.3.3 |
+| Last updated | 2026-11-11 (0.3.3) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.3.2 at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), 0.3.3 at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
@@ -49,9 +49,14 @@ one-click log zip for bug reports. 0.3.2 passes nicknames as Unicode (UTF-8) so 
 them in its own font, puts the mod's remaining English texts into the player's language, tells
 the player what happens to another mod's `dinput8.dll` (an ASI loader is kept and switched off
 while co-op is installed, and restored on removal), and adds a hint for SMOD's forced English.
-Honest status: 0.3.1 and 0.3.2 were checked by offline tests and by a live check on one test PC
-(below); the whole-campaign regression over two PCs was last run on 0.3.0, and nobody has played
-0.3.1 or 0.3.2 by hand outside the lab. A whole campaign played through by people is still to come.
+0.3.3 changes only texts (the DLL is the 0.3.2 one): every text the mod adds was reviewed in all
+six languages (the Russian story texts now speak of Church, Cole and Black as women, German uses
+"Sie" and Spanish "tú" throughout, French and Italian the feminine forms, every language the
+game's own names), and the bug-report collector's window and the setup exe's messages come in 16
+languages. Honest status: 0.3.1 to 0.3.3 were checked by offline tests and by live checks on one
+test PC (below); the whole-campaign regression over two PCs was last run on 0.3.0, and nobody has
+played 0.3.1, 0.3.2 or 0.3.3 by hand outside the lab. A whole campaign played through by people is
+still to come.
 
 ## Existing work
 
@@ -329,6 +334,20 @@ restored on uninstall.
   (`SelectedLanguage = "English"` in its `autoexec.lua`, and it skips the language screen), so with
   SMOD the game and the co-op texts are English. The mod does not change SMOD's files; a German,
   French, Spanish or Italian installer tells the player which word to write on that line.
+- **Texts reviewed in all six languages (0.3.3):** Church, Cole and Black are women, and the
+  Russian story texts now decline them so (up to 0.3.2 they were declined as men); names are
+  written as the game writes them, and the mod's in-game texts use no « » and no long dash, as the
+  game's own Russian texts use none and its font may lack them. German says "Sie" and Spanish "tú"
+  everywhere (some lines, the SMOD hint and the setup exe said "du" / "usted"), French and Italian
+  use the feminine forms for the three women, the translations use the game's own names (the
+  Firstborn, Alpha and Omega, the squad), and French and Spanish one name for each place. The text test checks every text in the six languages (format directives, the game's code
+  page, quotes).
+- **Bug-report collector and setup exe in 16 languages (0.3.3):** the window of
+  `coop\Collect logs.bat` (where the zip went, what it holds, what was removed, the Issues link,
+  the error messages) follows the game's language, which the mod's log now names at every start,
+  else Windows' language; the report inside the zip stays in English for the developers. The setup
+  exe's messages (a damaged download, PowerShell blocked, the installer window not started) follow
+  Windows' language in 16 languages instead of six.
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -355,6 +374,29 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.3.3 (2026-11-11), the test PC of 0.3.2 below (Windows 10, Russian game copies), nothing
+played by hand:
+
+- Offline: the Lua mock tests (15 files), the text test (1219 checks: every text in the six
+  languages, the same format directives, the game's code page, the quotes), the installer tests
+  (56 checks, among them the 0.3.2 release installed over an ASI loader and then updated by this
+  installer), the ASI loader test (13), the setup exe's self-test (87 files equal to the zip) and
+  the bug-report collector's own test (114 checks). The DLL is the published 0.3.2 one.
+- The update: the published 0.3.2, installed into a test folder with two shortcut folders, updated
+  itself to 0.3.3 through its own launcher (the download checked against its SHA-256, both shortcuts
+  kept and refreshed), then was removed back to the folder as it was.
+- Live, the Russian game: the Co-op menu, Host, the lobby, the session settings, Join, the Video
+  menu, the hint lines and three squad choice screens; every letter drawn, nothing cut off; the log
+  names the language as the collector reads it.
+- Live, German on a copy with the SMOD Add-ons' German texts: the rows and the choice cards fit.
+  That copy draws with the Russian edition's font, so its umlauts (the game's own German texts too)
+  came out as Cyrillic letters.
+- `Collect logs.bat` in a Windows 10 console window: Russian, German, Polish, Czech and Hungarian
+  drawn letter for letter; Japanese prints its English lines too where the console's font has no
+  Japanese.
+- Not run: the whole-campaign and two-PC regression, split screen, Steam. German, French, Spanish
+  and Italian letters on their own editions are proven by the text test, not by eye.
 
 Results for 0.3.2 (2026-11-09), one test PC (Windows 10, the game in Russian), a clean copy of the
 game, nothing played by hand:
@@ -536,8 +578,11 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 
 - One human session over Steam so far (missions 1-8, on 0.2.x); a tester's split screen report on
   0.3.0 led to 0.3.1. The full campaign has been run by scripts, not finished by people, and
-  0.3.1 and 0.3.2 were only checked on one test PC. A report from that session (a cutscene taking a client's
+  0.3.1 to 0.3.3 were only checked on one test PC. A report from that session (a cutscene taking a client's
   controls while the host walked) could not be reproduced.
+- The 0.3.3 texts were seen in the running game in Russian; German only on a copy that draws with
+  the Russian edition's font, so German, French, Spanish and Italian letters on their own editions
+  are proven by the text test, not by eye.
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
   Join Game auto-launch (game not running) are not tested yet.
 - Animations seen by the watching player were checked on screen for the main weapons and powers
