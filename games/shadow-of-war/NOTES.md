@@ -5267,3 +5267,12 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
     (the mod's own start presses had run out during the wait; a player presses Start) and came into the world after presses.
     Both death checks then passed over that link (the host's: the client waited for the host to walk again, 142 units off after;
     the client's: the stand-in follows). The guard suite's join cases still pass.
+
+## Session 2026-11-11: wrap-up for handoff
+
+- Joins over realistic simulated links (`local/join_time.ps1`, private): `mobile_tether` (2 Mbit/s, 70+-40 ms, 1% loss) and
+  `transatlantic` (90 ms, 0.3% loss) both joined in 31.9 s from start to the save in place: the save arrived before the game
+  asked for it, so the game's own start-up set the time.
+- Published: the mod repo with the slow-join fix and `release/TWO-PC-TEST.md`. The directory entry is marked up for adoption
+  and the write-up has a "Picking this up" section. An alpha package (0.1.0-alpha, built from the public tree, hashes in the
+  zip) was made; publishing it as a GitHub release needs the owner.

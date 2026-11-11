@@ -6,7 +6,7 @@
 | Versions tested | Steam app 356190, build 3095001 (last update 2018-09-05), `x64\ShadowOfWar.exe` 1.0.8874.0, SHA-256 `ed0d95cabb033cd66aaa99d699374881846c3cb03ec345f1123d82d45e0bdaef` |
 | Projects | [Santonus-not-bot/shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (alpha, MIT); [JustAddMP/ShadowOfWar](https://github.com/JustAddMP/ShadowOfWar) is a placeholder; research here (claim: cranebeaker/coop-anything#93) |
 | QA level | automated: scripted checks with two game copies on one PC and an offline suite; never tried on two PCs |
-| Last updated | 2026-11-08 |
+| Last updated | 2026-11-11 |
 
 ## Where things stand
 
@@ -176,3 +176,18 @@ host starts first, client joins and gets the host's save.
 - Fights with beasts (a region whose spawn table has caragors and graugs).
 - Run `tools/regress.py` (in the mod's repo) on every change; it covers a fight, duplicate damage, exact losses, both deaths and
   kill-and-respawn.
+
+## Picking this up
+
+The author stopped on 2026-11-11 (the directory entry is up for adoption). To carry on:
+
+- **Code:** [shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (MIT). `build.cmd` builds the
+  `bink2w64.dll` proxy and the offline tests with Visual Studio 2022; its README explains each part and the settings.
+  `release/make_package.py` packs a player zip with hashes; an alpha package (0.1.0-alpha) was built and checked but not yet
+  published as a release.
+- **Tests:** the offline suites (`enemy_test`, `net_test`, `test_guard`) need no game. The live tools in `tools/` (bots,
+  `regress.py`, soaks, the chaos relay runs) need two running copies; here they ran on one PC, through a way past the game's
+  single-instance and activation checks that this hub does not publish, so a new owner tests on two PCs (two Steam accounts)
+  or with a setup of their own within the game's terms. `release/TWO-PC-TEST.md` is the checklist for the first two-PC session.
+- **Where to look:** this page's "Known issues" and "Next steps"; [NOTES.md](NOTES.md) has every session with observations,
+  derived facts and unknowns kept apart, function addresses for build 3095001, and the tools used for each finding.
