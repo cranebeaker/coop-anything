@@ -10803,3 +10803,42 @@
     - https://github.com/kennedypoopson/evil-within-coop
   checked: 2026-11-09
   made_with_coop_anything: true
+- game: Resident Evil Revelations
+  year: 2012
+  engine: MT Framework
+  project: Resident Evil Revelations Co-op
+  url: https://github.com/dolbaras/revelations-coop
+  other_urls:
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: 'Version 0.1.0 (2026-11-10), PC/Steam build 13298487, a dinput8.dll proxy; the second human takes over the
+    campaign''s AI partner. Split screen on one PC with two gamepads covers the whole campaign. Network co-op (two PCs,
+    Steam friends or direct IP on UDP 28410, ENet) covers Episode 1 only (Jill and Parker): host-run enemies, doors, key
+    items and pickups in step, shared game over and Continue, downed/revive, partner on the minimap. A co-op save of its
+    own never touches the solo save; a "Co-Op Play" row in the game''s main menu, installer and self-updating shortcut,
+    13 languages. Tests: offline C suites and a headless bot, plus lab sessions on two PCs (both role orders, to the end
+    of Episode 1, partly driven by lab scripts; section 1-2 was skipped by a lab command, so it has not been played in
+    network co-op); split screen driven with two virtual pads. Nobody outside the lab has played it; not tried between
+    two different networks; Episodes 2+ over the network not offered. Raid is never touched, and the mod uses its own
+    transport, not the game''s. CORRECTED 2026-10-22, still true: the game ships no campaign co-op. Its only two-player
+    mode is Raid; the mode field at *(sGameSystems+0x24)+0x20 reads 0 in the campaign menus and 1 in Raid, and the
+    binary''s network layer and type registry serve Raid only. An earlier write-up here (PR #126) called them a dormant
+    campaign co-op; that thesis is withdrawn. MIT. Write-up in games/resident-evil-revelations.'
+  sources:
+  - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
+  - https://github.com/cranebeaker/coop-anything/issues/299
+  - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
+  checked: '2026-11-10'
