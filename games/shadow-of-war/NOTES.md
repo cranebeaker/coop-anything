@@ -5257,3 +5257,13 @@ Fresh copies on the new test save (no Nazgul set bonus), real kills in the clean
   public export (unit tests 140/140, guard suite 49/49), unpacked with every hash matching, the setup script's dry run ran from
   it, and its DLL took a lone host copy into the world with the exe check passing and the saves redirected. The public build
   cannot run two copies on one PC, so co-op with it waits for the two-PC test.
+- **Joining over a bad link** (the chaos relay's `hell` profile from the start: 512 kbit/s, 8% loss in bursts, 200+-150 ms):
+  - Observed: the client could not join. "The host's save did not arrive in time": the 2.3 MB save gets 20 s
+    (`coop_join_timeout_sec`), and it needs at least 37 s at 512 kbit/s. Earlier bad-network runs had started on a clean link
+    and switched later, so a join over a bad link had never been tried.
+  - Change: while the save arrives, the deadline moves to 20 s after each new byte (at most 10 minutes from the start of the
+    join); no answer at all still fails after 20 s. Progress is logged every 10 s.
+  - Checked: the join over `hell` completed in 190 s (about 13 KB/s; SHA-256 checked); the client then stood at the title screen
+    (the mod's own start presses had run out during the wait; a player presses Start) and came into the world after presses.
+    Both death checks then passed over that link (the host's: the client waited for the host to walk again, 142 units off after;
+    the client's: the stand-in follows). The guard suite's join cases still pass.
