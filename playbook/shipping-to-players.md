@@ -7,8 +7,8 @@ runs it.
 
 Learned on Planetbase ([games/planetbase](../games/planetbase/README.md)): explaining the manual install to a
 friend took longer than the session. A `.bat` for Windows and a `.sh` for Linux that do everything got a second
-player into the game on the first try. MDK2 HD ([games/mdk2-hd](../games/mdk2-hd/NOTES.md)) ships the same idea as
-a PowerShell script with `.cmd` wrappers.
+player into the game on the first try. MDK2 HD ([games/mdk2-hd](../games/mdk2-hd/README.md)) started with a
+PowerShell script behind `.cmd` wrappers and now ships one `MDK2-Coop-Setup.exe` that carries those scripts.
 
 ## What the file does, in order
 

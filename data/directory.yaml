@@ -7972,7 +7972,7 @@
   url: https://github.com/TommoDotCommo/mdk2-coop
   other_urls: []
   kind: mod
-  status: alpha
+  status: playable
   coop_scope:
     players_visible: 'yes'
     story: partial
@@ -7982,18 +7982,18 @@
   players: up to 16 (tested with 8)
   networking: steam-relay
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: Native dinput8.dll bridge plus Lua injected through settings.lua. The host runs the world; clients mirror
-    enemies, replay shots including delayed Doganboy grenades, share pickups, doors and checkpoints, follow level loads, and revive at a partner when
-    they go down. Cutscenes start together with a skip vote. Steam friends-only lobbies (invite or lobby ID, no port forwarding) or direct UDP, chosen in
-    a launcher. Co-op saves and reconnect after a crash. Text chat, pings, proximity voice, difficulty and controls presets, character and emote wheels,
-    couch (split-screen) co-op. Public alpha v0.2.0-alpha with an installer; before it, an automated ladder of 31 gates including all 96
-    checkpoints with two real clients and a host/client state diff.
+  notes: Native dinput8.dll bridge plus Lua injected through settings.lua, for the Steam build and the Overhaul Games build. The host runs the
+    world; clients mirror enemies, replay shots, share pickups, doors, checkpoints and item uses, follow level loads, and revive at a partner when
+    they go down. Cutscenes start together with a skip vote. Steam friends-only lobbies or direct UDP with a list of nearby hosts and invite codes,
+    chosen in a launcher. Co-op saves and reconnect after a crash. Text chat, pings, proximity voice, difficulty and controls presets, pad support,
+    couch co-op. Public beta v0.4.0-beta.1 with a one-file Setup. Automated ladder of 109 gates including all 96 checkpoints with two real
+    clients; one full run passed 105, three of the rest passed alone and one gate is intermittent. Nobody has finished the campaign in co-op yet.
   sources:
   - https://github.com/TommoDotCommo/mdk2-coop
   - https://store.steampowered.com/app/213350/
-  checked: '2026-10-23'
+  checked: '2026-11-11'
   made_with_coop_anything: true
 - game: Resident Evil 2 (2019 remake)
   year: 2019
