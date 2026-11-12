@@ -12,8 +12,9 @@
 
 Nobody can play the story together yet. A prototype runs two copies of the game on one PC. Each player has their own
 Artyom: both walk around the first level, and each sees the other move. NPCs near the players and an active monster
-follow the host. A second, armed level (`l19_defence`) also runs with two players, and the joiner can fire. Damage,
-enemy AI, doors and story sync are untested.
+follow the host. A second, armed level (`l19_defence`) also runs with two players: the joiner can fire, each sees
+the other's shots, and shooting the other player kills them on both sides. Enemy AI, doors and story sync are
+untested.
 
 ## Existing work
 
@@ -65,7 +66,10 @@ Not playable yet. Build from source per the project README; no release.
 
 ## Known issues
 
-- Both bodies spawn on the same spot; the client steps away with `@teleport`.
+- Both bodies spawn on the same spot; the join step moves the client 1.2 m in front of the host (otherwise the
+  client sees the host's gun inside its own view).
+- The other player's weapon is drawn wrong (the host sees the client holding a machete while it holds an AK).
+  Death and respawn of a player are not handled.
 - The engine only networks entities in its net list (players, human NPCs and active monsters in Hunter), by distance
   priority. A far NPC did not update on the client within 15 s. The client also lists 9 dormant intro `nosalis` the
   host does not; they are inactive on both sides.
