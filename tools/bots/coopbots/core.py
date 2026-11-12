@@ -31,7 +31,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from .adapter import MissingAction
 
-MUTANT = os.environ.get("COOPBOTS_MUTANT", "")   # test-only twin switch: nosettle | nosnapshot | nocounters | skipispass | nostall | allsteps | noarrange | notimescale (adapter.py: nowhy | nopost)
+MUTANT = os.environ.get("COOPBOTS_MUTANT", "")   # test-only twin switch: nosettle | nosnapshot | nocounters | skipispass | nostall | allsteps | noarrange | notimescale | pollabsent (adapter.py: nowhy | nopost)
 
 
 class StepFailure(Exception):
@@ -279,8 +279,9 @@ class Ctx:
             time.sleep(0.1)
 
     def _tick(self) -> None:
-        """Poll statuses once (this also drives fake worlds forward)."""
-        for m in self.machines:
+        """Poll statuses once (this also drives fake worlds forward). Machines that left (ctx.absent) are not polled: a real
+        game copy that crashed or quit has no control port to answer on."""
+        for m in (self.machines if MUTANT == "pollabsent" else self.present):
             m.bot.status()
 
     # ---- settle, quiet window, counters ----

@@ -61,6 +61,26 @@ analytics files; add `-logFile <instance>\Player.log` for the log. Verified on S
 real folder hashed unchanged across runs: [games/slime-rancher-2/qa/SaveIsolation](../games/slime-rancher-2/qa/SaveIsolation).
 A `steam_appid.txt` in the copy stops the Steam relaunch of the store install.
 
+**No loader hook that early (BepInEx 5 on Unity 6 Mono)?** Rename the product in the copy instead. Unity 6000.3 reads
+company and product names from `<Game>_Data/globalgamemanagers`; editing `app.info` changes nothing (Thronefall:
+the test copy still wrote analytics into the real LocalLow folder and PlayerPrefs into the real registry key). Replace
+the product name string in the copy's `globalgamemanagers` with one of the same length (it is a length-prefixed string;
+same length keeps the file valid), for example `Thronefall` -> `ThroneQA-A`. That moves LocalLow and the PlayerPrefs key
+for that copy. Games that save through `SteamRemoteStorage` (Thronefall logs `[SaveServices] Using SteamSaveServices`)
+also need `steam_appid.txt` = `480` in the copy, so a cloud write lands in Spacewar's storage, not the game's. Owner's
+saves, PlayerPrefs and cloud manifest hashed unchanged across all runs:
+[games/thronefall](../games/thronefall/README.md).
+
+**Two Steam accounts on one PC.** P2P between two copies on the same account does not work, so a real Steam test needs
+a second account. Steam runs one client per Windows user, so the second client runs in a Sandboxie-Plus box: the
+copy's game folder in `OpenFilePath` (so its logs land in the real folder), and `StartService=Steam Client Service`.
+Without that setting the boxed Steam logs `Failed to connect to Steam Service (GLE 183)`, shows "Steam Service requires
+some maintenance" and exits when you cancel; do not let it reinstall the real service. The owner signs the second
+account in once in the boxed window ("Remember me"); the agent never handles the password. Start the second copy with
+`Start.exe /box:<name> <game>.exe ...`. Both copies can run as app 480, so the second account does not need to own the
+game. Verified on Thronefall (Unity 6000.3, Sandboxie-Plus 1.18.8): each Steam client's `gameprocess_log.txt` lists its
+own copy, and the two accounts connect through Steam lobbies and `SteamNetworkingMessages`.
+
 ## 2. Single-instance checks: named mutex and FindWindow
 
 Many games refuse to start a second copy. Two mechanisms are common:

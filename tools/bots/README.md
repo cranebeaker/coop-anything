@@ -272,7 +272,7 @@ Prints `ALL OK` only when every test passes and every twin is caught. Fakes only
   speed (`tests/test_resume.py`: `--from-step`, `--only-step`, arrange, a frozen client, a copy that ignores or refuses the
   speed); the parallel runner (`tests/test_parallel.py`: the plan, the checks, every exit code, real subprocess runs with
   prefixed logs and one table).
-* 15 engine twins: the suite is run again with one check of the runner itself broken (`COOPBOTS_MUTANT`: no settle, no snapshot
+* 16 engine twins: the suite is run again with one check of the runner itself broken (`COOPBOTS_MUTANT`: a machine that left still polled while waiting, no settle, no snapshot
   compare, no counter check, skips counted as passes, failures that stop saying why, postconditions that are not checked,
   resume that runs every step, resume without arrange, settle that never stops early, a speed that never reaches the game,
   a parallel runner with unprefixed logs, always exit 0, one instance set for every pair, a hung runner never stopped, and

@@ -36,6 +36,7 @@ ENGINE_MUTANTS = {
     "sameids": ("every pair gets the same instances", ["test_parallel"]),
     "nokill": ("a hung runner is never stopped", ["test_parallel"]),
     "noforbid": ("options that belong to the parallel runner are allowed after --", ["test_parallel"]),
+    "pollabsent": ("a machine that left (ctx.absent) is still polled while waiting", ["test_absent"]),
 }
 
 
