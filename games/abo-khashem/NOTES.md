@@ -37,9 +37,22 @@ ModDB and Nexus tabs, official site, archived presskit). Phase 2 is on hold, see
 - A 2017/2018 Unity build is likely 5.x or 2017.x. If it is a Mono build, Assembly-CSharp.dll
   decompiles to readable C# and BepInEx can load a mod, which makes it a "build from zero" target
   in the easiest engine family (playbook/engine-families.md, Unity row).
-- Shukman is already a second, playable character that follows the hero. Giving player 2 control
-  of Shukman (instead of spawning a second hero) may avoid most "only one hero" assumptions in
-  quests and dialogue. A design idea to test in phase 3, nothing more.
+- Shukman is already a second, playable character that follows the hero, with his own talent
+  paths (Sharptooth, Mentor, Lockdown) and his own skill and talent trees; the hero has three
+  fighting styles (Bruiser, Trickster, Businessman). https://www.indiedb.com/games/abo-khashem,
+  https://www.metacritic.com/game/abo-khashem/ (user review). Player 2 as Shukman would be the
+  cheapest co-op, since quests, cutscenes and saves already expect him.
+
+## Design decision
+
+- Owner's choice, 2026-11-12: **two Abo Khashems**. Each player is a full hero with the fighting
+  styles and combo builder, not Shukman. This costs more than the Shukman route: a second hero
+  must be spawned, the guest needs his own stats, talents, inventory and combo save data, and
+  cutscenes and dialogue written for one hero need a rule for the guest (for example hide or
+  teleport him). Shukman stays as the host's companion.
+- To map in phase 3 for this design: how the hero object is created and found (singleton or
+  tag lookups), where hero stats, talents, combo and inventory live and how they save, and how
+  cutscenes and dialogue reference the hero.
 
 ## Guesses (unverified)
 

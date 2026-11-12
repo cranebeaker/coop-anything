@@ -30,7 +30,9 @@ From public sources only, nothing read from game files yet:
 - Open-world comedic RPG: a city to explore, dungeons, vehicles, minigames, a business and
   interior-design layer, and a phone texting system.
 - Shukman the lizard is a playable companion who follows the hero (presskit: "Fun playable
-  companion"). A player 2 could take over Shukman rather than a second hero.
+  companion"), with his own talent trees.
+- Chosen design: two Abo Khashems, each player a full hero with his own fighting style
+  (Bruiser, Trickster or Businessman). Shukman stays with the host. See NOTES.md.
 
 ## What we changed
 
@@ -54,7 +56,8 @@ None; there is no mod yet.
    `buildid` from `steamapps/appmanifest_662840.acf`, SHA-256 of the exe, Unity version from
    `globalgamemanagers`, `Managed/Assembly-CSharp.dll` (Mono) or `GameAssembly.dll` (IL2CPP),
    and whether `steam_api64.dll` is present.
-2. Copy the install to a test folder and decompile `Assembly-CSharp.dll`: find the player
-   controller, Shukman's controller, the save system and scene loading.
-3. Prototype player 2 as a Shukman puppet with a BepInEx plugin, then pick a networking model
+2. Copy the install to a test folder and decompile `Assembly-CSharp.dll`: find how the hero
+   is created and looked up, where his stats, talents, combo and inventory are saved, and how
+   cutscenes and dialogue reference him.
+3. Prototype a second hero as a puppet with a BepInEx plugin, then pick a networking model
    ([networking-steam-spacewar.md](../../playbook/networking-steam-spacewar.md)).
