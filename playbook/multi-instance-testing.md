@@ -52,6 +52,15 @@ and a folder of hard links appears in about a second.
 
 `gamepool provision` does all of this from the config (`link`, `config_files`, `protected_paths`).
 
+**Unity games with no "portable" switch** keep saves in `Application.persistentDataPath`
+(`%USERPROFILE%\AppData\LocalLow\<company>\<product>`), often a Steam Auto-Cloud folder. Unity resolves it with
+`SHGetKnownFolderPath(FOLDERID_LocalAppDataLow)`, imported by `UnityPlayer.dll` (and by `GameAssembly.dll` in IL2CPP
+builds). A test-only loader plugin that patches that import in the game's own modules, early (MelonLoader
+`OnPreInitialization`), and answers LocalLow with `<instance>\LocalLow` gives every copy private saves, prefs and
+analytics files; add `-logFile <instance>\Player.log` for the log. Verified on Slime Rancher 2 (Unity 6000.0, IL2CPP),
+real folder hashed unchanged across runs: [games/slime-rancher-2/qa/SaveIsolation](../games/slime-rancher-2/qa/SaveIsolation).
+A `steam_appid.txt` in the copy stops the Steam relaunch of the store install.
+
 ## 2. Single-instance checks: named mutex and FindWindow
 
 Many games refuse to start a second copy. Two mechanisms are common:
@@ -135,6 +144,15 @@ Copies the owner never looks at should cost little and never take the screen:
   corrupt on load; no audio can stall a test that waits for a voice line to end. Keep those opt-in.
 - Use the game's own logs and in-game screenshots as evidence, not desktop capture, which grabs whatever else is
   on the owner's screen.
+- Check that a minimized start does not stall the engine. A modded Unreal Engine 3 client (OpenOL) started from a
+  background shell opened minimized and stopped in engine init right after the audio middleware line (CPU idle, log
+  silent for minutes) until its window was minimized and restored once. Wait for that log line, restore the window once
+  (`ShowWindow` minimize then restore), and keep waking it until the client connects.
+
+- Keep the display awake for unattended runs. BattleTech (Unity 2018.4) hangs at "Input initialized", before
+  any mod code runs, when it starts while the display is asleep; both copies sat there until the screen woke.
+- Mod loaders can be single-instance too: ModTek allows one game process per install folder. BattleTech's second
+  copy is a folder of the small top-level files plus a junction to the first copy's `BattleTech_Data`.
 
 `gamepool lowcost` applies a profile from the config to the private settings only.
 

@@ -135,12 +135,15 @@ SIGNATURES = [
     ("REDengine 4", None, lambda f, d: _ext(f, ".archive") if "archive" in d else None),
     ("LithTech", None, lambda f, d: _ext(f, ".rez")),
     ("Godot", None, lambda f, d: _magic(f, ".pck", b"GDPC")),
-    ("GameMaker", None, lambda f, d: _has(f, "data.win")),
+    ("GameMaker", "GameMaker", lambda f, d: _has(f, "data.win")),
     ("RPG Maker", None, lambda f, d: _ext(f, ".rgss3a", ".rgss2a", ".rgssad") or _has(f, "rpg_core.js", "rmmz_core.js")),
     ("XNA / FNA / MonoGame", None, lambda f, d: _has(f, "fna.dll", "monogame.framework.dll", "microsoft.xna.framework.dll")),
     # Java games ship a .jar plus a bundled runtime (jre or jdk folder), or a launcher that starts java.exe.
     ("Java (JVM)", "Java",
      lambda f, d: _ext(f, ".jar") if ("jre" in d or "jdk" in d or _has(f, "java.exe", "javaw.exe")) else None),
+    # Santa Monica Studio Kinetica (God of War 2018): libSceGnm.dll next to GoW.exe, .dcb and .wad archives under exec/.
+    ("Santa Monica Studio Kinetica", "Santa Monica Studio Kinetica",
+     lambda f, d: _has(f, "libscegnm.dll") and _ext(f, ".dcb") and _ext(f, ".wad")),
 ]
 
 HOOK_TOOLS = {
@@ -165,6 +168,10 @@ HOOK_TOOLS = {
     "Java (JVM)": "a -javaagent (java.lang.instrument) loaded into the unmodified game JVM, the game's own public classes "
                   "and event bus as hook points (ByteBuddy or ASM only where no public seam exists), javap from the "
                   "bundled JDK for API facts, a decompiler (CFR, Vineflower) to read the logic",
+    "Santa Monica Studio Kinetica": "a version.dll proxy hooking IFFProcessLuaScriptChunk to dump and override the uncompressed "
+                                    "Lua 5.2 scripts in .wad files (Nukem9/godofwar-gameplay-tweaks), the exe's built-in "
+                                    "socket.core (LuaSocket TCP/UDP) and cmsgpack in luaL_openlibs, and the MIT-licensed "
+                                    "skeleton/input/camera hooks in adore11s/God-of-War-VR-Mod",
 }
 
 

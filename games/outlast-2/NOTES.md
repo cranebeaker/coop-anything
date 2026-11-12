@@ -1,4 +1,4 @@
-# Outlast 2 — Co-op Research and Development Notes
+# Outlast 2 - Co-op Research and Development Notes
 
 Game slug: `outlast-2`  
 Session: 2026-10-21  
@@ -23,7 +23,7 @@ Target: Campaign co-op for Outlast 2
 
 ---
 
-## 2. Phase 0 — Triage
+## 2. Phase 0 - Triage
 
 ### Answers to Triage Questions (`playbook/triage.md`)
 
@@ -59,7 +59,7 @@ Target: Campaign co-op for Outlast 2
 
 ---
 
-## 3. Phase 1 — Research & Evidence
+## 3. Phase 1 - Research & Evidence
 
 ### Search Log (`searched:`)
 
@@ -168,12 +168,12 @@ Target: Campaign co-op for Outlast 2
 - Live runs with progressively extended windows (25s / 60s / 90s / 180s / 300s / 420s) and two
   build revisions (context-capture build, phase-3 build): hook install clean every time,
   first-call capture never fired.
-- Process liveness: alive, CPU-active (33-34s CPU/60s), ~96 threads, ~1.7GB working set —
+- Process liveness: alive, CPU-active (33-34s CPU/60s), ~96 threads, ~1.7GB working set -
   engine running/loading, not crashed.
 
 ---
 
-## 7. Sync Design (Phase 3 — capture-gated wiring)
+## 7. Sync Design (Phase 3 - capture-gated wiring)
 
 Written 2026-10-24 while first ProcessEvent capture is pending. Design is based on the
 OpenOL (Outlast 1) host-authoritative puppet model. Packet definitions live in
@@ -230,7 +230,7 @@ Interpolation: hold 100–150 ms of buffered state, interpolate pos/vel, snap ro
 - Asserts: packed wire sizes (`8/44/16/12/12` bytes), field offsets, big-endian-free
   round-trip (player state + world event), single-bit flag/misc invariants, distinct
   packet type ids, protocol constants.
-- Result: **PASS — 5 check groups** (2026-10-24).
+- Result: **PASS - 5 check groups** (2026-10-24).
 
 ### 7.6 UDP transport + loopback tests (2026-10-24)
 
@@ -238,10 +238,10 @@ Interpolation: hold 100–150 ms of buffered state, interpolate pos/vel, snap ro
   (no CRT/SDK headers), API: `coop_net_init/shutdown`, `coop_net_open` (bind, ephemeral
   port support), `coop_net_send`, `coop_net_recv` (timeout), `coop_net_local_port`,
   `coop_net_close`. `ws2_32.def` generates the import lib.
-- `games/outlast-2/tests/net_loopback_test.c`: proves packet flow without the game —
+- `games/outlast-2/tests/net_loopback_test.c`: proves packet flow without the game -
   (1) self send/receive of a `CoopPlayerState`, (2) two-socket client→host delivery with
   source-address check, (3) receive timeout behavior.
-- Result: **PASS — 3 check groups** (2026-10-24).
+- Result: **PASS - 3 check groups** (2026-10-24).
 - Gotcha found by a hang: Windows `SO_RCVTIMEO` takes a `DWORD` in milliseconds, not a
   POSIX `struct timeval`; fixed in `coop_net_recv`.
 - Proxy DLL build now compiles `coop_net.c` and links `ws2_32.lib` (inert until wired).
@@ -256,10 +256,10 @@ Interpolation: hold 100–150 ms of buffered state, interpolate pos/vel, snap ro
   - fan-out: `relay_targets(sender_slot, ...)` never returns the sender's own address.
   - late join: `update_state` stores each player's last `CoopPlayerState`;
     `snapshot(exclude_slot, ...)` returns them for the joining client.
-- `games/outlast-2/tests/session_test.c`: 5 groups — join/find/duplicate join,
+- `games/outlast-2/tests/session_test.c`: 5 groups - join/find/duplicate join,
   capacity + slot reuse, touch/expire, relay fan-out targets, late-join snapshot
   (including the output cap and "joined but no state yet" case).
-- Result: **PASS — 5 check groups** (2026-10-24), alongside the existing protocol (5)
+- Result: **PASS - 5 check groups** (2026-10-24), alongside the existing protocol (5)
   and UDP loopback (3) groups: `games/outlast-2/tests/run.bat`.
 - Proxy DLL build now compiles `coop_session.c` as well (inert until wired).
 
@@ -277,18 +277,18 @@ Interpolation: hold 100–150 ms of buffered state, interpolate pos/vel, snap ro
     `tx_snapshot`, `expired`) for QA assertions and in-game logging.
 - `coop_protocol.h`: added `coop_packet_size()` and `coop_packet_validate()`
   (exact-length, magic/version/type checks).
-- `games/outlast-2/tests/relay_test.c`: real UDP loopback, real host + two clients —
+- `games/outlast-2/tests/relay_test.c`: real UDP loopback, real host + two clients -
   (1) join, state relay, late-join snapshot of earlier state, (2) host-controlled slot
   assignment against a lying sender, (3) packets from an address that never joined are
   ignored, (4) malformed packets (magic / version / type / length) rejected,
   (5) silent player expiry at the timeout boundary.
-- Result: **PASS — 5 check groups** (2026-10-24). All suites: protocol 5 + UDP loopback 3
+- Result: **PASS - 5 check groups** (2026-10-24). All suites: protocol 5 + UDP loopback 3
   + session 5 + relay 5 = **18 groups** via `games/outlast-2/tests/run.bat`.
 - Freestanding build note: test frames over 4 KB pull in `__chkstk` from the CRT, so the
   relay test keeps its `TestNet` fixture `static` (`.bss`) instead of on the stack.
 - Proxy DLL build now compiles `coop_relay.c` as well (inert until wired).
 - Live validation (2026-10-24): the rebuilt DLL with the transport + session + relay
-  linked in installs cleanly in the isolated install — prologue verified, 14-byte jump
+  linked in installs cleanly in the isolated install - prologue verified, 14-byte jump
   applied, process alive (~31 s CPU / 95 threads over the run), no crash. First
   `ProcessEvent` capture is still the open gate (see §6).
 
@@ -306,12 +306,12 @@ Interpolation: hold 100–150 ms of buffered state, interpolate pos/vel, snap ro
   - a step larger than `COOP_INTERP_TELEPORT_DIST` (800 UE3 units ≈ 8 m) snaps to the
     newer snapshot (streaming load, scripted move) instead of sliding through geometry;
   - stale/duplicate/out-of-order seq are rejected, so playback never rewinds.
-- `games/outlast-2/tests/interp_test.c`: 6 groups — lerp + playback delay, stale/reorder
+- `games/outlast-2/tests/interp_test.c`: 6 groups - lerp + playback delay, stale/reorder
   rejection, loss gaps + extrapolation cap, teleport snapping, shortest-arc angles, and a
   scripted lossy/reordered fake network (25 Hz sender, every 3rd packet dropped, pair
   swaps, duplicates, 0-10 ms jitter) asserting no NaN, no rewind, bounded per-frame step
   and that the puppet tracks the sender to the end of the run.
-- Result: **PASS — 6 check groups** (2026-10-24). All suites: protocol 5 + UDP loopback 3
+- Result: **PASS - 6 check groups** (2026-10-24). All suites: protocol 5 + UDP loopback 3
   + session 5 + relay 5 + interp 6 = **24 groups** via `games/outlast-2/tests/run.bat`.
 - Test-data bug found on the first run: the fake network timestamped packets by their
   index in the *surviving* array instead of their 25 Hz send time, which made the
@@ -320,6 +320,6 @@ Interpolation: hold 100–150 ms of buffered state, interpolate pos/vel, snap ro
 - `coop_interp.c` defines `_fltused` (float use in a `/NODEFAULTLIB` DLL).
 - Proxy DLL build now compiles `coop_interp.c` as well (inert until wired).
 - Live validation (2026-10-24): the rebuilt DLL with transport + session + relay +
-  interpolation linked in installs cleanly — prologue verified, jump applied, process
+  interpolation linked in installs cleanly - prologue verified, jump applied, process
   alive (~33 s CPU / 95 threads over the run), no crash.
 

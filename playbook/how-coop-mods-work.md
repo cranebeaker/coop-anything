@@ -102,6 +102,15 @@ one authority and you have most of story co-op.
 Design question to settle early: whose save is canonical, and what do other players
 persist (usually nothing, or inventory only).
 
+A save can also be the join mechanism for a single mission. BattleTech co-op does not
+regenerate a campaign contract on the guest (procedural content and story scripts read the
+whole campaign state); the host builds a combat save in memory at the mission briefing and
+sends it, and the guest loads it as a "restart mission", so both launch the same mission
+fresh and both see its opening (a loaded save differs from the live state, and a restart
+re-rolls random picks, see [lessons.md](lessons.md) 74 and 79). The guest never saves, because it is running the
+host's campaign and would write into its own save slots
+([games/battletech](../games/battletech/README.md)).
+
 Check what a save captures while remote players are present. In Gothic 3 the remote player's body is a copy
 of the hero; a save taken with it in the world aborts on load ("more than one hero"), so the save function
 itself has to be hooked to remove those bodies first, also for saves from the game's menu. A small sidecar
@@ -154,6 +163,15 @@ bandwidth budget, and delta compression against acknowledged baselines.
 Retrofits onto closed single-player games are almost always host-authoritative state
 sync, because you cannot make the original engine deterministic.
 
+Exception: a game that shipped its own versus mode may already be deterministic where it
+counts. BattleTech (2018) routes every combat action as an `InvocationMessage` through one
+handler that reseeds the logic RNG from the message's own seed, for its skirmish PvP. The
+single-player campaign runs the same path, so co-op combat there is lockstep on those
+messages with the host ordering them; only the AI is not deterministic (wall-clock think
+budget), so only the host's AI thinks and its orders go out as ordinary messages
+([games/battletech](../games/battletech/README.md)). Check for such a layer before choosing
+state sync.
+
 ### 1.7 Interest management
 
 Send each client only what is near it or matters. Evidence in sources:
@@ -188,8 +206,36 @@ A joining client must be brought to the current state. Seen approaches:
 - Skyrim Together Reborn: joiner follows the leader's world
   ([Wabbanode](https://wabbanode.com/help/skyrim-together/understanding-parties-in-skyrim-together-reborn)).
 
-Build "snapshot on join" (full state dump, then deltas) early. It also doubles as your
-reconnect path and your test oracle.
+For a state-replication design, build "snapshot on join" (full state dump, then deltas)
+early. It also doubles as your reconnect path and your test oracle.
+
+#### Late join with an input journal
+
+If a game already runs in input lockstep and both clients can reproduce the same
+mission start, replay can bring a guest up to the host's current tick. First prove
+that a recorded mission segment can cross an area boundary on a second client.
+Include semantic state such as area, player roles and campaign flags in the comparison.
+Exclude process-specific addresses and uninitialized padding from checksums.
+[Friend or Foe's lockstep and state checks](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/ARCHITECTURE.md#input-lockstep).
+
+1. Retain a bounded, tick-indexed journal of the inputs and simulation decisions
+   needed to replay from the agreed mission start. Set a retention limit and a
+   catch-up deadline so the host has a predictable wait.
+2. Start the incoming client from the same mission state. During catch-up, check
+   sampled state and record when the native game loads an area or releases
+   controls. Friend or Foe found that matching RNG could still coincide with
+   early guest controls after a streamed transition.
+3. Hand over the companion only after both clients agree on the replay tick and
+   sampled state and reach ordinary gameplay. If history is missing, the guest
+   cancels, or replay disagrees, refuse admission and let the host resume play.
+   [Friend or Foe's admission results and failed attempts](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md#v110-beta-mid-mission-joining).
+
+Start the regression suite with two actual game instances. Exercise first arrival
+with simulated delay and stalls, reconnect after a seat swap, and admission after
+a native area transition or cutscene. Count matching frames after control passes to
+the guest. Separately cancel a join and try one with exhausted history, then assert
+that the host can keep playing. Report local and two-PC transport checks separately.
+[Friend or Foe's test procedures](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/TESTING.md).
 
 ---
 
@@ -473,7 +519,13 @@ local player's position and world id. Difficulty: easy on Unity/mod-loader games
 1. Write a minimal transport: host plus one client, a message for "player state"
    (id, world id, position, rotation, animation, equipment), 10 to 20 Hz.
 2. Spawn a puppet from the game's own NPC or player model. Disable its AI and input.
-   Drive it from received state with interpolation.
+   Drive it from received state with interpolation. Without a spawn API, an existing NPC
+   can be taken over: skip its decision call and feed the game's own move request so its
+   walk animation plays, or spawn a cutscene copy of the player character and give it the
+   player's own animation graph (Shadow of War; see
+   [reverse-engineering.md](reverse-engineering.md#reading-and-driving-live-state-from-inside-the-game)).
+   With the player's graph, send the graph's own inputs (stick, speed, turn) and let them
+   move the puppet; pinning it to the received position every frame breaks its stride.
 3. Handle disconnect (despawn) and cell/level mismatch (hide puppets in other
    levels).
 

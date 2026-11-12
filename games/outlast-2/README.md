@@ -43,11 +43,11 @@ The networking stack is also in place in `games/outlast-2/src/`, compiled into t
 - Proxy hook install verified in live isolated runs (3/3 clean: prologue OK, jump applied, no crash).
 - PE static validation: RVA `0x4DA80` confirmed as genuine function start (`.pdata` RUNTIME_FUNCTION, size 812).
 - Live `ProcessEvent` interception: not yet observed (see `games/outlast-2/NOTES.md` §6).
-- Offline protocol test: `games/outlast-2/tests/run.bat` — packed layout, round-trip, flag invariants — **PASS** (2026-10-24, 5 groups).
-- UDP loopback test: same command — self round-trip, two-socket delivery, recv timeout — **PASS** (2026-10-24, 3 groups).
-- Relay session test: same command — join/find, capacity/slot reuse, touch/expire, relay fan-out, late-join snapshot — **PASS** (2026-10-24, 5 groups).
-- Relay end-to-end test: same command — real host + two clients over UDP loopback (join, state relay, late-join snapshot), host-owned slot assignment, unknown-sender rejection, malformed-packet rejection, silent-player expiry — **PASS** (2026-10-24, 5 groups). 18 check groups total.
-- Interpolation test: same command — playback delay/lerp, stale+reordered packet rejection, loss gaps, extrapolation cap, teleport snapping, shortest-arc angles, scripted lossy/reordered fake network — **PASS** (2026-10-24, 6 groups). 24 check groups total.
+- Offline protocol test: `games/outlast-2/tests/run.bat` - packed layout, round-trip, flag invariants - **PASS** (2026-10-24, 5 groups).
+- UDP loopback test: same command - self round-trip, two-socket delivery, recv timeout - **PASS** (2026-10-24, 3 groups).
+- Relay session test: same command - join/find, capacity/slot reuse, touch/expire, relay fan-out, late-join snapshot - **PASS** (2026-10-24, 5 groups).
+- Relay end-to-end test: same command - real host + two clients over UDP loopback (join, state relay, late-join snapshot), host-owned slot assignment, unknown-sender rejection, malformed-packet rejection, silent-player expiry - **PASS** (2026-10-24, 5 groups). 18 check groups total.
+- Interpolation test: same command - playback delay/lerp, stale+reordered packet rejection, loss gaps, extrapolation cap, teleport snapping, shortest-arc angles, scripted lossy/reordered fake network - **PASS** (2026-10-24, 6 groups). 24 check groups total.
 - These are offline/loopback tests of the sync stack; no automated test runs two game clients yet.
 - Directory and sync testing tools verified via `tools/build_directory.py`.
 

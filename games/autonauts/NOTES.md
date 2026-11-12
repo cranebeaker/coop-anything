@@ -131,3 +131,28 @@
 - New-game options: the main menu's background world sets `SaveLoadManager.m_MiniMap = true` (84x96) until it finishes; set it false yourself. `m_Options.m_PlayerPosition` stays from the previous size: reset it or `WorldGenerator.GetPlayerStartPosition` indexes out of bounds on a small map.
 - Big bases: full serialization costs ~0.035 ms/object. Incremental: rescan movers every scan, changed things for 3 s, moved things, plus a ring slice (full round ~5 s). Paths (`SandPath/StonePath/Road*`) and `Floor2D` pick rotation from neighbours per machine: leave Rotation out of hashes.
 - Test sandbox: two medium-map instances (~3 GB each) get OOM-killed; stress test runs on a small map with a dense base.
+
+## 0.11-0.12 real saves, garbage, editors (2026-10-21..26)
+- Test on a real late-game save early: the first one (Settlement mode, ~10,800 objects, Workshop Lua mods) broke the joiner within seconds while the new-world suite was green.
+- A bot's program names the buildings it uses by `"UID"` inside instruction JSON. Only count `{"ID":"<type>","UID":n` as nested children, or every bot update destroys those buildings on the joiner.
+- The game saves floats as whole hundredths and loses one per load/save round trip; load the host's values so they save back exactly, or every verify fails and objects are rebuilt.
+- A storage's loaded count waits in private `m_TempStored` for a Refresh the game skips for stacked storage; set `m_Stored` and clear the temp yourself.
+- Settlement's Transmitter makes local rewards on the joiner; give them UIDs from a joiner-only range or they take the host's next UIDs.
+- Workshop (Lua) mods run on the joiner too: block their world-changing `ModManager` calls there (storage writes, spawn, destroy, move...).
+- Garbage, not frame time, is the cost on a big base (Unity 2018 GC pauses ~200 ms on a 1 GB heap). Cheap fingerprints (a field whitelist via reflection) before a full re-save; send saved text without parse/re-serialize.
+- Huts: reload the hut without its folk (`Folks` emptied), then each folk; folk state goes to a waiting field only `Refresh` applies, so call the private `SetState` directly.
+
+## 0.12.37 in-place reloads (2026-10-26)
+- `Converter.Load` ends with `SetState(saved)`. Converting -> Converting runs `EndConverting` on your copy: ingredients destroyed, a blueprint stage counted, the mods' "converter complete" callback fired. Set `m_State = Idle` (and stop its private `m_PlaySound`) before an in-place Load.
+- `ConverterFoundation.Load` caps `Stage` at stages-1; the host saves "all stages done" for the frame a build completes. Set `m_Stage` from the JSON after Load.
+- `Housing.OnDestroy` walks `m_Folks`; at quit the session is reset before the scene tears down, so a `Role == Client` guard misses it: drop dead entries unconditionally.
+- Four game copies with a late-game save fit on a 32 GB PC (test kit `mode=four`).
+
+## 0.12.38-0.13.0 native menus, Creative, beta (2026-10-26)
+- UI from the game's own prefabs: clone a menu's text button (hide every child except Shadow/Back/Border/Text), the sign-rename panel (`Prefabs/Hud/RenameSign`) for a text-entry dialog, the warning rollover (`Prefabs/Hud/Rollovers/WarningRollover`, destroy its `WarningRollover` component) for notices, `GameStateConfirm` for message boxes (override the title text after `SetConfirm`).
+- `BaseMenu`: add buttons in a Postfix of `Awake` (before `Start` registers clicks) or call `RegisterGadget` + `AddAction` after `Start`.
+- The pause screen has no free row (Planet Scan panel above Save/Load/Continue): the right margin fits 190x70 buttons at 1280x720.
+- The title screen (`State.Start`) comes before the main menu; `SetState(MainMenu)` to skip it in tests. Starting a new world ~2 s into the title screen fails in `WorldGenerator.CreateObjects` (background map preview, `m_MiniMap`); start at once.
+- Creative spawn (`CreativeTools.OnObjectClicked`) creates objects locally: forward type/kind/extra/shift to the host and replay it for the joiner's character.
+- A joiner opening Load while connected crashes: hide `LoadButton` on the joiner's pause screen and refuse `Paused.OnLoad` / `GameStateLoad.Init`.
+- Author's two-PC Steam session over the internet (2026-10-26): hosting, invites, joining and play worked; found the two issues above.

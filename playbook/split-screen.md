@@ -13,12 +13,13 @@ That means split screen is a **layer on top of multiplayer**:
 
 ## Starting points
 
-Both projects below have public source, so agents can read, fork and extend them.
+All projects below have public source, so agents can read, fork and extend them.
 
 | Project | Platform | License | Notes |
 |---|---|---|---|
 | [Nucleus Co-op](https://github.com/SplitScreen-Me/splitscreenme-nucleus) | Windows | GPL-3.0 | The most widely used tool, 700+ game "handlers" on [splitscreen.me](https://splitscreen.me/docs/games). Its [handler API](https://www.splitscreen.me/docs/handler-api/) is the best catalogue of multi-instance tricks there is. |
 | [PartyDeck](https://github.com/partydeck/partydeck) | Linux, SteamOS / Steam Deck | MIT | Newer launcher: Gamescope windows arranged in a KWin session, Bubblewrap so each instance only sees its own controller, Proton (via UMU) for Windows games, Goldberg for Steam-API multiplayer, up to 4 instances, multiple keyboards and mice since 0.5 ([GamingOnLinux](https://gamingonlinux.com/2025/05/partydeck-is-a-split-screen-game-launcher-for-linux-steamos), [AUR](https://aur.archlinux.org/packages/partydeck-bin)). |
+| [Couchlink](https://github.com/cranebeaker/couchlink) | Windows | MIT | Made at Co-op Anything. One copy per player as hardlinked folders, a hook the game loads as a stand-in system DLL so each copy sees only its own controller (XInput, DirectInput, Raw Input and HID) or its own keyboard and mouse, each player on their own Steam account or an emulated Steam identity, signed recipes, up to 8 players. For mod authors: the `couchlink` skill here and the `couchlink-sdk` skill in its repo. |
 
 Things to know before building on them:
 
@@ -76,6 +77,15 @@ networking and no second window. Learned on Dave the Diver (Unity IL2CPP, BepInE
   modal locks player 1, drive player 1's character directly from player 1's own bindings until it closes.
 - **Limit:** one camera. Follow the midpoint and keep both players in view, and give player 2 their own
   HUD by copying and tinting the game's.
+- **Second example: Dead Cells** (HashLink, DCCM; [games/dead-cells](../games/dead-cells/README.md)). The game has a
+  real second-controller layer, so player 2 gets their own controller object pinned to pad 2. Game menus take an
+  *exclusive* input lock on player 1's controller: when a menu is handed to player 2, release that lock first or
+  player 1 stays frozen. A second HUD instance must share nothing with the first (sharing the minimap or counters
+  crashed on area changes); find every function that writes to "the HUD" with a bytecode scan and run each with the
+  owner's HUD. Look for state the game keeps once per profile or run rather than per character (outfit, a skill's
+  charge counter, the kill counter, keys counted in "the hero's" inventory): each needs its own per-player copy or a
+  shared rule. A pick that opens a confirm screen can still be declined, so give the partner their copy of an item
+  only once the pick is done.
 
 ## Split screen inside one copy: three ways mods do it
 
@@ -102,6 +112,26 @@ What carries over to other games:
   explicitly.
 - **Pay for the second view.** Drawing the world twice costs frame rate (the Oblivion mod quotes
   about 60 to 75 percent of normal). Offer an alternating mode.
+
+## Several copies of a mod built for online play
+
+An online co-op mod can often be played split screen by running one copy per player and pointing them at
+127.0.0.1. Learned on Resident Evil 7 with coop-re7, REFramework and Couchlink's input hook (2026-11); see
+[games/resident-evil-7/local-split-screen.md](../games/resident-evil-7/local-split-screen.md).
+
+- **Look for identity tie-breaks.** Copies under one Steam account share one SteamID, so a rule like "the lower
+  SteamID hosts" can't decide. Use something per copy instead (the local port, a seat number).
+- **Check what the mod's LAN or test mode leaves out.** coop-re7's `udp` mode skipped features gated on `steam`.
+- **Don't touch a window while a script framework installs its hooks.** REFramework suspends the game's threads
+  to hook it; restyling or moving the window then (`SetWindowLong`, `SetWindowPos`) froze the game, and the
+  caller hung with it. Wait for a sign that the mod runs (a file it writes), then use `SWP_ASYNCWINDOWPOS` and
+  skip hung windows. A launcher that places windows early can stall the second copy every time.
+- **Hide the real pads, not only the XInput slots.** A game that also reads PlayStation pads through HID or
+  DirectInput lets one pad drive every copy. Couchlink's hook does this with `own_pads` (an empty list hides
+  them all); check which input DLLs the game loads (`HID.DLL`, `dinput8.dll`, SetupAPI).
+- **Hardlinked copies need NTFS.** On exFAT or FAT32 the copy step fails (`os error 1`); move the game folder.
+- **One Steam account means one save folder.** Let one copy save and have the others load its save.
+- **Mind memory.** Two RE7 copies took about 8 GB of RAM each.
 
 ## Ideas for agents
 

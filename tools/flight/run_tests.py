@@ -25,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.environ.get("COFR_SRC") or HERE
@@ -2166,6 +2167,12 @@ NEW_MUTATIONS = [
     ("flight", 'if argv and argv[0] == "from-failure":', "if False:", "from-failure subcommand missing", ONLY_NEW),
 ]
 MUTATIONS += NEW_MUTATIONS
+MUTATIONS += [
+    ("shrink", "cmd = shlex.split(cmd, posix=True)", "cmd = shlex.split(cmd, posix=False)",
+     "POSIX path quotes retained", "PortabilityTests"),
+    ("shrink", "elif c == '\"':\n                if inq and i + 1 < n and s[i + 1] == '\"':",
+     "elif c == '\"':\n                if False:", "Windows doubled quotes discarded", "PortabilityTests"),
+]
 TWIN_MODS = ["cofr", "schema", "analyze", "shrink", "gentest", "report", "regress", "flight", "toy_replay", "trace_replay", "from_failure"]
 
 
@@ -2205,10 +2212,69 @@ def twin():
     return survived
 
 
+class PortabilityTests(unittest.TestCase):
+    def test_windows_command_quotes(self):
+        cases = [
+            ('"C:\\Program Files\\Python\\python.exe" -I "C:\\replay tools\\check.py" {fixture}',
+             [r"C:\Program Files\Python\python.exe", "-I", r"C:\replay tools\check.py", "{fixture}"]),
+            ('"a""b" {fixture}', ['a"b', "{fixture}"]),
+            ('"a""b""c" {fixture}', ['a"b"c', "{fixture}"]),
+            ('"" {fixture}', ["", "{fixture}"]),
+        ]
+        for command, expected in cases:
+            with self.subTest(command=command):
+                self.assertEqual(SH._msvcrt_split(command), expected)
+                with mock.patch.object(SH.os, "name", "nt"):
+                    self.assertEqual(SH.CommandOracle(command).cmd, expected)
+
+    def test_windows_list2cmdline_roundtrips(self):
+        import random
+        rng = random.Random(155)
+        alphabet = 'abc XYZ\\"\t012'
+        for _ in range(2000):
+            args = [''.join(rng.choice(alphabet) for _ in range(rng.randrange(25)))
+                    for _ in range(rng.randrange(1, 8))]
+            self.assertEqual(SH._msvcrt_split(subprocess.list2cmdline(args)), args)
+
+    def test_posix_command_quotes(self):
+        command = '"/opt/replay tools/python" -I "/tmp/check script.py" {fixture}'
+        with mock.patch.object(SH.os, "name", "posix"):
+            self.assertEqual(SH.CommandOracle(command).cmd,
+                             ["/opt/replay tools/python", "-I", "/tmp/check script.py", "{fixture}"])
+
+    def test_visual_studio_cache_detection(self):
+        self.assertTrue(_uses_visual_studio("CMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026\n"))
+        self.assertTrue(_uses_visual_studio("CMAKE_GENERATOR:INTERNAL=Visual Studio 17 2022\n"))
+        self.assertFalse(_uses_visual_studio("CMAKE_CXX_COMPILER:FILEPATH=C:/Visual Studio/cl.exe\n"
+                                            "CMAKE_GENERATOR:INTERNAL=Ninja\n"))
+        self.assertFalse(_uses_visual_studio("CMAKE_GENERATOR:INTERNAL=NMake Makefiles\n"))
+        self.assertFalse(_uses_visual_studio(""))
+
+    def test_configure_generator_fallback_order(self):
+        self.assertEqual(_configure_generators(True), [
+            ["-G", "Visual Studio 18 2026", "-A", "x64"],
+            ["-G", "Visual Studio 17 2022", "-A", "x64"],
+            ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],
+        ])
+        self.assertEqual(_configure_generators(False), [["-DCMAKE_BUILD_TYPE=Release"]])
+
+
 # ---------------------------------------------------------------- C++ phase
 
+def _configure_generators(windows):
+    return ([
+        ["-G", "Visual Studio 18 2026", "-A", "x64"],
+        ["-G", "Visual Studio 17 2022", "-A", "x64"],
+        ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],
+    ] if windows else [["-DCMAKE_BUILD_TYPE=Release"]])
+
+
+def _uses_visual_studio(cache_text):
+    return any(line.startswith("CMAKE_GENERATOR:INTERNAL=") and "Visual Studio" in line
+               for line in cache_text.splitlines())
+
 def cpp_phase(cross_dir):
-    """Configure and build the recorder and its tests with cmake (Visual Studio 2022 on Windows, one compile at a time),
+    """Configure and build the recorder and its tests with cmake (one compile at a time),
     run every ctest case (unit, golden, perf and the mutation twins), then run the golden group once more with
     COFR_EMIT_DIR so it leaves the files the cross tests read. Returns (ok, summary)."""
     cmake, ctest = shutil.which("cmake"), shutil.which("ctest")
@@ -2220,7 +2286,7 @@ def cpp_phase(cross_dir):
     os.makedirs(build, exist_ok=True)
     cache = os.path.join(build, "CMakeCache.txt")
     if not os.path.exists(cache):
-        gens = [["-G", "Visual Studio 17 2022", "-A", "x64"], ["-DCMAKE_BUILD_TYPE=Release"]] if os.name == "nt" else [["-DCMAKE_BUILD_TYPE=Release"]]
+        gens = _configure_generators(os.name == "nt")
         for g in gens:
             r = subprocess.run([cmake, "-S", CPP_DIR, "-B", build] + g, capture_output=True, text=True, env=env, errors="replace")
             if r.returncode == 0:
@@ -2229,7 +2295,7 @@ def cpp_phase(cross_dir):
             os.makedirs(build, exist_ok=True)
         else:
             return False, "cmake configure failed:\n" + (r.stdout + r.stderr)[-1500:]
-    vs = "Visual Studio" in read_text(cache)
+    vs = _uses_visual_studio(read_text(cache))
     cmd = [cmake, "--build", build, "--config", "Release", "--parallel", "1"]
     if vs:
         cmd += ["--", "/nologo", "/v:minimal", "/p:IgnoreWarnIntDirInTempDetected=true"]
