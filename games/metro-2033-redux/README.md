@@ -10,8 +10,8 @@
 
 ## Where things stand
 
-Nobody can play the story together yet. A prototype runs two copies of the game on one PC. The host's movement
-reaches the client, but the joining player has no body of its own and watches through the host's character.
+Nobody can play the story together yet. A prototype runs two copies of the game on one PC. Each player has their own
+Artyom: both walk around the first level, and each sees the other move. Combat, AI and story sync are unchecked.
 
 ## Existing work
 
@@ -28,7 +28,8 @@ reaches the client, but the joining player has no body of its own and watches th
 - The Steam exe is SteamStub-protected. Analyse an unpacked copy; disassembling the protected `.text` gives garbage
   (early "encrypted code" conclusions were wrong for that reason).
 - Net players get bodies only from the server's player spawner, and only in MP mode. Story levels have one `player`
-  entity, never linked to a net slot.
+  entity, never linked to a net slot. The host can still clone `player` through the engine's player spawn event; the
+  event replicates and links the clone to the joiner's slot.
 - Full RVA-level notes, labelled verified/derived/unknown:
   [docs/FINDINGS.md](https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md).
 
@@ -42,6 +43,7 @@ reaches the client, but the joining player has no body of its own and watches th
 | client stuck on loading | engine waits for a key after a map load | call `loader_finish` | client reaches gameplay |
 | client crash right after joining | net player lookup returns a slot without an actor | return "no player" when the slot's actor doesn't resolve (networked only) | client alive in gameplay |
 | host's player not networked | story-level actor never linked to net slot 0 | link it by hand (`@link_actor`) | client sees slot 0 move with the host |
+| joining player has no body | a story level has one `player`; nothing spawns one per net slot | host clones `player` through the engine's own player spawn event (RVA 0x6A9A80 id list + RVA 0x6BA940 with is_player) 15 s after a join | slot 1 linked on both sides; client walks its own body; each side sees the other's Artyom |
 | 2.5 min to start a test | 55 s unskippable intro, fixed waits | load a post-intro save, wait on engine log lines | both in-game in ~30 s |
 
 ## QA
@@ -49,8 +51,10 @@ reaches the client, but the joining player has no body of its own and watches th
 - Two copies of the game on one PC, driven by config: console commands, a fake XInput pad and waits on engine log
   lines. Results are read from heartbeat lines in each copy's log. Commands are in the project README
   ("Run a two-instance test on one PC").
-- Last run 2026-11-12: both copies alive for the whole run. Host slot 0 resolves to `player`. A 4 s pad push moved
-  slot 0 from x=-7.3 to -3.5 and back, seen on host and client. There are no pass/fail assertions yet.
+- Last run 2026-11-12 10:13: both copies alive for the whole run (~2 min of co-op). The host's pad moved slot 0 from
+  x=-7.3 to -3.5; the client saw it. The client got body 0x10B, moved it (x -7.3 to -1.4, then a strafe), and the host
+  saw slot 1 follow. Host and client screenshots each show the other player's Artyom. There are no pass/fail
+  assertions yet.
 
 ## How to play
 
@@ -58,13 +62,12 @@ Not playable yet. Build from source per the project README; no release.
 
 ## Known issues
 
-- The joining player has no body, and its own input does nothing.
-- AI, doors, pickups and story events are not checked for sync. No level transitions.
+- Both bodies spawn on the same spot; the client steps away with `@teleport`.
+- Combat, AI, doors, pickups and story events are not checked for sync. No level transitions, no save/load.
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
 - Diagnostics use fixed RVAs of one `metro.exe` build.
 
 ## Next steps
 
-Create a second player entity on the host before the client joins (clone the `player` record with a new id via
-the engine's create-from-record functions), then link it to net slot 1. The client's quick save then carries it.
-After that, check the client's input and camera, and AI and door sync. Details: FINDINGS section 5.
+Check combat (damage between players, NPCs targeting the client), doors and story scripts with two bodies; then
+level transitions and LAN play. Details: FINDINGS section 5.

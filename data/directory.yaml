@@ -11013,7 +11013,7 @@
   kind: mod
   status: prototype
   coop_scope:
-    players_visible: 'no'
+    players_visible: 'yes'
     story: unknown
     enemies: unknown
     world_state: unknown
@@ -11025,9 +11025,9 @@
   qa: none
   notes: Prototype for the Steam Next-Gen build (app 286690), not playable, no release, MIT. Revives the engine's own
     leftover dev multiplayer (ENet on UDP 1000, console server/connect) instead of new netcode. Two copies on one PC - the
-    host turns a running story level into a server, the client joins and loads the host's quick save, the host's player
-    is linked to net slot 0 and its movement reaches the client. The joining player has no body yet (watches through the
-    host's Artyom); AI, doors and story sync untested; loopback only. Tested with scripted bot runs (fake XInput pad,
+    host turns a running story level into a server, the client joins and loads the host's quick save, the host clones
+    the player through the engine's player spawn event for the joiner. Both players walk their own Artyom and see each
+    other move. Combat, AI, doors and story sync untested; loopback only. Tested with scripted bot runs (fake XInput pad,
     console command lists, log checks), no automated suite. See games/metro-2033-redux.
   sources:
   - https://github.com/realblastex/metro2033redux-coop
