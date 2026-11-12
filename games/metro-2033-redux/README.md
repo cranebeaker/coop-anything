@@ -12,7 +12,8 @@
 
 Nobody can play the story together yet. A prototype runs two copies of the game on one PC. Each player has their own
 Artyom: both walk around the first level, and each sees the other move. NPCs near the players and an active monster
-follow the host. Combat, doors and story sync are untested.
+follow the host. A second, armed level (`l19_defence`) also runs with two players, and the joiner can fire. Damage,
+enemy AI, doors and story sync are untested.
 
 ## Existing work
 
@@ -46,6 +47,7 @@ follow the host. Combat, doors and story sync are untested.
 | host's player not networked | story-level actor never linked to net slot 0 | link it by hand (`@link_actor`) | client sees slot 0 move with the host |
 | joining player has no body | a story level has one `player`; nothing spawns one per net slot | host clones `player` through the engine's own player spawn event (RVA 0x6A9A80 id list + RVA 0x6BA940 with is_player) 15 s after a join | slot 1 linked on both sides; client walks its own body; each side sees the other's Artyom |
 | 2.5 min to start a test | 55 s unskippable intro, fixed waits | load a post-intro save, wait on engine log lines | both in-game in ~30 s |
+| crashes on a second level (`l19_defence`): host at net start, client during load and when it fires | game code assumes one single player always exists (null controlled entity; ammo HUD index left unset when the cloned body has no ammo item) | link slot 0 in the net-start frame; three small guards (skip / disable the player-dependent part / zero the index) | both players armed in l19, client fires, both alive ~2.5 min |
 
 ## QA
 
@@ -70,8 +72,8 @@ Not playable yet. Build from source per the project README; no release.
 - Entities the host spawns through the engine's spawn event appear on both sides with the same id, but a spawned
   monster stays asleep (how to wake it is unknown). Doors are not networked.
 - The client's cloned body has no knife (the knife is not a child of `player`).
-- Combat, doors, pickups and story events are not checked for sync. Combat needs story progress: weapons are holstered
-  at the start of Hunter. No level transitions, no save/load.
+- Damage, enemy AI, doors, pickups and story events are not checked for sync. In `l19_defence` the monsters stay
+  dormant for the first minutes. No level transitions, no save/load.
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
 - Diagnostics use fixed RVAs of one `metro.exe` build.
 
