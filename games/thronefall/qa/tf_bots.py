@@ -198,6 +198,105 @@ def affordable(slots, gold):
 ENDED = ("AfterMatchVictory", "AfterMatchDefeat")
 
 
+def enter_level(ctx, host, client, level):
+    """Steps 1-4: both in the map, host opens the level flag, both pick a weapon, host presses Play, both load."""
+    with ctx.step("connected in the level select map"):
+        ctx.expect(all(m.bot.status()["players"] == 2 for m in ctx.present), "both machines see 2 players")
+        for m in ctx.present:
+            lv = next((l for l in m.bot.call("levels")["levels"] if l["scene"] == level), None)
+            ctx.log("%s: %s %s" % (m.name, level, "unlocked" if lv and lv["playable"] else "LOCKED on this machine"))
+
+    with ctx.step("host opens %s, the loadout opens on both" % level):
+        ctx.must(host.open_level(level), "host opens the level flag")
+        ctx.wait_until("loadout open on both", lambda: host.popup_open() and client.popup_open(), 15)
+
+    with ctx.step("both pick a weapon"):
+        ctx.must(host.first_page("new"), "host starts a new run and goes to the weapon grid")
+        ctx.must(host.pick_weapon(), "host picks a weapon")
+        ctx.must(client.pick_weapon(), "client picks a weapon")
+        ctx.wait_until("host knows both picks",
+                       lambda: len([v for v in host.weapon_picks().values() if v != "Invalid"]) == 2, 10)
+
+    with ctx.step("host presses Play, both load %s" % level):
+        ctx.must(host.press_play(), "host presses Play")
+        ctx.wait_until("both in the level", lambda: host.scene() == level and client.scene() == level, 60)
+        ctx.pause(3)
+
+
+END_FRAMES = ("Level Up Frame", "After Match Frame", "After Match Frame ")
+
+
+class LockedEndscreen(core.Playbook):
+    """Fix 4: the level is locked on the client, the host opens it, the client follows. Fix 5: after the match ends
+    the client clicks through its end screens and presses Back first; the host, still on its end screens, is pulled to
+    the map and must not keep an end screen open there."""
+    name = "locked_endscreen"
+    summary = "Client follows the host into a level it has not unlocked; Back from one player's end screen closes the other's."
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+        # Only the castle: the bots lose within a few nights, which ends the match.
+        DayNight(self.level, 0, build_filter=lambda s: s["name"] == "Castle Center").run(ctx)
+
+        with ctx.step("client clicks through its end screens and presses Back first", compare=False):
+            pressed = []
+            for _ in range(10):
+                if client.scene() == "_LevelSelect":
+                    break
+                ui = client.call("ui")
+                buttons = [e.split(" [")[0] for e in ui["elements"] if e.endswith("[TFUITextButton]")]
+                choice = next((b for b in buttons if b in ("Continue Reward Button", "Back Button")), None)
+                if choice:
+                    client.call("ui_apply", name=choice)
+                    pressed.append("%s on %s" % (choice, ui["active_frame"]))
+                time.sleep(3)
+            ctx.log("client pressed: %s" % pressed)
+            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 60)
+            ctx.pause(3)
+
+        with ctx.step("no end screen left open on the host"):
+            ui = host.call("ui")
+            ctx.log("host after being pulled to the map: active %s, open %s" % (ui["active_frame"], ui["open_frames"]))
+            left = [f for f in ui["open_frames"] if f in END_FRAMES] + ([ui["active_frame"]] if ui["active_frame"] in END_FRAMES else [])
+            ctx.expect(not left, "end screen still open on the host in the map: %s" % left)
+
+
+class Difficulty(core.Playbook):
+    """Co-op difficulty: during a night, both machines must have the same enemies with the same max HP."""
+    name = "difficulty"
+    summary = "Enemy count and per-enemy max HP equal on host and client during a night; logs the peak count and HP."
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+        self.peak, self.seen, self.mismatch = 0, {}, []
+
+    def sample(self, host, client):
+        h = host.call("snapshot")["per_player"]
+        c = client.call("snapshot")["per_player"]
+        self.peak = max(self.peak, h.get("enemies", 0))
+        hm, cm = h.get("enemy_maxhp", {}), c.get("enemy_maxhp", {})
+        self.seen.update(hm)   # enemy id -> "maxHp|speed|elite|damage" on the host
+        for k in set(hm) & set(cm):
+            if hm[k] != cm[k]:
+                self.mismatch.append((k, hm[k], cm[k]))
+
+    def run(self, ctx):
+        DayNight(self.level, 1, night_sampler=self.sample).run(ctx)
+        with ctx.step("enemies had the same HP, speed, elite flag and damage on both"):
+            parts = [v.split("|") for v in self.seen.values()]
+            ctx.log("night 1: peak enemy count %d, enemies seen %d, elites %d, max HP %s, speed %s, damage %s" % (
+                self.peak, len(parts), sum(1 for p in parts if p[2] == "1"),
+                sorted({p[0] for p in parts}), sorted({p[1] for p in parts}), sorted({p[3] for p in parts})))
+            ctx.expect(not self.mismatch, "enemy differs (id, host, client): %s" % self.mismatch[:8])
+
+
 class DayNight(core.Playbook):
     name = "day_night"
     summary = ("Open a level from the map, both pick weapons, start; host and client build in turns; nights alternate "
@@ -205,31 +304,15 @@ class DayNight(core.Playbook):
     min_players = 2
     max_players = 2
 
-    def __init__(self, level="Nordfels", nights=2, night_timeout_s=420):
+    def __init__(self, level="Nordfels", nights=2, night_timeout_s=420, build_filter=None, night_sampler=None):
         self.level, self.nights, self.night_timeout_s = level, nights, night_timeout_s
+        self.build_filter = build_filter        # slot -> bool: which buildings the bots may build (None: any)
+        self.night_sampler = night_sampler      # (host, client) -> None, called every 2 s during a night
+        self.ended = None
 
     def run(self, ctx):
         host, client = ctx.host.bot, ctx.clients[0].bot
-
-        with ctx.step("connected in the level select map"):
-            ctx.expect(all(m.bot.status()["players"] == 2 for m in ctx.present), "both machines see 2 players")
-
-        with ctx.step("host opens %s, the loadout opens on both" % self.level):
-            ctx.must(host.open_level(self.level), "host opens the level flag")
-            ctx.wait_until("loadout open on both", lambda: host.popup_open() and client.popup_open(), 15)
-
-        with ctx.step("both pick a weapon"):
-            ctx.must(host.first_page("new"), "host starts a new run and goes to the weapon grid")
-            ctx.must(host.pick_weapon(), "host picks a weapon")
-            ctx.must(client.pick_weapon(), "client picks a weapon")
-            ctx.wait_until("host knows both picks",
-                           lambda: len([v for v in host.weapon_picks().values() if v != "Invalid"]) == 2, 10)
-
-        with ctx.step("host presses Play, both load %s" % self.level):
-            ctx.must(host.press_play(), "host presses Play")
-            ctx.wait_until("both in the level", lambda: host.scene() == self.level and client.scene() == self.level, 60)
-            ctx.pause(3)
-
+        enter_level(ctx, host, client, self.level)
         builders = [host, client]
         night, ended = 0, None
         while self.nights == 0 or night < self.nights:
@@ -238,7 +321,7 @@ class DayNight(core.Playbook):
                 turn, built = 0, []
                 while True:
                     gold = host.gold()
-                    options = affordable(host.slots(), gold)
+                    options = [s for s in affordable(host.slots(), gold) if self.build_filter is None or self.build_filter(s)]
                     if not options:
                         break
                     who = builders[turn % 2]
@@ -261,6 +344,8 @@ class DayNight(core.Playbook):
                 while time.monotonic() < end:
                     eh, ec = host.enemies(), client.enemies()
                     worst = max(worst, abs(eh - ec))
+                    if self.night_sampler:
+                        self.night_sampler(host, client)
                     gh, gc = host.gamestate(), client.gamestate()
                     if gh in ENDED or gc in ENDED:
                         ctx.wait_until("match end on both", lambda: host.gamestate() in ENDED and client.gamestate() in ENDED, 30)
@@ -282,6 +367,7 @@ class DayNight(core.Playbook):
                 bad = {k: (hh[k], ch.get(k)) for k in hh if ch.get(k) is None or abs(hh[k] - ch[k]) > 0.5}
                 ctx.expect(not bad, "building HP differs (host, client): %s" % dict(list(bad.items())[:8]))
 
+        self.ended = ended
         if self.nights == 0:
             ctx.expect(ended, "the level ended (victory or defeat)")
             with ctx.step("match end: same result on both (%s)" % ended):
@@ -433,6 +519,10 @@ def main(argv):
         pb = SaveContinue(a.level, snap.get("shared", snap))
     elif a.playbook == "rejoin":
         pb = Rejoin(a.level)
+    elif a.playbook == "locked_endscreen":
+        pb = LockedEndscreen(a.level)
+    elif a.playbook == "difficulty":
+        pb = Difficulty(a.level)
     else:
         pb = DayNight(a.level, a.nights)
     opts = {"settle_s": 30.0, "settle_poll_s": 0.5}

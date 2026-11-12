@@ -267,7 +267,11 @@ namespace CoopQa
                     if (frame != null)
                         foreach (var e in frame.GetComponentsInChildren<ThronefallUIElement>(false))
                             arr.Add(e.name + " [" + e.GetType().Name + "]");
-                    return new JObject { ["active_frame"] = frame != null ? frame.name : null, ["elements"] = arr };
+                    // Every UI frame that is visible, active or not (a frame left open behind a scene change shows here).
+                    var open = new JArray();
+                    foreach (var f in UnityEngine.Object.FindObjectsByType<UIFrame>(FindObjectsSortMode.None))
+                        if (f.gameObject.activeInHierarchy) open.Add(f.name);
+                    return new JObject { ["active_frame"] = frame != null ? frame.name : null, ["elements"] = arr, ["open_frames"] = open };
                 }
                 case "ui_apply":
                 {

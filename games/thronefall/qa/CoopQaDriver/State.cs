@@ -79,6 +79,20 @@ namespace CoopQa
             if (TagManager.instance != null)
             {
                 per["enemies"] = TagManager.instance.EnemyUnits.Count;
+                // Max HP per living enemy, by network id: the host's co-op HP factor must give the same values everywhere.
+                var maxHp = new JObject();
+                foreach (var e in TagManager.instance.EnemyUnits)
+                {
+                    if (e == null) continue;
+                    var id = e.GetComponentInParent<Identifier>();
+                    var hp = e.GetComponentInChildren<Hp>();
+                    if (id == null || hp == null) continue;
+                    // max HP | movement speed | elite | damage multiplier: what the co-op difficulty changes
+                    var move = e.GetComponentInChildren<PathfindMovementEnemy>();
+                    var atk = e.GetComponentInChildren<AutoAttack>();
+                    maxHp[id.Id.ToString()] = $"{hp.maxHp:F1}|{(move != null ? move.movementSpeed : 0f):F2}|{(hp.Elite ? 1 : 0)}|{(atk != null ? atk.DamageMultiplyer : 0f):F2}";
+                }
+                per["enemy_maxhp"] = maxHp;
                 per["allies"] = TagManager.instance.PlayerUnits.Count;
             }
             if (plugin != null)

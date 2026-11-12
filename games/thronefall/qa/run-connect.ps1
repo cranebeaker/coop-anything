@@ -6,7 +6,8 @@ param(
     [string]$Driver = 'D:\coop-test\thronefall\qa-build\aaa.coopqa.dll',
     [int]$TimeoutSec = 240,
     [switch]$Kill,
-    [switch]$Unlock
+    [switch]$Unlock,
+    [switch]$UnlockHostOnly   # host has every level, the client only its own progress (fresh profile: tutorial only)
 )
 $ErrorActionPreference = 'Stop'
 $start = 'C:\Program Files\Sandboxie-Plus\Start.exe'
@@ -26,7 +27,7 @@ $common = @('-screen-fullscreen', '0', '-screen-width', '800', '-screen-height',
 if ($Unlock) { $common += '-coopqa-unlock' }
 $A = Join-Path $Root 'A'; $B = Join-Path $Root 'B'
 $pa = Start-Process "$A\thronefall.exe" -WorkingDirectory $A -PassThru -WindowStyle Minimized `
-    -ArgumentList ($common + @('-logFile', "$A\Player.log", '-coopqa', 'host', '-coopqa-lobbyfile', $lobbyFile, '-coopqa-port', '47801'))
+    -ArgumentList ($common + @('-logFile', "$A\Player.log", '-coopqa', 'host', '-coopqa-lobbyfile', $lobbyFile, '-coopqa-port', '47801') + $(if ($UnlockHostOnly) { @('-coopqa-unlock') } else { @() }))
 "$($pa.Id) $($pa.StartTime.ToString('o')) A" | Add-Content (Join-Path $Root 'pids.txt')
 & $start "/box:$Box" /wait:0 "$B\thronefall.exe" @common -logFile "$B\Player.log" -coopqa join -coopqa-lobbyfile $lobbyFile -coopqa-port 47802
 

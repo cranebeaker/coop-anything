@@ -168,6 +168,35 @@ Running log. Observations, derivations, guesses and unknowns are kept apart.
 - Hub tool fix: `tools/bots` `Ctx._tick` polled machines in `ctx.absent`; with a killed real game copy every wait failed.
   Now polls `ctx.present`; test `tests/test_absent.py`, twin `pollabsent`; bots suite ALL OK, 16/16 twins.
 
+### Owner's first real session (2026-11-12 evening, 1.2.7.3) and fixes 4 to 6 (1.2.7.4)
+- Reported by the owner: the friend's game forced the tutorial; co-op in the tutorial did not work ("Hoppla, du bist
+  gestorben" loop). Owner log: "Main save file not found" (this build finds no progress, only the tutorial unlocked).
+- Fix 4: `PacketHandler.HandleLoadoutOpen` ignored the host's open for a level locked on the client ("LoadoutOpen for
+  locked level ..., ignoring"), so the client had no popup and no weapon pick. A client now follows opens from the host.
+  `locked_endscreen` with host-only unlock (`run-connect.ps1 -UnlockHostOnly`): 1.2.7.3 FAIL at step 2 (log line above),
+  1.2.7.4 PASS (client log "locked here but opened by the host: following").
+- Reported by the owner: after a victory the score screen stayed on screen, even in the main menu. Owner log at the
+  transition: `activeFrame=Level Up Frame`: the friend pressed Back first and pulled the host out mid end screen.
+  Fix 5: `SceneTransitionManagerPatch.Transition` closes the active frame and the frames below it on the stack
+  (`CloseAllFrames` alone left the After Match Frame visible: seen in a test run). `locked_endscreen` PASS 15/15 twice
+  (host: `open []` after being pulled to the map; log "Closing open UI frame 'Level Up Frame' (+1 stacked)").
+- Fix 6: `Buffer.EnsureSize` doubled once; strings longer than the buffer threw "Destination array was not long
+  enough" (found through a ~90 character server chat message; player chat over ~60 characters had the same problem).
+- Perks: the owner reported the friend could not see the selected perks (in the tutorial). Not investigated with a test;
+  26 equippables in the owner's log are "not in the equipment table" and get runtime ids, which may differ between
+  machines with different unlocks (suspicion, unverified).
+
+### Co-op difficulty (1.2.7.4, owner's request)
+- Host-only settings (F1, BepInEx ConfigurationManager): CountAndHp (Normal, Sturdy, Tough, VeryTough, MoreEnemies,
+  Horde, Veterans, Hard, Brutal, Custom), EnemyType (Off, SomeElites, ManyElites, Aggressive, Swift, Frenzied, Brutes,
+  EliteAssault, Nightmare, Custom), ScaleAsPlayers (Off default, Actual, Players2..8) with ScalingPerPlayer.
+- The host sends HP, damage, speed and attack-rate factors, the elite roll and extra spawns in `EnemySpawnPacket`
+  (wire format changed); extra enemies have Coins 0 and do not advance `spawnedUnits`.
+- `difficulty` playbook, Nordfels night 1, every enemy compared host vs client (maxHp|speed|elite|damage):
+  Normal: 3 enemies, HP 25, speed 5, damage 1.0. Brutal+Nightmare: 6 enemies, HP 50 (elites 200), speed 6.0, damage
+  1.3 (elites 3.9), 2 elites. Custom 150%/+50% + Custom damage 200% + ScaleAsPlayers 8 Light (+105%): 7 enemies, HP 63.8
+  (= 25 x 2.55), damage 2.00. All PASS, host and client identical, 0 game errors.
+
 ### Lead (not proven player-facing): host with no weapon equipped hangs the level start
 - Seen with a fresh profile: host on the level's first page (Level Select Frame) presses Play/Start directly; host's pick is
   `Invalid` (nothing equipped), `LevelDataSync` falls back to `WeaponRequestPacket` and also sends it to the host itself;
