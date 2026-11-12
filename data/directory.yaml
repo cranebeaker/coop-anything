@@ -10864,7 +10864,7 @@
   project: Resident Evil Revelations 2 Co-op
   url: https://github.com/dolbaras/revelations2-coop
   other_urls:
-  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0
   kind: mod
   status: partial
   coop_scope:
@@ -10879,31 +10879,41 @@
   last_activity: 2026-11
   qa: automated
   notes: >-
-    Network co-op for Episode 1 of the story campaign only (both halves, Claire and Moira, Barry and Natalia),
-    2 players on 2 PCs, each with their own copy of the game and the mod. Version 0.2.1 (GitHub Latest, published
-    2026-11-10; pre-releases 0.1.0 and 0.1.1, first full release 0.2.0): a dinput8.dll proxy loaded through the
-    exe's import table that patches import slots and COM vtables in memory and changes no game file (Steam build
-    3658995 only). ENet over UDP with a direct IP (port 28410), or Steam lobbies and invites; a room where each
-    player picks a character and presses Ready; host-authoritative enemies as replicas on the other PC with kill
-    credit for the player who made the kill, scenario flags, co-op doors, boxes and slides, a stage-change gate
-    and loader mirror, the end of a half at the radio, per-player achievements, downed and revive (host's choice,
-    on by default), the partner on the minimap, and (0.2.1) a co-op game keeps its own save with a Continue row.
-    Installer and a shortcut that installs newer GitHub releases before each start; 12 languages in the co-op
-    screens. MIT. QA: C test suites and an installer suite, plus scripted two-PC lab sessions with real game
-    clients (lobby by IP and by Steam on one LAN, every checkpoint of both halves, retry, revive, co-op save and
-    update through the real release feed). The lab routes use console warps and teleports, not a walk on foot by
-    two people. Nobody outside the lab has played it; two different networks (Steam relay) are untried. Episodes
-    2-4, the bonus episodes, Survival, Invisible and Raid are not offered (Raid is not touched). Steam
-    achievements are not blocked in a player's game. Write-up in games/resident-evil-revelations-2.
+    Network co-op for the story campaign: Episodes 1-4 (Claire and Moira's half and Barry and Natalia's half of
+    each) and the bonus episodes The Struggle and Little Miss, 2 players on 2 PCs, each with their own copy of the
+    game and the mod. Version 0.3.0 (GitHub Latest, published 2026-11-12; 0.2.0 and 0.2.1 were Episode 1 only,
+    0.1.0 and 0.1.1 pre-releases): a dinput8.dll proxy loaded through the exe's import table that patches import
+    slots and COM vtables in memory and changes no game file (Steam build 3658995 only). ENet over UDP with a
+    direct IP (port 28410), or Steam lobbies and invites; a room where the host picks the episode and each player
+    picks a character and presses Ready; host-authoritative enemies as replicas on the other PC with kill credit
+    for the player who made the kill, scenario flags, co-op doors, boxes and slides, a stage-change gate and
+    loader mirror, per-player achievements, downed and revive (host's choice, on by default), the partner on the
+    minimap, a co-op save of its own with a Continue row (Episode 1 checkpoints). 0.3.0 starts Barry's halves of
+    Episodes 2-4 by a hop through the game's restart record, sends the enemy records in a turning window (more than
+    twelve enemies), ignores records that overtake a death, ends the session at the end of every episode and of
+    the last stage, and leaves the finale's script-driven helicopters to each PC. Installer and a shortcut that
+    installs newer GitHub releases before each start; 12 languages in the co-op screens. MIT. QA: C test suites
+    and an installer suite (252 offline, 257 against the real release feed), plus scripted two-PC lab sessions
+    with real game clients: Episode 1 from start to end; Episodes 2-4 and the bonus episodes stage by stage,
+    mostly reached by console jumps to the game's own checkpoints (starts, walking, the Episode 2 siege and Pedro
+    boss and a Struggle chapter fought with identical results on both PCs, results screens between halves and
+    chapters, the ends). No human has played Episodes 2-4 or the bonus episodes. Not verified: Episode 2's step
+    from the village (stage 201) to the tunnel (203) and stage 203, the fights in Barry's halves of Episodes 2-4
+    and in Claire's halves of Episodes 3-4, Episode 4's last bosses (453, 454), The Struggle's stage 610 behind a
+    gate that did not open in the tests and the clear conditions of 610 and 620, Little Miss's stealth rules, the
+    story's own steps between stages. Nobody outside the lab has played it; two different networks (Steam relay)
+    are untried. Survival, Invisible and Raid are not offered (Raid is not touched). Steam achievements are not
+    blocked in a player's game. Write-up in games/resident-evil-revelations-2.
   sources:
   - https://github.com/dolbaras/revelations2-coop
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.0
   - https://github.com/dolbaras/revelations2-coop/blob/main/docs/world.md
   - https://github.com/dolbaras/revelations2-coop/blob/main/docs/steam-transport.md
   - https://store.steampowered.com/app/287290/
   - https://github.com/cranebeaker/coop-anything/issues/298
-  checked: '2026-11-10'
+  checked: '2026-11-12'
   made_with_coop_anything: true
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
@@ -11004,6 +11014,49 @@
   - https://github.com/murgesku/MatrixGame
   checked: '2026-11-07'
 
+- game: Star Fox 64
+  year: 1997
+  engine: N64 decompilation port (Starship, libultraship)
+  project: Starship Co-op
+  url: https://github.com/Clodmony/starship-coop
+  other_urls:
+  - https://github.com/HarbourMasters/Starship
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: "2 played; up to 4 in the code, 3 in scripted network tests"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Online campaign co-op for the Starship PC port, each player on their own PC. Deterministic lockstep (inputs
+    over UDP, 3 frames of input delay) with a state hash compared on every frame and a desync report. On 2026-11-09
+    and 2026-11-10 two people, a Windows host and a Linux joining player on a direct connection over a VPN, played
+    one route from Corneria to the ending in 66 minutes with no desync; later sessions found two more faults, both
+    fixed, the second not yet replayed on two PCs, and the code merged on 2026-11-11 has not been played by hand.
+    In scripted runs on one Linux PC a 53-step test gate passes on the merged code, and all 17 levels stayed equal
+    from start to end with two clients (the test pilot is invincible and has unlimited bombs in two levels).
+    Players share the level, enemies, bosses and path; items go to the player who takes them, the team shares lives
+    and gold rings, and the host steers the route, cutscenes and radio. No release or download, you build from source
+    with your own US ROM. When the host's ship goes down it is refilled in place for a life; a desync or a lost player
+    starts the level again for everyone from the host's state (tested by scripts only, a real connection drop not
+    tried), and what a session earns is not saved. The project calls itself pre-alpha. License CC0 1.0.
+  sources:
+  - https://github.com/Clodmony/starship-coop
+  - https://github.com/Clodmony/starship-coop#what-a-real-run-showed-observed
+  - https://github.com/Clodmony/starship-coop/issues/2
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/QA.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0002-sync-model.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0009-vehicles-cutscenes-save.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0014-the-session-survives.md
+  - https://github.com/Clodmony/starship-coop/pull/265
+  checked: '2026-11-11'
+  made_with_coop_anything: true
 - game: Metro 2033 Redux
   year: 2014
   engine: 4A Engine
