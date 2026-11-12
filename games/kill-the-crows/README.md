@@ -40,8 +40,8 @@ machine (LAN loopback):
 
 A friends-only **Steam lobby path** also exists now (host F6 creates the lobby,
 client F7 searches and joins; version-filtered lobby data keeps mod versions from
-mixing). Steam itself blocks a full local test on one machine — a user's own lobbies
-are excluded from matchmaking search and self-P2P is not allowed — so the lobby code
+mixing). Steam itself blocks a full local test on one machine - a user's own lobbies
+are excluded from matchmaking search and self-P2P is not allowed - so the lobby code
 is boot-tested only (create/join callbacks, handshake wiring verified in logs with
 auto-retry); a real session needs two distinct Steam accounts. The LAN path below is
 the fully tested one.
@@ -70,7 +70,7 @@ the client has actually handshaked.
   Co-op only needs to sync Scene_Ingame plus the transitions.
 - `WaveManager` spawns enemies from `WaveData`/`SpawnData` at `EnemySpawnPoint`s;
   bosses spawn from `bossPrefabs` every N shared kills. Enemy AI (14+ types) is a
-  per-frame state machine reading the `Enemy.player` field — retargeting that field
+  per-frame state machine reading the `Enemy.player` field - retargeting that field
   to the nearest alive player per frame is enough for two-player targeting.
 - Bullets are raycast-driven (`Bullet.FixedUpdate` + `CollisionDetection`), spawned by
   `PlayerAttack.ShootBullet` (player) and per-type enemy AI coroutines (enemies).
@@ -80,7 +80,7 @@ the client has actually handshaked.
   showdown episode.
 - Damage entry points: `Hurtbox.OnHurt → Character.OnHurt(Bullet)` and
   `Character.OnHit(BulletOnHit, victim)` for melee/showdown hitboxes.
-- Saves are PlayerPrefs under `AppData/LocalLow/5minlab/revolver` — shared by every
+- Saves are PlayerPrefs under `AppData/LocalLow/5minlab/revolver` - shared by every
   copy on the machine; isolate before two-client tests if you care about the profile.
 - Known vanilla edge: killing a boss with a corpse prefab leaves
   `CameraManager.camTarget` on the destroyed transform for a few seconds until
@@ -93,10 +93,10 @@ the client has actually handshaked.
   transitions** (probe confirmed: arbitrary DDOL roots die before the first frame
   completes). Session state must live in statics and the pump MonoBehaviour must be
   recreated on `SceneManager.sceneLoaded`.
-- **`System.ValueTuple` is not loadable** in this Unity Mono runtime — any mod type
+- **`System.ValueTuple` is not loadable** in this Unity Mono runtime - any mod type
   with a tuple field/signature throws `TypeLoadException` at first JIT. Use structs.
 - Comparing `Environment.TickCount`-style values against millisecond constants is a
-  classic bug — store `DateTime.UtcNow.Ticks` and convert constants with
+  classic bug - store `DateTime.UtcNow.Ticks` and convert constants with
   `TimeSpan.TicksPerMillisecond` (a tick/ms mixup made the handshake time out in
   0.6 ms).
 - Disabling a stripped enemy's `Enemy` component fires `Character.OnDisable` and

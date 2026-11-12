@@ -137,3 +137,21 @@ animation checker.
 - **Say SKIP, not PASS, when the case never happened.** If a test needs an event that may not occur in a run (the other player dying first), print `SKIP` with the reason and do not fail the run; a silent pass would hide the gap (Outlast, OpenOL).
 - **The mod's own debug overlay can be the control channel.** A Dear ImGui overlay with a checkpoint list, spawn panel and relay start button let a script drive the game with a few keypresses and clicks at fixed window offsets instead of walking and menus; keep the overlay layout assumptions in one place and re-check them after a mod update (Outlast, OpenOL).
 - **Test what a late joiner receives, without the game, and look for dead code.** A relay can have a complete snapshot feature (store, queue, replay) whose last step is never called from the loop the shipped binary runs. Outlast's standalone relay sent late joiners nothing for pickups and other players' matinee and hero state because the CLI main loop skipped the drain call; the game hid it by asking for doors and enemies itself. A fake peer that sends state, a second peer that joins afterwards and lists what it receives found it in minutes; a debug build with two log lines in the queue and drain functions showed which step was missing. Add a blind-mirror twin so the check is known to fail.
+
+## Menu presentation must preserve automatic startup
+
+When hiding host-owned campaign choices on the guest, keep the native row IDs
+and the meaning of input already queued by the game. Instrument the renderer
+that actually draws the target menu. A hook on a base implementation can miss
+a derived screen, and bypassing a native draw call can also skip object cleanup.
+
+Run one real-client test from the waiting menu through host-selected startup.
+Assert that only the guest hides the intended rows, the host can select New Game,
+the guest enters gameplay automatically, and both clients shut down cleanly.
+Start the test with the usual menu flow so it exercises the code used by players.
+
+In Friend or Foe, moving the guest cursor turned a latched Accept into an Options
+selection and stalled startup. Removing the cursor move and filtering the actual
+renderer passed 601 matching frames with clean exits. The run covered automatic
+startup. Guest Options and Quit still needed their own click checks.
+[Friend or Foe regression notes](../games/spider-man-friend-or-foe/NOTES.md#2026-11-01-beta-campaign-in-place-joining-and-launcher-update).
