@@ -22,7 +22,7 @@
 ## Phase 1..3 — build (2026-11-08..09)
 
 - Decompiled Assembly-CSharp.dll with ilspycmd 11.0 → 356 files (kept outside the hub).
-- Mod source: `C:/Users/GG/KillTheCrowsCoop/Mod` (SDK-style csproj, net462, references
+- Mod source: `<work dir>/KillTheCrowsCoop/Mod` (SDK-style csproj, net462, references
   game Managed + BepInEx core; `dotnet build` auto-installs to BepInEx/plugins).
 - Architecture: host-authoritative, LAN UDP 7777 custom transport (reliable seq/ack
   events + unreliable state streams), static session state + scene-loaded pump
