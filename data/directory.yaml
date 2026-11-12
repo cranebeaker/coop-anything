@@ -7198,44 +7198,42 @@
 - game: Far Cry 2
   year: 2008
   engine: Dunia (CryEngine 1 derivative)
-  project: fc2-coop-probe (position puppet, research prototype)
-  url: https://github.com/MortyRei/fc2-coop-probe
+  project: 'fc2-coop-probe (co-op prototype: avatar, hit sync, host-run NPCs)'
+  url: https://github.com/HitchLangley/fc2-coop-probe
   other_urls:
+  - https://github.com/MortyRei/fc2-coop-probe
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   kind: mod
   status: prototype
   coop_scope:
-    players_visible: partial
+    players_visible: 'yes'
     story: 'no'
-    enemies: 'no'
-    world_state: 'no'
+    enemies: partial
+    world_state: partial
     items: 'no'
   players: '2 (two PCs over Steam, or two copies on one PC)'
   networking: steam-relay
   open_source: 'yes'
-  last_activity: '2026-10'
+  last_activity: '2026-11'
   qa: automated
   notes: >-
-    No public Far Cry 2 co-op campaign project exists (searched 2026-10-19). Research prototype for Steam 1.03: a
-    dinput8.dll proxy runs a Lua 4.0 channel and native commands inside the game, finds the player's Havok body by
-    class, and exchanges position and heading over its own UDP socket; each copy spawns an invincible avatar of the
-    peer, moves and turns it. A relay (in the probe's open PRs) carries this over Steam (Spacewar lobby, no IPs or
-    port forwarding): one manual run between two PCs on different networks on 2026-10-25 kept a 16/s link for ~7
-    minutes with 0 dropped and the avatar followed the host's walk. Players see each other only as a sliding,
-    idle-pose avatar: no animation, weapons, health, mission or world sync. Stock multiplayer cannot carry the
-    campaign (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). QA covers only the position
-    puppet: a script (tests/two_copy_walk.ps1, in MortyRei/fc2-coop-probe#1-#3, not merged) drives two copies on one
-    PC and checks positions and heading (20/20, 22/22 through relays; it fails on the probe before its fixes).
-    Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
+    Maintained by HitchLangley; started from MortyRei/fc2-coop-probe (initial import 2026-10-19, MIT). A
+    dinput8.dll proxy for Steam 1.03: the joiner loads the host's save and connects over a Steam relay (friend
+    lobby, Join Game, Story Mode > Cooperative menu row). The other player is an animated avatar with weapons,
+    shots, hit sync, doors, grenades, map and vehicle seats. The host runs all NPCs; the joiner shows them as
+    puppets (movement, idle actions, smart terrain, mounted guns). An off-by-default experiment gives the host's
+    avatar an AI component so that host NPCs shoot the joiner; on two copies on one PC their hits took the
+    joiner's health. Open: puppets' shots not visible on the joiner, missions and most world state not synced,
+    the latest work not yet tested on two PCs. QA: tests/two_copy_walk.ps1 drives two copies and checks
+    position and heading only; the rest was checked by hand on two copies.
   sources:
+  - https://github.com/HitchLangley/fc2-coop-probe
   - https://github.com/MortyRei/fc2-coop-probe
-  - https://github.com/MortyRei/fc2-coop-probe/pull/1
-  - https://github.com/MortyRei/fc2-coop-probe/pull/3
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
-  checked: '2026-10-25'
+  checked: '2026-11-12'
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
@@ -10825,7 +10823,7 @@
   project: Resident Evil Revelations Co-op
   url: https://github.com/dolbaras/revelations-coop
   other_urls:
-  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0
   kind: mod
   status: alpha
   coop_scope:
@@ -10839,32 +10837,51 @@
   open_source: 'yes'
   last_activity: 2026-11
   qa: automated
-  notes: 'Version 0.1.0 (2026-11-10), PC/Steam build 13298487, a dinput8.dll proxy; the second human takes over the
-    campaign''s AI partner. Split screen on one PC with two gamepads covers the whole campaign. Network co-op (two PCs,
-    Steam friends or direct IP on UDP 28410, ENet) covers Episode 1 only (Jill and Parker): host-run enemies, doors, key
-    items and pickups in step, shared game over and Continue, downed/revive, partner on the minimap. A co-op save of its
-    own never touches the solo save; a "Co-Op Play" row in the game''s main menu, installer and self-updating shortcut,
-    13 languages. Tests: offline C suites and a headless bot, plus lab sessions on two PCs (both role orders, to the end
-    of Episode 1, partly driven by lab scripts; section 1-2 was skipped by a lab command, so it has not been played in
-    network co-op); split screen driven with two virtual pads. Nobody outside the lab has played it; not tried between
-    two different networks; Episodes 2+ over the network not offered. Raid is never touched, and the mod uses its own
-    transport, not the game''s. CORRECTED 2026-10-22, still true: the game ships no campaign co-op. Its only two-player
-    mode is Raid; the mode field at *(sGameSystems+0x24)+0x20 reads 0 in the campaign menus and 1 in Raid, and the
-    binary''s network layer and type registry serve Raid only. An earlier write-up here (PR #126) called them a dormant
-    campaign co-op; that thesis is withdrawn. MIT. Write-up in games/resident-evil-revelations.'
+  notes: >-
+    Version 0.2.0 (GitHub Latest, published 2026-11-12; 0.1.0 of 2026-11-10 had network co-op for Episode 1 only),
+    PC/Steam build 13298487, a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on
+    one PC with two gamepads covers the whole campaign. Network co-op (two PCs, Steam friends or direct IP on UDP 28410,
+    ENet) now follows the story section by section from Episode 1 to the end of the campaign with the pair each part
+    gives (Jill and Parker, Chris and Jessica, Keith and Quint ...): the host's section change sends the next section's
+    start and the guest's game follows it through the stock Continue path, Episode 1 goes on into Episode 2 inside one
+    co-op game, and after the last section both PCs show the game's own end and each closes the session. Host-run
+    enemies (a kill by either player counts on both PCs, also far from the other PC), doors, key items and pickups in
+    step, shared game over and Continue, downed/revive, partner on the minimap. New in 0.2.0: Give to partner (RE5
+    style, in the stock item screen: a herb, a grenade or half of an ammunition type to a partner within about 3 m who
+    is not down); the Genesis scanner for the second player too (own analysis rate and herbs; in split screen one
+    scanner at a time, in the whole view); HUNK as the second player in 2-2 (8:32 P.M. Guest Cabin), where the story
+    locks the partner away; the split-screen aim fix (the game's one aim-allowed flag followed player 1 only). 0.1.0
+    and 0.2.0 refuse each other with a reason. A co-op save of its own never touches the solo save; a "Co-Op Play" row
+    in the game's main menu, installer and self-updating shortcut, 13 languages. Tests: offline C suites and a headless
+    bot, an installer suite (289 offline, 294 against the real release feed), plus scripted sessions with real game
+    clients on two PCs of one LAN: arrival, characters and movement in each of the 25 sections from 1-2 to 12-2, the
+    story's own transitions 1-1 -> 1-2, 1-3 -> 2-1, 2-1 -> 2-2, 4-1 -> 5-2 and 12-3 -> the end of the campaign, kills on
+    both PCs in five sections, Give and the Genesis both ways; split screen on one PC with two virtual pads. Parts were
+    driven by test commands (teleports, set story flags, virtual gamepads). Not verified: any play by people; the last
+    boss fight (12-3) played the story's way (the section was only started directly, the section ends were set by a
+    test command); 2-2's own story with HUNK (its end was set by a test command); fights in the sections checked for
+    arrival and movement only, and shots in water (6-2); a real scan of a target by the second player in split screen;
+    Give's texts in 12 of the 13 languages in a running game; two different networks (Steam relay). An enemy that chases
+    the guest into another area is driven by the guest's PC, and the guest's damage to it is lost if the host comes back
+    before it dies (known since 0.1.0). Raid is never touched, and the mod uses its own transport, not the game's.
+    CORRECTED 2026-10-22, still true: the game ships no campaign co-op. Its only two-player mode is Raid; the mode field
+    at *(sGameSystems+0x24)+0x20 reads 0 in the campaign menus and 1 in Raid, and the binary's network layer and type
+    registry serve Raid only. An earlier write-up here (PR #126) called them a dormant campaign co-op; that thesis is
+    withdrawn. MIT. Write-up in games/resident-evil-revelations.
   sources:
   - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
   - https://github.com/cranebeaker/coop-anything/issues/299
   - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
-  checked: '2026-11-10'
+  checked: '2026-11-12'
 - game: Resident Evil Revelations 2
   year: 2015
   engine: MT Framework (32-bit, Direct3D 9)
   project: Resident Evil Revelations 2 Co-op
   url: https://github.com/dolbaras/revelations2-coop
   other_urls:
-  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0
   kind: mod
   status: partial
   coop_scope:
@@ -10879,31 +10896,41 @@
   last_activity: 2026-11
   qa: automated
   notes: >-
-    Network co-op for Episode 1 of the story campaign only (both halves, Claire and Moira, Barry and Natalia),
-    2 players on 2 PCs, each with their own copy of the game and the mod. Version 0.2.1 (GitHub Latest, published
-    2026-11-10; pre-releases 0.1.0 and 0.1.1, first full release 0.2.0): a dinput8.dll proxy loaded through the
-    exe's import table that patches import slots and COM vtables in memory and changes no game file (Steam build
-    3658995 only). ENet over UDP with a direct IP (port 28410), or Steam lobbies and invites; a room where each
-    player picks a character and presses Ready; host-authoritative enemies as replicas on the other PC with kill
-    credit for the player who made the kill, scenario flags, co-op doors, boxes and slides, a stage-change gate
-    and loader mirror, the end of a half at the radio, per-player achievements, downed and revive (host's choice,
-    on by default), the partner on the minimap, and (0.2.1) a co-op game keeps its own save with a Continue row.
-    Installer and a shortcut that installs newer GitHub releases before each start; 12 languages in the co-op
-    screens. MIT. QA: C test suites and an installer suite, plus scripted two-PC lab sessions with real game
-    clients (lobby by IP and by Steam on one LAN, every checkpoint of both halves, retry, revive, co-op save and
-    update through the real release feed). The lab routes use console warps and teleports, not a walk on foot by
-    two people. Nobody outside the lab has played it; two different networks (Steam relay) are untried. Episodes
-    2-4, the bonus episodes, Survival, Invisible and Raid are not offered (Raid is not touched). Steam
-    achievements are not blocked in a player's game. Write-up in games/resident-evil-revelations-2.
+    Network co-op for the story campaign: Episodes 1-4 (Claire and Moira's half and Barry and Natalia's half of
+    each) and the bonus episodes The Struggle and Little Miss, 2 players on 2 PCs, each with their own copy of the
+    game and the mod. Version 0.3.0 (GitHub Latest, published 2026-11-12; 0.2.0 and 0.2.1 were Episode 1 only,
+    0.1.0 and 0.1.1 pre-releases): a dinput8.dll proxy loaded through the exe's import table that patches import
+    slots and COM vtables in memory and changes no game file (Steam build 3658995 only). ENet over UDP with a
+    direct IP (port 28410), or Steam lobbies and invites; a room where the host picks the episode and each player
+    picks a character and presses Ready; host-authoritative enemies as replicas on the other PC with kill credit
+    for the player who made the kill, scenario flags, co-op doors, boxes and slides, a stage-change gate and
+    loader mirror, per-player achievements, downed and revive (host's choice, on by default), the partner on the
+    minimap, a co-op save of its own with a Continue row (Episode 1 checkpoints). 0.3.0 starts Barry's halves of
+    Episodes 2-4 by a hop through the game's restart record, sends the enemy records in a turning window (more than
+    twelve enemies), ignores records that overtake a death, ends the session at the end of every episode and of
+    the last stage, and leaves the finale's script-driven helicopters to each PC. Installer and a shortcut that
+    installs newer GitHub releases before each start; 12 languages in the co-op screens. MIT. QA: C test suites
+    and an installer suite (252 offline, 257 against the real release feed), plus scripted two-PC lab sessions
+    with real game clients: Episode 1 from start to end; Episodes 2-4 and the bonus episodes stage by stage,
+    mostly reached by console jumps to the game's own checkpoints (starts, walking, the Episode 2 siege and Pedro
+    boss and a Struggle chapter fought with identical results on both PCs, results screens between halves and
+    chapters, the ends). No human has played Episodes 2-4 or the bonus episodes. Not verified: Episode 2's step
+    from the village (stage 201) to the tunnel (203) and stage 203, the fights in Barry's halves of Episodes 2-4
+    and in Claire's halves of Episodes 3-4, Episode 4's last bosses (453, 454), The Struggle's stage 610 behind a
+    gate that did not open in the tests and the clear conditions of 610 and 620, Little Miss's stealth rules, the
+    story's own steps between stages. Nobody outside the lab has played it; two different networks (Steam relay)
+    are untried. Survival, Invisible and Raid are not offered (Raid is not touched). Steam achievements are not
+    blocked in a player's game. Write-up in games/resident-evil-revelations-2.
   sources:
   - https://github.com/dolbaras/revelations2-coop
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.0
   - https://github.com/dolbaras/revelations2-coop/blob/main/docs/world.md
   - https://github.com/dolbaras/revelations2-coop/blob/main/docs/steam-transport.md
   - https://store.steampowered.com/app/287290/
   - https://github.com/cranebeaker/coop-anything/issues/298
-  checked: '2026-11-10'
+  checked: '2026-11-12'
   made_with_coop_anything: true
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
@@ -11104,3 +11131,178 @@
   - https://github.com/MunWolf/thronefall_multiplayer
   checked: '2026-11-12'
   made_with_coop_anything: false
+
+- game: Star Fox 64
+  year: 1997
+  engine: N64 decompilation port (Starship, libultraship)
+  project: Starship Co-op
+  url: https://github.com/Clodmony/starship-coop
+  other_urls:
+  - https://github.com/HarbourMasters/Starship
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: yes
+    world_state: yes
+    items: per-player
+  players: "2 played; up to 4 in the code, 3 in scripted network tests"
+  networking: direct-ip
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Online campaign co-op for the Starship PC port, each player on their own PC. Deterministic lockstep (inputs
+    over UDP, 3 frames of input delay) with a state hash compared on every frame and a desync report. On 2026-11-09
+    and 2026-11-10 two people, a Windows host and a Linux joining player on a direct connection over a VPN, played
+    one route from Corneria to the ending in 66 minutes with no desync; later sessions found two more faults, both
+    fixed, the second not yet replayed on two PCs, and the code merged on 2026-11-11 has not been played by hand.
+    In scripted runs on one Linux PC a 53-step test gate passes on the merged code, and all 17 levels stayed equal
+    from start to end with two clients (the test pilot is invincible and has unlimited bombs in two levels).
+    Players share the level, enemies, bosses and path; items go to the player who takes them, the team shares lives
+    and gold rings, and the host steers the route, cutscenes and radio. No release or download, you build from source
+    with your own US ROM. When the host's ship goes down it is refilled in place for a life; a desync or a lost player
+    starts the level again for everyone from the host's state (tested by scripts only, a real connection drop not
+    tried), and what a session earns is not saved. The project calls itself pre-alpha. License CC0 1.0.
+  sources:
+  - https://github.com/Clodmony/starship-coop
+  - https://github.com/Clodmony/starship-coop#what-a-real-run-showed-observed
+  - https://github.com/Clodmony/starship-coop/issues/2
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/QA.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0002-sync-model.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0009-vehicles-cutscenes-save.md
+  - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0014-the-session-survives.md
+  - https://github.com/Clodmony/starship-coop/pull/265
+  checked: '2026-11-11'
+  made_with_coop_anything: true
+- game: Metro 2033 Redux
+  year: 2014
+  engine: 4A Engine
+  project: metro2033redux-coop
+  url: https://github.com/realblastex/metro2033redux-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 (two copies on one PC)
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Prototype for the Steam Next-Gen build (app 286690), not playable, no release, MIT. Revives the engine's own
+    leftover dev multiplayer (ENet on UDP 1000, console server/connect) instead of new netcode. Two copies on one PC - the
+    host turns a running story level into a server, the client joins and loads the host's quick save, the host clones
+    the player through the engine's player spawn event for the joiner. Both players walk their own Artyom and see each
+    other move; shots and damage between players work on an armed level. AI, doors and story sync untested; loopback
+    only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8 shared-state
+    facts (PASS on two levels). See games/metro-2033-redux.
+  sources:
+  - https://github.com/realblastex/metro2033redux-coop
+  - https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md
+  - https://github.com/tsnest/MetroDeveloper
+  checked: '2026-11-12'
+  made_with_coop_anything: true
+- game: Abo Khashem
+  year: 2018
+  engine: Unity
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Comedic open-world RPG by Moving Dimensions (Saudi Arabia), single-player only on Steam, PS4 and Xbox One.
+    SteamDB detects Unity. No co-op or multiplayer mod found. Mono vs IL2CPP not yet checked. Notes in games/abo-khashem.
+  sources:
+  - https://store.steampowered.com/app/662840
+  - https://steamdb.info/app/662840
+  checked: '2026-11-12'
+  searched:
+  - 'This repo: DIRECTORY.md, games/, issues and PRs (0 hits), 2026-11-12'
+  - 'WebSearch (English and Arabic): Abo Khashem co-op, multiplayer, online mod, nexusmods, bepinex, 2026-11-12'
+  - 'GitHub repository search "abo khashem": one empty repo (README title only), 2026-11-12'
+  - 'GitHub code search (khashem with multiplayer, bepinex, harmony): no mod code, 2026-11-12'
+  - 'Steam community: 20 discussion topics, forum search multiplayer/coop 0 results, no guides, 2026-11-12'
+  - 'ModDB mods and files tabs (0 mods, 1 installer file), Nexus search (no game page), 2026-11-12'
+  - 'Official site and archived presskit: no Discord, modding or multiplayer mention, 2026-11-12'
+  - 'Not checked: Reddit (blocked for my tools), SteamDB patch notes (bot check)'
+- game: Outlast
+  year: 2013
+  engine: Unreal Engine 3
+  project: OpenOL
+  url: https://github.com/ShyKiss/OpenOL
+  other_urls:
+  - https://github.com/ShyKiss/OpenOL-Relay
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: "2-8"
+  networking: hosted-relay
+  open_source: yes
+  last_activity: '2023'
+  qa: community-reports
+  notes: Modified client and UDP relay server for Outlast 1. Synchronizes player puppets, doors, enemy states, and items, with late-join room snapshot persistence.
+  sources:
+  - https://github.com/ShyKiss/OpenOL
+  - https://github.com/ShyKiss/OpenOL-Relay
+  checked: '2026-10-21'
+- game: Outlast 2
+  year: 2017
+  engine: Unreal Engine 3
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No working co-op or multiplayer mod found for Outlast 2. Sibling title Outlast 1 has the OpenOL client mod and relay server. The Outlast Trials provides official multiplayer. Co-op-from-zero work in progress in this repo (games/outlast-2) - proxy dinput8.dll hook installs in an isolated install, and protocol/UDP transport/relay session/host relay/puppet interpolation are implemented with 24 offline check groups passing (tests/run.bat); engine wiring is blocked on the first live ProcessEvent capture, so no two-client game test has run yet.
+  sources:
+  - https://www.nexusmods.com/outlast2
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/outlast-2
+  checked: '2026-10-24'
+  searched:
+  - 'WebSearch: Outlast 2 co-op multiplayer mod on github.com, nexusmods.com, moddb.com, steamcommunity.com, reddit.com'
+  - 'Nexus Mods Outlast 2 catalog: checked all mods (O2menu trainer found; no co-op mods)'
+- game: Kill The Crows
+  year: 2023
+  engine: Unity 2022.1.5 (Mono)
+  project: KTC Co-op
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/kill-the-crows
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: "Build from zero, 2026-11-08..09. BepInEx 5 + HarmonyX host-authoritative LAN mod (UDP 7777): host simulates waves and enemy AI (retargeted per-frame to the nearest of the two players), client renders proxies and sims its own player; client shots are rebuilt as host-side bullets, client damage routed from host physics via a hurtbox ghost. Shared kill counter drives boss pacing; scene transitions, showdown time-scale and game-over synced. Verified with two real clients on one machine: 3-minute bot runs, 107 shared kills matching 107 client-side proxy deaths, zero exceptions and zero disconnects. Steam lobby path implemented (F6/F7, friends-only, version-filtered) but boot-tested only - Steam blocks one-account self-sessions; LAN is the fully tested path. Mod source in games/kill-the-crows/Mod. Write-up in games/kill-the-crows."
+  sources:
+  - https://store.steampowered.com/app/2441270/Kill_The_Crows/
+  checked: '2026-11-09'
