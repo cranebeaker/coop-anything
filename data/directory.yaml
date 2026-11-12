@@ -11003,3 +11003,35 @@
   - https://store.steampowered.com/app/214730/
   - https://github.com/murgesku/MatrixGame
   checked: '2026-11-07'
+
+- game: Metro 2033 Redux
+  year: 2014
+  engine: 4A Engine
+  project: metro2033redux-coop
+  url: https://github.com/realblastex/metro2033redux-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'no'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 (two copies on one PC)
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Prototype for the Steam Next-Gen build (app 286690), not playable, no release, MIT. Revives the engine's own
+    leftover dev multiplayer (ENet on UDP 1000, console server/connect) instead of new netcode. Two copies on one PC - the
+    host turns a running story level into a server, the client joins and loads the host's quick save, the host's player
+    is linked to net slot 0 and its movement reaches the client. The joining player has no body yet (watches through the
+    host's Artyom); AI, doors and story sync untested; loopback only. Tested with scripted bot runs (fake XInput pad,
+    console command lists, log checks), no automated suite. See games/metro-2033-redux.
+  sources:
+  - https://github.com/realblastex/metro2033redux-coop
+  - https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md
+  - https://github.com/tsnest/MetroDeveloper
+  checked: '2026-11-12'
+  made_with_coop_anything: true
