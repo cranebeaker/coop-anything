@@ -1153,17 +1153,46 @@ Observed:
   its controls, "Controlling"). The mission completes in `DockAtStation`, called from a ship's step when it docks;
   for a ship that needs its autopilot's `Intent`/`DestinationObject` or a player docking it, which the bot cannot do.
   Moving the ship next to the station (helper `gotohome ... ship`) did not dock it.
-- **A ship's flight is not synced**: moving the guest's copy of the shared ship left the host's where it was. A
-  hijacked ship flown by one player stays put on the other's copy (both stay aboard and see each other, as positions
-  are ship-wise). Open.
+- **Docking a hijacked ship** (2026-11-02): the player at the bridge presses Set Course (`oControls.SetCourse`, control
+  26; found by listing the controls the game asks about each frame at the bridge). In `ControlSomething` (self = the
+  ship) this needs the ship `Secured` (0x1a3: set once no guard aboard is conscious; the host's knockouts reach the
+  guest's copy through the guard mirror, so both copies are secured) and `PlayerShipIsAllowedToDockAtStation`; it calls
+  `SetCourseForStation` for the nearest station of the player's faction (`NearestStationOfFaction(x, y,
+  PlayerFaction())`: the home station, 627 000 units away in the test), which sets `Autopilot` 1, `Intent`
+  "PlayerAutopilot", `DestinationObject` the station. The ship's own step flies it there (about 100 000 units/s) and calls
+  `DockAtStation` on arrival, which completes the Hijack mission (observed in about 2 minutes). `BigShipAutopilot`
+  (control 80) is never called (no call to it in the code). While the guest's copy flies home, the host's follows its
+  speed and angle through its own space; the guest's completion completes the host's (shared completion).
+- **A ship's flight** (2026-11-02): each copy flew its own copy of the shared ship (observed: its own autopilot, speed
+  about 12 000/s, angles 70 degrees apart between copies; a hijacked ship flown by one player kept its old course on the
+  other's copy). A ship moves in its end step: `UpdateSpacePosition` (`0x00a33bb0`) adds `xSpeed`/`ySpeed`
+  (0x18b/0x18d, units per second) to `xReal`/`yReal` (0x26a/0x26b) and `Spin` (0x27b, degrees per second) to
+  `MyImageAngle` (0x1b6, = `image_angle`). The bot flies a ship from its bridge as it flies its pod (cursor override,
+  Thrust held: speed 12 000 -> 78 000 in 4.5 s). Now, while a player is at the shared ship's bridge (state
+  "Controlling", Parent = the ship), its copy sends the ship's speed, angle and spin each frame, and the other copy puts
+  them on its ship before `UpdateSpacePosition` runs. Places are not sent (galaxies differ: the ship moves the same way
+  through each copy's own space). Mutation `noshipflight`.
+- **Mistake, recorded**: the first version also had the guest's copy follow the host's while nobody was at the bridge.
+  It broke the alarm scenario (3 of 7 failed, twice; 7 passed with the sync off): during an alarm the ship's
+  `AlarmSecondsLeft` is `TimeForDistanceSpeedAcceleration` to where that copy's autopilot takes it, so with the host's
+  speed the guest's ship never got there (seconds left 17-21 or 11 against the host's 14; the guest's ship not
+  destroyed). Each copy's own autopilot flies the ship while nobody is at its bridge (both run the same course; angles
+  still differ between copies).
+- **Test** (`tools/flight.sh`, 8 checks): nobody at the bridge, nothing is followed; the guest takes the bridge and
+  flies, and the host's copy follows while it thrusts and turns, and keeps its new course after; both still aboard; no
+  dialogs; both advancing. Speeds and angles are read on both copies at once (within 3 degrees, 5%). Mutation
+  `noshipflight`: 2 checks fail. Check 3 reads both copies up to 3 times (turning at up to 45 degrees a second, two
+  reads a fraction of a second apart once differed by 10 degrees). Docking: see the Hijack notes above (`hijack.sh`).
 - **A puppet with no route to its player**: the guest put at the bridge from afar; the host's puppet walked toward it
   and stopped at 1 967 units (no route it may take: the bridge is behind keycard doors the guest did not pass, and
   a player can also jump, e.g. with a teleporter item). Now a puppet more than 400 units from its player that has not
   got 30 closer in 3 s is put where its player is. Mutation `nosnap`.
-- **Test** (`tools/hijack.sh`, 8 checks): the bridge is the objective on both; the host knocks the pilot out (down on the
-  guest too); the guest takes the bridge and the host's copy shows it there; the guest's mission completes (stand-in
-  for the docking: helper `completemission`, the path the other player's completion takes) and the host's completes
-  with it, and it is told; no error dialogs; both advancing.
+- **Test** (`tools/hijack.sh`, 10 checks): the bridge is the objective on both; the host knocks the pilot out (down on the
+  guest too); the guest takes the bridge and the host's copy shows it there; the host knocks every guard out (secured
+  on both copies); the guest presses Set Course: its ship flies to the station and docks (`DockAtStation` from the
+  ship's step) and its mission completes; the host's completes with it, and it is told; no error dialogs; both
+  advancing. Mutation `nosharedcomplete`: the host's mission stays open (1 check fails). The bot's control arrays now
+  go to 128 (Set Course is 26, the unused `BigShipAutopilot` asked for 80).
 - Test mistake, recorded: the setup command `puppet` run without an id made the host's copy call `PlayAsCharacter` on
   nothing (GameMaker error in `PlayerShipDockAtStation`); it now refuses without an id.
 
@@ -1274,3 +1303,305 @@ its player goes down (`puppet_down`): going down counts one, no hit reached the 
 (A side effect to know: on the host, the guest's going down counts one more injury in that count there.)
 - Builds are not reproducible here (the DLL's hash differs for the same source, built twice), so a "core <hash>" in
   the results names that build, not the source; the mod repo's commit names the source.
+## Doors and guards hacked by a guest; what terminals do (2026-11-02)
+
+- **Observed (decompile).** A door's lasting state besides open/closed: `Security` (0x374, its keycard level),
+  `HackedSecondsLeft` (0x86a) and `CrashedSecondsLeft` (0x43b). `oDoor.Step` reads its `DamageSignal`: one damage flag
+  sets `Security` to 0 (and starts `HackedSecondsLeft` on an airlock's door), another starts `CrashedSecondsLeft`. The
+  hack signal comes from the **Subverter** item (`oSubverter`, object 111): when used (`Activate`) while carried, its
+  step signals every door, guard, teleporter and turret in the owner's rectangular aim zone
+  (`ObjectIsInPersonsRectangularAimZone`, which reads the owner's `x`, `y`, `image_angle` and the item's `Range` and
+  `BeamWidth`). Other signal senders: `ExplodeOnShip`, `oFrazzler` (the "Crashbeam": guards and their shields; it did
+  not crash a door when tried), bullets, melee, traps.
+- **Observed (game).** The guest, facing door 3 (keycard level 1) with a Subverter: the door's `Security` went to 0
+  and the item's use went down by one (a one-use one vanished). The host's copy of the door kept level 1: a desync.
+- **Fix.** The door messages (every 15 frames) now carry each door's `Security` and its hack and crash timers. A guest
+  also sends a door when its level dropped or a timer started on its copy. A hack is one-way, so every copy keeps the
+  lowest level it has heard of for each door of the shared ship and puts it on that door whenever the door is active
+  there (doors far from the player do not step); a timer that started on the other copy is put on the door if it is
+  active. Mutation `nodoorhack`.
+- **Test** (`tools/doorhack.sh`, 10 checks): dock; the host knocks out every guard; doors 3 and 4 are keycard doors
+  (levels 1 and 2) on both copies; the host cannot walk past door 4; the guest hacks door 3, then door 4 (helpers
+  `giveitem 111`, `selectitem`, `doordir`, `useitem`: the item's `Activate` set while the guest faces the door, then the
+  item's own step hacks it): both locks gone on both copies; the host was told of both; the host then walks past door 4;
+  no error dialogs; both advancing. With `nodoorhack`: 7 passed, 3 failed (the host's locks stayed). Note: the walk
+  past door 4 passed under the mutation too: the guest's copy, where the door is unlocked, opens it for the host's
+  puppet, and the open-door message opens it on the host. The lock checks are what catch a missing hack.
+- **Terminals** (observed, decompile of `oTerminal.Step`): a terminal with `HasIntel` lowers the user's own
+  `PersonalMissionCost`; otherwise it gives the user a keycard of its `Security` level (`GiveThisPersonAKeycard`).
+  Both are the user's own, not the ship's: each player uses a terminal on their own copy and gets their own intel or
+  card (a card's clearance already reaches the other copy for the puppet). Whether a terminal used by one player should
+  be used up for the other is a design choice; not synced now.
+- **A guard hacked by a guest's Subverter** (observed): the Subverter hacks a guard (`GuardCanBeHacked`: shielded,
+  not hacked or crashed yet) by `SetDamageSignal` on it, run inside its loop over guards with the **guard as self**. The
+  guest's core took that for the mirrored guard's own attack and dropped it (`hit: a mirrored guard's own attack
+  dropped`), so the hack reached nobody. Fixed: a signal on the guard that is self is not that guard's attack; it goes
+  the guest-hit way (sent to the host, applied there with the same mask). The host's guard then has `Hacked` (0x4b4) 1;
+  `GuardHasShield` still answers 1 (the shield is there, hacked). The guard messages now carry `Hacked`, and a guest's
+  copy takes it (one-way). Mutation `noguardhack` (both halves).
+- **Test** (`tools/guardhack.sh`, 8 checks): dock; guards blind to both (no knockouts: knocked-out bodies sent the
+  target panicking to an escape pod in a try); the guest hacks door 3 and walks past it; the nearest hackable shielded
+  guard within 300; the guest's Subverter hack is sent as a hit (helper `useatguard`: aims at the guard in the same
+  frame, it moves); the host's guard is hacked; the guest's copy shows it; no error dialogs; both advancing. With
+  `noguardhack`: 5 passed, 3 failed.
+- **Seen in a try, not followed up:** a hit for a guard far from the host was dropped on the host ("guard not active
+  here"); that guard had most likely escaped the ship on the host already (it was panicking). A diagnostic now logs when
+  such a guard last stepped on the host.
+
+## How a pod docks, and the bot flying one (2026-11-02)
+
+- **Observed (decompile, `PlayerShipStateFlying`, which needed a 30-minute Ghidra timeout):** an ordinary pod docks by
+  itself: in flight, the nearest airlock facing it (`NearestAirlockFacingPlayerShip`, or `BestAirlockInThrustDirection`)
+  within its `DockingRange` (0x8bb), speeds matched (`MatchDistance`), then `DockWithAirlock`; an `AutoDockFailSafeTimer`
+  docks it if that drags on. Use (`oControls.Use`, control 0) docks only a special pod (`SpecialPodType` 2, in
+  `PlayerShipSpecialActions`).
+- **Observed (game):** leaving a station by its lift (helper `uselift`: the lift's `Activate`, whose step calls
+  `UndockFromStation`) leaves the same state as the helper `undock` (which calls `UndockFromStation` itself): the
+  player "Controlling" its pod, the pod free (Parent = itself), `LeavingStation` (0x890) 1. Undocking from a ship with
+  Use works.
+- **Observed (game): the bot's thrust does not reach a pod.** Holding control 5 (the thrust; it flies a ship from its
+  bridge) with the cursor on the target (helper `mouseon <id>`: the cursor follows an instance), the pod's `Thrust`
+  (0x23e) stayed 0 and its speed did not change, both while leaving a station and after undocking from a ship.
+  `ControlSomething` sets a pod's thrust through `PlayerThrustTowardsCursor` only while `oCamera.Object` passes a test
+  (the camera follows the player here; set to the pod, the game put it back); that function's own debug line never
+  appeared. Cause unknown.
+- **Why** (observed, a hook counting calls): `PlayerThrustTowardsCursor` is called from `ControlSomething` only for
+  `ControllingType` 117 (a ship's bridge); a pod is 163. A pod's own input is read in `PlayerShipStateFlying`, whose
+  decompile (the 30-minute one) lost its call arguments, so what it reads is unknown.
+- **The bot's pod steering** (helper `flyto <id>`): just before the game's `PlayerShipApplyThrust` (which adds
+  `xThrust`/`yThrust` to the speed and uses fuel), the core sets the pod's thrust vector (at most `MaxThrust`) toward the
+  target's velocity plus an approach speed that shrinks near it; with a ship as the target, it heads for the airlock the
+  pod would dock at once within 6000. Observed: from 2 225 units off a ship the pod flew back and the game docked it
+  (its autodock); from a mission ship the host's pod flew 850 000 units home in about 45 s and the game docked it at the
+  station. `home.sh`, `early.sh` and `life.sh` now fly home this way instead of the jump helper `gotohome` (13, 9 and 9
+  checks passed).
+- **Not flown:** out of a station. After `UndockFromStation` (the helper's or the lift's) the pod stays in its station
+  state (`State` 2, `LeavingStation` 1); its thrust step does not run, and moving it out (or clearing `LeavingStation`)
+  did not start it. That state waits on the station's door animation (`StationOpenDoor`,
+  `StationDoorAnimationComplete`); suspected, not checked: the animation does not run in the test copies. Boarding and
+  the new life's re-dock keep `gotoship` and `dockship`.
+- **The new-life re-dock flake, fixed** (2026-11-02): the error dialog of a failing run named `DockWithAirlock` line 39
+  (no message text captured). The helper `dockship` docked at the first airlock of the ship it had seen; with the
+  airlock the game itself would choose (`NearestDockableAirlockToPlayerShip`, helper `dockship 1`) the re-dock raised no
+  error in 9 runs. The test also takes the pod's controls before undocking a new character (helper `sitpod`) and makes
+  sure the guest left its pod before the knockout (once it was still at the controls). `life.sh`: 2 of 5 runs passed
+  before, 5 of 5 after. The first boarding keeps the first airlock (with the game's choice, the guest was never knocked
+  out in 4 runs: the scenario's walk and the guards' carrying start from that airlock).
+
+## Thrown items, traps, items leaving the ship (2026-11-02)
+
+- **A thrown item hitting a guard** (observed): a guest's hammer thrown past an unshielded sentry
+  (`InventoryItemImpactsObject` -> `SetDamageSignal`, self = the item) is a guest hit: sent to the host (two hits per
+  impact), whose sentry goes down; the guest's copy shows it down; the host's shown hammer hurts nobody. Thrown from
+  the airlock, the hammer struck a doorway and only distracted the guard (its bounce noise). Nothing needed changing.
+  Test `tools/thrownhit.sh` (9 checks; gear draw 1 for unshielded guards; mutation `nohits` 6 passed, 3 failed).
+- **A guest's trap** (observed): a Crash Trap armed by its own use (`Activate` -> `DropTrap`, `Armed` 0x551 = 1) is shown
+  on the host; under a sentry on the guest's copy its step goes off (`oCrashTrap_Step_0` -> `SetDamageSignal`) and the
+  hit reaches the host, whose sentry is crashed (`Crashed` 0x499 = 1; its state stays "Sentry"). The guest's copy kept
+  `Crashed` 0 (the guest drops its own signal): the guard messages now carry `Crashed` (the guest's copy takes the
+  host's value; mutation `noguardcrash`). The trap is moved under the sentry with a helper (`putitem`): the bot cannot
+  lead a guard over it. Test `tools/traps.sh` (8 checks; `nohits` 5 passed, 2 failed; `noguardcrash` 7 passed, 1 failed).
+- **An item leaving the ship** (observed): an item outside the hull is taken off the ship by the game (Parent = itself,
+  in space), then destroyed; the other copy's shown item stayed where it had lain. Now the dropping copy keeps watching
+  its items after they come to rest and, when one leaves the ship or is gone (not when someone picks it up), tells the
+  other copy, which destroys its shown one (`DestroyInstance()` run on the item: `DestroyMe` does not remove an item,
+  `DestroyInventoryItem` hung the host, `DestroyInstance` with an argument raised "should be run on self instead").
+  Test `tools/itemgone.sh` (6 checks; moved outside with `putitem`, as if thrown out of a window; mutation `noitemgone`
+  4 passed, 2 failed).
+
+## A pod destroyed; Trackers; the bot firing a gun (2026-11-02)
+
+- **A pod destroyed** (observed): a pod's `DamageSignal` (0x400, which a missile's blast sets: `ExplodeInSpace`) puts it in
+  its damaged state (`State` 3; the pod problem); its `DestroySignal` (0x89b) then destroys it (`PlayerShipDie`), the
+  player at its controls killed with it. Heat (0x684) set to 1000 did nothing, docked or flying. In co-op the other copy
+  saw only "left the ship" and then the new character: the player's state shows "Resting" for a frame or two before
+  "CharacterSelect", too short to be seen there. Now the owner's copy counts its pod destroyed with it at the controls
+  (`hook_pod_destroy`) in its player messages, and the other copy shows "<name>'s pod was destroyed". Test
+  `tools/podlost.sh` (7 checks; mutation `nopodnews` 6 passed, 1 failed).
+- **Trackers** (observed, after an alarm with reinforcements): three "Tracker" mercenaries (`MercType` 3) beamed in,
+  the same on both copies; their heat sensors never switched on (`PredatorHeatRadius` 0, `HeatSensorOn` 0,
+  `SecondsSinceSensorReboot` 0) and they searched like the other guards, whose state is the host's on the guest. Nothing
+  more to sync in this build. (The guest was knocked out and thrown out during that alarm with `unseen` on: the known
+  alarm-time case.)
+- **The bot firing a gun the game's way** (observed): a gun's own step fires when the gun is held and its `Activate` is
+  set (what a use press does), with rounds in the holder's `Ammo` array (`Ammo[AmmoType]`; a gun's own `Ammo` is
+  refilled from it each step: a gun given by the test had none). Helpers `ammo <type> <n>` and `useatguard` (the
+  player faces a guard: `image_angle` world-wise for aim zones, `MyImageAngle` ship-wise for the gun) replace
+  `firegun` for this. The guest's gunshot noise was not sent: the check looked for the gun's `MyOwner`, which a
+  player's gun does not have; it also takes `Owner` now. Observed: the noise sent, 5 to 10 of the host's guards alerted;
+  the gun's spread took a shot 23 units wide, so the test fires up to 4. Test `tools/gunfire.sh` (7 checks; mutation
+  `noalerts` 6 passed, 1 failed: reached at last; `nohits` 6 passed, 1 failed).
+
+## Loot boxes are each player's own; suite check 4d2 again (2026-11-02)
+
+- **The owner's choice:** an ordinary loot box gives each player its own random item, and the mission's box (Steal's)
+  goes to whoever opens it first. Now an ordinary box opens on the opener's copy only (nothing sent): its item is the
+  game's own draw there (`CreateRandomItemOfRarity`, by the ship's difficulty), and the other player can open the same
+  box on their copy for an item of their own. The mission's box (`global.Objective`) is synced as before: it opens on
+  every copy, the item the opener's. Keyed boxes need nothing more: each player opens their own copy with their own
+  keycards. Observed: the guest opened the box by the airlock (its item 101225), the host's copy stayed closed; the host
+  opened it (its own item 101237), the guest's unchanged; Steal still completed for both (8 checks). `mission.sh` check
+  2d (now 11 checks); mutation `sharedboxes` (the old sync for every box) 10 passed, 1 failed.
+- **Suite check 4d2** (a stray hit on the guest from a bullet of its own copy): failed again in 1 of 8 runs on
+  2026-11-02 (its logs overwritten). The guest drops a gun's shots when the gun's `MyOwner` is a shared guard; a
+  player's gun had only `Owner` (found with the gunfire test), so guns are now matched by `Owner` too, and a stray hit
+  now logs its bullet's owners. Then 16 of 16 runs passed (the stray hits logged were the suite's own grenades). Not a
+  proof (it failed now and then before: in 2 of 4 runs on one build, once on 2026-10-31, twice on 2026-11-02), but no
+  failure since.
+- **Left (cosmetic):** what a puppet holds (the other player's selected item in its hands).
+
+## What a puppet holds (2026-11-02)
+
+- Each player message carries the objects of the sender's primary and secondary items (`PrimaryItem` 0x2b8,
+  `SecondaryItem` 0x2b9; sent as object + 1, so a message's zeros before the first real one are not object 0: an
+  instance of object 0 made at the start hung the host). On the receiving copy, aboard the shared ship only, the puppet
+  gets a shown item of the same object: created there, added to the puppet's inventory with the game's
+  `AddToInventory` (the puppet's own pickup hook, which drops pickups by a puppet, is bypassed for it), and set as its
+  primary or secondary item directly. The game's `AssignAsPrimaryItem` / `AssignAsSecondaryItem` hung the game when
+  called for a puppet (and for the test's own `equip` helper), and `SelectInventoryItem` was undone by the game. Empty
+  hands are the puppet's own `Inventory[0]`. A shown item the game replaced is destroyed.
+- `held.sh` (8 checks): the guest equips a gun, then empty hands; the host's puppet holds the same each time and its
+  inventory grows by at most one item per hand; the other way round too. Mutation `noheld`: 4 of 8 failed.
+- One run on 2026-11-02 failed 4 of 8 (the puppet kept its own items), with stage-2 work in progress in the build; not
+  seen again (8 of 8 on 2026-11-03 02:19Z). Cause not found.
+
+## Up to 4 players (stage 2, 2026-11-02/03)
+
+- **Network:** the host keeps up to 3 guests' addresses (`MAX_GUESTS` 3) and sends to all of them; a guest sends to
+  the host only. Each player message carries the sender's slot (0 the host, 1-3 the guests), set by the host from the
+  address it came from, and a welcome message tells each guest its slot (again every 2 s: one lost would leave a guest
+  without one). The host relays each guest's player messages and its world events (items put down, grenades, bullets,
+  breaches, modules lost, taken guards, boxes) to the other guests. Hit messages carry the sender's and the target's
+  slots; a hit on a player's puppet is applied by that player only (it was applied by every guest that got it), and the
+  host relays one meant for another guest.
+- **One puppet per other player:** the 2-player code keeps the other player in globals (its puppet, the puppet's pod,
+  its latest message, small per-puppet state). That stays the first partner (the host's first guest; a guest's host).
+  Each further player gets a context with the same fields and its own puppet, an unused roster character made playable
+  with its own pod, when its first message arrives. When that puppet or its pod steps, or its news, held items or body
+  are handled, its context is swapped into the globals, the 2-player code runs unchanged, and it is swapped back.
+  Bugs found this way: a function's own static state (the puppet step's frame counter, the last known state of the
+  puppet for its knockout, the airlock its body was laid in) is per puppet too, or two puppets take turns overwriting
+  it (only one of two puppets found its way through the ship until the step counter moved into the context); a swap
+  back that looked the context up again left the globals swapped.
+- **Carrying:** a further guest carrying a guard is carried by its puppet on the host, as the first guest's is (mutation
+  `noextracarryguard`).
+- **Guards:** the host's guards pick the nearest up player aboard, extra puppets included (mutation `noextraguards`). A
+  guard sent to carry off an extra player's knocked-out body keeps that puppet as its target until it lays it down
+  (mutation `noextracarry`); the host throws it out of that airlock as it does the first guest's.
+- **Fields about the receiver:** a few fields of the host's message are about the guest that gets it (its body as the
+  host's guards treat it, its mission stats, how often the host's guards spotted it). With one guest, one message did.
+  Now each guest gets its own copy (mutation `samepacket`: one message for all, the first guest's body for everyone).
+  Stats: each guest gets its own count.
+- **Time over N players:** anyone pauses, everyone pauses; anyone slows, slow; fast-forward only when every player
+  asks (mutation `fastforany`). The pauser is sent as its slot + 1 (the 2-player values 1 host, 2 guest are the same),
+  and the banner names whoever paused on every copy.
+- **Banners:** "X was spotted" for every player on the host (by slot); a further guest is told "You were spotted".
+  Its departure, its mission ended, its pod lost: its news runs in its context and names it. The news code kept its
+  own memory in function statics (announced already, last pod-loss count, aboard frames ...) and "has been aboard"
+  was one global: with two other players these flipped between them every call (mutation `sharednews`, which shares
+  them again: 22 "pod destroyed" banners instead of 1, and two "left the ship"). Now per player, reset for every
+  player when a mission is accepted.
+- **Mission stats:** the host keeps a baseline of each further puppet's stats at the mission's start and sends each
+  guest its own count (mutation `noextrastats`).
+- **Ship flight:** the shared ship follows whichever other player is at its bridge (any slot: the host's message and
+  the relayed ones), not only the first partner (mutation `firstpilotonly`).
+- **Tests:** `nplay.sh` starts 3 or 4 copies (C and D are copies of B's test install, own prefixes) and connects them.
+  `three.sh` (13 checks): connect, dock, each copy shows both others where they are, hits land on the right player,
+  C's pause and the fast-forward rule. `four.sh` (10): the same with four copies. `threebody.sh` (10): the second
+  guest is spotted (banners), knocked out, carried off and thrown out on the host, and its own copy follows while the
+  first guest's does not. `threecarry.sh` (11): the second guest carries the knocked-out target of a Capture mission (on
+  the host its puppet carries the host's copy, and the first guest's copy is carried too), puts it in its pod, flies it
+  home and delivers it: all three missions complete. `threenews.sh` (8): the second guest leaves (both others told by
+  name, once), docks home (both told its mission completed); the first guest's pod is destroyed (the host and the
+  second guest told). `threeflight.sh` (8): the second guest flies a hijacked ship; the host's and the first guest's
+  copies follow. `threebody.sh` is 11 checks now (the second guest's mission stats).
+- **Final runs (2026-11-03, build 2ba30208):** `suite` 27/28, `flight` 8, `guestcapture` 9, `home` 13, `podlost` 7,
+  `fail` 10/11, `held` 8, `three` 13, `four` 10, `threebody` 11, `threenews` 8, `threeflight` 8, `threecarry` 11.
+  Two failures, both unexplained:
+  - Suite check 5 (a guest's hit on a guard reaches the host's guard: applied, but the guard kept patrolling) has
+    failed in 8 of about 73 suite runs since 2026-11-01, all without mutations, long before stage 2. Cause not looked
+    into yet.
+  - `fail.sh`'s check that the host's guards did not shoot the knocked-out guest (2 hits sent while it lay down)
+    failed once. That check passed in every earlier run without mutations, and in 4 reruns on the same build right
+    after. Its logs were overwritten by the next test, so the cause is unknown.
+
+## Steam networking (stage 3, 2026-11-03)
+
+- **The owner allowed using their Steam account** for lobbies and Valve's P2P relay; no second account is available.
+- **The game's `steam_api.dll`** (225 056 bytes, SHA-256 prefix af17df745250d181) is of the SDK with `SteamClient017`,
+  `SteamUser019`, `SteamUtils009`, and exports Valve's flat C API (`SteamAPI_ISteamNetworking_SendP2PPacket` ...).
+  Observed by disassembly: each flat function takes the interface first, then its arguments on the stack (cdecl); a
+  `CSteamID` or `SteamAPICall_t` is passed as a 64-bit value and returned in edx:eax. So plain C calls them. The flat
+  functions use the DLL's own SDK's method order, so interfaces are asked for by the DLL's versions
+  (`SteamUser019`, `SteamUtils009`; `SteamNetworking005`, `SteamMatchMaking009`, `SteamFriends015` are the same in the
+  game's exe, which was built with `SteamUser018`/`SteamUtils007`).
+- **No callbacks registered:** call results (CreateLobby, JoinLobby) are polled with `ISteamUtils::GetAPICallResult`
+  (`LobbyCreated_t` 513, 16 bytes; `LobbyEnter_t` 504, 24 bytes); the host accepts P2P sessions from its lobby's
+  members every half second (so nobody else's packets are read); a guest finds a friend's lobby with
+  `GetFriendGamePlayed` (the first friend playing this game in a lobby).
+- **One account, two copies (observed):** both copies run as the same Steam user. A lobby made by A can be "joined" by
+  B (response 1) but stays at one member. P2P packets sent to one's own Steam id are delivered, but only to the first
+  copy (A): B's packets to itself arrived at A, never at B. So with one account, Steam carries traffic one way, to A.
+- **Transport:** sends and receives go through one layer: UDP on localhost (the tests) or Steam P2P (unreliable up to
+  1200 bytes, reliable above). A player is its address or its Steam id. Test mode `steamup`: the guest sends everything
+  to the host over Steam (to its own id), plus a UDP hello now and then so the host can answer over UDP. The whole
+  28-check suite passed in that mode (the guest sent 6762 messages over Steam, the host read 6654); mutation
+  `nosteamrx` (the host ignores Steam): 15 passed, 13 failed. Derived, not checked: P2P to one's own id probably does
+  not go through Valve's relay, so this tests the API and the messages, not the internet path.
+- **Bandwidth:** list messages (guards, doors, jammers, bullets) were sent at their full array size (guards: 12 KB,
+  10 times a second); now up to their last entry. Measured aboard (2 copies, 38 guards): the host sent 94 KB/s per
+  guest before, 36 KB/s after (player messages 13 KB/s at 60 per second, guards 22 KB/s). A guest's jammer request
+  still went at full size at first, and the host dropped it (security scenario, 1 failed); fixed.
+- **Real play without test commands:** `coop_settings.txt` next to the game (`mode host` or `mode join`). Once the
+  player stands in the station, a roster character becomes the puppet and the copy hosts a friends-only lobby, or
+  looks for a friend's lobby every 10 s (banners say what happens). Missions the host accepts at the mission computer
+  are shared: `DrawAcceptButtonAt` calls `AcceptMission(id)` with the mission as self (decompiled); the hook shares
+  it instead (our own accept passes through). Tested with a helper that makes that call, not with a click. Mutation
+  `noautoshare` caught.
+- **Per-guest mission acknowledgements:** the first guest's acknowledgement stopped the resending for every guest. Now
+  the mission is resent to each guest until it has it, so a guest that joins late gets the mission being played
+  (`latejoin.sh`; mutation `firstack`: the late guest never gets it).
+- **Version check:** the host's welcome carries its mod build (a hash of the core's compile time); a guest with another
+  build sees a banner.
+- **Not tested (needs a second account):** the host's traffic to a guest over Steam, a friend finding and joining the
+  lobby, the internet path through Valve's relay. A playtest guide for the owner and a friend is in the mod repo
+  (`PLAYTEST.md`).
+
+## Bad networks, players leaving, and suite check 5 (2026-11-03)
+
+- **Chaos tests:** the hub's chaos relay (`tools/chaos`) sits between the guests and the host (UDP); the launchers
+  take `CHAOS=<profile>`. Results before the fixes below: suite 28/28 through `good_wifi` (103 packets dropped),
+  `bad_wifi`, `transatlantic` and `mobile_tether`; `three.sh` 13/13 through `bad_wifi`; through `hell` 27/28: a
+  guest's hit on a guard never arrived (applied 0).
+- **Events delivered once, for sure:** one-off events (hits, items put down, boxes, items taken, grenades, an escaped
+  target, a jammer destroyed) were sent three times unconfirmed, so a burst of loss could lose all three. Over Steam
+  they now go reliable; over UDP each is numbered, resent every 0.2 s until confirmed (10 s at most), and copies are
+  dropped by the receiver (a duplicated grenade would have shown twice: it had no check). Through `hell` the hit check
+  then passed; mutation `norely` (the old way) through `hell`: the target's escape was lost and the mission ended on
+  the host only.
+- **Two message ids collided:** the new event wrapper first took "HSR1", the reinforcements' id, and swallowed every
+  reinforcement message (`security.sh` through `bad_wifi`: the guest beamed in none of the host's); and the test-mode
+  hello had the hits' id "HSH1" (harmless: a hello is 4 bytes). Both moved; the core now logs a bug line if two message
+  kinds ever share an id.
+- **Spotted banners under loss:** a guest skipped a count it first saw above 1 (meant for joining late); having missed
+  the message with 1, it saw 2 and showed nothing (`hell`). Now the host's first message sets the start.
+- **Players leaving:** nothing handled it: a player who quit or crashed stood frozen, a pause it left on stayed on for
+  everyone, and after a restart its messages (counted from 1 again) were ignored as old. Now a player not heard for
+  10 s is gone: its puppet is hidden (no guard's target), its time requests no longer count, and the others are told
+  ("<name> left the game", "Co-op: lost the connection to the host"). Heard again, it is back: its restarted count is
+  taken, and on the host a guest joining from a new address takes a gone guest's place (its slot, its puppet) and gets
+  the mission being played. `leave.sh` (8 checks, 3 copies): C pauses and is killed, A and B run on, are told, hide
+  it; C restarts, joins, gets its old slot and the mission (same ship), A and B are told it is back; the host is
+  killed, B is told, hides it and runs on. Mutations `nogone` (6 failed) and `norejoin` (2 failed). (In that test the
+  loader's heartbeat file lagged for B after the host's copy was killed, while the game ran at its normal rate: the
+  check reads the core's frame count instead.)
+- **Suite check 5 (a guest's hit on a guard; fails about 1 run in 9): not explained.** The guard carries a shield, and
+  the attacker of the test's hit is the guest's puppet, parked in its pod about 2000 units away, so the guard's facing
+  looked like the cause. Turned to four directions on fresh ships (helper instvar on MyImageAngle): from 0, 90 and 180
+  degrees the hit was applied and nothing happened, from 270 the guard panicked, and with its shield hacked from 0 it
+  went down. But with the shield hacked before the hit in the suite itself, check 5 failed again (2026-11-03 15:23Z:
+  hacked 1 a second before, the hit applied, the guard patrolled on). Three failures in four turned tries is far more
+  than the suite's rate, so turning the guard by hand probably caused failures of its own. Observed in that failure:
+  the guard stood at (3456, 3456) turning fast (MyImageAngle 328, 622, 677 within 0.75 s) when hit, and walked on 2 s
+  later. Unknown: whether a guard turning at a patrol point ignores a damage signal. The check is unchanged; a
+  failing run's logs are now kept (`local/qa/fail-*`).
