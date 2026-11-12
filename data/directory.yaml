@@ -11013,6 +11013,7 @@
   - https://store.steampowered.com/app/214730/
   - https://github.com/murgesku/MatrixGame
   checked: '2026-11-07'
+
 - game: Star Fox 64
   year: 1997
   engine: N64 decompilation port (Starship, libultraship)
@@ -11055,4 +11056,36 @@
   - https://github.com/Clodmony/starship-coop/blob/coop/docs/coop/decisions/0014-the-session-survives.md
   - https://github.com/Clodmony/starship-coop/pull/265
   checked: '2026-11-11'
+  made_with_coop_anything: true
+- game: Metro 2033 Redux
+  year: 2014
+  engine: 4A Engine
+  project: metro2033redux-coop
+  url: https://github.com/realblastex/metro2033redux-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 (two copies on one PC)
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Prototype for the Steam Next-Gen build (app 286690), not playable, no release, MIT. Revives the engine's own
+    leftover dev multiplayer (ENet on UDP 1000, console server/connect) instead of new netcode. Two copies on one PC - the
+    host turns a running story level into a server, the client joins and loads the host's quick save, the host clones
+    the player through the engine's player spawn event for the joiner. Both players walk their own Artyom and see each
+    other move; shots and damage between players work on an armed level. AI, doors and story sync untested; loopback
+    only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8 shared-state
+    facts (PASS on two levels). See games/metro-2033-redux.
+  sources:
+  - https://github.com/realblastex/metro2033redux-coop
+  - https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md
+  - https://github.com/tsnest/MetroDeveloper
+  checked: '2026-11-12'
   made_with_coop_anything: true
