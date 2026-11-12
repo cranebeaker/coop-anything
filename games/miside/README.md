@@ -4,13 +4,15 @@
 |---|---|
 | Engine | Unity 2021.3.35f1, IL2CPP, Windows x64 (BepInEx 6.0.0-be.790 Unity.IL2CPP, HarmonyX, Il2CppInterop) |
 | Versions tested | Steam (app 2527500), buildid 19029065. `MiSideFull.exe` SHA-256 `562723c950c2be95ecbdc516530aee56b97837e2ac6610b8b5bce394e23022c0` |
-| Projects | MiSide Together ([miside-coop](https://github.com/multiplayereverything/miside-coop), [v0.3.5](https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5) pre-release, [v0.3.2](https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2) full release); directory entry "MiSide Together" |
+| Projects | MiSide Together ([miside-coop](https://github.com/multiplayereverything/miside-coop), [v0.3.21](https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.21) pre-release, [v0.3.2](https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2) full release); directory entry "MiSide Together" |
 | QA level | automated |
-| Last updated | 2026-10-30 |
+| Last updated | 2026-11-12 |
 
 ## Where things stand
 
-MiSide Together lets 2 to 4 players play MiSide's story together. The host leads. Everyone loads the same chapter, sees the same dialogue, cutscenes and Mita, and sees the other players as the main character with their real pose. It is an alpha. Every chapter has been driven by automated tests with hidden game copies on one PC, and all of Scene 1 has been played through by two copies into Scene 2. The computers in Scenes 13 to 15 and the Scene 1 and Scene 14 phones are shared. The mod's author has played it with two friends, three players together over Steam on separate PCs with their own accounts. They reported 19 problems, and 0.3.5 fixes most of them.
+MiSide Together lets 2 to 4 players play MiSide's story together. The host leads. Everyone loads the same chapter, sees the same dialogue, cutscenes and Mita, and sees the other players as the main character with their real pose. It is an alpha. Every chapter has been driven by automated tests with hidden game copies on one PC, and all of Scene 1 has been played through by two copies into Scene 2. The computers in Scenes 13 to 15 and the Scene 1 and Scene 14 phones are shared. The mod's author has played it with two friends, three players together over Steam on separate PCs with their own accounts. They reported 19 problems, and 0.3.5 fixed most of them.
+
+Since 0.3.19 the story in Scenes 1 to 17 runs on an ordered log kept by the host. A press, a walk-in trigger or the end of a player animation on any PC is a request; the host orders it and every PC applies it once. The player who caused it is that moment's Main Character: their body performs the animation and the others watch. The current build is the 0.3.21 pre-release (protocol 17); 0.3.16 to 0.3.21 came from two more sessions with friends, on 2026-11-08 and 2026-11-10.
 
 ## Existing work
 
@@ -116,7 +118,9 @@ A one-player tour (`inventory`) loads every chapter. It lists each chapter's gam
   - `MT-ANIM`: how late each NPC animation started on clients.
 - Lab screenshots (`LabShot`, converted by `tools/shots_to_png.py`) let a tour compare what each player sees.
 - **v0.3.5 (2026-10-28):** the suite has 34 tours with 2 to 4 players, including host migration, a 120 ms lag run, the Steam stand-in (`steam`: 60 of 60 messages in order with 68 failed sends), the shared computers (`core`, `quest`, `mobile`), all of Scene 1 (`scene1`, `scene1end`) and Scene 3's opening (`scene3`). Last full run: 33 of 34; `scene19` stuck on the first splash screen and passed on its own rerun. `scripts\interactions-all.ps1` presses every interaction in every chapter with 2 players: 18 of 18 chapters pass.
+- **v0.3.21 (2026-11-10):** the suite has 50 tours, and Scenes 2 to 17 and 20 each also have a two-player story bot run (`scene2` to `scene20`) in which both copies press, answer prompts and walk into triggers, and the client must end with the host's quests, rooms and lighting. New tours since 0.3.5 cover the story log (`storylog`, `pressrace`), a short connection drop (`blip`), a minigame owner leaving (`ownerleaves`), the saves guard (`savesguard`) and input taken the way a player presses (`inputhook`). Last full run before 0.3.19: 49 of 50, the failure a test-side error. A useful method: run the same bot alone and with two players and compare the action count, where it stops and the pictures; a difference is a sync bug, the same stop is the bot's limit.
 - **Story autopilot (after v0.3.5):** `scripts\storypilot-all.ps1` has the host play each chapter as far as simple actions go (answer choices, press armed objects, look at and walk into story triggers) while the client must hold the host's quests, checked every 30 s. First run: 17 of 18 chapters stayed together; Scene 1 did not, which led to the "own press" fix above, after which Scene 1 stays together too. In 9 chapters the autopilot gets only 0 to 2 actions in (they need chases, minigames or aiming), so those chapters prove little yet.
+- **Hands-on playtests (2026-11-08, 2026-11-10):** three players over Steam on 0.3.15, then sessions on 0.3.21. Each report was reproduced in the lab as a failing check before its fix; the ones that could not be reproduced were reported as such, with extra logging added for the next session.
 - **Hands-on playtest (2026-10-28):** the mod's author and two friends, three players on separate PCs and Steam accounts, joined over Steam. Their 19 reports (with screenshots of errors) became the 0.3.5 work; most were reproduced in the lab first and given a tour.
 - Not covered: four real players, and the dialogue-choice and NavMesh guards added for playtest errors that the lab could not reproduce.
 
@@ -132,6 +136,9 @@ Everyone needs the same game build and mod build.
 ## Known issues
 
 - The Scene 13 and 15 computers and the Scene 14 PC game are run by one player; the others watch through their own eyes.
+- Scenes 18 to 21 still use the older direct relay, not the story log.
+- From Scene 7 on, the second half of most chapters has not been played through by two players in the lab.
+- Scene 20: two players pressing opposite turns at the same corner at the same moment can get different corridors until one dies.
 - In the Scene 1 phone app's mini-games, the result and money are the host's, but each cut or move can look a little different on the others' screens.
 - The handheld Tetris is each player's own.
 - Scene 19 (Glasses) cannot be started from the chapter menu, even in single player. Reach it through the story.
@@ -139,6 +146,7 @@ Everyone needs the same game build and mod build.
 
 ## Next steps
 
-- Play 0.3.5 with friends again over Steam to confirm the playtest fixes, and to check the dialogue-choice and NavMesh guards.
+- Play 0.3.21 with friends over Steam to confirm the fixes from the last two sessions.
+- Move Scenes 18 to 21 onto the story log.
 - Teach the story autopilot the actions it stops at (chases, minigames, aiming) so it plays further into Scenes 9 to 11, 14 to 16 and 20.
 - Play the story through in co-op and write it up for `verified-playthrough`.
