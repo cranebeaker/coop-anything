@@ -11106,3 +11106,32 @@
   - https://github.com/tsnest/MetroDeveloper
   checked: '2026-11-12'
   made_with_coop_anything: true
+- game: Abo Khashem
+  year: 2018
+  engine: Unity
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Comedic open-world RPG by Moving Dimensions (Saudi Arabia), single-player only on Steam, PS4 and Xbox One.
+    SteamDB detects Unity. No co-op or multiplayer mod found. Mono vs IL2CPP not yet checked. Notes in games/abo-khashem.
+  sources:
+  - https://store.steampowered.com/app/662840
+  - https://steamdb.info/app/662840
+  checked: '2026-11-12'
+  searched:
+  - 'This repo: DIRECTORY.md, games/, issues and PRs (0 hits), 2026-11-12'
+  - 'WebSearch (English and Arabic): Abo Khashem co-op, multiplayer, online mod, nexusmods, bepinex, 2026-11-12'
+  - 'GitHub repository search "abo khashem": one empty repo (README title only), 2026-11-12'
+  - 'GitHub code search (khashem with multiplayer, bepinex, harmony): no mod code, 2026-11-12'
+  - 'Steam community: 20 discussion topics, forum search multiplayer/coop 0 results, no guides, 2026-11-12'
+  - 'ModDB mods and files tabs (0 mods, 1 installer file), Nexus search (no game page), 2026-11-12'
+  - 'Official site and archived presskit: no Discord, modding or multiplayer mention, 2026-11-12'
+  - 'Not checked: Reddit (blocked for my tools), SteamDB patch notes (bot check)'
