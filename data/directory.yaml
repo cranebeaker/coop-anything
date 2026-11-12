@@ -11182,3 +11182,26 @@
   searched:
   - 'WebSearch: Outlast 2 co-op multiplayer mod on github.com, nexusmods.com, moddb.com, steamcommunity.com, reddit.com'
   - 'Nexus Mods Outlast 2 catalog: checked all mods (O2menu trainer found; no co-op mods)'
+- game: Kill The Crows
+  year: 2023
+  engine: Unity 2022.1.5 (Mono)
+  project: KTC Co-op
+  url: https://github.com/cranebeaker/coop-anything/tree/main/games/kill-the-crows
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: "Build from zero, 2026-11-08..09. BepInEx 5 + HarmonyX host-authoritative LAN mod (UDP 7777): host simulates waves and enemy AI (retargeted per-frame to the nearest of the two players), client renders proxies and sims its own player; client shots are rebuilt as host-side bullets, client damage routed from host physics via a hurtbox ghost. Shared kill counter drives boss pacing; scene transitions, showdown time-scale and game-over synced. Verified with two real clients on one machine: 3-minute bot runs, 107 shared kills matching 107 client-side proxy deaths, zero exceptions and zero disconnects. Steam lobby path implemented (F6/F7, friends-only, version-filtered) but boot-tested only - Steam blocks one-account self-sessions; LAN is the fully tested path. Mod source in games/kill-the-crows/Mod. Write-up in games/kill-the-crows."
+  sources:
+  - https://store.steampowered.com/app/2441270/Kill_The_Crows/
+  checked: '2026-11-09'

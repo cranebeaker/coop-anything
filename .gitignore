@@ -2,6 +2,9 @@
 __pycache__/
 build/
 coop-bots-out/
+Mod/bin/
+Mod/obj/
+local/
 # Root-level build artifacts from games/outlast-2/src/build.bat and the test
 # builds (cl writes .obj into the current directory, which is the repo root).
 /dinput8proxy.obj
