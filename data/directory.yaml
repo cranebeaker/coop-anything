@@ -11022,13 +11022,14 @@
   networking: direct-ip
   open_source: 'yes'
   last_activity: 2026-11
-  qa: none
+  qa: automated
   notes: Prototype for the Steam Next-Gen build (app 286690), not playable, no release, MIT. Revives the engine's own
     leftover dev multiplayer (ENet on UDP 1000, console server/connect) instead of new netcode. Two copies on one PC - the
     host turns a running story level into a server, the client joins and loads the host's quick save, the host clones
     the player through the engine's player spawn event for the joiner. Both players walk their own Artyom and see each
-    other move. Combat, AI, doors and story sync untested; loopback only. Tested with scripted bot runs (fake XInput pad,
-    console command lists, log checks), no automated suite. See games/metro-2033-redux.
+    other move; shots and damage between players work on an armed level. AI, doors and story sync untested; loopback
+    only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8 shared-state
+    facts (PASS on two levels). See games/metro-2033-redux.
   sources:
   - https://github.com/realblastex/metro2033redux-coop
   - https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md

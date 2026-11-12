@@ -55,10 +55,13 @@ untested.
 - Two copies of the game on one PC, driven by config: console commands, a fake XInput pad and waits on engine log
   lines. Results are read from heartbeat lines in each copy's log. Commands are in the project README
   ("Run a two-instance test on one PC").
-- Last run 2026-11-12 10:13: both copies alive for the whole run (~2 min of co-op). The host's pad moved slot 0 from
-  x=-7.3 to -3.5; the client saw it. The client got body 0x10B, moved it (x -7.3 to -1.4, then a strafe), and the host
-  saw slot 1 follow. Host and client screenshots each show the other player's Artyom. There are no pass/fail
-  assertions yet.
+- Automated smoke test: `scripts/smoke_test.ps1` in the project repo starts both copies, lets the host and the
+  client each move, and checks 8 facts from the logs: both alive, no crash event, body spawned, slot 1 linked on both
+  sides, client controls its body, host movement seen by the client, slot 0 and slot 1 positions equal on both sides.
+  Runs 2026-11-12 15:2x: Hunter `RESULT: PASS (8 checks)`, `l19_defence` `RESULT: PASS (8 checks)`; a deliberately
+  too-short run gives `RESULT: FAIL (6 of 8)`.
+- Manual bot checks with screenshots: each side sees the other's Artyom; the host sees the client's tracer; the host
+  shot the client's body to health -1.0 on both sides.
 
 ## How to play
 
