@@ -81,7 +81,8 @@ Not playable yet. Build from source per the project README; no release.
   host does not; they are inactive on both sides.
 - Entities the host spawns through the engine's spawn event appear on both sides with the same id, but a spawned
   monster stays asleep (how to wake it is unknown). Doors are not networked.
-- The client's cloned body has no knife (the knife is not a child of `player`).
+- The client's cloned body has no knife (the knife is not a child of `player`). Its ammo items are cloned without a
+  parent; the mod re-attaches them to the new body with the engine's attach call.
 - Damage, enemy AI, doors, pickups and story events are not checked for sync. In `l19_defence` the monsters stay
   dormant for the first minutes. No level transitions, no save/load.
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
