@@ -48,6 +48,7 @@ untested.
 | host's player not networked | story-level actor never linked to net slot 0 | link it by hand (`@link_actor`) | client sees slot 0 move with the host |
 | joining player has no body | a story level has one `player`; nothing spawns one per net slot | host clones `player` through the engine's own player spawn event (RVA 0x6A9A80 id list + RVA 0x6BA940 with is_player) 15 s after a join | slot 1 linked on both sides; client walks its own body; each side sees the other's Artyom |
 | 2.5 min to start a test | 55 s unskippable intro, fixed waits | load a post-intro save, wait on engine log lines | both in-game in ~30 s |
+| a killed joiner stays dead | single-player death; the engine's own slot reset makes the client reload the level, which crashed | host spawns a new body onto the still-linked slot 5 s after death; guards for two crashes on a cloned body (no ammo items, removal timer on a freed corpse) | client gets body 2 and plays on (smoke `-Respawn` PASS) |
 | crashes on a second level (`l19_defence`): host at net start, client during load and when it fires | game code assumes one single player always exists (null controlled entity; ammo HUD index left unset when the cloned body has no ammo item) | link slot 0 in the net-start frame; three small guards (skip / disable the player-dependent part / zero the index) | both players armed in l19, client fires, both alive ~2.5 min |
 
 ## QA
@@ -59,7 +60,8 @@ untested.
   client each move, and checks 8 facts from the logs: both alive, no crash event, body spawned, slot 1 linked on both
   sides, client controls its body, host movement seen by the client, slot 0 and slot 1 positions equal on both sides.
   Runs 2026-11-12 15:2x: Hunter `RESULT: PASS (8 checks)`, `l19_defence` `RESULT: PASS (8 checks)`; a deliberately
-  too-short run gives `RESULT: FAIL (6 of 8)`.
+  too-short run gives `RESULT: FAIL (6 of 8)`. `-Respawn` adds a kill of the client and checks the automatic
+  respawn: `l19_defence -Respawn` `RESULT: PASS (10 checks)`.
 - Manual bot checks with screenshots: each side sees the other's Artyom; the host sees the client's tracer; the host
   shot the client's body to health -1.0 on both sides.
 
@@ -72,7 +74,8 @@ Not playable yet. Build from source per the project README; no release.
 - Both bodies spawn on the same spot; the join step moves the client 1.2 m in front of the host (otherwise the
   client sees the host's gun inside its own view).
 - The other player's weapon is drawn wrong (the host sees the client holding a machete while it holds an AK).
-  Death and respawn of a player are not handled.
+- A dead joiner gets a new body 5 s later, 1.2 m in front of the host (a wall there would block it). The corpse
+  stays on the host but vanishes on the client.
 - The engine only networks entities in its net list (players, human NPCs and active monsters in Hunter), by distance
   priority. A far NPC did not update on the client within 15 s. The client also lists 9 dormant intro `nosalis` the
   host does not; they are inactive on both sides.
