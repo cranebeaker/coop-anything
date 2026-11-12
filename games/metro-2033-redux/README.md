@@ -11,7 +11,8 @@
 ## Where things stand
 
 Nobody can play the story together yet. A prototype runs two copies of the game on one PC. Each player has their own
-Artyom: both walk around the first level, and each sees the other move. Combat, AI and story sync are unchecked.
+Artyom: both walk around the first level, and each sees the other move. NPCs near the players follow the host.
+Combat, monsters, doors and story sync are unchecked.
 
 ## Existing work
 
@@ -63,11 +64,14 @@ Not playable yet. Build from source per the project README; no release.
 ## Known issues
 
 - Both bodies spawn on the same spot; the client steps away with `@teleport`.
-- Combat, AI, doors, pickups and story events are not checked for sync. No level transitions, no save/load.
+- The engine only networks entities in its net list (players and human NPCs in Hunter), by distance priority. A far
+  NPC did not update on the client within 15 s. The client lists 9 `nosalis` monsters the host does not, so monsters
+  likely desync.
+- Combat, doors, pickups and story events are not checked for sync. No level transitions, no save/load.
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
 - Diagnostics use fixed RVAs of one `metro.exe` build.
 
 ## Next steps
 
-Check combat (damage between players, NPCs targeting the client), doors and story scripts with two bodies; then
-level transitions and LAN play. Details: FINDINGS section 5.
+Find why the host doesn't network the monsters, then test a fight; check doors and story scripts with two bodies;
+then level transitions and LAN play. Details: FINDINGS section 5.
