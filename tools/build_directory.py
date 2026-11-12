@@ -32,6 +32,24 @@ QA_BADGE = {
 STATUS_ORDER = ["playable", "official", "partial", "alpha", "prototype", "abandoned", "unknown", "none"]
 
 
+BOOL_FIELDS = {"up_for_adoption"}  # real booleans in the schema, validated as such
+
+
+def normalize_yaml(value):
+    """Keep YAML 1.1 yes/no and true/false from leaking into the catalogue."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    if isinstance(value, list):
+        return [normalize_yaml(v) for v in value]
+    if isinstance(value, dict):
+        return {k: v if k in BOOL_FIELDS else normalize_yaml(v) for k, v in value.items()}
+    return value
+
+
+def load_entries(path=DATA):
+    return normalize_yaml(yaml.safe_load(path.read_text(encoding="utf-8"))) or []
+
+
 def errors_for(i, e):
     errs = []
     where = f"entry {i} ({e.get('game', '?')} / {e.get('project', '?')})"
@@ -144,7 +162,7 @@ def render(entries):
 
 
 def main():
-    entries = yaml.safe_load(DATA.read_text(encoding="utf-8")) or []
+    entries = load_entries()
     errs = [m for i, e in enumerate(entries) for m in errors_for(i, e)]
     seen = Counter((str(e.get("game")).lower(), str(e.get("project")).lower()) for e in entries)
     errs += [f"duplicate entry: {g} / {p}" for (g, p), n in seen.items() if n > 1]
