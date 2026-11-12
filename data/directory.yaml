@@ -11003,3 +11003,28 @@
   - https://store.steampowered.com/app/214730/
   - https://github.com/murgesku/MatrixGame
   checked: '2026-11-07'
+- game: Abo Khashem
+  year: 2018
+  engine: Unity
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: Comedic open-world RPG by Moving Dimensions (Saudi Arabia), single-player only on Steam, PS4 and Xbox One.
+    SteamDB detects Unity. No co-op or multiplayer mod found. Mono vs IL2CPP not yet checked. Notes in games/abo-khashem.
+  sources:
+  - https://store.steampowered.com/app/662840
+  - https://steamdb.info/app/662840
+  checked: '2026-11-12'
+  searched:
+  - 'This repo: DIRECTORY.md, games/, issues and PRs (0 hits), 2026-11-12'
+  - 'WebSearch (English and Arabic): Abo Khashem co-op, multiplayer, online mod, nexusmods, bepinex, 2026-11-12'
+  - 'GitHub repository search "abo khashem": one empty repo (README title only), 2026-11-12'
+  - 'Not checked: Steam community discussions, Reddit, archive.org, developer Discord'
