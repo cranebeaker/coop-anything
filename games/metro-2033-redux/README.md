@@ -11,8 +11,8 @@
 ## Where things stand
 
 Nobody can play the story together yet. A prototype runs two copies of the game on one PC. Each player has their own
-Artyom: both walk around the first level, and each sees the other move. NPCs near the players follow the host.
-Combat, monsters, doors and story sync are unchecked.
+Artyom: both walk around the first level, and each sees the other move. NPCs near the players and an active monster
+follow the host. Combat, doors and story sync are untested.
 
 ## Existing work
 
@@ -64,14 +64,18 @@ Not playable yet. Build from source per the project README; no release.
 ## Known issues
 
 - Both bodies spawn on the same spot; the client steps away with `@teleport`.
-- The engine only networks entities in its net list (players and human NPCs in Hunter), by distance priority. A far
-  NPC did not update on the client within 15 s. The client lists 9 `nosalis` monsters the host does not, so monsters
-  likely desync.
-- Combat, doors, pickups and story events are not checked for sync. No level transitions, no save/load.
+- The engine only networks entities in its net list (players, human NPCs and active monsters in Hunter), by distance
+  priority. A far NPC did not update on the client within 15 s. The client also lists 9 dormant intro `nosalis` the
+  host does not; they are inactive on both sides.
+- Entities the host spawns through the engine's spawn event appear on both sides with the same id, but a spawned
+  monster stays asleep (how to wake it is unknown). Doors are not networked.
+- The client's cloned body has no knife (the knife is not a child of `player`).
+- Combat, doors, pickups and story events are not checked for sync. Combat needs story progress: weapons are holstered
+  at the start of Hunter. No level transitions, no save/load.
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
 - Diagnostics use fixed RVAs of one `metro.exe` build.
 
 ## Next steps
 
-Find why the host doesn't network the monsters, then test a fight; check doors and story scripts with two bodies;
-then level transitions and LAN play. Details: FINDINGS section 5.
+Get a test save at a fight (or find how scripts wake spawned monsters) and test combat; aim the bot at a door and test
+door use with two bodies; give the client a knife; then level transitions and LAN play. Details: FINDINGS 5.4.
