@@ -7198,44 +7198,42 @@
 - game: Far Cry 2
   year: 2008
   engine: Dunia (CryEngine 1 derivative)
-  project: fc2-coop-probe (position puppet, research prototype)
-  url: https://github.com/MortyRei/fc2-coop-probe
+  project: 'fc2-coop-probe (co-op prototype: avatar, hit sync, host-run NPCs)'
+  url: https://github.com/HitchLangley/fc2-coop-probe
   other_urls:
+  - https://github.com/MortyRei/fc2-coop-probe
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   kind: mod
   status: prototype
   coop_scope:
-    players_visible: partial
+    players_visible: 'yes'
     story: 'no'
-    enemies: 'no'
-    world_state: 'no'
+    enemies: partial
+    world_state: partial
     items: 'no'
   players: '2 (two PCs over Steam, or two copies on one PC)'
   networking: steam-relay
   open_source: 'yes'
-  last_activity: '2026-10'
+  last_activity: '2026-11'
   qa: automated
   notes: >-
-    No public Far Cry 2 co-op campaign project exists (searched 2026-10-19). Research prototype for Steam 1.03: a
-    dinput8.dll proxy runs a Lua 4.0 channel and native commands inside the game, finds the player's Havok body by
-    class, and exchanges position and heading over its own UDP socket; each copy spawns an invincible avatar of the
-    peer, moves and turns it. A relay (in the probe's open PRs) carries this over Steam (Spacewar lobby, no IPs or
-    port forwarding): one manual run between two PCs on different networks on 2026-10-25 kept a 16/s link for ~7
-    minutes with 0 dropped and the avatar followed the host's walk. Players see each other only as a sliding,
-    idle-pose avatar: no animation, weapons, health, mission or world sync. Stock multiplayer cannot carry the
-    campaign (Ubisoft services closed 2021-06-01; -join waits on gconnect.ubi.com). QA covers only the position
-    puppet: a script (tests/two_copy_walk.ps1, in MortyRei/fc2-coop-probe#1-#3, not merged) drives two copies on one
-    PC and checks positions and heading (20/20, 22/22 through relays; it fails on the probe before its fixes).
-    Probe code is MIT, in its own repo; write-up and dated notes in games/far-cry-2.
+    Maintained by HitchLangley; started from MortyRei/fc2-coop-probe (initial import 2026-10-19, MIT). A
+    dinput8.dll proxy for Steam 1.03: the joiner loads the host's save and connects over a Steam relay (friend
+    lobby, Join Game, Story Mode > Cooperative menu row). The other player is an animated avatar with weapons,
+    shots, hit sync, doors, grenades, map and vehicle seats. The host runs all NPCs; the joiner shows them as
+    puppets (movement, idle actions, smart terrain, mounted guns). An off-by-default experiment gives the host's
+    avatar an AI component so that host NPCs shoot the joiner; on two copies on one PC their hits took the
+    joiner's health. Open: puppets' shots not visible on the joiner, missions and most world state not synced,
+    the latest work not yet tested on two PCs. QA: tests/two_copy_walk.ps1 drives two copies and checks
+    position and heading only; the rest was checked by hand on two copies.
   sources:
+  - https://github.com/HitchLangley/fc2-coop-probe
   - https://github.com/MortyRei/fc2-coop-probe
-  - https://github.com/MortyRei/fc2-coop-probe/pull/1
-  - https://github.com/MortyRei/fc2-coop-probe/pull/3
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
-  checked: '2026-10-25'
+  checked: '2026-11-12'
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
