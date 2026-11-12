@@ -8873,7 +8873,7 @@
   project: MiSide Together
   url: https://github.com/multiplayereverything/miside-coop
   other_urls:
-  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.21
   - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.2
   - https://github.com/cranebeaker/coop-anything/tree/main/games/miside
   kind: mod
@@ -8887,28 +8887,31 @@
   players: '2-4'
   networking: steam-relay
   open_source: partial
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: BepInEx 6 (be.790, Unity.IL2CPP) plugin for the Steam build. The host leads the story and clients follow;
-    story events (presses, triggers, dialogue choices, keypads) are relayed rather than state, and the host runs
-    every cutscene on its own clock. Players see each other as the main character with the full 68-bone pose.
-    Interactions that put an item in the hand are done by the presser only; the rest play the same animation on
-    every player's own character. Mita and NPCs are host-driven; chasers hunt each player locally, and a death
-    restarts everyone at the checkpoint. Shared key inventory, seeded randomness, room objects, minigame end events,
-    the Scene 18 visual novel; host migration; joins wait for the next chapter. The Scene 13/15 core computer and
-    the Scene 14 PC game are run by one operator and replayed on every copy; the Scene 14 phone character and the
-    Scene 1 phone app (dialogue, name, days, shop, cooking result, money) follow their holder or the host, and the
-    phone shows in the holder's hand for the others. The handheld Tetris is each player's own. Steam P2P through
-    the game's own steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP 27030. v0.3.5
-    pre-release (v0.3.2 is the last full release). The lab suite drives 2-4 game copies on one PC (34 tours,
-    including all of Scene 1 played to Scene 2, plus an every-chapter interaction run, 18 of 18 chapters). The
-    author has played it with two friends (three players over Steam on separate PCs and accounts); their 19
-    reports fed the 0.3.5 fixes. Source is public with no licence file yet.
+  notes: BepInEx 6 (be.790, Unity.IL2CPP) plugin for the Steam build. Since 0.3.19 the story runs on a host-kept
+    ordered log in Scenes 1-17 - a press, a walk-in trigger or the end of a player animation on any PC is a request,
+    the host orders it and every PC applies it once, and the player who caused it is that moment's Main Character
+    (their body performs it, the others watch). Scenes 18-21 still relay events directly. Players see each other as
+    the main character with the full 68-bone pose. Mita and NPCs are host-driven and look at the same player on
+    every PC; chasers hunt each player locally, and a death restarts everyone at the checkpoint. Shared key
+    inventory, seeded randomness (including Scene 20's escape corridor), room objects, the Scene 18 visual novel.
+    Minigames that read the keyboard themselves (Scene 4's console and card table) run on the Main Character's PC
+    and are mirrored to the others' screens; the Scene 13/15 core computer, the Scene 14 phone character and the
+    Scene 1 phone app follow one operator. A short connection drop reconnects to the same host, a lost host
+    migrates, joins wait for the next chapter, and a friend's saves are backed up before they are mirrored. F5 has
+    a debug page (each player's chapter, story position and ping, skip a stuck step, save a bug report on every
+    PC). Steam P2P through the game's own steam_api64 (friend lobbies, Valve relay), LAN discovery or direct TCP
+    27030. v0.3.21 pre-release, protocol 17 (v0.3.2 is the last full release). The lab suite drives 2-4 game
+    copies on one PC (50 tours plus a two-player story bot run for most chapters; 49 of 50 on the build before
+    0.3.19, the failure a test-side error). The author plays it with friends over Steam on separate PCs and
+    accounts; reports from the 2026-11-08 and 2026-11-10 sessions fed 0.3.16-0.3.21. Source is public with no
+    licence file yet.
   sources:
   - https://github.com/multiplayereverything/miside-coop
   - https://github.com/multiplayereverything/miside-coop/blob/main/docs/SYNC.md
-  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.5
-  checked: '2026-10-30'
+  - https://github.com/multiplayereverything/miside-coop/releases/tag/v0.3.21
+  checked: '2026-11-12'
   made_with_coop_anything: true
 - game: "Spooky's Jump Scare Mansion: HD Renovation"
   year: 2017
