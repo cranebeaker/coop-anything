@@ -50,6 +50,15 @@ this hub.
 | [REA](https://github.com/morluto/rea) | One MCP over Ghidra, IDA and Hopper plus workflow instructions for many agents | `npx rea-agents setup` edits your agents' config: let the owner run it and restart the agent |
 | Script extenders (xNVSE, SKSE, F4SE) | A supported way to hook Bethesda engines from a DLL | Write a plugin instead of patching the exe |
 
+## Finding who writes a field
+
+A write watch on one thread misses everything a game does on its worker threads. In [Shadow of War](../games/shadow-of-war/NOTES.md) the per-thread trace saw no write to
+an AI table's count or list for minutes while both changed; a watch armed on every thread (debug registers set through
+`SetThreadContext` on each thread, a vectored handler that records the writer's call stack, at most 4 addresses) caught the
+insert and the delete paths in seconds. Two traps: a field written every frame fills a small hit buffer before the interesting
+write comes (watch the rare one), and in a list watch the links of the entries in the middle, not only the head, because
+entries can be replaced in place.
+
 ## Reading and driving live state from inside the game
 
 When there are no symbols and no script extender, a small proxy DLL in a test copy gives

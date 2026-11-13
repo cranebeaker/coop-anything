@@ -3608,3 +3608,1671 @@ smoothing lagged the free-run start.
   the promotions it applied); a captain's looks, name and level on the client (the proxy is a generic orc); captains' own
   fights and duels away from both players (they are events of the host's simulation, so they are sent, but not watched).
 - Two PCs, as before.
+
+## Session 2026-11-01 bw: soak test of the Nemesis sharing, and what a captain is made of
+
+### Observations
+
+- **Soak (host and client copy on one PC, same save, 25 minutes, `tools/soak_nemesis.py`):** the host's player was moved
+  between the captains' spot and the start every 40 s and both players were kept at full health; every 10 s both probes
+  answered, both games stayed up, the client's counters ended at `nemesis_got=50 nemesis_applied=50 nemesis_failed=0`. All 50
+  events came in the first 6 minutes; the next 19 minutes had none and the client had 0 proxies (the host's fight was over),
+  so this is a test of the stream's stability, not of a long fight.
+- **The two games' event lists agree for events about members that existed in the save and differ for new ones.** Compared
+  in order from the client's first event (the games' own debug logs): the first five (Ur-Gram: `DatalLevelChanged`,
+  `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`, `ActiveKillPlayer_AlreadyNamed`, `ActiveGotPlayerInLastChance`)
+  are the same on both; then, in one burst on the host (four `TimePassed`, then `PromoteEmpty_BuilderWC_*` /
+  `PromoteEmpty_BuilderTransform_*` with `Promote` and `Clear` for 11 newly named captains, then `PromoteDead_*`), the host's
+  subject has a name and the client's is `None` in 33 of the 50 lines: the client's world has no member with that id, so the
+  handler ran on nothing. The burst came about 40 s after the host's player was killed by Ur-Gram; whether the death caused it
+  was not tested. Events whose subjects existed in the save (Ur-Gram, `Skon`) were applied by name on both.
+- **A captain is a FactionMember object** (vtable `1FD5EA0`, name inline at +0x498, about 0x800 bytes). It holds pointers to
+  records by type: faction `0xA51` (+0x178, +0x180, +0x298, +0x2C8, +0x718), appearance `0xA66` (+0x278), spawn type `0xA06`
+  (+0x338), many `0xA08` (+0x558..+0x5C0) and `0xA0C` (+0x610..+0x650), also `0xA29`, `0xA03`, `0xA01`, `0xA00`, `0xA1D`,
+  `0xA0D`, `0xA30`, `0xA1E`, `0xA4B`, `0xA1B`. Two objects with this vtable carried the name "Ur-Gram" (one with the
+  full set, one with fewer records; which one the game treats as the live member was not worked out).
+- Found with: a heap search for the 8-byte name (`findq`, the name is exactly 8 bytes with its end), then the object start
+  at the hit minus 0x498.
+
+### Derived
+
+- A client that should show a captain as himself, and apply events about captains made after the join, needs the member's
+  data, not only a name: its records (appearance, traits, level, faction), or a member created by the same call with the same
+  inputs on both sides. The game has `FactionMember.Save` / `.Load` console programs; whether they carry a single member is
+  unknown.
+
+### Unknown
+
+- How a spawned character points to its member (and back); how a new member is made (the call that the promotion burst
+  makes before `PromoteEmpty_*`); whether the burst follows the player's death or time passing in general.
+
+## Session 2026-11-01 bx: a captain shown as himself on the client
+
+### Observations
+
+- **A captain's character holds his Nemesis member's reference** at `+0x2708` (the faction record pointer, type `0xA51`) and
+  `+0x2710` (the member id, a dword; `0xFFFFFFFF` for every other character). Found by scanning the unique `OlogHai_Infantry` (11,165
+  health) for the dword 99 (Ur-Gram's id) and checking the qword before it (`Faction_MtnPass`); an `Orc_Archer` and an
+  `Orc_Infantry` next to him hold `ff ff ff ff` there.
+- **The member table.** `LookupFactionMember` (`18DDCC`) indexes the array of member pointers held by the object at `region+0x20`
+  (begin `+0x18`, end `+0x20`, the member id the index, also stored in the member at `+0x174`). In the test save the main
+  regions (`Faction_volcano`, `_island`, `_MtnPass`, `_desert`, `_snowMtn`, `_MinasIthil`, `_None`, `_desert_Real`) share one
+  table of 500 slots; the invasion factions share another (77); `Faction_Demovolcano` has its own (27); the quest-replay and DLC
+  regions have empty tables. A member's `+0x278` is a character type record (`OlogHai_Infantry`, `Orc_Archer`, story captains
+  such as `GP_Bruz`, `SQ_Zog`, `SOTPVolcano_Orc_DefenderWarchief`), `+0x338` a place (`VC_Camp`, `MP_Staging`), `+0x4B8` the level.
+  Two members can have the same name (Ur-Gram is 99 and 117; Orthog 5 and 7).
+- **The game's character spawn takes the member.** `1036D0` (the function `SimSpawn` calls with `"CoopPuppet"`) reads its stack
+  arguments as: 5th and 6th bytes, 7th a pointer, **8th a FactionMember** (its `+0x178` faction record and `+0x174` id go into the
+  spawn request), 9th a pointer. The character set-up `3FAAEC` (from the AI class's slot 12) then finds the member through
+  `18D93C(FactionMgr, ref)`, stores the reference in the character (`60C424`), takes `member+0x270` into `char+0x2B28`, applies the
+  member's own appearance (`member+0x278`, virtual `+0x440`), copies the member's 64-bit seed `member+0x168` into `char+0x2338`
+  (the seed the model's random parts come from) and sets up traits (`578E30` with `member+0x268`, `578EEC` with `member+0x2D8`).
+  Passing the member as the 8th argument (`SimSpawn(..., member)`) made a character with the same reference (`Faction_MtnPass`, id
+  99), the same `+0x2B28` record and the same seed as the game's own Ur-Gram.
+- **Live (host A and client B on one PC, same save, `coop_enemies=on`):** A's player at the captains' spot: A announced 41 enemies
+  and one captain (a 53-byte `MEMBER` message after his `NEW`); B built the captain's proxy from its own member 99 within 3 s
+  (`captains_built=1`), next to A's captain ((25374, 37818, 4274) against (25414, 37818, 4260)). B's window showed an armoured
+  `Ologhai` with the glowing orange armour (`captain-live-b.png` in `local/logs`, not published). The proxy's maximum health
+  is 960, not 11,165 (the client shows the host's health as a fraction, so the bar is right).
+- **A captain the host's game made after the join does not exist on the client.** In the same run A sent a second captain, member
+  497 `?shak`; B's table has nothing at 497 (`captains_missing=1`: "no member 497 named ?shak in this copy"), so his proxy is the
+  type's generic orc. This is the soak's gap again, seen from the spawn side.
+- **Killing a character made from a member** (health to 0, as `FreeProxy` does) changed 0 dwords of the member (member 6,
+  `Orc_Spearman`; a control with the character let go first, `+0x2710` = -1, member 5, also 0). A first try on Ur-Gram's member
+  showed 13 changed dwords (a flag at `+0x508`, `+0x518`, list links); in that run B's native Ur-Gram also left the character list and host
+  events were applying, so the cause was not isolated. `FreeProxy` now lets the proxy go of its member (`+0x2710` = -1) before it
+  kills it.
+- **The proxy lifecycle** (`tools/captain_cycle.py`): captain proxy built (960/960) while A stood at the captains' spot; after A
+  went back to the start, B had no captain proxy left (`client_proxies` 16, then 6; the only character with a member
+  on B was its own native Ur-Gram, 11,165/11,165). One dword of member 99 on B changed over that time (`+0x308`; not
+  explained).
+- Offline: `enemy_test` 56 of 56 (new: the MEMBER message, once per change, again for a new session, length and orphan and
+  unterminated-name checks); `net_test` 36 of 36; `test_guard run` 56 of 56.
+
+### Derived
+
+- The client never needs the member's data for a captain that is in both worlds: it builds him from its own record, so his
+  look, name and traits are the client's copy of the same save. The message carries only the faction record's name hash, the
+  member id and the name (to check it is the same member).
+- Making a member the client does not have needs the game's own creation path:
+  - `19ED468(out)`: `operator new(0x528)`, the member constructor `1BB4C1C`, the pointer stored in `*out`;
+  - `1BD2E20(table, avoid)`: appends a new member when the table is below its limit (`table+0xB0`), else picks a reusable slot
+    (scoring dead and unused members), removes the old member (`F67E70` on the FactionMgr), builds the new one in the slot and
+    sets `member+0x174` to the slot, then `F67970` registers it; the id the client would get is the game's choice, not the host's;
+  - `1BC45A8(member, node)` writes a member into the game's text node tree (the `FACTIONMEMBER_SINGLESAVE` of the `FactionMember.Save`
+    program; a second section holds the other fields), `1BC159C(member, node)` reads it back, `1BB936C(dst, src)` copies one member
+    over another (the copy lists the fields that matter: `+0x168` seed, `+0x170`, `+0x174`, `+0x178`, `+0x180`, `+0x188`,
+    `+0x190`, `+0x268`..`+0x290`, `+0x2C0`.., `+0x318`..`+0x340`, `+0x3D0`..`+0x3F0`, `+0x460`.., `+0x4B8`..`+0x4C4`, `+0x4D0`, `+0x4F8`,
+    `+0x4FC`). The replay code `182AFBC` loads a temporary member from a node and copies it over the target member.
+- So a missing captain could be made on the client by a call to `1BD2E20`'s steps with the host's id and the host's member copied in
+  with `1BB936C`, if the client can be sent the member in a form `1BC159C` reads (the node text) or as the raw field list above. Not
+  tried.
+
+### Unknown
+
+- Whether the client's own Nemesis simulation or its native copy of the same captain ever conflicts with a proxy built from the
+  same member (B's native Ur-Gram was alive far away, then gone; no conflict seen in a few minutes).
+- What `member+0x308` is; whether a member's `+0x508` flag bits are death or something else (a kill of a character made from a
+  member did not change them).
+- Creating a member by the game's own path; two PCs; the host's death screen.
+
+## Session 2026-11-02 by: members the client does not have, made from the host's text
+
+### Observations
+
+- **The game can write one member as text and read it back** with its own functions, called from the mod with the game's own
+  sequence (`FactionMember.Save` handler `1C5BAC4` for the write, the world load's member routine `F99FF0` for the read):
+  - write: `18786F0(doc)`, `1878CA0(doc, "FACTIONMEMBER_SINGLESAVE")` gives the root node, `1BC45A8(member, root)`, `187A3CC(doc, path)` writes the file, `1878A2C(doc)`;
+  - read: `1879AC4(path, 0, callback, arg)` parses the file and calls `callback(doc, arg)`; there `18791F0(doc, "FACTIONMEMBER_SINGLESAVE")`
+    gives the node, then `403DE238(0x528)`, the constructor `1BB4C1C`, `1BC20B0(member, node)` and `1BC159C(member, node)`;
+  - placement in slot n (the tail of `1BD2E20`, the table allocation): if the slot holds a live member (`1BD16D4`), `F67E70(mgr, old)` and
+    `1BD522C(slot, 0)`; then `F67970(mgr, table+0xA8, n)`, `1BD2220(slot, &holder)` with `holder` = the new member, `member+0x174` = n,
+    `19EF15C(&holder)`. `mgr` is `[[RVA 26FFAA8] + 0x6C68]`, the table the object at `region+0x20`.
+  - The text is plain and readable: `Identity` (name, faction, `FactionID`, `RandomSeed`, model, role, tribe, personality), `Flags` (level,
+    location, dead, kills), the trait pickers, the gear with GUIDs, then a `SIMEvent_NOTLOADEDFROMHERE` section. 6,900 to 9,000 bytes.
+- **Round trip, one copy:** member 6 exported, imported into slot 6 of the other copy (which had an identical member) and exported again:
+  the same 304 lines, in another order inside the trait list, with `ImportanceScore` recomputed (51 against -62).
+- **Host to client, live (host A and client B, one PC):** B's slot 99 was first given another member's text (Orthog); A's captain
+  Ur-Gram was announced; A sent his text in 9 messages; B made the member (`members_built=1`), then built the captain's proxy from it. The
+  two members' texts are the same line for line except the `SIMEvent_NOTLOADEDFROMHERE` section (the member's current simulation event: the
+  game itself does not load it from here), the recomputed importance values and nothing else.
+- **Soak 1 (14 min, host moved between spots, nothing prepared):** `members_got=5` (3 skipped: the client already had them, same seed;
+  2 built: Ur-Gram, whose slot held another member after the earlier test, and `Hork`, a captain the host made into slot 497),
+  `captains_built=13`, `captains_missing=0`, 24 of 24 events applied. A text comparison of slot 497 on both copies afterwards: equal.
+  Member 99 differed: the host's Ur-Gram was dead (`IsDead`, `LastDeath*`, `SeveredHead`), the client's was not.
+- **Soak 2 (9 min):** the client's slots 99, 245, 239 and 151 were first filled with another member's text; the host then sent members
+  as its events named them: 4 sent, 3 built, 1 skipped; the games' own handler logs agree: 12 events on each, in the same order with the
+  same subject and other names (`tools/soak_nemesis.py`).
+- **The client's event queue dropped every message over 200 bytes**, so the first live run got no member data (`members_got=0`); member
+  chunks (up to 921 bytes) are now let through.
+
+### Derived
+
+- The seed (`+0x168`, `RandomSeed`) tells two members of one slot apart: the host sends a member's text the first time an event or an
+  enemy names him in a session and again if the slot's seed changes; the client builds him unless it already has that seed there. Chunks
+  of 900 bytes, in order, in front of the message that names the member (reliable ordered transport), so the member exists when the
+  event or the proxy needs him.
+- What the host's kill code sets (`IsDead`, the death attack, a severed head) is not an event, so it is not carried; the
+  dead captain stays alive in the client's Nemesis world until an event (`PromoteDead_*`) replaces him. A fix would send the member
+  again after a death event; not tried.
+
+### Unknown
+
+- A promotion burst of brand-new captains (`PromoteEmpty_*` for many new members) was not seen again; the first soak had one new captain
+  (`Hork`) and a slot reuse. The old replaced member's release (`F67E70`, `1BD522C`) ran in the tests without a crash, for minutes.
+- Whether the client's own Nemesis screens, the army and the hierarchy view show an imported member correctly; the `+0x330` index
+  that the world load updates for each member (post owners) is not done by the placement.
+- Two PCs; the host's death screen.
+
+## Session 2026-11-02 bz: looking for the captain's speech (not found yet)
+
+### Observations
+
+- **What the game logs when a captain engages** (host copy alone, `coop_slowmo=on`, the player kept at 100,000 health and fighting the
+  nearest captain, Ur-Gram): `DatalLevelChanged`, then `ActiveShowdownGiven_Distance` (the captain picks the fight), in one run a
+  half-second `SetPresentationSequenceSlowMo = CombatResetCamera` (start, ramp out, stop), then `ActiveInitialPlayerThreat` about 2-3 s
+  after the first event. In another run only `ActiveInitialPlayerThreat` showed. No other `SLOWMO` line appeared with these events
+  (the lines seen otherwise were `Instakill_01_SM`, `AI_OlogHai_RecoilAttackSlowMo`, and the death sequences: `PlayerDeath_SM` "Pausing
+  due to Epsilon value!", `Taunt_Eye_Zoom_In_SM`, a captain's "Killed You" camera with name, title and subtitle).
+- **No speech was seen on screen.** Window captures every 40-150 ms from the first event on (kept in `local/logs/intro`, not published)
+  showed ordinary fighting; the speech and camera focus the owner describes did not appear in these runs. The "Killed You" scene after
+  the test player died to a captain (Pûg) did appear: camera on the captain, nameplate (name, line), subtitle at the bottom.
+- The game's presentation system is data driven: record types `Presentation.Event` (`BeginPresentation`/`EndPresentation`,
+  `PresentationOnStart/Complete/Cancel/Confirm`, camera type, `PresentationSequence`, `PresentationTimeScale`) and an attack flag
+  `PresentationAttack`/`PresentationAttackName`. `5D1030` is `SetPresentationCameraState(character, state, type)`: it writes the state into
+  the character's AI data (`[char+0x2CE8]+0xB18` / `+0xB1C`) and logs "Presentation camera state changed."; callers `5D0D8C`, `5D0DF4`
+  (twice), `1A945B0`. Polling `+0xB18/+0xB1C` of a captain showed 0, 0 throughout (the player's `+0x2CE8` is not AI data).
+- The slow-motion pause is a time-scale record (`PlayerDeath_SM` logs "Pausing due to Epsilon value!"), so with slow motion off in
+  co-op these pauses do not happen; the owner allows slow motion for captain presentations.
+
+### Unknown
+
+- What the captain's speech is in the game's data (a presentation event, a presentation attack, or an in-world line) and what starts it;
+  why the runs here did not show it (the captain's identity not presented, the test player's state, or a condition of the fight).
+
+## Session 2026-11-02 ca: the captain's intro on the client
+
+### Observations
+
+- **The intro as the owner played it on the host:** at the captain's first events (`ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`) the
+  camera cuts to a close-up of his face, with a nameplate (name, title) and a subtitle, for about 1.5 s; the log has no attack or
+  presentation line for it. Captured by `tools/ring_shot.ps1` (a ring of window frames) and `tools/speech_capture.py` (copies the frames around a log
+  trigger).
+- **The client already plays a presentation when it replays the host's event** (the game's own handler starts it), but:
+  1. the first time the camera showed an empty wall: the captain's member had no character (`member+0x48`, the character the member points
+     to, was 0 on the client; on the host it is the captain's character). A proxy built from a member is not linked by the spawn. The
+     client now links its proxy (`SimMemberLink`, every frame while the proxy lives; unlinked before the proxy is freed). After that the
+     client's log (a per-event diagnostic line) shows "his member points to a proxy" and the owner saw the captain on both screens;
+  2. in a crowd the captain was often missing from the client: only the 16 nearest enemies are announced and he was the 17th. Captains
+     are now announced first;
+  3. the client's proxies were marked as the player's followers (an ally: the owner saw the captain's level in blue, "dominated", and could
+     not hit him with the controller). Captains' proxies are no longer marked (`SimProxyAdopt(owner, false)`); ordinary proxies still are,
+     and one client strike on an ordinary proxy was counted and applied on the host (`hits_on_proxies=1`, `hits_applied=1`). A strike on a
+     captain's proxy was not retested (the proxy was gone before the test).
+- **The client's intro comes late, about 6-7 s after the replayed event.** The client's log: `ActiveShowdownGiven_Distance` replayed at
+  84,828, `ActiveInitialPlayerThreat` at 95,390, then `SetPresentationSequenceSlowMo = Identify_Slowmo_Timestop_50_SM` at 101,234 with
+  "Pausing due to Epsilon value!" lines (the game's pause), and the close-up in the frames at the end of the window. So the client
+  runs its own presentation for its own player when its own conditions are met (the owner's phrase: it plays "way after" the host's),
+  and it pauses the client's world (the slow-motion record), as the owner expects. The host's own timeline for the same fight was not seen
+  in the automated runs (the test player there never got the close-up).
+- A captain's death ("Killed You": camera, nameplate, subtitle, "New Title earned") also plays on the client when the host's player dies
+  (the host's events reach the client's presentation).
+- The slow-motion manager is at `5CF6C4`; the setter functions `5D095C` (4 callers), `5D09E0` (the world-UI one, 2 callers), `5D0A28`
+  (3 callers) are the candidates for the sequence and dynamic presentation setters; which is which was not worked out.
+
+### Derived
+
+- The pause and the close-up are the game's own presentation, started by the game in each copy; syncing their start (one copy starts
+  when the other does) needs the call that starts the "Identify" presentation (found with a call trace on the slow-motion setters while
+  the client's intro starts). Not done.
+
+### Unknown
+
+- What the client waits for before its intro; whether a host-triggered start can be forced on the client.
+- Whether a strike on a captain's proxy lands now.
+
+### Session ca, later: the intro synced
+
+- After the three fixes above (the captain's proxy linked as his member's character, captains announced before the 16-nearest cut, no
+  ally mark on a captain's proxy) the owner reported that the intro "did sync up" on host and client in a fresh run (hand-played on
+  the host, nothing recorded on screen at that moment). The earlier delay of 6-10 s on the client (and a camera aimed at an empty
+  wall) was most likely the captain's proxy being missing or unlinked when the client's game started its presentation, not a timer.
+- Traces of the slow-motion request `5D08B8` for 10 s after the first event (`tools/trace_on_event.py`): host 23 calls (callers `5D334D`
+  x16, `434A69`, `6EEA47`, `6EECEE`), client 8 (`5D334D` x5, `434A69`); the presentation record on the host was
+  `CombatResetCamera` (2.7 s after `ActiveShowdownGiven_Distance`). The start of the presentation was not isolated further.
+
+## Session 2026-11-02 cb: the client's frozen world, and enemies hunting the nearest player
+
+### Observations
+
+- **The owner's "no animation, enemies slide to player A and stand idle" was the client's own pause.** On the client the game started
+  `SetPresentationSequenceSlowMo = Identify_Slowmo_Timestop_50_SM` at game time 101,234 and stopped it at 174,984: 73 s of "Pausing
+  due to Epsilon value!" (8,314 lines). The host never ran that record (0 lines in its log). With the world at epsilon the proxies' animations
+  stand still while the mod keeps writing their positions, so they slide in frozen poses. These test copies had `coop_slowmo=on`
+  (the shipped default is off, which skips slow motion entirely).
+- **Animation otherwise works.** A fresh run with slow motion on: 388 attack starts and 253 locomotion plays applied on the client (26 plays
+  refused, 0 attack failures; new counters `attacks_ok/fail`, `plays_ok/fail` in the `enemies` status); frames of the client show orcs
+  walking and swinging; a single copy with an AI-off orc and `WalkForward` shows the legs moving.
+- **Enemies hunt the client when the decoy is on.** The shipped host setup writes `coop_decoy=on`, the test copies did not (the code default
+  was off). With it on and the players 600 units apart at the fort: the client lost 708 to 557 health in 40 s, the host sent 4 damage
+  messages and the client applied 4. The code default is now on (`coop_decoy=off` switches it off; `off` was not parsed before).
+- The slow-motion manager (global at RVA `2A86888`) keeps its requests in a list of pointers (`[mgr]`..`[mgr+8]`), each with its source
+  id at `+0x80`; the request function `5D08B8(mgr, source, record, flag)` ends a source's request when the record is null. The setters
+  `19CFxxx` pass source ids 5, 7, 8, 9, `0xD`, `0x10`; which is the presentation sequence was not worked out.
+
+### Derived
+
+- With `coop_slowmo=on` a client now ends any slow-motion request after 4 s (`SimSlowMoCap`, `coop_slowmo_cap_ms` is a constant for now).
+  Not yet seen working against the identify pause (it did not start in the one run made after the change).
+
+### Unknown
+
+- Why the client's identify pause ran 73 s (it probably waits for an end that the proxy captain's missing AI never sends); whether
+  the cap ends it cleanly; how long the host's intro really holds the world.
+
+## Session 2026-11-02 cc: enemies after the host switch to the nearer player
+
+### Observations
+
+- The owner's report (client B among the host's enemies while host A stays at the spawn): B is ignored, the enemies slide toward A and do not
+  attack B. What I had measured before (a few damage messages) came from enemies that were already fighting A.
+- Measured data from that session: B stood at the fort among 16 shown enemies for over 70 s without losing health (236 throughout) while
+  A was 5,500 units away; the `damage` counters moved only while B was next to enemies that were fighting A. 49 characters with
+  health 0 stood on B afterwards (see session ca/cb notes: a dead host enemy's proxy is only given health 0 and is never removed).
+- An AI character's current target is the pointer at `[char+0x2CE8]+0x28` (the function at `11B258` logs "Target just changed." when it
+  changes); the goal slots (`+0x118`...) hold a target character at `+0x30`. Idle enemies have no goal at all.
+- **New: `HuntFrame` (host, every 100 ms).** Every enemy whose target is the host's own player or the decoy gets the nearer of the two
+  (with 150 units of hysteresis) as its target, through the existing `SimRetarget`. Live (A idle at the fort with 100,000 health, B 600
+  units away with normal health, defaults, `coop_enemies=on`): the engaged enemies went from 11 to 18 and B lost health from about 45 s
+  on: 22 damage messages sent by the host and applied by B in 80 s (before the change: 4 in 40 s); window frames of B show orcs next to it
+  with raised weapons. Health 708 to 256 in 80 s.
+
+### Derived
+
+- Enemies that are not after anyone are not touched: they wake when something hits them (the host's player, or the client's strikes, which
+  the host applies with its own player as the attacker, so they turn on the host's player first and are then switched to the decoy when B is
+  nearer). An idle camp that nobody strikes stays idle; B alone near it does not wake it. Not solved.
+
+### Unknown
+
+- Waking idle enemies for B (what the AI's perception needs); the 45 s before B was attacked in the run above; the dead-enemy proxies; the
+  client's animation as the owner sees it.
+
+### Session cc, later: waking idle enemies
+
+- **What a woken enemy does.** `SimPokeEnemy`: the game's hit function with the decoy as attacker and the record
+  `AI_Infantry_Melee_Front_1_RR`, then the enemy's health put back (hostile kinds by name, not followers, within `coop_wake_radius`
+  (600, 0 = off) of the decoy, each at most once in 15 s, two per 100 ms; the host's `enemies` status shows `hunt_woken`,
+  `hunt_wake_failed`). 20 enemies woken in 75 s at the fort with the host's player at the spawn, 0 failed.
+- **At the fort the woken enemies take the decoy as their target but do not come:** 6 to 8 engaged; of the enemies within 1,500 of B,
+  five archers and an orc had the decoy as target (one archer shot), most were in `AI_Bip_Cheer_Loop`, the captain targeted an orc;
+  no damage reached B in 75 s. The fort's guards are stationary ("StatOrc" posts).
+- **With roaming orcs** (4 `Orc_Infantry` spawned on the host 450 units around B, the host's player at the spawn): the woken orcs
+  came, one at a time (one at 124 units, the others circled at 300-1,000), and B lost 708 to 406 over 48 s (9 damage messages). The game
+  keeps most of a crowd out of a fight while one attacks (its combat circle, built around the one player); for the decoy the same
+  seems to hold.
+- Measurement aids: `tools/hunt_session.py`, `a_keeper.py`; a client that must stay where the test puts it needs
+  `coop_follow_travel=off`.
+
+### Unknown
+
+- Whether more than one enemy can be made to attack B at once (the combat circle is per player); why the archers and guards stand in the
+  cheer loop; dead-enemy proxies; animation as the owner sees it.
+
+## Session 2026-11-04 cd: the client's enemies play the host's actions
+
+### Observations
+
+- The owner's report after a hand-played session (A idle at the spawn, orcs around it, B played by the owner): the orcs attack both
+  players, but on B they have no animation and no attack or counter indicator, they slide up to B and B takes damage; B can do a finisher
+  but it is a little buggy and the orc disappears; bodies of enemies killed on A stay frozen in the air on B; if B goes down the orcs
+  cannot start a kill attempt (accepted for now).
+- With the proxies' animations guessed from their speed (Idle, WalkForward, Run by name) a lone orc running at B showed a running gait and a
+  swing in window frames, but with several orcs close around B the frames showed the same crouched pose for most of a second and
+  no swing while B's health fell.
+- The animation state machine starts an action with `195988(graph, action)` for every character (the graph's owner is at `[graph+0x28]`,
+  its character at `[owner+0x40]`, the action definition at `[action+0x60]`, which has a name). A stub there (`SimActionTapInstall`) records
+  every start in a 4,096-entry ring (the old `graphwatch` records one graph and cannot run with it).
+- **New: the host sends each announced enemy's started action by name (`ANIM`, 37 bytes, reliable) and the client's proxy starts the
+  same action on its graph by name (`SimProxyPlay`); while actions are coming the speed guess is off (`coop_anim_mirror=off` brings it back).**
+  Live (four orcs around the spawn, B 280 units from A): the host sent 240 starts, the client played 44 and refused 4 in 10 s (plays by guess:
+  2). Window frames of B show the orcs around it changing pose from frame to frame (an arm coming up and down on the nearest). What the
+  owner sees was not checked.
+
+### Unknown
+
+- Whether the mirrored actions look right to the owner (sliding, attack animation, the indicator before an attack: that is the game's
+  attack state aimed at the player; the proxies' attacks are not aimed at B's player); the bodies that stay in the air (a dead host enemy's proxy
+  is given health 0 and never dies for the game); the finisher on a proxy.
+
+### Session cd, later: the counter prompt and dead bodies
+
+- **Attack aimed at B (for the counter prompt).** The game's attack start `StartAttack(health, node, record, target, ...)` takes the
+  opponent's health object as `target`; the proxies were started with 0. The host now flags an enemy whose target is the client's decoy
+  (`kTargetsClient`, bit 2 of the snapshot record's flags) and the client starts that proxy's attacks with its own player's health object as
+  the target. An AI-off orc started on a record with the player as target did not hurt the player before (notes bp), so no
+  second damage; the host's damage message stays the only one. **Not confirmed on screen:** whether the game then shows the prompt
+  (frames of B showed the "Hold ... for Glaive Attack" hint and the enemies' poses; the red/blue flash was not made out).
+- **Dead bodies.** Writing health 0 left a standing character the game never treats as dead (49 on the client after one session). The
+  game's own death runs when a hit takes the health below 0: `SimKillCharacter` sets the health to 1 and applies a hit from the client's own
+  player (record `PC_NT_L1_D1_F_LL_RL_04`, a player's attack, an enemy's record did no damage) through the hit function, after the proxy
+  is let go (its hits are dropped otherwise). One spawned orc killed that way on a single copy lay on the ground (frame), `health 0`, and was still there
+  after 16 s. The client now kills a proxy this way when its host enemy dies and when it is freed. Live (two copies, four orcs, two killed
+  on the host): `killed=5 kill_failed=0` on the client, 2 characters with health 0 on it afterwards; the frames did not settle whether they lie
+  where they fell. Side effect to check: the hit is the client player's, so the game may credit it a kill (experience, loot).
+- Probe `kill abs:<character>` does the same on any copy.
+
+## Session 2026-11-04 ce: attack moves on the proxies
+
+### Observations
+
+- The owner's report after the session with the aimed attacks and the game-driven death: the orcs dying works; still no counter indicator, B cannot
+  counter, the orcs have no attack animation; B's ranged attacks do not register on the host and the orc "turns invisible".
+- A player's strike (and so an enemy's swing) is not a graph action but a move request on the character's animation controller
+  (`[character+0x1970]`); the mirrored graph actions (session cd) never carried it. `PlayAttackMoveOn(character, record)` (the call the
+  stand-in's swings use: `4CA9A0` gives the move's name, `2E17D8` its animation object, `2C614C` registers the request) is now
+  called when a proxy starts an attack record: 31 moves played, 0 failed in 10 s with four orcs.
+- Both players side by side, the same moment on both windows (frames): the orcs on B's screen lunge at B and **the counter prompt (the
+  white star with Y) shows above the attacking orc on B's screen** (the host's own screen showed the orcs at the host player). First time
+  the prompt was seen on B. Whether B can counter with it (the input timing) was not tried.
+- **Ranged.** The probe's virtual pad now also holds the triggers (bits 16-23 and 24-31 of the buttons value). A left-trigger hold on B
+  made its player crouch beside an orc, not aim (not worked out why); a shot was not made, so what an arrow does to a proxy is not
+  known. 2 melee hits (`PC_Recoil_Light_U2D_F`, `PC_Recoil_Heavy_U2D_F`) of the client were reported and applied on the host, which did not
+  hurt the host's orc (all three stayed at 300 health).
+
+### Unknown
+
+- What B's arrow hit does on the client (which function applies it; whether the proxy takes it and is then hidden or killed locally) and
+  why the host's orc does not feel it; the "invisible orc"; whether B can counter an aimed attack.
+
+## Session 2026-11-04 cf: arrows, strike reactions, counter prompts (owner's hand tests)
+
+### Observations
+
+- **Ranged hits.** An arrow does not go through the game's hit function (`2C70C0`), so the hit filter never saw it. On the client it took a
+  proxy orc from full health (300) to 0 in one step (3 of 3 logged events, `coop: local damage on proxy ...`), the host's orc did not feel it.
+  The client now compares each proxy's health with what it wrote the frame before (`SimHealthNow`); a drop that no reported strike explains
+  is told to the host as strikes (`PC_NT_L1_D1_F_LL_RL_04`, about 96 damage each on a 300 orc; one per 90 taken, 1..6). Owner: "ranged
+  attacks seem to be working".
+- The orc's health on the client is the host's, written every frame (a write watch on a proxy's health showed only our own writer, ~590
+  writes in 10 s), so only a non-health death path (arrows, executions) can differ from the host.
+- `kill_failed` on the client rises with arrow kills (23 and 46 in two sessions): the game-driven kill (`SimKillCharacter`) fails on a
+  proxy that is already dead locally; the fallback writes health 0. Believed harmless, not checked.
+- **Reactions.** Strikes on proxies were dropped by the hit filter and only reported, so the game never played its reaction (hit, counter,
+  finisher) on the orc: the likely cause of "no animation when countered or executed" (owner's report). Built `coop_proxy_react` (default
+  on): the strike is reported and also let through; the host's health is written over the damage. A proxy is also left alone for 1.8 s after
+  a strike (no moves, no idle or mirrored action played over the reaction). **Not confirmed by the owner**: in the last sessions the orcs
+  did not attack B, so counters and strikes could not be tried.
+- **Counter prompt missing** on some attacks (owner: at both low and high health, sometimes present at both). Not explained. The client now
+  logs the first 600 attack starts (`coop: attack <record> of proxy <n> aimed at this player=<0|1>, <d> units away, ...`). In one session
+  all 50 logged attacks were aimed at this player (flag 1), 70-160 units away, with no damage message sent.
+- **The orcs stopped attacking B** in the last three sessions (damage messages from the host: 0, 0, 0; earlier today 16, 16, 15). The host
+  shows 4 orcs "engaged" with the decoy as target (`hunt_engaged`), the decoy standing at B's position, but the orcs stand 100-250 units
+  from it. Nothing in the host code changed between the working and the failing sessions except the client-side items above, so this is
+  not explained; the observer `tools/hunt_watch.py` (private repo) prints each hostile's distance to A and B and its target.
+- Pausing a game (the menu on B, a click on A) freezes the probe pipe; the session helper hung and A lost its keeper.
+
+### Unknown
+
+- Why the orcs stopped fighting; whether strike reactions now play; the counter prompt gaps; two-PC behavior; the host's death screen.
+
+### Tools
+
+- Probe `proxies` (owners, health objects, health on the client), `tools/hunt_watch.py`, `tools/hunt_measure.py`.
+
+## Session 2026-11-04 cg: why the orcs stopped fighting the client (unattended runs)
+
+Both copies on one PC, test save, `coop_enemies=on`, B with `coop_follow_travel=off`; B at the north test spot (24113, 43097, 13094),
+four `Orc_Infantry` spawned on A 420 units around B (`tools/place_measure.py`, private repo). Damage messages = enemy swings that
+reached the client's decoy on the host (`dmg_sent`).
+
+### Observations
+
+- **A tool killed the decoy's registration.** Probe `kill` lets a character go as a proxy before it hits it. A cleanup that killed every
+  leftover 300-health character not within 30 units of B also hit the decoy (a `Gondorian_Soldier`, 300 health, 56 units from B at
+  that moment): the kill failed (the hit filter drops hits on the decoy) but the decoy was out of the proxy table. The tools now skip
+  the host's proxies and stand-in by identity (`live_suite.host_own`). Runs before the fix are not counted below.
+- **Arrows at the decoy.** Two `Orc_Archer` 800 units from B: one took the decoy as its target and stood 422 units from it for 60 s; the
+  decoy stayed 300/300 and the same object; no damage message reached B. Arrows do not go through the hit function (session cf), so
+  the host's archers cannot hurt the client: a gap.
+- **Who hits whom** (new probe `coopset hitlog <n>`: the next n hits that reach the hit function, logged with both characters' types,
+  health and roles). Clean 60 s control, B idle, 22 damage messages: 48 hits. Each orc swing at B's place lands on the stand-in (13)
+  and the decoy (11); the stand-in hit orcs 12 times with the moves it copies from B (`AF7A2273`, `3FD1D5E4`, B's hit reactions);
+  orc on orc 6; the decoy's wake-up pokes 3. No orc lost health.
+- **The client's hit reactions count as its strikes.** With B idle the client reported 8 hits on proxies (`AF7A2273`, its reaction
+  to being hit, touching the orc); the host applied them (0 damage for these records).
+- **Orcs fight orcs around the start.** In one run one orc took others from 300 to 0 in steps of ~73 (`139FD1658`: 300, 227, 155, 82,
+  10, dead) from the moment it was spawned; after the runs a dozen orcs kept fighting each other near the tower. Probably the host's
+  army against the spawned hostiles; it explains orcs that died without B striking in earlier runs.
+- **The stall, reproduced** (before the changes below): B striking every 4 s, after the others died one orc stood 430 units from B
+  with the decoy as its target and made no swing for 50 s. In the hit log the orc that stopped (`5FF1290`) had swung at the decoy
+  again and again until another orc and one of B's strikes (applied with the host's player as the attacker) hit it; it never swung
+  again, its target still read "decoy". A fresh decoy (`coopset decoy off`, `on`) did not start it again (it took the new decoy as
+  its target; 0 damage messages in 30 s).
+- **B's attack moves alone do not stop the orcs**: B swinging at nothing (turned away, 28 presses in 90 s) with four orcs at it: 64
+  damage messages, no stall.
+- **The decoy as the attacker does no damage.** The client's hits applied with the decoy as the attacker left every orc at 300 (12
+  logged), with or without its follower mark cleared during the call.
+- **The host's player died twice in unattended runs** (an orc, then a captain; `ActiveKillPlayer_grunt`, `ActiveGotPlayerInLastChance`):
+  between runs nothing kept it at full health. The death and army screens then stopped the host's world: every orc frozen with no
+  target, the stand-in put back 159 units off every frame. Pressing A on the army screen marks a captain; B (back) leaves it.
+- **Changed** (both switchable live with `coopset`):
+  - `coop_hit_by=poke` (default): the host applies the client's hit as its own player's (the only attacker that does damage), then
+    the decoy pokes the orc (a hit whose damage is given back), so the decoy, the client's place, is the last one that hit it.
+    `decoy` (falls back to poke when it did nothing) and `player` (the old way) remain.
+  - `coop_standin_hits=off` (default): the stand-in's copies of the other player's swings are dropped in the hit function. What the
+    client hits is told by the client; the stand-in's copy hurt the host's orcs a second time.
+  - `coop_hunt_strict` (default off, see below).
+  - `coopset keephealth on`: a test aid that puts this copy's player back at full health every frame.
+- Fresh session, new defaults, B striking every 4 s: 49 damage messages in 90 s, rising steadily (10, 17, 23, 28, 39, 45); orcs B had
+  hurt (204, 108) kept attacking.
+- **A/B in one session** (`tools/ab_hits.py`, alternating, B striking every 4 s, 90 s each): old handling (`hitby player`, stand-in
+  swings on) 52 and 56 damage messages; new (`poke`, stand-in swings off) 69 and 63; no stalled rows in any of the four. The old
+  handling did not stall in this session either, so these runs do not show what cures the stall.
+- **Swapping only the host's player or the decoy** (`coop_hunt_strict`): the hunt's redirect replaced whatever an engaged orc had
+  taken as its target, every frame, so an orc that turned on another orc had that orc overwritten by the decoy (derived from the code;
+  it matches `5FF1290`). Limited to the host's player and the decoy: orcs at B fought each other more (7739 frames left to their own
+  target) and the damage messages fell to 9, 19 and 38 in three strike runs (1, 3, 0 stalled rows). Off by default.
+- **Final check on the default build** (poke, stand-in swings off, unrestricted swap), fresh session: B idle 21 in 60 s; B striking 22
+  (1 stalled row) and 33 in 90 s. Across tonight's sessions the counts spread widely (idle 21-40 in 60 s, striking 9-69 in 90 s):
+  the host's player stands 330-450 units from B, so some orcs go for it, and orcs fight each other near the start.
+- Probe `kill` left some orcs at 1 health standing in one attack record for good (`A7AA....`, stamp unchanged); the cleanup now
+  despawns those.
+
+### Derived (not proven)
+
+- The stall shows up after an engaged orc is hit by someone other than the one it fights (another orc, or the client's strike applied
+  as the host's player's), while the hunt keeps writing the decoy over its target. Seen once in the hit log; not reproduced on demand.
+
+### Unknown
+
+- What cures the stall: neither the poke nor the strict swap is shown to; a measurement that keeps the host's player far away and
+  the orc fights out (another place, or no army) is needed first. The counter prompt gaps and the reactions on B (not looked at
+  tonight); arrows of the host's archers at the client.
+
+### Tools (private repo)
+
+- `place_measure.py` (strikes, `--air`, stall count, attack state per orc, cleanup at the end), `strike_one.py`, `decoy_watch.py`,
+  `dmg_watch.py`, `attack_state.py`, `ab_hits.py`, `pair_ready.py`, `wait_copy.py` (one pipe connection kept: a second open fails while
+  the first is held).
+
+## Session 2026-11-05 ch: archers at the decoy, strike reactions, a counter, a crash in the AI's goal code (unattended)
+
+Both copies on one PC, test save, `coop_enemies=on`, `coopset keephealth on` on both. Frames are B's window (`tools/shot.ps1`);
+grids kept in `local/logs` (not published).
+
+### Observations
+
+- **The host's archers do not reach the decoy.** New counter: health the decoy loses outside the hit function (`decoy_hurt`). An
+  `Orc_Archer` with the decoy as its target, 370-390 units from it, started its shot (`EB96E382`) every ~4 s; over 60 s hidden and
+  30 s more at full size (`coopset decoyhide off`) the decoy lost nothing, and in 20 s the hit function saw no hit at all
+  (`hitlog`). So no arrow lands on the decoy and the client is never hurt by the host's archers.
+- **Strike reactions on the client** (`tools/strike_frames.py`, B beside one orc, 8 strikes, 14 frames): with `coop_proxy_react=on`
+  the orc doubled over at the first hit, then "Critical Hit" and it was thrown back; from the fifth frame its body lay on the ground.
+  With `off` it showed no reaction and was gone after the fifth frame, no body in view (the owner's "the orc turns invisible").
+  2 and 3 strikes were reported to the host. One run each.
+- **A counter** (`tools/counter_frames.py`, three orcs at B, B pressing Y every 0.25 s for 12 s while they attacked: 7 damage
+  messages): one frame shows the white Y prompt above an attacking orc; the next shows B lunging at that orc with the green wraith
+  flash and the orc thrown back, then "Critical Hit". Most likely a counter with the orc's reaction; seen in one run, from frames only.
+  A red (dodge-only) prompt also showed for another attack. 1 hit of B's was reported in the 12 s.
+- **A crash on the host**: access violation at rva `11AA3A` reading `0x28`, stack `11A4CA 11A288 123C7C 122513 1236A8 1F7360 ...`,
+  4 s after three orcs were spawned, some at the addresses of orcs killed seconds before (first time at this address in either
+  copy's log). The code is the AI's goal-slot code that the hunt's target swap writes into. The swap now skips a dead enemy and a
+  current target that is not a character (`retarget_skipped`); the next run (an idle run and the counter run, the same
+  kill-then-spawn order) had no crash, with 60 swaps skipped. Whether the swap caused the crash is not proven.
+- Probe `kill` left orcs alive at 1 health in most cleanups of this session (6 of 6 in one); the tools despawn those.
+
+### Unknown
+
+- Why no arrow lands on the decoy (it is moved by writing its transform every frame; its physics body may stay behind; not checked);
+  how the client should take the host's archers' arrows.
+- Whether the client's counters always work and show (one run); executions by the client (not tried).
+- The stall from session cg (not looked at again).
+
+### Tools (private repo)
+
+- `clear_hostiles.py`, `counter_frames.py`, `grid.ps1` (frames into one image), `strike_frames.py` (B beside the orc, turned to it).
+
+## Session 2026-11-05 ci: a watch for enemies that stop attacking the client
+
+### Observations
+
+- **Built** (host, `coop_stuck_sec`, default 20, 0 off; live `coopset stuck <s>`): an enemy that has the decoy as its target,
+  stands within 600 units of it and has had no swing reach it (the damage reports) for that long is let go by the hunt (its
+  redirect cleared) and poked by the decoy (the wake-up hit, health given back), so the client's place is again the last thing
+  that hit it. Each time is logged (`coop: stuck:` type, distance, health, seconds without a swing, its last attack, how many times
+  for this enemy) and counted (`hunt_unstuck`).
+- With 5 s (to make it fire on orcs waiting their turn): 7 times in 60 s, every poke made, orcs kept swinging (20 damage
+  messages); no crash.
+- With 20 s: two strike runs (B striking every 4 s, four orcs, 90 s): 69 and 68 damage messages, no stalled rows, the watch did
+  not fire. The stall itself did not happen, so whether the poke frees a stuck orc is not known.
+- Four orcs killed with probe `kill` after 12 s of fighting all died this time (no frozen 1-health orc to test the watch on); dead
+  orcs are left alone by it.
+- No new host crash in this session (the guard of session ch in place).
+
+### Unknown
+
+- Whether the watch frees an orc that is stuck the way session cg saw (the log line's count per enemy shows it: one stuck orc
+  logged again and again means it does not).
+
+## Session 2026-11-05 cj: a test arena, and why the decoy stopped drawing attacks
+
+### Observations
+
+- **The decoy only works near where it was spawned.** It was moved every frame by writing its transform (what is drawn); the
+  game's navigation and physics kept it at its spawn point. With the decoy spawned at the tower (where the client joins) and the
+  client moved to open ground 5,800 units below, four orcs 540-800 units away took the decoy as target, dropped it and stood
+  repeating one action (`2463C578`): 0 swings in 60 s, and with the host's player 400 units away, 0 in 50 s. After `coopset decoy
+  off` / `on` (a decoy spawned there): 22 in 50 s. This is the likeliest cause of "enemies stop attacking the client" (the
+  client moves away from where its decoy was made) and of the archers' arrows never landing on it (session ch).
+- **Fix** (`coop_decoy_reanchor`, default 150): when the decoy is that far from where the game last put it, the game's own
+  teleport moves it (otherwise the transform is written). A/B in the arena, the client moved 800 units before each run
+  (`tools/ab_decoy.py`): teleported 36 and 20 swings in 50 s, respawned 20 and 19; no stalled rows. A later idle run: 17.
+- **Test arena** (`live_suite.ARENA` = 24000, 37325, 10700; the host at `ARENA_HOST`, 1,500 units west): open flat ground below
+  the tower (x 23,250..25,250, z 9,250..11,250 within 30 units of height), found with `tools/height_map.py` (the player dropped
+  over a grid from a fixed height; landing heights). An orc camp lies south of it (walls at z ~8,500) and sends orcs; the tower's
+  cliff is north. `tools/goto_arena.py` moves A, then B (under 2,500 units apart, never a long jump), keeps both at full health,
+  clears hostile grunts within 3,000, turns both cameras. The tools that used the tower ledge use the arena now.
+- **The Nazgul gear** (owner's note): the test save's Talion wears the Nazgul set, which raises some enemies he kills as undead
+  allies that fight hostile orcs. That fits the orc-on-orc fights and deaths without a strike seen since session cg. Probe `kill`
+  is a hit from the host's player, so the test cleanups made such kills; they now write the orc's health to 0 instead (it stops;
+  no attacker). The game's despawn (`1A8BB74`) removed no living orc near the players, also not after writing it 40,000 units away.
+- Both copies once stayed on "Press A to Continue" although the guard pressed A eight times; presses through the probe's pad got
+  them in. `tools/wait_copy.py` now presses A after 90 s.
+
+### Unknown
+
+- Whether a health-0 orc can still be raised (no attacker: probably not) and whether it is left standing; whether the stand-in
+  itself (also moved by writing) has the same problem for things that target it; the Nazgul set's effect on fights in general.
+
+## Session 2026-11-05 ck: a roaming fight, the decoy after a long jump, despawn crashes (unattended)
+
+Both copies on one PC, test save, `coop_enemies=on`, B with `coop_follow_travel=off`. New tool `tools/roam_fight.py` (private repo):
+B fights in the arena the way a player does (runs by the stick to random points, then 8-15 s of fighting: turns to the nearest orc
+and strikes 2-3 times or presses Y; walks to it when farther), the host keeps 3 orcs alive near B, and every 30 s it prints the
+damage messages the host sent, those B applied, B's hits the host applied, how many 3-s scans found an orc within 600 of B with
+the decoy as target ("engaged"), decoy reanchors and stuck-watch pokes. A window engaged in most scans with no damage message is a
+stall. Options: `--no-roam` (fight in place), `--idle`, `--no-strike`, `--only-orcs` (wild wargs, ologs and camp orcs near B
+stopped), `--fresh-decoy`, `--spawn-dist`, `--detail` (each orc's distance to the decoy, target, attack), `--feel` (B's own
+keephealth off, its health drops counted; by default B's keephealth stays on so B cannot die).
+
+### Observations
+
+- **Roaming with the 2026-11-05b build: 13 swings in 300 s** (first 300 s of a 10-minute run, cut short), stalls in 2 of 10
+  windows. Standing still, earlier sessions had 17-36 in 50 s.
+- **A decoy made far away draws no attacks after the game's teleport moves it**, the reanchor of session cj included. The decoy is
+  made where the client joins (the tower); the arena is 1,267 units across and 5,705 down. That decoy, moved to the arena: 0 swings
+  in 60 s with orcs spawned 420 units away, 0 at 700, and 0 and 0 in two more 60 s runs after it was remade at the tower on purpose
+  (`tools/decoy_origin.py`). A decoy made in the arena, same place, same spawns: 36, 25 and 13 in 60 s. Session cj's A/B moved it
+  800 units, which works. Orcs with the far-made decoy as target stood 530-840 units away without an attack for 30 s and more; the
+  others repeated `2463C578` with no target.
+- **Fix** (host, `coop_decoy_remake`, default 1000, 0 off; live `coopset remake <d>`): a jump of the client's place longer than
+  that (or 400 up or down) removes the decoy and makes it again there (logged "the client's place jumped ...", counted
+  `decoy_remade`). Redirects that point at a removed decoy are dropped first (`SimRetargetDropTarget`). Unit tests 88/88, 36/36.
+- **With the fix**: the same start (decoy made at the tower, both moved to the arena): 8 and 22 swings in two 60 s runs. The
+  roaming run: 57 swings in 300 s, 38 applied on B, all in the first 90 s, then five stalled windows (longest silence 84 s). The
+  client's death is also a jump: B killed by orcs in the arena respawned at the tower, the decoy was made again there (1,930 units,
+  5,172 up), and the host's stand-in followed B (1 unit off).
+- **Controlled arms** (fresh copies, fresh decoy, `--only-orcs`, orcs spawned 420 units from B, 240 s each, no stall in any):
+  B idle 91 swings, B fighting in place 76, B roaming without strikes 84 (188 decoy teleports). So neither moving nor striking
+  wears the decoy out within 4 minutes when only the test's orcs fight. The stalls of the roaming run had wild wargs
+  (`Warg_Brown`), a camp olog (11,165 health) and camp orcs in the fight; a stalled decoy probed with the hit function's log
+  (`coopset hitlog`, `tools/stall_probe.py`): three orcs 420 units from it made no hit on anything in 30 s; after the decoy was made
+  again, 7 damage messages in 30 s, most from wild wargs. Which of these stops the decoy is not known (the full roam with outsiders
+  could not be run cleanly: see the hangs below).
+- **Archers** (`tools/decoy_watch.py Orc_Archer`, two archers 800 units from B, decoy made in the arena): 12 damage messages in
+  60 s, all applied on B (attacks `408C85AB` and `408C85B1`, the archer then 150-250 units from the decoy). Session ch's shot was
+  `EB96E382`; whether an arrow (not a close attack) reached B is still not shown. The decoy lost no health outside the hit function.
+- **The game's despawn crashes inside, often, on the client.** The guard's handler caught access violations in the game's despawn
+  (`1A8BB74` -> `1A8BBA8` -> `361570` -> `377365` / `377374` -> `60B4A3` -> `60B54E` -> `2775D2`, reading -1, 0x78, 0x49 and other
+  bad pointers): 16 in one client session of this test day, 34-36 in each saved client log. On the client the despawns are
+  `FreeProxy` (the proxy is killed through the hit function, then despawned in the same frame) and the client's own population
+  (every 1.5 s). A quick test on the host (`tools/despawn_crash.py`: probe `despawn` of living orcs, of orcs with health written to
+  0, and of those 6 s later) caught none and despawned none (the probe's despawn waits for "out of sight").
+- **Twice the client hung** (Windows: "Not Responding"; its simulation thread at full speed, the probe still answering): the game's
+  destructor `4DD18C` empties an intrusive list by calling each element's release, and the element never leaves the list; called
+  from `76E1B8` <- `4DBD18` <- `4DBBC8` <- `2FA174` (a pass over pending objects) <- `2D47E0` (main loop). Both times right after a
+  test teleported B back into the arena, just after the host had stopped the orcs fighting B (their proxies despawned on B).
+  Likeliest cause: one of the caught crashes above left a half-removed object in that list. New tool `tools/hot_thread.py <pid>`
+  (the busiest thread's instruction pointer and the exe addresses on its stack).
+- **The host's stand-in got stuck twice**, after the same crash on the host (`377365` in the despawn path) when B died the first
+  time and when the hung B was closed: "puppet ... is gone", a new stand-in spawned when B came back, and from then on every
+  put-back of it ran ("sim: puppet move #N") but it did not move (142-876 units off for minutes); the decoy, made at the stand-in,
+  stayed with it, and no enemy attacked B. A clean death (no crash) did not do it.
+- **The client's hits are the host's player's hits.** In the default hit mode (`coop_hit_by=poke`) the host applies a client's
+  strike as a hit by its own player, then the decoy pokes; an orc the client kills is the host's kill, and the test save's Nazgul set
+  raises some of them as undead allies. Orcs fighting orcs and the host's tamed wargs showed in the runs. Not changed.
+- Also built, off by default (`coop_decoy_stall`, seconds; live `coopset decoystall <s>`; counted `decoy_stall_remade`): when an
+  enemy after the decoy stands within 600 of it and no swing has reached it for that long, the decoy is made again. Not tested.
+- The game sets the client player's maximum health back (708 in the test save) every few seconds, so a written 100,000 is not kept
+  on B. The probe's `kill` cannot kill a copy's own player (it leaves it at 1 health). An idle B with its keephealth off died under
+  three orcs within a minute, and its death and Nemesis screens stopped its world.
+
+### Unknown
+
+- Why the game's despawn crashes on the client (the kill and the despawn in one frame are the first suspect), and whether the
+  hangs and the stuck stand-in come from it (likely, not shown).
+- What stops the decoy in a fight with wild wargs, ologs and camp orcs around (or after a long session).
+- Whether arrows reach the client.
+
+### Tools (private repo)
+
+`roam_fight.py`, `decoy_origin.py`, `stall_probe.py`, `hot_thread.py`, `death_standin.py`, `despawn_crash.py`.
+
+## Session 2026-11-06 cl: the crashes inside the game's despawn; the client's hang is something else (unattended)
+
+Both copies on one PC, test save, `coop_enemies=on`, B with `coop_follow_travel=off`. New tools (private repo):
+`despawn_ab.py` (runs of `roam_fight.py` per phase, despawn counters, caught access violations, whether a copy still answers),
+`hang_regs.py` (the hung loop's registers and the object it destroys), `unstick_ext.py` (a repair of that loop from outside, test
+only), `rtti_name.py` (vtable names; this exe has none next to its vtables).
+
+### Observations
+
+- **Where it faults.** The game's despawn `1A8BB74(character, 0, 0)`: (1) `100748` releases the character's entry in a 256-entry
+  table by its index at `character+0x2BF8` (entry `+0x10` non-zero: `360EAC`); (2) `361548([character+0x2D10], 0)`, which first
+  calls `377320` (through the thunk `1156A24`): it reads the component's `+8` (then `+0x70` of that) and each pointer of the array
+  `+0x10..+0x18` (then `+0x70` of each) and hands each to `60B484`, which reads a table at `[handle+8]`; (3) it sets the AI data's
+  `+0x910` and `+0x912` to 1 and `+0x914`. Every caught fault was in (2) or below (`3615C7`, `377365`/`376`/`37E`, `60B53F`,
+  `60B615`, `2775D2`, `251C2E`): the component's fields held 8, -1, 0x22 and other non-pointers.
+- **Who asked.** The client asks its own population (what its game ticks that is not a proxy) to go every 1.5 s, and asked the
+  same characters again and again until the game removed them. New counters in the `enemies` status (`despawn_calls`,
+  `_repeats`, `_skipped`, `_faults`, `_repeat_faults`, `_refused`) and a log line per fault ("the game's despawn faulted on ...
+  (asked before: ...)").
+- **A/B** (both copies, 6 roaming fights of 60 s per phase, wild wargs and camp orcs left in, each run starting with the cleanup
+  and teleport that preceded both hangs of session ck):
+  - old way (`coopset despawnonce off`): the client made 3,560 despawn calls, 3,255 of them repeats; **38 faults, all 38 on a
+    repeat ask**; 16 access violations caught. Some repeats read the "asked" byte (`+0x910`) as 232 and 248: the character's
+    memory had been freed and reused.
+  - new way (`despawnonce on`): 297 calls, 7,292 repeats skipped, **0 faults, 0 access violations**.
+- **Fix 1** (both roles, default on; `coopset despawnonce off` for tests): a character is asked once. A call is skipped when its AI
+  data is already marked (`+0x910`) or it was asked in the last 60 s (by address: the population list can still hold a character
+  freed in the last 400 ms).
+- Ten more fights with fix 1 on fresh copies: 434 calls, 9,585 repeats skipped, **2 faults, both on a first ask**, in one frame:
+  two far-off proxies (an `Orc_Defender` spawned 120 s before ~5,000 units away) freed when the host stopped announcing them
+  (`FreeProxy`: the proxy is killed, then asked to go in the same frame).
+- **Fix 2**: before the call, the component is checked the way `377320` will walk it (its `+8` and each array entry 0 or readable,
+  each one's `+0x70` handle 0 or readable, the handle's table 0 or readable); if not, the character is not asked (counted
+  `despawn_refused`, logged). Unit tests 88/88 and 36/36, the guard's offline suite 56/56 (it refuses a test root inside the real
+  `%LOCALAPPDATA%`: run it from `local/`). The final build in 4 fights: 213 calls, 3,548 repeats skipped, 0 faults, 0 refused, 0
+  access violations, no hang, every damage message applied on B (56 of 56).
+- **The client still hung once** (third time in two days), after the third of ten fights with fix 1 and **no fault and no access
+  violation in that session**: the same loop as session ck (`4DD18C`, from `2FA174` <- `2D47E0`). So the despawn faults are not its
+  (only) cause. The registers in the loop (`tools/hang_regs.py`): the object being destroyed has the base vtable `1DB7358` (set by
+  that destructor; the constructor `4DD2E4`/`4DD300` builds three such lists at `+8`, `+0x18`, `+0x28` and is called from dozens of
+  static initializers: an event/signal-like type); its list at `+8` had a last node whose owner has vtable `1DB6BE0` (a link type,
+  61 references in the code) and whose "previous" link pointed at a node outside the list, so unlinking it never empties the list.
+  The other node's owner has vtable `1DAA9D0`, the type `361548` also builds.
+- **A repair is not enough.** Marking that list empty from outside while the thread sat in the loop (`tools/unstick_ext.py`) let the
+  loop end; the game ran on for a moment (queued events, the teleport) and then crashed (unhandled access violation at `15FD40`
+  reading `0x1C0`, from `2D4B56` <- `1F6922` <- `1A89D3` <- `160A29` ... `2FC447`) and closed. A watch doing that inside the mod was
+  built and removed again: it turns a hang into a crash.
+- Closing the client while connected: the host logged "connection lost", kept its stand-in and caught no fault.
+
+### Also seen (not fixed)
+
+- Late in a long session the host's swings fell off (27, 4, 4, 0, 0 per minute in the A/B's second phase) and the client applied
+  fewer of them (`dmg_stale` 164 of 220: messages for host enemies that had no proxy on the client at that moment); with fix 1 on
+  fresh copies the first 4 of 10 runs applied every message (55 of 55), later ones half or less. The client's proxies are freed by
+  its game and spawned again often (up to 11 spawns per 10 s); only 9 of its proxies were killed by its own hits in one session.
+
+### Unknown
+
+- Who breaks the link in the destroyed object's list (a write watch on the node is the next step), and whether the mod's proxies
+  (spawned, adopted, freed and spawned again many times) are part of it.
+
+### Later in cl: chasing the client's hang; stopped orcs pile up on the host
+
+- **What is being deleted when the client hangs.** `4DBBC8` walks a pending list (`+0x40`), and for each item calls its pool's
+  destroy (`4DBD18` -> vtable `+0x20`), here `76E1B8`: the destructor `49CEC0`, then a free of `0x3180` bytes. `49CEC0` sets the
+  vtable `1FB3640` (the character class the stand-in also has) and tears down the character's members (`+0x2C70` ... `+0x3168`), then
+  tail-jumps to the base destructor `45FDAC`; the hanging list object (base vtable `1DB7358`) is destroyed somewhere below it (no
+  return address, tail jumps). So a character is being deleted, and a list object inside it has a broken link.
+  `tools/hang_regs.py` now also finds that character on the stack and prints its kind, place and the list object's offset in it:
+  for the next hang.
+- **No quick repro.** `tools/hang_repro.py` repeats what preceded each hang (orcs spawned at B, a fight with B striking, the orcs
+  stopped on the host, B teleported to the arena's centre): 40 cycles, no hang; 20 more with B teleported 3,000 units into the
+  camp and back, none; 15 with archers mixed in, none; the run with the camp's grunts stopped each cycle did not get going (below).
+  Despawn faults stayed at 0 throughout.
+- **Stopped orcs are never removed (a test-tool problem).** The tools stop orcs by writing their health to 0
+  (`live_suite.remove`, so that the Nazgul set raises none). After this day the host held **253 characters at health 0** (230
+  `Orc_Infantry`, 23 `Orc_Archer`), the client 10; the host's game then **created no new orc at all** ("the game created nothing
+  for Orc_Infantry"), and the probe's despawn did not remove them (they are in sight of the player). This likely explains the
+  fights thinning out late in long sessions (sessions ck and cl: swings falling to 0, "the decoy wears out" after many runs, fewer
+  damage messages the client could apply): those were not shown to be the mod's. `goto_arena.go` now counts them and warns above
+  80; restart both copies before a batch of measurements.
+- **The guard's offline tests and Windows' firewall.** The four `coop_peer` cases listen on this PC's real address, and each
+  run's case copy of `test_guard.exe` lives in a new folder, so Windows' firewall asked the owner about each one (the owner
+  allowed them). `SOWGUARD_TEST_NO_PEER=1` skips those four (52 cases) for runs that do not touch the network code (README).
+
+### Later in cl: the Nazgul gear's raise, and real kills in the test cleanups
+
+- **Owner's question: can the raise be turned off in co-op?** Not found yet. What was learned:
+  - The game's strings name a resurrection system that is mostly the Nemesis one (captains coming back, `Faction.Resurrection`,
+    "Chance to resurrect"), and one player-ability marker, `Marker_Resurrected_PlayerAbility_RaiseDead`, checked by the
+    resurrection job's state machine `1C5132C` (state with `1B5B780`, then `106CDC(character, marker)`).
+  - New probe command `watchw <1|2|4|8> <addr> [addr ...]`: hardware write watches (debug registers 0-3) on every thread of the
+    game; `watch` reports up to 16 hits with the writing code and call stack (`SimWatchWrites`).
+  - `tools/raise_watchw.py` (rounds of 4 `Orc_Infantry` killed by probe `kill`, watches on their health): in 21 rounds the health
+    of killed orcs was written again only by the game's spawner sets (`1A93428`, "Spawner set '%s' unable to spawn - already at max
+    AI" -> `1AC414C` -> `1045EC` -> `103819` -> `103917` -> ... `15CEF5`): the game reuses dead characters' memory for new spawns, so
+    "the same character alive again" is not a raise. Raised orcs show as living orc followers of the host's player (byte
+    `+0x23B8` set; health 247 of 300 in one): 5 among ~130 host-player kills earlier in the session, and 2 new among 9 kills in a
+    later check. Branded orcs are followers too, so removing orc followers in the mod would take the player's army with them.
+- **Real kills in the test cleanups.** `live_suite.remove` now kills with probe `kill` (the game's death; the game removes the body:
+  of ~130 such kills 10 bodies were left, and 2 of 9 bodies were gone 30 s after the kill) and writes health 0 only when the kill
+  does not take. `live_suite.raised` lists the host's living orc followers near a place; `goto_arena.go` removes them at each
+  run start (they fight the test's orcs). The host's count of stopped (health-0) characters stayed at 10-11 instead of growing.
+
+### Later in cl: a test save without the Nazgul set bonus
+
+- The owner swapped gear in the host's test copy so the Nazgul set bonus is gone, and quit (the game saves on quitting). The new
+  save is the test baseline now (`local/backups/2026-11-06-no-nazgul-set`, used by `prep-pair.ps1`; the old one with the set is
+  kept). With it, `tools/raise_count.py` (rounds of 8 orcs spawned at the host and killed with probe kill, then 20 s): 40 kills,
+  no killed orc alive again and no new orc follower near a kill; an earlier, looser run: 39 kills, no follower left at the end
+  (orc followers already in the save wandered in and out of range). With the set: 2 raised of 9 kills in one check, ~5 of ~130
+  in another. Both copies load the new save and link.
+
+## Session cm (2026-11-06/07): the client's hang found and fixed (the mod's own write); references in the retarget swap
+
+Fresh copies on the new test save (no Nazgul set bonus), real kills in the cleanups. Build 3095001, both copies on one PC.
+
+### Observations
+
+- **The hang came back on fresh copies**, about 2 minutes into a roaming bot fight (`tools/roam_fight.py 900 3 --seed=611`): B stopped
+  applying the host's damage messages, Windows marked it "Not Responding", its simulation thread at full speed in the same loop as
+  sessions ck and cl (`4DD18C` <- `76E1CC` <- `4DBD31` <- `4DBC3C` <- `2FA27C` <- `2D4B6C`).
+- **What the loop is.** `4DD18C` is the destructor of a base class (vtable `1DB7358`) whose objects keep a list of the references
+  that point at them: a circular doubly linked list, head at object+8. A reference is `{ vtable; node: next, prev; the node's owner
+  (the reference itself, +0x18); target (+0x20) }`, its node at reference+8 (constructor `4CA490`: node linked to itself, target 0;
+  copy `4C8F98`; attach `18D80C`: link at the tail of target+8, store the target, no unlink first; the assign functions `3F52B8`,
+  `17B8920`, `1AFA720`, `115E404`: unlink, then attach). The loop takes the last node, calls `18D264` on its owner, then the owner's
+  vfunc 1. **`18D264` unlinks only when the reference's target is set.** The object being destroyed is the 0x3180-byte character
+  (`76E1B8`: the character pool's deleting destructor, `49CEC0` then free 0x3180): its list holds every reference to that character
+  (59 on a fresh host orc, 88 on a client proxy).
+- **The hung list** (`tools/hang_list.py`): ten references, all with target = the character, except the last one (vtable `1DB6BE0`):
+  target 0 while still linked, neighbours pointing back at it. `18D264` skips it, its vfunc 1 (`77E660`) returns 0: the loop never
+  ends. That reference sat at +0x28 of an object with vtable `1FD5EA0`, built by `1BB4C1C` - **the Nemesis member's constructor**
+  (`kMemberCtor` in `simhook.cpp`). So the stuck reference is a member's link to its character, whose target is `member+0x48`.
+- **The mod wrote that field alone**: `SimMemberLink` set `member+0x48` to a captain's proxy (every frame while shown) and to 0 when
+  the proxy was freed, without unlinking or linking. A member reference the game had linked to a character of the client's own
+  world, then rewritten to the proxy and then to 0, stays in that character's list with no target; when the game removes that
+  character, its destructor hangs.
+- **Repair from outside, proper this time** (`tools/unstick_node.py`): unlinking that one reference and linking it to itself (the state
+  `18D264` leaves) let the thread out at once; the client answered, autosaved and ran on for minutes. (Session cl's repair wrote the
+  list head empty and left the stuck reference pointing into the freed character: a crash followed.) After the ~4-minute freeze the
+  host had dropped the client (`ready=0`): a rejoin was needed.
+- **The fix, checked**: `SimMemberLink` now uses the game's assign (`3F52B8`) on the member's reference (checked: self pointer at +0x18,
+  vtable `1DB6BE0`). `tools/captain_unlink.py` (A goes to the captains, B builds a captain's proxy, A leaves): before, on the old
+  build, the member's node stayed linked to itself and its target was written raw (proxy, then another character); with the fix the
+  reference sits in the proxy's list while shown and is unlinked with target 0 when the proxy is freed (3 assigns, 0 raw writes, B ran
+  on; twice).
+- **Defence in depth**: the destructor loop's call at `4DD1BC` goes to a repair (`src/listfix.h`, `SimUnlinkFixInstall`; off with
+  `coop_unlink_fix=off`): with the target set it does what `18D264` does; with it 0 and the reference linked into a list whose
+  neighbours point back at it, it unlinks it and links it to itself (logged, counted `unlink_repaired`). Unit tests (`enemy_test`
+  93/93) include a negative control: with the game's rule a list whose last reference has no target never empties; with the repair
+  it empties in ten rounds. Installed on both copies in every run since; `unlink_repaired` stayed 0 in every run with the member fix.
+- **The host's retarget swap also wrote into references.** `tools/target_refs.py`: an orc targeting the host's player keeps it in
+  six places the swap rewrites; three are character references linked into the player's list (the active goal slot's target
+  `AI data+0x358` = slot `+0x328` + 0x30, `AI data+0x6C0`, `orc+0x2CA8`), three are references to the player's health object linked
+  into its list at health+8. The swap wrote the decoy over them raw, so they stayed in the player's lists: when the decoy is removed
+  (a long jump remakes it), its destructor never clears them. The swap now moves such a field with the game's assign
+  (`retarget_refs` counted; `retarget_raw` for plain pointers; `coop_retarget_refs=off` / `coopset retargetrefs off` restores the
+  raw write). In fights: 51,429 / 16,218 / 9,006 assigns, 0-1 raw writes, no crash line.
+- **A host crash, once** (unhandled access violation at `2FC037` reading `0x18`: `[character+0x2D08]` was 0; stack `2FC00D` `2FBC08`
+  `11BD1B` `11B245` `2F7AD6`, the AI tick's goal code), 5 s after the host made its decoy again (B taken 3000 units off and back).
+  First sighting. Not reproduced since, either way (see Unknown).
+- **Fights on fresh copies with the new save**: 133 damage messages in 420 s (19/min, all applied, 0 stalls), 138 in 300 s (27.5/min,
+  every window engaged), 74 in 300 s, 39 in 180 s; all applied by B, `dmg_stale` 0. The thinning seen late in sessions ck/cl did not
+  show on fresh copies.
+- **A client crash, once**: the game's own fatal check in its page allocator ("CPageAllocator"; `D1FE10`: a 512-entry table full ->
+  `D1EE40` -> `819104` writes to address 0), about a minute after B entered the world, during the arena set-up. First sighting.
+- **Archers**: `tools/archer_range.py` (host spawns `Orc_Archer` 1200-1500 units from B; probe `dmglog` lists each swing that reached
+  the decoy with the attacker's distance): 0 reports in two tries; the archers stood still or died within 30 s (cause not checked).
+- New probe command `dmglog`: the last 32 damage reports (host: attacker, attack id, the attacker's distance from the hit; client: what
+  it did with each message: applied, failed, no proxy).
+- Guard tests: the new byte checks first read outside the tests' smaller stand-in exe (one case failed, 51/52); they now go through
+  `Head` (bounds-checked): 52/52 with `SOWGUARD_TEST_NO_PEER=1`; `net_test` 36/36.
+
+### Test-harness traps (this session)
+
+- A tool that took B 3000 units *west* led the host's orcs to the host's player (the arena host spot is west): it died despite
+  keephealth (`deaths_by_grunts`), respawned at the tower start, and from there its stand-in of B could not be moved into the arena
+  (the game ignored every put-back for minutes). With `coop_follow_travel=off` (the tests) nothing brings the players together again.
+- A jump 3000 units *north* (z 13,700) is ground for the player, but the host's stand-in could not be moved there either.
+- `coopset remake 300` (a remake after a short move) remade the decoy before the orcs reached it: no swing in 240 s.
+- The game does not delete a killed or despawned orc's body on the host within 90 s, also not with the player 2,500 units off;
+  the client deletes its proxies on its own schedule (36 proxies marked in a 7-minute fight: none deleted in that time).
+
+### Unknown
+
+- Who else (besides the old `SimMemberLink`) could leave a reference linked with no target; `unlink_repaired` counts it if anything does.
+- Whether the host crash at `2FC037` came from the raw retarget writes (a guess: a reference left pointing at a removed decoy); the
+  jump test that would show it was spoilt by the traps above.
+- The client's page-allocator crash: cause unknown; seen once.
+- Whether the host's archers' arrows reach the client.
+
+### Later in cm: host crashes when the decoy is made again, and the removed decoy's AI
+
+- **A jump test that stays in the arena** (`tools/jump_cycles.py --arena`): B jumps between two points of the arena's flat ground
+  2,250 units apart (over `coop_decoy_remake`'s 1000) every 12 s while 3 orcs fight it; the host's player stays at its spot (put
+  back when the fights push it). The host remade its decoy about 4 times per cycle.
+- **The host crashed in both modes of the retarget swap**: with raw writes (`--raw`) after ~6 cycles (the game's own fatal check
+  "Removing an object from a tag that doesn't contain it.", `1128302` <- `6D73B5` <- `4DCF0E` <- `76E1CC`: while deleting a
+  character); with the game's assign after 9 cycles (34 remakes; access violation at `342E1A` reading `0x528`: `[character+0x2CD8]`
+  was 0, in the AI tick `2F5E96` <- `2F7B21`). The first host crash of the session (`2FC037`, `[character+0x2D08]` = 0) was of the
+  same kind: a character's AI ticking while its components are gone.
+- **Cause found (derived)**: `DecoyRemove` wrote the old decoy's health 0, asked the game to despawn it and took it out of the proxy
+  set in the same frame. The proxy set is what skips a proxy's behavior tree (`BrainFilter`), so the old decoy's own AI ran again
+  on a character the despawn was taking apart. The client has kept its freed proxies in the set until the game deletes them
+  (`g_limbo`) since session bh; the host's decoy did not.
+- **Fix**: a removed decoy now stays in the proxy set (AI off) until the game has deleted it (`g_decoy_limbo`, up to 56;
+  `coop_decoy_limbo=off` / `coopset decoylimbo off` for the old way; status `decoy_limbo`, `decoy_limbo_gone`). With it: 16 jump
+  cycles, 61 remakes, no crash (the limbo was then capped at 32). The game never deleted one of them (`decoy_limbo_gone` 0), and
+  after ~10 cycles (~40 old decoys at health 0) the fights stopped: no swing in the last 6 cycles. A kill the game's way did not
+  take on a decoy (probe `kill` now takes an attacker: the host's player, the decoy itself and an orc all gave "not killed"; the
+  mod's own hooks drop hits aimed at the decoy, which may be why). So old decoys stay, AI off; a remake comes with a long jump of
+  the client (joining, a respawn, a fast travel), a few per session in play.
+- **The client crashed twice on full game tables** (not the mod's code paths seen so far): once in the page allocator (512 pages),
+  once in the AI code (`11244A`: a 256-entry table at `[rbx+0x70]`, `1123CC` <- `112100` <- `2FC6B8`), the second during the raw jump
+  test. `tools/char_count.py`: after 4 jump cycles the client held 27 characters (11 dead), the host 70 (26 dead): the client does
+  not pile up bodies; what filled the tables is not known.
+- **The final build** (limbo up to 56, probe `kill` with an attacker): 12 jump cycles, 46 remakes, no crash on either copy, all 46
+  old decoys held in limbo; guard tests 52/52 (no-peer), `enemy_test` 93/93, `net_test` 36/36.
+- **Archers** (`tools/archer_range.py`, the decoy picked as the proxy with health above 0: `live_suite.live_decoy`, since the host's
+  proxy list now holds old decoys too): two `Orc_Archer` spawned 700 units from B came to ~400 units of the decoy, then kept
+  1,000-1,500 off with the decoy as their target (`retarget show`), and in 40-120 s **never shot it**: 0 damage reports from them
+  (the host logged 8-14 from other attackers meanwhile), the decoy's health untouched; the same with `coopset decoyhide off`. So the
+  host's archers do not attack the client from range. Why (the target being an ally of the player's faction, line of sight, the
+  mod's attack-target hook) is not known.
+
+### Later in cm: a 15-minute soak, hits from enemies the client does not show, and the client's AI-table crash
+
+- **Soak on the build with the decoy limbo** (`roam_fight.py 900 3 --seed=618`): 25 rows in 779 s, 23 engaged, no stall; then the
+  client closed: **the same game check as before at `11244A`** (a 256-entry table full; stack `11213E` `2FCD4D` `2FF504` `2FF343`
+  `160BA8`), now the second time in a long fight. The table is at +0x140 of the object the AI manager updates in `2FC6B8` (called
+  from `2FF40C` for each entry of a manager's array, `2FF268`); its count is at +0x1B0 (`112354` sets it from the container at +8;
+  `1123CC` checks it against 0x100).
+- **Hits the client dropped**: B's `dmg_stale` reached 86 in that soak (12, 7, 7, 27, 18, 13 in single 30-s windows): damage messages
+  for host enemies with no proxy on B at that moment, both when a camp joined (21 orcs near B; the host shows 16) and with only 4
+  orcs near (B's proxies come and go). **Fix**: such a swing is applied with the nearest proxy as the attacker (the attack's record
+  gives the damage), counted `dmg_borrowed`, logged `b` in `dmglog`; `coop_dmg_borrow=off` / `coopset dmgborrow off` drops them as
+  before.
+  Not exercised live yet: in a 5-minute fight with 6 orcs (114 of 114 swings applied) and with 20 orcs around B for 90 s (32
+  swings, each with its own proxy) no swing came without a proxy; the host never sends a swing of an enemy it has not announced.
+- **A 15-minute fight with a sampler** (`roam_fight.py --ai-table`): the guess that the table is the character's AI data
+  (`[character+0x2CE8]+0x1B0`) is wrong (garbage for B's player). What the object is: unknown.
+- **The host's stand-in fell behind again on a fresh session** (no crash): after B roamed south to the camp's walls (z ~8,800,
+  outside the arena) the host's stand-in stayed 300-1,700 units off for minutes, "put back" every ~0.85 s without catching up; the
+  decoy follows the stand-in, so the host's enemies went elsewhere and B showed no enemy for 2 minutes. When B stood still the
+  stand-in caught up (0 off), then lagged 150-240 behind small moves. (The host runs `coop_puppet_move=anim`: the stand-in moves by
+  the client's animation inputs and is put back when it drifts; `walks` in its status counts the other mode, so 0 is expected.)
+- **The decoy now follows the client's sent place** (its latest packet, under a second old) instead of the stand-in's
+  (`coop_decoy_follow=remote`, default; `standin` or `coopset decoyfollow standin` for the old way; `decoy_by_remote` counts frames
+  where they were more than 150 apart). Same route (`roam_fight.py 600 3 --seed=619`): the decoy stayed within 21 units of B in
+  all 19 rows and B always had proxies; the old way lost B at 90 s (decoy 369, then 1,693 off, no proxy on B for minutes). Swings
+  in that run: 75 in 600 s (7.5/min, 3 stalled rows): fewer than other routes' 13-27/min; one run each, so not a measured
+  difference.
+- **Crash lines now carry the registers** (`crash registers: rax=... rbx=...[rva:<vtable>]`), for the client's table-full crash at
+  `11244A` (its rbx is the table's object).
+- **A second 15-minute soak on the same route** (`--seed=618`, the build with all of the above): 900 s completed, 263 damage
+  messages (17.5/min), all applied by B, `dmg_stale` 0, 23 of 29 windows engaged, 4 stalled (longest engaged silence 51 s), no
+  crash line on either copy (the first soak on this route lost B to the `11244A` check at ~13 min). One run: the table-full crash
+  is not shown to be gone.
+- **Archers against the host's own player** (A alone, keephealth off for 40 s, two `Orc_Archer` spawned 1,000 units off): A was hit
+  7 times (29-99 health each) while the nearer archer stood 330-510 units off: out of blade reach, so arrows. Against the decoy
+  the same kind of archer kept 1,000-1,500 off and never fired. So arrows work; the archers hold back from the decoy, beyond their
+  firing range. Why (the decoy being an ally soldier, its own threat radius) is not known.
+- **Not the follower mark**: two 45-s trials, archers spawned 700 units from B, the decoy's follower byte (`+0x23B8`, set by
+  `SimProxyAdopt`) as the mod sets it and then written 0 every second: the nearest archer came to ~365 units of the decoy (median;
+  the range they shoot the host's player from) in both, and the only report from them in each was one blade hit (110 units). No
+  arrow at the decoy at bow range either.
+- **The client's other table-full crash is the audio manager's**: the registers logged at the next one (4 s into a soak, again
+  right after B entered the arena) and the code around it: `D1FE10` (`18E634` <- `CGameAudioManagerThread::AddKey`, `18E560`)
+  checks `[r13+0xA1170] == 0x200` and calls `D1EE40`, whose message is "m_vFutureKeys is at capacity of %u. Game will crash. Set
+  convar "GameAudioManager.FatalErrorOnFutureKeyFull" to false to get around this." That convar is the byte `D1EE5C` reads (`cmp
+  byte [rip+x],0` -> rva `26708C5`, 1 by default; 0 skips the crash). **Fix**: the mod writes it 0 in co-op on both roles
+  (`SimAudioKeysNonFatal`, checked against the instruction; `coop_audio_keys_fatal=on` keeps the game's crash); logged "a full
+  audio key queue no longer crashes the game", the byte read 00 on both copies. Why the queue fills on the client (it runs in the
+  background on this PC) is not known.
+- **The dropped-hit fallback, live** (new probe `injectdmg <enemy id> <attack hex>`, client: queues a host damage message for an
+  id it has no proxy for): 3 injected hits were applied with the nearest proxy as attacker (`dmg_borrowed` 3, `dmglog` `b` lines at
+  272-372 units); with `coopset dmgborrow off` the same hit counted `dmg_stale`. Hits through proxies 322 and 1,046 units off took
+  32 and 37 health from B: the attacker's distance does not stop the damage.
+- **25-minute soak on the build with the audio switch** (`roam_fight.py 1500 4 --seed=621`; the same route had lost B to the audio
+  crash 4 s in on the build before): 1,500 s completed, 509 damage messages (20.4/min), all applied by B, `dmg_stale` 0, 45 of 49
+  windows engaged, 0 stalled (longest engaged silence 19 s), no crash line on either copy. Guard tests 52/52 (no-peer), `net_test`
+  36/36, `enemy_test` 93/93.
+- **A second 25-minute soak** (`--seed=618`, the route that lost B to the AI-table check at ~13 min on an earlier build): 1,500 s
+  completed, 258 damage messages (10.3/min), 256 applied by B, `dmg_stale` 0, 40 of 49 windows engaged, 4 stalled (longest engaged
+  silence 59 s), no crash line on either copy. 50 minutes of bot fighting on this build without a crash; the `11244A` check did
+  not come back, so its table is still unnamed (the crash line would now carry the registers).
+- **A 10-minute run with per-orc detail** (`--seed=618 --detail`, to see what orcs do in a stalled window): 182 damage messages
+  (18.2/min), all applied, 15 of 19 windows engaged, none stalled (longest engaged silence 14 s), so nothing to look at; stalls
+  stay intermittent (0-4 per 25 minutes in the soaks above).
+- **Archers, closer** (`tools/archer_actions.py`, `tools/archer_vs.py`; the host now names its decoy in the `enemies` status,
+  `decoy=abs:...`, because `live_suite.live_decoy` had been picking an old decoy whose health came back):
+  - Against the real decoy two archers had it as target in nearly every sample, were in their shoot attack (`AI_Archer_Shoot`) in
+    ~45% of samples, but kept an outer ring 670-840 units off (`AI_Bip_CC_Taunt_OutterRing`) and no arrow reached it: no hit of an
+    archer in the hit log (`coopset hitlog 80`), `decoy_hurt` 0. Against the host's player they closed to ~270 and hit it 14 times.
+  - A plain `Gondorian_Soldier` spawned in the arena with two archers pointed at it (`retarget` every 0.5 s) was shot dead in 26 s
+    (six arrows of 50, from 383-977 units); adopted as a proxy (probe `adopt`: behavior tree skipped, follower mark) it was still
+    shot dead in 28 s; with its position written every 0.3 s it took one arrow in 40 s.
+  - So the decoy now is not written while it is within 25 units of its place (`coop_decoy_still`, default 25, 0: the old way;
+    `decoy_unwritten` counts the frames): 30,258 frames left alone in a 5-minute fight, which went as well as before (99 damage
+    messages, 19.8/min, every window engaged; the same route gave 74 earlier). Arrows still did not reach the decoy, also with
+    the stand-in made targetable (`puppet targetable on`) and with `decoyhide off`. Cause still unknown.
+  - Ruled out as well: the stand-in's body (with B taken 60 units from a plain soldier, between it and the archers, the archers
+    shot it dead in 27 s, shooting in every sample), and the decoy's shrink (`decoyhide off` and the decoy made again with it off:
+    0 archer reports in 45 s, `decoy_hurt` 1). Archers are noisy: one plain-soldier run had them in their shoot attack in only 19 of
+    266 samples and no hit. Left to try: what the archers aim at on the decoy (its bones or aim point), and whether the arrows
+    that do land (`decoy_hurt`, health lost outside the hit function) should be sent to the client.
+- **Arrows that do land on the decoy now reach the client.** Health the decoy loses outside the hit function (what an arrow does:
+  `decoy_hurt`, which was only counted) is sent to the client as a swing of the nearest announced enemy that has the decoy as its
+  target, an archer first, with `AI_Archer_Shoot` for an archer (its "current attack" can be a taunt) and that enemy's current
+  attack otherwise (`decoy_hurt_sent`; `coop_decoy_hurt_send=off` only counts). Checked by writing the decoy's health 50 lower
+  four times with an archer on it: 4 detected, 4 sent as `AI_Archer_Shoot`, 4 applied by B, whose health went 504 -> 390. With no
+  enemy on the decoy nothing is sent (seen once). Arrows on the decoy stay rare (above), so this only catches the few that land.
+- **Archers, more ruled out**: no idle-wake pokes happened (`hunt_woken` 0) and waking/hunting off changed nothing; a soldier kept
+  at full health (written every 0.3 s), shrunk (scale 0.01 written every 0.3 s), or adopted as a proxy the moment it spawned was
+  still shot (killed in 21-32 s); the decoy with the archers re-pointed at it every 0.5 s (309-492 units off), and a decoy never
+  teleported (`coopset reanchor 0`), took no arrow. Arrows do not use the hit function at all (a soldier killed by six arrows
+  showed no archer hit in the hit log): they hurt by another path, which on the decoy would show as `decoy_hurt`. Still unknown.
+- **The client's AI-table crash, explained (derived from live reads)**: the crash at `11244A` logged `rbx` = an object of class
+  `1FF9F50` (constructor `1C6D1CC`, inside `1BE03DC`'s 0xE2C8-byte object; the client holds 256 of them, found by `findq` of the
+  vtable), counting the entries of a list at +8 (count at +0x70, the game's check at 256). Each such table belongs (through its
+  reference at +0x40, target at +0x60, an object of class `1DBE008` holding the character at +0x40) to one character. Sampled on B
+  (`roam_fight.py --ai-table`, `tools/agent_table.py`): the large tables were all the **proxies'** (`Orc_Infantry`, `Warg_Tamed`:
+  44-90 entries, growing ~0.5 a second under fire, back to 0 when the proxy goes) and **the host's stand-in on B** (`Talion`, 32
+  after ~8 minutes); B's own player held 5. The entries are references (vtable `1DB1CE0`) whose target is 0 (what they referred to
+  is gone) still linked in the table's list. These are the characters whose behavior tree the mod skips: their own tree would
+  prune such entries. A proxy alive for long enough under fire fills its table and the game crashes. Letting one proxy's tree run
+  for 2 s (probe `adopt ... off`, then `adopt` again) did not empty its table (26 before and after). Not fixed yet: the next step
+  is the game's prune of those entries (the 1DB1CE0 references are built in `1BE1418`, class `2303A30`), to call it for skipped
+  characters, or recycling a proxy before its table fills.
+- **A host crash in a behavior tree** (`37671F` writing `[0+0x528]`: the tree's character, `[tree+8]`, had its `+0x2CD8` component
+  gone; the same field as the `342E1A` crash): the mod's behavior-tree filter now skips the tree of a character whose `+0x2CD8` is 0
+  (`torn_skips` in the `puppet` status; logged).
+- **The tree guard, narrowed**: skipping every character without a `+0x2CD8` component failed one guard case (51/52: the suite's
+  stand-in characters have none, so no tree ran); the guard now skips only a character whose tree ran with the component before
+  and finds it gone (being taken apart). Guard suite 52/52; in a 5-minute fight it never fired (`torn_skips` 0 on both copies) and
+  the fight went well (137 damage messages, 27.3/min, all applied, every window engaged).
+- **How the AI-table count is made**: `112354` gets it from `114A0A0` -> `245654`, which walks the list at table+8 (through +8 links)
+  and, for each entry, calls the entry's virtual methods `+0x158` and `+0x1C8` on the object 0x40 before the node (a large object:
+  57+ virtual methods; the dead `1DB1CE0` reference seen earlier sits inside it). So the entries are whole game objects, not small
+  references: unlinking them from outside would leak them and skip their own clean-up, so it was not tried. Options for next time:
+  find what the skipped tree does with them (the `+0x158` check is probably "still valid"), or have the client remake a proxy
+  before its table nears 256 (a proxy rarely lives that long under fire; the stand-in's grows slower, ~4 a minute).
+- **Fix for the AI-table crash: proxies are made again before their table fills.** A background thread finds the client's AI tables
+  every 15 s (`SimScanHeap` for the vtable `1FF9F50`); every 2 s the client reads each one's count and character, and a proxy whose
+  table holds `coop_proxy_table_max` entries (default 200, below the game's 256; 0: off; `coopset proxytablemax`) is taken 20,000
+  units down, freed the usual way (killed, despawned, kept with its AI off until the game deletes it) and made again where the
+  host's enemy is, with an empty table (status: `proxy_recycled`, `ai_table_max`, `ai_table_scans`; logged "its proxy's AI table
+  held N entries; made again"). Checked with the limit at 20: 30 proxies made again in a 4-minute fight, which went on normally
+  (56 of 56 damage messages applied, every window engaged), both copies up. The host's stand-in on the client also grows (~4 a
+  minute; not handled yet).
+- **25-minute soak with the recycling at its default** (`--seed=618`, 4 orcs): 1,500 s completed, 319 damage messages (12.8/min),
+  all applied, `dmg_stale` 0, 0 stalled windows (25 of 49 counted as engaged), no crash on either copy; the largest proxy table
+  seen was 92, so no proxy had to be made again. Guard suite 52/52, `net_test` 36/36, `enemy_test` 93/93.
+- **The stand-ins' tables too.** After a 5-minute fight the stand-in's table held 77 on the client (the host's player's picture)
+  and 33 on the host; the host's decoy had none. The same check now runs on both roles for the stand-in: at the limit it is let
+  go (`SimRetirePuppet`: no stand-in, the old one 20,000 units down with health 0 and its tree skipped, asked to despawn) and the
+  usual pick makes a new one (`puppet_recycled`). Checked with the limit at 30: the host's stand-in was made again once (34
+  entries), the client made 21 proxies again, the fight went on (93 of 93 damage messages applied, every window engaged), both
+  copies up. Guard suite 52/52, `net_test` 36/36.
+- **30-minute soak on the build with both recycling checks** (`roam_fight.py 1800 4 --seed=622`): 1,800 s completed, 1,013 damage
+  messages (33.8/min), 1,010 applied by B, `dmg_stale` 0, 58 of 59 windows engaged, 0 stalled, no crash on either copy. The
+  largest AI table the mod saw: 85 on B, 32 on A (`ai_table_max`), so nothing had to be made again on this route. (The tool's own
+  `--ai-table` column stayed at 6 throughout while the mod's counter reached 85: that sampler is not reliable; read the mod's.)
+- **A 20-minute heavy fight** (`roam_fight.py 1200 6 --seed=623 --no-roam`: six orcs, B standing its ground): 1,200 s completed,
+  468 damage messages (23.4/min), 464 applied, `dmg_stale` 0, 37 of 39 windows engaged, 0 stalled, no crash. Largest AI tables 133
+  on B and 70 on A, so the 200 limit was not reached; B made 607 proxies in that time (proxies come and go far more often than a
+  table fills, which is why the crash needed long fights).
+- **The AI-table entries**: all of class `1DB1B08` (constructor `3749D8`), node at +0x40, an inner reference (`1DB1CE0`, at +0x18)
+  whose target is 0; the count walk's check (`+0x158`, `2458C0`) reads a flag at entry+0x560, so these are large objects; the other
+  method (`+0x1C8`, `47C76E0`) is in an obfuscated code region. What removes them when a character's own tree runs is still not
+  found; the recycling covers it.
+- **The archers, solved: their arrows hit the stand-in.** The decoy stands where the host's stand-in of B stands (7 units apart
+  in the check); with two archers pointed at the decoy for 50 s the stand-in lost 28 health 7 times (298 -> 120) and the decoy 50
+  once. Arrows do not go through the hit function, so nothing reached the client, and nothing healed the stand-in (arrows would
+  have killed it). **Fix**: on the host, health the stand-in loses outside the hit function is sent to the client the same way as
+  the decoy's (`SendArrowHit`: the nearest announced enemy after the decoy, an archer first, as `AI_Archer_Shoot`; `standin_hurt`,
+  `standin_hurt_sent`), and the stand-in is healed. Checked: three archers for 60 s, 3 arrows on the stand-in, 3 sent, 3 applied by
+  B (health 504 -> 429), the stand-in back to full each time. Guard suite 52/52, `net_test` 36/36, `enemy_test` 93/93.
+- **Archers in a mixed fight** (`roam_fight.py 540 4 --seed=624 --archer-every=3`: every third orc an archer): the host forwarded 19
+  arrows that hit the stand-in and 1 on the decoy; B applied 135 = 115 swings + 20 arrows; 14 of B's last 32 hits were
+  `AI_Archer_Shoot`. A second run (300 s, `--seed=625`): 10 arrows forwarded, B applied 70 = 60 + 10.
+- **One more despawn guard**: in the first mixed fight B's despawn faulted once (caught; 342 asks) on a character whose vtable was
+  already the base class's (`1DB7358`): it was being deleted. The despawn now refuses such a character (`despawn_refused`, logged
+  "is being deleted"). The second run: 188 despawns on B, 0 faults, 0 refused.
+- **The host's player dies** (`tools/host_death.py`, new; the client keeps `coop_follow_travel` on, as players do). A brought to
+  1 health by the probe's kill and finished by five orcs in 4 s, while B fought nine of the host's enemies in the arena.
+  Observed, two runs:
+  - The game moves the host's dead player to its respawn point (the tower, 2,350-2,700 units away and 57 m up) while the death
+    screens still show: 6 s after the death in one run, 22 s in the other.
+  - The client counts that as the host's long jump and follows it (`travels` +1). Its fight is left behind (the proxies there
+    are dropped).
+  - The host keeps sending its player's state on these screens, so the client never counts it as away (`away` stayed 0). The
+    player guide said the client's enemies vanish after 5 s; that holds for a stop with no states (the pause test), not the
+    death screens.
+  - The host's world itself is stopped there: no enemy snapshots, an orc spawned beside the host does not move, its player and
+    stand-in do not move, a teleport of the stand-in (even 300 units) does not land. The mod's frame hook still runs (the
+    puppet's frame counters rise).
+  - The game frees the host's stand-in of B during the respawn ("puppet ... is gone"); the mod makes a new one (at B's last place
+    the host knew, then moved to B once the host's world runs).
+  - Once A's player walks again (21 s of A presses, with a back press every third): B 100-240 units from A, the host's stand-in 4
+    units from B, the host's enemies shown on B again (5 after spawning 3 orcs near A). `RESULT: PASS`, no crash on either copy.
+  - **Test trap**: after a death the camera answers the stick on screens where the player cannot move yet, so
+    `live_suite.ensure_world` said "back" while A still stood on a screen (the first run's stand-in looked stuck 6,000 units off
+    because of that). New `Copy.can_move()` (1 s of stick, the player must move 20 units) is used by both death tests now.
+- **The client's player dies** (`tools/death_standin.py`, last run in session ck where it broke the host's stand-in). The probe's
+  kill by B's own player no longer takes ("not killed"), and four orcs alone took B to 74 health in 120 s (that run did not
+  kill B; not counted). With one of B's proxies as the attacker the kill left B at 1 health and the orcs finished it in 4 s. B
+  respawned at the tower ("this player travelled alone (6097 units); back to the host in 3 s"), was taken back to the host, and
+  after a 3 s walk the host's stand-in was 0 units from B; B's stand-in of A 6 units from A; no crash, 0 despawn faults.
+- **The AI table, read further** (static reading of the exe on disk with `tools/xref.py` and dumpbin, plus the probe's `trace` and
+  `wtrace` on the running copies; new tools `vtable_scan.py`, `ai_tasks.py`, `ai_lists.py`, `standin_list.py`).
+  - Observed in the code:
+    - The table class (`1FF9F50`) has only two virtual methods; neither touches the count.
+    - `1123CC` is not an add. It is a trim: with more than *n* entries scoring above 0 it lowers the weakest through `1756A8`,
+      which only writes a weight (entry+0x14). It stops the game at a count of 256 because its local scratch array holds 256.
+    - `112354` recomputes the count: the walk `245654` over the entry list (circular, head at table+8, next at +8, the entry 0x40
+      before its node). Each entry adds itself through its method `+0x1C8`, or `+0x1D0` when its byte at +0x560 is set. Then
+      `+0x150` (`7F8560`) clears that byte. So the walk removes nothing: +0x560 is a pending mark, not "finished".
+    - The walk runs from `112100` (via `2FC6B8` ← `2FF40C` ← `1C88270`, a per-character update that returns early while two
+      pointers at +0x618/+0x620 are empty) and after an add through `1C6DE98`. `1C6DE98` is reached from `1BE791C`, which
+      takes the pending object at +0x6958 of the 0xE2C8-byte object.
+    - The entry constructor `3749D8` is called from `373E1C`, which `195988` calls. `195988` is the animation state machine's
+      start-action function, the same one the mod's own plays go through.
+  - Observed live:
+    - Calls to `3749D8` on the client while the host's player struck: 19 in 8 s, all from `373E1C`, and `373E1C` from `195988`.
+    - Real orcs on the host held 1-3 entries.
+    - Each player held 5-6 entries; the client's player once 92-128.
+    - The host's stand-in of the client held 42 entries, with its count equal to its list.
+    - On the client after the client's own death, the new stand-in of the host had **count 0 and a growing list**: 302, then 407
+      after 60 s of the host striking (1.75 a second). Reproduced in a fresh session: right after `death_standin.py` the new
+      stand-in had count 0 with 25 entries.
+    - Setting the +0x560 byte on 299 of its entries released nothing, and its count stayed 0. So the walk does not run on it.
+    - In a fresh session without a death, the stand-in's list rose and fell (50, later 7), and its count followed it.
+  - Derived: the mod's check looked only at the count, so a stand-in in that state was never made again, while its list grew
+    past 256. Session cm's earlier note saw this stand-in's count at 77, so the walk does run on it at times. A walk over such a
+    list would hit the 256 stop.
+  - Unknown: what prunes the list on a normal character, and why the stand-in made after the client's death never runs the walk.
+    A guess: it was spawned while the client's world was loading, so the update `1C88270` never got its two pointers.
+  - **Fix**: the mod now also walks each table's list (at most 512 nodes, read-only, inside an exception guard). It makes a
+    character again when the larger of count and list reaches `coop_proxy_table_max` (`ai_list_max` in the `enemies` status).
+    Checked with `standin_list.py` after the client's death, the host striking for 240 s:
+    - The stand-in was made again at a list of 202 with its count at 0, and later once more at 201. The new one started with 7.
+    - Three enemy pictures were made again at lists of 200-201.
+    - No crash. `standin_list.py`'s RESULT: PASS. Unit tests 93/93 and 36/36, guard suite 52/52.
+  - Seen in passing: while the host's player lunged about some 2,500 units from the client's player, the client's picture of
+    the host trailed 900-1,700 units behind. It stood 173 units off once the host stopped. In the same run on the ledge, with
+    the players close together, it stayed 25-34 units off. Not looked into.
+- **The client's picture of the host, by distance** (`tools/standin_lag.py`, new; the host walks or strikes back and forth for
+  30-40 s with the client placed 300-2,400 units away). Fresh session:
+  - Walking: median 47-71 units off, at most 190.
+  - Striking: median 85-88, at most 209, although the host's lunges carried it 4,500-7,000 units away.
+  - Right after a client death, in the same session: median 7, at most 224. That death's new stand-in counted its table
+    normally (count 11, list 11).
+  - So distance alone does not cause the lag seen earlier (900-1,700 units). That lag came with the stand-in whose table was
+    never counted, which appeared after one client death of two in this build. Unknown what decides it.
+- **A 20-minute soak on the build with the list check** (`roam_fight.py 1200 4 --seed=627 --archer-every=3`): 1,203 s completed,
+  227 swing messages sent, the client applied them plus the forwarded arrows (35: 31 off the stand-in, 4 off the decoy), 34 of 39
+  windows engaged, 2 stalled, no crash on either copy, nothing made again (largest table 133 on the host, 68 on the client).
+- **The uncounted stand-in table after a client death, again**: after one death the client's stand-in had count 0 with 41
+  entries; after the next death the same stand-in had count 7 with 6 entries. So the state can clear by itself. A first try at
+  reading the per-character update's gate (+0x618/+0x620 and the tick at +0xF7C8 of the object 0x650 before the table's owner)
+  read float data: the object offset assumed there is wrong, so nothing is concluded from it.
+- **What prunes the AI list, found** (probe `watchw` on every thread, while the host's player struck; the per-thread `wtrace`
+  missed it because this work runs on a worker thread).
+  - Observed:
+    - On a healthy client stand-in the count is rewritten every frame by the walk: `112354` ← `112100` ← `2FC6B8` ← `2FF40C`
+      ← `2FF268`, on a worker thread.
+    - An entry was linked in by `373E1C` → `1C6D446`, reached from `2C50B8` ← `2FC40F` ← `1CF5B3`.
+    - An entry was unlinked and freed by `3749B8` (the entry's deleting destructor) → `3752B6`/`3752CB`, called from `2FC173`.
+      That is inside `2FC050`, the pruning pass, which `2FC6B8` reaches through `FFF3B0` at `2FCD10`.
+  - From the code:
+    - `2FC050` updates each entry (method `+0x40`). It deletes an entry whose weight (+0x70) is at most 0 and whose state (+0x74)
+      is 2. It also deletes an older entry of the same action (method `+0x138`) unless that one is marked at +0x7C.
+    - `2FF268` loops over a registry of agents (+0x6720) and skips an agent whose byte +0x285 is 0. The agent is the object 0x140
+      before its table; the agent reset `1960C4` clears that byte.
+    - So an agent the update skips is never pruned and never counted. That matches the stand-in seen with count 0 and a growing
+      list.
+  - Live: every healthy agent read had +0x285 = 1: both players, both stand-ins, three proxies (`tools/agent_active.py`). Three
+    client deaths in this session did not bring back the bad state, so +0x285 on a bad stand-in is still unread.
+- **The host's stand-in standing still after client deaths**.
+  - Observed:
+    - After the client died twice, the host's stand-in of the client stood 1,600 units off for minutes. It was put back every
+      frame (36,550 put-backs) without moving, while the host's world ran.
+    - It had been made again after the game freed the old one at the client's death ("is gone").
+    - A stand-in made again at that time (forced through `coopset proxytablemax 2`) stood still at its spawn spot too. With the
+      client standing still at 500-5,000 units east of the host (`tools/standin_range.py`), it followed out to 2,500, stayed at
+      x 25,000 when the client stood at 3,000 and 3,500, and followed again at 4,000-5,000.
+    - A direct write of its position (probe `write` at +0xAC) held, but the stand-in did not follow afterwards.
+    - In a fresh session the same check followed at every distance, and three client deaths and a forced remake there left a
+      stand-in that followed.
+  - Unknown: what puts a stand-in in that state.
+  - **Fallback** (`FrozenPutBack` in `AnimFrame`, both roles): after 30 way-off put-backs in a row that left the stand-in where it
+    was, it is moved by direct writes whenever it is 15 units off, until it is seen moving by itself again. The `remote` status
+    shows it as `frozen=<now>/<spells>/<writes>`.
+  - Checked:
+    - On the host's death screen (host world stopped) the host's fallback engaged once (one write) and let go when the world ran
+      again; `host_death.py` still passes.
+    - On the client it engaged during its own death respawn (56 s) and while both copies stood on game screens (103 s), 51
+      writes in all, and let go both times.
+    - A 5-minute fight with archers after that: no new spell on either copy. 54 swing messages sent, 66 applied by the client
+      with the arrows, 9 arrows sent off the stand-in.
+    - Not checked: the original stuck state. It did not come back in this session.
+  - Also seen: during the test both players once stood on game screens at the same time (neither could walk; the host's player
+    had moved ~3,500 units). A few A and back presses freed them. Cause unknown.
+- **A 30-minute soak on the build with the stand-in fallback** (`roam_fight.py 1800 4 --seed=629 --archer-every=3`, fresh copies):
+  - Result: 1,800 s completed, no crash on either copy. The fallback never engaged (`frozen=no/0/0` on both). The client made 2
+    proxies again (largest table 200, list 195); the host's largest was 69.
+  - Swings: only 92 swing messages (3.1/min), the client applying 107 with the arrows (12 off the stand-in, 5 off the decoy).
+    29 of 59 windows stalled; 161 orcs spawned, 31 strayed and stopped.
+  - Two 4-minute fights right after, in the same session: 42 messages (10.5/min, 6 of 7 windows engaged) and 29 (7.2/min, 2 of 7).
+  - Derived: the fights work but their intensity varies a lot between runs (earlier 30-minute soaks: 33.8/min on an older build;
+    the 20-minute one on the list-check build: 11.3/min). The new code only touches the stand-in (not engaged here) and reads the
+    AI lists, so it is not a likely cause. The known thinning of fights in long sessions is.
+  - Unknown: whether engagement differs between builds. A paired comparison (old build vs new, same seed, fresh copies each) was
+    not run.
+- **Can the game's pruning empty a proxy's list?** (`tools/ai_end.py`, after a 5-minute fight.)
+  - Observed:
+    - The longest proxy list held 112-116 entries. All were in state 1 (+0x74) with weight above 0 (+0x70); all but the newest
+      had the bytes +0x7C and +0x7D set.
+    - Writing weight 0 and state 2 into all but the newest 8 (108 entries): within a second every weight was back above 0, the
+      state stayed 2, and nothing was deleted in 6 s (list 116, count 116). The proxy stayed and nothing crashed.
+    - The entry's method `+0x40` (`2FB9E8`) only copies a few fields (+0x540 to +0x544 and the like).
+  - Derived: the weight comes from elsewhere, likely the animation graph's blending, which keeps a proxy's old actions blended in.
+    So ending entries by hand does not let the pruning delete them; the mod keeps making such characters again before the list
+    fills.
+- **Old build vs new build, paired** (fresh copies for every run; the session's baseline `2247fd1` against the current build;
+  `roam_fight.py 360 4 --archer-every=3`, seeds 700 and 701, in ABBA order; private script `ab_run.ps1`):
+
+  | run | build | messages/min | applied by B | windows engaged | stalled |
+  |---|---|---|---|---|---|
+  | seed 700 | old | 9.3 (56) | 61 | 11/11 | 2 |
+  | seed 700 | new | 12.1 (73) | 86 | 7/11 | 0 |
+  | seed 701 | new | 10.6 (64) | 80 | 10/11 | 0 |
+  | seed 701 | old | 16.5 (99) | 106 | 9/11 | 0 |
+
+  No crash in any run; owner files unchanged after each. Derived: no sign of weaker fights on the new build (means 11.4 vs
+  12.9/min, with a spread inside each build larger than the gap). The thin 30-minute soak was the long-session effect, not the
+  build. Four runs are too few to rule out a small difference.
+- **Counters and the client's damage** (`tools/counter_rate.py`: three orcs at the client, 60-s phases alternating the client idle
+  and the client pressing Y every 0.25 s).
+  - Observed in two phases before the host crashed (below):
+    - Idle: 227 proxy attacks started, 19 damage messages applied (0.08 per attack).
+    - Pressing Y: 299 attacks, 21 applied (0.07 per attack), and 5 hits of the client sent to the host.
+  - Derived, from one short run: counters don't visibly lower the damage the client takes. That fits the design: the host's orc
+    hits the host's picture of the client whatever the client does on its own screen, and the damage message follows. Not
+    changed; one run is too little.
+- **Host crash `11AA3A` again** (reading 0x28; first seen in session cf), during that run, after the client's counters had
+  killed orcs and new ones were spawned.
+  - The crashing call `11AA18` got as its first argument the value at +0x2CF0 of the character being looked at (caller
+    `11A19C`). That value was the host player's address + 0x2CE8, whose first qword points at itself. Derived: +0x2CE8/+0x2CF0
+    of a player-type character is an empty list head, not an AI object, so the AI's attack-parameter lookup ran on a player-type
+    character as the attacker.
+  - `11AA18` returns a pointer to a block the caller only reads: an array entry, or arg+0x118 when there is no candidate. No
+    guard written yet.
+- **Trying to bring it back** (`tools/kill_spawn.py`: three orcs spawned 250 units around the client, killed after 12 s with the
+  game's own death, the next three at the same spots):
+  - With both copies: the host crashed at cycle 27 at a different place, `190F7C` (reading 0x1, in the AI tick at `2F7ABB`).
+    Its rbx was a Talion-class character (vtable `1FB3640`) that was not the stand-in, and rdx was the host's player. The host's
+    damage messages to the client had stopped growing early in that run.
+  - With the host alone (control: no client, so no stand-in, decoy or target swaps): 40 cycles, no crash.
+  - With both copies again (same session as the control): 40 cycles, no crash.
+  - Derived: rare (1 of 2 paired runs, 0 of 1 control). It points at the co-op side but proves nothing.
+  - Unknown: which Talion-class character that was, and what puts a player-type character into the AI's paths.
+- **A guard for `11AA3A`** (`SimAiParamGuardInstall`; `coop_ai_param_guard`, default on). The call at `11A4C5` (the crash's
+  path) now goes through a guard. When the first argument's first qword points at itself or leads to no AI data, the guard
+  answers as the game does for a call without a target (argument + 0x118, which the caller only reads). Every other call goes on
+  unchanged. The status shows `ai_param_guard=<installed>/<answered>`.
+  - Checked: installed on both copies; 40 kill-and-respawn cycles and a 5-minute fight (58 messages, 11.6/min) with no crash
+    and the guard answering 0 times. Guard suite 52/52, unit tests 93/93 and 36/36.
+  - Not checked: that it stops the crash. The crash did not happen in these runs.
+  - The other crash seen (`190F7C`) is not covered.
+- **What links both host AI crashes** (static reading plus live reads on the host).
+  - Observed:
+    - The host's player's +0x2CE8 and +0x2CF0 both hold the player's +0x2CE8 (an empty list head), and its +0x2D18 holds 1. A
+      spawned orc has component pointers in all three, each component starting with a pointer back to the orc.
+    - Crash `11AA3A` read through +0x2CF0 of a character that was the host player or carried the player's list head. Crash
+      `190F7C` ran in an orc's AI tick (`2F7ABB`) on a component (that orc's +0x2CF0) whose first qword was the host player, and
+      read the player's +0x2D18 (1).
+  - The hunt redirects an engaged enemy to whichever of the decoy and the host's player is nearer (`want` in the hunt loop). With
+    `coop_hunt_strict` off (the default), the swap replaces whatever the enemy targets, scanning 0x1400 bytes from the enemy's AI
+    data, 0x80 bytes of the enemy and 0x300 of its health object.
+  - Derived (not proven): a swap toward the host's player writes a non-AI character where the AI expects an AI one, possibly
+    into neighbouring objects the 0x1400-byte scan runs into. Swaps toward the decoy write an AI character.
+  - **Change**: the hunt no longer redirects to the host's player. When the host's player is nearer, the redirect is dropped and
+    the enemy's own AI chooses (`hunt_player_left`; `coop_hunt_to_player=on` restores the old swap).
+  - Checked:
+    - Four fresh-copy fights (seeds 700, 701, 700, 702): 2.5, 12.2, 11.0 and 8.5 messages a minute, within the earlier builds'
+      spread (the 2.5 did not repeat on the same seed).
+    - With the old behavior and the client 400 units from the host (`kill_spawn.py --near`, 40 cycles): no crash. That run made
+      only 19 redirects, so it could not tell the two apart.
+  - Not shown: that this stops the crashes.
+- **Swing stress, old vs new hunt** (`kill_spawn.py 40 3 12 --swing`, fresh copies each).
+  - Setup: the orcs are spawned around the host; the client jumps between 450 east and 450 west of the host every 3 s, so the
+    nearer of the decoy and the host's player keeps changing. The orcs are killed and respawned every 12 s.
+  - Old behavior (`hunt-to-player=on`): 77 redirects in 40 cycles, no crash.
+  - New behavior (off): 60 redirects to the decoy and 359 redirects to the host's player dropped (`hunt_player_left`), no crash.
+  - Derived: the new behavior holds up under heavy flipping. The old one did not crash here either, so the crashes' link to the
+    redirect is still not shown.
+- **Long runs on the published build** (`29d3634` public, the hunt fix in; fresh copies each):
+  - 45 minutes (`roam_fight.py 2700 4 --seed=710 --archer-every=3`): completed, no crash on either copy. Thin: 141 messages
+    (3.1/min), 22 of 89 windows engaged.
+  - 25 minutes (`--seed=711`): completed, no crash. 363 messages (14.5/min), 417 applied with the arrows, 45 of 49 windows
+    engaged. The 30-second windows held 0-18 messages from start to end, with no decline over time.
+  - Afterwards (`tools/orc_targets.py`, new: each hostile grunt's target from its AI's active goal slot): three grunts within
+    3,000 units of the client's place. Two were after the host's player (1,400 and 2,650 units away), one after another
+    character.
+  - Derived: fight intensity in these runs depends on the seed and route more than on the run's length. The thin 30- and
+    45-minute runs are not a steady decline (the 25-minute one held up).
+- **Duplicate damage, found and fixed.**
+  - Found with `tools/counter_log.py`: the client's damage log, which since this session also holds its own strikes (`h`).
+  - Observed: 12 of 31 swings reached the client twice, the same attacker and attack 15-63 ms apart, at slightly different
+    distances. The host's log showed two sends for each.
+  - Derived: the decoy stands where the stand-in stands, and a hit on either is reported, so a swing reaching both was sent
+    twice.
+  - Fix: the host drops a second report of the same attacker and attack on the other of the two within 300 ms (`dmg_dups`).
+    Checked: 13 sent, 4 dropped, no same-swing pairs left.
+- **Counters and the client's health.**
+  - Observed:
+    - The client's counter strikes are named `PC_Bip_Sync_Cntr_TimedKill_F/B`, `..._Knockback_B` and `..._Stun_B`. The game's
+      attack table holds 142 attacks named `_Cntr_`.
+    - Run 1: two counters reached the host 0.8 s after a damage message from the same enemy.
+    - Run 2: six did, 0.8-1.4 s after. That build did not log why no give-back happened.
+    - Run 3, logged: three counters hit enemies whose last swing on the client was 3.7, 27 and 38 s old, so the countered swing
+      had sent no damage message. None left a health loss to give back.
+  - Added, off by default (`coop_counter_heal=on`): a counter strike within 1.5 s of that enemy's last swing gives that swing's
+    health back. Not verified.
+  - Unknown: whether a countered swing ever still hurts the client. The countered attacks in run 3 did not.
+- **The client's counter kills on the host** (`counter_log.py`, then the host's log of the client's hits).
+  - Observed:
+    - A `PC_Bip_Sync_Cntr_TimedKill_F/B` counter of the client is applied on the host and kills the orc there (227 -> 0,
+      300 -> 0). Stun and knockback counters left the host's orc at full health.
+    - After every counter kill the client also sent 3-4 `PC_NT_L1_D1_F_LL_RL_04` strikes on the dead orc. These came from its
+      local-damage path, which turns health a picture loses outside the hit function into stock strikes: the kill's damage lands
+      frames after the counter strike is reported.
+  - Fix: no stock strikes within 2.5 s of a reported strike on that picture (`local_after_strike`). Checked: three counter
+    kills, each 300 -> 0 on the host with no strikes after it; 6 losses held back.
+  - The local-damage path also sent 4 strikes for losses on pictures the client never struck: two tamed wargs and an orc
+    prisoner, 60.5 each, near the tower about 80 s into the session. It credits any such loss to the client.
+  - Now no stock strikes are sent for pictures whose type names a tamed creature, prisoner, slave, captive or follower
+    (`local_bystander`). In the check run no such loss happened, so the filter was not exercised. What causes those losses
+    (falls after being placed?) is unknown.
+- **A 30-minute soak with this round's fixes** (de-duplicated damage, no stock strikes after a reported strike or on bystanders;
+  `roam_fight.py 1800 4 --seed=711 --archer-every=3`, fresh copies): completed, no crash on either copy. 161 swing messages
+  (5.4/min, duplicates no longer counted); the client applied 204 with the forwarded arrows; 37 of 59 windows engaged, 1 stalled.
+  Owner files unchanged.
+- **Live regression runner** (`tools/regress.py`, new). On a running pair it runs this session's live checks in turn and prints
+  PASS/FAIL for each: a 5-minute fight, duplicate damage, the host's death, the client's death, 10 kill-and-respawn cycles.
+  First run on the current build, all passed (5 of 5):
+
+  | check | result |
+  |---|---|
+  | fight | 39 messages, 8 of 9 windows engaged |
+  | duplicate damage | 57 host sends, 0 same-swing pairs |
+  | host's death | the stand-in 51 units from the client, 9 host enemies shown on it |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | no crash |
+- **Fights over a bad network** (the hub's chaos relay, `tools/chaos/chaos.py relay`, between the client and the host on one PC;
+  `coop_host` in the client's ini pointed at the relay; `roam_fight.py` with archers; one session, profiles switched while it ran):
+
+  | profile | round trip | messages sent / applied by the client | client's strikes applied by the host | windows engaged |
+  |---|---|---|---|---|
+  | bad_wifi | 65-87 ms | 39 / 57 | 97 | 9 of 9 |
+  | transatlantic | 183-192 ms | 41 / 51 | 126 | 8 of 9 |
+  | hell (8% loss in bursts, reordering, duplicates, 512 kbit/s) | 334-383 ms | 24 / 25 | 87 | 5 of 5 |
+
+  - The join (the host's 2.3 MB save) worked through `bad_wifi`. The link stayed connected throughout (`away` 0). No stale
+    damage. 13 stale client hits over the session (hits on enemies already gone). No crash.
+  - A spoilt first run, for the record: a captain showdown killed the host's player (`ActiveKillPlayer_AlreadyNamed`), and both
+    copies then stood on game screens (the host's death screens; the client after applying the host's Nemesis events). The
+    client could not strike, so that run showed 0 client strikes; it was not the network. `can_move()` on both copies before a
+    run catches this.
+  - Still not tried: two PCs, a real VPN.
+- **A captain's ambush, seen from the client.** In the spoilt network run above, the client applied the host's whole sequence:
+  `Ambush_Presented`, `ActiveUnkPresentation`, `ActiveShowdownGiven_Distance`, `ActiveInitialPlayerThreat`,
+  `ActiveKillPlayer_AlreadyNamed` (the captain killed the host's player), `ActiveGotPlayerInLastChance`, then `TimePassed` four
+  times and promotions. The client stood on a screen until pressed. Which screen (most likely the captain's presentation) was not
+  seen. This is the design (the client runs the host's Nemesis events; `coop_nemesis=share` only logs them); left as it is.
+- **This session's decisions under unit test.** The same-swing de-duplication, the bystander and after-strike gates of the
+  local-damage path, the stock-strike count, the frozen put-back count and the counter give-back now live in `src/coop_rules.h`
+  as game-free functions. The mod uses them, and `enemy_test` checks them (23 new checks, 116 of 116). After the change the
+  runner's fight and duplicate-damage checks passed live (9 of 9 windows engaged; 0 same-swing pairs in 73 sends).
+- **A guard for the other AI crash (`190F7C`)** (`SimAiTickGuardInstall`, under `coop_ai_param_guard`).
+  - The call at `4990D8` hands `499724` an orc's component from +0x2CF0. `499724` reads the component's owner and the owner's
+    +0x2D18. In the crash that owner was the host's player, whose +0x2D18 holds 1.
+  - The call's result is not used at that site. So for an owner without a component pointer the call is now skipped
+    (`ai_tick_guard=<installed>/<skipped>`).
+  - Live: installed on the host, 0 skipped. The runner's fight (5 of 9 windows engaged) and 10 kill-and-respawn cycles passed.
+  - Not shown: that it stops the crash (seen once, before the hunt change).
+- **The runner on the final build** (both guards, the hunt change, the damage fixes; `regress.py` now presses both players free
+  of game screens before each check): 5 of 5 passed.
+
+  | check | result |
+  |---|---|
+  | fight | 9 of 9 windows engaged |
+  | duplicate damage | 43 host sends, 0 same-swing pairs |
+  | host's death | the stand-in 32 units from the client, 15 host enemies shown on it |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | 10 cycles, no crash |
+- **Losses on the client's pictures by themselves** (`tools/proxy_losses.py`: the client idle at the tower, five orcs spawned
+  300-700 units around it, the client's counters and the pictures' heights sampled for 60 s).
+  - Observed, first run: pictures dropped 150-163 units between samples, and a wild warg's picture lost 100.8. The client sent
+    that loss to the host as two of its own strikes.
+  - Observed, rerun: the same kind of drops (one picture 150 units down every 2 s, likely an orc climbing down the ledges), and no
+    loss.
+  - Change: a picture more than 100 units below its highest point of the last 2 s is taken as fallen, and its loss is not sent
+    (`local_fall`; `TrackPeak`/`RecentFall` in `coop_rules.h`, 4 new checks, 120 of 120). The host's enemy falls too and loses
+    its own health. Not exercised live yet.
+  - Unknown: the rerun's `hits_sent` rose by 7 while the client did nothing.
+- **The idle client's strikes and the 60.5 losses, explained (likely).**
+  - Observed: in a third idle run the client's damage log (its strikes, `h`) held 7 strikes: `PC_Recoil_Light_U2D_F` and
+    `PC_Recoil_Heavy_U2D_F`, each right after an orc's swing reached the client.
+  - Derived: these are recoil hits, damage the client's gear or skills deal back to an attacker. They are the client's doing and
+    are rightly sent to the host.
+  - Observed: in the same run one orc's picture lost 60.5 twice outside the hit function, the same amount as the tamed wargs and
+    the prisoner before.
+  - Derived (not proven): the 60.5 losses come from the client's own gear (an aura or damage over time), not from falls. Sending
+    them for hostile enemies is right. The bystander filter keeps the host's allies out (on the client their pictures can be
+    caught by the client's effect). The fall skip stays (harmless), but falls were probably not the cause.
+- **Exact losses.**
+  - Before: health a client's picture loses outside the hit function (arrows, gear effects such as the 60.5 above) went to the
+    host as stock strikes of about 96 each, one per 90 lost. A 60.5 loss therefore landed as 96.
+  - Now (`coop_exact_losses`, default on): a new event (`kOpLoss`, a hit's layout with the amount in the attack field) carries
+    the exact amount.
+    - The host takes exactly that from its enemy.
+    - When it reaches 0, the host kills it the game's way (`losses_killed`).
+    - After a non-lethal loss the decoy pokes it, as for hits, so it turns to the client.
+  - 5 new checks, 125 of 125.
+  - Live (`tools/exact_loss.py`, the client's picture cut by 50, then to 0): the host's orc went 300 -> 250.0 -> 0, and the
+    second step was the game's own death (`losses_killed=1`).
+- **The runner with exact losses** (six checks now, `exact_loss` added): 6 of 6 passed on the latest build.
+
+  | check | result |
+  |---|---|
+  | fight | 8 of 9 windows engaged |
+  | duplicate damage | 56 sends, 0 pairs |
+  | exact loss | 300 -> 250.0 -> 0 |
+  | host's death | the stand-in 27 units from the client |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | no crash |
+- **45 minutes on the final, published build** (public `6918021`; `roam_fight.py 2700 4 --seed=720 --archer-every=3`, fresh copies):
+  completed, no crash on either copy. 148 swing messages, 206 applied by the client with the arrows, 365 of the client's hits
+  applied on the host. 37 of 89 windows engaged (the thinning of long runs again), 2 stalled. Owner files unchanged.
+- **Counters, settled.** `counter_log.py 180 3 --real-health` with `coop_counter_heal=on` on the client.
+  - Observed: 8 counter strikes. Four came 0.77-1.36 s after a damage message from the same enemy, and in each the client's
+    health was 504 before that swing and still 504 at the counter: the countered swing did no damage. Other swings in the run did
+    hurt (504 -> 395 -> 287). The other four counters hit enemies whose last swing was 1.6-3.7 s old. Nothing was given back
+    (`counter_heals` 0).
+  - Derived: the game ignores a hit that lands while the client is countering, so counters protect the client by themselves.
+    The give-back stays off; the client's counters are only counted (`counter_strikes`).
+- **The thinning of long runs, explained: a test artifact.** Three 15-minute fights back to back in one session, with
+  `tools/host_state.py` (new: hunt and decoy counters plus what the grunts near the client are after) between them.
+  - Observed:
+    - Segment 1 fought (82 messages, 16 of 29 windows engaged). Segments 2 and 3 had no fight at all: 0 messages, no living grunt
+      near the client, no pictures on the client.
+    - The host's log: a captain appeared to the host about 4 minutes in (`ActiveShowdownGiven_Distance`,
+      `ActiveInitialPlayerThreat`); later its stand-in was freed (the world reloading).
+    - Afterwards the host's player could not walk, and its tracker saw no enemies (`host_known=0`) although a fresh orc stood 300
+      units from the client.
+  - Derived: the host's world stood still on a screen waiting for a press. A player would give it; the bot gave none. The thin
+    30- and 45-minute runs are this, not the mod.
+  - Change to the bot: `roam_fight.py` now presses A and back on the host when no enemy snapshot arrives in a whole 30-s window
+    (`host pressed through Nx` in its final line).
+  - Checked on the stuck session: one press, after which the host's world ran again (the client's pictures back, its strikes
+    applied).
+  - Also seen: the hunt dropped 664 redirects toward the host's player in segment 1 (`hunt_player_left`).
+- **The 45-minute soak again, with the press-through bot** (same seed 720, fresh copies): completed, no crash. 371 messages
+  (8.2/min), 440 applied by the client with the arrows, 381 of its hits applied on the host, 68 of 89 windows engaged. Before:
+  148 messages, 37 of 89 windows.
+  - The press-through never fired (`host pressed through 0x`): no captain stopped the host this time. So the comparison shows
+    what the earlier run lost, but does not test the press-through. The single press on the stuck session above does.
+  - A different gap showed: 13 stalled windows (orcs engaged near the client, no swing). The longest stretch was 320 s from
+    2,247 s on, while the host's snapshots kept coming. Not looked into yet.
+- **Stalls looked at** (`roam_fight.py` now lists, for a stalled window, what each grunt within 1,000 units of the client is
+  after). A 30-minute run (`--seed=740 --archer-every=3`, fresh copies):
+  - 263 messages (8.8/min), 372 applied by the client with the arrows, 514 of its hits applied on the host, 54 of 59 windows
+    engaged. No press needed, no crash.
+  - One stall: three grunts at 111, 120 and 376 units, all with the decoy as their target, none swinging in the window.
+  - Derived: they were after the client's place, so this is the game's own attack pacing, not a targeting fault. The 13 stalls
+    of the previous 45-minute run were not repeated.
+- **The guard's Steam start check (`0xC0DE0006`), looked at.**
+  - Observed: tonight every retry of a host start failed for a while, until a clean relaunch.
+  - Tried: asking Steam for the remote-storage interface again every 10 ms for up to 5 s instead of stopping at once. Six host
+    starts (four launches with `launch-retry`): two still failed after the full 5 s; the other four got the interface at once.
+    Both failures were the first start right after a game copy had been closed.
+  - Derived (not proven): when it fails, Steam does not give that process the interface at all, likely because it has not yet
+    noticed the previous copy end. A start about 20 s later works (`launch-retry.ps1`). A player starting one copy rarely meets
+    it.
+  - The change was not kept.
+- **Other enemy kinds against the client** (`tools/enemy_kinds.py`, new: two of a kind spawned at the client for 40 s while it
+  strikes back):
+
+  | kind | host swing messages / applied by the client | client strikes reported / applied on the host |
+  |---|---|---|
+  | `OlogHai_Infantry` | 3 / 3 | 7 applied (first run) |
+  | `Orc_Berserker` | 5 / 5 | 6 / 6 |
+  | `Orc_Spearman` | 21 / 34 (forwarded arrows from the camp's archers added) | 3 / 3 |
+  | `Warg_Brown` | 1 / 1 | 2 / 2 |
+  | `Orc_Infantry` | 3 / 3 | 8 / 8 |
+
+  No stale or failed hits. The first attempt was spoilt: the client got stuck on a screen after the Olog-hai and showed 0
+  strikes for the rest. The tool now frees both players before each kind.
+- **More kinds.**
+  - In this region only `Orc_Defender` could be spawned of 19 guessed names. No caragor, graug, ghul or uruk is in its spawn
+    table, so those need another region. The probe's `scan` covers only the game's image, not its data, so names cannot be listed
+    that way.
+  - Shield orcs (`enemy_kinds.py Orc_Defender`): one swing message reached the client and was applied; 13 client strikes were
+    reported and applied on the host.
+  - Open: whether a defender blocks the client as it would block a player. The client's pictures have no AI, so they cannot
+    block on the client's screen. In a single check, one reported strike and the host's defender went 360 -> 0 (a kill move or a
+    sent loss; not settled).
+- **Shield orcs, compared** (`tools/block_compare.py`: a fresh `Orc_Defender` struck 8 times by the host's player, then a fresh
+  one struck 8 times by the client; two runs):
+  - Host's player: 360 -> 114, and 360 -> 0.
+  - Client: 360 -> 196 and 360 -> 114 on the host, 3 strikes reported each time.
+  - Derived: in these runs defenders did not block a player's plain strikes reliably either. The client did not do more damage
+    than the host's player. No sign that the client bypasses blocks unfairly; the open question above is closed for plain
+    strikes.
+- **The player setup with the current build** (`release/setup-copy.ps1 -DryRun`, read-only against the Steam install, client role):
+  - The exe was recognised as the expected build. The game is 109.6 GB, with enough free space. Each step was listed (copy,
+    the mod in, the profile folder, `sowguard.ini`) and nothing was created.
+  - The `sowguard.ini` it writes differs from the test copies' only in test conveniences (loopback bind, the two-copies mutex
+    rename, extra protected folders) and fewer debug-print channels. Everything added in session cm works from defaults, so
+    players need no new settings.
+- **The player setup, run for real on a stand-in game folder** (a tiny fake `x64` folder, `-SkipExeCheck`; host with a save and a
+  password, client with a host address):
+  - Both copies got the mod as `bink2w64.dll` (the build's hash), the original kept as `bink2w64_.dll`, `steam_appid.txt` 356190
+    and the profile folders. The host's save landed in the copy's cloud folder; the client had none (it gets the host's).
+    `sowguard.ini` held the role, port or host address and the password.
+  - The stand-in original folder was left unchanged.
+  - Refused as intended: a copy folder inside the game folder, a client without a host address, an exe that is not build 3095001.
+  - The scratch folder was removed after.
+- **The client waits for the host's respawn** (`coop_travel_wait_host`, default on).
+  - Before: the host's long jump while its world is stopped (the game moves a dead host's player to the respawn point 6-22 s
+    after the death) was followed at once, pulling the client out of its fight while the host still sat on its death screens.
+  - Now: while no enemy snapshot has come for 1.5 s (at most two minutes), the client waits and follows once the host's world
+    runs.
+  - Checked: `host_death.py` passed. The client stayed in the arena through 28 s of death screens and arrived 97 units from the
+    host when it walked again (`travel_waits=1`). The client's death and a fight still pass.
+- **The respawn wait, a nuance.**
+  - Observed: in a second host-death run the client waited (`travel_waits=1`) but arrived about 30 s into the death sequence,
+    while the host's player still could not walk. The host's world runs again during the killer's Nemesis presentation, before
+    the host presses on, and its state starts coming again.
+  - Derived: the wait ends when the host's world runs, not when the host is back in control. That is still later than before (at
+    once).
+  - `host_death.py` now checks that the client waited (`travel_waits` rose; `--no-wait` for `coop_travel_wait_host=off`). It
+    passed on the rerun.
+- **The runner on the build with the respawn wait**: 6 of 6 passed.
+
+  | check | result |
+  |---|---|
+  | fight | 9 of 9 windows engaged |
+  | duplicate damage | 42 sends, 0 pairs |
+  | exact loss | 300 -> 250.0 -> 0 |
+  | host's death | waited; then 119 units from the host, the stand-in 0 units from the client |
+  | client's death | the stand-in follows |
+  | kill-and-respawn | no crash |
+- **A 10-second outage in the middle of a fight** (the chaos relay's `disconnect` 100 s into a 4-minute `roam_fight.py` run; the
+  relay on `lan` otherwise):
+  - The client logged the link lost after 5 s of silence, took the host's enemies away ("no state from the host for 5 s"),
+    reconnected by itself when the link came back (the host saw a second hello), and showed them again ("the host is back").
+  - The outage's window showed 0 of 10 pictures and the decoy 1,651 units off (the client's place not updated). The next window
+    had 9 of 10 engaged with 9 pictures, none duplicated.
+  - All 40 host swing messages were applied by the client (none lost across the outage). 47 client strikes were applied on the
+    host. No crash.
+- **A 90-minute fight** (`roam_fight.py` 5,400 s, 4 orcs, every third an archer, `--ai-table`, fresh copies):
+  - No crash on either copy. The client made one Olog-hai picture again (its AI table at 200) and its stand-in of the host
+    once (200), as designed. 1,041 swing messages sent, 1,459 damage messages applied on the client (exact losses included),
+    617 client strikes applied on the host; 87 of 179 windows engaged, 5 stalled, the longest engaged silence 57 s.
+  - Fights thinned out after ~2,300 s. Cause: the tool itself. `roam_fight.py` spawns at most 40 orcs per slot (160 here) and
+    reached that cap; from then on only stray orcs fought. The cap is now `--max-spawns=<k>`.
+  - The largest AI table on the client stayed at exactly 200 for the last 40 minutes: the retired Olog-hai picture, kept with
+    its AI off until the game deletes it. It did not grow.
+- **The agent's switch, the AI list and a stand-in that slides** (`tools/agent_off.py`, `tools/agent_anim.py`, new).
+  - From the code:
+    - The agent update `2FF268` skips an agent whose byte +0x285 is 0. Three writes set that byte. The agent's file binding
+      `193704` sets it to 1 (it refuses a second binding: "File already bound"). The agent reset `1960C4` sets it to 0. `1141FC`
+      writes 1 to +0x285 of some object after copying 16 bytes to its +0x1E0, but that object is reached through +0x24A0 of a
+      component and may be another class.
+    - `415D5C` shuts an agent down: it clears +0x284, calls the reset, and empties the AI table at +0x140 (`113954`).
+    - Two neighbouring vtable slots (`1FFBDA0` and `1FFBDA8`) lead to the binding (through `4896EC`) and to the reset.
+  - Observed on the host's stand-in of the client (probe write of the byte to 0, then back to 1):
+    - With the byte at 0 the list grew while the count stood still (7, then 31, then 55 entries; count 7). With the byte back
+      at 1 the game pruned and counted it again (16 and 16). So this byte gates the pruning.
+    - With the byte at 0 the stand-in no longer walked by itself. While the client ran for 6 s, the stand-in moved in only
+      6 of 29 samples, in 153-unit jumps, all of them the mod's put-backs (8). With the byte at 1 it moved in 27-28 of 29
+      samples in 46-unit steps, with 0-1 put-backs. On the host's screen the client's picture slides and jumps instead of
+      walking.
+    - It still followed the client. So the byte does not explain the stand-in seen standing still after client deaths, whose
+      put-backs did not land at all.
+  - **Change**: a stand-in whose agent stays switched off for 6 s is made again (`coop_standin_agent_off`, seconds, default 6,
+    0 turns it off; live `coopset standinagentoff <s>`; counted `puppet_agent_off`). An AI table whose list runs 16 entries
+    past its count is logged once with the agent's byte (`ai_uncounted=<tables>/<of those with the byte at 0>`).
+  - Checked: with the byte written to 0, the host made a new stand-in 6 s later. The new stand-in walked by itself (22 of 29
+    samples moving in 46-unit steps, 1 put-back).
+  - Unknown: what switches a stand-in's agent off in play (the uncounted lists seen after client deaths suggest a death, not
+    shown). Writing the byte back to 1 also worked in the test, but a real shutdown also clears the agent's other state, so the
+    mod makes a new stand-in instead.
+- **The runner on the build with the stand-in remake** (fresh pair):
+  - First run 4 of 6. `exact_loss` and a rerun of both failed checks read "a player cannot walk (b)". A screenshot showed the
+    client in the world, facing a door: `can_move()` pushed the stick forward only. It now tries four directions.
+  - `dup_damage` failed with 3 same-swing pairs, twice. Reading the pairs: they were 13-18 minutes old (the host's damage log
+    keeps 128 entries, and the check counted the earlier fight's entries too). The check now counts only its own window.
+  - The pairs were still a real gap. Two orcs (ids 84 and 85) landed the same attack 31 ms apart. Their reports interleaved
+    (orc 1 on the stand-in, orc 2 on the stand-in, orc 1 on the decoy, orc 2 on the decoy), and the de-duplication remembered
+    only the last report, so both second reports were sent. It now remembers each attacker's last report (8 slots; unit tests
+    for the interleaved case and for more attackers than slots).
+  - `exact_loss` failed once more with the host's orc losing 0: the client logged no local loss for that picture, whose
+    address the game had used for two earlier pictures. It passed alone right after and in the next full run. Cause unknown.
+  - Second full run: 5 of 6. `dup_damage` found 0 host sends in its 45 s (a weak fight, no evidence either way); it passed on
+    the two reruns (15 sends, 0 pairs each). Over the session the host dropped 95 duplicate reports against 132 sends. No
+    crash on either copy; the stand-in remake did not fire during the deaths.
+  - The new stand-in log fired once on the client: its stand-in of the host listed 17 entries with count 0 and the agent byte
+    at 1. So an uncounted list can come with the byte on; the byte is not the only cause.
+- **A 75-minute fight that keeps fighting** (`roam_fight.py` 4,500 s, 4 orcs, archers, `--max-spawns=480`; the build with the
+  stand-in remake and the per-attacker de-dup; fresh copies):
+  - No crash on either copy; the owner's files unchanged. 313 orcs spawned, 4-6 alive near the client on average to the end;
+    121 of 149 windows engaged; 1,267 client strikes applied on the host.
+  - Per 15 minutes the host's swing messages read like a decline (29.5 a minute in 0-900 s, then 2-4), but per 30 s window
+    both soaks show a burst instead: 20-63 messages a window from ~270 s to ~510 s (the client felt 217 health in one window),
+    and a steady 0-10 a window before and after. Same timing in both soaks (different seeds); its source is not known.
+  - Checked with a separate run (`local/decline_run.ps1`: a fresh pair, 1,200 s of fighting, then 300 s as-is, 300 s with a
+    fresh decoy, 300 s as-is): 6.0-9.8 messages a minute in every 5-minute segment of the 35 minutes, and the fresh decoy did
+    not raise it (6.4 against 8.9 and 6.7). So there is no wear-out with time in fights like these.
+  - 38 windows stalled (an orc after the decoy in most scans, no swing landed), 36 of them after 900 s; the decoy was made only
+    4 times in the run.
+  - `--ai-table` printed a value of 2,777,918,039 for one character from 1,890 s on: the tool's old guess (a dword behind
+    +0x2CE8) reading a freed object. Not a table size; that option is superseded by the mod's own `ai_table_max`.
+- **The host's redirect slots** (the hunt points up to 32 enemies at the decoy; `retarget_slots=<used>/<dead>` in `enemies`, new;
+  `tools/slot_watch.py`, new):
+  - From the code: the hunt never checked health, so a dead enemy whose AI still named the decoy kept its slot every frame.
+  - Observed with that left as it was (`coopset huntreleasedead off`, 7 minutes of fighting): 4-7 slots in use, nearly all held
+    by dead enemies, never near 32; they went when the bodies did. With the release on (default): 20 dead enemies' slots let go
+    in 7 minutes, 0-4 in use; damage messages 6-15 a minute either way. So the slots never ran short; the release
+    (`coop_hunt_release_dead`) is tidiness, not a fix for anything measured.
+  - Runner on that build: 6 of 6 (fight 50 messages, 0 stalled; dup_damage 24 sends, 0 pairs; exact loss 300 -> 250 -> 0; both
+    deaths; kill-and-respawn). The stand-in log fired on healthy stand-ins (17-20 entries, count 0, byte 1), so it now needs 64
+    entries past the count.
+- **Deaths and the runner's checks over a bad network** (the chaos relay between the copies; `local/pair_up.ps1 -ClientHost`):
+  - `bad_wifi`: host's death PASS (the client 422 units from the host after, the stand-in 29 from the client); client's death
+    PASS.
+  - `hell` (8% loss in bursts, 330-380 ms): host's death PASS (146 s; 266 and 22 units), client's death PASS (173 s against
+    63-90 s on a direct link), exact loss PASS (300 -> 250 -> 0), kill-and-respawn PASS (no crash). Duplicate damage FAILED
+    with one pair, which the network did not cause (next item).
+- **The host's tamed wargs hurt the client.**
+  - Observed: the pair was attacker id 111, attack `6B15C38E` = `AI_Warg_WhileMoving`, 46 ms apart. With `coopset hitlog`
+    the host logged `Talion [stand-in] <- Warg_Tamed ... 6B15C38E` twice within 125 ms: a tamed warg (the host's ally,
+    600 health, following the host's player) passing through the client's stand-in with its running lunge. Same victim
+    twice, so the de-duplication rightly let both through; both reached the client as damage. The same attack made the
+    109 ms pair in an earlier run.
+  - Change: a hit on the stand-in or the decoy by an attacker of a bystander kind (Tamed, Follower, Prisoner, Slave, Captive,
+    by spawn type) is not sent (`coop_ally_hits`, default off; `ally_hit_drops`). Tamed wargs carry no follower flag at
+    +0x23B8, so the type name is used.
+  - Checked: probe `standinhit` with a spawned `Warg_Tamed` as the attacker: with the default, dropped before the host's damage
+    queue (twice); with `coop_ally_hits=on`, queued (two `u` entries in `dmglog`: a freshly spawned tamed warg is not an
+    announced enemy, so it is not sent either; the one seen in the fight had an enemy id, so it had been announced, likely
+    while wild). Runner fight and duplicate damage passed after.
+  - Not reproduced in a staged fight: `tools/ally_hits.py` (three wild wargs at the client with the hit log on) saw no ally hit
+    on the client's picture in two 60 s runs; the wild wargs went for the host's player and each other.
+- **The `exact_loss` miss, chased**: six runs in a row passed, so it is rare. One idea from the failing run's log (that proxy's
+  address had served two earlier enemies' proxies): an old record still holding it would drive the same object and its health
+  write would hide the loss. A guard now makes such a record let go (`proxy_handle_reused`). In a full runner pass on that
+  build (6 of 6, 202 proxies spawned) it never fired, so the idea is not shown and the cause stays unknown.
+- **A 60-minute fight on the final build of the day** (`roam_fight.py` 3,600 s, 4 orcs, archers, `--max-spawns=400`; the agent
+  remake, per-attacker de-dup, ally drop, slot release and reused-address guard all in; fresh copies):
+  - No crash on either copy; the owner's files unchanged. 299 orcs spawned, 3.7-4.5 alive near the client on average;
+    111 of 119 windows engaged, 11 stalled; 982 client strikes applied on the host.
+  - Damage messages per 15 minutes: 6.8, 5.8, 4.0, 8.3 a minute. No early burst in this run (seed 813) and no decline.
+  - AI tables made again as designed: the client's stand-in twice (200, 201), the host's stand-in once (202), archer
+    proxies three times (200). Every one with the agent byte at 1: lists also fill while the agent update runs, so the
+    byte explains only one way a list grows. The agent-off remake did not fire; the reused-address guard did not fire.
+- **The respawn wait, redone** (`tools/presentation_flag.py`, new):
+  - From the code: the console command `Combat.SimulatePresentation.Start/Stop` calls `F0F44`, which writes byte +0x1810 of the
+    combat manager (`[exe+26FFB70]`); the game's own caller is `2AFD14` (it also sets a flag on each character of a list),
+    reached from `5D20C4`.
+  - Observed on the host through a death: the flag is 1 during the death cinematic (+5 to +24 s, world running, health 0) and
+    the killer's presentation (+45 to +48 s), 0 on the death and Nemesis screens and in play.
+  - Observed on the client (a logged timeline): the host's player state and snapshots kept coming through the whole death
+    sequence, screens included. So the earlier "the host's world is stopped" wait held only because no enemy was near the
+    respawn point (the host then sent no snapshot); with enemies there, or none at all for two minutes, it would have been
+    wrong.
+  - Change: the host sends a snapshot every tick (a header alone with no enemy near) carrying the presentation flag in its
+    spare byte; after the host's death, a jump waits until the host's player has walked 60 units by itself and no presentation
+    plays (at most 2 minutes).
+  - Checked: `host_death.py` passed; the client stayed in its fight from the respawn (+22 s) through the screens and the
+    killer's presentation and arrived the moment it ended (+64 s). Unit tests for the flag and the header-only snapshot.
+- **A dead enemy's address reused by the same type**: in a failed `exact_loss` run the host's test orc sat at the address of an
+  orc of the same type that had died minutes before; the host's tracker treated a reused address as new only for another type,
+  so the new orc kept the dead one's id, and both of the client's losses for it were dropped as stale (`losses_stale=2`). A
+  living enemy where a dead one was is now a new enemy (GONE, then NEW with another id; unit tests). Runner after: 5 of 6, the
+  failure an `exact_loss` reading 110.5 lost (the 50 cut plus a 60.5 hit of the client's gear effect on the test orc), then
+  `exact_loss` 3 of 3. No crash.
+- **A release package** (`release/make_package.py` in the mod's repo, new): the public build of `bink2w64.dll`, the setup and
+  launch scripts, the player guide and the licence with a `SHA256SUMS.txt`, in `shadow-of-war-coop-<version>.zip`. It refuses a
+  DLL with the private tree's two-copies-on-one-PC test code. Checked on a candidate (0.1.0-rc1, not published): built from a
+  public export (unit tests 140/140, guard suite 49/49), unpacked with every hash matching, the setup script's dry run ran from
+  it, and its DLL took a lone host copy into the world with the exe check passing and the saves redirected. The public build
+  cannot run two copies on one PC, so co-op with it waits for the two-PC test.
+- **Joining over a bad link** (the chaos relay's `hell` profile from the start: 512 kbit/s, 8% loss in bursts, 200+-150 ms):
+  - Observed: the client could not join. "The host's save did not arrive in time": the 2.3 MB save gets 20 s
+    (`coop_join_timeout_sec`), and it needs at least 37 s at 512 kbit/s. Earlier bad-network runs had started on a clean link
+    and switched later, so a join over a bad link had never been tried.
+  - Change: while the save arrives, the deadline moves to 20 s after each new byte (at most 10 minutes from the start of the
+    join); no answer at all still fails after 20 s. Progress is logged every 10 s.
+  - Checked: the join over `hell` completed in 190 s (about 13 KB/s; SHA-256 checked); the client then stood at the title screen
+    (the mod's own start presses had run out during the wait; a player presses Start) and came into the world after presses.
+    Both death checks then passed over that link (the host's: the client waited for the host to walk again, 142 units off after;
+    the client's: the stand-in follows). The guard suite's join cases still pass.
+
+## Session 2026-11-11: wrap-up for handoff
+
+- Joins over realistic simulated links (`local/join_time.ps1`, private): `mobile_tether` (2 Mbit/s, 70+-40 ms, 1% loss) and
+  `transatlantic` (90 ms, 0.3% loss) both joined in 31.9 s from start to the save in place: the save arrived before the game
+  asked for it, so the game's own start-up set the time.
+- Published: the mod repo with the slow-join fix and `release/TWO-PC-TEST.md`. The directory entry is marked up for adoption
+  and the write-up has a "Picking this up" section. An alpha package (0.1.0-alpha, built from the public tree, hashes in the
+  zip) was made; publishing it as a GitHub release needs the owner.

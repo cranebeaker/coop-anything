@@ -10626,15 +10626,17 @@
   qa: automated
   notes: One host and one client, UDP, direct address over an overlay VPN. The host's world is the real one; the client
     joins the host's save (SHA-256 checked), sees the host's enemies (up to 16 near either player), hurts them and is hurt
-    by them, and follows the host's fast travel. MIT, Steam build 3095001 only; runs in a separate copy of the game
-    folder with saves and Steam cloud redirected and the game itself offline. Tested only with two game copies on one PC
-    (loopback and a simulated bad network, scripted checks plus an offline suite); never on two PCs. Slow motion is not
-    off in co-op yet, captains and Nemesis events are the host's only, the client cannot fast-travel by itself. Research
-    and reverse-engineering notes are in games/shadow-of-war; claim issue cranebeaker/coop-anything#93.
+    by them (counters, arrows and exact damage included), runs the host's Nemesis events on its own copy of the Nemesis
+    world, and follows the host's fast travel and respawn. MIT, Steam build 3095001 only; runs in a separate copy of the
+    game folder with saves and Steam cloud redirected and the game itself offline. Tested only with two game copies on one
+    PC (bot fights up to 90 minutes without a crash, both players' deaths, simulated bad networks, scripted checks plus an
+    offline suite); never on two PCs. The author has stopped; the write-up in games/shadow-of-war lists the known problems
+    and where to go next. Claim issue cranebeaker/coop-anything#93.
   sources:
   - https://github.com/Santonus-not-bot/shadow-of-war-coop
   - https://github.com/cranebeaker/coop-anything/issues/93
-  checked: '2026-11-01'
+  checked: '2026-11-11'
+  up_for_adoption: true
   made_with_coop_anything: true
 - game: 'Hotline Miami 2: Wrong Number'
   year: 2015

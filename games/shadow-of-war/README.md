@@ -6,14 +6,19 @@
 | Versions tested | Steam app 356190, build 3095001 (last update 2018-09-05), `x64\ShadowOfWar.exe` 1.0.8874.0, SHA-256 `ed0d95cabb033cd66aaa99d699374881846c3cb03ec345f1123d82d45e0bdaef` |
 | Projects | [Santonus-not-bot/shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (alpha, MIT); [JustAddMP/ShadowOfWar](https://github.com/JustAddMP/ShadowOfWar) is a placeholder; research here (claim: cranebeaker/coop-anything#93) |
 | QA level | automated: scripted checks with two game copies on one PC and an offline suite; never tried on two PCs |
-| Last updated | 2026-11-01 |
+| Last updated | 2026-11-11 |
 
 ## Where things stand
 
 The co-op mod is in its own repo, [shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop): one host and one
 client, the client joins the host's save, sees and fights the host's enemies, follows the host's fast travel, and runs the
-host's Nemesis events (captain fights, kills, promotions) on its own copy of the Nemesis world. Alpha, tested
-only on one PC. This folder holds the research and reverse-engineering behind it,
+host's Nemesis events (captain fights, kills, promotions) on its own copy of the Nemesis world, and shows each
+captain as himself (built from its own copy of his Nemesis record; a captain the host makes after the join is an
+ordinary orc there). Hits go both ways with the host's grunts, archers, Olog-hai, berserkers, spearmen, shield orcs and wild
+wargs; the client's arrows and gear effects reach the host's enemies exactly; counters protect the client. Both players' deaths,
+bad networks (a simulated 330-380 ms lossy link), a 10-second outage mid-fight and runs of up to 90 minutes were checked with
+bots, without a crash. Alpha,
+tested only on one PC. This folder holds the research and reverse-engineering behind it,
 for a from-scratch, host-authoritative co-op: a safe way to run and instrument a test copy,
 a map of the engine's console commands, the Nemesis system's live log output, and the
 Nemesis event, death, promotion and RNG functions with byte signatures for the Steam
@@ -90,7 +95,7 @@ Function table and signatures: NOTES.md, sessions r and s.
 
 ## What we changed
 
-No co-op changes yet. Tooling for working on the game safely (not published yet):
+The co-op mod itself is in its own repo (see "Where things stand"); it grew out of this tooling for working on the game safely:
 
 - **sowguard**, a `bink2w64.dll` proxy for a copied test install: refuses to run outside
   the test folder or on another build; hooks ntdll file calls in the game process to
@@ -113,20 +118,76 @@ No co-op changes yet. Tooling for working on the game safely (not published yet)
   second led to the remote-storage block; with it, a session with 16 autosaves left the
   real saves and Steam folder unchanged. One launch crashed because of the first
   debug-print hook (see the playbook lesson on hooking leaf stubs); fixed and tested.
-- Co-op QA: none (nothing to test yet).
+- Co-op QA (session cm, 2026-11-07, two copies on one PC, bot-driven: `tools/roam_fight.py` in the mod's repo moves the client
+  around an arena while the host keeps orcs on it): two 25-minute runs and a 15-minute run on the current build completed with
+  no crash, 258-509 enemy hits on the client per 25 minutes, all applied by the client; the client's freeze (the game's reference
+  list destructor looping, caused by the mod's own write to a captain's member link) and two host crash causes (a removed
+  decoy's AI running on, raw target writes) were found, fixed and checked with negative controls (`tools/jump_cycles.py`,
+  `tools/captain_unlink.py`, unit tests with a looping-list control). Offline: unit tests 93/93 and 36/36, guard suite 52/52.
+  Each player's death was checked with bots too (`tools/host_death.py`, `tools/death_standin.py`): the client follows the host's
+  respawn, or is taken back to the host after its own, and both pictures follow again; no crash.
+  `tools/regress.py` runs the live checks in one go (a fight, duplicate damage, exact losses, both deaths, kill-and-respawn): 6 of 6
+  passed on the latest build (2026-11-08). Fights also ran through the hub's chaos relay on bad Wi-Fi, transatlantic and the worst profile (8% loss in
+  bursts, 330-380 ms round trip): hits went both ways, the link never dropped, no crash; a 10-second outage in a fight recovered by
+  itself. Soaks of 25, 30, 45, 75 and 90 minutes completed without a crash.
+  Details and every run in [NOTES.md](NOTES.md).
 
 ## How to play
 
-Nothing to play yet.
+See the player guide in the mod's repo (`release/README-PLAYERS.md`): a co-op copy of the game folder per player, an overlay VPN,
+host starts first, client joins and gets the host's save.
 
 ## Known issues
 
-None (no release).
+- Never tried on two PCs over a real network.
+- The host's archers' arrows land on the host's picture of the client (it stands where the decoy does); since session cm that
+  damage is sent to the client. Archers shoot less at the client than at the host's player.
+- A 256-entry table in the game's AI fills for characters whose AI the mod switches off (the client's enemy pictures, both
+  stand-ins) and crashed the client three times; the mod now makes such a character again before its table fills (session cm).
+  Not yet run for hours. The table is the animation state machine's (its entries come from the start-action function); after
+  the client's death its picture of the host kept a growing list the game never counted, so the mod now checks the list too.
+- The host's picture of the client can lag behind on rough ground (the enemies follow the client's sent place since session cm).
+- When the host dies, the client stays in its fight through the host's death scene, screens and the killer's presentation and is
+  taken to the respawn point once the host walks again (session cm; it was pulled away at once before).
+- A swing that reached both the host's picture of the client and the decoy was sent twice; since session cm it is sent once,
+  also when two enemies land the same attack at once.
+- The host's tamed wargs hurt the client when their running lunge passed through its picture; since session cm hits by the
+  host's tamed wargs and followers are not sent (seen once in a fight; the drop was checked with a staged hit).
+- Counters protect the client: a swing it counters does not take its health (checked in session cm), so the experimental
+  give-back (`coop_counter_heal`) stays off.
+- When a captain ambushes the host, the client applies the host's Nemesis events (the presentation, the showdown, a kill of the
+  host's player) and also stands on a screen until the player presses on (seen once with bots).
+- After a client death the host's picture of the client once stood still 1,600 units off (the game no longer moved it); since
+  session cm the mod moves such a picture by direct writes until the game moves it again. Why it happens is not known.
+- A picture whose AI update the game has switched off slides and jumps (moved only by the mod's put-backs) and its AI list is
+  never emptied; since session cm such a picture is made again after 6 s. What switches it off in play is not known.
+- Two rare host crashes in the game's AI (seen once and twice) both read the host's player as an AI character. The mod no longer
+  points enemies at the host's player, and both crash sites have a narrow guard; neither crash came back, so the fix is not
+  proven.
+- Caragors, graugs and other beasts were not tried (they cannot be spawned in the test region).
+- In bot tests a captain's appearance or the host's death leaves a copy on a screen until a press; the test tools press through
+  (players do so anyway).
 
 ## Next steps
 
-- Decide the sync model: host-side event stream from `HandleFactionEventAction` and the
-  death/promotion functions, or host world state through `Faction.Save` / `Faction.Load`.
-- Check whether the LithTech client/server split is real at runtime (`GameServerShell`,
-  `clientmgr`, NetMesh code).
-- Map the player character from `GameClient` (RVA `26FFA98`).
+- A test between two PCs over a real network (needs a second player).
+- Find what switches a picture's AI update off in play (the byte at +0x285 of its agent: set by the agent's binding `193704`,
+  cleared by its shutdown `415D5C`; session cm), so pictures need not be made again.
+- Fights with beasts (a region whose spawn table has caragors and graugs).
+- Run `tools/regress.py` (in the mod's repo) on every change; it covers a fight, duplicate damage, exact losses, both deaths and
+  kill-and-respawn.
+
+## Picking this up
+
+The author stopped on 2026-11-11 (the directory entry is up for adoption). To carry on:
+
+- **Code:** [shadow-of-war-coop](https://github.com/Santonus-not-bot/shadow-of-war-coop) (MIT). `build.cmd` builds the
+  `bink2w64.dll` proxy and the offline tests with Visual Studio 2022; its README explains each part and the settings.
+  `release/make_package.py` packs a player zip with hashes; an alpha package (0.1.0-alpha) was built and checked but not yet
+  published as a release.
+- **Tests:** the offline suites (`enemy_test`, `net_test`, `test_guard`) need no game. The live tools in `tools/` (bots,
+  `regress.py`, soaks, the chaos relay runs) need two running copies; here they ran on one PC, through a way past the game's
+  single-instance and activation checks that this hub does not publish, so a new owner tests on two PCs (two Steam accounts)
+  or with a setup of their own within the game's terms. `release/TWO-PC-TEST.md` is the checklist for the first two-PC session.
+- **Where to look:** this page's "Known issues" and "Next steps"; [NOTES.md](NOTES.md) has every session with observations,
+  derived facts and unknowns kept apart, function addresses for build 3095001, and the tools used for each finding.

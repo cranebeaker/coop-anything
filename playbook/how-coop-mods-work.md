@@ -545,6 +545,31 @@ Exit test: both clients damage the same enemy; both see the same health and deat
 appear once. Difficulty: hard. AI is the long tail (TES3MP still lists AI as its main
 open problem; OOT True Co-op lists aggro, sounds and particles as gaps).
 
+Damage traps seen when the remote player has more than one stand-in on the host (in Shadow of War
+an invisible allied soldier stands where the remote player's picture stands, because enemies do not
+attack the picture itself; [notes](../games/shadow-of-war/NOTES.md), session cm):
+
+- **One swing, two victims, two damage messages.** A swing that reaches both stand-ins is reported
+  once per victim, and the remote player takes it twice (12 of 31 swings in one test). Drop a second
+  report of the same attacker and attack on the other stand-in within a few hundred milliseconds.
+  Remember the last report of each attacker, not one report overall: two enemies landing the same
+  attack in the same frames interleave their reports (one, two, one, two), and a single remembered
+  report let both duplicates through.
+- **Send the amount, not a stand-in attack.** Damage the remote side's enemy pictures take outside
+  the hit function (arrows, gear effects) was first replayed on the host as a few stock sword
+  strikes, so a 60.5 loss landed as 96. A message with the exact amount, applied as a health
+  change (and as the game's own death when it reaches zero), keeps both sides equal.
+- **Do not double count a kill animation.** A counter-kill reports its strike at once, but the
+  health drops frames later; a "health lost outside hits" check then reported it again. Skip that
+  check for a short time after a reported strike on the same enemy.
+- **Credit only what the remote player did.** The remote side's gear (an aura, recoil) also hurts
+  pictures of the host's allies, and falls cost health too; forward only losses of hostile enemies,
+  and not right after a fall.
+- **Only enemies hurt the remote player.** The host's own allies brush its stand-ins too: a tamed
+  wolf's running lunge passed through one and was forwarded as damage, twice in 125 ms. Check the
+  attacker's side before forwarding a hit on a stand-in (the follower flag did not cover tamed
+  beasts there; the spawn type did).
+
 ### Stage 4: world and quest state
 
 1. Locate the story variable store (quest stages, global flags, event flags). Intercept
