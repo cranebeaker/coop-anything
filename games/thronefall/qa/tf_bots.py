@@ -670,6 +670,374 @@ class CoopExtras(core.Playbook):
             ctx.expect(sum(r[1] for r in rows.values()) > 0, "no player damage counted: %s" % rows)
 
 
+def wait_dawn(ctx, host, client, timeout_s=420, sampler=None):
+    """Play the running night until it is day on both (or the match ends)."""
+    end = time.monotonic() + timeout_s
+    while time.monotonic() < end:
+        if sampler:
+            sampler()
+        if host.gamestate() in ENDED or client.gamestate() in ENDED:
+            return host.gamestate()
+        if host.time_of_day() == "Day" and client.time_of_day() == "Day":
+            return "Day"
+        time.sleep(2)
+    return None
+
+
+class CoopMore(core.Playbook):
+    """1.2.7.9: profiles, extra-enemy gold, separate damage scaling, ping spreading, live kill counter, respawn wait
+    growing per death, teammate revive and watching a teammate while down."""
+    name = "coop_more"
+    summary = ("Profiles save/load; pings replace and spread; kill counter equal on both; extra enemies carry gold; "
+               "respawn wait 20 s then 30 s; a teammate next to the fallen player revives them; camera watches while down.")
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+        host_id, client_id = ids(host)
+
+        with ctx.step("profiles: save Count & HP Tough in slot 2, change it, load slot 2", compare=False):
+            CoopSettings.open_menu(None, ctx, host)
+            ctx.must(panel_set(host, "count", "Tough"), "count Tough")
+            p = host.call("profile", action="save", slot=2)
+            ctx.log("slot 2 after save: %s" % p)
+            ctx.must(panel_set(host, "count", "Normal"), "count back to Normal")
+            p = host.call("profile", action="load", slot=2)
+            ctx.log("slot 2 after load: %s" % p)
+            ctx.expect(host.call("coop_panel", action="state")["rows"]["count"] == "Tough", "load did not bring back Tough")
+            ctx.expect(p["stored"] and "count=Tough" in p["stored"], "slot 2 does not hold count=Tough: %s" % p)
+
+        with ctx.step("host: more enemies, 100% gold, revive, respawn 20 s +10 s, scaled as 2 with enemy damage Medium",
+                      compare=False):
+            for key, value in (("count", "MoreEnemies"), ("gold", "100%"), ("revive", "On"), ("respawn", "20 s"),
+                               ("rinc", "10 s"), ("scale", "Players2"), ("dstep", "Medium")):
+                ctx.must(panel_set(host, key, value, tries=24), "host: %s %s" % (key, value))
+            ping = panel_set(host, "ping", "On")
+            ctx.must(ping, "map ping on")
+            total = host.call("coop_panel", action="state")["total"]
+            ctx.log("total line: %s" % total)
+            ctx.expect("damage +20% (0% + 20% scaling)" in total and "extra enemies drop 100% gold" in total,
+                       "total line: %s" % total)
+            ctx.must(keys_step(host, "kkills", "On"), "host kill counter on")
+            host.call("coop_panel", action="close")
+            CoopSettings.open_menu(None, ctx, client)
+            ctx.must(keys_step(client, "kkills", "On"), "client kill counter on")
+            ctx.must(keys_step(client, "kwatch", "On"), "client watches when down")
+            client.call("coop_panel", action="close")
+            ctx.wait_until("client sees the host's rules", lambda: "respawn=20 s" in (client.call("lobbydata", key="tfmp_coop")["value"] or ""), 10)
+
+        enter_level(ctx, host, client, self.level)
+
+        with ctx.step("pings: same spot replaces, nearby plates move apart", compare=False):
+            client.call("map_ping", action="now", x=0.5, y=0.5)
+            ctx.pause(0.5)
+            client.call("map_ping", action="now", x=0.5, y=0.5, kind="Attack")
+            ctx.pause(0.8)
+            one = host.call("hud")
+            ctx.log("after two pings on one spot: host shows %s ping(s)" % one["pings"])
+            ctx.expect(one["pings"] == 1, "same-spot ping not replaced: %s markers" % one["pings"])
+            client.call("map_ping", action="now", x=0.58, y=0.5, kind="Defend")
+            ctx.pause(0.8)
+            two = host.call("hud")
+            ctx.log("after a ping next to it: %s markers, %s plate(s) moved" % (two["pings"], two["platesMoved"]))
+            ctx.expect(two["pings"] == 2 and two["platesMoved"] >= 1, "plates not spread: %s" % two)
+
+        with ctx.step("day 1: host builds the castle", compare=False):
+            castle = next(s for s in host.slots() if s["name"] == "Castle Center")
+            ctx.must(host.build(castle["id"]), "host builds the castle")
+            ctx.settle()
+
+        with ctx.step("night 1 starts", compare=False):
+            ctx.must(host.call_night(), "host calls the night")
+            ctx.wait_until("night on both", lambda: host.time_of_day() == "Night" and client.time_of_day() == "Night", 15)
+
+        def down_on_both():
+            return (host.call("revive_state")["players"][str(client_id)]["down"]
+                    and client.call("revive_state")["players"][str(client_id)]["down"])
+
+        def up_on_both():
+            return (not host.call("revive_state")["players"][str(client_id)]["down"]
+                    and not client.call("revive_state")["players"][str(client_id)]["down"])
+
+        for death, expect_wait in ((1, 20.0), (2, 30.0)):
+            with ctx.step("death %d: client goes down; respawn wait %.0f s on both; camera watches the host" % (death, expect_wait),
+                          compare=False):
+                host.call("teleport", x=host.call("revive_state")["players"][str(host_id)]["pos"][0] + 20,
+                          z=host.call("revive_state")["players"][str(host_id)]["pos"][2])
+                ctx.pause(1)
+                ctx.log(host.call("knock_out", id=client_id))
+                ctx.wait_until("client down on both", down_on_both, 10)
+                ctx.pause(1)
+                h = host.call("revive_state")
+                c = client.call("revive_state")
+                ctx.log("host view %s; client view %s, watching %s" % (h["players"][str(client_id)], c["players"][str(client_id)], c["watching"]))
+                for name, view in (("host", h), ("client", c)):
+                    st = view["players"][str(client_id)]
+                    ctx.expect(st["deaths"] == death, "%s counts %s deaths, expected %d" % (name, st["deaths"], death))
+                    ctx.expect(abs(st["wait"] - expect_wait) < 0.1, "%s respawn wait %s, expected %s" % (name, st["wait"], expect_wait))
+                ctx.expect(c["watching"], "client camera is not watching the host")
+                ctx.expect(c["watchedId"] == host_id and c["watchText"] and "to switch" in c["watchText"],
+                           "client watch hint wrong: %s / %r" % (c["watchedId"], c["watchText"]))
+                # With one teammate up, next / previous stay on that teammate.
+                client.call("watch_cycle", dir=1)
+                ctx.pause(0.3)
+                client.call("watch_cycle", dir=-1)
+                ctx.pause(0.3)
+                ctx.expect(client.call("revive_state")["watchedId"] == host_id, "switching lost the only teammate")
+
+            with ctx.step("death %d: the host stands next to the client; it gets up within the revive time" % death,
+                          compare=False):
+                pos = host.call("revive_state")["players"][str(client_id)]["pos"]
+                before = host.call("revive_state")["revived"]
+                host.call("teleport", x=pos[0] + 1.0, z=pos[2])
+                seen = []
+                t0 = time.monotonic()
+                while time.monotonic() - t0 < 10 and not up_on_both():
+                    seen.append(round(client.call("revive_state")["players"][str(client_id)]["progress"], 2))
+                    time.sleep(0.3)
+                took = time.monotonic() - t0
+                ctx.log("revived after %.1f s; progress the client saw: %s" % (took, sorted(set(seen))))
+                ctx.expect(up_on_both(), "client still down after 10 s next to the host")
+                ctx.expect(host.call("revive_state")["revived"] == before + 1, "host did not revive")
+                ctx.expect(any(0 < s < 1 for s in seen), "no revive bar progress reached the client")
+                ctx.pause(1)
+                ctx.expect(not client.call("revive_state")["watching"], "camera still watching after the revive")
+
+        samples = []
+
+        def sample():
+            hk, ck = host.call("hud")["kills"], client.call("hud")["kills"]
+            samples.append((hk, ck))
+
+        with ctx.step("night 1 to dawn: kill counter equal on both and to the host's counts; extra enemies carry gold",
+                      compare=False):
+            result = wait_dawn(ctx, host, client, sampler=sample)
+            ctx.log("night 1 ended: %s" % result)
+            ctx.pause(3)
+            h, c, stats = host.call("hud"), client.call("hud"), host.call("match_stats")["current"]
+            ctx.log("kill counter host %s client %s, host counts %s; text on client: %r" % (h["kills"], c["kills"], stats, c["text"]))
+            ctx.log("extra enemies spawned %s carrying %s coins" % (h["extraSpawned"], h["extraCoins"]))
+            ctx.expect(h["kills"] == c["kills"], "kill counter differs: host %s client %s" % (h["kills"], c["kills"]))
+            ctx.expect(all(int(stats.get(k, "0|").split("|")[0]) == v for k, v in h["kills"].items()),
+                       "kill counter %s does not match the host's counts %s" % (h["kills"], stats))
+            ctx.expect(c["text"], "no kill counter text on the client")
+            ctx.expect(h["extraSpawned"] > 0 and h["extraCoins"] > 0, "extra enemies without gold: %s" % h)
+
+
+class LateJoin(core.Playbook):
+    """1.2.7.9: with "Join during a level" the client crashes after dawn, the host builds on, the client restarts and
+    joins straight into the running level with the host's current day; the host's own dawn save stays as it was."""
+    name = "late_join"
+    summary = "Client crash after dawn, host builds, client rejoins into the running level with the current day; host save unchanged."
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+        cm = ctx.clients[0]
+
+        with ctx.step("host turns on Join during a level", compare=False):
+            CoopSettings.open_menu(None, ctx, host)
+            ctx.must(panel_set(host, "join", "On"), "join during a level on")
+            host.call("coop_panel", action="close")
+
+        DayNight(self.level, 1).run(ctx)     # into the level, day 1, night 1, dawn 1 (the host saves at dawn)
+        dawn_hash = host.call("save_hash", level=self.level)
+        ctx.log("host dawn save: %s" % dawn_hash)
+
+        with ctx.step("client crashes after dawn; host builds alone", compare=False):
+            ctx.log(client_restart("-Kill"))
+            ctx.absent.add(cm.name)
+            ctx.wait_until("host sees 1 player", lambda: host.players() == 1, 60)
+            options = affordable(host.slots(), host.gold())
+            if options:
+                ctx.must(host.build(options[0]["id"]), "host builds %s" % options[0]["name"])
+            else:
+                ctx.log("nothing affordable; skipped")
+            self.after = host.shared()
+            ctx.log("host now: gold %s, wave %s" % (self.after["gold"], self.after["wave"]))
+
+        with ctx.step("client restarts, joins the lobby and is brought into the running level", settle=False, compare=False):
+            ctx.log(client_restart("-Start", "-Unlock"))
+            ctx.must(client.reconnect(), "client control port")
+            ctx.wait_until("both see 2 players", lambda: client.players() >= 2 and host.players() >= 2, 90)
+            ctx.wait_until("client in %s" % self.level, lambda: client.scene() == self.level, 120)
+            ctx.absent.discard(cm.name)
+            ctx.log("host admitted %s late joiner(s)" % host.call("late_join")["admitted"])
+            ctx.pause(6)
+            ctx.log("client applied %s replayed build(s)" % client.call("late_join")["replayed"])
+
+        with ctx.step("client has the host's current day (buildings, gold, wave)"):
+            ctx.pause(3)
+
+        with ctx.step("the host's own dawn save file is unchanged", compare=False):
+            now = host.call("save_hash", level=self.level)
+            ctx.expect(now["hash"] == dawn_hash["hash"], "host save changed: %s -> %s" % (dawn_hash, now))
+
+        DayNight(self.level, 1, enter=False).run(ctx)   # play on together: day 2, night 2, dawn 2
+
+
+def palette_hex(name):
+    rgb = {"Red": (1.00, 0.25, 0.25), "Green": (0.45, 1.00, 0.40), "Cyan": (0.30, 0.85, 1.00)}[name]
+    return "".join("%02X" % int(round(c * 255)) for c in rgb)
+
+
+def slot(bot, sid):
+    return next(s for s in bot.slots() if s["id"] == sid)
+
+
+class CoopBig(core.Playbook):
+    """1.2.8.0: tabs, individual part colours and shared wardrobes, chat colours, team HP, planning, build vote
+    (no, then yes), destroyed buildings with gold back, rebuild, night summary, down alerts, endless."""
+    name = "coop_big"
+    summary = ("Part colours and wardrobes seen by the other player; chat names coloured; plans and a build vote; "
+               "destroyed tower: summary, gold back, rebuild; down alert; endless keeps the level going.")
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+        host_id, client_id = ids(host)
+
+        with ctx.step("host rules: plan first, vote AnyOne, summary, destroyed stay destroyed 50%, endless", compare=False):
+            CoopSettings.open_menu(None, ctx, host)
+            for key, value in (("plan", "On"), ("vote2", "AnyOne"), ("summary", "On"), ("keep", "On"),
+                               ("refund", "50%"), ("endless", "On")):
+                ctx.must(panel_set(host, key, value, tries=24), "host: %s %s" % (key, value))
+            for key, value in (("kwardrobe", "On"), ("kteamhp", "On"), ("kdown", "On")):
+                ctx.must(keys_step(host, key, value), "host: %s %s" % (key, value))
+            ctx.must(keys_step(host, "gsprintmode", "Toggle"), "host: sprint toggle")
+            ctx.must(keys_set(host, "ginteract", "F"), "host: extra interact key F")
+            ctx.log("host sprint: %s" % host.call("sprint"))
+            host.call("coop_panel", action="close")
+
+        with ctx.step("client: individual colours (clothes red, horse green), wardrobes on; host changes its wardrobe",
+                      compare=False):
+            CoopSettings.open_menu(None, ctx, client)
+            ctx.must(keys_step(client, "kmode", "Individual"), "client: individual colours")
+            ctx.must(keys_step(client, "kpart0", "Red"), "client: clothes red")
+            ctx.must(keys_step(client, "kpart5", "Green"), "client: horse green")
+            ctx.must(keys_step(client, "kwardrobe", "On"), "client: show wardrobes")
+            client.call("coop_panel", action="close")
+            dressed = host.call("set_wardrobe", crown=1, capeMat=2)
+            ctx.log("host wardrobe now %s" % dressed)
+
+        with ctx.step("each sees the other's colours and wardrobe", compare=False):
+            ctx.wait_until("host sees the client's red clothes and green horse", lambda: (
+                "body=%s" % palette_hex("Red") in host.call("part_colors")["players"][str(client_id)]
+                and "horse=%s" % palette_hex("Green") in host.call("part_colors")["players"][str(client_id)]), 15)
+            ctx.wait_until("client sees the host's outfit", lambda: (
+                client.call("wardrobe")["wearing"].get(str(host_id)) == host.call("wardrobe")["own"]), 15)
+            ctx.log("host sees client %s; client sees host wearing %s (host own %s)" % (
+                host.call("part_colors")["players"][str(client_id)], client.call("wardrobe")["wearing"].get(str(host_id)),
+                host.call("wardrobe")["own"]))
+
+        enter_level(ctx, host, client, self.level)
+
+        with ctx.step("chat names in the sender's colour; team HP bars", compare=False):
+            client.call("chat", say="hello from the client")
+            ctx.wait_until("host got the message", lambda: "hello from the client" in (host.call("chat")["last"] or ""), 10)
+            last = host.call("chat")["last"]
+            ctx.log("host chat line: %r" % last)
+            ctx.expect(last.startswith("<color=#"), "client name not coloured: %r" % last)
+            hp = host.call("night_report")["teamHp"]
+            ctx.log("host team HP: %s" % hp)
+            ctx.expect(hp and str(host_id) in hp and str(client_id) in hp, "team HP bars missing: %r" % hp)
+
+        castle = next(s for s in host.slots() if s["name"] == "Castle Center")
+        with ctx.step("plan first: the host's castle becomes a plan, gold stays, both see it", compare=False):
+            gold = host.gold()
+            host.build(castle["id"])
+            ctx.wait_until("castle planned on both", lambda: any(p.split("|")[0] == str(castle["id"]) for p in client.call("plans")["plans"]), 10)
+            ctx.pause(1)
+            ctx.log("plans on the client: %s; plates %s blueprints %s" % (
+                client.call("plans")["plans"], client.call("plans")["plates"], client.call("plans")["blueprints"]))
+            ctx.expect(slot(host, castle["id"])["level"] == 0, "castle was built instead of planned")
+            ctx.expect(host.gold() == gold, "gold changed by planning: %s -> %s" % (gold, host.gold()))
+            ctx.expect(client.call("plans")["plates"] >= 1, "no plan plate on the client")
+
+        with ctx.step("confirm the castle: vote opens on the client, client says yes, castle built", compare=False):
+            host.call("plans", action="confirm", near=False)
+            ctx.wait_until("vote open on the client", lambda: (client.call("plans")["vote"] or "").split("|")[1:2] == ["Open"], 10)
+            ctx.log("client vote: %s" % client.call("plans")["voteText"])
+            client.call("plans", action="vote", yes=True)
+            ctx.wait_until("castle built", lambda: slot(host, castle["id"])["level"] == 1 and slot(client, castle["id"])["level"] == 1, 15)
+
+        tower_id = None
+        with ctx.step("client plans a building; vote NO keeps it planned; vote YES builds it", compare=False):
+            options = [s for s in affordable(host.slots(), host.gold()) if s["name"] != "Castle Center"]
+            ctx.expect(options, "nothing affordable to plan")
+            if options:
+                tower_id = options[0]["id"]
+                client.build(tower_id)
+                ctx.wait_until("planned", lambda: any(p.split("|")[0] == str(tower_id) for p in host.call("plans")["plans"]), 10)
+                host.call("plans", action="confirm", near=False)
+                ctx.wait_until("vote open", lambda: (client.call("plans")["vote"] or "").split("|")[1:2] == ["Open"], 10)
+                client.call("plans", action="vote", yes=False)
+                ctx.wait_until("vote failed", lambda: "Failed" in (host.call("plans")["vote"] or ""), 10)
+                ctx.pause(1)
+                ctx.expect(slot(host, tower_id)["level"] == 0, "built although the vote failed")
+                ctx.expect(any(p.split("|")[0] == str(tower_id) for p in host.call("plans")["plans"]), "plan lost after the failed vote")
+                host.call("plans", action="confirm", near=False)
+                ctx.wait_until("second vote open", lambda: (client.call("plans")["vote"] or "").split("|")[1:2] == ["Open"], 10)
+                client.call("plans", action="vote", yes=True)
+                ctx.wait_until("built", lambda: slot(host, tower_id)["level"] == 1 and slot(client, tower_id)["level"] == 1, 15)
+                ctx.log("built %s" % options[0]["name"])
+
+        with ctx.step("night: the client goes down (alert on the host), the tower is destroyed", compare=False):
+            ctx.must(host.call_night(), "host calls the night")
+            ctx.wait_until("night on both", lambda: host.time_of_day() == "Night" and client.time_of_day() == "Night", 20)
+            alerts = host.call("night_report")["alerts"]
+            host.call("knock_out", id=client_id)
+            ctx.wait_until("down alert on the host", lambda: host.call("night_report")["alerts"] > alerts, 10)
+            ctx.log("host team HP while down: %s" % host.call("night_report")["teamHp"])
+            if tower_id is not None:
+                ctx.log("destroy: %s" % host.call("destroy_building", id=tower_id))
+
+        with ctx.step("dawn: night summary on both, gold back 50%, the tower listed as a rebuild", compare=False):
+            ctx.expect(wait_dawn(ctx, host, client) == "Day", "no dawn")
+            ctx.pause(3)
+            h, c = host.call("night_report"), client.call("night_report")
+            ctx.log("summary on the client: %s / %s" % (c["rows"], c["lostText"]))
+            ctx.expect(h["rows"] == c["rows"] and c["rows"], "summary differs or missing: host %s client %s" % (h["rows"], c["rows"]))
+            if tower_id is not None:
+                ctx.expect(c["lostText"] and "gold back" in c["lostText"], "no lost building / gold back: %r" % c["lostText"])
+                ctx.wait_until("rebuild listed on the client", lambda: any(p.split("|")[4] == "rebuild" for p in client.call("plans")["plans"]), 10)
+                ctx.log("plans now: %s" % client.call("plans")["plans"])
+
+        if tower_id is not None:
+            with ctx.step("rebuild: confirm, client votes yes, the tower stands again", compare=False):
+                host.call("plans", action="confirm", near=False)
+                ctx.wait_until("vote open", lambda: (client.call("plans")["vote"] or "").split("|")[1:2] == ["Open"], 10)
+                client.call("plans", action="vote", yes=True)
+                ctx.wait_until("rebuild gone from the list", lambda: not any(p.split("|")[4] == "rebuild" for p in host.call("plans")["plans"]), 15)
+                ctx.log("host message: %s" % host.call("plans")["message"])
+                ctx.expect("Rebuild" in (host.call("plans")["message"] or ""), "no rebuild message")
+
+        with ctx.step("endless: at the level's last wave the level does not end; the next nights get harder", compare=False):
+            e = host.call("endless")
+            last = e["original"] - 1
+            h = host.call("set_wave", wave=last)
+            c = client.call("set_wave", wave=last)
+            ctx.log("host at the last wave: %s; client %s" % (h, c))
+            ctx.expect(not h["matchOver"] and h["count"] > e["original"], "level would end: %s" % h)
+            h2 = host.call("set_wave", wave=e["original"])
+            client.call("set_wave", wave=e["original"])
+            ctx.log("first extra night: %s" % host.call("endless"))
+            ctx.expect(abs(host.call("endless")["bonusNext"] - 0.10) < 1e-3, "no +10% on the first extra night")
+            ctx.expect(client.call("endless")["count"] >= h2["count"] - 1, "client wave list shorter than the host's")
+
+
 class DayNight(core.Playbook):
     name = "day_night"
     summary = ("Open a level from the map, both pick weapons, start; host and client build in turns; nights alternate "
@@ -904,6 +1272,12 @@ def main(argv):
         pb = MapPing(a.level)
     elif a.playbook == "coop_extras":
         pb = CoopExtras(a.level)
+    elif a.playbook == "coop_more":
+        pb = CoopMore(a.level)
+    elif a.playbook == "late_join":
+        pb = LateJoin(a.level)
+    elif a.playbook == "coop_big":
+        pb = CoopBig(a.level)
     else:
         pb = DayNight(a.level, a.nights)
     opts = {"settle_s": 30.0, "settle_poll_s": 0.5}

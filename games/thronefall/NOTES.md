@@ -279,6 +279,89 @@ Running log. Observations, derivations, guesses and unknowns are kept apart.
   attack +15% faster. bosses HP 300%, damage 125%". `coop_extras` now also checks that host and client show the same
   explanation and total line.
 
+### Join during a level, revive, respawn wait, profiles, kill counter (1.2.7.9, 2026-11-13, owner's request)
+- **Join during a level** (host rule): the lobby stays joinable in a level. Level sync is now per peer
+  (`LevelDataSync.CaresAboutPeer`), so a late joiner is first told "_LevelSelect", reports in from the map
+  (`LateJoinPacket`), gets the host's dawn save of the level (`SaveSync.SendSaveTo`), then the level name.
+  Findings on the way:
+  - `MatchSaveLoadHandler.SaveRun()` in the middle of a day writes the dawn state again (4106 chars, same as the
+    dawn file), so a day snapshot is not possible that way. Instead the host records every confirmed build since the
+    last dawn save and replays them to the late joiner once it reports the level loaded; the client applies a build
+    only if the slot is still at that level (`BuildSlot.Level == packet level`), so duplicates do nothing.
+  - With one state per peer, `BaseSync.Handle` stores RequestLevel/WeaponResponse packets as the peers' last packet,
+    and `LevelDataSync.Compare` cast them to `SyncLevelDataPacket` (InvalidCastException every frame, nobody entered
+    levels). Compare now treats a foreign packet as "changed".
+  - A client that has just loaded the map still has `SceneTransitionIsRunning`; `Transition` then only queues the
+    level, and the queue runs at the next transition (never). `TransitionAfterHostSave` waits for the running one.
+  - The late-joiner set must hold everybody who is with the host on the map (updated every frame there), or players
+    who came in normally are taken for late joiners during the host's transition.
+  - At night the joiner waits; it is admitted 3 s into the next day (after the dawn save).
+  - `late_join` PASS 15/15: client crash after dawn, host builds a tower alone, client restarts and joins into the
+    running level, 1 build replayed, shared state equal, host save hash unchanged, one more day and night together.
+- **Respawn wait / longer per death** (host): Harmony postfix on the private getter
+  `AutoRevive.ReviveAfterBeingKnockedOutFor` (must sit in a class marked `[HarmonyPatch]`: CreateAndPatchAll ignores
+  method-level attributes in unmarked classes; the first run showed the game's 11 s). Deaths per player per level are
+  counted on every machine from the synced knock-outs, so host and client compute the same wait: 20 s then 30 s with
+  20 s + 10 s.
+- **Teammate revive** (host): a teammate within 3.5 m of a downed player for the revive time; the host sets
+  `AutoRevive.hasBeenKnockedOutFor` to the wait, so the game's own AutoRevive revives (perks included). Revived after
+  3.1 s with 3 s set, twice; the client saw the bar fill (0.07 ... 0.88). Note: AutoRevive revives at once by day, so
+  downs only matter at night.
+- **Watch friend when down** (per player): `CameraRig.overrideCameraTarget` = a teammate who is up, only if nothing
+  else uses the override; cleared on revive.
+- **Kill counter** (per player): host sends kills per player once a second when they change; equal on both and to
+  the host's counts.
+- **Gold from extra enemies** (host, 0-200 %, default 0): a share of the copied enemy's coins with the remainder carried
+  over; 2 extra enemies carried 2 coins at 100 %.
+- **Separate per-player scaling** for enemy damage, boss HP and boss damage (Off/Light/Medium/Strong/Custom), added like
+  enemy HP; the "In total" line shows it ("damage +20% (0% + 20% scaling)").
+- **Profiles**: 5 slots in `BepInEx/config/thronefall_mp_profiles.txt`; save Tough, change, load: Tough again.
+- **Pings**: a ping within 2 m replaces the old one; overlapping name plates move down 42 px; older pings shrink and fade.
+- Menu: difficulty left (with profiles and the total line), rules and own settings right; fits at 1440p.
+- Regression on 1.2.7.9: `coop_extras` 21/21, `coop_settings` 15/15, `map_ping` 9/9, `rejoin` 12/12,
+  `locked_endscreen` 15/15. Owner files untouched.
+- Infrastructure: after a PC/Steam restart the sandboxed second Steam is not running and copy B logs
+  `SteamAPI_Init() failed` (connect fails with "no peer joined"); start it again with `Start.exe /box:Steam2 steam.exe`.
+
+### 1.2.8.0 (2026-11-13, owner's request): planning, votes, rebuilds, endless, wardrobes, game keys
+- **Destroyed stay destroyed**: `PerkManager.DestructionGodActive` (the game's own rule, read only in
+  `Hp.ReviveAllKnockedOutPlayerUnitsAndBuildings` at dawn) forced on. Experiment: the slot then stays `Built` with a dead
+  building and cannot be focused again, so it is not rebuildable by itself. Resetting a slot to level 0 mid-match is
+  unsafe (other slots depend on it: activators, walls), so destroyed buildings are listed as "Rebuild" plans that
+  revive the building (`Hp.Revive`, remove `AUTO_NoReviveNextMorning`, clear `knockedOutTonight`) for everything paid
+  into it (`sum upgrades[0..Level-1].cost`). Gold back at dawn = share of that sum; with rebuild costing the full sum
+  there is no gold loop.
+- **Planning / build vote**: every build passes `BuildPlanner.OnBuildRequest` on the host (client: in
+  `HandleBuildOrUpgrade`, refused requests get `CancelBuild`; host: in the `OnUpgradeChoiceComplete` hook). Finding: the
+  game's cancel (`OnUpgradeChoiceComplete(null)` -> `OnUpgradeCancel`) does not give the host back what it paid while
+  holding (8 -> 5 gold for a 3 gold castle), so the hook refunds `upgradeSelected.cost`. Confirmed plans are built by
+  the host with `ConfirmBuildPacket` and an explicit gold charge. Vote results were overwritten by the host's next
+  "no vote" broadcast in the same frame; results now stay 3 s. Blueprints: the game's own preview
+  (`Graphics.DrawMesh(UpgradePreviewMesh, MainMesh matrix, previewMaterial)`) with a per-player tinted material copy.
+- **Endless**: `EnemySpawner.MatchOver` is `wavenumber >= waves.Count - 1 && !SpawningInProgress`; every machine
+  appends waves ahead (the last up to four waves without a boss or placed unit, fixed order) so the last wave never
+  comes; host and client lists match (checked: 13 waves, at wave 12 count 16, MatchOver false on both). Each extra
+  night adds the ramp to HP and count (first extra night +10% at Steady). The game also has an "EternalTrial" mode with
+  a seeded wave generator (`EternalWaveGenerator`, random seed per machine), not used.
+- **Wardrobes**: `WardrobePlayer.Set*` store the choice through `PlayerWardrobeManager` only if that field is set; for
+  other players' kings it is nulled during the call. Each player publishes item and material indices as lobby member
+  data. Colours per part: clothes ("Player" material), cape `_Color2`, trim `_Color1`, crown / armour objects of the
+  WardrobePlayer, horse ("Horse" material).
+- **Game keys**: the game's Rewired keyboard map (read with the driver's `bindings`): Sprint = Left Shift, **Sprint
+  Toggle = Tab (already in the game)**, Interact / Call Night = Space or left mouse, Command Units = R / Left Ctrl /
+  mouse 3, Select All Army/Melee/Ranged/Heroes = 1-4, Smart Command = F / Q, Zoom = Z, Lock Target = Left Alt. Extra
+  keys are added in postfixes on `Rewired.Player.GetButton/GetButtonDown/GetButtonUp/GetAxis(string)`; nothing in the
+  game's control maps is changed.
+- QA: `coop_big` PASS 15/15 (part colours and wardrobe seen by the other player, coloured chat names, team HP, plan ->
+  vote yes -> built, plan -> vote no -> still planned -> vote yes -> built, client down alert, tower destroyed ->
+  summary on both + gold back 2 of 3 at 50% -> rebuild plan -> vote -> rebuilt, endless). Regression on the same build:
+  `coop_more`, `coop_extras`, `coop_settings`, `map_ping`, `late_join`, `rejoin`, `locked_endscreen` all PASS.
+- Real keys and mouse (owner allowed), visible host copy: Esc closes Co-op Settings twice (the game then shows its
+  pause menu again, one more Esc closes it), tap middle mouse = ping, hold + mouse up = Attack, wheel + key 4 =
+  Upgrade to 4, hold C next to a plan builds it, extra key J calls the night, sprint toggle with an extra key: PASS.
+  Synthetic Left Shift (keybd_event, VK 0xA0 and 0x10) did not reach Rewired, so the toggle via the game's own Shift
+  is unverified with injected input.
+
 ### Lead (not proven player-facing): host with no weapon equipped hangs the level start
 - Seen with a fresh profile: host on the level's first page (Level Select Frame) presses Play/Start directly; host's pick is
   `Invalid` (nothing equipped), `LevelDataSync` falls back to `WeaponRequestPacket` and also sends it to the host itself;

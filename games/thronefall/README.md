@@ -14,12 +14,13 @@ Two players can play Thronefall together over Steam with Bemno's fork of Thronef
 the current Unity 6 build. Automated tests with two real game copies on two Steam accounts, plus the owner's first real
 session with a friend, found seven bugs in 1.2.7. The worst break everyday play: joining a friend a second time hangs,
 Continue Run gives the joining player an empty map, a friend without the level unlocked cannot join it, and the end
-screen can stay on screen for good. All seven have fixes; six pass the same automated tests, the Esc fix still needs a
-real key press. On the owner's request, optional
-co-op settings were added: enemy difficulty, boss difficulty, a night vote, map pings with a ping wheel, a ready check,
-end-of-match stats, player colours, an arrow to off-screen friends and rebindable mod keys, all changeable in a menu on
-the map without a new lobby and all off by default (local build 1.2.7.8, not published). The Craaghelm DLC maps were
-not tested.
+screen can stay on screen for good. All seven have fixes that pass automated tests (the Esc fix with real key
+presses). On the owner's request, optional co-op settings were added: enemy and boss difficulty with per-player
+scaling, a night vote, map pings with a ping wheel, a ready check, match and night summaries, joining a running level,
+teammate revive and respawn rules, planning with coloured blueprints and build votes, destroyed buildings that stay
+destroyed (with gold back and rebuilds), an endless mode, player colours per part, shared wardrobes, team HP, a kill
+counter and extra game keys; all changeable in a tabbed menu on the map without a new lobby and all off by default
+(local build 1.2.8.0, not published). The Craaghelm DLC maps were not tested.
 
 ## Existing work
 
@@ -57,7 +58,7 @@ archive note invites forks "as long as they give credit".
 
 ## What we changed
 
-Seven fixes and a set of optional co-op settings, as ten patches against Bemno 1.2.7 (local build 1.2.7.8). The code
+Seven fixes and a set of optional co-op settings, as thirteen patches against Bemno 1.2.7 (local build 1.2.8.0). The code
 is not published yet.
 
 1. **Joining hangs from the second session on.** `RecentPartners` (since 1.2.5) pings remembered partners while
@@ -105,6 +106,23 @@ Nothing changes unless a player turns it on. Session settings belong to the host
 | Map ping | host | Off | Off, On |
 | Ready check | host | Off | Off, On |
 | Match stats | host | Off | Off, On |
+| Join during a level | host | Off | Off, On |
+| Plan buildings first | host | Off | Off, On |
+| Build vote | host | Off | Off, AnyOne, Majority, All |
+| Night summary | host | Off | Off, On |
+| Destroyed stay destroyed / Gold back | host | Off / 0% | Off, On / 0-100% |
+| Endless / Harder per night | host | Off / Steady | Off, On / Gentle 5%, Steady 10%, Hard 15%, Brutal 25%, Insane 40%, Custom 1-100% |
+| Teammate revive / Revive time | host | Off / 3 s | Off, On / 1-10 s |
+| Respawn wait / Longer per death | host | game / 0 s | game or 5-120 s / 0-60 s |
+| Gold from extra enemies | host | 0% | 0-200% |
+| Enemy damage, boss HP, boss damage per player | host | Off | Off, Light, Medium, Strong, Custom |
+| Profiles | host | - | 5 slots, Save / Load |
+| Color mode / part colours | each player | One color / Auto | One color, Individual: clothes, cape, trim, crown, breastplate, horse |
+| Show wardrobes, Team HP bars, Down alerts, Kill counter, Watch friend when down | each player | Off | Off, On |
+| Chat time | each player | 3 s | 3-30 s |
+| Confirm plans (hold), Vote yes, Vote no | each player | C, Y, N | any key |
+| Sprint mode | each player | Hold | Hold, Toggle |
+| Extra game keys (move, interact, sprint, call night, command, select 1-4, zoom, pause) | each player | none | any key |
 | Count & HP | host | Normal | 10 presets, the last one Custom |
 | Enemy type | host | Off | 10 presets, the last one Custom |
 | Scale as players | host | Off | Off, Actual, 2 to 8 players; per player Light, Medium, Strong |
@@ -163,6 +181,42 @@ The same bar lists every co-op setting that is not at its default, so both playe
 `Hp.TakeDamage`, HP before and after, attacker under the player's object) and buildings built and upgraded (in the
 build confirmation). At victory or defeat it sends the table to everyone. Gold is not counted: the host holds the
 shared purse.
+
+**Join during a level (1.2.7.9).** The lobby stays open in a level. A late joiner (or a player rejoining after a
+crash) is sent to the map first, gets the host's dawn save of the level, loads the level from it, and the host then
+replays the builds made since that dawn (the game's `SaveRun` in the middle of a day writes the dawn state again, so a
+day snapshot is not possible). By day this happens at once; at night the joiner waits for the next dawn. The host's own
+save file is not written. This needed the level sync per peer and a wait for a running scene transition on the client.
+
+**Revive and respawn (1.2.7.9).** Teammate revive: standing next to a fallen player for the revive time finishes the
+game's own AutoRevive wait, so revive perks still apply. Respawn wait and "longer per death" patch the game's
+AutoRevive wait; every machine counts the deaths from the synced knock-outs, so all show the same countdown. "Watch
+friend when down" points the camera (`CameraRig.overrideCameraTarget`) at a teammate who is up; arrow keys switch.
+
+**Planning, build votes, rebuilds (1.2.8.0).** Every build request passes the host first. With "Plan buildings first"
+the first build at a slot becomes a plan: the game's own building preview is drawn there in the planner's colour, with a
+plate naming the building, the upgrade and its cost, and the paid coins go back. Building there again, or holding the
+Confirm plans key (near a plan: that one; elsewhere: all), builds it. With a build vote the others vote yes / no; the
+builder counts as yes; AnyOne, Majority or All decide. "Destroyed stay destroyed" switches on the game's own rule that
+skips the dawn repair (`PerkManager.DestructionGodActive`); because the game then leaves the slot unusable, every
+destroyed building is offered as an orange "Rebuild" plan for everything paid into it, and "Gold back" returns a share
+of that at dawn, so destruction never makes money.
+
+**Endless (1.2.8.0).** The game ends a level when the last wave is reached and done. With Endless on, every machine
+appends waves ahead of the current one (the level's last up to four waves without a boss or a placed unit, in a fixed
+order, so the lists match), and each extra night adds the chosen percentage to enemy HP and count. The game's own
+"Eternal Trial" mode uses a random seed per machine and is not used.
+
+**Looks and HUD (1.2.7.9-1.2.8.0).** Colours per part (clothes, cape, trim, crown, breastplate, horse) or one colour;
+the main colour stays the player's colour for pings, blueprints, arrows, stats and chat names. Shared wardrobes: each
+player publishes their wardrobe items and materials, and the other kings are dressed with the game's own wardrobe
+functions (with the wardrobe manager taken off, so nothing is stored in anyone's wardrobe). Team HP bars, down alerts
+with a danger ping, a live kill counter, a night summary at dawn, chat names in player colours and a scrollable chat
+history.
+
+**Game keys (1.2.8.0).** An extra key for any game action, read next to the game's input (Rewired), so the game's own
+keys and controllers keep working and its control settings stay untouched. The game already toggles sprint with Tab
+(Left Shift holds); the mod's Sprint mode Toggle turns the hold key into a toggle too.
 
 **Co-op difficulty (1.2.7.4).** Waves are the single-player waves, so every extra player makes the game easier. The
 host picks one entry from each list; the default is the base game. Since 1.2.7.8 the menu shows next to every value
@@ -243,6 +297,9 @@ python -I games/thronefall/qa/tf_bots.py --playbook difficulty --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook coop_settings --level Frostsee
 python -I games/thronefall/qa/tf_bots.py --playbook map_ping --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook coop_extras --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook coop_more --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook late_join --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook coop_big --level Nordfels
 ```
 
 Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
@@ -260,6 +317,11 @@ Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
 | `map_ping` Nordfels | PASS 9/9 (1.2.7.6), twice: off by default sends nothing; host turns it on, client sees it read only; both players rebind their own keys; Ping at Player lands on the pinging player; two cursor points land under the cursor (screen round trip within 3%) and on the same spot on both |
 | `locked_endscreen` regression | PASS 15/15 on 1.2.7.5 |
 | `coop_extras` Nordfels (1.2.7.7) | PASS 21/21: everything off by default (game's blue clothes); colours Red and Cyan on clothes and capes on both machines, map and level; friend arrow when 150 m away, gone when near; start-screen bar with the active settings on both; Play blocked until the client's Ready, dialog closes by itself; wheel directions; Attack, Upgrade 4, Danger and Wait pings with sign and label; three nights to defeat, then the same stats table on both (9 kills / 322 damage / 1 built and 1 / 118 / 1). `map_ping` 9/9 and `coop_settings` 15/15 again on this build |
+| `coop_more` Nordfels (1.2.7.9) | PASS 14/14: profile saved and loaded; same-spot ping replaced, nearby plates spread; respawn wait 20 s then 30 s on both; revived by the host after 3.1 s twice, the client saw the bar fill; camera watching while down, switch keys; kill counter equal on both and to the host's counts; extra enemies carried gold |
+| `late_join` Nordfels (1.2.7.9) | PASS 15/15: client crash after dawn, host builds a tower alone, client restarts and joins straight into the running level, 1 build replayed, shared state equal, host save file hash unchanged, one more day and night together |
+| `coop_big` Nordfels (1.2.8.0) | PASS 15/15: part colours and wardrobe seen by the other player; coloured chat names; team HP; plan, vote yes, built; plan, vote no (still planned), vote yes, built; down alert; tower destroyed, summary equal on both, gold back 2 of 3 at 50%, rebuild plan, vote, rebuilt; endless: no match end at the last wave, wave lists equal, +10% on the first extra night |
+| Regression on 1.2.8.0 | `coop_more`, `coop_extras`, `coop_settings`, `map_ping`, `late_join`, `rejoin`, `locked_endscreen` all PASS; owner files untouched |
+| Real keys and mouse on a visible copy (owner allowed) | 9/10: Esc closes Co-op Settings twice; tap ping; ping wheel up = Attack; wheel + 4 = Upgrade to 4; hold C next to a plan builds it; extra key J calls the night; sprint toggle with an extra key. Injected Left Shift did not reach the game's input, so the toggle on the game's own Shift is unverified |
 
 ## How to play
 
@@ -281,15 +343,16 @@ presses Back. With the fixed build, the optional settings are in Esc > Co-op Set
   - chat messages over about 60 characters are not sent;
   - after the first Esc in a mod menu, Esc no longer closes the mod's menus. Workaround: use the Close buttons.
 - Co-op in the tutorial level does not work (players die in a loop).
-- A joining player who crashes cannot rejoin while the host is in a level: the host goes back to the map (pause menu),
-  the friend joins again (a second click may be needed right after the host's map loads), the host continues the run
-  from the last dawn. Wait a few seconds after the friend appears before opening a level flag.
+- Without "Join during a level", a joining player who crashes cannot rejoin while the host is in a level: the host goes
+  back to the map (pause menu), the friend joins again (a second click may be needed right after the host's map
+  loads), the host continues the run from the last dawn. Wait a few seconds after the friend appears before opening a
+  level flag.
 - Reported once, not reproduced: the joining player did not see the perks the host selected (in the tutorial). The
   owner later confirmed the friend does see them outside the tutorial.
-- Not tested in 1.2.7.7: real key presses (ping tap and wheel hold, key capture, Esc; the bots call the same code the
-  keys call, and with minimized windows the mouse position is not meaningful), controller buttons as keys, the
-  Co-op Settings menu with a controller, match stats after a victory and with upgrades, three or more players, Totend's
-  second boss stage, a victory run.
+- Not tested in 1.2.8.0: the sprint toggle on the game's own Shift key, controller buttons as keys, the Co-op Settings
+  menu with a controller, match stats after a victory and with upgrades, three or more players (watch switching, votes
+  with more than two), joining at night (wait for dawn), an endless run played for many nights, Totend's second boss
+  stage, a victory run.
 - Leaving a level right after a defeat logs a short burst of `NullReferenceException` in `PathfindMovementEnemy.Update`
   (game code; about 700 lines on the host, then quiet). No visible effect.
 

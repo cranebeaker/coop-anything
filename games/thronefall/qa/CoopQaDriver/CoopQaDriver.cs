@@ -350,6 +350,7 @@ namespace CoopQa
                     if (panel == null) return new JObject { ["ok"] = false, ["error"] = "no CoopSettingsPanel" };
                     if ((string)a["action"] == "click")
                     {
+                        panel.ShowTabOf((string)a["key"]);
                         var row = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == (string)a["key"]);
                         if (row == null) return new JObject { ["ok"] = false, ["error"] = "no row " + a["key"] };
                         var btn = row.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true)
@@ -453,6 +454,212 @@ namespace CoopQa
                         ["lastOnScreen"] = Screen.width > 0 ? new JArray(sp.x / Screen.width, sp.y / Screen.height) : null,
                     };
                 }
+                case "revive_state":
+                {
+                    // Down / up, deaths in this level, revive progress, the respawn wait the game uses, and whether
+                    // the camera watches a teammate.
+                    var players = new JObject();
+                    foreach (var p in ThronefallMP.Plugin.Instance.PlayerManager.GetAllPlayers())
+                    {
+                        var hp = ThronefallMP.Network.TeammateRevive.HpOf(p);
+                        var ar = p.Data != null ? p.Data.GetComponent<AutoRevive>() : null;
+                        ThronefallMP.Network.TeammateRevive.Progress.TryGetValue(p.Id, out var prog);
+                        players[p.Id.ToString()] = new JObject
+                        {
+                            ["down"] = hp != null && hp.KnockedOut,
+                            ["deaths"] = ThronefallMP.Network.TeammateRevive.DeathsOf(p.Id),
+                            ["progress"] = prog.progress,
+                            ["wait"] = ar != null ? Traverse.Create(ar).Property<float>("ReviveAfterBeingKnockedOutFor").Value : -1f,
+                            ["left"] = ar != null ? ar.TimeTillRevive : -1f,
+                            ["pos"] = p.Object != null ? new JArray(p.Object.transform.position.x, p.Object.transform.position.y, p.Object.transform.position.z) : null,
+                        };
+                    }
+                    return new JObject
+                    {
+                        ["players"] = players,
+                        ["watching"] = ThronefallMP.Network.TeammateRevive.Watching,
+                        ["watchedId"] = ThronefallMP.Network.TeammateRevive.WatchedId,
+                        ["watchText"] = ThronefallMP.UI.Panels.CoopHudPanel.WatchText,
+                        ["revived"] = ThronefallMP.Network.TeammateRevive.Revived,
+                    };
+                }
+                case "plans":
+                {
+                    // Plans / rebuilds as this machine knows them, the open vote, plates and blueprints drawn.
+                    var arr = new JArray();
+                    foreach (var p in ThronefallMP.Network.BuildPlanner.Plans)
+                        arr.Add($"{p.SlotId}|{p.Level}|{p.Choice}|{(p.PlayerId == ThronefallMP.Network.BuildPlanner.Nobody ? -1 : p.PlayerId)}|{(p.Rebuild ? "rebuild" : "plan")}|{ThronefallMP.Network.BuildPlanner.Describe(p)}");
+                    var vote = ThronefallMP.Network.BuildPlanner.CurrentVote;
+                    if ((string)a["action"] == "confirm") ThronefallMP.UI.UIManager.PlanPanel.TestConfirm((bool?)a["near"] ?? false);
+                    if ((string)a["action"] == "vote") ThronefallMP.UI.UIManager.PlanPanel.TestVote((bool?)a["yes"] ?? true);
+                    return new JObject
+                    {
+                        ["plans"] = arr,
+                        ["vote"] = vote == null ? null : $"{vote.Id}|{vote.Status}|{vote.Yes}/{vote.Needed}|{vote.No}|{vote.Text}",
+                        ["voteText"] = ThronefallMP.UI.Panels.PlanPanel.VoteText,
+                        ["plates"] = ThronefallMP.UI.Panels.PlanPanel.PlatesShown,
+                        ["blueprints"] = ThronefallMP.UI.Panels.PlanPanel.BlueprintsDrawn,
+                        ["executed"] = ThronefallMP.Network.BuildPlanner.Executed,
+                        ["message"] = ThronefallMP.Network.BuildPlanner.LastMessage,
+                        ["gold"] = ThronefallMP.GlobalData.Balance,
+                    };
+                }
+                case "endless":
+                {
+                    var spawner = EnemySpawner.instance;
+                    return new JObject
+                    {
+                        ["on"] = ThronefallMP.CoopDifficulty.Endless,
+                        ["original"] = ThronefallMP.Network.EndlessMode.OriginalWaves,
+                        ["appended"] = ThronefallMP.Network.EndlessMode.Appended,
+                        ["wave"] = spawner != null ? spawner.Wavenumber : -1,
+                        ["count"] = spawner != null ? spawner.waves.Count : -1,
+                        ["matchOver"] = spawner != null && spawner.MatchOver,
+                        ["bonusNext"] = spawner != null ? ThronefallMP.Network.EndlessMode.Bonus(spawner.Wavenumber) : 0f,
+                    };
+                }
+                case "set_wave":
+                {
+                    // TEST ONLY: jump the wave counter (to reach the level's last wave quickly), on this machine.
+                    var spawner = EnemySpawner.instance;
+                    Traverse.Create(spawner).Field<int>("wavenumber").Value = (int)a["wave"];
+                    ThronefallMP.Network.EndlessMode.Ensure((int)a["wave"] + 3);
+                    return new JObject { ["wave"] = spawner.Wavenumber, ["count"] = spawner.waves.Count, ["matchOver"] = spawner.MatchOver };
+                }
+                case "chat":
+                {
+                    if (a["say"] != null) ThronefallMP.Plugin.Instance.Network.SendChatMessage((string)a["say"]);
+                    return new JObject { ["last"] = ThronefallMP.UI.Panels.ChatPanel.LastLine, ["history"] = ThronefallMP.UI.UIManager.ChatPanel.HistoryCount };
+                }
+                case "wardrobe":
+                {
+                    var arr = new JObject();
+                    foreach (var p in ThronefallMP.Plugin.Instance.PlayerManager.GetAllPlayers())
+                        arr[p.Id.ToString()] = ThronefallMP.Network.WardrobeSync.Wearing(p);
+                    var lobby = ThronefallMP.Plugin.Instance.Network.Lobby;
+                    var published = new JObject();
+                    foreach (var p in ThronefallMP.Plugin.Instance.PlayerManager.GetAllPlayers())
+                        published[p.Id.ToString()] = SteamMatchmaking.GetLobbyMemberData(lobby, p.SteamID, ThronefallMP.Network.WardrobeSync.MemberKey);
+                    return new JObject { ["wearing"] = arr, ["published"] = published, ["own"] = ThronefallMP.Network.WardrobeSync.Own };
+                }
+                case "set_wardrobe":
+                {
+                    // TEST ONLY: dress the local king like the wardrobe tent would (items and materials by list index),
+                    // without the wardrobe manager, so this test copy's prefs stay as they are.
+                    var lp = ThronefallMP.Plugin.Instance.PlayerManager.LocalPlayer?.Object;
+                    var w = lp != null ? lp.GetComponentInChildren<WardrobePlayer>(true) : null;
+                    if (w == null) return new JObject { ["ok"] = false, ["error"] = "no WardrobePlayer" };
+                    var manager = Traverse.Create(w).Field("playerWardrobeManager");
+                    var saved = manager.GetValue();
+                    manager.SetValue(null);
+                    try
+                    {
+                        if (a["crown"] != null && w.CrownWardrobeItems.Count > (int)a["crown"]) w.SetCrown(w.CrownWardrobeItems[(int)a["crown"]], true);
+                        if (a["cape"] != null && w.CapeWardrobeItems.Count > (int)a["cape"]) w.SetCape(w.CapeWardrobeItems[(int)a["cape"]], true);
+                        if (a["capeMat"] != null && w.CapeColorCombos.Count > (int)a["capeMat"]) w.SetCapeMaterial(w.CapeColorCombos[(int)a["capeMat"]], true);
+                        if (a["crownMat"] != null && w.CrownMaterials.Count > (int)a["crownMat"]) w.SetCrownMaterial(w.CrownMaterials[(int)a["crownMat"]], true);
+                    }
+                    finally { manager.SetValue(saved); }
+                    return new JObject { ["now"] = ThronefallMP.Network.WardrobeSync.Wearing(ThronefallMP.Plugin.Instance.PlayerManager.LocalPlayer),
+                        ["crowns"] = w.CrownWardrobeItems.Count, ["capes"] = w.CapeWardrobeItems.Count, ["capeMats"] = w.CapeColorCombos.Count, ["crownMats"] = w.CrownMaterials.Count };
+                }
+                case "part_colors":
+                {
+                    var arr = new JObject();
+                    foreach (var p in ThronefallMP.Plugin.Instance.PlayerManager.GetAllPlayers())
+                    {
+                        var horse = ThronefallMP.Network.PlayerColors.MaterialColor(p, "Horse");
+                        var body = ThronefallMP.Network.PlayerColors.BodyColor(p);
+                        var cape = ThronefallMP.Network.PlayerColors.CapeColor(p);
+                        arr[p.Id.ToString()] = $"body={(body.HasValue ? ColorUtility.ToHtmlStringRGB(body.Value) : "-")} cape={(cape.HasValue ? ColorUtility.ToHtmlStringRGB(cape.Value) : "-")} horse={(horse.HasValue ? ColorUtility.ToHtmlStringRGB(horse.Value) : "-")}";
+                    }
+                    return new JObject { ["players"] = arr };
+                }
+                case "bindings":
+                {
+                    // The game's keyboard and mouse keys per action (Rewired maps of player 0), read only.
+                    var result = new JObject();
+                    var player = Rewired.ReInput.players.GetPlayer(0);
+                    foreach (var action in Rewired.ReInput.mapping.Actions)
+                    {
+                        var keys = new List<string>();
+                        foreach (var type in new[] { Rewired.ControllerType.Keyboard, Rewired.ControllerType.Mouse })
+                            foreach (var aem in player.controllers.maps.ElementMapsWithAction(type, action.id, false))
+                                keys.Add(aem.elementIdentifierName + (aem.axisContribution == Rewired.Pole.Negative ? "(-)" : ""));
+                        if (keys.Count > 0) result[action.name] = string.Join(", ", keys.Distinct());
+                    }
+                    return new JObject { ["actions"] = result };
+                }
+                case "sprint":
+                    return new JObject { ["mode"] = ThronefallMP.GameKeys.Sprint.ToString(), ["on"] = ThronefallMP.GameKeys.SprintToggledOn };
+                case "destroy_building":
+                {
+                    // TEST ONLY (host): destroy a building with the game's own damage, as enemies would.
+                    var go = ThronefallMP.Components.Identifier.GetGameObject(ThronefallMP.Components.IdentifierType.BuildSlot, (ushort)(int)a["id"]);
+                    var slot = go != null ? go.GetComponent<BuildSlot>() : null;
+                    var hp = slot != null ? slot.GetComponentInChildren<Hp>(true) : null;
+                    if (hp == null) return new JObject { ["ok"] = false, ["error"] = "no building Hp in slot " + a["id"] };
+                    hp.TakeDamage(hp.maxHp * 10f, null, false, true);
+                    return new JObject { ["hp"] = hp.HpValue, ["level"] = slot.Level, ["state"] = slot.State.ToString() };
+                }
+                case "night_report":
+                    return new JObject
+                    {
+                        ["goldBack"] = ThronefallMP.Network.NightReport.LastGoldBack,
+                        ["lost"] = ThronefallMP.Network.NightReport.LostCount,
+                        ["rows"] = new JArray(ThronefallMP.UI.Panels.NightSummaryPanel.LastRows.ToArray()),
+                        ["lostText"] = ThronefallMP.UI.Panels.NightSummaryPanel.LastLost,
+                        ["panel"] = ThronefallMP.UI.UIManager.NightSummaryPanel != null && ThronefallMP.UI.UIManager.NightSummaryPanel.Enabled,
+                        ["teamHp"] = ThronefallMP.UI.Panels.CoopHudPanel.HpText,
+                        ["alerts"] = ThronefallMP.Network.TeammateRevive.Alerts,
+                    };
+                case "watch_cycle":
+                    // What the Watch next (+1) / previous (-1) key does.
+                    ThronefallMP.Network.TeammateRevive.Cycle((int?)a["dir"] ?? 1);
+                    return new JObject { ["done"] = true };
+                case "knock_out":
+                {
+                    // TEST ONLY (host): knock a player out with the game's own damage, as an enemy would.
+                    var p = ThronefallMP.Plugin.Instance.PlayerManager.Get((ushort)(int)a["id"]);
+                    var hp = ThronefallMP.Network.TeammateRevive.HpOf(p);
+                    if (hp == null) return new JObject { ["ok"] = false, ["error"] = "no Hp for player " + a["id"] };
+                    hp.TakeDamage(hp.maxHp * 10f, null, false, true);
+                    return new JObject { ["down"] = hp.KnockedOut };
+                }
+                case "hud":
+                {
+                    var kills = new JObject();
+                    foreach (var kv in ThronefallMP.UI.Panels.CoopHudPanel.Kills) kills[kv.Key.ToString()] = kv.Value;
+                    return new JObject
+                    {
+                        ["kills"] = kills,
+                        ["text"] = ThronefallMP.UI.Panels.CoopHudPanel.KillText,
+                        ["pings"] = ThronefallMP.UI.UIManager.PingPanel.PanelRoot.transform.Cast<Transform>().Count(t => t.name == "ping"),
+                        ["platesMoved"] = ThronefallMP.UI.Panels.PingPanel.PlatesMoved,
+                        ["extraSpawned"] = ThronefallMP.Patches.EnemySpawnerPatch.ExtraSpawned,
+                        ["extraCoins"] = ThronefallMP.Patches.EnemySpawnerPatch.ExtraCoins,
+                    };
+                }
+                case "profile":
+                {
+                    var panel = ThronefallMP.UI.UIManager.CoopSettingsPanel;
+                    var slot = (int?)a["slot"] ?? 1;
+                    if ((string)a["action"] == "save") panel.SaveProfile(slot);
+                    if ((string)a["action"] == "load") panel.LoadProfile(slot);
+                    return new JObject { ["text"] = panel.ProfileText, ["stored"] = ThronefallMP.CoopProfiles.Get(slot) };
+                }
+                case "save_hash":
+                {
+                    // The host's own match save for a level: hash of the file on disk (unchanged by a late join).
+                    var path = Thronefall.SaveServices.SaveServicesLocator.Instance.GetFullSavePath("mp_" + (string)a["level"] + ".json");
+                    if (!Thronefall.SaveServices.SaveServicesLocator.Instance.Exists(path)) return new JObject { ["hash"] = null };
+                    var text = Thronefall.SaveServices.SaveServicesLocator.Instance.ReadAllText(path);
+                    using var sha = System.Security.Cryptography.SHA256.Create();
+                    var hash = BitConverter.ToString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(text))).Replace("-", "");
+                    return new JObject { ["hash"] = hash, ["length"] = text.Length };
+                }
+                case "late_join":
+                    return new JObject { ["admitted"] = ThronefallMP.Network.LateJoin.Admitted, ["replayed"] = ThronefallMP.Network.LateJoin.Replayed, ["joinDuringLevel"] = ThronefallMP.CoopDifficulty.JoinDuringLevel };
                 case "renderers_dump":
                 {
                     // Reverse engineering: every renderer under the local character, with its material colours.
@@ -595,6 +802,7 @@ namespace CoopQa
                     var action = (string)a["action"];
                     if (action == "click")
                     {
+                        panel.ShowTabOf((string)a["row"]);
                         var row = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == (string)a["row"]);
                         var btn = row?.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true).FirstOrDefault(b => b.name == "key" || b.name == ((int?)a["dir"] < 0 ? "prev" : "next"));
                         if (btn == null || !btn.gameObject.activeInHierarchy) return new JObject { ["ok"] = false, ["error"] = "no button in row " + a["row"] };
@@ -605,7 +813,7 @@ namespace CoopQa
                         panel.SetKey((string)a["row"], (KeyCode)Enum.Parse(typeof(KeyCode), (string)a["key"]));
                     }
                     var rows = new JObject();
-                    foreach (var r in ThronefallMP.ModKeys.Rows)
+                    foreach (var r in ThronefallMP.ModKeys.Rows.Concat(ThronefallMP.GameKeys.Rows()))
                     {
                         var t = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == r.Key);
                         var text = t?.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true).Where(x => x.name != "label").Select(x => x.text).FirstOrDefault(x => x != "<" && x != ">");
