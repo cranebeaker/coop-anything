@@ -11084,7 +11084,7 @@
   status: prototype
   coop_scope:
     players_visible: 'yes'
-    story: unknown
+    story: partial
     enemies: unknown
     world_state: unknown
     items: unknown
@@ -11097,14 +11097,15 @@
     leftover dev multiplayer (ENet on UDP 1000, console server/connect) instead of new netcode. Two copies on one PC - the
     host turns a running story level into a server, the client joins and loads the host's quick save, the host clones
     the player through the engine's player spawn event for the joiner. Both players walk their own Artyom and see each
-    other move; shots and damage between players work on an armed level. AI, doors and story sync untested; loopback
-    only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8 shared-state
+    other move; shots and damage between players work on an armed level. Host death restarts both from the last
+    checkpoint; a story level change takes the joiner along (its game restarts and rejoins). Doors, vehicles and
+    story scripts are not networked (each copy runs its own); loopback only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8 shared-state
     facts (PASS on two levels). See games/metro-2033-redux.
   sources:
   - https://github.com/realblastex/metro2033redux-coop
   - https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md
   - https://github.com/tsnest/MetroDeveloper
-  checked: '2026-11-12'
+  checked: '2026-11-13'
   made_with_coop_anything: true
 - game: Abo Khashem
   year: 2018
