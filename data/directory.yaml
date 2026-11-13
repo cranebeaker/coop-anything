@@ -10823,6 +10823,7 @@
   project: Resident Evil Revelations Co-op
   url: https://github.com/dolbaras/revelations-coop
   other_urls:
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0
   kind: mod
   status: alpha
@@ -10838,43 +10839,57 @@
   last_activity: 2026-11
   qa: automated
   notes: >-
-    Version 0.2.0 (GitHub Latest, published 2026-11-12; 0.1.0 of 2026-11-10 had network co-op for Episode 1 only),
-    PC/Steam build 13298487, a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on
-    one PC with two gamepads covers the whole campaign. Network co-op (two PCs, Steam friends or direct IP on UDP 28410,
-    ENet) now follows the story section by section from Episode 1 to the end of the campaign with the pair each part
-    gives (Jill and Parker, Chris and Jessica, Keith and Quint ...): the host's section change sends the next section's
-    start and the guest's game follows it through the stock Continue path, Episode 1 goes on into Episode 2 inside one
-    co-op game, and after the last section both PCs show the game's own end and each closes the session. Host-run
-    enemies (a kill by either player counts on both PCs, also far from the other PC), doors, key items and pickups in
-    step, shared game over and Continue, downed/revive, partner on the minimap. New in 0.2.0: Give to partner (RE5
-    style, in the stock item screen: a herb, a grenade or half of an ammunition type to a partner within about 3 m who
-    is not down); the Genesis scanner for the second player too (own analysis rate and herbs; in split screen one
-    scanner at a time, in the whole view); HUNK as the second player in 2-2 (8:32 P.M. Guest Cabin), where the story
-    locks the partner away; the split-screen aim fix (the game's one aim-allowed flag followed player 1 only). 0.1.0
-    and 0.2.0 refuse each other with a reason. A co-op save of its own never touches the solo save; a "Co-Op Play" row
-    in the game's main menu, installer and self-updating shortcut, 13 languages. Tests: offline C suites and a headless
-    bot, an installer suite (289 offline, 294 against the real release feed), plus scripted sessions with real game
-    clients on two PCs of one LAN: arrival, characters and movement in each of the 25 sections from 1-2 to 12-2, the
-    story's own transitions 1-1 -> 1-2, 1-3 -> 2-1, 2-1 -> 2-2, 4-1 -> 5-2 and 12-3 -> the end of the campaign, kills on
-    both PCs in five sections, Give and the Genesis both ways; split screen on one PC with two virtual pads. Parts were
-    driven by test commands (teleports, set story flags, virtual gamepads). Not verified: any play by people; the last
-    boss fight (12-3) played the story's way (the section was only started directly, the section ends were set by a
-    test command); 2-2's own story with HUNK (its end was set by a test command); fights in the sections checked for
-    arrival and movement only, and shots in water (6-2); a real scan of a target by the second player in split screen;
-    Give's texts in 12 of the 13 languages in a running game; two different networks (Steam relay). An enemy that chases
-    the guest into another area is driven by the guest's PC, and the guest's damage to it is lost if the host comes back
-    before it dies (known since 0.1.0). Raid is never touched, and the mod uses its own transport, not the game's.
-    CORRECTED 2026-10-22, still true: the game ships no campaign co-op. Its only two-player mode is Raid; the mode field
-    at *(sGameSystems+0x24)+0x20 reads 0 in the campaign menus and 1 in Raid, and the binary's network layer and type
-    registry serve Raid only. An earlier write-up here (PR #126) called them a dormant campaign co-op; that thesis is
-    withdrawn. MIT. Write-up in games/resident-evil-revelations.
+    Version 0.2.1 (GitHub Latest, published 2026-11-13), a fix release for network play on top of 0.2.0 of 2026-11-12
+    (network co-op through the whole story; 0.1.0 of 2026-11-10 had network co-op for Episode 1 only), PC/Steam build
+    13298487, a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on one PC with
+    two gamepads covers the whole campaign. Network co-op (two PCs, Steam friends or direct IP on UDP 28410, ENet)
+    follows the story section by section from Episode 1 to the end of the campaign with the pair each part gives (Jill
+    and Parker, Chris and Jessica, Keith and Quint ...): the host's section change sends the next section's start and
+    the guest's game follows it through the stock Continue path, Episode 1 goes on into Episode 2 inside one co-op
+    game, and after the last section both PCs show the game's own end and each closes the session. Host-run enemies (a
+    kill by either player counts on both PCs, also far from the other PC), doors, key items and pickups in step, shared
+    game over and Continue, downed/revive, partner on the minimap. Since 0.2.0: Give to partner (RE5 style, in the
+    stock item screen: a herb, a grenade or half of an ammunition type to a partner within about 3 m who is not down);
+    the Genesis scanner for the second player too (own analysis rate and herbs; in split screen one scanner at a time,
+    in the whole view); HUNK as the second player in 2-2 (8:32 P.M. Guest Cabin), where the story locks the partner
+    away; the split-screen aim fix (the game's one aim-allowed flag followed player 1 only). Fixed in 0.2.1: an enemy
+    that chases the guest into another area is handed over between the PCs (the host's PC keeps its copy in step with
+    the guest's PC, in place and health, and goes on from that state when the host gets there; a blow of the host in
+    that moment counts once, and a kill there is one death on both PCs); an enemy no longer vanishes from the guest's
+    screen over floor the guest's PC has not loaded (only the PC that runs an enemy decides its death); the partner's
+    character holds the partner's real guns, the DLC pistols too; the guest's character starts the session's first
+    level with its knife, spare ammunition and herbs, and after a Continue gets the guns of the host's save when its own
+    save gave it none; the guest's game no longer crashes when the first level begins more than about five minutes after
+    the room's Start; the Campaign page's save panel and the host's room note show the co-op save. Different versions
+    (0.2.0 and 0.2.1 too) refuse each other with a reason. A co-op save of its own never touches the solo save; a
+    "Co-Op Play" row in the game's main menu, installer and self-updating shortcut, 13 languages. Tests: offline C
+    suites and a headless bot, an installer suite (288 offline, 286 against the real release feed), plus scripted
+    sessions with real game clients on two PCs of one LAN: arrival, characters and movement in each of the 25 sections
+    from 1-2 to 12-2, the story's own transitions 1-1 -> 1-2, 1-3 -> 2-1, 2-1 -> 2-2, 4-1 -> 5-2 and 12-3 -> the end of
+    the campaign, kills on both PCs in five sections, Give and the Genesis both ways; for 0.2.1 the hand-over of an
+    enemy that chased the guest into another area (the host's PC took it back with the health the guest's shots had
+    left, and it died once on both PCs), the partner's real guns through 1-2, 1-3 and 2-1 by the story, the guest's
+    start kit, Continue from a 3-1 and a 12-2 co-op save, a first level that began more than five minutes after the
+    Start; split screen on one PC with two virtual pads. Parts were driven by test commands (teleports, set story
+    flags, virtual gamepads). Not verified: any play by people; the last boss fight (12-3) played the story's way (the
+    section was only started directly, the section ends were set by a test command); 2-2's own story with HUNK (its end
+    was set by a test command); fights in the sections checked for arrival and movement only, and shots in water (6-2);
+    a real scan of a target by the second player in split screen; Give's texts in 12 of the 13 languages in a running
+    game; two different networks (Steam relay). At the first level of a network session the host's character on the
+    guest's screen carries no knife, so a knife attack of the host is not shown there (it counts on the host's PC).
+    Raid is never touched, and the mod uses its own transport, not the game's. CORRECTED 2026-10-22, still true: the
+    game ships no campaign co-op. Its only two-player mode is Raid; the mode field at *(sGameSystems+0x24)+0x20 reads 0
+    in the campaign menus and 1 in Raid, and the binary's network layer and type registry serve Raid only. An earlier
+    write-up here (PR #126) called them a dormant campaign co-op; that thesis is withdrawn. MIT. Write-up in
+    games/resident-evil-revelations.
   sources:
   - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
   - https://github.com/cranebeaker/coop-anything/issues/299
   - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
-  checked: '2026-11-12'
+  checked: '2026-11-13'
 - game: Resident Evil Revelations 2
   year: 2015
   engine: MT Framework (32-bit, Direct3D 9)
