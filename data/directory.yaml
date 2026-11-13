@@ -7494,13 +7494,13 @@
 - game: 'Call of Duty: Modern Warfare 2'
   year: 2009
   engine: IW 4.0 (Call of Duty)
-  project: mw2_coop
-  url: https://github.com/stxlvn/mw2_coop
+  project: Modern Warfare 2 Enhanced (mw2_enhanced, formerly mw2_coop)
+  url: https://github.com/stxlvn/mw2_enhanced
   other_urls:
-  - https://github.com/stxlvn/mw2_coop/releases
+  - https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.1
   - https://www.nexusmods.com/codmw2/mods/99
   kind: mod
-  status: partial
+  status: playable
   coop_scope:
     players_visible: yes
     story: partial
@@ -7510,21 +7510,25 @@
   players: 2
   networking: direct-ip
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: Beta (v0.5.0-beta), playable. MIT mod for the 64-bit Steam build. A winmm.dll proxy plus load-time
-    GSC patches on top of the game's own lockstep Spec Ops co-op netcode, hosted and joined from the
-    game's menus (lobby, LAN list, address, Steam invite). Every set piece is reworked for two players, among them S.S.D.D.,
-    Team Player, Wolverines!, the rope and rappel scenes (Gulag, Just Like Old Times, Escape from Favela), Takedown's car, The Only Easy Day's swim, Cliffhanger's climb and
-    snowmobiles, No Russian, Second Sun's crash and ISS, Loose Ends' betrayal, Endgame's boat and knife
-    fight; enemies fight both players, both play the difficulty the host picks, friendly fire is a lobby switch and every level has checkpoints. The game's co-op runs in lockstep (both PCs run the same level), so the world
-    is shared. In-game QA on two copies, including a bot tour of the start points of all 19 levels (the Museum epilogue still fails for player 2); two people played parts of the story on two PCs, from the start up to and including No Russian. The missions after it were checked by bots only; not played through end to end yet. Write-up in
-    games/modern-warfare-2.
+  notes: Release 1.0 (v1.0.0, 2026-11-13; fixes in v1.0.1 the same day). MIT mod for the 64-bit Steam build (an archive for the older 32-bit game and the
+    iw4x-sp client too). A winmm.dll proxy plus load-time GSC patches on top of the game's own lockstep Spec Ops co-op netcode,
+    hosted and joined from the game's menus (lobby, LAN list, address, Steam invite, optional Steam relay), or split screen on
+    one PC (one process, two client contexts, also without internet and in Special Ops). Every set piece is reworked for two
+    players (S.S.D.D., Team Player, Wolverines!, the rope and rappel scenes, Takedown's car, Cliffhanger's climb and snowmobiles,
+    No Russian, Second Sun, Loose Ends' betrayal, Endgame's boat and knife fight, the Museum); enemies fight both players, both
+    play the difficulty the host picks, friendly fire is a lobby switch and every level has checkpoints. Also a Settings >
+    Enhanced page, a developer console, FSR 1 / FSR 3 / DLSS upscalers and, experimental and off by default, the mod's own
+    Direct3D 11 and 12 renderers. QA is automated on two copies (bots fail every section of every campaign mission and check the
+    restart, a bot tour of all 19 levels, split screen with simulated gamepads, 8 campaign maps on each native renderer); two people
+    played the story on two PCs up to and including No Russian; the rest was checked by bots and nobody has played the whole
+    campaign through together yet. Write-up in games/modern-warfare-2.
   sources:
-  - https://github.com/stxlvn/mw2_coop
-  - https://github.com/stxlvn/mw2_coop/releases
+  - https://github.com/stxlvn/mw2_enhanced
+  - https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.1
   - https://github.com/cranebeaker/coop-anything/tree/main/games/modern-warfare-2
-  checked: '2026-10-25'
+  checked: '2026-11-13'
   made_with_coop_anything: true
 - game: Celeste
   year: 2018
