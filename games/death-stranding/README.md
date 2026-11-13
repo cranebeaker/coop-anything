@@ -6,7 +6,7 @@
 | Versions tested | Steam Director's Cut, app `1850570`, build `13300582`, `ds.exe` SHA-256 `9d5306d7eb2f5d3135c63accc3e74b8f9b029f9d76112a6aae4a38fdbb4edd2b`, Windows. The mod refuses other builds. The 2020 PC release and the Epic release are untested |
 | Projects | [death-stranding-coop](https://github.com/TommoDotCommo/death-stranding-coop) (MIT, prototype, no release; directory entry "Death Stranding") |
 | QA level | automated (two game copies on one PC; see QA for what it covers) |
-| Last updated | 2026-11-10 |
+| Last updated | 2026-11-13 |
 
 ## Where things stand
 
@@ -60,7 +60,9 @@ in [NOTES.md](NOTES.md).
   id range.
 - A seated porter is a child entity of the vehicle. Vehicles come from a pooled creator and a mover can play back
   transforms.
-- The game reads keyboard and mouse as raw input and pads through Windows.Gaming.Input; it never polls XInput.
+- The game reads keyboard and mouse as raw input. A connected controller holds its pad slot through
+  Windows.Gaming.Input, and on the author's PC the game never asked XInput for that slot. It does load
+  `xinput1_4.dll`, which opens an Xbox controller's device interface, and it opens HID devices directly.
 
 Not known: how story progress, orders, enemies, death and cutscenes are stored and driven; whether the 2020 release or
 other builds share any of this.
@@ -72,7 +74,9 @@ Nothing in the game's files. In disposable copies only:
 - **A loader proxy that isolates a copy.** It redirects saves and settings into the copy by patching the import tables
   of every loaded module, makes the single-instance mutex per-copy, and refuses the game's online connections so a
   modded copy never talks to the game's service. Each protection has a mutant its test must fail. Two threads patching
-  import tables at once crashed the game once; one lock fixed it.
+  import tables at once crashed the game once; one lock fixed it. On a second PC the patcher read a module that
+  another thread had just unloaded and crashed the game ten minutes in; holding a loader reference while patching
+  fixed that there (a local fix, not in the mod yet).
 - **A game-free presence core**: versioned handshake, quantised snapshots, clock and round-trip estimates,
   interpolation, reconnect, and an exactly-once channel for world events. A 15.6 ms Windows timer and relative sleeps
   made a localhost test drift by 0.3 to 0.4 m; a monotonic clock and fixed deadlines brought it to about 1 cm.
@@ -108,6 +112,14 @@ Live regressions recorded in the mod's STATUS.md for 2026-11-10 (not re-run for 
 once in two copies, each copy's partner within a median 5 mm and at most 9 cm of the other's track over 15 to 18 m;
 the partner quitting and starting again, both seeing each other 3 mm apart afterwards, no fault in any process.
 
+A second PC (2026-11-13, mod commit `c05321f` built on Windows with MSYS2, details in [NOTES.md](NOTES.md)): one copy
+and the stand-in partner, played by a person, nothing asserted by a script. A first session ended after about ten
+minutes in a proxy crash; with a local fix the next one ran about 52 minutes and ended by a normal exit. The partner
+was visible and followed after his body was switched to the game's resident double. The real save
+folder did not exist before or after the first run. On that PC the whole-repository `make test` stopped in `core`,
+which needs Linux, after reporting 396 mutants killed; `make -C redirect portable-test` and the three native
+game-free checks passed.
+
 Not tested: two PCs, more than two players, anything with enemies or story, structures other than ladders, the game's
 own build menus.
 
@@ -123,6 +135,12 @@ instructions are in the [mod's README](https://github.com/TommoDotCommo/death-st
 - The partner's carried cargo is drawn as plain cases, not the game's packing.
 - Identical items stacked on one spot can be matched the wrong way round after a restart (6 in 2000 fuzzed sessions).
 - Only ladders are confirmed for shared structures.
+- Seen on a second PC at mod commit `c05321f` (causes in [NOTES.md](NOTES.md)):
+  - The launcher's one-copy command with the stand-in partner ends the game at once: a loopback peer is refused.
+  - The proxy's module allowlist ends the game when other software loads a DLL into it (there, a third-party input
+    method). The copy only stayed up with the module policy on `log-only`; the network policy stayed enforced.
+  - With `partner: "own"` on a brand-new save the partner has gear and a name label but no body. `peer` shows him.
+  - Building on Windows itself (MSYS2) needs a compiler-name override, a `windres` wrapper and `-static`.
 - The game's licence terms forbid reverse engineering. The project stays offline-only, bypasses no protection and
   ships no game files; anyone building on it should read the terms and decide for themselves.
 
