@@ -4,13 +4,13 @@
 |---|---|
 | Engine | IW 4.0 (closed; id Tech 3 derived) |
 | Versions tested | Steam app 10180, build 25374375 (the 64-bit update of September 2026): `iw4sp.exe` x64, PE timestamp `0x6aaaa257`, SHA-256 `2F8C9CFDA1B8C0FB308FD9719577154E8222FC7654F5E8F1BF54579BCA69D805`, `version` dvar `IW4 2.0 build 14 Fri Oct 03 16:56:21 2025 win64`, Russian language set |
-| Projects | [Modern Warfare 2 Enhanced](https://github.com/stxlvn/mw2_enhanced) (formerly mw2_coop; campaign co-op over the network and split screen on one PC, v1.0.0, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
+| Projects | [Modern Warfare 2 Enhanced](https://github.com/stxlvn/mw2_enhanced) (formerly mw2_coop; campaign co-op over the network and split screen on one PC, v1.0.1, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
 | QA level | automated (two game copies on one PC, in-game scripted checks of the reworked set pieces, bots that fail every section of every campaign mission and check the restart, a bot tour of the start points of all 19 levels, split screen sessions with simulated gamepads, 8 campaign maps on each of the mod's own DirectX 11 and 12 renderers; the campaign has not been played through end to end by people) |
 | Last updated | 2026-11-13 |
 
 ## Where things stand
 
-**Release 1.0 (v1.0.0, 2026-11-13,** also on [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)**).** On the current 64-bit Steam build, two players play the
+**Release 1.0 (v1.0.0, 2026-11-13; fixes in v1.0.1, 2026-11-13,** also on [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)**).** On the current 64-bit Steam build, two players play the
 campaign together through the game's own Spec Ops co-op netcode, hosted and joined from the
 game's menus (lobby, list of games on the network, address, Steam invite), or on one PC in a **split
 screen** (Campaign -> Split screen: one window cut top and bottom like the Xbox 360 version, each half with its own view,
@@ -52,7 +52,7 @@ replaced, and players who tried it found it rough.
   ([install guide](https://forum.alterware.dev/t/iw4x-singleplayer-install-guide/383)).
 - **IW4x** ([iw4x/iw4x-client](https://github.com/iw4x/iw4x-client)): open-source multiplayer
   client, not the campaign.
-- **Modern Warfare 2 Enhanced** ([stxlvn/mw2_enhanced](https://github.com/stxlvn/mw2_enhanced), MIT, v1.0.0, formerly mw2_coop, [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)):
+- **Modern Warfare 2 Enhanced** ([stxlvn/mw2_enhanced](https://github.com/stxlvn/mw2_enhanced), MIT, v1.0.1, formerly mw2_coop, [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)):
   this project, for the 64-bit build (an archive for the older 32-bit game and the iw4x-sp client too).
 
 ## How the game works (for co-op)
@@ -117,7 +117,7 @@ replaced, and players who tried it found it rough.
 
 ## What we changed
 
-All in [Modern Warfare 2 Enhanced](https://github.com/stxlvn/mw2_enhanced) (latest release v1.0.0 of 2026-11-13; an install archive with `winmm.dll` and the `mw2coop` folder, hosting and joining in the game's menus, no `.bat` launchers; the full change list is its [CHANGELOG.md](https://github.com/stxlvn/mw2_enhanced/blob/main/CHANGELOG.md)):
+All in [Modern Warfare 2 Enhanced](https://github.com/stxlvn/mw2_enhanced) (latest release v1.0.1 of 2026-11-13; an install archive with `winmm.dll` and the `mw2coop` folder, hosting and joining in the game's menus, no `.bat` launchers; the full change list is its [CHANGELOG.md](https://github.com/stxlvn/mw2_enhanced/blob/main/CHANGELOG.md)):
 - `winmm.dll` proxy that checks the build, runs console commands from a file, watches dvars
   and memory, logs co-op packets and script runtime errors.
 - Script loader replacement (`Scr_AddSourceBuffer`): own scripts plus load-time patches of the
@@ -313,7 +313,7 @@ Findings that are useful for other games on a D3D9 engine (details in the projec
   sees the host's player model with its name tag; the host plays the intro scene, the client
   does not.
 
-- 2026-11-13, after v1.0.0 (mod's main, release 1.0.1 not published yet), two copies on one PC:
+- 2026-11-13, after v1.0.0 (fixes released in v1.0.1), two copies on one PC:
   - `failwalk` (new): both players walk and turn before a forced failure and again after the restart from the checkpoint; reproduces issue 22 (player 2 ignored after a restart: the server kept his old command time) and passes after the fix.
   - Re-runs of the scenarios behind three open reports on the current build, all pass: held weapons and weapon switch on the estate (issue 13), Cliffhanger stealth for player 2 (issue 14), the boat checkpoint (issue 16). The reporters have not confirmed yet.
   - Offline: the game's IWNet / Steam sign-in check no longer stops the split screen lobby, host or join (issue 21). Tried with the connection faked off in the test copy, not on a PC that is really offline.
@@ -322,7 +322,7 @@ Findings that are useful for other games on a D3D9 engine (details in the projec
 ## How to play
 
 See the [project's README](https://github.com/stxlvn/mw2_enhanced). Both players copy `winmm.dll` and the `mw2coop` folder from the
-[v1.0.0 release](https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.0) archive (or from [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)) into the game folder; the host picks Campaign -> co-op, the partner joins from
+[v1.0.1 release](https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.1) archive (or from [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)) into the game folder; the host picks Campaign -> co-op, the partner joins from
 the list, by address or by Steam invite; on one PC: Campaign -> Split screen.
 
 ## Known issues
@@ -333,7 +333,7 @@ The project's [README](https://github.com/stxlvn/mw2_enhanced#known-issues) keep
 - Checkpoints: bots fail every section of every campaign mission and check that the level starts again with both players up and together (all pass); a restart goes to the level's own checkpoint, which is sometimes the section before the one you died in. Not tried by two people.
 - Rarely (once in about a hundred mission loads, 32-bit build) both PCs hang right after a mission starts; the stacks point at the graphics driver, not proven.
 - Split screen: tested with bots, screenshots of both halves and simulated gamepads, not with two real gamepads or by two people; XInput pads only; no second keyboard; the second player can only pause.
-- Co-op and split screen without internet (LAN, direct IP): fixed on main after v1.0.0 (issue 21), checked only with the sign-in faked off, not on a really offline PC.
+- Co-op and split screen without internet (LAN, direct IP): fixed in v1.0.1 (issue 21), checked only with the sign-in faked off, not on a really offline PC.
 - The mod's own DirectX 11 / 12 renderers and the upscalers are experimental: bot-checked on 8 campaign maps each, not played by people; DLSS has not run on a real card; on the tested laptop FSR 3 does not beat the plain native resolution in speed.
 - Steam overlay plus Discord overlay together crash after the game recreates its graphics device (both hook the same Direct3D 9 calls); turn one off.
 

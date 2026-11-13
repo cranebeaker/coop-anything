@@ -7497,7 +7497,7 @@
   project: Modern Warfare 2 Enhanced (mw2_enhanced, formerly mw2_coop)
   url: https://github.com/stxlvn/mw2_enhanced
   other_urls:
-  - https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.0
+  - https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.1
   - https://www.nexusmods.com/codmw2/mods/99
   kind: mod
   status: playable
@@ -7512,7 +7512,7 @@
   open_source: 'yes'
   last_activity: 2026-11
   qa: automated
-  notes: Release 1.0 (v1.0.0, 2026-11-13). MIT mod for the 64-bit Steam build (an archive for the older 32-bit game and the
+  notes: Release 1.0 (v1.0.0, 2026-11-13; fixes in v1.0.1 the same day). MIT mod for the 64-bit Steam build (an archive for the older 32-bit game and the
     iw4x-sp client too). A winmm.dll proxy plus load-time GSC patches on top of the game's own lockstep Spec Ops co-op netcode,
     hosted and joined from the game's menus (lobby, LAN list, address, Steam invite, optional Steam relay), or split screen on
     one PC (one process, two client contexts, also without internet and in Special Ops). Every set piece is reworked for two
@@ -7526,7 +7526,7 @@
     campaign through together yet. Write-up in games/modern-warfare-2.
   sources:
   - https://github.com/stxlvn/mw2_enhanced
-  - https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.0
+  - https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.1
   - https://github.com/cranebeaker/coop-anything/tree/main/games/modern-warfare-2
   checked: '2026-11-13'
   made_with_coop_anything: true
