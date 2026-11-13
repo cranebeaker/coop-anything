@@ -316,6 +316,8 @@ In the game, new save, prologue area:
 - Live: one copy and the stand-in partner, two sessions (about 10 minutes, ended by the proxy crash; about 52 minutes
   with the fix, normal exit). A person played. No assertion was automated; the evidence is the proxy, mod, crash and
   Windows event logs and what was on screen.
-- The two local fixes, not in the mod yet: the module reference in the patcher, with a native race test whose
+- The two local fixes, proposed to the mod as
+  [#7](https://github.com/TommoDotCommo/death-stranding-coop/pull/7) and
+  [#8](https://github.com/TommoDotCommo/death-stranding-coop/pull/8) (not merged): the module reference in the patcher, with a native race test whose
   mutant must fault (8 of 8 runs each way on this PC), and the XUSB device interface, with three mutants that the
   path test kills. `make -C redirect portable-test` passes with each.

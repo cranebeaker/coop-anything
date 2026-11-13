@@ -76,7 +76,8 @@ Nothing in the game's files. In disposable copies only:
   modded copy never talks to the game's service. Each protection has a mutant its test must fail. Two threads patching
   import tables at once crashed the game once; one lock fixed it. On a second PC the patcher read a module that
   another thread had just unloaded and crashed the game ten minutes in; holding a loader reference while patching
-  fixed that there (a local fix, not in the mod yet).
+  fixed that there (proposed to the mod in
+  [death-stranding-coop#7](https://github.com/TommoDotCommo/death-stranding-coop/pull/7), not merged).
 - **A game-free presence core**: versioned handshake, quantised snapshots, clock and round-trip estimates,
   interpolation, reconnect, and an exactly-once channel for world events. A 15.6 ms Windows timer and relative sleeps
   made a localhost test drift by 0.3 to 0.4 m; a monotonic clock and fixed deadlines brought it to about 1 cm.
