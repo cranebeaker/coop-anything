@@ -4,9 +4,9 @@
 |---|---|
 | Engine | MT Framework (Capcom), 32-bit, Direct3D 9, XInput; the engine's own class registry ("DTI") and a story script machine (FSM) |
 | Versions tested | Steam app 287290, the only public branch, build **3658995** (2019-03-19); `rerev2.exe` 18,315,248 bytes, SHA-256 `55ac7d2bd80704c6a8a1fa7bd2371726adbaa01ae0fda056198fb042404367f9`; x86, image base 0x400000, no ASLR; Steam stub (`.text` is encrypted on disk and decrypted by the stub at start-up); Windows 10 and 11 |
-| Projects | [Resident Evil Revelations 2 Co-op](https://github.com/dolbaras/revelations2-coop) (MIT), directory entry "Resident Evil Revelations 2 Co-op"; version [0.3.0](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0), published 2026-11-12, GitHub "Latest" (0.2.1 of 2026-11-10 was Episode 1 only). Sibling game: [Resident Evil Revelations](../resident-evil-revelations/README.md) (the first game, its own write-up and mod, same engine family, different binary) |
+| Projects | [Resident Evil Revelations 2 Co-op](https://github.com/dolbaras/revelations2-coop) (MIT), directory entry "Resident Evil Revelations 2 Co-op"; version [0.3.1](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1), published 2026-11-13, GitHub "Latest": Continue for every episode and fixes on top of [0.3.0](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0) of 2026-11-12, which opened Episodes 2-4 and the bonus episodes (0.2.1 of 2026-11-10 was Episode 1 only). Sibling game: [Resident Evil Revelations](../resident-evil-revelations/README.md) (the first game, its own write-up and mod, same engine family, different binary) |
 | QA level | automated (C test suites, an installer suite and scripted two-PC lab sessions with real game clients; Episode 1 from start to end, Episodes 2-4 and the bonus episodes stage by stage); no human playthrough, nobody outside the lab has played it |
-| Last updated | 2026-11-12 (0.3.0) |
+| Last updated | 2026-11-13 (0.3.1) |
 
 Claim issue: [#298](https://github.com/cranebeaker/coop-anything/issues/298).
 
@@ -19,8 +19,11 @@ Miss** (Natalia and Dark Natalia), over a direct IP or through Steam. Each playe
 character in a lobby, both press Ready, and the host's PC runs the enemies. There is an installer,
 a shortcut that installs newer GitHub releases before each start, and a one-click log collector
 for bug reports. 0.2.0 (2026-11-09) was the first full release (Episode 1; 0.1.0 and 0.1.1 were
-pre-releases), 0.2.1 (2026-11-10) gave a co-op game its own save and a **Continue** row, and
-**0.3.0** (2026-11-12) opens Episodes 2-4 and the bonus episodes.
+pre-releases), 0.2.1 (2026-11-10) gave a co-op game its own save and a **Continue** row,
+**0.3.0** (2026-11-12) opened Episodes 2-4 and the bonus episodes, and **0.3.1** (2026-11-13)
+offers Continue for every episode and fixes the start of Barry's halves and the enemy updates in
+big groups (see
+[Continue for every episode and fixes (0.3.1)](#continue-for-every-episode-and-fixes-031)).
 
 How far each part is checked differs a lot. **Episode 1** was checked in the lab from its start to
 its end. **Episodes 2-4 and the bonus episodes** were checked stage by stage, mostly after console
@@ -150,7 +153,8 @@ Steam account) and the solo save image kept in memory is put back when the title
 back. The campaign save, and Steam's own record of it, are therefore not opened by a co-op game.
 The first co-op game starts from a copy of the solo save's settings and unlocks. When the host's
 co-op save holds an Episode 1 checkpoint, the room shows a **Continue** row; the guest follows
-the host's checkpoint record with his own items. The co-op save is not in Steam Cloud.
+the host's checkpoint record with his own items. The co-op save is not in Steam Cloud. Since
+0.3.1 the Continue row covers every episode (see below).
 
 ### Episodes 2-4 and the bonus episodes (0.3.0)
 
@@ -179,6 +183,33 @@ the host's checkpoint record with his own items. The co-op save is not in Steam 
   over, and the game crashed; they are now left to each PC's own script. In the same stage the
   second human could stay parked at the edge of the map after the load; the mod places that human
   next to the partner.
+
+### Continue for every episode and fixes (0.3.1)
+
+- **Continue for every episode.** The room shows the Continue row whenever the host's co-op save
+  holds a checkpoint of Episodes 1-4 (either half) or of a bonus episode, whatever episode the room
+  shows; Yes switches the room to that checkpoint's episode, half and difficulty. Each player's
+  hello and lobby row now carries a key of his co-op save's checkpoint (the room's episode x 2 +
+  the half, 0 = none; protocol version 3, so both players need 0.3.1), and Start continues only
+  when the guest's key equals the host's: the guest follows the host's checkpoint, with the
+  characters and items of that half from his own co-op save. A save made at the end of a half or
+  of a bonus chapter (its results screen) is not offered, because the stock Continue would go on
+  into the next part; Episode 1 works as in 0.3.0. A model of the 0.3.0 rule (Episode 1 only)
+  must fail `tests/test_coopsave.c`.
+- **Barry's half started on both PCs.** The start of Barry's half of Episodes 2-4 is one hop of
+  the host that the partner takes through the coupled retry. In 0.3.0 the host sent it once, and a
+  partner whose game was still loading at that moment ignored it and stayed in Claire's first
+  stage. The host now repeats the step until the partner answers that it is in play in part 1 of
+  Barry's half; a repeat is idempotent (already in the target stage: answer only; the same step
+  applied a moment ago: being loaded). `tests/test_warp.c` checks it, and the 0.3.0 model fails.
+- **Every enemy in big groups.** The host read at most 48 living enemies and sent one batch of
+  twelve records per 66 ms tick, so with n enemies each got a record every `ceil(n / 12)` ticks
+  (every 264 ms with 40 in The Struggle's forest: steps on the guest's PC) and beyond 48 never.
+  The host's list now holds up to 128 (the game's two enemy arrays of 64), and a tick sends
+  `ceil(n / 12)` batches, at most four: up to 48 enemies each one has a record every tick, above
+  that the window turns. With twelve or fewer the tick is exactly 0.3.0's. Traffic stays small
+  (about 24 KB/s with 40 enemies, about 28 KB/s with 128, only while more than twelve live).
+  `tests/test_wrec.c` covers it, and the 0.3.0 tick fails.
 
 ### Installing, updating and other mods
 
@@ -209,6 +240,8 @@ in the repository's docs).
 | With 13 or more enemies (Episode 3's sewers: 14 on the host, 12 on the guest) some never existed on the guest's PC | A batch of enemy records holds twelve; the host always sent the first twelve, so the rest had no record, and their one-time spawn message could arrive while the guest was still loading. | The record window turns from batch to batch (`tests/test_wrec.c`, 1657 checks; the old model fails). Shown on the pair: 14 of 14 on both PCs, twice. |
 | Enemies killed on the host came back alive on the guest's PC | A record sent before the death arrived after the death message and set the replica's health again. | Records for an enemy that died less than ten seconds ago are ignored; shown in the siege: the alive counts of both PCs equal at every sample. |
 | Both games died in Episode 4's finale | The finale's helicopters are script-driven set models; mirroring their actions like doors freed a moving unit still linked in the engine's update list. | Those set models are excluded from the door mirror (`tests/test_objsync.c` plus a model of the old rule that must fail); both games ran more than eight minutes in the finale afterwards. |
+| Barry's half of Episodes 2-4 could start on the host's PC only, with the guest left in Claire's first stage | The host sent the hop into Barry's half once; a guest whose game was still loading at that moment ignored it. | The host repeats the step until the guest answers from part 1 of Barry's half (`tests/test_warp.c`; the 0.3.0 model fails). Shown on the pair for 0.3.1: with the guest's game held back on purpose, the guest followed into Barry's half (stage 250) as soon as its game was free, with one load only. |
+| With many enemies (The Struggle's forest, big waves) they moved in steps on the guest's PC, and above 48 some were not updated at all | One batch of twelve records per tick from a list of at most 48 living enemies. | Up to four batches a tick from a list of up to 128 (`tests/test_wrec.c`; the 0.3.0 tick fails). Shown on the pair for 0.3.1: The Struggle's forest (stage 600), 50 enemies listed identically on both PCs, each at most 15 ms behind the host on the guest's PC, none lost. |
 
 ## Lessons that carry over
 
@@ -234,6 +267,10 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
    whatever comes after its limit every time, always the same objects, and nothing logs it. When
    a world can hold more objects than one batch, rotate the window and test that every object is
    covered within `ceil(n / per_batch)` batches.
+5. **A step sent once is lost on a PC that is still loading.** A one-time order to the partner's
+   PC (here: hop into Barry's half) arrives while that game may still be loading and is then
+   dropped. Repeat such a step until the partner answers from the target state, and make the step
+   idempotent, so that a repeat during the load does nothing.
 
 ## QA
 
@@ -242,15 +279,17 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   version before its fix. Suites at the 0.3.0 gate, with their check counts: ach 786, aim 159730,
   bgl 85, combat3 19072, downed 443, grapple 603859, lang 3587 (texts in 12 languages), lobby
   1735, lobbymust 133, meleehit 15066, objsync 150, proto 121435, warp 6750, wrec 1657 (the
-  enemy-record window) and more; `tests/test_steam_real32.c` calls the real Steam code against fake
-  interfaces that use the game's C++ calling conventions; `python -I tests/run_net_tests.py` runs the
-  session over real UDP through a network emulator with loss, duplication and reordering. A
-  headless bot (`tests/coop_bot.c`) speaks the protocol for the refusal, version and lost-peer cases.
-- **Installer**: `powershell -File tests\test_installer.ps1`: 252 of 252 before the 0.3.0
-  publication (with the 0.2.1 package as the old version) and 257 of 257 with `-Online` (the real
-  GitHub feed, read only); after the publication the published 0.2.1 updated a stand-in copy to
-  0.3.0 through the real feed (checksum against GitHub's digest, install, version file) and the
-  uninstall gave the copy back byte for byte.
+  enemy-record window) and more; for 0.3.1 new checks in `test_coopsave`, `test_warp` and
+  `test_wrec` that fail on the logic of 0.3.0, every suite green; `tests/test_steam_real32.c`
+  calls the real Steam code against fake interfaces that use the game's C++ calling conventions;
+  `python -I tests/run_net_tests.py` runs the session over real UDP through a network emulator
+  with loss, duplication and reordering. A headless bot (`tests/coop_bot.c`) speaks the protocol
+  for the refusal, version and lost-peer cases.
+- **Installer**: `powershell -File tests\test_installer.ps1`: 252 of 252 before the 0.3.1
+  publication (with the published 0.3.0 package as the old version) and 249 of 249 with `-Online`
+  (the real GitHub feed, read only) after it; after the publication the published 0.3.0 updated a
+  stand-in copy to 0.3.1 through the real feed (checksum against GitHub's digest, install, version
+  file), a second start installed nothing, and the uninstall gave the copy back byte for byte.
 - **Live, two PCs on one LAN** (the author's test copies of the game, one PC as the host and the
   other as the guest, driven by a console and scripts, not by a person):
   - Episode 1: every checkpoint of both halves, reached with a lab warp or teleport, with the doors,
@@ -266,6 +305,16 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
     between The Struggle's chapters; the ends of Episodes 2 and 3, of both bonus episodes and of
     Episode 4's last stage; the stages after the first of each half mostly reached by console jumps
     to the game's own checkpoints. Scripted walking, aiming and kept health were used.
+  - 0.3.1, with its release build: The Struggle's forest (stage 600) with 50 enemies listed
+    identically on both PCs, every enemy on the guest's PC at most 15 ms behind the host, none
+    lost; Barry's half of Episode 2 with the guest's game held back on purpose (the host repeated
+    the step, and the guest followed into stage 250 as soon as its game was free, with one load);
+    a game over in Barry's half and Retry (both players back at the checkpoint); Episode 1 from the
+    room (its start and first stages, the same enemies on both PCs); Continue in the room for
+    Episode 1, Claire's and Barry's halves of Episode 2, The Struggle and Little Miss (both PCs at
+    the same checkpoint with the right pair of characters, the enemies listed on both, no game over
+    on arrival; the checkpoints were made by the test tools: the game's own checkpoint, its flag
+    set by hand).
 - **What this does not show**: a person playing any of it; the story's own step in Episode 2
   from the village (stage 201) to the tunnel (stage 203, entered only by a jump) and stage 203
   itself; the fights in Barry's halves of Episodes 2-4 and in Claire's halves of Episodes 3-4 (the
@@ -273,24 +322,27 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   (stages 453 and 454, 30,000 health each; the end of the episode was shown after a test request of
   the stage's end); The Struggle's stage 610, which starts behind a gate that did not open in the
   tests, and the clear conditions of its middle chapters; Little Miss's stealth rules; the story's
-  own steps between the stages of Episodes 2-4; two different networks (Steam relay); any player
-  outside the lab. This is why the QA level is `automated` and not `verified-playthrough`.
+  own steps between the stages of Episodes 2-4; Continue in Episodes 3 and 4 (the same code as
+  Episode 2); two different networks (Steam relay); any player outside the lab. This is why the
+  QA level is `automated` and not `verified-playthrough`.
 
 ## How to play
 
 Both players need the Steam game (app 287290, build 3658995) and the same mod version.
 
-1. Download `revelations2-coop-setup-0.3.0.exe` (or the zip: extract it and run
+1. Download `revelations2-coop-setup-0.3.1.exe` (or the zip: extract it and run
    `Install Co-op.bat`) from the
-   [release](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0) on **both** PCs. The
+   [release](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1) on **both** PCs. The
    installer is not code-signed, so Windows SmartScreen may warn. An installed 0.1.1 or later
-   updates itself to 0.3.0 at the next start from its shortcut.
+   updates itself to 0.3.1 at the next start from its shortcut; both players need 0.3.1.
 2. Start the game from the **Resident Evil Revelations 2 Co-op** shortcut: Campaign, then
    **Co-Op Play**.
 3. One player picks **Find a Partner** (Steam friend or System Link; for a direct IP the host
    forwards UDP port 28410 and allows the game in the firewall), the other **Join a Partner**.
    The host picks the episode (1-4, The Struggle, Little Miss) and the difficulty, each player
-   picks a character (Claire's or Barry's half), both press Ready; the host starts the game.
+   picks a character (Claire's or Barry's half), both press Ready; the host starts the game. To go
+   on from the last checkpoint of a co-op game, the host picks **Continue** (the guest needs a co-op
+   save of the same episode and half).
 4. Steam achievements are **not** blocked: what a co-op game earns is unlocked on your account.
 
 Bug reports: double-click `coop\Collect logs.bat` in the game folder right after the problem; it
@@ -311,7 +363,9 @@ zip of both PCs.
   them (no effect on play was seen).
 - Barry's half of Episodes 2-4 starts a few seconds after the first stage of the part has loaded;
   that stage's opening may flash by.
-- "Continue" in the room works for Episode 1 checkpoints only.
+- "Continue" in Episodes 3 and 4 was not checked in a running game (the same code as Episode 2).
+  It is not offered for a save made at the end of a half or of a bonus chapter (its results
+  screen): start the next half or chapter as a new game.
 - Survival, Invisible and Raid are not offered. Joining a running game is not possible: if one
   player's game closes or the connection is lost, start a new co-op game.
 - The end of Episode 1's halves needs both players at the radio together.
@@ -329,6 +383,7 @@ zip of both PCs.
    with the `Collect logs.bat` zips of both PCs help most.
 2. **Test the Steam relay** between two different networks, and a click in the real friends list
    and the overlay's invite dialog.
-3. **Continue for Episodes 2-4**: the room offers Continue for Episode 1 checkpoints only.
+3. **Continue in Episodes 3 and 4** checked in a running game, and Continue from a save made at
+   the end of a half or of a bonus chapter.
 4. See the sibling [Revelations 1](../resident-evil-revelations/README.md) write-up for the
    first game; the offsets of the two builds do not transfer, only the structure ideas.

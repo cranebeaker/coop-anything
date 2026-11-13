@@ -10881,6 +10881,7 @@
   project: Resident Evil Revelations 2 Co-op
   url: https://github.com/dolbaras/revelations2-coop
   other_urls:
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0
   kind: mod
   status: partial
@@ -10898,31 +10899,43 @@
   notes: >-
     Network co-op for the story campaign: Episodes 1-4 (Claire and Moira's half and Barry and Natalia's half of
     each) and the bonus episodes The Struggle and Little Miss, 2 players on 2 PCs, each with their own copy of the
-    game and the mod. Version 0.3.0 (GitHub Latest, published 2026-11-12; 0.2.0 and 0.2.1 were Episode 1 only,
-    0.1.0 and 0.1.1 pre-releases): a dinput8.dll proxy loaded through the exe's import table that patches import
-    slots and COM vtables in memory and changes no game file (Steam build 3658995 only). ENet over UDP with a
-    direct IP (port 28410), or Steam lobbies and invites; a room where the host picks the episode and each player
-    picks a character and presses Ready; host-authoritative enemies as replicas on the other PC with kill credit
-    for the player who made the kill, scenario flags, co-op doors, boxes and slides, a stage-change gate and
-    loader mirror, per-player achievements, downed and revive (host's choice, on by default), the partner on the
-    minimap, a co-op save of its own with a Continue row (Episode 1 checkpoints). 0.3.0 starts Barry's halves of
-    Episodes 2-4 by a hop through the game's restart record, sends the enemy records in a turning window (more than
-    twelve enemies), ignores records that overtake a death, ends the session at the end of every episode and of
-    the last stage, and leaves the finale's script-driven helicopters to each PC. Installer and a shortcut that
-    installs newer GitHub releases before each start; 12 languages in the co-op screens. MIT. QA: C test suites
-    and an installer suite (252 offline, 257 against the real release feed), plus scripted two-PC lab sessions
-    with real game clients: Episode 1 from start to end; Episodes 2-4 and the bonus episodes stage by stage,
-    mostly reached by console jumps to the game's own checkpoints (starts, walking, the Episode 2 siege and Pedro
-    boss and a Struggle chapter fought with identical results on both PCs, results screens between halves and
-    chapters, the ends). No human has played Episodes 2-4 or the bonus episodes. Not verified: Episode 2's step
-    from the village (stage 201) to the tunnel (203) and stage 203, the fights in Barry's halves of Episodes 2-4
-    and in Claire's halves of Episodes 3-4, Episode 4's last bosses (453, 454), The Struggle's stage 610 behind a
-    gate that did not open in the tests and the clear conditions of 610 and 620, Little Miss's stealth rules, the
-    story's own steps between stages. Nobody outside the lab has played it; two different networks (Steam relay)
-    are untried. Survival, Invisible and Raid are not offered (Raid is not touched). Steam achievements are not
-    blocked in a player's game. Write-up in games/resident-evil-revelations-2.
+    game and the mod. Version 0.3.1 (GitHub Latest, published 2026-11-13; 0.3.0 of 2026-11-12 opened Episodes
+    2-4 and the bonus episodes, 0.2.0 and 0.2.1 were Episode 1 only, 0.1.0 and 0.1.1 pre-releases): a dinput8.dll
+    proxy loaded through the exe's import table that patches import slots and COM vtables in memory and changes no
+    game file (Steam build 3658995 only). ENet over UDP with a direct IP (port 28410), or Steam lobbies and
+    invites; a room where the host picks the episode and each player picks a character and presses Ready;
+    host-authoritative enemies as replicas on the other PC with kill credit for the player who made the kill,
+    scenario flags, co-op doors, boxes and slides, a stage-change gate and loader mirror, per-player achievements,
+    downed and revive (host's choice, on by default), the partner on the minimap, a co-op save of its own with a
+    Continue row (since 0.3.1 the last checkpoint of every episode and half and of both bonus episodes; the guest
+    needs a co-op save of the same episode and half). 0.3.0 starts Barry's halves of Episodes 2-4 by a hop through
+    the game's restart record, sends the enemy records in a turning window (more than twelve enemies), ignores
+    records that overtake a death, ends the session at the end of every episode and of the last stage, and leaves
+    the finale's script-driven helicopters to each PC. 0.3.1 repeats the hop into Barry's half until the guest's
+    game is really there (a guest still loading stayed in Claire's first stage), and sends every enemy's record as
+    often as with a few enemies up to 48 at a time, and all of them in turn up to 128 (before, with many enemies
+    the guest's PC got their positions less often, and above 48 some never); protocol version 3, so both players
+    need 0.3.1. Installer and a shortcut that installs newer GitHub releases before each start; 12 languages in
+    the co-op screens. MIT. QA: C test suites and an installer suite (252 offline, 249 against the real release
+    feed), plus scripted two-PC lab sessions with real game clients: Episode 1 from start to end; Episodes 2-4 and
+    the bonus episodes stage by stage, mostly reached by console jumps to the game's own checkpoints (starts,
+    walking, the Episode 2 siege and Pedro boss and a Struggle chapter fought with identical results on both PCs,
+    results screens between halves and chapters, the ends); for 0.3.1 The Struggle's forest with 50 enemies listed
+    identically on both PCs (each at most 15 ms behind the host on the guest's PC), Barry's half of Episode 2 with
+    the guest's game held back on purpose, a game over and Retry there, and Continue in Episode 1, both halves of
+    Episode 2, The Struggle and Little Miss (from checkpoints made by test tools). No human has played Episodes
+    2-4 or the bonus episodes. Not verified: Episode 2's step from the village (stage 201) to the tunnel (203) and
+    stage 203, the fights in Barry's halves of Episodes 2-4 and in Claire's halves of Episodes 3-4, Episode 4's
+    last bosses (453, 454), The Struggle's stage 610 behind a gate that did not open in the tests and the clear
+    conditions of 610 and 620, Little Miss's stealth rules, the story's own steps between stages, Continue in
+    Episodes 3 and 4 in a running game (the same code as Episode 2); story companions that the host's story
+    removes may stay on the guest's PC (no effect on play was seen). Continue is not offered for a save made at
+    the end of a half or of a bonus chapter. Nobody outside the lab has played it; two different networks (Steam
+    relay) are untried. Survival, Invisible and Raid are not offered (Raid is not touched). Steam achievements are
+    not blocked in a player's game. Write-up in games/resident-evil-revelations-2.
   sources:
   - https://github.com/dolbaras/revelations2-coop
+  - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.2.0
@@ -10930,7 +10943,7 @@
   - https://github.com/dolbaras/revelations2-coop/blob/main/docs/steam-transport.md
   - https://store.steampowered.com/app/287290/
   - https://github.com/cranebeaker/coop-anything/issues/298
-  checked: '2026-11-12'
+  checked: '2026-11-13'
   made_with_coop_anything: true
 - game: 'Spider-Man: Friend or Foe'
   year: 2007
