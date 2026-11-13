@@ -4,26 +4,30 @@
 |---|---|
 | Engine | IW 4.0 (closed; id Tech 3 derived) |
 | Versions tested | Steam app 10180, build 25374375 (the 64-bit update of September 2026): `iw4sp.exe` x64, PE timestamp `0x6aaaa257`, SHA-256 `2F8C9CFDA1B8C0FB308FD9719577154E8222FC7654F5E8F1BF54579BCA69D805`, `version` dvar `IW4 2.0 build 14 Fri Oct 03 16:56:21 2025 win64`, Russian language set |
-| Projects | [mw2_coop](https://github.com/stxlvn/mw2_coop) (campaign co-op, beta, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
-| QA level | automated (two game copies on one PC, in-game scripted checks of the reworked set pieces, a spawn and kit check on six levels, a bot tour of the start points of all 19 levels; the campaign has not been played through end to end) |
-| Last updated | 2026-10-25 |
+| Projects | [Modern Warfare 2 Enhanced](https://github.com/stxlvn/mw2_enhanced) (formerly mw2_coop; campaign co-op over the network and split screen on one PC, v1.0.0, MIT); COD-MOD 3.223 campaign co-op pack (32-bit, 2020, abandoned) |
+| QA level | automated (two game copies on one PC, in-game scripted checks of the reworked set pieces, bots that fail every section of every campaign mission and check the restart, a bot tour of the start points of all 19 levels, split screen sessions with simulated gamepads, 8 campaign maps on each of the mod's own DirectX 11 and 12 renderers; the campaign has not been played through end to end by people) |
+| Last updated | 2026-11-13 |
 
 ## Where things stand
 
-**Beta, playable (v0.5.0-beta,** also on [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)**).** On the current 64-bit Steam build, two players play the
+**Release 1.0 (v1.0.0, 2026-11-13,** also on [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)**).** On the current 64-bit Steam build, two players play the
 campaign together through the game's own Spec Ops co-op netcode, hosted and joined from the
-game's menus (lobby, list of games on the network, address, Steam invite). Reworked for two
+game's menus (lobby, list of games on the network, address, Steam invite), or on one PC in a **split
+screen** (Campaign -> Split screen: one window cut top and bottom like the Xbox 360 version, each half with its own view,
+two gamepads or keyboard and gamepad; it also works with no internet connection, and in Special Ops). Reworked for two
 players: S.S.D.D. (each takes his own weapons), Team Player's convoy, the Humvees of
-Wolverines!, the rope and rappel scenes (the Gulag's cellblock rope and evacuation, Just Like Old Times' opening
+Wolverines! (ladders and the Predator laptop too), the rope and rappel scenes (the Gulag's cellblock rope and evacuation, Just Like Old Times' opening
 rappel, Escape from Favela's big jump and chopper ladder), the Only Easy Day's escape little bird, Takedown's car, The Only Easy Day's swim and stealth kill, Cliffhanger's ice climb
 and snowmobiles, No Russian's elevator, cover and ending, the crash site and ISS of Second Sun,
-Endgame's boat chase and the final knife fight. Enemies fight both players; both play the
+Loose Ends' betrayal, Endgame's boat chase and the final knife fight, the Museum epilogue. Enemies fight both players; both play the
 difficulty the host picks, with a lobby switch for friendly fire and checkpoints in every
 level. Bots toured the start points of all 19 levels on two copies (results in
-[NOTES.md](NOTES.md); the Museum epilogue still fails for player 2, see Known issues). Two people
+[NOTES.md](NOTES.md)) and fail every section of every campaign mission to check the restart. Two people
 have played parts of the story on two PCs over the internet, from the start up to and including
-No Russian (Cliffhanger through, then into No Russian); the missions after it were checked
-by bots only, and nobody has played the whole campaign through together yet.
+No Russian; the missions after it were checked by bots only, and nobody has played the whole campaign through together yet.
+Since v0.5.0 the project also got: split screen (one process, two client contexts, an own compositor), a Settings > Enhanced page in the game's menu,
+a developer console, FSR 1, FSR 3 and DLSS upscalers, one 32-bit archive for the older 32-bit game and the iw4x-sp client, and, as an experiment
+(off by default, 64-bit), **the mod's own Direct3D 11 and Direct3D 12 renderers** in place of the game's Direct3D 9 back end (see "What we changed").
 The older COD-MOD campaign co-op pack only runs on the 32-bit build that the 2026 update
 replaced, and players who tried it found it rough.
 
@@ -48,8 +52,8 @@ replaced, and players who tried it found it rough.
   ([install guide](https://forum.alterware.dev/t/iw4x-singleplayer-install-guide/383)).
 - **IW4x** ([iw4x/iw4x-client](https://github.com/iw4x/iw4x-client)): open-source multiplayer
   client, not the campaign.
-- **mw2_coop** ([stxlvn/mw2_coop](https://github.com/stxlvn/mw2_coop), MIT, v0.5.0-beta, [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)):
-  this project, for the 64-bit build.
+- **Modern Warfare 2 Enhanced** ([stxlvn/mw2_enhanced](https://github.com/stxlvn/mw2_enhanced), MIT, v1.0.0, formerly mw2_coop, [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)):
+  this project, for the 64-bit build (an archive for the older 32-bit game and the iw4x-sp client too).
 
 ## How the game works (for co-op)
 
@@ -86,7 +90,7 @@ replaced, and players who tried it found it rough.
   thread; runtime script errors are invisible unless the function is replaced. A failing
   script can be found anyway: the VM's live code position and the callers' saved positions
   are in memory, and `Scr_GetFunctionHandle` maps function names to offsets in the program
-  buffer until `Scr_EndLoadScripts` frees its table (mw2_coop hooks it and logs
+  buffer until `Scr_EndLoadScripts` frees its table (mw2_enhanced hooks it and logs
   `file::function +offset` stacks; RVAs in NOTES.md).
 - **The revive system (`maps\_coop`) assumes Spec Ops:** it reads the flag
   `special_op_terminated`, which only `maps\_specialops` creates, and kills a player who
@@ -109,11 +113,11 @@ replaced, and players who tried it found it rough.
   off; handing a turret from one player to the other in a single server frame crashed both
   machines, over three frames it works.
 - Function addresses (RVAs) with what they do are in [NOTES.md](NOTES.md) and in
-  `src/game.h` of mw2_coop.
+  `src/game.h` of mw2_enhanced.
 
 ## What we changed
 
-All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (latest release v0.5.0-beta of 2026-10-25; since v0.3.0-alpha an install archive with `winmm.dll` and the `mw2coop` folder, hosting and joining in the game's menus, no `.bat` launchers):
+All in [Modern Warfare 2 Enhanced](https://github.com/stxlvn/mw2_enhanced) (latest release v1.0.0 of 2026-11-13; an install archive with `winmm.dll` and the `mw2coop` folder, hosting and joining in the game's menus, no `.bat` launchers; the full change list is its [CHANGELOG.md](https://github.com/stxlvn/mw2_enhanced/blob/main/CHANGELOG.md)):
 - `winmm.dll` proxy that checks the build, runs console commands from a file, watches dvars
   and memory, logs co-op packets and script runtime errors.
 - Script loader replacement (`Scr_AddSourceBuffer`): own scripts plus load-time patches of the
@@ -223,9 +227,17 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (latest release v0.5.0-bet
   is mirrored to player 2. COD-MOD had no fix here (only `ignoreme` and health hacks). No
   Russian: straying and grenades count for either player; a blown cover kills both.
 
+### The mod's own Direct3D 11 / 12 renderers (v1.0.0, experimental)
+
+Findings that are useful for other games on a D3D9 engine (details in the project's `docs/native-dx-plan.md`):
+- The game's own back end can be replaced function by function: the mod hooks the engine's device calls, decodes the render-state words the engine builds for its draws, and issues the same draws through a Direct3D 11 or 12 layer that only two files touch (the rest of the mod uses an `nat_*` / `nd_*` API; the Direct3D 12 copy is the same sources compiled with a symbol prefix, so both live in one DLL).
+- Differences from Direct3D 9 that each cost a bug: a render target change must reset the viewport and scissor (blur and downsample passes drew into a corner: "solid colour flash"), the half-pixel offset of the viewport, alpha to coverage must not touch blended alpha-tested draws (with the game's default 2x anti-aliasing a menu's soft smoke became hard patches), depth textures that D3D9 reads as hardware shadow maps, and the engine's own 2D passes that must be drawn at the output size when the picture is upscaled.
+- FSR 3 / DLSS on a native renderer need three things from the engine: the jitter in the world matrix (injected where the engine uploads its constants), a readable copy of the depth, and motion vectors (the camera's from the matrices, the moving objects' and the weapon's by a block search between the two frames); both stay ignored on DirectX 11 and lower.
+- Profiling found two plain mistakes: a debug `getenv` called twice for every draw (half of the render thread with FSR 3 on) and one synchronous upload buffer plus GPU wait per mip level of every texture on Direct3D 12 (20000 per level load, 18 s); batching them through a persistent upload buffer made the Direct3D 12 load as fast as Direct3D 11. A sampling profiler of the render thread (instruction pointer every 2 ms) was enough to see both.
+
 ## QA
 
-- `tools/qa_pair.sh <scenario>` in mw2_coop starts a host and a client copy, connects them,
+- `tools/qa_pair.sh <scenario>` in mw2_enhanced starts a host and a client copy, connects them,
   launches the mission and runs a scenario from `_mw2coop_qa.gsc` on both machines.
 - Runs on 2026-10-20, S.S.D.D., host and client, no script errors on either machine in any
   of these:
@@ -303,32 +315,24 @@ All in [mw2_coop](https://github.com/stxlvn/mw2_coop) (latest release v0.5.0-bet
 
 ## How to play
 
-Beta: see the mw2_coop README. Both players copy `winmm.dll` and the `mw2coop` folder from the
-[v0.5.0-beta release](https://github.com/stxlvn/mw2_coop/releases) archive (or from [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)) into the game folder; the host picks Campaign -> co-op, the partner joins from
-the list, by address or by Steam invite.
+See the [project's README](https://github.com/stxlvn/mw2_enhanced). Both players copy `winmm.dll` and the `mw2coop` folder from the
+[v1.0.0 release](https://github.com/stxlvn/mw2_enhanced/releases/tag/v1.0.0) archive (or from [Nexus Mods](https://www.nexusmods.com/codmw2/mods/99)) into the game folder; the host picks Campaign -> co-op, the partner joins from
+the list, by address or by Steam invite; on one PC: Campaign -> Split screen.
 
 ## Known issues
 
+The project's [README](https://github.com/stxlvn/mw2_enhanced#known-issues) keeps the full list; the ones that matter here:
+- Nobody has played the whole campaign through together yet; two people played the story up to and including No Russian, the rest and the scenes added since v0.5.0 were checked by bots on two copies.
 - Slow motion shows on both screens, whoever triggers it (one game clock for both PCs).
-- Checkpoints: a restart from one was tested by bots in Team Player and S.S.D.D. and played in
-  Cliffhanger and No Russian; in the other levels bots only checked that each checkpoint's flag
-  exists, not when a full run sets it.
-- The scenes added in v0.5.0-beta (ropes and rappels, the chopper ladder, the Cliffhanger snowmobile and climb
-  views, S.S.D.D.'s gates, Team Player's swap) were checked by bots on two copies only; no two people have played
-  them. The level-ending fix (endings after a checkpoint restart) has not been played yet either.
-- Museum (the epilogue, map `ending`): in the bot tour player 2 cannot walk or ends up far from
-  player 1 at the exhibit start points (9 FAIL); not fixed. Its civilians also flood the log
-  with `_anim::anim_weight` errors and some stand in a T-pose, in single player too (checked
-  with the co-op scripts moved aside).
-- No Russian's far ending (nobody at the van door) logs one script error (`AnimScripted` refuses
-  the van's driver); the scene plays on.
-- Loose Ends start point `forest_fight` logs two script errors from the level's own start code.
-- A mouse click on the ice climb sometimes needed repeating; one likely cause is fixed in v0.5.0-beta (a swing
-  clicked during the last one counted for nothing), not confirmed by a test: report if it still happens.
+- Checkpoints: bots fail every section of every campaign mission and check that the level starts again with both players up and together (all pass); a restart goes to the level's own checkpoint, which is sometimes the section before the one you died in. Not tried by two people.
+- Rarely (once in about a hundred mission loads, 32-bit build) both PCs hang right after a mission starts; the stacks point at the graphics driver, not proven.
+- Split screen: tested with bots, screenshots of both halves and simulated gamepads, not with two real gamepads or by two people; XInput pads only; no second keyboard; the second player can only pause.
+- The mod's own DirectX 11 / 12 renderers and the upscalers are experimental: bot-checked on 8 campaign maps each, not played by people; DLSS has not run on a real card; on the tested laptop FSR 3 does not beat the plain native resolution in speed.
+- Steam overlay plus Discord overlay together crash after the game recreates its graphics device (both hook the same Direct3D 9 calls); turn one off.
 
 ## Next steps
 
-- The Museum epilogue for player 2.
-- Play the campaign through together end to end, and the new scenes with two people.
-- Enemy scaling for two players; finish the 32-bit build (an experimental archive now), split screen.
+- Play the campaign through together end to end, and the newer scenes with two people.
+- Split screen with two real gamepads and two people; DLSS on a real card.
+- The native renderers: play missions on them, then decide whether to make one the default.
 - Check whether MW3 (2011) `iw5sp.exe` carries the same co-op netcode.
