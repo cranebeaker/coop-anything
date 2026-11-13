@@ -4,9 +4,9 @@
 |---|---|
 | Engine | LÖVE 11 (fused exe: `love.exe` + a zip of Lua sources), LuaJIT, luasteam |
 | Versions tested | Steam, appid 2379780, build 17459173, version 1.0.1o-FULL, `Balatro.exe` SHA-256 `0d75fe164accf3312734d4b37ac98788dd15f0b8e4f9bb8b7f90c4e59de93f47`, Windows 10 x64 |
-| Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.2), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
-| QA level | automated (bot clients, 11 scenarios incl. crashes, restarts, tag stacks and boss rerolls) plus playtests to ante 8 |
-| Last updated | 2026-11-06 |
+| Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.3), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
+| QA level | automated (bot clients, 13 scenarios incl. crashes, restarts, tag stacks, boss rerolls, a paused score count and ante vouchers) plus playtests to ante 8 |
+| Last updated | 2026-11-13 |
 
 ## Where things stand
 
@@ -64,6 +64,12 @@ found: [NOTES.md](NOTES.md).
   Guest select/skip presses show on the host's screen as a wish.
 - Boss rerolls on both sides (Director's Cut / Retcon button, Boss Tag): the one who rerolls
   pays, the partner takes the same boss (`boss` message), so both always face one boss.
+- The ante is shared: Hieroglyph / Petroglyph on either side move both back (`ante` message).
+- The blind screen shows the partner's skip tags under the own ones (sent in `sy`, with the
+  Orbital Tag's hand).
+- The score count: the game writes a hand's score with an ease whose end value is fixed when
+  the hand is scored. Partner points are held back until the own ease has left the event
+  queue, and points added during an ease shift its end value, so none are overwritten.
 - Pack tags open one at a time on both sides: received tags go through the game's own
   `new_blind_choice` loop, and the guest follows a skip only once the game is idle.
 - Options: shared hand levels (planets or all upgrades), both skip tags to both, shared
@@ -76,20 +82,31 @@ found: [NOTES.md](NOTES.md).
 
 ## QA
 
-- `tools/run_all.ps1` in the mod repo: 11 scenarios, each two bot clients playing real games to
+- `tools/run_all.ps1` in the mod repo: 13 scenarios, each two bot clients playing real games to
   the end of ante 2, logs compared by `tools/check_logs.ps1`. It checks selections, skips,
   targets, equal totals in every round, score sent only after counting, tags, levels and
   wishes.
 - Scenarios: shop lag + planets, host shop lag + secret hands, tag stack (Double + Charm on
   both), guest wishes + slow guest, own decks, host killed at 110 s, guest killed at 45 s,
   both killed at 130 s, guest killed and reopened by the host, tag stack with bots sitting 6 s
-  in each pack, boss rerolls on both sides. Any run also fails on `ERR two packs at once`.
-- Last full run 2026-10-27 (0.6.0): 9/9 passed (46, 46, 41, 44, 39, 20, 25, 17, 25 checks).
+  in each pack, boss rerolls on both sides, host paused 30 s while its hand counts, ante
+  vouchers on both sides. Any run also fails on `ERR two packs at once`.
+- 0.6.0 (2026-10-27): 9/9 passed (46, 46, 41, 44, 39, 20, 25, 17, 25 checks).
 - 0.6.1 (2026-10-29): scenarios 1-2 (46/46 each); a wish run (47/47); language screenshots
   (`tools/lang_test.ps1`, 15/15).
 - 0.6.2 (2026-11-04): tag stack with slow packs 41/41, boss rerolls 46/46 (host at ante 1,
   guest at ante 2 paying $10; same boss on both at selection), scenario 1 46/46, host killed
   20/20. The two-packs detector fired on the 0.5.0 tag behaviour (`-OldNbc`) as a check.
+- 0.6.3:
+  - 2026-11-07: 13/13 passed (46, 46, 41, 48, 39, 20, 30, 17, 20, 41, 46, 40, 73 checks).
+    The paused-count scenario with the 0.6.2 handling (`-OldEase`) fails 9 checks, e.g.
+    host 171 vs guest 236.
+  - 2026-11-12, after later changes: 12/13. The failure was the wish check (a wish sent
+    while the host was still in the shop was dropped). After the fix, the wish scenario
+    passed 4 runs in a row (48/48); the full suite was not run again.
+- Long sessions are checked in the logs: `PERF` (fps, ms per frame, memory, object
+  counts), `MOVE` (census of `G.MOVEABLES`), `PROF` (sampling profiler when the game
+  update is slow), `LEAK` (UI elements taken out of the update).
 
 ## How to play
 
@@ -104,6 +121,14 @@ the friend's gamepad shows up on the host's PC and drives the guest window. Only
 the game. Balatro has no Steam Remote Play Together (not among its Steam features).
 
 ## Known issues
+
+- Frame drop in the gamepad window, fixed in 0.6.3.
+  - Cause: in gamepad mode the game leaves the UI elements of removed boxes in
+    `G.MOVEABLES`, mostly the Buy / Sell / Use buttons it builds under the focused card
+    (`Card:hover` -> `card_focus_ui`). The game updates that whole list every frame: up to
+    8000 entries, 40-60 ms a frame.
+  - The mod takes them out every 10 s. A 107-minute playtest afterwards stayed at 60 fps.
+  - Bots in gamepad mode did not reproduce it.
 
 - Gamepad presses in the window without focus are not covered by tests.
 - Continue and catch-up were bot-tested on antes 1-2 only.
