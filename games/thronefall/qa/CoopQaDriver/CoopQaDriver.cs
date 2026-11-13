@@ -375,6 +375,12 @@ namespace CoopQa
                     {
                         panel.Enabled = false;
                     }
+                    if ((string)a["action"] == "open")
+                    {
+                        // Show the panel on a tab (0 Difficulty, 1 Rules, 2 You, 3 Game keys), e.g. for a layout screenshot.
+                        panel.Enabled = true;
+                        panel.ShowTab((int?)a["tab"] ?? 0);
+                    }
                     var rows = new JObject();
                     foreach (var r in ThronefallMP.CoopDifficulty.Rows)
                     {
