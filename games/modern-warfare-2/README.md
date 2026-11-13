@@ -313,6 +313,12 @@ Findings that are useful for other games on a D3D9 engine (details in the projec
   sees the host's player model with its name tag; the host plays the intro scene, the client
   does not.
 
+- 2026-11-13, after v1.0.0 (mod's main, release 1.0.1 not published yet), two copies on one PC:
+  - `failwalk` (new): both players walk and turn before a forced failure and again after the restart from the checkpoint; reproduces issue 22 (player 2 ignored after a restart: the server kept his old command time) and passes after the fix.
+  - Re-runs of the scenarios behind three open reports on the current build, all pass: held weapons and weapon switch on the estate (issue 13), Cliffhanger stealth for player 2 (issue 14), the boat checkpoint (issue 16). The reporters have not confirmed yet.
+  - Offline: the game's IWNet / Steam sign-in check no longer stops the split screen lobby, host or join (issue 21). Tried with the connection faked off in the test copy, not on a PC that is really offline.
+  - A release archive of each build was extracted over a test copy and run for 100 s in a split screen session: no crash.
+
 ## How to play
 
 See the [project's README](https://github.com/stxlvn/mw2_enhanced). Both players copy `winmm.dll` and the `mw2coop` folder from the
@@ -327,6 +333,7 @@ The project's [README](https://github.com/stxlvn/mw2_enhanced#known-issues) keep
 - Checkpoints: bots fail every section of every campaign mission and check that the level starts again with both players up and together (all pass); a restart goes to the level's own checkpoint, which is sometimes the section before the one you died in. Not tried by two people.
 - Rarely (once in about a hundred mission loads, 32-bit build) both PCs hang right after a mission starts; the stacks point at the graphics driver, not proven.
 - Split screen: tested with bots, screenshots of both halves and simulated gamepads, not with two real gamepads or by two people; XInput pads only; no second keyboard; the second player can only pause.
+- Co-op and split screen without internet (LAN, direct IP): fixed on main after v1.0.0 (issue 21), checked only with the sign-in faked off, not on a really offline PC.
 - The mod's own DirectX 11 / 12 renderers and the upscalers are experimental: bot-checked on 8 campaign maps each, not played by people; DLSS has not run on a real card; on the tested laptop FSR 3 does not beat the plain native resolution in speed.
 - Steam overlay plus Discord overlay together crash after the game recreates its graphics device (both hook the same Direct3D 9 calls); turn one off.
 
