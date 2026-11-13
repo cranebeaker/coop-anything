@@ -265,6 +265,20 @@ Running log. Observations, derivations, guesses and unknowns are kept apart.
   field set to true by any panel that used Esc and never reset, so every later Esc was ignored. Now it is true only
   in the frame it was set. Not tested with a real key press (the bots cannot press Esc).
 
+### Explanations in the menu (1.2.7.8, 2026-11-13, owner's request)
+- Every session row can carry a `Detail` (value + all values -> text), computed from the same `Values(...)` tables the
+  spawns use, so the text cannot drift from the effect; clients compute it from the lobby data. Shown right of the
+  arrows. A line "In total: ..." under the session column adds presets and player scaling exactly like
+  `HpScale = (hp + bonus) / 100` and `ExtraPerSpawn = (extra + bonus) / 100`, bonus = (players - 1) x step; enemy type
+  and bosses are not scaled (bosses take only `BossHpScale`, no extra copies).
+- "+X% more enemies" is exact on average: `EnemySpawnerPatch` adds ExtraPerSpawn to a carry for every enemy the wave
+  spawns and spawns one copy each time the carry reaches 1 (+75% = 3 extra for every 4).
+- Checked by cycling every preset on the host copy: e.g. VeryTough "enemy HP 200%"; Hard + Players4 Medium "In total:
+  enemy HP 225% (150% + 75% scaling), 125% more enemies (50% + 75% scaling)"; VeryTough + Nightmare + Players4 + Brutal
+  "enemy HP 275% (200% + 75% scaling), 75% more enemies (0% + 75% scaling), 60% elites, damage +30%, speed +20%,
+  attack +15% faster. bosses HP 300%, damage 125%". `coop_extras` now also checks that host and client show the same
+  explanation and total line.
+
 ### Lead (not proven player-facing): host with no weapon equipped hangs the level start
 - Seen with a fresh profile: host on the level's first page (Level Select Frame) presses Play/Start directly; host's pick is
   `Invalid` (nothing equipped), `LevelDataSync` falls back to `WeaponRequestPacket` and also sends it to the host itself;

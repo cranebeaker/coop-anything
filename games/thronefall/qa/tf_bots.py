@@ -550,7 +550,15 @@ class CoopExtras(core.Playbook):
                 ctx.must(panel_set(host, key, value), "host: %s %s" % (key, value))
             ctx.must(keys_step(host, "kcolor", "Red"), "host colour Red")
             ctx.must(keys_step(host, "karrow", "On"), "host arrow on")
+            hd = host.call("coop_panel", action="state")["details"]
+            ctx.log("host explanations: %s" % hd)
+            ctx.expect(hd.get("count") == "enemy HP 150%", "Count & HP Tough explained as %r" % hd.get("count"))
             CoopSettings.open_menu(None, ctx, client)
+            ctx.wait_until("client shows the host's explanations",
+                           lambda: client.call("coop_panel", action="state")["details"].get("count") == "enemy HP 150%", 10)
+            ht, ct = host.call("coop_panel", action="state")["total"], client.call("coop_panel", action="state")["total"]
+            ctx.log("total line: host %r, client %r" % (ht, ct))
+            ctx.expect(ht == ct and ht.startswith("In total: enemy HP 150%."), "total line: host %r client %r" % (ht, ct))
             ctx.must(keys_step(client, "kcolor", "Cyan"), "client colour Cyan")
             ctx.must(keys_step(client, "karrow", "On"), "client arrow on")
             host.call("coop_panel", action="close")

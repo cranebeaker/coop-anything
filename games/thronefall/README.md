@@ -18,7 +18,7 @@ screen can stay on screen for good. All seven have fixes; six pass the same auto
 real key press. On the owner's request, optional
 co-op settings were added: enemy difficulty, boss difficulty, a night vote, map pings with a ping wheel, a ready check,
 end-of-match stats, player colours, an arrow to off-screen friends and rebindable mod keys, all changeable in a menu on
-the map without a new lobby and all off by default (local build 1.2.7.7, not published). The Craaghelm DLC maps were
+the map without a new lobby and all off by default (local build 1.2.7.8, not published). The Craaghelm DLC maps were
 not tested.
 
 ## Existing work
@@ -57,7 +57,7 @@ archive note invites forks "as long as they give credit".
 
 ## What we changed
 
-Seven fixes and a set of optional co-op settings, as nine patches against Bemno 1.2.7 (local build 1.2.7.7). The code
+Seven fixes and a set of optional co-op settings, as ten patches against Bemno 1.2.7 (local build 1.2.7.8). The code
 is not published yet.
 
 1. **Joining hangs from the second session on.** `RecentPartners` (since 1.2.5) pings remembered partners while
@@ -165,16 +165,60 @@ build confirmation). At victory or defeat it sends the table to everyone. Gold i
 shared purse.
 
 **Co-op difficulty (1.2.7.4).** Waves are the single-player waves, so every extra player makes the game easier. The
-host picks one entry from each list; the default is the base game.
+host picks one entry from each list; the default is the base game. Since 1.2.7.8 the menu shows next to every value
+what it does, and a line "In total: ..." under the session settings with what all of it adds up to.
 
-- CountAndHp: Normal, Sturdy (125% HP), Tough (150%), VeryTough (200%), MoreEnemies (+50%), Horde (+100% at 85% HP),
-  Veterans (+25% at 130% HP), Hard (+50% at 150% HP), Brutal (+100% at 200% HP), Custom (free HP and count).
-- EnemyType: Off, SomeElites (20% elites), ManyElites (40%), Aggressive (+30% damage), Swift (+25% speed), Frenzied
-  (attack 30% faster), Brutes (+50% damage, 15% slower), EliteAssault (40% elites, +25% damage), Nightmare (60% elites,
-  +30% damage, +20% speed, attack 15% faster), Custom (free damage, speed, attack rate, elite share).
-- ScaleAsPlayers (off by default): Actual, or a fixed count from 2 to 8, independent of the real number (two friends
-  with the scaling of eight, or eight with the scaling of two); ScalingPerPlayer Light/Medium/Strong adds 15/25/35% HP
-  and enemies per player beyond the first.
+*Count & HP* (how many enemies and how much HP each has; "more enemies" are extra copies of the enemies the wave
+spawns):
+
+| Preset | Enemy HP | More enemies |
+|---|---|---|
+| Normal | 100% | none (base game) |
+| Sturdy | 125% | none |
+| Tough | 150% | none |
+| VeryTough | 200% | none |
+| MoreEnemies | 100% | +50% (1 extra for every 2) |
+| Horde | 85% | +100% (twice as many) |
+| Veterans | 130% | +25% (1 extra for every 4) |
+| Hard | 150% | +50% |
+| Brutal | 200% | +100% |
+| Custom | Custom HP (50-500%) | Custom more enemies (0-300%) |
+
+*Enemy type* (how dangerous each enemy is; "elites" are the game's own elite version of an enemy):
+
+| Preset | Elites | Damage | Speed | Attack speed |
+|---|---|---|---|---|
+| Off | 0% | 100% | 100% | 100% (base game) |
+| SomeElites | 20% | 100% | 100% | 100% |
+| ManyElites | 40% | 100% | 100% | 100% |
+| Aggressive | 0% | +30% | 100% | 100% |
+| Swift | 0% | 100% | +25% | 100% |
+| Frenzied | 0% | 100% | 100% | 30% faster |
+| Brutes | 0% | +50% | -15% | 100% |
+| EliteAssault | 40% | +25% | 100% | 100% |
+| Nightmare | 60% | +30% | +20% | 15% faster |
+| Custom | 0-100% | 50-300% | 50-200% | 50-200% |
+
+*Bosses* (only bosses, separate from the two lists above): Normal; Sturdy 150% HP; Tough 200% HP; Brutal 300% HP and
+125% damage; Legendary 400% HP and 150% damage; Custom (boss HP 50-1000%, boss damage 50-300%).
+
+*Scale as players* (Off by default). It adds a bonus for every player after the first, to enemy HP and to the number of
+enemies alike: Light +15%, Medium +25%, Strong +35% per player. The player count is either the real one ("Actual") or
+a fixed one from 2 to 8 ("Players4" = as if four played, whoever is really there). The bonus is added to the Count &
+HP preset, not multiplied:
+
+- enemy HP = preset HP + (players - 1) x step
+- more enemies = preset more enemies + (players - 1) x step
+
+| Example | Enemy HP | More enemies |
+|---|---|---|
+| Normal, Players2, Medium | 100% + 25% = 125% | 0% + 25% = +25% |
+| Hard, Players4, Medium | 150% + 75% = 225% | 50% + 75% = +125% |
+| VeryTough, Players4, Medium | 200% + 75% = 275% | 0% + 75% = +75% |
+| Normal, Players8, Strong | 100% + 245% = 345% | 0% + 245% = +245% |
+
+Enemy type and bosses are not scaled by players. "+75% more enemies" means exactly 3 extra for every 4: the host adds
+0.75 to a counter for each enemy the wave spawns and spawns one extra copy each time the counter reaches 1.
 
 The host sends HP, damage, speed and attack-rate factors, the elite roll and the extra spawns in its `EnemySpawn`
 packets, so every machine spawns the same enemies. Extra enemies drop no coins and do not count toward the wave, so

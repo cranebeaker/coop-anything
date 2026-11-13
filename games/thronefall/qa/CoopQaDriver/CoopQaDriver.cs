@@ -369,7 +369,15 @@ namespace CoopQa
                         var next = t != null ? t.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true).FirstOrDefault(b => b.name == "next") : null;
                         rows[r.Key] = (value != null ? value.text : "?") + (next != null && next.gameObject.activeSelf ? "" : " (read only)");
                     }
-                    return new JObject { ["open"] = panel.Enabled, ["rows"] = rows };
+                    var details = new JObject();
+                    foreach (var r in ThronefallMP.CoopDifficulty.Rows)
+                    {
+                        var t = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == r.Key);
+                        var d = t != null ? t.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true).FirstOrDefault(x => x.name == "detail") : null;
+                        if (d != null && !string.IsNullOrEmpty(d.text)) details[r.Key] = d.text;
+                    }
+                    var total = panel.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true).FirstOrDefault(x => x.name == "total");
+                    return new JObject { ["open"] = panel.Enabled, ["rows"] = rows, ["details"] = details, ["total"] = total != null ? total.text : null };
                 }
                 case "force_boss_spawn":
                 {
