@@ -45,7 +45,8 @@ function KeepMinimized {
 
 function Status($n) {
     $f = Join-Path $Root "$n\coopqa-status.txt"
-    if (Test-Path $f) { Get-Content $f } else { @() }
+    # The driver rewrites the file every second, so it can vanish between the check and the read.
+    if (Test-Path $f) { Get-Content $f -ErrorAction SilentlyContinue } else { @() }
 }
 function StepOf($lines) { ($lines | Where-Object { $_ -like 'step=*' } | Select-Object -First 1) -replace '^step=', '' }
 

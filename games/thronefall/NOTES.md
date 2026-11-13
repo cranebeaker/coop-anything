@@ -362,6 +362,92 @@ Running log. Observations, derivations, guesses and unknowns are kept apart.
   Synthetic Left Shift (keybd_event, VK 0xA0 and 0x10) did not reach Rewired, so the toggle via the game's own Shift
   is unverified with injected input.
 
+### 1.2.8.1 (2026-11-13, owner's request): Eternal Trials in co-op, team score, weapon-as-perk fix
+Observations (game code read with Mono.Cecil, buildid 26487600):
+- Eternal Trials (`LocalGamestate.SelectedGameMode` = `EternalTrial`) is the game's roguelike mode. The run is
+  `EternalTrialsRunManager.currentRun` (static), saved as JSON (`JsonUtility`, loadout through
+  `LoadoutToStringsForSaving` / `SavedStringsToLoadout`) to `EternalTrials_V4.json` next to the progress save. A
+  stage's mid-level match save uses the key `ET_CurrentLevel`, not the map name.
+- Flow: banner on the map (`EternalTrialsInteractor`; the first press ever shows an explanation pop-up instead) ->
+  `EternalTrialsSelectScreen` (New run / Continue) -> three `MapChoice` cards (map, weapon, two perks, gold) ->
+  `ConfirmChoice` + `LoadNextMap`. A win (`OnVictory`) moves to the next stage and offers three new cards; a defeat
+  (`OnDefeat`) ends the run. Waves come from `EternalWaveGenerator` with the run's seed.
+- Without the mod's help, every machine would roll its own seed and cards (random seed per machine).
+- Each quest is checked from the player's own `LevelData` (`Quest.CheckBeaten`: `beatenBest`, `highscoreBest`,
+  `levelHasBeenBeatenWith` = the equipment at the win). Nordfels has 6 quests: Victory; Score 5000; Victory without
+  Long Bow; with Challenge the Turtle God; with the Snake God; with Turtle + Tiger God. The win is written only after
+  the end screens are clicked through.
+- The end-of-match score is computed on every machine from local values: `ScoreManager.VictoryGoldBonus` uses the local
+  `PlayerInteraction.TrueBalance` (in co-op the host holds the gold), the no-retry bonus reads the local match save
+  (clients never write one). Seen: host 1872, client 1175 for the same win. `get_VictoryNoRetryBonus` throws a
+  `NullReferenceException` on the map (no level), so it must only be read in a level.
+- Bug (already in 1.2.7 Classic co-op): `LevelDataSync.CreateSyncPacket` left out only Long Bow, Light Spear and Heavy
+  Sword from the host's perks, so newer weapons (Battle Axe, Blood Wand, ...) reached the client as a "perk" and the
+  client had two weapons equipped (seen: Battle Axe twice in `CurrentlyEquipped`).
+- Game error, not the mod: Eternal Trials on Durststein logs "Coroutine couldn't be started because the the game
+  object 'Blacksmith' is inactive!" once per load. `BUILDINGS/Blacksmith` is a `BuildSlot` with
+  `EternalTrialsOnlyBuilding`, inactive at load. Reproduced offline in single player (driver `-coopqa solo`,
+  `et_solo`): 3 of 3 loads with different perks. Classic Durststein in co-op has no such object and no error.
+
+What 1.2.8.1 does (design):
+- The host owns the run. Its run JSON rides in the existing level-data sync packet (`Eternal`, `EtRun`), and clients
+  apply it in memory. On clients every run-changing call (`SaveRun`, `OnVictory`, `OnDefeat`, `AddScore`,
+  `CreateFreshRun`, `ConfirmChoice`, ...) is skipped, so a client's own single-player run file is never touched.
+  Online, the host's run file gets the mod's `mp_` prefix (`mp_EternalTrials_V4.json`).
+- Any player can pick a card: a client's pick goes to the host as `EtPickPacket`; the host confirms it and loads the
+  map for everyone (the first pick wins). A client pressing the banner sees the host's cards, or "Only the host starts
+  Eternal Trials" when the host has no run choosing.
+- The run's weapon is set for every player, and the run's perks are equipped on every machine. The match save travels
+  under `ET_CurrentLevel` (also for joining during a level). The mod's own Endless setting is off in Eternal Trials.
+- Team score: the host sends its five score parts once a second while in a level (`ScorePacket`); clients return them
+  from the `ScoreManager` getters while in the same scene.
+- Weapon-as-perk fix: skip every weapon (`Equip.Weapons`); `EquipEquipment` refuses duplicates.
+
+Checks that ran (2026-11-13, two real copies, `eternal_trials` playbook): host starts a run, the client gets the same 3
+cards; the client picks; both load the same map with the same stage, seed, wave hash, perks and weapon; `remotePicks` 1;
+forced win -> both on stage 1 with the same new cards; host picks -> same stage, waves and perks; forced defeat -> run
+over on both; single-player run files unchanged on both, the host wrote only `mp_EternalTrials_V4.json`, the client
+wrote nothing; next Classic level: Classic mode and same waves on both; the client uses the host's score parts.
+Before the known-error filter, one run failed only on the Durststein game error above.
+
+Bug found while testing the quests (fix 9):
+- Observation: after a forced Classic win with one night played, both bots clicked through their end screens; the
+  client reached Back first. Client wins 4 -> 5, host stayed at 4 (`levelHasBeenBeatenWith.Count`).
+- Game code: `LevelData` keeps the running match in `beaten` / `highscore` and the saved result in `beatenBest` /
+  `highscoreBest`. `SaveScoreAndStatsToBestIfBest(true)` (best values, plus `levelHasBeenBeatenWith.Add(CurrentlyEquipped)`
+  only when `_endOfMatch` is true) and `SaveLoadManager.SaveGame()` run inside
+  `EndOfMatchScoreUIHelper.ClassicModeAnimationSequence` and `AfterMatchUIManager.ShowRewards`. `ShowRewards` also
+  trickles the match score into `PerkManager.xp` frame by frame and levels up on Interact. `LocalGamestate.Start`
+  calls `SaveScoreAndStatsToBestIfBest(false)` when that level is entered again (best values only, no equipment, no
+  save).
+- Derived: a player pulled to the map before their animation reaches that point loses the "won with" entry (quests
+  like "Victory without Long Bow"), the rest of the XP, and, if they quit before entering that level again, the win
+  and the score.
+- Fix: `EndScreenGate` on the host holds a level request out of an end screen (to a map, or a restart of the same
+  level) until every player sent one, at most 120 s; a server chat line names who is still on the end screen.
+- Checks: `eternal_trials` 19/19 (both win counts rise; after the Eternal Trials defeat the host stays until the
+  client's Back), `locked_endscreen` 17/17 (5 s after the client's Back both still in the level, host waits for 1;
+  both in the map after the 120 s limit; no end screen left open on the host).
+- Unknown: whether "Try again" on the end screen goes through the same request (code path suggests To == From); not
+  tested.
+- Regression found by `eternal_trials`: the next Eternal Trials stage can be on the same map (Wildbach -> Wildbach),
+  which is a request with To == From while the host is on its victory screen, so the gate held it and the host stayed
+  on the victory screen. Eternal Trials stage changes are never held now (the Eternal Trials victory screen saves
+  nothing); the test waits for the new match, not only for the scene.
+
+Owner's requests during the same session (1.2.8.1):
+- Match stats and night summary per player (were host rules): Off (default) / End of match / Always (live) / Key for
+  the stats, Off / At dawn / Key for the summary, Stats key default I (Tab is the game's sprint toggle). The host
+  always counts and sends; live stats about once a second while they change (`MatchStatsPacket.Final` false).
+  Finding: a `BaseUI` panel's GameObject is its own `PanelRoot`, so its `Update` stops while hidden; panels that must
+  show themselves are ticked from the plugin object (`StatsPanelsTicker`). Checks: `coop_extras` 22/22, `coop_big` 15/15.
+- Build vote split: "Vote: confirm one plan" and "Vote: confirm all plans" (host, both On by default = 1.2.8.0
+  behaviour). Building again at a planned slot counts as confirming one plan. Check: `plan_votes` 15/15 (both
+  directions of each switch). The Co-op Settings menu is only on the map (Esc in a level shows the game's menu).
+- Question: arrow damage looks delayed for the joining player. From the code (not measured): client damage is blocked
+  locally (`HpPatch.TakeDamage`), the host applies it when its copy of the shot hits, HP comes back through `HpSync`,
+  so a client sees hits about one round trip late; the host sees none.
+
 ### Lead (not proven player-facing): host with no weapon equipped hangs the level start
 - Seen with a fresh profile: host on the level's first page (Level Select Frame) presses Play/Start directly; host's pick is
   `Invalid` (nothing equipped), `LevelDataSync` falls back to `WeaponRequestPacket` and also sends it to the host itself;

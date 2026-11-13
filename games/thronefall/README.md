@@ -6,21 +6,23 @@
 | Versions tested | Steam, buildid 26487600 (2026-11-11), Windows 11 |
 | Projects | Thronefall Multiplayer: BadWolf original (archived), Bwarhness / BiggestBlackest continuation, spencatro GitLab fork, Bemno fork (current) |
 | QA level | automated (base game, Nordfels; see QA) |
-| Last updated | 2026-11-13 |
+| Last updated | 2026-11-13 (1.2.8.1) |
 
 ## Where things stand
 
 Two players can play Thronefall together over Steam with Bemno's fork of Thronefall Multiplayer (1.2.7), which runs on
 the current Unity 6 build. Automated tests with two real game copies on two Steam accounts, plus the owner's first real
-session with a friend, found seven bugs in 1.2.7. The worst break everyday play: joining a friend a second time hangs,
-Continue Run gives the joining player an empty map, a friend without the level unlocked cannot join it, and the end
-screen can stay on screen for good. All seven have fixes that pass automated tests (the Esc fix with real key
-presses). On the owner's request, optional co-op settings were added: enemy and boss difficulty with per-player
+session with a friend, found nine bugs in 1.2.7. The worst break everyday play: joining a friend a second time hangs,
+Continue Run gives the joining player an empty map, a friend without the level unlocked cannot join it, the end
+screen can stay on screen for good, and the first player to press Back after a match cuts the others' end screens, so
+their win, quest progress and XP are not saved. All nine have fixes that pass automated tests (the Esc fix with real
+key presses). On the owner's request, optional co-op settings were added: enemy and boss difficulty with per-player
 scaling, a night vote, map pings with a ping wheel, a ready check, match and night summaries, joining a running level,
 teammate revive and respawn rules, planning with coloured blueprints and build votes, destroyed buildings that stay
 destroyed (with gold back and rebuilds), an endless mode, player colours per part, shared wardrobes, team HP, a kill
-counter and extra game keys; all changeable in a tabbed menu on the map without a new lobby and all off by default
-(local build 1.2.8.0, not published). The Craaghelm DLC maps were not tested.
+counter and extra game keys; all changeable in a tabbed menu on the map without a new lobby and all off by default.
+The game's own roguelike mode, Eternal Trials, works in co-op, and all players get one team score (local build
+1.2.8.1, not published). The Craaghelm DLC maps were not tested.
 
 ## Existing work
 
@@ -58,8 +60,8 @@ archive note invites forks "as long as they give credit".
 
 ## What we changed
 
-Seven fixes and a set of optional co-op settings, as thirteen patches against Bemno 1.2.7 (local build 1.2.8.0). The code
-is not published yet.
+Nine fixes, a set of optional co-op settings and Eternal Trials co-op, as fourteen patches against Bemno 1.2.7 (local
+build 1.2.8.1). The code is not published yet.
 
 1. **Joining hangs from the second session on.** `RecentPartners` (since 1.2.5) pings remembered partners while
    offline. When the ping times out (the partner's game is not ready), the `SteamNetworkingMessages` session to that peer
@@ -95,6 +97,18 @@ is not published yet.
    1.2.7: `UIManager.ExitHandled` ("Esc used this frame") was a static field that the first panel to use Esc set to
    true and nothing ever reset, so every later Esc was ignored by every mod panel. Fix: it is true only in the frame it
    was set. Not tested with a real key press (the bots cannot press Esc).
+8. **The host's newer weapons were added to the friend's loadout (1.2.8.1).** `LevelDataSync.CreateSyncPacket` left
+   out only Long Bow, Light Spear and Heavy Sword from the perks it sends, so a host with Battle Axe, Blood Wand or
+   another newer weapon gave it to every client as a second weapon (seen: Battle Axe twice in `CurrentlyEquipped`).
+   Fix: leave out every weapon and refuse duplicate equipment. Test: `eternal_trials` (same equipment on both).
+9. **The first Back on the end screen cut the others' end screens (1.2.8.1).** The game saves a match only inside its
+   end-screen animations: the win and the score go to the player's best, together with the equipment the level was
+   won with (used by quests like "Victory without Long Bow"), and the match score trickles into the XP bar; then it
+   saves. Back from one player took everyone to the map at once, so the others lost that. Seen: the client pressed
+   Back first, the host's win count did not rise. Fix: Back on an end screen marks the player as done; the host goes
+   to the map when every player is done, or after 120 s. Test: `eternal_trials` (both win counts rise, the host waits
+   for the client's Back), `locked_endscreen` (host still on its end screen 5 s after the client's Back, both in the
+   map after 120 s, no screen left open).
 
 ### New: optional co-op settings
 
@@ -105,11 +119,10 @@ Nothing changes unless a player turns it on. Session settings belong to the host
 | Night vote | host | Off | Off, On |
 | Map ping | host | Off | Off, On |
 | Ready check | host | Off | Off, On |
-| Match stats | host | Off | Off, On |
 | Join during a level | host | Off | Off, On |
 | Plan buildings first | host | Off | Off, On |
 | Build vote | host | Off | Off, AnyOne, Majority, All |
-| Night summary | host | Off | Off, On |
+| Vote: confirm one plan / Vote: confirm all plans (1.2.8.1, with a build vote) | host | On / On | On, Off |
 | Destroyed stay destroyed / Gold back | host | Off / 0% | Off, On / 0-100% |
 | Endless / Harder per night | host | Off / Steady | Off, On / Gentle 5%, Steady 10%, Hard 15%, Brutal 25%, Insane 40%, Custom 1-100% |
 | Teammate revive / Revive time | host | Off / 3 s | Off, On / 1-10 s |
@@ -119,8 +132,13 @@ Nothing changes unless a player turns it on. Session settings belong to the host
 | Profiles | host | - | 5 slots, Save / Load |
 | Color mode / part colours | each player | One color / Auto | One color, Individual: clothes, cape, trim, crown, breastplate, horse |
 | Show wardrobes, Team HP bars, Down alerts, Kill counter, Watch friend when down | each player | Off | Off, On |
+| Match stats (1.2.8.1; a host rule before) | each player | Off | Off, End of match, Always (live), Key |
+| Night summary (1.2.8.1; a host rule before) | each player | Off | Off, At dawn, Key |
+| Stats key (shows / hides them in Key mode) | each player | I | any key |
 | Chat time | each player | 3 s | 3-30 s |
 | Confirm plans (hold), Vote yes, Vote no | each player | C, Y, N | any key |
+| Stats key, Ping wheel Upgrade 1-4, Chat scroll up / down (1.2.8.1) | each player | I, 1-4, Page Up / Page Down | any key |
+| Fixed keys, listed at the bottom of "You" (1.2.8.1) | - | Esc, Del, Enter, Ctrl+V, F1 | not changeable |
 | Sprint mode | each player | Hold | Hold, Toggle |
 | Extra game keys (move, interact, sprint, call night, command, select 1-4, zoom, pause) | each player | none | any key |
 | Count & HP | host | Normal | 10 presets, the last one Custom |
@@ -180,7 +198,9 @@ The same bar lists every co-op setting that is not at its default, so both playe
 **Match stats (1.2.7.7).** The host counts, per player, enemy kills and damage dealt by the player's character (in
 `Hp.TakeDamage`, HP before and after, attacker under the player's object) and buildings built and upgraded (in the
 build confirmation). At victory or defeat it sends the table to everyone. Gold is not counted: the host holds the
-shared purse.
+shared purse. Since 1.2.8.1 the host always counts and sends: live about once a second while the numbers change, and
+the final table at the end; the night summary at every dawn. Each player chooses whether and when to see them (top
+right, owner's request).
 
 **Join during a level (1.2.7.9).** The lobby stays open in a level. A late joiner (or a player rejoining after a
 crash) is sent to the map first, gets the host's dawn save of the level, loads the level from it, and the host then
@@ -204,8 +224,26 @@ of that at dawn, so destruction never makes money.
 
 **Endless (1.2.8.0).** The game ends a level when the last wave is reached and done. With Endless on, every machine
 appends waves ahead of the current one (the level's last up to four waves without a boss or a placed unit, in a fixed
-order, so the lists match), and each extra night adds the chosen percentage to enemy HP and count. The game's own
-"Eternal Trial" mode uses a random seed per machine and is not used.
+order, so the lists match), and each extra night adds the chosen percentage to enemy HP and count. It is off in
+Eternal Trials.
+
+**Eternal Trials (1.2.8.1).** The game's roguelike mode: a run is a chain of stages, each a map with a weapon and
+perks picked from three cards, waves generated from the run's seed. On its own every machine would roll its own seed
+and cards. The host owns the run: its run (JSON) rides in the level sync packet and clients use it in memory; every
+call that changes a run is skipped on clients, so a client's own single-player run is never touched, and online the
+host's run file is `mp_EternalTrials_V4.json`. Any player can pick a card (a client's pick goes to the host, the
+first pick wins); the card's weapon and the run's perks apply to every player. A stage's match save travels under the
+game's key `ET_CurrentLevel`. Durststein logs a game error in Eternal Trials ("Coroutine couldn't be started because
+the the game object 'Blacksmith' is inactive!"); the same happens offline in single player, so it is the game's.
+
+**Team score (1.2.8.1).** The game computes the end-of-match score on each machine from local values (the gold bonus
+from the player's own coins, while in co-op the host holds the gold; the no-retry bonus from the local match save).
+Clients ended a won level with less (seen: 1175 against the host's 1872), which made score quests harder for them. The
+host now sends its score parts once a second while in a level and clients use them.
+
+**Quests.** Each level has its own quests (Nordfels: 6: Victory, Score 5000, Victory without Long Bow, with Challenge
+the Turtle God, with the Snake God, with Turtle + Tiger God). They are checked from each player's own save, so in
+co-op each player earns them for themselves; a win counts once the end screens have played (fix 9).
 
 **Looks and HUD (1.2.7.9-1.2.8.0).** Colours per part (clothes, cape, trim, crown, breastplate, horse) or one colour;
 the main colour stays the player's colour for pings, blueprints, arrows, stats and chat names. Shared wardrobes: each
@@ -300,7 +338,12 @@ python -I games/thronefall/qa/tf_bots.py --playbook coop_extras --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook coop_more --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook late_join --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook coop_big --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook eternal_trials --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook plan_votes --level Nordfels
 ```
+
+Known game errors (the driver lists them under `known` and does not count them) are checked offline first: start one
+copy with `-coopqa solo`, then `to_map` and `et_solo` (Eternal Trials on a chosen map, base game code only).
 
 Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
 
@@ -321,6 +364,10 @@ Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
 | `late_join` Nordfels (1.2.7.9) | PASS 15/15: client crash after dawn, host builds a tower alone, client restarts and joins straight into the running level, 1 build replayed, shared state equal, host save file hash unchanged, one more day and night together |
 | `coop_big` Nordfels (1.2.8.0) | PASS 15/15: part colours and wardrobe seen by the other player; coloured chat names; team HP; plan, vote yes, built; plan, vote no (still planned), vote yes, built; down alert; tower destroyed, summary equal on both, gold back 2 of 3 at 50%, rebuild plan, vote, rebuilt; endless: no match end at the last wave, wave lists equal, +10% on the first extra night |
 | Regression on 1.2.8.0 | `coop_more`, `coop_extras`, `coop_settings`, `map_ping`, `late_join`, `rejoin`, `locked_endscreen` all PASS; owner files untouched |
+| `eternal_trials` Nordfels (1.2.8.1) | PASS 19/19: client's banner before a run only says the host starts; host starts a run, the client sees the same 3 cards and picks one; both load that map with the same stage, seed, wave hash, perks and weapon; forced win: both on stage 1 with the same new cards (also when the next stage is on the same map); forced defeat ends the run on both; single-player run files unchanged on both, only the host's `mp_EternalTrials_V4.json` written; after the defeat the host waits for the client's Back; next Classic level in Classic mode; one night, then the same score parts on both (553 + 56); forced win: score 611 on both on the victory screen, both win counts rise, Victory quest done on both |
+| `locked_endscreen` Nordfels (1.2.8.1) | PASS 17/17: 5 s after the client's Back both are still in the level and the host waits for one player; both in the map after the 120 s limit; no end screen left open |
+| `plan_votes` Nordfels (1.2.8.1) | PASS 15/15: vote for one plan Off: building again at the planned castle builds it, no vote; vote for all plans On: Confirm all opens a vote, yes builds it; then on the map the other way round: one plan opens a vote, Confirm all builds at once |
+| `coop_extras`, `coop_big` (1.2.8.1, stats per player) | PASS 22/22 and 15/15: client on Match stats Always sees "Match stats (live)" during the level, host on End of match sees nothing until the end; the final table equal on both; night summary: host on At dawn sees it, client on Key does not until the Stats key, a second press hides it |
 | Real keys and mouse on a visible copy (owner allowed) | 9/10: Esc closes Co-op Settings twice; tap ping; ping wheel up = Attack; wheel + 4 = Upgrade to 4; hold C next to a plan builds it; extra key J calls the night; sprint toggle with an extra key. Injected Left Shift did not reach the game's input, so the toggle on the game's own Shift is unverified |
 
 ## How to play
@@ -349,6 +396,9 @@ presses Back. With the fixed build, the optional settings are in Esc > Co-op Set
   level flag.
 - Reported once, not reproduced: the joining player did not see the perks the host selected (in the tutorial). The
   owner later confirmed the friend does see them outside the tutorial.
+- Not tested in 1.2.8.1: Eternal Trials Continue after restarting the game, an Eternal Trials stage played to its
+  real end (the tests force the win and the defeat), "Try again" on the end screen with the end-screen wait, the
+  Stats key with a real key press (tests call the same function), three or more players with the end-screen wait.
 - Not tested in 1.2.8.0: the sprint toggle on the game's own Shift key, controller buttons as keys, the Co-op Settings
   menu with a controller, match stats after a victory and with upgrades, three or more players (watch switching, votes
   with more than two), joining at night (wait for dawn), an endless run played for many nights, Totend's second boss
@@ -359,6 +409,9 @@ presses Back. With the fixed build, the optional settings are in Esc > Co-op Set
 ## Next steps
 
 - Publish the fixes (offer them to Bemno/Thronefall_Multiplayer).
+- Measure the hit delay a client sees: its damage is applied on the host and the new HP comes back, so a client's
+  arrow hits show about one round trip late (from the code, not measured). Client-side prediction is possible but
+  risks HP differences between machines.
 - Shared perk selection with different unlocks: 26 equippables are not in the mod's equipment table and get runtime
   ids, which may differ between machines (suspicion).
 - A victory run (the bot needs upgrade choice dialogs to survive 13 waves), Craaghelm maps (need the DLC), army

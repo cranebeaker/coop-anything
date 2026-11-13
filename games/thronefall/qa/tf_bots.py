@@ -1,4 +1,4 @@
-"""Thronefall co-op playbooks on the hub bot runner (tools/bots).
+﻿"""Thronefall co-op playbooks on the hub bot runner (tools/bots).
 
 The game copies must already be running and connected (run-connect.ps1 -Unlock). Instance 0 is the host on port 47801,
 instance 1 the client on 47802. The runner settles and compares the `shared` snapshot after every step; the game's
@@ -228,8 +228,8 @@ END_FRAMES = ("Level Up Frame", "After Match Frame", "After Match Frame ")
 
 class LockedEndscreen(core.Playbook):
     """Fix 4: the level is locked on the client, the host opens it, the client follows. Fix 5: after the match ends
-    the client clicks through its end screens and presses Back first; the host, still on its end screens, is pulled to
-    the map and must not keep an end screen open there."""
+    the client clicks through its end screens and presses Back first; fix 9: the host is not pulled out of its own end
+    screens but waits; after the maximum wait it is pulled to the map and must not keep an end screen open there."""
     name = "locked_endscreen"
     summary = "Client follows the host into a level it has not unlocked; Back from one player's end screen closes the other's."
     min_players = 2
@@ -246,17 +246,27 @@ class LockedEndscreen(core.Playbook):
         with ctx.step("client clicks through its end screens and presses Back first", compare=False):
             pressed = []
             for _ in range(10):
-                if client.scene() == "_LevelSelect":
-                    break
                 ui = client.call("ui")
                 buttons = [e.split(" [")[0] for e in ui["elements"] if e.endswith("[TFUITextButton]")]
                 choice = next((b for b in buttons if b in ("Continue Reward Button", "Back Button")), None)
                 if choice:
                     client.call("ui_apply", name=choice)
                     pressed.append("%s on %s" % (choice, ui["active_frame"]))
+                    if choice == "Back Button":
+                        break
                 time.sleep(3)
             ctx.log("client pressed: %s" % pressed)
-            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 60)
+            ctx.expect(pressed and pressed[-1].startswith("Back Button"), "client pressed Back")
+
+        with ctx.step("fix 9: the host is not pulled out of its end screen; the host waits for it", compare=False):
+            ctx.pause(5)
+            gate = host.call("endgate")
+            ctx.log("host scene %s, client scene %s, gate %s" % (host.scene(), client.scene(), gate))
+            ctx.expect(host.scene() == self.level and client.scene() == self.level, "both still in the level")
+            ctx.expect(gate["waiting"] == 1, "the host waits for one player (itself)")
+
+        with ctx.step("after the maximum wait (120 s) both go to the map", compare=False):
+            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 150)
             ctx.pause(3)
 
         with ctx.step("no end screen left open on the host"):
@@ -467,6 +477,20 @@ class MapPing(core.Playbook):
             ctx.log("client keys: %s" % c)
             ctx.expect(c["ping"] == "F" and c["chat"] == "Return", "client keys wrong: %s" % c)
             ctx.must(keys_set(client, "kping", "Mouse2"), "client: ping key back to the default")
+
+        with ctx.step("1.2.8.1: ping wheel and chat scroll keys are rebindable; fixed keys are listed", compare=False):
+            rows = host.call("keys")["rows"]
+            ctx.log("wheel %s, chat scroll %s/%s, fixed %s" % ([rows.get("kwheel%d" % n) for n in range(1, 5)],
+                    rows.get("kchatup"), rows.get("kchatdown"), [rows.get("kfix%d" % n) for n in range(1, 8)]))
+            ctx.expect(all(rows.get("kwheel%d" % n) for n in range(1, 5)) and rows.get("kchatup") and rows.get("kchatdown"),
+                       "new key rows missing: %s" % rows)
+            ctx.expect(rows.get("kfix1") == "Esc" and all(rows.get("kfix%d" % n) for n in range(1, 8)), "fixed-key rows missing")
+            ctx.must(keys_set(host, "kwheel4", "F4"), "host: ping wheel Upgrade 4 on F4")
+            ctx.must(keys_set(host, "kchatup", "Home"), "host: chat scroll up on Home")
+            r = host.call("keys")
+            ctx.expect((r["wheel4"], r["chatUp"]) == ("F4", "Home"), "new keys not applied: %s / %s" % (r["wheel4"], r["chatUp"]))
+            ctx.must(keys_set(host, "kwheel4", "Alpha4"), "host: Upgrade 4 back to 4")
+            ctx.must(keys_set(host, "kchatup", "PageUp"), "host: chat scroll up back to Page Up")
             host.call("coop_panel", action="close")
             client.call("coop_panel", action="close")
 
@@ -543,11 +567,14 @@ class CoopExtras(core.Playbook):
                 ctx.expect(all(p["body"] == "5879DB" for p in players), "body not the game's blue by default: %s" % players)
                 ctx.expect(not b.call("arrows")["on"], "friend arrow on by default")
 
-        with ctx.step("host: ready check, match stats, map ping on, Count & HP Tough; colours Red and Cyan; arrows on",
-                      compare=False):
+        with ctx.step("host: ready check, map ping on, Count & HP Tough; match stats per player (host End of match, "
+                      "client Always); colours Red and Cyan; arrows on", compare=False):
             CoopSettings.open_menu(None, ctx, host)
-            for key, value in (("ready", "On"), ("stats", "On"), ("ping", "On"), ("count", "Tough")):
+            for key, value in (("ready", "On"), ("ping", "On"), ("count", "Tough")):
                 ctx.must(panel_set(host, key, value), "host: %s %s" % (key, value))
+            ctx.must(keys_step(host, "kstats", "End of match"), "host: match stats End of match")
+            CoopSettings.open_menu(None, ctx, client)
+            ctx.must(keys_step(client, "kstats", "Always"), "client: match stats Always")
             ctx.must(keys_step(host, "kcolor", "Red"), "host colour Red")
             ctx.must(keys_step(host, "karrow", "On"), "host arrow on")
             hd = host.call("coop_panel", action="state")["details"]
@@ -654,6 +681,11 @@ class CoopExtras(core.Playbook):
                 self.client_built = 1
                 ctx.settle()
             ctx.log("host stats so far: %s" % host.call("match_stats")["current"])
+
+        with ctx.step("match stats during the level: live on the client (Always), hidden on the host (End of match)",
+                      compare=False):
+            ctx.wait_until("live stats on the client", lambda: client.call("match_stats")["showing"] == "Match stats (live)", 15)
+            ctx.expect(host.call("match_stats")["showing"] == "", "host shows stats during the level")
 
         # Play to the end with only the castle (and its upgrades), so the match ends within a few nights.
         DayNight(self.level, 0, build_filter=lambda s: s["name"] == "Castle Center", enter=False).run(ctx)
@@ -911,9 +943,13 @@ class CoopBig(core.Playbook):
 
         with ctx.step("host rules: plan first, vote AnyOne, summary, destroyed stay destroyed 50%, endless", compare=False):
             CoopSettings.open_menu(None, ctx, host)
-            for key, value in (("plan", "On"), ("vote2", "AnyOne"), ("summary", "On"), ("keep", "On"),
+            for key, value in (("plan", "On"), ("vote2", "AnyOne"), ("keep", "On"),
                                ("refund", "50%"), ("endless", "On")):
                 ctx.must(panel_set(host, key, value, tries=24), "host: %s %s" % (key, value))
+            ctx.must(keys_step(host, "ksummary", "At dawn"), "host: night summary At dawn")
+            CoopSettings.open_menu(None, ctx, client)
+            ctx.must(keys_step(client, "ksummary", "Key"), "client: night summary on the Stats key")
+            CoopSettings.open_menu(None, ctx, host)
             for key, value in (("kwardrobe", "On"), ("kteamhp", "On"), ("kdown", "On")):
                 ctx.must(keys_step(host, key, value), "host: %s %s" % (key, value))
             ctx.must(keys_step(host, "gsprintmode", "Toggle"), "host: sprint toggle")
@@ -1010,6 +1046,12 @@ class CoopBig(core.Playbook):
             h, c = host.call("night_report"), client.call("night_report")
             ctx.log("summary on the client: %s / %s" % (c["rows"], c["lostText"]))
             ctx.expect(h["rows"] == c["rows"] and c["rows"], "summary differs or missing: host %s client %s" % (h["rows"], c["rows"]))
+            ctx.expect(h["panel"], "host (At dawn) does not show the summary")
+            ctx.expect(not c["panel"], "client (Key) shows the summary without the key")
+            client.call("stats_key")
+            ctx.wait_until("client shows the summary after the Stats key", lambda: client.call("night_report")["panel"], 5)
+            client.call("stats_key")
+            ctx.wait_until("client hides it after the second press", lambda: not client.call("night_report")["panel"], 5)
             if tower_id is not None:
                 ctx.expect(c["lostText"] and "gold back" in c["lostText"], "no lost building / gold back: %r" % c["lostText"])
                 ctx.wait_until("rebuild listed on the client", lambda: any(p.split("|")[4] == "rebuild" for p in client.call("plans")["plans"]), 10)
@@ -1117,6 +1159,302 @@ class DayNight(core.Playbook):
                 ctx.expect(client.gamestate() == ended, "client shows %s, host %s" % (client.gamestate(), ended))
                 for m in ctx.present:
                     ctx.log("%s end screen: %s" % (m.name, m.bot.call("ui")))
+
+
+def et(bot):
+    try:
+        r = bot.call("et")
+    except (OSError, ConnectionError, RuntimeError):
+        r = {"active": False}   # a scene is loading
+    r.setdefault("run", {})
+    return r
+
+
+def try_ok(bot, cmd, **args):
+    """True when the driver command succeeded (the connection raises on ok: false)."""
+    try:
+        return bool(bot.call(cmd, **args).get("ok", True))
+    except RuntimeError:
+        return False
+
+
+def run_of(bot):
+    return et(bot)["run"]
+
+
+class PlanVotes(core.Playbook):
+    """1.2.8.1: the build vote can be switched off separately for confirming one plan and for confirming all plans.
+    Round 1: one plan without a vote, all plans with a vote. Round 2 (after going back to the map, where the settings
+    are): one plan with a vote, all plans without a vote."""
+    name = "plan_votes"
+    summary = ("Plan first + build vote AnyOne. Round 1 (vote one Off, all On): building again at a plan builds it at once; "
+               "Confirm all opens a vote. Round 2 (one On, all Off): building again opens a vote; Confirm all builds at once.")
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+
+        def vote_open():
+            return (client.call("plans")["vote"] or "").split("|")[1:2] == ["Open"]
+
+        def no_vote_for(seconds):
+            end = time.monotonic() + seconds
+            while time.monotonic() < end:
+                if vote_open():
+                    return False
+                time.sleep(0.5)
+            return True
+
+        def planned(sid):
+            return any(p.split("|")[0] == str(sid) for p in host.call("plans")["plans"])
+
+        def built(sid):
+            return slot(host, sid)["level"] == 1 and slot(client, sid)["level"] == 1
+
+        def rules(one, all_):
+            with ctx.step("host rules: plan first, build vote AnyOne, vote for one plan %s, for all plans %s" % (one, all_),
+                          compare=False):
+                CoopSettings.open_menu(None, ctx, host)
+                for key, value in (("plan", "On"), ("vote2", "AnyOne"), ("vone", one), ("vall", all_)):
+                    ctx.must(panel_set(host, key, value, tries=24), "host: %s %s" % (key, value))
+                ctx.log("host explanations: %s" % {k: v for k, v in host.call("coop_panel", action="state")["details"].items()
+                                                  if k in ("vone", "vall")})
+                host.call("coop_panel", action="close")
+
+        def confirm_one(vote):
+            castle = next(s for s in host.slots() if s["name"] == "Castle Center")
+            with ctx.step("one plan, vote %s: the host plans the castle and builds there again" % ("On" if vote else "Off"),
+                          compare=False):
+                host.build(castle["id"])
+                ctx.wait_until("castle planned", lambda: planned(castle["id"]), 10)
+                ctx.expect(slot(host, castle["id"])["level"] == 0, "castle built instead of planned")
+                host.build(castle["id"])
+                if vote:
+                    ctx.wait_until("vote open on the client", vote_open, 10)
+                    ctx.expect(slot(host, castle["id"])["level"] == 0, "castle built before the vote")
+                    client.call("plans", action="vote", yes=True)
+                ctx.wait_until("castle built on both", lambda: built(castle["id"]), 15)
+                if not vote:
+                    ctx.expect(no_vote_for(2), "a vote opened although the vote for one plan is Off")
+
+        def confirm_all(vote):
+            with ctx.step("all plans, vote %s: the client plans a building, the host confirms all" % ("On" if vote else "Off"),
+                          compare=False):
+                options = [s for s in affordable(host.slots(), host.gold()) if s["name"] != "Castle Center"]
+                ctx.expect(options, "nothing affordable to plan")
+                if not options:
+                    return
+                sid = options[0]["id"]
+                client.build(sid)
+                ctx.wait_until("planned", lambda: planned(sid), 10)
+                host.call("plans", action="confirm", near=False)
+                if vote:
+                    ctx.wait_until("vote open on the client", vote_open, 10)
+                    client.call("plans", action="vote", yes=True)
+                ctx.wait_until("built on both", lambda: built(sid), 15)
+                if not vote:
+                    ctx.expect(no_vote_for(2), "a vote opened although the vote for all plans is Off")
+                ctx.log("built %s (%s)" % (options[0]["name"], "after a vote" if vote else "without a vote"))
+
+        rules("Off", "On")
+        enter_level(ctx, host, client, self.level)
+        confirm_one(False)
+        confirm_all(True)
+
+        with ctx.step("back to the map", compare=False):
+            host.back_to_map()
+            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 60)
+            ctx.pause(3)
+
+        rules("On", "Off")
+        enter_level(ctx, host, client, self.level)
+        confirm_one(True)
+        confirm_all(False)
+
+
+class EternalTrials(core.Playbook):
+    """1.2.8.1: the game's Eternal Trials in co-op. The host starts a run at the banner, the client sees the same three
+    map choices and picks one, both play the same stage (same waves, perks and weapon), a win moves both to the next
+    stage with the same new choices, a loss ends the run on both; single-player run files stay untouched. Then a normal
+    level: both back in Classic mode, and a win counts for each player's own level quests."""
+    name = "eternal_trials"
+    summary = "Eternal Trials run shared by host and client: start, client pick, same waves, win, next stage, loss; quests after a co-op win."
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+        with ctx.step("both in the map, 2 players; run files and quests before", compare=False):
+            ctx.expect(all(m.bot.status()["players"] == 2 for m in ctx.present), "both machines see 2 players")
+            files0 = {m.name: et(m.bot)["files"] for m in ctx.present}
+            quests0 = {m.name: m.bot.call("quests", scene=self.level) for m in ctx.present}
+            for m in ctx.present:
+                q = quests0[m.name]
+                ctx.log("%s files %s; %s quests %s/%s, wins %s: %s" % (m.name, files0[m.name], self.level, q["complete"],
+                                                                       q["total"], q["wins"], q["list"]))
+
+        with ctx.step("client presses the banner before any run: only a message", compare=False):
+            ctx.expect(try_ok(client, "et_banner"), "client finds the banner")
+            time.sleep(1)
+            ctx.log("client after the banner: active frame %s, mode ET %s" % (client.call("ui").get("active_frame"), et(client)["active"]))
+
+        with ctx.step("host presses the banner and starts a new run", compare=False):
+            ctx.expect(try_ok(host, "et_banner"), "host finds the banner")
+            time.sleep(1)
+            if not try_ok(host, "et_new"):
+                ctx.log("host: a pop-up came first (%s), closing it and pressing the banner again" % host.call("ui").get("active_frame"))
+                host.call("et_banner", close=True)
+                ctx.wait_until("select screen open, New run pressed", lambda: try_ok(host, "et_new"), 15)
+            ctx.wait_until("host has a fresh run with 3 choices",
+                           lambda: et(host)["active"] and len(et(host).get("choices", [])) == 3, 15)
+            h = et(host)
+            ctx.log("host run %s; choices %s" % (h["run"], h["choices"]))
+            ctx.expect(h["run"]["stage"] == 0 and not h["run"]["inGame"], "fresh run at stage 0")
+
+        with ctx.step("client gets the host's run and the same 3 choices", compare=False):
+            ctx.wait_until("client run = host run",
+                           lambda: et(client)["active"] and run_of(client).get("seed") == run_of(host).get("seed"), 20)
+            ctx.expect(et(client).get("choices") == et(host)["choices"],
+                       "choices differ: host %s client %s" % (et(host)["choices"], et(client).get("choices")))
+
+        choices = et(host)["choices"]
+        pick = choices[1].split(":")
+        with ctx.step("client opens the banner (the host's choices) and picks the 2nd map (%s)" % pick[1], compare=False):
+            client.call("et_banner")
+            ctx.wait_until("client shows the choices and picks", lambda: try_ok(client, "et_pick", id=int(pick[0])), 15)
+
+        with ctx.step("both load %s in Eternal Trials: same stage, seed, waves, perks and weapon" % pick[1], compare=False):
+            ctx.wait_until("both in %s" % pick[1], lambda: host.scene() == pick[1] and client.scene() == pick[1], 90)
+            ctx.pause(5)
+            h, c = et(host), et(client)
+            ctx.log("host %s" % h)
+            ctx.log("client %s" % c)
+            ctx.expect(h["remotePicks"] == 1, "the host confirmed the client's pick")
+            ctx.expect(h["active"] and c["active"], "Eternal Trials mode on both")
+            ctx.expect(h["run"]["stage"] == c["run"]["stage"] == 0 and h["run"]["seed"] == c["run"]["seed"], "same stage and seed")
+            ctx.expect(h["waves"] == c["waves"] and h["wavesHash"] == c["wavesHash"],
+                       "same waves (host %s %s, client %s %s)" % (h["waves"], h["wavesHash"], c["waves"], c["wavesHash"]))
+            ctx.expect(h["equipped"] == c["equipped"], "same perks and weapon equipped")
+            ctx.expect(h["run"]["weapon"] in h["equipped"], "the run's weapon is equipped")
+            ctx.expect(sorted(h["run"]["perks"]) == sorted(pick[3].split("+")) if pick[3] else True, "the picked perks are in the run")
+
+        with ctx.step("the stage is won (forced on the host): both move to stage 1 with the same new choices", compare=False):
+            host.call("force_end", victory=True)
+            ctx.wait_until("victory on both", lambda: host.gamestate() == "AfterMatchVictory" and client.gamestate() == "AfterMatchVictory", 30)
+            ctx.wait_until("host at stage 1", lambda: run_of(host).get("stage") == 1 and not run_of(host).get("inGame"), 60)
+            ctx.wait_until("client at the host's stage 1",
+                           lambda: run_of(client).get("stage") == 1 and run_of(client).get("seed") == run_of(host).get("seed"), 30)
+            h, c = et(host), et(client)
+            ctx.log("host run %s choices %s" % (h["run"], h.get("choices")))
+            ctx.expect(h.get("choices") == c.get("choices"), "same new choices (client %s)" % c.get("choices"))
+            ctx.expect(h["run"]["score"] == c["run"]["score"], "same run score (%s / %s)" % (h["run"]["score"], c["run"]["score"]))
+
+        choices = et(host)["choices"]
+        pick = choices[0].split(":")
+        with ctx.step("host continues and picks the 1st map (%s): both load stage 1" % pick[1], compare=False):
+            time.sleep(3)
+            ctx.wait_until("host shows the choices and picks",
+                           lambda: (try_ok(host, "et_continue") or True) and try_ok(host, "et_pick", id=int(pick[0])), 20)
+            # The next stage can be on the same map, so wait for the new match, not only for the scene.
+            ctx.wait_until("both playing stage 1 in %s" % pick[1], lambda: all(
+                m.scene() == pick[1] and m.gamestate() == "InMatch" and run_of(m).get("stage") == 1 for m in (host, client)), 90)
+            ctx.pause(5)
+            h, c = et(host), et(client)
+            ctx.log("host %s" % h)
+            ctx.expect(h["run"]["stage"] == c["run"]["stage"] == 1 and h["run"]["seed"] == c["run"]["seed"], "same stage 1 and seed")
+            ctx.expect(h["wavesHash"] == c["wavesHash"], "same waves (host %s, client %s)" % (h["wavesHash"], c["wavesHash"]))
+            ctx.expect(h["equipped"] == c["equipped"], "same perks and weapon (host %s, client %s)" % (h["equipped"], c["equipped"]))
+            ctx.expect(sorted(h["run"]["perks"]) == sorted(c["run"]["perks"]), "same run perks")
+
+        with ctx.step("the stage is lost (forced on the host): the run is over on both", compare=False):
+            host.call("force_end", victory=False)
+            ctx.wait_until("defeat on both", lambda: host.gamestate() == "AfterMatchDefeat" and client.gamestate() == "AfterMatchDefeat", 30)
+            ctx.wait_until("run complete on both", lambda: run_of(host).get("complete") and run_of(client).get("complete"), 60)
+
+        with ctx.step("single-player run files untouched; the host's co-op run has its own file", compare=False):
+            for m in ctx.present:
+                f = et(m.bot)["files"]
+                ctx.log("%s files after: %s" % (m.name, f))
+                ctx.expect(f["EternalTrials_V4.json"] == files0[m.name]["EternalTrials_V4.json"],
+                           "%s single-player run file unchanged" % m.name)
+            ctx.expect(et(host)["files"]["mp_EternalTrials_V4.json"] != "none", "host wrote mp_EternalTrials_V4.json")
+            ctx.expect(et(client)["files"]["mp_EternalTrials_V4.json"] == files0[ctx.clients[0].name]["mp_EternalTrials_V4.json"],
+                       "the client wrote no run file")
+
+        with ctx.step("back to the map: the host waits for the client's Back, then both go", compare=False):
+            host.back_to_map()
+            ctx.pause(3)
+            ctx.expect(host.scene() != "_LevelSelect", "the host waits for the client (end screen gate)")
+            client.back_to_map()
+            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 60)
+            ctx.pause(3)
+
+        enter_level(ctx, host, client, self.level)
+        with ctx.step("a normal level after Eternal Trials: Classic mode on both, normal waves", compare=False):
+            h, c = et(host), et(client)
+            ctx.expect(not h["active"] and not c["active"], "Classic mode on both")
+            ctx.expect(h["wavesHash"] == c["wavesHash"], "same waves")
+
+        with ctx.step("one night: the game adds night points and gold, so the score is not empty", compare=False):
+            castle = next(s for s in host.slots() if s["name"] == "Castle Center")
+            ctx.must(host.build(castle["id"]), "host builds the castle (the night needs it)")
+            ctx.must(host.call_night(), "host calls the night")
+            ctx.wait_until("night on both", lambda: host.time_of_day() == "Night" and client.time_of_day() == "Night", 20)
+            ctx.expect(wait_dawn(ctx, host, client) == "Day", "dawn on both")
+
+        with ctx.step("one team score: the client uses the host's score parts", compare=False):
+            ctx.pause(3)
+            hs, cs = host.call("score"), client.call("score")
+            ctx.log("score host %s client %s" % (hs, cs))
+            ctx.expect(cs.get("fromHost"), "the client has the host's score")
+            keys = ("current", "gold", "mutator", "victoryNoRetry", "defeatNoRetry")
+            ctx.expect(all(hs[k] == cs[k] for k in keys), "same score parts")
+            ctx.expect(hs["current"] > 0, "night points on the host (%s)" % hs["current"])
+
+        with ctx.step("win the level (forced), click through the rewards: it counts for each player's quests", compare=False):
+            host.call("force_end", victory=True)
+            ctx.wait_until("victory on both", lambda: host.gamestate() == "AfterMatchVictory" and client.gamestate() == "AfterMatchVictory", 30)
+            ctx.pause(3)
+            keys = ("current", "gold", "mutator", "victoryNoRetry", "defeatNoRetry")
+            end = {m.name: m.bot.call("score") for m in ctx.present}
+            ctx.log("score on the victory screen: %s" % end)
+            hs, cs = end[ctx.host.name], end[ctx.clients[0].name]
+            ctx.expect(cs.get("fromHost"), "the client shows the host's score")
+            ctx.expect(all(hs.get(k) == cs.get(k) for k in keys), "same score parts on both")
+            ctx.expect(sum(hs.get(k, 0) for k in keys) > 0, "the score is not empty (host %s)" % hs)
+            for _ in range(20):
+                if host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect":
+                    break
+                for b in (host, client):
+                    try:
+                        ui = b.call("ui")
+                    except RuntimeError:
+                        continue
+                    buttons = [e.split(" [")[0] for e in ui["elements"] if e.endswith("[TFUITextButton]")]
+                    choice = next((x for x in buttons if x in ("Continue Reward Button", "Continue Button", "Back Button")), None)
+                    if choice:
+                        try_ok(b, "ui_apply", name=choice)
+                time.sleep(3)
+            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 60)
+            ctx.wait_until("the win is recorded on both",
+                           lambda: all(m.bot.call("quests", scene=self.level)["wins"] > quests0[m.name]["wins"] for m in ctx.present), 30)
+            got = {}
+            for m in ctx.present:
+                q = got[m.name] = m.bot.call("quests", scene=self.level)
+                ctx.log("%s: quests %s/%s, beaten %s, best score %s, last win with %s: %s" % (
+                    m.name, q["complete"], q["total"], q["beaten"], q["highscore"], q["lastWin"], q["list"]))
+                ctx.expect(q["beaten"], "%s: level marked beaten" % m.name)
+                # The test copies may have it from an earlier run, so check the quest itself, not the count.
+                ctx.expect(q["list"] and q["list"][0].startswith("Achieve Victory") and q["list"][0].endswith("True"),
+                           "%s: the Victory quest is done" % m.name)
+                ctx.expect(q["complete"] >= quests0[m.name]["complete"], "%s: no quest lost" % m.name)
 
 
 class SaveContinue(core.Playbook):
@@ -1278,6 +1616,10 @@ def main(argv):
         pb = LateJoin(a.level)
     elif a.playbook == "coop_big":
         pb = CoopBig(a.level)
+    elif a.playbook == "eternal_trials":
+        pb = EternalTrials(a.level)
+    elif a.playbook == "plan_votes":
+        pb = PlanVotes(a.level)
     else:
         pb = DayNight(a.level, a.nights)
     opts = {"settle_s": 30.0, "settle_poll_s": 0.5}

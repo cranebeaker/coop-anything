@@ -1,4 +1,4 @@
-// Test-only driver for Thronefall Multiplayer. Inert unless the game is started with "-coopqa host" or "-coopqa join".
+﻿// Test-only driver for Thronefall Multiplayer. Inert unless the game is started with "-coopqa host" or "-coopqa join".
 //   -coopqa host|join          role of this copy (host creates a lobby, join joins the lobby id from the lobby file)
 //   -coopqa-lobbyfile <path>   host writes the lobby id there, the joiner reads it
 //   -coopqa-port <n>           JSON control port on 127.0.0.1 (see Rpc.cs and the command list in Handle)
@@ -33,6 +33,16 @@ namespace CoopQa
         private static readonly List<string> Errors = new List<string>();
         private static readonly List<string> Dialogs = new List<string>();
 
+        // Errors the game logs by itself, checked offline in single player (-coopqa solo, mod loaded but not
+        // connected). They are listed under "known" by the errors command and do not count as failures.
+        //  - Eternal Trials on Durststein: its Blacksmith is an Eternal-Trials-only build slot that starts inactive
+        //    (3 of 3 solo runs with different perks, buildid 26487600).
+        private static readonly string[] KnownGameErrors =
+        {
+            "Coroutine couldn't be started because the the game object 'Blacksmith' is inactive!",
+        };
+        private static readonly List<string> KnownErrors = new List<string>();
+
         private void Awake()
         {
             var args = Environment.GetCommandLineArgs();
@@ -49,7 +59,10 @@ namespace CoopQa
             Application.runInBackground = true;
             Application.logMessageReceived += (msg, stack, type) =>
             {
-                if ((type == LogType.Exception || type == LogType.Error) && Errors.Count < 200) Errors.Add(msg.Split('\n')[0]);
+                if (type != LogType.Exception && type != LogType.Error) return;
+                var first = msg.Split('\n')[0];
+                if (Array.IndexOf(KnownGameErrors, first) >= 0) { if (KnownErrors.Count < 200) KnownErrors.Add(first); }
+                else if (Errors.Count < 200) Errors.Add(first);
             };
             Log($"role={_role} lobbyfile={_lobbyFile}");
 
@@ -518,6 +531,156 @@ namespace CoopQa
                         ["bonusNext"] = spawner != null ? ThronefallMP.Network.EndlessMode.Bonus(spawner.Wavenumber) : 0f,
                     };
                 }
+                case "et":
+                {
+                    // Eternal Trials: game mode, this machine's run, the three map choices and the level's waves.
+                    var o = new JObject
+                    {
+                        ["active"] = ThronefallMP.Network.EternalTrialsCoop.Active,
+                        ["remotePicks"] = ThronefallMP.Network.EternalTrialsCoop.RemotePicks,
+                        ["scene"] = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                        ["state"] = LocalGamestate.Instance != null ? LocalGamestate.Instance.CurrentState.ToString() : "",
+                    };
+                    var run = ThronefallMP.Network.EternalTrialsCoop.Loaded;
+                    if (run != null)
+                    {
+                        o["run"] = new JObject
+                        {
+                            ["stage"] = run.stage, ["seed"] = run.currentStageSeed, ["map"] = run.currentMap,
+                            ["score"] = run.score, ["inGame"] = run.inGame, ["inNight"] = run.inNight,
+                            ["complete"] = run.runComplete,
+                            ["perks"] = new JArray(run.acquiredPerks.Where(p => p != null).Select(p => p.name).ToArray()),
+                            ["weapon"] = run.currentWeapon != null ? run.currentWeapon.name : "",
+                        };
+                        if (ThronefallMP.Network.EternalTrialsCoop.Active && !run.inGame)
+                        {
+                            o["choices"] = new JArray(EternalTrialsRunManager.GetMapChoices().Select(c =>
+                                c.id + ":" + c.mapName + ":" + (c.containedWeapon != null ? c.containedWeapon.name : "") + ":" +
+                                string.Join("+", c.containedPerks.Where(p => p != null).Select(p => p.name)) + ":" + c.goldAtStart).ToArray());
+                        }
+                    }
+                    if (PerkManager.instance != null)
+                    {
+                        o["equipped"] = new JArray(PerkManager.instance.CurrentlyEquipped.Where(e => e != null).Select(e => e.name).OrderBy(n => n).ToArray());
+                    }
+                    // The run files (single-player and co-op) as fingerprints, to show which ones a test changed.
+                    var files = new JObject();
+                    foreach (var name in new[] { "EternalTrials_V4.json", "mp_EternalTrials_V4.json" })
+                    {
+                        var path = Thronefall.SaveServices.SaveServicesLocator.Instance.GetFullSavePath(name);
+                        if (!System.IO.File.Exists(path)) { files[name] = "none"; continue; }
+                        uint fh = 2166136261;
+                        foreach (var b in System.IO.File.ReadAllBytes(path)) { fh = (fh ^ b) * 16777619; }
+                        files[name] = fh.ToString("x8");
+                    }
+                    o["files"] = files;
+                    var spawner = EnemySpawner.instance;
+                    if (spawner != null && spawner.waves != null)
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        foreach (var w in spawner.waves)
+                        {
+                            foreach (var s in w.spawns)
+                            {
+                                sb.Append(s.enemyPrefab != null ? s.enemyPrefab.name : "-").Append('*').Append(s.count)
+                                  .Append('@').Append(s.spawnLine != null ? s.spawnLine.name : "-").Append(s.eliteEnemies ? "E" : "")
+                                  .Append('$').Append(s.goldCoins).Append(',');
+                            }
+                            sb.Append('|');
+                        }
+                        uint h = 2166136261;
+                        foreach (var ch in sb.ToString()) { h = (h ^ ch) * 16777619; }
+                        o["waves"] = spawner.waves.Count;
+                        o["wavesHash"] = h.ToString("x8");
+                        o["wave"] = spawner.Wavenumber;
+                    }
+                    return o;
+                }
+                case "et_banner":
+                {
+                    // What a player does at the Eternal Trials banner on the map: press it.
+                    var banner = UnityEngine.Object.FindObjectOfType<EternalTrialsInteractor>();
+                    if (banner == null) return new JObject { ["ok"] = false, ["error"] = "no Eternal Trials banner here" };
+                    // The first press shows the game's explanation pop-up; a player closes it and presses again.
+                    if ((bool?)a["close"] == true && UIFrameManager.instance.ActiveFrame != null) UIFrameManager.instance.CloseAllFrames();
+                    banner.InteractionBegin(null);
+                    return new JObject { ["ok"] = true, ["frame"] = UIFrameManager.instance?.ActiveFrame?.name };
+                }
+                case "et_new":
+                {
+                    // The select screen's "New run" button (the select screen must be open: et_banner).
+                    var screen = UnityEngine.Object.FindObjectOfType<EternalTrialsSelectScreen>();
+                    if (screen == null) return new JObject { ["ok"] = false, ["why"] = "select screen not open", ["frame"] = UIFrameManager.instance?.ActiveFrame?.name };
+                    screen.NewRun();
+                    return new JObject { ["ok"] = true, ["frame"] = UIFrameManager.instance?.ActiveFrame?.name };
+                }
+                case "et_continue":
+                {
+                    // The end screen's Continue button in Eternal Trials: opens the map choices.
+                    var ok = UIFrameManager.OpenEternalTrialsLoadoutPick();
+                    return new JObject { ["ok"] = ok, ["frame"] = UIFrameManager.instance?.ActiveFrame?.name };
+                }
+                case "et_pick":
+                {
+                    // Confirm one of the shown map choices (by its id), the way clicking its Play button does.
+                    var id = (int)a["id"];
+                    var shown = UnityEngine.Object.FindObjectsOfType<ETMapChoiceDisplay>();
+                    var display = shown.FirstOrDefault(d => d.Data != null && d.Data.id == id);
+                    if (display == null) return new JObject { ["ok"] = false, ["why"] = "choice " + id + " not shown", ["shown"] = shown.Length };
+                    display.Confirm();
+                    return new JObject { ["ok"] = true, ["map"] = display.Data.mapName };
+                }
+                case "force_end":
+                {
+                    // TEST ONLY (host): end the match now, as the mod does at the real end (victory or the castle falls).
+                    var victory = (bool?)a["victory"] ?? true;
+                    if (victory)
+                    {
+                        ThronefallMP.Plugin.Instance.Network.Send(new ThronefallMP.Network.Packets.Game.VictoryPacket(), true);
+                        LocalGamestate.Instance.SetState(LocalGamestate.State.AfterMatchVictory, false, true);
+                    }
+                    else
+                    {
+                        ThronefallMP.Plugin.Instance.Network.Send(new ThronefallMP.Network.Packets.Game.ResignPacket());
+                        LocalGamestate.Instance.SetState(LocalGamestate.State.AfterMatchDefeat, false, true);
+                    }
+                    return new JObject { ["state"] = LocalGamestate.Instance.CurrentState.ToString() };
+                }
+                case "score":
+                {
+                    // The end-of-match score parts this machine's game uses (a client: the host's, see ScoreSync).
+                    var p = ThronefallMP.Network.ScoreSync.Local();
+                    if (p == null) return new JObject { ["ok"] = true, ["inLevel"] = false,
+                        ["lastTotal"] = SceneTransitionManager.instance != null ? SceneTransitionManager.instance.TotalScoreFromLastMatch : -1 };
+                    return new JObject
+                    {
+                        ["ok"] = true, ["inLevel"] = true, ["fromHost"] = ThronefallMP.Network.ScoreSync.HasHostScore,
+                        ["current"] = p.Current, ["gold"] = p.GoldBonus, ["mutator"] = p.MutatorBonus,
+                        ["victoryNoRetry"] = p.VictoryNoRetry, ["defeatNoRetry"] = p.DefeatNoRetry,
+                        ["lastTotal"] = SceneTransitionManager.instance != null ? SceneTransitionManager.instance.TotalScoreFromLastMatch : -1,
+                    };
+                }
+                case "quests":
+                {
+                    // The level's quests and whether this player's save has them done (the game's own check).
+                    var scene = (string)a["scene"];
+                    var lpm = LevelProgressManager.instance;
+                    var info = lpm.GetLevelInfoFromSceneName(scene);
+                    var data = lpm.GetLevelDataForScene(scene);
+                    if (info == null || data == null) return new JObject { ["ok"] = false, ["error"] = "unknown level " + scene };
+                    return new JObject
+                    {
+                        ["ok"] = true,
+                        ["total"] = info.QuestsTotal(),
+                        ["complete"] = info.QuestsComplete(),
+                        ["beaten"] = data.beatenBest,
+                        ["highscore"] = data.highscoreBest,
+                        ["wins"] = data.levelHasBeenBeatenWith.Count,
+                        ["lastWin"] = data.levelHasBeenBeatenWith.Count > 0
+                            ? new JArray(data.levelHasBeenBeatenWith.Last().Where(e => e != null).Select(e => e.name).OrderBy(n => n).ToArray()) : new JArray(),
+                        ["list"] = new JArray(info.quests.Select(q => q.GetMissionStatement() + " => " + q.CheckBeaten(data)).ToArray()),
+                    };
+                }
                 case "set_wave":
                 {
                     // TEST ONLY: jump the wave counter (to reach the level's last wave quickly), on this machine.
@@ -660,6 +823,49 @@ namespace CoopQa
                 }
                 case "late_join":
                     return new JObject { ["admitted"] = ThronefallMP.Network.LateJoin.Admitted, ["replayed"] = ThronefallMP.Network.LateJoin.Replayed, ["joinDuringLevel"] = ThronefallMP.CoopDifficulty.JoinDuringLevel };
+                case "endgate":
+                    // Host: how many players the end screen still waits for (EndScreenGate).
+                    return new JObject { ["ok"] = true, ["waiting"] = ThronefallMP.Network.EndScreenGate.WaitingCount };
+                case "to_map":
+                    // Solo copies (-coopqa solo): from the main menu to the map, as the game's Play button does.
+                    SceneTransitionManager.instance.TransitionToBaseLevelSelect();
+                    return new JObject { ["ok"] = true };
+                case "et_solo":
+                {
+                    // Solo copies only (offline, base game code): roll fresh Eternal Trials runs until one offers the
+                    // wanted map, then pick it the way the game does. For checking what the game does without co-op.
+                    if (ThronefallMP.Plugin.Instance.Network.Online) return new JObject { ["ok"] = false, ["why"] = "online" };
+                    var map = (string)a["map"];
+                    for (var i = 0; i < 200; i++)
+                    {
+                        EternalTrialsRunManager.GenerateNewFreshRunSeed();
+                        EternalTrialsRunManager.CreateFreshRun();
+                        var choice = EternalTrialsRunManager.GetMapChoices().FirstOrDefault(c => c.mapName == map);
+                        if (choice == null) continue;
+                        LocalGamestate.SelectedGameMode = LocalGamestate.GameMode.EternalTrial;
+                        EternalTrialsRunManager.ConfirmChoice(choice);
+                        EternalTrialsRunManager.LoadNextMap(null);
+                        return new JObject { ["ok"] = true, ["rolls"] = i + 1, ["weapon"] = choice.containedWeapon != null ? choice.containedWeapon.name : "" };
+                    }
+                    return new JObject { ["ok"] = false, ["why"] = "map never offered" };
+                }
+                case "find_go":
+                {
+                    // Reverse engineering: every GameObject with this name in the loaded scenes (inactive too), with
+                    // its path, active flags and components.
+                    var want = (string)a["name"];
+                    var arr = new JArray();
+                    foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+                    {
+                        if (go.name != want || !go.scene.IsValid()) continue;
+                        var path = go.name;
+                        for (var t = go.transform.parent; t != null; t = t.parent) path = t.name + (t.gameObject.activeSelf ? "" : "(off)") + "/" + path;
+                        var comps = new JArray();
+                        foreach (var c in go.GetComponents<Component>()) comps.Add(c == null ? "null" : c.GetType().Name + (c is Behaviour bh && !bh.enabled ? "(disabled)" : ""));
+                        arr.Add(new JObject { ["path"] = path, ["scene"] = go.scene.name, ["activeSelf"] = go.activeSelf, ["inHierarchy"] = go.activeInHierarchy, ["components"] = comps });
+                    }
+                    return new JObject { ["objects"] = arr };
+                }
                 case "renderers_dump":
                 {
                     // Reverse engineering: every renderer under the local character, with its material colours.
@@ -792,7 +998,15 @@ namespace CoopQa
                         ["current"] = current,
                         ["panel"] = panel != null && panel.Enabled,
                         ["rows"] = new JArray(ThronefallMP.UI.Panels.MatchStatsPanel.LastRows.ToArray()),
+                        ["showing"] = ThronefallMP.UI.Panels.MatchStatsPanel.Showing,
                     };
+                }
+                case "stats_key":
+                {
+                    // What the Stats key does (Key mode of Match stats / Night summary).
+                    ThronefallMP.UI.UIManager.MatchStatsPanel?.PressStatsKey();
+                    ThronefallMP.UI.UIManager.NightSummaryPanel?.PressStatsKey();
+                    return new JObject { ["ok"] = true };
                 }
                 case "keys":
                 {
@@ -827,6 +1041,8 @@ namespace CoopQa
                         ["pingAt"] = ThronefallMP.ModKeys.PingAt.ToString(),
                         ["chat"] = ThronefallMP.ModKeys.Chat.ToString(),
                         ["list"] = ThronefallMP.ModKeys.PlayerList.ToString(),
+                        ["wheel4"] = ThronefallMP.ModKeys.WheelKey(4).ToString(),
+                        ["chatUp"] = ThronefallMP.ModKeys.ChatScrollUp.ToString(),
                     };
                 }
                 case "hold_night":
@@ -871,7 +1087,7 @@ namespace CoopQa
                     if (a["x"] != null) Time.timeScale = (float)a["x"];
                     return new JObject { ["timescale"] = Time.timeScale };
                 case "errors":
-                    return new JObject { ["errors"] = new JArray(Errors), ["dialogs"] = new JArray(Dialogs) };
+                    return new JObject { ["errors"] = new JArray(Errors), ["known"] = new JArray(KnownErrors), ["dialogs"] = new JArray(Dialogs) };
                 default:
                     return new JObject { ["ok"] = false, ["error"] = "unknown command " + cmd };
             }
@@ -922,7 +1138,7 @@ namespace CoopQa
                     if (net != null && SteamManager.Initialized && ThronefallMP.UI.UIManager.HostPanel != null
                         && SceneManager.GetSceneByName("_UI").isLoaded && InStep > 3f)
                     {
-                        Step(_role == "host" ? "host-create" : "join-wait-lobbyfile");
+                        Step(_role == "host" ? "host-create" : _role == "solo" ? "solo" : "join-wait-lobbyfile");
                     }
                     break;
 
