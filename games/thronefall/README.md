@@ -6,7 +6,7 @@
 | Versions tested | Steam, buildid 26487600 (2026-11-11), Windows 11 |
 | Projects | Thronefall Multiplayer: BadWolf original (archived), Bwarhness / BiggestBlackest continuation, spencatro GitLab fork, Bemno fork (current) |
 | QA level | automated (base game, Nordfels; see QA) |
-| Last updated | 2026-11-12 |
+| Last updated | 2026-11-13 |
 
 ## Where things stand
 
@@ -14,8 +14,10 @@ Two players can play Thronefall together over Steam with Bemno's fork of Thronef
 the current Unity 6 build. Automated tests with two real game copies on two Steam accounts, plus the owner's first real
 session with a friend, found six bugs in 1.2.7. The worst break everyday play: joining a friend a second time hangs,
 Continue Run gives the joining player an empty map, a friend without the level unlocked cannot join it, and the end
-screen can stay on screen for good. All six have fixes that pass the same tests, and a host-side co-op difficulty
-option was added on request (local build 1.2.7.4, not published). The Craaghelm DLC maps were not tested.
+screen can stay on screen for good. All six have fixes that pass the same tests. On the owner's request, optional
+co-op settings were added: enemy difficulty, boss difficulty, a night vote, a map ping and rebindable mod keys, all
+changeable in a menu on the map without a new lobby and all off by default (local build 1.2.7.6, not published). The
+Craaghelm DLC maps were not tested.
 
 ## Existing work
 
@@ -53,7 +55,8 @@ archive note invites forks "as long as they give credit".
 
 ## What we changed
 
-Six fixes and one feature, as five patches against Bemno 1.2.7 (local build 1.2.7.4). The code is not published yet.
+Six fixes and a set of optional co-op settings, as seven patches against Bemno 1.2.7 (local build 1.2.7.6). The code
+is not published yet.
 
 1. **Joining hangs from the second session on.** `RecentPartners` (since 1.2.5) pings remembered partners while
    offline. When the ping times out (the partner's game is not ready), the `SteamNetworkingMessages` session to that peer
@@ -86,8 +89,48 @@ Six fixes and one feature, as five patches against Bemno 1.2.7 (local build 1.2.
    enough for a string longer than the buffer ("Destination array was not long enough"). Fix: grow until it fits.
    Found through the co-op difficulty chat message.
 
-**New: co-op difficulty (host only, optional).** Waves are the single-player waves, so every extra player makes the game
-easier. The host picks, in the BepInEx configuration window (F1), one entry from each list; the default is the base game.
+### New: optional co-op settings
+
+Nothing changes unless a player turns it on. Session settings belong to the host; keys belong to each player.
+
+| Setting | Who decides | Default | Choices |
+|---|---|---|---|
+| Night vote | host | Off | Off, On |
+| Map ping | host | Off | Off, On |
+| Count & HP | host | Normal | 10 presets, the last one Custom |
+| Enemy type | host | Off | 10 presets, the last one Custom |
+| Scale as players | host | Off | Off, Actual, 2 to 8 players; per player Light, Medium, Strong |
+| Bosses | host | Normal | Normal, Sturdy, Tough, Brutal, Legendary, Custom |
+| Ping key | each player | middle mouse button | any key or mouse button; None |
+| Ping at | each player | Cursor | Cursor, Player |
+| Chat key | each player | Enter | any key |
+| Player list key | each player | the key left of 1 | any key |
+
+**Co-op Settings menu (1.2.7.5).** Esc on the map opens the pause menu, which gets a "Co-op Settings" entry next to
+"Copy Invite". The host changes values with < and >; they apply from the next level start, so the difficulty can change
+between levels without a new lobby. The host publishes its values in the lobby data (`tfmp_coop`), and the other
+players see them read only. The same values are in the BepInEx configuration window (F1). Below the session settings,
+"Your keys (only for you)" lets every player rebind the mod's keys: click the key, press the new one (Esc cancels, Del
+clears).
+
+**Night vote (1.2.7.5).** When on, a player whose night-call bar fills is marked ready instead of starting the night;
+the chat shows "X is ready for the night (1/2)". The host starts the night when every player is ready. A ready mark
+lasts 30 seconds.
+
+**Boss difficulty (1.2.7.5).** A survey of every level found the bosses spawn through the normal wave path: Frostsee
+wave 12 (15000 HP), Moorweg wave 11 Ghostqueen (15000), Freifort wave 12 Iron Castle (66000), Totend wave 14 Corrupt
+King (66666) with a second stage (70000). The host detects bosses by the game's Boss tag and gives them only the boss
+setting: Sturdy 150% HP, Tough 200%, Brutal 300% and +25% damage, Legendary 400% and +50%, Custom. Every Hp of a boss
+is scaled, so second stages too. Correction to 1.2.7.4: there the enemy difficulty also scaled bosses.
+
+**Map ping (1.2.7.6).** When on, the ping key marks a spot for every player: a diamond in the player's colour with their
+name on a dark plate, for 5 seconds, kept at the screen edge while the spot is off screen. "Cursor" puts it on the
+ground under the mouse (the plane at the player's height, or a static collider within 8 units of it; characters and
+units are skipped), "Player" where the character stands. A `MapPing` packet goes client to host to the others; the host
+stamps the real sender. The marker is screen-space UI, so it needs no shaders.
+
+**Co-op difficulty (1.2.7.4).** Waves are the single-player waves, so every extra player makes the game easier. The
+host picks one entry from each list; the default is the base game.
 
 - CountAndHp: Normal, Sturdy (125% HP), Tough (150%), VeryTough (200%), MoreEnemies (+50%), Horde (+100% at 85% HP),
   Veterans (+25% at 130% HP), Hard (+50% at 150% HP), Brutal (+100% at 200% HP), Custom (free HP and count).
@@ -100,8 +143,9 @@ easier. The host picks, in the BepInEx configuration window (F1), one entry from
 
 The host sends HP, damage, speed and attack-rate factors, the elite roll and the extra spawns in its `EnemySpawn`
 packets, so every machine spawns the same enemies. Extra enemies drop no coins and do not count toward the wave, so
-waves still end and the economy stays as in the base game. Bosses are unchanged. The choice is shown in chat at level
-start. The packet format changed, so all players need the same build (the mod's version check enforces it).
+waves still end and the economy stays as in the base game. Bosses get only the boss setting (1.2.7.5 on). When a setting
+is not at its default, the choice is shown in chat at level start. The packet format changed, so all players need the
+same build (the mod's version check enforces it).
 
 ## QA
 
@@ -117,9 +161,11 @@ powershell -File games/thronefall/qa/run-connect.ps1 -Unlock            # or -Un
 python -I games/thronefall/qa/tf_bots.py --playbook day_night --level Nordfels --nights 0
 python -I games/thronefall/qa/tf_bots.py --playbook locked_endscreen --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook difficulty --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook coop_settings --level Frostsee
+python -I games/thronefall/qa/tf_bots.py --playbook map_ping --level Nordfels
 ```
 
-Results, 2026-11-12, buildid 26487600, mod 1.2.7 plus fixes:
+Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
 
 | Playbook | Result |
 |---|---|
@@ -130,13 +176,17 @@ Results, 2026-11-12, buildid 26487600, mod 1.2.7 plus fixes:
 | `rejoin`: client crash, host plays on, client rejoins in the map, Continue Run | PASS 12/12 (1.2.7.3) |
 | `locked_endscreen`: level locked on the client; client presses Back first after the match | 1.2.7.3 FAIL (client ignores the open), 1.2.7.4 PASS 15/15 twice |
 | `difficulty`, every enemy compared host vs client (max HP, speed, elite, damage) | Normal: 3 enemies, HP 25, speed 5, damage 1.0. Brutal + Nightmare: 6 enemies, HP 50 (elites 200), speed 6, damage 1.3 (elites 3.9). Custom 150%/+50%, damage 200%, scaled as 8 players (Light): 7 enemies, HP 63.8 (25 x 2.55), damage 2.0. All PASS, identical on both machines, 0 game errors |
+| `coop_settings` Frostsee: menu on the map, night vote, boss difficulty changed in the same lobby | PASS 15/15 (1.2.7.5 and 1.2.7.6): client read only; host alone ready stays Day, both ready gives Night on both; boss 15000 HP (Normal), then 30000 on both after switching to Tough in the menu |
+| `map_ping` Nordfels | PASS 9/9 (1.2.7.6), twice: off by default sends nothing; host turns it on, client sees it read only; both players rebind their own keys; Ping at Player lands on the pinging player; two cursor points land under the cursor (screen round trip within 3%) and on the same spot on both |
+| `locked_endscreen` regression | PASS 15/15 on 1.2.7.5 |
 
 ## How to play
 
 Both players install BepInExPack_Thronefall 5.4.2100 and the same build of the mod (1.2.7 from
-[Bemno's releases](https://github.com/Bemno/Thronefall_Multiplayer/releases)). Host: Multiplayer, Host, invite. Friend:
-Multiplayer, Direct Connect with the invite. Always let the same player host a run; the host's save is sent to the
-others automatically. After a match, both click through the end screens before one presses Back.
+[Bemno's releases](https://github.com/Bemno/Thronefall_Multiplayer/releases); the fixed build is not published yet).
+Host: Multiplayer, Host, invite. Friend: Multiplayer, Direct Connect with the invite. Always let the same player host a
+run; the host's save is sent to the others automatically. After a match, both click through the end screens before one
+presses Back. With the fixed build, the optional settings are in Esc > Co-op Settings on the map.
 
 ## Known issues
 
@@ -152,7 +202,11 @@ others automatically. After a match, both click through the end screens before o
 - A joining player who crashes cannot rejoin while the host is in a level: the host goes back to the map (pause menu),
   the friend joins again (a second click may be needed right after the host's map loads), the host continues the run
   from the last dawn. Wait a few seconds after the friend appears before opening a level flag.
-- Reported once, not reproduced: the joining player did not see the perks the host selected (in the tutorial).
+- Reported once, not reproduced: the joining player did not see the perks the host selected (in the tutorial). The
+  owner later confirmed the friend does see them outside the tutorial.
+- Not tested in 1.2.7.6: real key presses for the ping and the key capture (the bots call the same code the key calls,
+  with minimized windows the mouse position is not meaningful), controller buttons as keys, pinging on the overworld
+  map, the Co-op Settings menu with a controller, Totend's second boss stage, a victory run.
 - Leaving a level right after a defeat logs a short burst of `NullReferenceException` in `PathfindMovementEnemy.Update`
   (game code; about 700 lines on the host, then quiet). No visible effect.
 

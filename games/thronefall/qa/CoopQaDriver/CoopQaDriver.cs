@@ -310,6 +310,178 @@ namespace CoopQa
                         ["pending_level"] = Static(lds, "_pendingLevel")?.ToString(),
                     };
                 }
+                case "waves":
+                {
+                    // Every wave spawn of the level, and every object tagged Boss in the loaded scenes.
+                    var waves = new JArray();
+                    var spawner = EnemySpawner.instance;
+                    if (spawner != null)
+                    {
+                        for (var w = 0; w < spawner.waves.Count; w++)
+                        {
+                            var spawns = new JArray();
+                            foreach (var s in spawner.waves[w].spawns)
+                            {
+                                var tagged = s.enemyPrefab != null ? s.enemyPrefab.GetComponentInChildren<TaggedObject>(true) : null;
+                                var boss = tagged != null && tagged.Tags.Contains(TagManager.ETag.Boss);
+                                spawns.Add($"{(s.enemyPrefab != null ? s.enemyPrefab.name : "null")} x{s.count}{(boss ? " BOSS" : "")}{(s.spawnLine == (s.enemyPrefab != null ? s.enemyPrefab.transform : null) ? " placed" : "")}");
+                            }
+                            waves.Add(new JObject { ["wave"] = w, ["multi"] = spawner.waves[w].difficultyMulti, ["spawns"] = spawns });
+                        }
+                    }
+                    var bosses = new JArray();
+                    foreach (var t in UnityEngine.Object.FindObjectsByType<TaggedObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                        if (t.Tags.Contains(TagManager.ETag.Boss))
+                        {
+                            var hp = t.GetComponentInChildren<Hp>(true);
+                            bosses.Add($"{t.name} active={t.gameObject.activeInHierarchy} hp={(hp != null ? hp.maxHp : -1)} id={(t.GetComponentInParent<ThronefallMP.Components.Identifier>() != null)}");
+                        }
+                    return new JObject { ["scene"] = State.ActiveScene(), ["waves"] = waves, ["boss_objects"] = bosses };
+                }
+                case "open_pause":
+                    // What Esc does in the map: UIFrameManager.OpenMenu (the mod adds its buttons there).
+                    AccessTools.Method(typeof(UIFrameManager), "OpenMenu").Invoke(UIFrameManager.instance, null);
+                    return new JObject { ["active_frame"] = UIFrameManager.instance.ActiveFrame != null ? UIFrameManager.instance.ActiveFrame.name : null };
+                case "coop_panel":
+                {
+                    // The Co-op Settings panel: "state" lists every row (value, whether < > are shown, colour greyed),
+                    // "click" presses < (dir -1) or > (dir +1) of one row, like a mouse click.
+                    var panel = ThronefallMP.UI.UIManager.CoopSettingsPanel;
+                    if (panel == null) return new JObject { ["ok"] = false, ["error"] = "no CoopSettingsPanel" };
+                    if ((string)a["action"] == "click")
+                    {
+                        var row = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == (string)a["key"]);
+                        if (row == null) return new JObject { ["ok"] = false, ["error"] = "no row " + a["key"] };
+                        var btn = row.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true)
+                            .FirstOrDefault(b => b.name == ((int)a["dir"] < 0 ? "prev" : "next"));
+                        if (btn == null || !btn.gameObject.activeInHierarchy) return new JObject { ["ok"] = false, ["error"] = "button not available (read only?)" };
+                        ClickButton(btn);
+                    }
+                    if ((string)a["action"] == "close")
+                    {
+                        panel.Enabled = false;
+                    }
+                    var rows = new JObject();
+                    foreach (var r in ThronefallMP.CoopDifficulty.Rows)
+                    {
+                        var t = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == r.Key);
+                        var value = t != null ? t.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true).FirstOrDefault(x => x.name == "value") : null;
+                        var next = t != null ? t.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true).FirstOrDefault(b => b.name == "next") : null;
+                        rows[r.Key] = (value != null ? value.text : "?") + (next != null && next.gameObject.activeSelf ? "" : " (read only)");
+                    }
+                    return new JObject { ["open"] = panel.Enabled, ["rows"] = rows };
+                }
+                case "force_boss_spawn":
+                {
+                    // TEST ONLY: run the host's own spawn step (EnemySpawnerPatch.UpdateSpawn) for the level's boss spawn
+                    // now, instead of playing to its wave. The packet, the boss difficulty and the sync are the real ones.
+                    var spawner = EnemySpawner.instance;
+                    for (var w = 0; w < spawner.waves.Count; w++)
+                    for (var s = 0; s < spawner.waves[w].spawns.Count; s++)
+                    {
+                        var spawn = spawner.waves[w].spawns[s];
+                        if (spawn.enemyPrefab == null || !spawn.enemyPrefab.GetComponentsInChildren<TaggedObject>(true).Any(t => t.Tags.Contains(TagManager.ETag.Boss))) continue;
+                        // What the wave start does first (it fills the coin array), then the spawn step.
+                        spawn.Reset(true);
+                        Traverse.Create(spawn).Field("finished").SetValue(false);
+                        Traverse.Create(spawn).Field("waitBeforeNextSpawn").SetValue(0f);
+                        try
+                        {
+                            AccessTools.Method(typeof(ThronefallMP.Patches.EnemySpawnerPatch), "UpdateSpawn").Invoke(null, new object[] { spawn, w, s });
+                        }
+                        catch (System.Reflection.TargetInvocationException e)
+                        {
+                            return new JObject { ["ok"] = false, ["error"] = e.InnerException?.ToString() ?? e.ToString() };
+                        }
+                        return new JObject { ["wave"] = w, ["spawn"] = s, ["prefab"] = spawn.enemyPrefab.name };
+                    }
+                    return new JObject { ["ok"] = false, ["error"] = "no boss spawn in this level" };
+                }
+                case "boss_hp":
+                {
+                    var arr = new JArray();
+                    foreach (var t in UnityEngine.Object.FindObjectsByType<TaggedObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                        if (t.Tags.Contains(TagManager.ETag.Boss))
+                            foreach (var hp in t.GetComponentsInChildren<Hp>(true))
+                                arr.Add($"{t.name}/{hp.name}: active={t.gameObject.activeInHierarchy} maxHp={hp.maxHp:F0}");
+                    return new JObject { ["bosses"] = arr };
+                }
+                case "screenshot":
+                {
+                    // Written at the end of the frame by Unity; a minimized window may come out black.
+                    var path = (string)a["path"];
+                    ScreenCapture.CaptureScreenshot(path);
+                    return new JObject { ["path"] = path };
+                }
+                case "map_ping":
+                {
+                    // "now": what the ping key does (PingPanel.TryPing: the ground under the mouse, or the player's
+                    // position with PingAt=Player). Always returns how many pings this copy has shown and the last one.
+                    // "x"/"y" (0..1 of the screen) ping at that screen point instead of the mouse pointer.
+                    Vector2? at = a["x"] != null ? new Vector2((float)a["x"] * Screen.width, (float)a["y"] * Screen.height) : null;
+                    var sent = (string)a["action"] == "now" ? (bool?)ThronefallMP.UI.Panels.PingPanel.TryPing(at) : null;
+                    var last = ThronefallMP.UI.Panels.PingPanel.LastPosition;
+                    // Where the last ping is on this screen (0..1), to check the cursor -> ground -> screen round trip.
+                    var cam = Camera.main;
+                    var sp = cam != null ? cam.WorldToScreenPoint(last) : Vector3.zero;
+                    var local = ThronefallMP.Plugin.Instance.PlayerManager.LocalPlayer?.Object;
+                    var marker = ThronefallMP.UI.UIManager.PingPanel?.PanelRoot.transform.Find("ping");
+                    return new JObject
+                    {
+                        ["sent"] = sent,
+                        ["active"] = ThronefallMP.CoopDifficulty.MapPingActive,
+                        ["shown"] = ThronefallMP.UI.Panels.PingPanel.Shown,
+                        ["last"] = new JArray(last.x, last.y, last.z),
+                        ["player"] = local != null ? new JArray(local.transform.position.x, local.transform.position.y, local.transform.position.z) : null,
+                        ["marker"] = marker != null ? marker.GetComponentInChildren<TMPro.TextMeshProUGUI>(true)?.text : null,
+                        ["markerVisible"] = marker != null && marker.gameObject.activeInHierarchy,
+                        ["screen"] = new JArray(Screen.width, Screen.height),
+                        ["lastOnScreen"] = Screen.width > 0 ? new JArray(sp.x / Screen.width, sp.y / Screen.height) : null,
+                    };
+                }
+                case "keys":
+                {
+                    // "Your keys" in the Co-op Settings panel. "click": press the key button of a row (starts the
+                    // capture, like a mouse click). "set": what pressing a key during the capture does (SetKey).
+                    var panel = ThronefallMP.UI.UIManager.CoopSettingsPanel;
+                    var action = (string)a["action"];
+                    if (action == "click")
+                    {
+                        var row = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == (string)a["row"]);
+                        var btn = row?.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true).FirstOrDefault(b => b.name == "key" || b.name == ((int?)a["dir"] < 0 ? "prev" : "next"));
+                        if (btn == null || !btn.gameObject.activeInHierarchy) return new JObject { ["ok"] = false, ["error"] = "no button in row " + a["row"] };
+                        ClickButton(btn);
+                    }
+                    else if (action == "set")
+                    {
+                        panel.SetKey((string)a["row"], (KeyCode)Enum.Parse(typeof(KeyCode), (string)a["key"]));
+                    }
+                    var rows = new JObject();
+                    foreach (var r in ThronefallMP.ModKeys.Rows)
+                    {
+                        var t = panel.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == r.Key);
+                        var text = t?.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true).Where(x => x.name != "label").Select(x => x.text).FirstOrDefault(x => x != "<" && x != ">");
+                        rows[r.Key] = text;
+                    }
+                    return new JObject
+                    {
+                        ["capturing"] = panel.Capturing,
+                        ["rows"] = rows,
+                        ["ping"] = ThronefallMP.ModKeys.Ping.ToString(),
+                        ["pingAt"] = ThronefallMP.ModKeys.PingAt.ToString(),
+                        ["chat"] = ThronefallMP.ModKeys.Chat.ToString(),
+                        ["list"] = ThronefallMP.ModKeys.PlayerList.ToString(),
+                    };
+                }
+                case "hold_night":
+                    Bot.Start(Bot.HoldNight((float?)a["seconds"] ?? 6f));
+                    return TaskInfo();
+                case "lobbydata":
+                {
+                    var net = ThronefallMP.Plugin.Instance.Network;
+                    var key = (string)a["key"];
+                    return new JObject { ["value"] = net.Online ? SteamMatchmaking.GetLobbyData(net.Lobby, key) : null };
+                }
                 case "join_lobby":
                 {
                     // What the Direct Connect / lobby list join does: Network.ConnectLobby.

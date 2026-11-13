@@ -297,6 +297,199 @@ class Difficulty(core.Playbook):
             ctx.expect(not self.mismatch, "enemy differs (id, host, client): %s" % self.mismatch[:8])
 
 
+def panel_set(bot, key, target, tries=12):
+    """Press > on a Co-op Settings row until it shows `target`."""
+    for _ in range(tries):
+        rows = bot.call("coop_panel", action="state")["rows"]
+        if rows.get(key, "").split(" (")[0] == target:
+            return Result(True, "%s = %s" % (key, target))
+        bot.call("coop_panel", action="click", key=key, dir=1)
+    return Result(False, "%s never reached %s (now %s)" % (key, target, bot.call("coop_panel", action="state")["rows"].get(key)))
+
+
+def boss_max_hp(bot):
+    """maxHp of every Hp of every active boss, sorted."""
+    out = []
+    for line in bot.call("boss_hp")["bosses"]:
+        if "active=True" in line:
+            out.append(float(line.rsplit("maxHp=", 1)[1]))
+    return sorted(out)
+
+
+class CoopSettings(core.Playbook):
+    """The map menu Co-op Settings (host changes, client read only), the night vote, and the boss difficulty changed
+    between two levels without a new lobby. Level must contain a boss (Frostsee)."""
+    name = "coop_settings"
+    summary = "Settings menu on the map, night vote, boss difficulty applied from the next level without a new lobby."
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Frostsee"):
+        self.level = level
+
+    def open_menu(self, ctx, bot):
+        bot.call("open_pause")
+        ctx.wait_until("pause menu shows Co-op Settings",
+                       lambda: any(e.startswith("Co-op Settings") for e in bot.call("ui")["elements"]), 8)
+        bot.call("ui_apply", name="Co-op Settings")
+        ctx.wait_until("Co-op Settings open", lambda: bot.call("coop_panel", action="state")["open"], 5)
+
+    def boss_round(self, ctx, host, client, label):
+        r = host.call("force_boss_spawn")
+        ctx.log("%s: boss spawn %s" % (label, r))
+        ctx.wait_until("boss active on both", lambda: boss_max_hp(host) and boss_max_hp(client), 20)
+        ctx.pause(2)
+        h, c = boss_max_hp(host), boss_max_hp(client)
+        ctx.log("%s: boss maxHp host %s client %s" % (label, h, c))
+        ctx.expect(h == c, "boss HP differs: host %s, client %s" % (h, c))
+        return h
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+
+        with ctx.step("host opens Co-op Settings from the map's pause menu and turns the night vote on", compare=False):
+            self.open_menu(ctx, host)
+            ctx.must(panel_set(host, "vote", "On"), "night vote on")
+            ctx.must(panel_set(host, "boss", "Normal"), "bosses normal")
+            ctx.wait_until("client sees the host's values in the lobby",
+                           lambda: "vote=On" in (client.call("lobbydata", key="tfmp_coop")["value"] or ""), 10)
+            self.open_menu(ctx, client)
+            rows = client.call("coop_panel", action="state")["rows"]
+            ctx.log("client panel: %s" % rows)
+            ctx.expect(rows.get("vote") == "On (read only)", "client shows night vote %r" % rows.get("vote"))
+            ctx.expect(all(v.endswith("(read only)") for v in rows.values()), "client can change values: %s" % rows)
+
+        enter_level(ctx, host, client, self.level)
+
+        with ctx.step("host builds the castle"):
+            castle = next(s for s in host.slots() if s["name"] == "Castle Center")
+            ctx.must(host.build(castle["id"]), "host builds the castle")
+
+        with ctx.step("night vote: the host alone cannot start the night", compare=False):
+            host.call("hold_night", seconds=6)
+            ctx.must(host.wait_task(20), "host holds the night button")
+            ctx.pause(2)
+            ctx.expect(host.time_of_day() == "Day" and client.time_of_day() == "Day",
+                       "night started with only the host ready: host %s client %s" % (host.time_of_day(), client.time_of_day()))
+
+        with ctx.step("night vote: when the client holds it too, night falls on both"):
+            ctx.must(client.call_night(), "client holds the night button")
+            ctx.wait_until("night on both", lambda: host.time_of_day() == "Night" and client.time_of_day() == "Night", 15)
+
+        with ctx.step("boss with boss difficulty Normal", compare=False):
+            self.normal = self.boss_round(ctx, host, client, "Normal")
+
+        with ctx.step("back to the map; host sets bosses to Tough in the menu (same lobby)", compare=False):
+            ctx.must(host.back_to_map(), "host: back to map")
+            ctx.wait_until("both in the map", lambda: host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect", 60)
+            ctx.pause(5)
+            self.open_menu(ctx, host)
+            ctx.must(panel_set(host, "boss", "Tough"), "bosses tough")
+            ctx.wait_until("client sees boss=Tough", lambda: "boss=Tough" in (client.call("lobbydata", key="tfmp_coop")["value"] or ""), 10)
+
+        enter_level(ctx, host, client, self.level)
+
+        with ctx.step("boss with boss difficulty Tough: twice the HP on both", compare=False):
+            tough = self.boss_round(ctx, host, client, "Tough")
+            ctx.expect(len(tough) == len(self.normal) and all(abs(t - 2 * n) < 1 for t, n in zip(tough, self.normal)),
+                       "Tough boss HP %s is not twice Normal %s" % (tough, self.normal))
+
+
+def keys_set(bot, row, key):
+    """What the player does in "Your keys": click the key button (capture starts), then press `key`."""
+    r = bot.call("keys", action="click", row=row)
+    if not r.get("capturing"):
+        return Result(False, "%s: clicking the key button did not start the capture: %s" % (row, r))
+    r = bot.call("keys", action="set", row=row, key=key)
+    return Result(not r["capturing"], "%s -> %s, shown as %r" % (row, key, r["rows"].get(row)))
+
+
+def same_point(a, b, tol=0.05):
+    return a is not None and b is not None and all(abs(x - y) <= tol for x, y in zip(a, b))
+
+
+class MapPing(core.Playbook):
+    """Map ping: off by default (nothing is sent), the host turns it on in Co-op Settings, every player rebinds their
+    own keys there, and a ping from either player shows on both at the same spot with the pinging player's name."""
+    name = "map_ping"
+    summary = "Map ping off by default, on via the host's menu, keys rebindable per player, pings shown on both at the same spot."
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def ping(self, ctx, sender, receiver, label, **at):
+        before = receiver.call("map_ping")["shown"]
+        r = sender.call("map_ping", action="now", **at)
+        ctx.expect(r["sent"] is True, "%s: ping not sent: %s" % (label, r))
+        ctx.wait_until("%s: the ping arrives" % label, lambda: receiver.call("map_ping")["shown"] > before, 10)
+        s, d = sender.call("map_ping"), receiver.call("map_ping")
+        ctx.log("%s: sender player at %s, ping at %s; receiver shows %s, marker visible %s" % (
+            label, s["player"], s["last"], d["last"], d["markerVisible"]))
+        ctx.expect(same_point(s["last"], d["last"]), "%s: ping at %s on the sender, %s on the receiver" % (label, s["last"], d["last"]))
+        ctx.expect(d["markerVisible"] and d["marker"] and not d["marker"].startswith("Player "),
+                   "%s: no named marker on the receiver: %r" % (label, d["marker"]))
+        return s
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+
+        with ctx.step("map ping is off by default: pressing the key sends nothing", compare=False):
+            h, c = host.call("map_ping"), client.call("map_ping")
+            ctx.expect(not h["active"] and not c["active"], "map ping active by default: host %s client %s" % (h["active"], c["active"]))
+            r = client.call("map_ping", action="now")
+            ctx.pause(2)
+            ctx.expect(r["sent"] is False, "client could ping while off: %s" % r)
+            ctx.expect(host.call("map_ping")["shown"] == h["shown"], "host showed a ping while off")
+
+        with ctx.step("host turns Map ping on in Co-op Settings; the client sees it read only", compare=False):
+            CoopSettings.open_menu(None, ctx, host)
+            ctx.must(panel_set(host, "ping", "On"), "map ping on")
+            ctx.wait_until("client sees ping=On in the lobby",
+                           lambda: "ping=On" in (client.call("lobbydata", key="tfmp_coop")["value"] or ""), 10)
+            CoopSettings.open_menu(None, ctx, client)
+            rows = client.call("coop_panel", action="state")["rows"]
+            ctx.expect(rows.get("ping") == "On (read only)", "client shows map ping %r" % rows.get("ping"))
+            ctx.wait_until("map ping active on both", lambda: host.call("map_ping")["active"] and client.call("map_ping")["active"], 10)
+
+        with ctx.step("every player rebinds their own keys (client too, although the host rows are read only)", compare=False):
+            ctx.must(keys_set(host, "kping", "Mouse3"), "host: ping key")
+            ctx.must(keys_set(host, "kchat", "T"), "host: chat key")
+            ctx.must(keys_set(host, "klist", "F2"), "host: player list key")
+            ctx.must(keys_set(client, "kping", "F"), "client: ping key")
+            r = host.call("keys", action="click", row="kpingat", dir=1)
+            ctx.log("host keys: %s" % r)
+            ctx.expect((r["ping"], r["chat"], r["list"], r["pingAt"]) == ("Mouse3", "T", "F2", "Player"),
+                       "host keys not applied: %s" % r)
+            ctx.expect(r["rows"].get("kping") == "Mouse 4", "ping key shown as %r" % r["rows"].get("kping"))
+            c = client.call("keys")
+            ctx.log("client keys: %s" % c)
+            ctx.expect(c["ping"] == "F" and c["chat"] == "Return", "client keys wrong: %s" % c)
+            ctx.must(keys_set(client, "kping", "Mouse2"), "client: ping key back to the default")
+            host.call("coop_panel", action="close")
+            client.call("coop_panel", action="close")
+
+        enter_level(ctx, host, client, self.level)
+
+        with ctx.step("host pings at its own position (Ping at: Player): shown on both at the same spot", compare=False):
+            s = self.ping(ctx, host, client, "host")
+            ctx.expect(same_point(s["player"], s["last"], 0.5), "ping %s is not at the host %s" % (s["last"], s["player"]))
+
+        with ctx.step("client pings at two cursor points (Ping at: Cursor): on the ground under the cursor, same spot on both",
+                      compare=False):
+            spots = []
+            for x, y in ((0.3, 0.65), (0.7, 0.35)):
+                ctx.pause(1)
+                s = self.ping(ctx, client, host, "client at screen %.2f,%.2f" % (x, y), x=x, y=y)
+                ctx.log("client screen %s, ping drawn at %s of its screen" % (s["screen"], s["lastOnScreen"]))
+                ctx.expect(s["lastOnScreen"] and abs(s["lastOnScreen"][0] - x) < 0.03 and abs(s["lastOnScreen"][1] - y) < 0.03,
+                           "ping at %s is not under the cursor %s" % (s["lastOnScreen"], (x, y)))
+                ctx.expect(abs(s["last"][1] - s["player"][1]) < 8, "ping height %s far from the player %s" % (s["last"], s["player"]))
+                spots.append(s["last"])
+            ctx.expect(not same_point(spots[0], spots[1], 1.0), "two cursor points gave the same spot %s" % spots)
+
+
 class DayNight(core.Playbook):
     name = "day_night"
     summary = ("Open a level from the map, both pick weapons, start; host and client build in turns; nights alternate "
@@ -523,6 +716,10 @@ def main(argv):
         pb = LockedEndscreen(a.level)
     elif a.playbook == "difficulty":
         pb = Difficulty(a.level)
+    elif a.playbook == "coop_settings":
+        pb = CoopSettings(a.level)
+    elif a.playbook == "map_ping":
+        pb = MapPing(a.level)
     else:
         pb = DayNight(a.level, a.nights)
     opts = {"settle_s": 30.0, "settle_poll_s": 0.5}

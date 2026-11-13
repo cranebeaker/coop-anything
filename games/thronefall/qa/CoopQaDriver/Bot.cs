@@ -316,6 +316,31 @@ namespace CoopQa
             };
         }
 
+        // Hold Call Night for a fixed time (stepping off any building first), whether or not the night starts.
+        public static BotTask HoldNight(float seconds)
+        {
+            return new BotTask
+            {
+                Name = $"hold night {seconds:F0} s",
+                Tick = t =>
+                {
+                    var me = LocalPlayer();
+                    var pi = me != null ? me.GetComponent<PlayerInteraction>() : null;
+                    if (pi != null && pi.FocussedInteractor != null && t.Elapsed < seconds)
+                    {
+                        BotInput.CallNight = false;
+                        var away = me.transform.position - pi.FocussedInteractor.transform.position;
+                        away.y = 0f;
+                        SteerTo(me.transform.position + (away.sqrMagnitude < 0.01f ? Vector3.forward : away.normalized) * 3f);
+                        return false;
+                    }
+                    BotInput.Horizontal = BotInput.Vertical = 0f;
+                    BotInput.CallNight = true;
+                    return t.Elapsed >= seconds && t.Done(DayNightCycle.Instance != null ? DayNightCycle.Instance.CurrentTimestate.ToString() : "?");
+                }
+            };
+        }
+
         // Hold Call Night until night starts.
         public static BotTask CallNight(float timeout = 20f)
         {

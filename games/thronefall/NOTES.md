@@ -197,6 +197,35 @@ Running log. Observations, derivations, guesses and unknowns are kept apart.
   1.3 (elites 3.9), 2 elites. Custom 150%/+50% + Custom damage 200% + ScaleAsPlayers 8 Light (+105%): 7 enemies, HP 63.8
   (= 25 x 2.55), damage 2.00. All PASS, host and client identical, 0 game errors.
 
+### Co-op Settings menu, night vote, boss difficulty (1.2.7.5, 2026-11-13)
+- Boss survey (`qa/boss_survey.py`, every level's waves): all bosses come through the normal wave spawn path. Frostsee
+  wave 12 "BOSS FIGHT" 15000 HP; Moorweg wave 11 Ghostqueen 15000; Freifort wave 12 Iron Castle 66000; Totend wave 14
+  Corrupt King 66666 + second stage 70000. **Correction:** before 1.2.7.5 the CountAndHp/EnemyType factors were also
+  applied to bosses (the write-up said bosses were unaffected). 1.2.7.5 detects bosses (Boss tag in the prefab) and
+  gives them only the BossDifficulty factors.
+- Menu: Esc on the map > "Co-op Settings" (a clone of "Copy Invite"). Host edits, clients read the lobby data
+  `tfmp_coop` directly (a copy refreshed every second was stale in the first run).
+- `coop_settings` playbook PASS 15/15: client read only; night vote (host alone stays Day, both ready -> Night on
+  both); Frostsee boss 15000 (Normal) -> 30000 (Tough) on host and client after a change in the same lobby.
+
+### Map ping and key bindings (1.2.7.6, 2026-11-13, owner's request)
+- Host setting "Map ping" (Off default) in Co-op Settings; clients read it from the lobby data (key `ping`).
+- Ping key per player (default middle mouse), "Ping at" Cursor or Player, plus rebindable chat (Enter) and player list
+  (`) keys: "Your keys" in Co-op Settings (click, press a key; Esc cancels, Del clears) or F1.
+- `MapPingPacket` (new PacketId at the end of the enum), client -> host -> others (ShouldPropagate); the host stamps
+  the sender's player id. Marker: screen-space UI (no shaders), clamped to the screen edge, 5 s, max 3 per player.
+- Cursor ping: ground plane at the player's height, or the first static collider hit within 8 units of that height
+  (CharacterController/Rigidbody hits skipped). Seen: one cursor point landed at y 6.1 (a collider above ground).
+- With minimized test windows `Input.mousePosition` is not meaningful (the first run's "cursor" ping fell back to the
+  player's feet), so the test pings at given screen points and checks the round trip (WorldToScreenPoint within 0.03).
+- First screenshot: name label unreadable (thin font, outline) and the ping hidden under the host's Invite dialog.
+  Fixed: bold 28 px name on a dark plate, bigger marker, ping layer moved to the top when a ping arrives.
+- `map_ping` playbook PASS 9/9 (off by default sends nothing; host turns it on, client read only; both rebind keys;
+  Ping at Player lands on the pinging player; two cursor points land under the cursor and on the same spot on both).
+  `coop_settings` regression PASS 15/15 on the same build. Owner files untouched.
+- Not tested: real key presses (bots call the same TryPing the key calls; the capture loop uses Input.GetKeyDown),
+  controller buttons as ping key, the ping on the overworld map.
+
 ### Lead (not proven player-facing): host with no weapon equipped hangs the level start
 - Seen with a fresh profile: host on the level's first page (Level Select Frame) presses Play/Start directly; host's pick is
   `Invalid` (nothing equipped), `LevelDataSync` falls back to `WeaponRequestPacket` and also sends it to the host itself;
