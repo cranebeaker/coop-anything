@@ -12,12 +12,14 @@
 
 Two players can play Thronefall together over Steam with Bemno's fork of Thronefall Multiplayer (1.2.7), which runs on
 the current Unity 6 build. Automated tests with two real game copies on two Steam accounts, plus the owner's first real
-session with a friend, found six bugs in 1.2.7. The worst break everyday play: joining a friend a second time hangs,
+session with a friend, found seven bugs in 1.2.7. The worst break everyday play: joining a friend a second time hangs,
 Continue Run gives the joining player an empty map, a friend without the level unlocked cannot join it, and the end
-screen can stay on screen for good. All six have fixes that pass the same tests. On the owner's request, optional
-co-op settings were added: enemy difficulty, boss difficulty, a night vote, a map ping and rebindable mod keys, all
-changeable in a menu on the map without a new lobby and all off by default (local build 1.2.7.6, not published). The
-Craaghelm DLC maps were not tested.
+screen can stay on screen for good. All seven have fixes; six pass the same automated tests, the Esc fix still needs a
+real key press. On the owner's request, optional
+co-op settings were added: enemy difficulty, boss difficulty, a night vote, map pings with a ping wheel, a ready check,
+end-of-match stats, player colours, an arrow to off-screen friends and rebindable mod keys, all changeable in a menu on
+the map without a new lobby and all off by default (local build 1.2.7.7, not published). The Craaghelm DLC maps were
+not tested.
 
 ## Existing work
 
@@ -55,7 +57,7 @@ archive note invites forks "as long as they give credit".
 
 ## What we changed
 
-Six fixes and a set of optional co-op settings, as seven patches against Bemno 1.2.7 (local build 1.2.7.6). The code
+Seven fixes and a set of optional co-op settings, as nine patches against Bemno 1.2.7 (local build 1.2.7.7). The code
 is not published yet.
 
 1. **Joining hangs from the second session on.** `RecentPartners` (since 1.2.5) pings remembered partners while
@@ -88,6 +90,10 @@ is not published yet.
 6. **Chat messages over about 60 characters are never sent.** `Buffer.EnsureSize` doubled the buffer once, which is not
    enough for a string longer than the buffer ("Destination array was not long enough"). Fix: grow until it fits.
    Found through the co-op difficulty chat message.
+7. **Esc stops closing the mod's menus.** Reported by the owner (Co-op Settings did not close with Esc). Already in
+   1.2.7: `UIManager.ExitHandled` ("Esc used this frame") was a static field that the first panel to use Esc set to
+   true and nothing ever reset, so every later Esc was ignored by every mod panel. Fix: it is true only in the frame it
+   was set. Not tested with a real key press (the bots cannot press Esc).
 
 ### New: optional co-op settings
 
@@ -97,10 +103,14 @@ Nothing changes unless a player turns it on. Session settings belong to the host
 |---|---|---|---|
 | Night vote | host | Off | Off, On |
 | Map ping | host | Off | Off, On |
+| Ready check | host | Off | Off, On |
+| Match stats | host | Off | Off, On |
 | Count & HP | host | Normal | 10 presets, the last one Custom |
 | Enemy type | host | Off | 10 presets, the last one Custom |
 | Scale as players | host | Off | Off, Actual, 2 to 8 players; per player Light, Medium, Strong |
 | Bosses | host | Normal | Normal, Sturdy, Tough, Brutal, Legendary, Custom |
+| Your color | each player | Auto | Auto, Gold, Cyan, Pink, Green, Orange, Blue, Red, White |
+| Friend arrow | each player | Off | Off, On |
 | Ping key | each player | middle mouse button | any key or mouse button; None |
 | Ping at | each player | Cursor | Cursor, Player |
 | Chat key | each player | Enter | any key |
@@ -109,9 +119,10 @@ Nothing changes unless a player turns it on. Session settings belong to the host
 **Co-op Settings menu (1.2.7.5).** Esc on the map opens the pause menu, which gets a "Co-op Settings" entry next to
 "Copy Invite". The host changes values with < and >; they apply from the next level start, so the difficulty can change
 between levels without a new lobby. The host publishes its values in the lobby data (`tfmp_coop`), and the other
-players see them read only. The same values are in the BepInEx configuration window (F1). Below the session settings,
-"Your keys (only for you)" lets every player rebind the mod's keys: click the key, press the new one (Esc cancels, Del
-clears).
+players see them read only. The same values are in the BepInEx configuration window (F1). Since 1.2.7.7 the menu has
+two columns: the session on the left, "Your settings (only for you)" on the right (colour, friend arrow and the mod's
+keys: click the key, press the new one; Esc cancels, Del clears). Inactive rows (a Custom value while its preset is
+not Custom) are soft green.
 
 **Night vote (1.2.7.5).** When on, a player whose night-call bar fills is marked ready instead of starting the night;
 the chat shows "X is ready for the night (1/2)". The host starts the night when every player is ready. A ready mark
@@ -128,6 +139,30 @@ name on a dark plate, for 5 seconds, kept at the screen edge while the spot is o
 ground under the mouse (the plane at the player's height, or a static collider within 8 units of it; characters and
 units are skipped), "Player" where the character stands. A `MapPing` packet goes client to host to the others; the host
 stamps the real sender. The marker is screen-space UI, so it needs no shaders.
+
+**Ping wheel (1.2.7.7).** Holding the ping key opens a wheel: Attack here, Defend here, Build here, Upgrade to 1-4
+(the number shows in the marker, e.g. "build the 4th upgrade here"; 1-4 on the keyboard pick it directly), Wait,
+Danger (flashes red, 7 s). A tap is the plain ping. The game font has none of the tried symbols (swords, shield, pause),
+so the signs are X, D, +, 1-4, II and !.
+
+**Player colours (1.2.7.7).** Each player picks a colour (Auto by default). It travels as Steam lobby member data, no
+packet. It paints the character's clothes and cape on every machine, on the map and in levels, and colours that
+player's pings, arrow and stats row. The cape is painted the way `WardrobePlayer.SetCapeMaterial` does it
+(`_Color2`/`_Color1` on the cape material) but without calling it, because that also stores the choice in the player's
+wardrobe prefs. The clothes are the body mesh `Humanoid Model Base/Mesh` (material "Player", `_BaseColor` 5879DB,
+`_ColorDim` 003BEC); armour from the game's wardrobe is not painted.
+
+**Friend arrow (1.2.7.7).** Per player: an arrow in the friend's colour at the screen edge, with name and distance,
+while the friend is off screen.
+
+**Ready check (1.2.7.7).** When on, the level start screen gets a bar with a Ready button for every player but the host;
+the host's Play (New Run and Continue Run) waits for all of them, with a "Waiting for X" dialog that closes by itself.
+The same bar lists every co-op setting that is not at its default, so both players see what they are starting.
+
+**Match stats (1.2.7.7).** The host counts, per player, enemy kills and damage dealt by the player's character (in
+`Hp.TakeDamage`, HP before and after, attacker under the player's object) and buildings built and upgraded (in the
+build confirmation). At victory or defeat it sends the table to everyone. Gold is not counted: the host holds the
+shared purse.
 
 **Co-op difficulty (1.2.7.4).** Waves are the single-player waves, so every extra player makes the game easier. The
 host picks one entry from each list; the default is the base game.
@@ -163,6 +198,7 @@ python -I games/thronefall/qa/tf_bots.py --playbook locked_endscreen --level Nor
 python -I games/thronefall/qa/tf_bots.py --playbook difficulty --level Nordfels
 python -I games/thronefall/qa/tf_bots.py --playbook coop_settings --level Frostsee
 python -I games/thronefall/qa/tf_bots.py --playbook map_ping --level Nordfels
+python -I games/thronefall/qa/tf_bots.py --playbook coop_extras --level Nordfels
 ```
 
 Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
@@ -179,6 +215,7 @@ Results, 2026-11-12 and 2026-11-13, buildid 26487600, mod 1.2.7 plus fixes:
 | `coop_settings` Frostsee: menu on the map, night vote, boss difficulty changed in the same lobby | PASS 15/15 (1.2.7.5 and 1.2.7.6): client read only; host alone ready stays Day, both ready gives Night on both; boss 15000 HP (Normal), then 30000 on both after switching to Tough in the menu |
 | `map_ping` Nordfels | PASS 9/9 (1.2.7.6), twice: off by default sends nothing; host turns it on, client sees it read only; both players rebind their own keys; Ping at Player lands on the pinging player; two cursor points land under the cursor (screen round trip within 3%) and on the same spot on both |
 | `locked_endscreen` regression | PASS 15/15 on 1.2.7.5 |
+| `coop_extras` Nordfels (1.2.7.7) | PASS 21/21: everything off by default (game's blue clothes); colours Red and Cyan on clothes and capes on both machines, map and level; friend arrow when 150 m away, gone when near; start-screen bar with the active settings on both; Play blocked until the client's Ready, dialog closes by itself; wheel directions; Attack, Upgrade 4, Danger and Wait pings with sign and label; three nights to defeat, then the same stats table on both (9 kills / 322 damage / 1 built and 1 / 118 / 1). `map_ping` 9/9 and `coop_settings` 15/15 again on this build |
 
 ## How to play
 
@@ -197,16 +234,18 @@ presses Back. With the fixed build, the optional settings are in Esc > Co-op Set
   - a friend can only join levels they have unlocked themselves. Workaround: play the tutorial alone once;
   - if one player presses Back on the end screen first, the other's end screen can stay on screen. Workaround:
     restart the game;
-  - chat messages over about 60 characters are not sent.
+  - chat messages over about 60 characters are not sent;
+  - after the first Esc in a mod menu, Esc no longer closes the mod's menus. Workaround: use the Close buttons.
 - Co-op in the tutorial level does not work (players die in a loop).
 - A joining player who crashes cannot rejoin while the host is in a level: the host goes back to the map (pause menu),
   the friend joins again (a second click may be needed right after the host's map loads), the host continues the run
   from the last dawn. Wait a few seconds after the friend appears before opening a level flag.
 - Reported once, not reproduced: the joining player did not see the perks the host selected (in the tutorial). The
   owner later confirmed the friend does see them outside the tutorial.
-- Not tested in 1.2.7.6: real key presses for the ping and the key capture (the bots call the same code the key calls,
-  with minimized windows the mouse position is not meaningful), controller buttons as keys, pinging on the overworld
-  map, the Co-op Settings menu with a controller, Totend's second boss stage, a victory run.
+- Not tested in 1.2.7.7: real key presses (ping tap and wheel hold, key capture, Esc; the bots call the same code the
+  keys call, and with minimized windows the mouse position is not meaningful), controller buttons as keys, the
+  Co-op Settings menu with a controller, match stats after a victory and with upgrades, three or more players, Totend's
+  second boss stage, a victory run.
 - Leaving a level right after a defeat logs a short burst of `NullReferenceException` in `PathfindMovementEnemy.Update`
   (game code; about 700 lines on the host, then quiet). No visible effect.
 

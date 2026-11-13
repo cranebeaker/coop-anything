@@ -490,6 +490,178 @@ class MapPing(core.Playbook):
             ctx.expect(not same_point(spots[0], spots[1], 1.0), "two cursor points gave the same spot %s" % spots)
 
 
+def keys_step(bot, row, target, tries=12):
+    """Press > on a "Your settings" row until it shows `target`."""
+    for _ in range(tries):
+        if bot.call("keys")["rows"].get(row) == target:
+            return Result(True, "%s = %s" % (row, target))
+        bot.call("keys", action="click", row=row, dir=1)
+    return Result(False, "%s never reached %s (now %s)" % (row, target, bot.call("keys")["rows"].get(row)))
+
+
+def ids(bot):
+    """(own player id, other player id) as this machine sees them."""
+    players = bot.call("colors")["players"]
+    own = next(p["id"] for p in players if p["local"])
+    other = next(p["id"] for p in players if not p["local"])
+    return own, other
+
+
+class CoopExtras(core.Playbook):
+    """1.2.7.7: player colours (cape too), friend arrow, the start-screen bar (active settings, ready check), ping kinds
+    and the ping wheel, and the match stats after playing the level to its end."""
+    name = "coop_extras"
+    summary = ("Colours on capes and pings, friend arrow, active settings and ready check on the start screen, ping "
+               "kinds, match stats equal on both after the match.")
+    min_players = 2
+    max_players = 2
+
+    def __init__(self, level="Nordfels"):
+        self.level = level
+
+    def colors_agree(self, ctx, host, client, where):
+        h = {p["id"]: p for p in host.call("colors")["players"]}
+        c = {p["id"]: p for p in client.call("colors")["players"]}
+        ctx.log("%s colours: host sees %s; client sees %s" % (where, list(h.values()), list(c.values())))
+        for pid in h:
+            ctx.expect(h[pid]["color"] == c[pid]["color"], "%s: player %s has colour %s on the host, %s on the client"
+                       % (where, pid, h[pid]["color"], c[pid]["color"]))
+            for view, name in ((h, "host"), (c, "client")):
+                ctx.expect(view[pid]["cape"] == view[pid]["color"], "%s: player %s cape %s on the %s, colour %s"
+                           % (where, pid, view[pid]["cape"], name, view[pid]["color"]))
+                ctx.expect(view[pid]["body"] == view[pid]["color"], "%s: player %s body %s on the %s, colour %s"
+                           % (where, pid, view[pid]["body"], name, view[pid]["color"]))
+
+    def run(self, ctx):
+        host, client = ctx.host.bot, ctx.clients[0].bot
+        host_id, client_id = ids(host)
+
+        with ctx.step("defaults: no colours chosen, no arrow, nothing extra", compare=False):
+            for b in (host, client):
+                players = b.call("colors")["players"]
+                ctx.expect(all(p["choice"] == 0 for p in players), "a colour is chosen by default: %s" % players)
+                ctx.expect(all(p["body"] == "5879DB" for p in players), "body not the game's blue by default: %s" % players)
+                ctx.expect(not b.call("arrows")["on"], "friend arrow on by default")
+
+        with ctx.step("host: ready check, match stats, map ping on, Count & HP Tough; colours Red and Cyan; arrows on",
+                      compare=False):
+            CoopSettings.open_menu(None, ctx, host)
+            for key, value in (("ready", "On"), ("stats", "On"), ("ping", "On"), ("count", "Tough")):
+                ctx.must(panel_set(host, key, value), "host: %s %s" % (key, value))
+            ctx.must(keys_step(host, "kcolor", "Red"), "host colour Red")
+            ctx.must(keys_step(host, "karrow", "On"), "host arrow on")
+            CoopSettings.open_menu(None, ctx, client)
+            ctx.must(keys_step(client, "kcolor", "Cyan"), "client colour Cyan")
+            ctx.must(keys_step(client, "karrow", "On"), "client arrow on")
+            host.call("coop_panel", action="close")
+            client.call("coop_panel", action="close")
+
+        with ctx.step("colours reach the other player; capes painted on both machines (map)", compare=False):
+            ctx.wait_until("both see both choices", lambda: all(
+                {p["id"]: p["choice"] for p in b.call("colors")["players"]} == {host_id: 7, client_id: 2}
+                for b in (host, client)), 15)
+            ctx.pause(1)
+            self.colors_agree(ctx, host, client, "map")
+
+        with ctx.step("friend arrow: client walks far off, the host's arrow points at it; back near, it goes", compare=False):
+            hp = host.call("map_ping")["player"]
+            # The overworld camera is zoomed out: 60 m is still on screen, 300 m is outside the map (the game puts
+            # the player back). 150 m east is off screen.
+            client.call("teleport", x=hp[0] + 150, z=hp[2])
+            ctx.wait_until("host shows an arrow to the client", lambda: str(client_id) in host.call("arrows")["visible"], 15)
+            d = host.call("arrows")["visible"][str(client_id)]
+            ctx.log("host arrow to the client (client 150 m east): direction %s" % d)
+            ctx.expect(d[0] > 0.5, "arrow does not point east: %s" % d)
+            client.call("teleport", x=hp[0] + 2, z=hp[2])
+            ctx.wait_until("arrow gone once the client is near", lambda: str(client_id) not in host.call("arrows")["visible"], 15)
+
+        with ctx.step("host opens %s: the bar shows the active settings and the ready check on both" % self.level, compare=False):
+            ctx.must(host.open_level(self.level), "host opens the level flag")
+            ctx.wait_until("loadout open on both", lambda: host.popup_open() and client.popup_open(), 15)
+            ctx.pause(1)
+            h, c = host.call("loadout_info"), client.call("loadout_info")
+            ctx.log("host bar: %s" % h)
+            ctx.log("client bar: %s" % c)
+            for name, info in (("host", h), ("client", c)):
+                ctx.expect(info["bar"] and info["settings"] and "Count & HP Tough" in info["settings"]
+                           and "Ready check On" in info["settings"], "%s bar wrong: %s" % (name, info))
+                ctx.expect(info["readyText"] and "waiting for" in info["readyText"], "%s ready line: %s" % (name, info))
+            ctx.expect(c["button"] and not h["button"], "Ready button: host %s client %s" % (h["button"], c["button"]))
+
+        with ctx.step("both pick a weapon; the host's Play waits for the client's Ready", compare=False):
+            ctx.must(host.first_page("new"), "host: new run, weapon grid")
+            ctx.must(host.pick_weapon(), "host picks a weapon")
+            ctx.must(client.pick_weapon(), "client picks a weapon")
+            ctx.wait_until("host knows both picks",
+                           lambda: len([v for v in host.weapon_picks().values() if v != "Invalid"]) == 2, 10)
+            host.press_play()
+            ctx.pause(4)
+            ctx.expect(host.scene() == "_LevelSelect" and client.scene() == "_LevelSelect",
+                       "the level started without the client's Ready")
+            ctx.expect(host.call("loadout_info")["dialog"], "no 'Waiting for ... to press Ready' dialog on the host")
+
+        with ctx.step("client presses Ready; the host sees it; Play starts the level", compare=False):
+            ctx.must(Result(client.call("loadout_info", action="ready").get("ok", True), "client Ready"), "client presses Ready")
+            ctx.wait_until("host sees the client ready", lambda: host.call("loadout_info")["ready"].get(str(client_id)), 10)
+            ctx.wait_until("the waiting dialog closes by itself", lambda: not host.call("loadout_info")["dialog"], 5)
+            ctx.pause(0.5)
+            ctx.log("host bar after Ready: %s" % host.call("loadout_info")["readyText"])
+            ctx.must(host.press_play(), "host presses Play")
+            ctx.wait_until("both in the level", lambda: host.scene() == self.level and client.scene() == self.level, 60)
+            ctx.pause(3)
+
+        with ctx.step("capes keep their colours in the level", compare=False):
+            self.colors_agree(ctx, host, client, "level")
+
+        with ctx.step("ping wheel: mouse direction picks the kind", compare=False):
+            cases = {(0, 100): "Attack", (100, 0): "Build", (0, -100): "Upgrade4", (-100, 0): "Upgrade2",
+                     (10, 10): "Look", (70, 70): "Defend", (-70, 70): "Upgrade1"}
+            got = {k: host.call("wheel_pick", dx=k[0], dy=k[1])["kind"] for k in cases}
+            ctx.log("wheel picks: %s" % got)
+            ctx.expect(got == cases, "wheel picks %s, expected %s" % (got, cases))
+
+        with ctx.step("ping kinds arrive with their sign and label, in the sender's colour", compare=False):
+            for sender, receiver, kind, sign, label in (
+                    (client, host, "Attack", None, "Attack here"),
+                    (host, client, "Upgrade4", "4", "Upgrade to 4"),
+                    (client, host, "Danger", "!", "Danger!"),
+                    (host, client, "Wait", None, "Wait")):
+                before = receiver.call("map_ping")["shown"]
+                ctx.must(Result(sender.call("map_ping", action="now", x=0.55, y=0.55, kind=kind)["sent"], kind), "ping %s" % kind)
+                ctx.wait_until("%s arrives" % kind, lambda: receiver.call("map_ping")["shown"] > before, 10)
+                r = receiver.call("map_ping")
+                ctx.log("%s ping on the receiver: sign %r, label %r" % (kind, r["sign"], r["marker"]))
+                ctx.expect(r["kind"] == kind and (sign is None or r["sign"] == sign) and r["sign"]
+                           and r["marker"] and r["marker"].endswith(label), "%s ping wrong on the receiver: %s" % (kind, r))
+                ctx.pause(1)
+
+        with ctx.step("day 1: host builds the castle, the client one more building if affordable", compare=False):
+            castle = next(s for s in host.slots() if s["name"] == "Castle Center")
+            ctx.must(host.build(castle["id"]), "host builds the castle")
+            ctx.settle()
+            other = [s for s in affordable(host.slots(), host.gold()) if s["name"] != "Castle Center"]
+            self.client_built = 0
+            if other:
+                ctx.must(client.build(other[0]["id"]), "client builds %s" % other[0]["name"])
+                self.client_built = 1
+                ctx.settle()
+            ctx.log("host stats so far: %s" % host.call("match_stats")["current"])
+
+        # Play to the end with only the castle (and its upgrades), so the match ends within a few nights.
+        DayNight(self.level, 0, build_filter=lambda s: s["name"] == "Castle Center", enter=False).run(ctx)
+
+        with ctx.step("match stats: the same table on both, matching the host's counts", compare=False):
+            ctx.wait_until("stats shown on both", lambda: host.call("match_stats")["panel"] and client.call("match_stats")["panel"], 20)
+            h, c = host.call("match_stats"), client.call("match_stats")
+            ctx.log("host stats panel %s, host counts %s" % (h["rows"], h["current"]))
+            ctx.log("client stats panel %s" % c["rows"])
+            ctx.expect(h["rows"] == c["rows"], "stats differ: host %s client %s" % (h["rows"], c["rows"]))
+            rows = {int(r.split("|")[0]): [int(x) for x in r.split("|")[1:]] for r in h["rows"]}
+            ctx.expect(rows.get(host_id, [0, 0, 0, 0])[2] >= 1, "host built nothing: %s" % rows)
+            ctx.expect(rows.get(client_id, [0, 0, 0, 0])[2] == self.client_built, "client built %s, expected %s" % (rows, self.client_built))
+            ctx.expect(sum(r[1] for r in rows.values()) > 0, "no player damage counted: %s" % rows)
+
+
 class DayNight(core.Playbook):
     name = "day_night"
     summary = ("Open a level from the map, both pick weapons, start; host and client build in turns; nights alternate "
@@ -497,15 +669,17 @@ class DayNight(core.Playbook):
     min_players = 2
     max_players = 2
 
-    def __init__(self, level="Nordfels", nights=2, night_timeout_s=420, build_filter=None, night_sampler=None):
+    def __init__(self, level="Nordfels", nights=2, night_timeout_s=420, build_filter=None, night_sampler=None, enter=True):
         self.level, self.nights, self.night_timeout_s = level, nights, night_timeout_s
         self.build_filter = build_filter        # slot -> bool: which buildings the bots may build (None: any)
         self.night_sampler = night_sampler      # (host, client) -> None, called every 2 s during a night
+        self.enter = enter                      # False: both are already in the level
         self.ended = None
 
     def run(self, ctx):
         host, client = ctx.host.bot, ctx.clients[0].bot
-        enter_level(ctx, host, client, self.level)
+        if self.enter:
+            enter_level(ctx, host, client, self.level)
         builders = [host, client]
         night, ended = 0, None
         while self.nights == 0 or night < self.nights:
@@ -720,6 +894,8 @@ def main(argv):
         pb = CoopSettings(a.level)
     elif a.playbook == "map_ping":
         pb = MapPing(a.level)
+    elif a.playbook == "coop_extras":
+        pb = CoopExtras(a.level)
     else:
         pb = DayNight(a.level, a.nights)
     opts = {"settle_s": 30.0, "settle_poll_s": 0.5}

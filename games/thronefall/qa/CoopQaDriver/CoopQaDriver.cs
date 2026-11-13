@@ -419,7 +419,11 @@ namespace CoopQa
                     // position with PingAt=Player). Always returns how many pings this copy has shown and the last one.
                     // "x"/"y" (0..1 of the screen) ping at that screen point instead of the mouse pointer.
                     Vector2? at = a["x"] != null ? new Vector2((float)a["x"] * Screen.width, (float)a["y"] * Screen.height) : null;
-                    var sent = (string)a["action"] == "now" ? (bool?)ThronefallMP.UI.Panels.PingPanel.TryPing(at) : null;
+                    // "kind": a PingKind name (what the ping wheel picks); default Look.
+                    var kind = a["kind"] != null
+                        ? (ThronefallMP.Network.Packets.Game.PingKind)Enum.Parse(typeof(ThronefallMP.Network.Packets.Game.PingKind), (string)a["kind"])
+                        : ThronefallMP.Network.Packets.Game.PingKind.Look;
+                    var sent = (string)a["action"] == "now" ? (bool?)ThronefallMP.UI.Panels.PingPanel.TryPing(at, kind) : null;
                     var last = ThronefallMP.UI.Panels.PingPanel.LastPosition;
                     // Where the last ping is on this screen (0..1), to check the cursor -> ground -> screen round trip.
                     var cam = Camera.main;
@@ -433,10 +437,146 @@ namespace CoopQa
                         ["shown"] = ThronefallMP.UI.Panels.PingPanel.Shown,
                         ["last"] = new JArray(last.x, last.y, last.z),
                         ["player"] = local != null ? new JArray(local.transform.position.x, local.transform.position.y, local.transform.position.z) : null,
-                        ["marker"] = marker != null ? marker.GetComponentInChildren<TMPro.TextMeshProUGUI>(true)?.text : null,
+                        ["marker"] = marker != null ? ThronefallMP.UI.Panels.PingPanel.LastLabel : null,
+                        ["kind"] = ThronefallMP.UI.Panels.PingPanel.LastKind.ToString(),
+                        ["sign"] = ThronefallMP.UI.Panels.PingPanel.LastSign,
                         ["markerVisible"] = marker != null && marker.gameObject.activeInHierarchy,
                         ["screen"] = new JArray(Screen.width, Screen.height),
                         ["lastOnScreen"] = Screen.width > 0 ? new JArray(sp.x / Screen.width, sp.y / Screen.height) : null,
+                    };
+                }
+                case "renderers_dump":
+                {
+                    // Reverse engineering: every renderer under the local character, with its material colours.
+                    var lp = ThronefallMP.Plugin.Instance.PlayerManager.LocalPlayer?.Object;
+                    if (lp == null) return new JObject { ["ok"] = false, ["error"] = "no local player" };
+                    var arr = new JArray();
+                    foreach (var r in lp.GetComponentsInChildren<Renderer>(true))
+                    {
+                        var path = r.name;
+                        for (var t = r.transform.parent; t != null && t != lp.transform; t = t.parent) path = t.name + "/" + path;
+                        var mats = new JArray();
+                        foreach (var m in r.sharedMaterials)
+                        {
+                            if (m == null) continue;
+                            var cols = new List<string>();
+                            foreach (var pn in new[] { "_BaseColor", "_ColorDim", "_Color1", "_Color2", "_Color3", "_Color" })
+                                if (m.HasProperty(pn)) cols.Add(pn + "=" + ColorUtility.ToHtmlStringRGB(m.GetColor(pn)));
+                            mats.Add($"{m.name} [{m.shader.name}] {string.Join(" ", cols)}");
+                        }
+                        arr.Add(new JObject { ["path"] = path, ["type"] = r.GetType().Name, ["active"] = r.gameObject.activeInHierarchy && r.enabled, ["materials"] = mats });
+                    }
+                    return new JObject { ["renderers"] = arr };
+                }
+                case "wardrobe_dump":
+                {
+                    // Reverse engineering: the local character's wardrobe parts, their renderers, materials, shaders
+                    // and colour properties, plus the game's armour material choices.
+                    var lp = ThronefallMP.Plugin.Instance.PlayerManager.LocalPlayer?.Object;
+                    var wp = lp != null ? lp.GetComponentInChildren<WardrobePlayer>(true) : null;
+                    if (wp == null) return new JObject { ["ok"] = false, ["error"] = "no WardrobePlayer" };
+                    var tr = Traverse.Create(wp);
+                    var parts = new JObject();
+                    foreach (var field in new[] { "Armour", "Armour_DeadStatic", "Cape", "Crown", "Mount" })
+                    {
+                        var go = tr.Field(field).GetValue() as GameObject;
+                        if (go == null) { parts[field] = null; continue; }
+                        var rends = new JArray();
+                        foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+                        {
+                            var mats = new JArray();
+                            foreach (var m in r.sharedMaterials)
+                            {
+                                if (m == null) continue;
+                                var props = new JArray();
+                                for (var i = 0; i < m.shader.GetPropertyCount(); i++)
+                                {
+                                    var pn = m.shader.GetPropertyName(i);
+                                    var pt = m.shader.GetPropertyType(i);
+                                    if (pt == UnityEngine.Rendering.ShaderPropertyType.Color)
+                                        props.Add(pn + "=" + ColorUtility.ToHtmlStringRGBA(m.GetColor(pn)));
+                                    else if (pt == UnityEngine.Rendering.ShaderPropertyType.Texture)
+                                        props.Add(pn + "=tex:" + (m.GetTexture(pn) != null ? m.GetTexture(pn).name : "null"));
+                                }
+                                mats.Add(new JObject { ["name"] = m.name, ["shader"] = m.shader.name, ["props"] = props });
+                            }
+                            rends.Add(new JObject { ["renderer"] = r.name, ["type"] = r.GetType().Name, ["active"] = r.gameObject.activeInHierarchy, ["materials"] = mats });
+                        }
+                        parts[field] = new JObject { ["object"] = go.name, ["active"] = go.activeInHierarchy, ["renderers"] = rends };
+                    }
+                    var armours = new JArray();
+                    var list = tr.Field("armourMaterials").GetValue() as System.Collections.IList;
+                    if (list != null)
+                        foreach (var o in list)
+                            if (o is WardrobeMaterial wm)
+                                armours.Add(wm.name + ": " + (wm.material != null ? wm.material.name : "null") + " / " + (wm.accentMat != null ? wm.accentMat.name : "null"));
+                    return new JObject { ["parts"] = parts, ["armourMaterials"] = armours,
+                        ["curArmourMat"] = (tr.Field("curArmourMat").GetValue() as WardrobeMaterial)?.name };
+                }
+                case "wheel_pick":
+                    // Which ping the wheel picks for a mouse offset (pixels, y up) from where the key went down.
+                    return new JObject { ["kind"] = ThronefallMP.UI.Panels.PingPanel.WheelPick(new Vector2((float)a["dx"], (float)a["dy"])).ToString() };
+                case "colors":
+                {
+                    // Every player's colour choice as this machine sees it, the colour used, and the cape colour.
+                    var arr = new JArray();
+                    foreach (var p in ThronefallMP.Plugin.Instance.PlayerManager.GetAllPlayers())
+                    {
+                        var c = ThronefallMP.Network.PlayerColors.For(p.Id);
+                        var cape = ThronefallMP.Network.PlayerColors.CapeColor(p);
+                        arr.Add(new JObject
+                        {
+                            ["id"] = p.Id,
+                            ["local"] = p.Id == ThronefallMP.Plugin.Instance.PlayerManager.LocalId,
+                            ["choice"] = ThronefallMP.Network.PlayerColors.ChoiceOf(p.SteamID),
+                            ["color"] = ColorUtility.ToHtmlStringRGB(c),
+                            ["cape"] = cape.HasValue ? ColorUtility.ToHtmlStringRGB(cape.Value) : null,
+                            ["body"] = ThronefallMP.Network.PlayerColors.BodyColor(p) is Color b ? ColorUtility.ToHtmlStringRGB(b) : null,
+                        });
+                    }
+                    return new JObject { ["players"] = arr };
+                }
+                case "arrows":
+                {
+                    var arr = new JObject();
+                    foreach (var kv in ThronefallMP.UI.Panels.FriendArrowPanel.Visible)
+                        arr[kv.Key.ToString()] = new JArray(kv.Value.x, kv.Value.y);
+                    return new JObject { ["visible"] = arr, ["on"] = ThronefallMP.ModKeys.FriendArrow };
+                }
+                case "loadout_info":
+                {
+                    // The bar above the level start screen; "ready" presses its Ready button like a click.
+                    if ((string)a["action"] == "ready")
+                    {
+                        var btn = ThronefallMP.UI.UIManager.LoadoutInfoPanel.GetComponentsInChildren<ThronefallMP.UI.Controls.ButtonControl>(true)
+                            .FirstOrDefault(b => b.name == "ready_button");
+                        if (btn == null || !btn.gameObject.activeInHierarchy) return new JObject { ["ok"] = false, ["error"] = "no Ready button" };
+                        ClickButton(btn);
+                    }
+                    var ready = new JObject();
+                    foreach (var p in ThronefallMP.Plugin.Instance.PlayerManager.GetAllPlayers())
+                        ready[p.Id.ToString()] = ThronefallMP.Network.ReadyCheck.IsReady(p.Id);
+                    return new JObject
+                    {
+                        ["bar"] = ThronefallMP.UI.Panels.LoadoutInfoPanel.BarVisible,
+                        ["settings"] = ThronefallMP.UI.Panels.LoadoutInfoPanel.SettingsText,
+                        ["readyText"] = ThronefallMP.UI.Panels.LoadoutInfoPanel.ReadyText,
+                        ["button"] = ThronefallMP.UI.Panels.LoadoutInfoPanel.ButtonVisible,
+                        ["dialog"] = ThronefallMP.Network.ReadyCheck.Dialog != null,
+                        ["ready"] = ready,
+                    };
+                }
+                case "match_stats":
+                {
+                    var current = new JObject();
+                    foreach (var kv in ThronefallMP.Network.MatchStats.Current)
+                        current[kv.Key.ToString()] = $"{kv.Value.Kills}|{Mathf.RoundToInt(kv.Value.Damage)}|{kv.Value.Built}|{kv.Value.Upgrades}";
+                    var panel = ThronefallMP.UI.UIManager.MatchStatsPanel;
+                    return new JObject
+                    {
+                        ["current"] = current,
+                        ["panel"] = panel != null && panel.Enabled,
+                        ["rows"] = new JArray(ThronefallMP.UI.Panels.MatchStatsPanel.LastRows.ToArray()),
                     };
                 }
                 case "keys":

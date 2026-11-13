@@ -226,6 +226,45 @@ Running log. Observations, derivations, guesses and unknowns are kept apart.
 - Not tested: real key presses (bots call the same TryPing the key calls; the capture loop uses Input.GetKeyDown),
   controller buttons as ping key, the ping on the overworld map.
 
+### Ping kinds, friend arrow, player colours, ready check, match stats (1.2.7.7, 2026-11-13, owner's request)
+- Player colour: Steam lobby member data `tfmp_color` (0 Auto, 1-8 palette), no packet. The cape is painted the way
+  `WardrobePlayer.SetCapeMaterial` does it (`capeSMR.material` `_Color2` main, `_Color1` accent, also
+  `capeMR_DeadStatic`), but without calling it: `SetCapeMaterial` also calls `PlayerWardrobeManager.SetMatIndex`,
+  which would store the choice in the player's wardrobe prefs. Observed: the map character and the level character
+  both have a `WardrobePlayer`; colours equal on both machines, capes painted on both.
+- Friend arrow (per player): screen-edge chevron towards each off-screen player. On the overworld the camera is zoomed
+  out: a player 60 m away is still on screen; 300 m east of the start is outside the map and the game puts the player
+  back. 150 m east gave an arrow with direction (0.78, 0.62).
+- Ping kinds: `MapPingPacket` gained a kind byte (Look, Attack, Defend, Build, Upgrade1-4, Wait, Danger). Hold the ping
+  key 0.25 s for the wheel (9 choices clockwise from the top, dead zone 45 px, 1-4 pick an upgrade). The game font has
+  none of the tried symbols (crossed swords, multiplication sign, shield, pause), so the signs are X, D, +, 1-4, II, !.
+- Ready check: `ReadyPacket` client -> host -> others (host stamps the sender); the host's gate in
+  `LevelStartGatePatch` now also covers Continue Run (any popup frame), the weapon check still only the grid. Marks are
+  cleared when the start popup opens or closes (debounced 1 s, page changes leave no active frame for a moment). The
+  host's "Waiting for X" dialog stayed open for a whole match in the first run; it now closes once nobody waits.
+- Match stats: counted on the host in `HpPatch.TakeDamage` (HP before/after, kill = HP crossed 0, target tagged
+  EnemyOwned, attacker = a TaggedObject under a player's character) and `HandleConfirmBuild` (level 0 built, else
+  upgrade). Sent once when `LocalGamestate` reaches AfterMatch*. No "unknown source" player damage was logged in the
+  test, so arrows/weapon hits resolve to the character. The host keeps counting a moment after the end (the panel
+  showed 322 damage, the host's live count later 332); the table is the snapshot at the end.
+- Start-screen bar: `CoopDifficulty.Summary` lists rows that differ from their default (sub-rows only when their parent
+  differs), from the host's own values or the lobby data.
+- `coop_extras` playbook PASS 21/21 (defaults off; colours and capes on map and level; arrow; bar text on both;
+  Play blocked until Ready, dialog closes; wheel directions; four ping kinds with sign and label; build, play three
+  nights to defeat; stats table equal on both: 9 kills/322 damage/1 built and 1/118/1). Regressions `map_ping` 9/9 and
+  `coop_settings` 15/15 on the same build. Owner files untouched.
+- Not tested: real key hold for the wheel (bots call the same functions), the stats after a victory, upgrades in the
+  stats (bots only built), colours with three or more players.
+- Owner feedback: the character itself did not change colour (only the cape). Found by dumping every renderer under
+  the player object: the default wardrobe has no armour (`Armour` inactive); the king's clothes are one mesh,
+  `Alive Visuals/Horse_LOD1/Rig/root/body/Humanoid Model Base/Mesh`, material "Player" (FlatKit/Stylized Surface,
+  `_BaseColor` 5879DB, `_ColorDim` 003BEC, same hue, full saturation). The death poses have their own copies. Painted
+  with the chosen colour and a dim of the same hue (saturation x1.7, value x0.85). `coop_extras` PASS 21/21 with body
+  checks (blue by default, the chosen colour on map and level on both machines).
+- Owner report: Esc did not close Co-op Settings. Cause already in Bemno 1.2.7 (the baseline has the field and no reset): `UIManager.ExitHandled` was a static
+  field set to true by any panel that used Esc and never reset, so every later Esc was ignored. Now it is true only
+  in the frame it was set. Not tested with a real key press (the bots cannot press Esc).
+
 ### Lead (not proven player-facing): host with no weapon equipped hangs the level start
 - Seen with a fresh profile: host on the level's first page (Level Select Frame) presses Play/Start directly; host's pick is
   `Invalid` (nothing equipped), `LevelDataSync` falls back to `WeaponRequestPacket` and also sends it to the host itself;
