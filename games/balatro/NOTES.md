@@ -164,8 +164,8 @@ rounds=5 selects=5 skips=1 early_clicks=4 refused=4 levels host->guest=13/13 gue
      remembers it in `D.peer_known`, and a Lovely patch on the softlock line also accepts
      `DUO_hand_known(hand)`. `played` is left alone, so Supernova and Obelisk are not
      touched.
-   - `D.peer_known` lives in memory only (lost on quit and continue, like the rest of the
-     co-op state).
+   - In 0.5.0 `D.peer_known` lived in memory only; 0.6.0 saves it with the run
+     (`G.GAME.duo.known`), so it survives Continue.
 
 QA 0.5.0:
 - `run_suite.ps1 -HostShopLag 6 -Secret -Planets` (host lingers 6 s per shop; the guest
@@ -189,7 +189,7 @@ rounds=5 selects=5 skips=1 early_clicks=0 refused=0 levels host->guest=13/13 gue
 ## 0.6.0 (2026-10-27), from a playtest of 0.5.0
 Reports and what the code says:
 1. The guest left the shop first and sat on an empty screen while the host was still in
-   the shop (photo, ante 1 round 1).
+   the shop (ante 1, round 1).
    - Unknown why: no logs from that session, and the logs are overwritten on start.
    - Observed: in 0.5.0 the guest only gets a boss when the host is on the blind screen,
      in the shop or in the run start. Any loss of `bos`, a fresh run with an empty
@@ -197,7 +197,7 @@ Reports and what the code says:
    - 0.6.0: the guest asks (`need`) and waits at most 1 s, then shows its blinds with
      its own boss. The adoption (below) swaps in the host's boss when it arrives.
    - The previous log is now kept as `duo_log_prev.txt`.
-2. After a restart the blinds were out of step (photo: guest round 0 with Big up,
+2. After a restart the blinds were out of step (guest round 0 with Big up,
    host round 1 with Big defeated). Each window continued its own save, and the two
    saves were made at different moments.
    - 0.5.0 never compared positions: the host waited for "the same round and blind",
@@ -206,7 +206,7 @@ Reports and what the code says:
 4. Request: check that running out of hands doesn't block everything. 0.5.0 set
    `G.CONTROLLER.locks.duo_wait` while waiting, which blocks all input (jokers,
    consumables, run info).
-5. Crash and broken continue (photo 3).
+5. Crash and broken continue.
    - Both had a Double Tag; the skipped blind gave a Charm Tag (Mega Arcana pack) to
      both. Each side had 3 Charm Tags (own, Double copy, partner's).
    - The host opened two packs at once and crashed when they closed.
@@ -347,13 +347,232 @@ QA 0.6.1:
   not rerun on 0.6.1. Their code paths didn't change after the 0.6.0 run, where all 9
   passed.
 
+## 0.6.2 (2026-11-04), from a playtest of 0.6.1
+1. Two pack tags at once, now on the guest. Host and guest both got a Charm Tag (Mega
+   Arcana) from the skip; the guest opened both packs at once.
+   - Reproduced by bots (`run_suite.ps1 -TestTags -GuestLag 1`). Guest log: the host's tag
+     arrived at 32.93 s, `D.run_pending_nbc` fired it at 33.65 s (`NBC fired tag_charm`), and
+     the guest's own skip ran at 34.07 s, while the first pack was still opening
+     (`SKIP` + `TAG own tag_charm`).
+   - Cause: `guest_actions` ran the host's skip without waiting for the game to be idle.
+     A tag's `yep` animation runs on the blind screen before the pack state starts, so the
+     skip's own `new_blind_choice` loop opened a second pack. With people the window is
+     wide: the host sits in its own pack, so its blind states (`sy` with `p=blind`) come
+     late, and the guest is idle in between.
+   - Fix: `guest_actions` waits for `not D.busy() and not tags_busy()`.
+     `D.run_pending_nbc` does nothing while a host skip is still to follow
+     (`D.guest_skip_pending`): the skip runs the game's loop for every tag, the partner's
+     first, one pack at a time (`end_consumeable` opens the next).
+   - New detector: a booster `use_card` while the previous pack has not reached
+     `end_consumeable` logs `ERR two packs at once`, so every bot run fails on it.
+   - New bot option `--duo-test-pack-lag N` (`-PackLag`): the bot sits N s in each pack
+     like a person.
+2. Boss rerolls on both sides. The boss is shared (it sets the target and the rules).
+   - 0.6.1 refused a guest reroll ("the host picks"); a Boss Tag on the guest was used up
+     for nothing, and the guest's voucher button did nothing.
+   - Now `G.FUNCS.reroll_boss` runs on both sides (Director's Cut / Retcon button, which
+     costs $10 as in vanilla, or a Boss Tag, which is free). `D.reroll_update` waits for the
+     game's `boss_reroll` lock to clear and sends `boss` with the new key.
+   - The partner takes it without cost or animation (`D.peer_boss`: `bosses_used`, then the
+     blind screen is redrawn in place) and shows "Partner rerolled the boss".
+   - For 5 s after a reroll, `align_blinds` does not take the partner's older boss back
+     (`D.boss_override`).
+   - Director's Cut "once per ante" is per player (`boss_rerolled` is not passed on).
+
+QA 0.6.2 (bots):
+- `run_suite.ps1 -TestTags -PackLag 6 -GuestLag 1`: 41/41, 3 packs each one at a time,
+  no `ERR two packs`.
+- `run_suite.ps1 -Reroll`: host rerolls at ante 1 (as Boss Tag), guest at ante 2 (paid).
+  - First run: 45/46; the one failure was a missing log line. The guest already had the
+    host's boss from `sy` when `boss` arrived, and `D.peer_boss` returned silently. It now
+    logs "already ours".
+  - Ante 1: host `bl_window -> bl_goad`, guest `SELBOSS own=bl_goad host=bl_goad`.
+  - Ante 2: guest `bl_mouth -> bl_wall`, dollars 37 -> 27; host `BOSS peer bl_mouth ->
+    bl_wall`; guest `SELBOSS own=bl_wall host=bl_wall`.
+
+## 0.6.3 (2026-11-07), from a playtest of 0.6.2 (one player over Parsec)
+1. Score lost on one side. Playtest: the host was out of hands and waiting. Its screen
+   said ~14k, its status line said "you 9k + partner 11k" (20k), and the guest's screen said
+   20k. The guest then won the blind, and the host lost the run.
+   - Cause: the game counts a hand into `G.GAME.chips` with an `ease` event whose end
+     value is fixed when the hand is scored (`state_events.lua` ~1044; `engine/event.lua`
+     keeps `end_val` and writes it when the ease ends). 0.6.2 held the partner's points
+     back while the own count ran, but gave up after 20 s (`own_ease_t`). A count that
+     takes longer (game paused or a menu open during the count: events created before the
+     pause stop, a long joker chain) let the partner's points in, then the ease landed and
+     overwrote them.
+   - Reproduced by bots: `--duo-test-pause 30` (`run_suite.ps1 -Pause 30`) pauses the host
+     for 30 s right after its hand is scored, from round 2 on. `-OldEase` brings back the
+     0.6.2 handling. Result: 9 failures, e.g. "r2 totals differ: host 171 vs guest 236" and
+     "host chips 171 != mine+theirs 347", and the run ended in a loss on round 5 (host 111
+     vs guest 254).
+     - The pause has to start the frame after scoring. An event created while
+       `G.SETTINGS.paused` is set runs anyway (`created_on_pause`). The first try paused
+       inside `DUO_on_hand`, and the count went through.
+   - Fix: the own count is over when no ease on `G.GAME.chips` is left in any event queue
+     (`chips_eases`), not after a timer. All points added from outside go through
+     `add_chips`, which also shifts `end_val` (and `start_val` once the ease has started)
+     of any count still running. Nothing added during a count can be lost. A 60 s cap is
+     kept only so the partner's 'pl' gets released.
+2. The status line "Shared score ... (you + partner)" stays on screen through the round
+   evaluation (cash out) until the shop. `facing_blind` is cleared when the round
+   evaluation starts (`game.lua` ~3312), so the line vanished at once. The last line of
+   the round is kept and drawn in phase `eval`. It is no longer drawn on the blind screen
+   (it showed "0 / 0" there).
+3. The partner's skip tags on the blind screen. A player streaming over Parsec sees only
+   their own window.
+   - `sy` now carries both blind tags (`ts`, `tb`). They are taken from phases blind,
+     blind_wait and shop: tags are rolled at cash out, like the boss.
+   - `create_UIBox_blind_tag` is wrapped to add a row under the own tag: "Partner's tag",
+     the tag name and a small tag sprite (hover shows its text).
+     - The sprite is made `for_collection`, so the partner's Orbital Tag does not pull our
+       own orbital hand.
+   - When the partner's tags change while the screen is up, it is rebuilt once it is
+     quiet.
+   - Bot runs use fixed seeds, so the two sides had the same tags there. Screenshot
+     checked: both blinds show the partner row.
+4. Hieroglyph / Petroglyph (-1 ante).
+   - 0.6.2, from the code: the buyer went back one ante alone, so the partner was
+     further along. `align_blinds` ("furthest along wins") then moved the buyer forward
+     again on its blind screen. The voucher cost a hand or discard and did nothing.
+   - 0.6.3: `Card:apply_to_run` is wrapped. For these two vouchers it sends
+     `ante` (`d`, `n` = ante before), and the partner runs `ease_ante(d)` and adjusts
+     `blind_ante` without the hand/discard cost.
+5. The guest can open the Play / New Run menu (decks, stakes, challenges). `setup_run` is
+   no longer refused. `start_setup_run` and `start_challenge_run` are refused while the
+   menu stays open ("The host starts the run"), and `start_run` stays refused as before.
+6. Frame drops in the guest window over two hours (144 Hz monitor, unfocused, driven
+   over Parsec; from about 144 to about 20 fps). Not reproduced: the test VM has one
+   display and software rendering.
+   - Added a `PERF` log line once a minute: fps, worst frame, ms per frame in game
+     update / game draw / mod update / mod draw, Lua memory, event queue length, the
+     game's object counts (`G.I`), window focus, log size. A playtest log will show what
+     grows.
+   - In a 5 minute bot run (VM): the game's object counts stayed flat (cards 53, sprites
+     163-165, uiboxes 8-12). The mod took ~2 ms per frame; drawing dominated (~90 ms in
+     software GL).
+
+QA 0.6.3 (bots):
+- `run_suite.ps1 -Pause 30`: 40/40 (same rounds equal on both sides: 104, 236, 240, 384,
+  254). The same run with `-OldEase` fails 9 checks (above).
+- `run_suite.ps1 -Ante`: 73/73, 11 rounds. Host `ANTE own Hieroglyph 2 -> 1`, guest `ANTE
+  peer 2 -> 1`, later guest `ANTE own Petroglyph 2 -> 1`, host `ANTE peer 2 -> 1`. Round 4
+  and 7 targets back at ante 1 (90) on both; no `ADOPT ante`.
+- `run_suite.ps1 -Wish -Slow 4`: 48/48 including the guest menu check (`GUESTMENU open
+  overlay=true / BLOCKED start_setup_run / GUESTMENU after play overlay=true`).
+- Full `run_all.ps1`, 13 scenarios (the 11 before plus `-Pause 30` and `-Ante`): 13/13
+  passed (46, 46, 41, 48, 39, 20, 30, 17, 20, 41, 46, 40, 73 checks).
+- Not run: `lang_test.ps1` for the two new strings (`peer_tag_label`, `peer_ante`) in 12 of
+  the 14 languages.
+
+### 0.6.3, second playtest (2026-11-09, guest window logs only)
+7. Frame drop, measured with the `PERF` line (guest window, 144 Hz monitor, unfocused,
+   gamepad over Parsec):
+   - Mod time stayed ~0.04 ms per frame and draw time ~2 ms.
+   - The game's own update grew within a run: 0.7 ms (minute 1), 4 (13), 8 (27), 14 (40),
+     24 ms (48), so fps fell from 60 to ~40. Lua memory grew from 8 to 140 MB.
+   - Both dropped back at a new run (minute 70: 3.4 ms, 54 MB).
+   - Object counts in `G.I` stayed flat (cards ~65).
+   - Not known yet: the host window's numbers (its log was not collected) and where the
+     update time goes.
+8. Bot census of `G.MOVEABLES` (every Moveable the game moves and updates each frame), long
+   run with `-Jokers 5`. Both windows grew from 479 to 586 in 9 minutes, by creation site
+   (`UIBox.init` / `Particles.init` record their callers):
+   - `Particles@blind.lua:282`: `Blind:defeat` makes `self.children.particles` and never
+     removes the previous one. The blind object lives through the run, so one per blind.
+   - `UIBox@common_events.lua:1069`: the Cash Out button is its own UIBox with major
+     `G.round_eval`. `cash_out` removes `G.round_eval`, not the button, so one per round.
+   - Both are in the game's code, not the mod. Fixes: `Blind:defeat` removes the old
+     particles first, and when the shop opens, UIBoxes whose major is `REMOVED` are
+     removed (`SWEEP`). After that `G.MOVEABLES` stayed at 480-500 for 11 minutes on both
+     sides.
+   - These two leaks are smaller than the playtest's growth: bots play more rounds per
+     minute and their update time rose only 1.8 -> 3.5 ms (VM). The playtest's cause is
+     still open.
+   - Added for the next log:
+     - `PROF` lines: while the update takes over 6 ms, every 5 min, a 5 s sample. The
+       game's LuaJIT has no `jit.profile`, so it uses `debug.sethook` count hooks with JIT
+       off.
+     - Controller counts (button registry, collision list, held keys, cursor stacks, draw
+       hash, pad in use) and the `MOVE` census.
+9. Orbital Tag in the partner-tag row showed "[poker hand]". The hand is rolled per ante and
+   blind when the blind screen is built (`G.GAME.orbital_choices`), so `sy` now carries it
+   (`os`, `ob`). The row's tag gets it. Bot log: `PTAG ui d=Small k=tag_handy hand=Pair`.
+
+### 0.6.3, third playtest (2026-11-11, logs of both windows)
+10. Logs from both windows over two sessions:
+    - Host (mouse): `G.MOVEABLES` 500-1500, game update 1-9 ms, 60 fps throughout.
+    - Guest (gamepad over Parsec): `G.MOVEABLES` grew to 3600 in 70 minutes (update 24 ms,
+      38 fps). In the second session it reached 8000+, jumping 3400 -> 5700 -> 8000 in two
+      minutes while the partner moved jokers around many times. The update took 40-60 ms
+      (16-25 fps).
+    - Both dropped back at a new run.
+    - Census: almost all are `UIElement` (503 -> 8303); UIBoxes stayed ~20, so the elements
+      outlive or leave their boxes.
+    - `PROF` sample at 2400 s: 37% `Moveable:move_with_major`
+      (`engine/moveable.lua:350`), 10% `Moveable:move` (278), 7-8% each the other move
+      helpers, 3% `Moveable:remove` (503) and 3% `Node:remove` (319).
+      - The remove functions scan `G.MOVEABLES` linearly, so they slow down as it grows.
+11. Not reproduced by bots: `-Pad N` keeps the bot in gamepad mode with the game's emulated
+    pad (`keyboard_controller`), wanders with the D-pad and moves a joker N times per shop
+    (A held + D-pad). `G.MOVEABLES` stayed at 490-660. Missing compared to the playtest:
+    a real pad's sticks and triggers, Parsec input.
+12. Guard added: every 10 s, UIElements whose UIBox is `REMOVED`, or that have not been in
+    their parent's children for two checks in a row, are taken out of `G.MOVEABLES`. Only
+    the list entry goes, objects are not removed, so nothing still drawn can break. A
+    `LEAK swept ...` line per minute says how many and from which box.
+    - The census now splits `UIElement` by box creation site and state (`UIE@`,
+      `UIE:deadbox@`, `UIE:detached@`), so the next guest log shows whether the leak is of
+      a kind the guard catches.
+    - In the bot runs it caught nothing (no such elements there).
+
+13. Flaky wish check in the full suite (`host pulsed 5 of 6 wishes`, about 1 run in 4).
+    - First guess, a wish arriving while the host's blind screen is still being built, was
+      not it (the next full run failed the same way).
+    - Repeated `-Wish -Slow 4` until it failed and kept the logs. The guest sent its Boss
+      wish at 199.4 s from its blind screen, but the host was still in the shop. The host
+      got it at 202.8 s and dropped it at once: wishes only lived on the blind screen.
+    - Now a wish for the current round waits through the shop and the screen build (still
+      at most 30 s). After that, 4 runs in a row passed (48/48 each).
+    - Full suite on this code before the fix: 12/13, the one failure being this check.
+
+### 0.6.3, fourth playtest (2026-11-12, guest window 107 min)
+14. The guard holds.
+    - The guest window (gamepad over Parsec) had `G.MOVEABLES` at 500-750 and the game
+      update at ~2 ms for 107 minutes, 60 fps throughout, no `ERR` lines.
+    - The 10 s sweep took out 8256 UIElements in that time, 13-188 per minute, all
+      `deadbox` (their UIBox was removed, the elements stayed in `G.MOVEABLES`).
+    - Most came from boxes made at `card.lua:4312`, `Card:hover`:
+      `self.children.focused_ui = G.UIDEF.card_focus_ui(self)`. This is the
+      Buy / Sell / Use button set under a card, built only for the card with gamepad focus
+      (`states.focus.is`). That is why only the gamepad window leaked: the game's own leak
+      in controller mode.
+    - Smaller sources: blind screen boxes (`UI_definitions.lua:1447-1449`), round
+      evaluation, the shop.
+    - The host log of that session was not kept (its window was restarted).
+    - Why the elements outlive their box: unknown (not traced in the game's code).
+
+## Network play
+- Steam store categories for 2379780 have no Remote Play Together (only Single-player,
+  Full controller support, DualSense, Steam Cloud, Family Sharing...). So Steam does not
+  offer Remote Play Together invites for Balatro.
+- Balatro's `luasteam.dll` exposes only the overlay, rich presence, friends basics and user
+  stats; there are no networking or lobby functions. Steam P2P would mean calling
+  `steam_api64.dll` through LuaJIT FFI (flat API).
+- Works today without code: stream the guest window (Parsec, free for personal use, or
+  Sunshine + Moonlight); the friend's gamepad arrives on the host's PC as a local pad.
+- The mod's protocol is plain TCP and already takes an address (`duo_config.txt`:
+  `address`, `bind`), but there is no UI for it, and same-PC parts (window placement, the
+  gamepad split, the host opening the guest window) assume one PC.
+
 ## Not covered yet
 - Tags with immediate effects other than Double/Meteor, Orbital Tag copy, and pack tags
   opening on the host mid blind screen with a person at the controls.
 - Window placement with two monitors: the test machine shows one display, so only one monitor was checked. Checked by hand there with `tools/win_test.ps1` (separate profile `wt`): first start → both halves; guest moved with SetWindowPos → after a restart `place restore 884x561 at 208,181`. Host switched to Borderless in the game's Video menu → after a restart `place keep Borderless display 1`, guest still restored. The game's Video menu showed "Windowed" after a halves arrange (the old mismatch is gone). The CO-OP menu, the "What is shared..." submenu and its Back button render.
 - Hand levels shared with `all` (Space Joker, Burnt Joker, Orbital Tag) are not bot-tested; only Planet and Black Hole are.
 - Gamepad input in the unfocused window (needs a person pressing buttons).
-- Host boss reroll (Director's Cut / Retcon) and Boss Tag on the guest.
-- Antes past 2, jokers that read the score (Mr. Bones), Hieroglyph/Petroglyph (ante shift).
+- Antes past 2, jokers that read the score (Mr. Bones). Hieroglyph/Petroglyph are
+  bot-tested through `Card:apply_to_run` only, not bought from a real shop.
+- The guest frame drop over long sessions (see 0.6.3, item 6).
 - Mid-run quit and continue beyond the antes 1-2 bot runs (Continue itself is covered, see 0.6.0 above).
 - Install into the real game folder.
