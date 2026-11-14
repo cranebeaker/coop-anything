@@ -11205,3 +11205,3625 @@
   sources:
   - https://store.steampowered.com/app/2441270/Kill_The_Crows/
   checked: '2026-11-09'
+- game: Escape from Duckov
+  year: 2025
+  engine: Unity
+  project: Escape From Duckov Coop Mod
+  url: https://github.com/Mr-sans-and-InitLoader-s-team/Escape-From-Duckov-Coop-Mod-Preview
+  other_urls:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3591341282
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: partial
+    items: partial
+  players: unknown
+  networking: unknown
+  open_source: partial
+  last_activity: '2026-11'
+  qa: none
+  notes: >-
+    LAN and online co-op for Escape from Duckov by Mr.sans and InitLoader. It syncs players (position, actions,
+    equipment, health, names), enemies (spawning, movement, damage, death), combat, loot and containers, doors,
+    destructibles, other scene objects and vehicles, and checks that everyone runs the same version. Two modes:
+    independent co-op, where each player loads their own save that has finished the tutorial and joins a room from
+    inside the game, and shared co-op, which keeps the main menu entry. Version 1.4.8.1 is released on GitHub and the
+    Steam Workshop. The licence is a modified AGPL-3.0 with extra restrictions listed in the repo.
+  sources:
+  - https://github.com/Mr-sans-and-InitLoader-s-team/Escape-From-Duckov-Coop-Mod-Preview
+  - https://github.com/Mr-sans-and-InitLoader-s-team/Escape-From-Duckov-Coop-Mod-Preview/blob/master/README_EN.md
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3591341282
+  checked: '2026-11-14'
+- game: Fallout 2
+  year: 1998
+  engine: Fallout 2 CE
+  project: fallout2-coop
+  url: https://github.com/gusmarcum/fallout2-coop
+  other_urls: []
+  kind: fork
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: 2 or more
+  networking: vpn-needed
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Dedicated server and network client built on the Fallout 2 Community Edition engine, with one character per player
+    in a shared persistent world. The README says the whole game has been played in co-op from the start to the final boss,
+    and it recommends a VPN such as ZeroTier for play over the internet. The licence is a custom Sustainable Use licence,
+    and the code is derived from an earlier co-op fork.
+  sources:
+  - https://github.com/gusmarcum/fallout2-coop
+  checked: '2026-11-14'
+- game: Fallout 4
+  year: 2015
+  engine: unknown
+  project: Fallout4Coop
+  url: https://github.com/hardkiller2565123123/Fallout4Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-06
+  qa: none
+  notes: Early Fallout 4 co-op mod. The README is a single line and does not describe features, installation or how players
+    connect.
+  sources:
+  - https://github.com/hardkiller2565123123/Fallout4Coop
+  checked: '2026-11-14'
+- game: 'Fallout: New Vegas'
+  year: 2010
+  engine: Gamebryo
+  project: VegasCoop
+  url: https://github.com/silvematt/VegasCoop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-08
+  qa: none
+  notes: 'Weekend test mod for Fallout: New Vegas (xNVSE plugin) that replicates the position and rotation of two game clients
+    over a peer-to-peer TCP connection. The host and peer addresses are set in the source and the plugin is built by the player.
+    The author offers it as a starting point for other co-op mods. Licence GPL-2.0.'
+  sources:
+  - https://github.com/silvematt/VegasCoop
+  checked: '2026-11-14'
+- game: 'Fallout: New Vegas'
+  year: 2010
+  engine: Gamebryo
+  project: NewVegasCoop
+  url: https://github.com/zyrcxies/NewVegasCoop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: host and 2-4 friends
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Co-op xNVSE plugin for the Steam version of Fallout: New Vegas. The README calls version 0.1.4 an early release
+    that is playable start to finish with bugs, and says players get it from Nexus Mods. The README says AI (Claude) was used
+    as a coding assistant and points to a custom licence in the LICENSE file.'
+  sources:
+  - https://github.com/zyrcxies/NewVegasCoop
+  checked: '2026-11-14'
+- game: House Flipper
+  year: 2018
+  engine: Unity
+  project: HouseFlipper-Coop
+  url: https://github.com/MadsLundaa/HouseFlipper-Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: unknown
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: BepInEx co-op plugin for the original House Flipper in which players renovate the same house. Money, skills and job
+    progress are shared with the host as authority, and some actions are host-only. Players connect by host IP (TCP 27055,
+    or a VPN) or by Steam ID, and the project calls itself a prototype. Licence MIT.
+  sources:
+  - https://github.com/MadsLundaa/HouseFlipper-Coop
+  checked: '2026-11-14'
+- game: 'Transformers: Fall of Cybertron'
+  year: 2012
+  engine: unknown
+  project: foc-coop
+  url: https://github.com/Nazarik322/foc-coop
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: unknown
+    story: 'yes'
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: up to 5
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Co-op layer for the Fall of Cybertron campaign with up to 5 players, connecting through Steam lobbies with no port
+    forwarding. Enemies, damage and story events are shared and downed players can be revived. It is installed with an installer
+    from Releases, and the latest release is marked beta.
+  sources:
+  - https://github.com/Nazarik322/foc-coop
+  checked: '2026-11-14'
+- game: 'Ace Combat 7: Skies Unknown'
+  year: 2019
+  engine: Unreal Engine 4
+  project: Ace-Combat7-PVE-Co-Op-mod
+  url: https://github.com/jeonspace-1/Ace-Combat7-PVE-Co-Op-mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: PVE co-op mod for Ace Combat 7 distributed as zip files with a launcher, with instructions in a README inside the
+    zip. The repo description says it was made with vibe coding and is unrelated to another co-op mod. The public README does
+    not describe features or how players connect.
+  sources:
+  - https://github.com/jeonspace-1/Ace-Combat7-PVE-Co-Op-mod
+  checked: '2026-11-14'
+- game: Alice in Wonderland
+  engine: unknown
+  project: CoopCompanion
+  url: https://github.com/Alice-2010/CoopCompanion
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Network companion for playing the PC releases of Alice in Wonderland in co-op, made of a server program written in
+    Go and a game hook DLL. The README only shows an architecture diagram and gives no install steps or feature list.
+  sources:
+  - https://github.com/Alice-2010/CoopCompanion
+  checked: '2026-11-14'
+- game: American McGee's Alice
+  year: 2000
+  engine: id Tech 3
+  project: alice-coop-
+  url: https://github.com/kanaj5/alice-coop-
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: direct-ip
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Co-op mod for American McGee's Alice (the 2011 remaster release), started through the Alice-Coop.bat launcher where
+    one player hosts and the other enters the host IP. The README calls it an alpha that has not been tested through the whole
+    game. Either Alice can be revived by holding the action button, and only the host can load and save.
+  sources:
+  - https://github.com/kanaj5/alice-coop-
+  checked: '2026-11-14'
+- game: 'Alice: Madness Returns'
+  year: 2011
+  engine: Unreal Engine 3
+  project: Alice-Madness-Returns-Co-op
+  url: https://github.com/docwitson/Alice-Madness-Returns-Co-op
+  other_urls:
+  - https://www.nexusmods.com/alicemadnessreturns/mods/87
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Experimental two-player co-op mod built on MadnessPatch, with a graphical launcher and a UDP relay that shares player,
+    animation and world state while the host decides ordinary enemy behaviour. It is meant for localhost, a trusted LAN or
+    a VPN, and both games still simulate parts of the level locally. Licence GPL-2.0.
+  sources:
+  - https://github.com/docwitson/Alice-Madness-Returns-Co-op
+  checked: '2026-11-14'
+- game: 'Alien: Isolation'
+  year: 2014
+  engine: Cathode
+  project: alien-isolation-coop
+  url: https://github.com/phoenixd123/alien-isolation-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Two-player mod where each player runs their own copy of the campaign and the mod mirrors the partner position, doors,
+    pickups, story steps and deaths. Joining works through Steam or a direct IP, and the README lists what works, what is
+    written but untested, and that it has mostly been tested with two copies on one PC. Licence MIT.
+  sources:
+  - https://github.com/phoenixd123/alien-isolation-coop
+  checked: '2026-11-14'
+- game: 'Amnesia: The Dark Descent'
+  year: 2010
+  engine: HPL2
+  project: Amnesia-The-Dark-Descent---Local-Co-op-Mod
+  url: https://github.com/TheBorn/Amnesia-The-Dark-Descent---Local-Co-op-Mod
+  other_urls: []
+  kind: fork
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: partial
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: none
+  notes: Split-screen or dual-monitor local co-op built on the Amnesia64 fork of the open-source HPL2 engine, with player
+    1 on keyboard and mouse and player 2 on a gamepad. The README calls it experimental and warns of bugs and soft locks,
+    and it offers Normal, Hard and Custom co-op modes where Normal shares items and the lantern. Licence GPL-3.0.
+  sources:
+  - https://github.com/TheBorn/Amnesia-The-Dark-Descent---Local-Co-op-Mod
+  checked: '2026-11-14'
+- game: 'Arcanum: of Steamworks and Magick Obscura'
+  year: 2001
+  engine: unknown
+  project: ArcanumMP
+  url: https://github.com/PanBartosz/ArcanumMP
+  other_urls:
+  - https://panbartosz.github.io/ArcanumMP/
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: up to 4
+  networking: lan
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Four-player co-op for Arcanum's original campaign with native Windows and Linux builds that can play together. Each
+    player controls their own character while the host runs the shared campaign, with shared dialogue, travel and saves. The
+    status page says the campaign evidence is automated routing through the main story chain and not one full normal playthrough.
+  sources:
+  - https://github.com/PanBartosz/ArcanumMP
+  checked: '2026-11-14'
+- game: Arma Reforger
+  year: 2022
+  engine: Enfusion
+  project: COE2_AR
+  url: https://github.com/Kexanone/COE2_AR
+  other_urls:
+  - https://reforger.armaplatform.com/workshop/60926835F4A7B0CA
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Combat Ops Enhanced 2, a co-op infantry game mode for Arma Reforger with dynamically generated areas of operation
+    and a votable commander role. It is installed from the Arma Reforger Workshop and ships scenarios for Arland, Everon and
+    Kolguyev. Some planned phases (briefing, debriefing) are listed as not implemented, and the licence is APL-SA.
+  sources:
+  - https://github.com/Kexanone/COE2_AR
+  checked: '2026-11-14'
+- game: Back 4 Blood
+  year: 2021
+  engine: Unreal Engine 4
+  project: b4b-coop
+  url: https://github.com/actuallydan/b4b-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4 (5 if the host allows)
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Private co-op that runs the offline mode of Back 4 Blood as a listen server, so friends join the host through Steam
+    with no official servers and no port forwarding. Each player keeps their own offline progress. The author says it was
+    made quickly for friends and is not supported with great dedication. Licence MIT.
+  sources:
+  - https://github.com/actuallydan/b4b-coop
+  checked: '2026-11-14'
+- game: Balatro
+  year: 2024
+  engine: LOVE
+  project: balatro-coop
+  url: https://github.com/Dallowin/balatro-coop
+  other_urls:
+  - https://dallowin.github.io/balatro-coop/
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: shared
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Two players share one run and one score against each blind, taking turns playing hands. Players invite Steam friends
+    and join through Steam, with no lobby code or server needed. The README calls it early, playable and actively developed,
+    and it uses Lovely Injector and Steamodded. Licence GPL-3.0.
+  sources:
+  - https://github.com/Dallowin/balatro-coop
+  checked: '2026-11-14'
+- game: Ball x Pit
+  year: 2025
+  engine: Unity
+  project: ballxpit-local-coop-adeck-games
+  url: https://github.com/somaimpressaodigital/ballxpit-local-coop-adeck-games
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: per-player
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Two-player local co-op on one PC for Ball x Pit with separate characters, equipment, health and upgrades and a shared
+    unlock list. It adds to an earlier local co-op plugin and ships BepInEx in a complete zip that is extracted into the game
+    folder. It needs two controllers and the repo has no licence file.
+  sources:
+  - https://github.com/somaimpressaodigital/ballxpit-local-coop-adeck-games
+  checked: '2026-11-14'
+- game: 'Bayonetta Origins: Cereza and the Lost Demon'
+  year: 2023
+  engine: unknown
+  project: bayonetta-origins-coop
+  url: https://github.com/chokercrave/bayonetta-origins-coop
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Local two-player code mod for the Switch game where player 1 plays Cereza and player 2 plays Cheshire on separate
+    controllers. The README calls it beta, tested only on the Eden emulator, with real hardware not yet supported. It only
+    works on game version 1.0.0 and plays like the original when no second controller is connected. Licence GPL-2.0.
+  sources:
+  - https://github.com/chokercrave/bayonetta-origins-coop
+  checked: '2026-11-14'
+- game: Beholder
+  year: 2016
+  engine: Unity
+  project: Beholder-1-COOP-MOD
+  url: https://github.com/nikbendy25-maker/Beholder-1-COOP-MOD
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Co-op mod for Beholder in which the host keeps the whole world (NPC behaviour, quests, money, items) and the client
+    draws the state the host sends 15 times a second. The repo has no main README, and the Russian text file says the mod
+    DLL must be built by the player on a machine with the game.
+  sources:
+  - https://github.com/nikbendy25-maker/Beholder-1-COOP-MOD
+  checked: '2026-11-14'
+- game: Beyond Oasis
+  engine: unknown
+  project: beyond-oasis-coop
+  url: https://github.com/NeilsMabet/beyond-oasis-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: partial
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Experimental two-player ROM patch for the Mega Drive game Beyond Oasis, played in any compatible emulator with your
+    own ROM. Player 2 is invulnerable and player 1 handles story interactions, dialogue, inventory and pickups. The README
+    says it is a prototype and not a verified full-campaign conversion.
+  sources:
+  - https://github.com/NeilsMabet/beyond-oasis-coop
+  checked: '2026-11-14'
+- game: Black Mesa
+  year: 2020
+  engine: Source
+  project: SourceCoop
+  url: https://github.com/ampreeT/SourceCoop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: 'yes'
+  last_activity: 2026-08
+  qa: none
+  notes: 'SourceMod plugin that makes the single-player campaigns of Black Mesa (and Half-Life 2: Deathmatch) playable together
+    on a server. Players find co-op servers in the normal server browser, and mappers can convert maps with a documented script
+    format. Licence GPL-3.0.'
+  sources:
+  - https://github.com/ampreeT/SourceCoop
+  checked: '2026-11-14'
+- game: Blasphemous
+  year: 2019
+  engine: Unity
+  project: Blasphemous.CoopLocal
+  url: https://github.com/DavidAgr5421/Blasphemous.CoopLocal
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Local co-op mod for Blasphemous inspired by the multiplayer mod by BrandenEK. The README is a single line and the
+    repo has no stated feature list or install steps.
+  sources:
+  - https://github.com/DavidAgr5421/Blasphemous.CoopLocal
+  checked: '2026-11-14'
+- game: Blasphemous
+  year: 2019
+  engine: Unity
+  project: Blasphemous-Seamless
+  url: https://github.com/DDDrag0/Blasphemous-Seamless
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Seamless co-op for Blasphemous built on the multiplayer mod by BrandenEK, aimed at full enemy and boss synchronisation.
+    Players host and join by IP and port or through Steam P2P on the Steam version. The README calls it early and unpolished,
+    with several features implemented but not yet seen in a real match.
+  sources:
+  - https://github.com/DDDrag0/Blasphemous-Seamless
+  checked: '2026-11-14'
+- game: Blasphemous
+  year: 2019
+  engine: Unity
+  project: Blasphemous.Multiplayer
+  url: https://github.com/BrandenEK/Blasphemous.Multiplayer
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'no'
+    world_state: 'yes'
+    items: shared
+  players: unknown
+  networking: dedicated-server
+  open_source: unknown
+  last_activity: 2026-04
+  qa: none
+  notes: Multiplayer mod that shows other players and syncs inventory, stats, skills, map and world progress between them,
+    with an optional PvP mode. One player runs BlasServer.exe and the others connect through the in-game panel. The README
+    says enemies and bosses will probably never sync.
+  sources:
+  - https://github.com/BrandenEK/Blasphemous.Multiplayer
+  checked: '2026-11-14'
+- game: Brotato
+  year: 2023
+  engine: Godot
+  project: Brotato-EightPlayerCoop
+  url: https://github.com/PoppyTheDeveloPaw/Brotato-EightPlayerCoop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: partial
+  players: up to 8
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Local co-op for up to 8 players on one PC, with one keyboard player and up to 7 gamepads. Materials are shared, and
+    1-4 players play like the normal game while 5-8 players get new co-op screens. It is installed from the Steam Workshop.
+    Licence MIT.
+  sources:
+  - https://github.com/PoppyTheDeveloPaw/Brotato-EightPlayerCoop
+  checked: '2026-11-14'
+- game: Buckshot Roulette
+  year: 2023
+  engine: Godot
+  project: Buckshot-Roulette-Local-CoOp
+  url: https://github.com/Vladdabad/Buckshot-Roulette-Local-CoOp
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-08
+  qa: none
+  notes: Local co-op mod for Buckshot Roulette, written with AI according to its README and made for a LAN party. A batch
+    file installs GDRE tools and the modified game files into the Steam game folder, and the author says online co-op should
+    still work.
+  sources:
+  - https://github.com/Vladdabad/Buckshot-Roulette-Local-CoOp
+  checked: '2026-11-14'
+- game: Bulletstorm
+  year: 2011
+  engine: Unreal Engine 3
+  project: bulletstorm-coop
+  url: https://github.com/Domik482/bulletstorm-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Two-player campaign co-op for Bulletstorm: Full Clip Edition, built by patching UnrealScript bytecode and routing
+    maps through the game''s multiplayer lobby. The README calls it alpha v0.21 and lists remote player weapon aim and Dropkit
+    UI as open issues. A standalone installer applies the patches.'
+  sources:
+  - https://github.com/Domik482/bulletstorm-coop
+  checked: '2026-11-14'
+- game: 'Castlevania: Symphony of the Night'
+  year: 1997
+  engine: unknown
+  project: sotn-coop
+  url: https://github.com/tucker-bower/sotn-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: partial
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online and couch co-op for Symphony of the Night, run as two synced emulator instances in a custom launcher with
+    a Windows installer and an Android preview. Relics, areas, bosses and max stat upgrades are shared and gold is pooled.
+    Licensed AGPL-3.0, and the README says an AI wrote the code.
+  sources:
+  - https://github.com/tucker-bower/sotn-coop
+  checked: '2026-11-14'
+- game: 'Castlevania: Symphony of the Night'
+  year: 1997
+  engine: unknown
+  project: sotn-online-coop
+  url: https://github.com/jweyden/sotn-online-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 3
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op for up to three players on their own computers, playing Alucard, Richter or Maria from the PlayStation,
+    PSP and Saturn versions. Players supply their own game files and a Setup program builds the game, using SymphonyRecomp
+    and sotn-decomp. The latest release is marked pre-release and the repo description says it was written with AI. Licensed
+    AGPL-3.0.
+  sources:
+  - https://github.com/jweyden/sotn-online-coop
+  checked: '2026-11-14'
+- game: Children of Morta
+  year: 2019
+  engine: Unity
+  project: Children_of_Morta4P
+  url: https://github.com/williamanjo/Children_of_Morta4P
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: BepInEx mod that raises the game's online co-op from 2 to up to 4 players, joined through Steam invites. The README
+    (in Portuguese) calls v0.9.12 experimental and says a real match with 3 or 4 players has not been tested. An installer
+    is provided.
+  sources:
+  - https://github.com/williamanjo/Children_of_Morta4P
+  checked: '2026-11-14'
+- game: Clive Barker's Jericho
+  year: 2007
+  engine: unknown
+  project: Clive-Barker-s-Jericho-Coop
+  url: https://github.com/MAK-PIVO/Clive-Barker-s-Jericho-Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Repository for a co-op mod for Clive Barker's Jericho. It holds only a README that says the release is coming soon,
+    with progress at 85 percent, and no code or release is published.
+  sources:
+  - https://github.com/MAK-PIVO/Clive-Barker-s-Jericho-Coop
+  checked: '2026-11-14'
+- game: Cloudpunk
+  year: 2020
+  engine: Unity
+  project: cloudpunk-coop-mod
+  url: https://github.com/Vvyiloff/cloudpunk-coop-mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Source for an experimental Cloudpunk co-op mod (BepInEx 6, Unity IL2CPP), with a pre-release install zip and a protocol
+    test suite. The README (in Russian) says the full beta is not finished: independent regions, all story actions, trading,
+    rewards and final acceptance on two PCs still need work.'
+  sources:
+  - https://github.com/Vvyiloff/cloudpunk-coop-mod
+  checked: '2026-11-14'
+- game: 'Command & Conquer: Red Alert 3'
+  year: 2008
+  engine: unknown
+  project: RedAlert3World
+  url: https://github.com/MahBoiDeveloper/RedAlert3World
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-07
+  qa: none
+  notes: Not a code mod but a map package for Red Alert 3 that bundles fan-made single-player and cooperative missions, Art
+    of Defense and other maps from several authors. It is released as installable packages, latest 1.3.
+  sources:
+  - https://github.com/MahBoiDeveloper/RedAlert3World
+  checked: '2026-11-14'
+- game: 'Counter-Strike: Condition Zero'
+  year: 2004
+  engine: GoldSrc
+  project: condition-zero-joint-operations
+  url: https://github.com/MakarovK/condition-zero-joint-operations
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Solo and two-player co-op expansion with CT and T Tour of Duty campaigns, each player with their own squad. Players
+    connect through Steam invitations or LAN. Release v0.1.0-beta.2 is called the first public beta and supports only the
+    pinned Windows Steam 25th Anniversary build. Licensed GPL-3.0.
+  sources:
+  - https://github.com/MakarovK/condition-zero-joint-operations
+  checked: '2026-11-14'
+- game: 'Counter-Strike: Condition Zero'
+  year: 2004
+  engine: GoldSrc
+  project: Condition-Zero-Coop
+  url: https://github.com/MuxaJlbl4/Condition-Zero-Coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: lan
+  open_source: unknown
+  last_activity: 2025-09
+  qa: none
+  notes: Cooperative patch for the Condition Zero Tour of Duty campaign with extra player slots and spawns, extra enemy bots
+    per joined player, and optional YaPB bots. The admin installs the patch and teammates join over a physical or virtual
+    LAN. Install is a single exe from the releases page.
+  sources:
+  - https://github.com/MuxaJlbl4/Condition-Zero-Coop
+  checked: '2026-11-14'
+- game: 'Counter-Strike: Source'
+  year: 2004
+  engine: Source
+  project: Condition-Zero-Source
+  url: https://github.com/MuxaJlbl4/Condition-Zero-Source
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: lan
+  open_source: unknown
+  last_activity: 2026-07
+  qa: none
+  notes: 'SourceMod-based single-player and cooperative PvE mod that brings the Condition Zero mission and task system to
+    Counter-Strike: Source. The host shares an IP on a LAN, with Tailscale or a similar tool suggested for remote players.
+    Installs with a Windows installer, latest 1.2. It targets Counter-Strike: Source, not Condition Zero.'
+  sources:
+  - https://github.com/MuxaJlbl4/Condition-Zero-Source
+  checked: '2026-11-14'
+- game: CrossCode
+  year: 2018
+  engine: unknown
+  project: cc-multibakery
+  url: https://github.com/krypciak/cc-multibakery
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online and split-screen co-op mod for CrossCode. The README calls it beta, says a regular playthrough is not possible
+    yet and that work is focused on making PvP stable. Servers use TCP over a LAN or a tunnel or virtual LAN, and installation
+    goes through the CrossCode modding Discord. Licensed GPL-3.0.
+  sources:
+  - https://github.com/krypciak/cc-multibakery
+  checked: '2026-11-14'
+- game: Crysis
+  year: 2007
+  engine: CryEngine 2
+  project: crysis1_coop
+  url: https://github.com/salaza/crysis1_coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Crysis mod SDK repository that also contains a co-op mod (Coop source folders, a prebuilt package and host, join
+    and firewall batch scripts). The README only covers the SDK and does not describe the co-op features.
+  sources:
+  - https://github.com/salaza/crysis1_coop
+  checked: '2026-11-14'
+- game: Crysis 2 Remastered
+  year: 2021
+  engine: CryEngine
+  project: crysis2remastered-coop-build55-source
+  url: https://github.com/dinkkidingldon-dotcom/crysis2remastered-coop-build55-source
+  other_urls:
+  - https://www.nexusmods.com/crysis2remastered/mods/40
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: C# source snapshot for C2Core.dll, the in-process module of Build 55 of a Windows Steam campaign co-op mod for Crysis
+    2 Remastered. It connects the in-game Co-op menu to Steam friends and Steam Networking Messages and handles level transitions
+    and host checkpoints. The mod files are on Nexus Mods.
+  sources:
+  - https://github.com/dinkkidingldon-dotcom/crysis2remastered-coop-build55-source
+  checked: '2026-11-14'
+- game: Crysis 3 Remastered
+  year: 2021
+  engine: CryEngine
+  project: crysis3-remastered-coop
+  url: https://github.com/CuBnIcK/crysis3-remastered-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 to 4
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Campaign co-op for Crysis 3 Remastered where the host runs the level as a listen server and friends join through
+    Steam invites, relayed by Steam with no port forwarding. It uses an injected DLL, a Lua pak and a Steam layer, and the
+    README documents known gaps such as pick and throw on remote players and moving platforms. No release is published.
+  sources:
+  - https://github.com/CuBnIcK/crysis3-remastered-coop
+  checked: '2026-11-14'
+- game: Cuphead
+  year: 2017
+  engine: Unity
+  project: cuphead-coop
+  url: https://github.com/LeifsterNYC/cuphead-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: vpn-needed
+  open_source: unknown
+  last_activity: 2026-07
+  qa: none
+  notes: 'Host-authoritative BepInEx plugin for online 2-player Cuphead co-op, replacing Steam Remote Play. The README calls
+    it alpha: LAN or ZeroTier only, no NAT traversal, no in-game menu, and no save sync between sessions.'
+  sources:
+  - https://github.com/LeifsterNYC/cuphead-coop
+  checked: '2026-11-14'
+- game: Cuphead
+  year: 2017
+  engine: Unity
+  project: cuphead-online-coop
+  url: https://github.com/nikrabaev/cuphead-online-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Online co-op where the host plays Cuphead on their own save and a friend joins as Mugman over the internet, via Steam
+    invites or direct IP. It has a reconnect prompt, backs up both players' saves, and supports macOS, with Windows marked
+    experimental. Installed with a script from the releases page.
+  sources:
+  - https://github.com/nikrabaev/cuphead-online-coop
+  checked: '2026-11-14'
+- game: Cuphead
+  year: 2017
+  engine: Unity
+  project: CupHeadCoop
+  url: https://github.com/SHAIDERWOW/CupHeadCoop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Native online co-op for Cuphead on Steam covering the base game and the Delicious Last Course DLC, using Steam P2P
+    with a lobby code or friends list, plus a direct UDP LAN mode. It also syncs Steam achievements for both players. Licensed
+    MIT.
+  sources:
+  - https://github.com/SHAIDERWOW/CupHeadCoop
+  checked: '2026-11-14'
+- game: Darkest Dungeon II
+  year: 2023
+  engine: Unity
+  project: Darkest-Dungeon-II-Co-op
+  url: https://github.com/TheRegularTerrarian/Darkest-Dungeon-II-Co-op
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'no'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Co-op mod for Darkest Dungeon II. The host opens a Steam lobby and invites friends, and players vote and control
+    heroes from a mod menu. The README says players only see the game visually if the host streams it, for example in Discord.
+  sources:
+  - https://github.com/TheRegularTerrarian/Darkest-Dungeon-II-Co-op
+  checked: '2026-11-14'
+- game: Days Gone
+  year: 2019
+  engine: Unreal Engine 4
+  project: DaysGone-Multiplayer
+  url: https://github.com/Aidoxilia/DaysGone-Multiplayer
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: 3 or more
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Experimental co-op mod for Days Gone on Windows with shared movement, lobby and chat, and partly shared missions,
+    enemies and loot. Players join by IP or through a Steam lobby. The README marks several systems as partial and says independent
+    quests by separated players are not guaranteed to sync.
+  sources:
+  - https://github.com/Aidoxilia/DaysGone-Multiplayer
+  checked: '2026-11-14'
+- game: Deltarune
+  year: 2025
+  engine: GameMaker
+  project: deltarune-online
+  url: https://github.com/traeb0n/deltarune-online
+  other_urls:
+  - https://github.com/AeEn123AI/deltarune-multiplayer
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: up to 8
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op for Deltarune Chapters 1 to 5 where each player controls a party member and everyone dodges with their
+    own SOUL. It is based on AeEn123AI's Deltarune multiplayer and has a self-updating Windows installer. The README says
+    an AI wrote almost all of it and to expect rough edges. Licensed GPL-3.0.
+  sources:
+  - https://github.com/traeb0n/deltarune-online
+  checked: '2026-11-14'
+- game: Deltarune
+  year: 2025
+  engine: GameMaker
+  project: deltarune-multiplayer
+  url: https://github.com/AeEn123AI/deltarune-multiplayer
+  other_urls:
+  - https://github.com/traeb0n/deltarune-online
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: up to 8
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Online co-op for Deltarune Chapters 1 to 5, one party member per player, with story flags, items, gold and HP synced
+    to the host. Players join over UDP by the host's IP address with no relay server. The README says an AI wrote almost all
+    of it and to expect rough edges. Licensed GPL-3.0.
+  sources:
+  - https://github.com/AeEn123AI/deltarune-multiplayer
+  checked: '2026-11-14'
+- game: 'DmC: Devil May Cry'
+  year: 2013
+  engine: Unreal Engine 3
+  project: DMC-2013-Split-screen-mod
+  url: https://github.com/Tr1dae/DMC-2013-Split-screen-mod
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Local split-screen couch co-op for DmC on Steam, where player 2 plays Vergil or Dante on a second controller. The
+    README calls it a work in progress with several systems still built for one player. It ships as source and scripts that
+    build the patch from the player's own game files.
+  sources:
+  - https://github.com/Tr1dae/DMC-2013-Split-screen-mod
+  checked: '2026-11-14'
+- game: Doom Eternal
+  year: 2020
+  engine: id Tech 7
+  project: doom-eternal-modded-multiplayer
+  url: https://github.com/Velserus/doom-eternal-modded-multiplayer
+  other_urls:
+  - https://www.nexusmods.com/doometernal/mods/1062
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Release host for three Doom Eternal mods: Slayer vs Slayer, a Co-operative Mode where players work together through
+    combat encounters, and Invasion Mode with Demon players hunting the Slayer. The README only lists the Nexus Mods pages
+    and a download folder.'
+  sources:
+  - https://github.com/Velserus/doom-eternal-modded-multiplayer
+  checked: '2026-11-14'
+- game: 'Dragon''s Dogma: Dark Arisen'
+  year: 2013
+  engine: MT Framework
+  project: ddda-coop
+  url: https://github.com/clepix21/ddda-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 to 4
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op where the host plays as usual and up to three Steam friends join, each with their own character in place
+    of one of the host's pawns. The README calls it alpha, tested mostly by bots and one evening with friends. Latest release
+    0.9.7, with a launcher.
+  sources:
+  - https://github.com/clepix21/ddda-coop
+  checked: '2026-11-14'
+- game: Elden Ring
+  year: 2022
+  engine: unknown
+  project: EldenRingSeamlessCoopFix
+  url: https://github.com/bjackr/EldenRingSeamlessCoopFix
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: A companion DLL for the Elden Ring Seamless Co-op mod that fixes desync bugs such as an invisible partner horse,
+    frozen partners after death, and scripted enemies and events out of step between players. It loads only inside Seamless
+    Co-op sessions and needs Seamless Co-op v2.0.2 and game version 2.7.2 on Steam. MIT license, AI-assisted (the README says
+    it is largely vibe-coded), only tested with PvE and the base game.
+  sources:
+  - https://github.com/bjackr/EldenRingSeamlessCoopFix
+  checked: '2026-11-14'
+- game: Elden Ring
+  year: 2022
+  engine: unknown
+  project: unseamless-coop
+  url: https://github.com/micthiesen/unseamless-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: partial
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-09
+  qa: none
+  notes: A from-scratch Rust rewrite of the Elden Ring Seamless Co-op mod. Players with the same password find each other
+    through a Steam lobby, sync host settings and see each other as nameplates and toasts, but the layer that places players
+    in each other's world is still missing according to the README. MIT license.
+  sources:
+  - https://github.com/micthiesen/unseamless-coop
+  checked: '2026-11-14'
+- game: Enter the Gungeon
+  year: 2016
+  engine: Unity
+  project: GungeonOnlineCoOpMod
+  url: https://github.com/Hero88go/GungeonOnlineCoOpMod
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 (4 in development)
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op for Enter the Gungeon where each player has their own camera and can pick any character. The README
+    calls it a 1.0 beta, with Classic and Explore co-op styles, resumable saved runs, and joining by invite code or Steam
+    invite on Steam, GOG and Epic. BepInEx based, MIT license.
+  sources:
+  - https://github.com/Hero88go/GungeonOnlineCoOpMod
+  checked: '2026-11-14'
+- game: Enter the Gungeon
+  year: 2016
+  engine: Unity
+  project: Coop_View
+  url: https://github.com/kleirof/Coop_View
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-01
+  qa: none
+  notes: A BepInEx mod that gives the second player of Gungeon's local co-op an independent camera on a second monitor. It
+    has no network code, and for remote play the README says to stream the second screen with Parsec or Sunshine. The README
+    is mainly in Chinese with an English section.
+  sources:
+  - https://github.com/kleirof/Coop_View
+  checked: '2026-11-14'
+- game: Escape from Tarkov
+  year: 2025
+  engine: Unity
+  project: Fika-Plugin
+  url: https://github.com/project-fika/Fika-Plugin
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: The BepInEx client plugin of Fika, which adds multiplayer co-op raids on top of SPT, the offline single-player Tarkov
+    server. The README says it is fully functional with minimal bugs, with all base game features replicating and a headless
+    client option to offload AI. Source is public under CC-BY-NC-SA-4.0 as stated in the README.
+  sources:
+  - https://github.com/project-fika/Fika-Plugin
+  checked: '2026-11-14'
+- game: F.E.A.R. 3
+  year: 2011
+  engine: unknown
+  project: fear3-coop-fix
+  url: https://github.com/AlouxLeBouloun/f.e.a.r.3-coop-fix
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Fixes F.E.A.R. 3 Steam co-op, where the host kicks the friend and closes the lobby about two minutes after the friend
+    joins. Only the host needs the fix. It also adds an FOV fix for Paxton Fettel and a microphone toggle key, and installs
+    as a dinput8.dll next to the game. MIT license. This targets F.E.A.R. 3, a game that already has co-op.
+  sources:
+  - https://github.com/AlouxLeBouloun/f.e.a.r.3-coop-fix
+  checked: '2026-11-14'
+- game: F.E.A.R. 3
+  year: 2011
+  engine: unknown
+  project: F3-Patch
+  url: https://github.com/mycoolhughes/F3-Patch
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: A host-side steam_api.dll replacement that works around the Steam denial-12 disconnect in F.E.A.R. 3 co-op, keeping
+    the original Steam networking. It supports Windows and Linux/Proton and only the host needs it. The README says it was
+    developed with ChatGPT/Codex (AI-assisted).
+  sources:
+  - https://github.com/mycoolhughes/F3-Patch
+  checked: '2026-11-14'
+- game: Fable III
+  year: 2010
+  engine: unknown
+  project: Fable3-Coop
+  url: https://github.com/LunalFresh/Fable3-Coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: direct-ip
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Two-player online co-op for the PC version of Fable III, with saved friends, invitations and session controls in
+    a Sanctuary menu. Players connect over IPv4 on UDP ports 39000-39001, either player can host, and it needs Fable3.exe
+    1.1.1.3 and the same mod version for both. The installer is a PowerShell setup with checksum verification and backups.
+  sources:
+  - https://github.com/LunalFresh/Fable3-Coop
+  checked: '2026-11-14'
+- game: Fable III
+  year: 2010
+  engine: unknown
+  project: fable3-local-coop
+  url: https://github.com/IceQueenElise/fable3-local-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Local couch co-op for Fable III on PC, with two controllers in one game instance and a shared camera as on the Xbox
+    360. It is an xinput1_3.dll proxy that turns on dormant co-op code, needs the 2011 Games for Windows LIVE build with xLiveLess,
+    and lists known issues with player 2 menus and gifts. The README says it was built with AI decompilation and coding tools.
+  sources:
+  - https://github.com/IceQueenElise/fable3-local-coop
+  checked: '2026-11-14'
+- game: Fable III
+  year: 2010
+  engine: unknown
+  project: fable3pc-local-coop-restoration-mod
+  url: https://github.com/edenfps/fable3pc-local-coop-restoration-mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2 (3-4 in principle)
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-07
+  qa: none
+  notes: Work-in-progress restoration of the dormant same-console shared-screen co-op in the PC Fable III. The README calls
+    it an unfinished research project and proof of concept where player 2 can join, walk and fight but cannot use any Press
+    A prompts, shops, dialogue or menus. AGPL-3.0 license, with reverse engineering notes in the repo.
+  sources:
+  - https://github.com/edenfps/fable3pc-local-coop-restoration-mod
+  checked: '2026-11-14'
+- game: Fallout 4
+  year: 2015
+  engine: Creation Engine
+  project: FathersFallout
+  url: https://github.com/FLHNM/FathersFallout
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op for Fallout 4 where each player keeps their own character and everyone shares the host's world, including
+    NPCs, quests, loot, settlements and builds, plus proximity voice chat. The README calls it alpha. Players join through
+    Steam or by IP on GOG, using a launcher and F4SE plugins, and it needs Fallout 4 1.11.240 with all DLC. GPL-3.0 with extra
+    terms.
+  sources:
+  - https://github.com/FLHNM/FathersFallout
+  checked: '2026-11-14'
+- game: Fallout 4
+  year: 2015
+  engine: Creation Engine
+  project: FalloutWorld
+  url: https://github.com/Noisemaker111/fallout4multiplayer
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-08
+  qa: none
+  notes: Fallout 4 multiplayer where players see each other move and animate, over LAN or with a Steam invite. The README
+    says it is early and buggy and needs the classic Fallout 4 1.10.163 build, and it installs from a player pack with a launcher
+    called FoM. The host may need Python installed.
+  sources:
+  - https://github.com/Noisemaker111/fallout4multiplayer
+  checked: '2026-11-14'
+- game: Fallout 4
+  year: 2015
+  engine: Creation Engine
+  project: fallout4-fixed-coop
+  url: https://github.com/QemmHD/fallout4-fixed-coop
+  other_urls:
+  - https://github.com/ThePie88/FO4_Wrld
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: unknown
+  last_activity: 2026-06
+  qa: none
+  notes: A personal fork of FO4_Wrld, a Fallout 4 1.11.191 multiplayer mod, kept for fixes and stabilization. The README lists
+    hostile raider combat sync as the current scope, with a Python server holding ownership and threat state, and shared HP
+    not done. The upstream project is under the PolyForm Noncommercial License.
+  sources:
+  - https://github.com/QemmHD/fallout4-fixed-coop
+  checked: '2026-11-14'
+- game: Far Cry 6
+  year: 2021
+  engine: Dunia
+  project: FarCry6-CoopResize
+  url: https://github.com/CuBnIcK/FarCry6-CoopResize
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 3-4
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: A patcher that lifts Far Cry 6's two-player campaign co-op limit so three or four players can play together, on Steam
+    and Ubisoft Connect. Every player must run the patcher, three players are tested and four are less tested, and the README
+    lists a cutscene camera issue for player 3 and 4. Fork of a Far Cry 5 patch. MIT license.
+  sources:
+  - https://github.com/CuBnIcK/FarCry6-CoopResize
+  checked: '2026-11-14'
+- game: Far Cry 3
+  year: 2012
+  engine: Dunia
+  project: FarCry3Coop
+  url: https://github.com/Bantila/FarCry3Coop
+  other_urls:
+  - https://github.com/Bantila/FarCryCoop
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Research toward co-op for Far Cry 3, part of the FarCryCoop project with one repository per game. The README gives
+    the status as research with notes and test scripts, and the plan is 4 players through the story joined by Steam invite.
+    MIT license.
+  sources:
+  - https://github.com/Bantila/FarCry3Coop
+  checked: '2026-11-14'
+- game: Firewatch
+  year: 2016
+  engine: Unity
+  project: Shoshone-Co-op-Firewatch
+  url: https://github.com/Zwtzyyy/Shoshone-Co-op-Firewatch
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Source for a multiplayer co-op mod for Firewatch. The README is one line, and the repo holds C# networking and player
+    sync code plus folders with zipped StoryCoop builds.
+  sources:
+  - https://github.com/Zwtzyyy/Shoshone-Co-op-Firewatch
+  checked: '2026-11-14'
+- game: 'FTL: Faster Than Light'
+  year: 2012
+  engine: unknown
+  project: ftl-coop
+  url: https://github.com/AeroX2/ftl-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-09
+  qa: none
+  notes: Co-op for FTL as a fork of the Hyperspace binary mod, where the group shares one run with the same maps, beacons
+    and events, and decisions are votes. Players host or join over Steam or by address on UDP port 31415, with Multiverse
+    supported. The repo description calls it vibe-coded (AI-assisted).
+  sources:
+  - https://github.com/AeroX2/ftl-coop
+  checked: '2026-11-14'
+- game: God of War (2005)
+  year: 2005
+  engine: unknown
+  project: god-of-war-coop
+  url: https://github.com/dphades1572/god-of-war-coop
+  other_urls:
+  - https://dphades1572.github.io/god-of-war-coop/
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: shared
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Two-player local co-op for the original PS2 God of War running in the PCSX2 emulator, with a second Kratos on controller
+    2, shared upgrades, revives and boss fights for two. The README calls it an early release 1.0.0 with later levels not
+    played through yet, and it needs your own US disc image (SCUS-97399).
+  sources:
+  - https://github.com/dphades1572/god-of-war-coop
+  checked: '2026-11-14'
+- game: Gothic 3
+  year: 2006
+  engine: unknown
+  project: gothic3-coop-steam
+  url: https://github.com/DustyCK-png/gothic3-coop-steam
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: automated
+  notes: Experimental Gothic 3 co-op with a Steam UDP relay, build recipe and recorded test results for the G3 Together mod,
+    using Community Patch 1.75.14. The README says it is not a finished multiplayer release and describes tests with two real
+    game clients and a mock Steam relay. GPL-3.0 license.
+  sources:
+  - https://github.com/DustyCK-png/gothic3-coop-steam
+  checked: '2026-11-14'
+- game: Graveyard Keeper II
+  year: 2026
+  engine: unknown
+  project: graveyard-keeper-2-coop
+  url: https://github.com/Fredwuz/graveyard-keeper-2-coop
+  other_urls:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3811794693
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: 2-4
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Co-op for Graveyard Keeper 2 where two to four players share the host's world, installed from a zip or the Steam
+    Workshop (BepInEx based). The README calls it beta, says friends can join only after the host's first sleep, and says
+    it is a fork continued with heavy AI coding after the original author deleted the repo. MIT license.
+  sources:
+  - https://github.com/Fredwuz/graveyard-keeper-2-coop
+  checked: '2026-11-14'
+- game: Grow Home
+  year: 2015
+  engine: Unity
+  project: grow-together
+  url: https://github.com/TrickerNoxics14/grow-together
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 8
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Unofficial co-op mod for Grow Home where up to 8 players see each other and join with a short invite code. The README
+    calls it experimental, and a launcher builds a separate patched copy of the game and checks the repo for newer mod files.
+    MIT license. The repo was renamed from growhome-coop.
+  sources:
+  - https://github.com/TrickerNoxics14/grow-together
+  checked: '2026-11-14'
+- game: Hades
+  year: 2020
+  engine: unknown
+  project: HadesCoop
+  url: https://github.com/ewerrus/HadesCoop
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Two-player co-op for the first Hades with a second gamepad, giving player 2 their own boons, weapon, health and HUD,
+    with alternate or double reward modes. It works locally, and the README calls network play experimental. It targets Steam
+    patch 38290 and installs by copying files and running a batch file.
+  sources:
+  - https://github.com/ewerrus/HadesCoop
+  checked: '2026-11-14'
+- game: Hades II
+  year: 2025
+  engine: unknown
+  project: hades2-coop
+  url: https://github.com/Hades2-coop-project/hades2-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-08
+  qa: none
+  notes: Local co-op for Hades II where two players on one PC fight through the Underworld, each needing a gamepad, on the
+    Steam and Epic versions. For remote play the README suggests streaming the session with Parsec. Installs with a PowerShell
+    script from the releases page. MIT license.
+  sources:
+  - https://github.com/Hades2-coop-project/hades2-coop
+  checked: '2026-11-14'
+- game: Hades
+  year: 2020
+  engine: unknown
+  project: HadesCoopMod
+  url: https://github.com/TheNormalnij/HadesCoopMod
+  other_urls:
+  - https://github.com/slimy-bro/HadesCoopMod
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-04
+  qa: none
+  notes: Local co-op for Hades where two players on one PC fight through the Underworld, on Steam and Epic, with a gamepad
+    needed. The README only gives build and developer loading steps, and suggests Parsec for remote play. MIT license. A copy
+    with the same README exists as slimy-bro/HadesCoopMod.
+  sources:
+  - https://github.com/TheNormalnij/HadesCoopMod
+  checked: '2026-11-14'
+- game: Half-Life
+  year: 1998
+  engine: GoldSrc
+  project: BrainBread
+  url: https://github.com/IronOak-Studios/BrainBread
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-07
+  qa: none
+  notes: Cooperative zombie survival mod for Half-Life. The repo holds the game assets and compiled DLLs, and it is installed
+    by copying it as a brainbread folder into the Half-Life directory. The README does not say how players connect or how
+    many can play.
+  sources:
+  - https://github.com/IronOak-Studios/BrainBread
+  checked: '2026-11-14'
+- game: 'Half-Life: Alyx'
+  year: 2020
+  engine: Source 2
+  project: AlyxMP
+  url: https://github.com/Requiem-Software/AlyxMP
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: unknown
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: 'Campaign co-op for Half-Life: Alyx, in VR or with mouse and keyboard through HLA NoVR. One player hosts and the
+    others join by address (TCP 27420, or a VPN such as Tailscale). Enemies run on the host, doors, puzzles and items are
+    shared, and a Windows installer sets it up. GPL-3.0 license.'
+  sources:
+  - https://github.com/Requiem-Software/AlyxMP
+  checked: '2026-11-14'
+- game: Half-Life
+  year: 1998
+  engine: GoldSrc
+  project: SevenKewp
+  url: https://github.com/wootguy/SevenKewp
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Generic co-op mod for Half-Life, forked from halflife-updated, that aims to run Sven Co-op style maps and stay close
+    to the original game. Players join a SevenKewp server, and vanilla Half-Life clients can join with some limitations. The
+    README says the server has no release binaries yet and must be built; a client download is on the releases page.
+  sources:
+  - https://github.com/wootguy/SevenKewp
+  checked: '2026-11-14'
+- game: Half-Life 2
+  year: 2004
+  engine: Source
+  project: Lambda
+  url: https://github.com/GMLambda/Lambda
+  other_urls:
+  - http://steamcommunity.com/sharedfiles/filedetails/?id=780244493
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: unknown
+    story: 'yes'
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Co-op gamemode for the Half-Life 2 campaign, installed as a Garry's Mod addon. Supports Half-Life 2, Episode 1 and
+    Deathmatch fully, Episode 2 at about 80 percent, and Half-Life 1 on Source as experimental. Levels are reworked for multiplayer
+    with checkpoints and player transitions between maps. MIT license.
+  sources:
+  - https://github.com/GMLambda/Lambda
+  checked: '2026-11-14'
+- game: Harry Potter and the Chamber of Secrets
+  year: 2002
+  engine: Unreal Engine 1 (M212)
+  project: hp2-coop-multiplayer
+  url: https://github.com/jenyaalexanov/hp2-coop-multiplayer
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-08
+  qa: none
+  notes: Two-player co-op for the PC game on the M212 engine, synced over UDP; the second player appears as a ghost puppet.
+    The README calls it an early v0.1 test build with gaps in enemy and door sync, and says about 90 percent of the code was
+    written with AI help. Works over LAN, a VPN or a forwarded port; the M212 engine must be installed separately. MIT license.
+  sources:
+  - https://github.com/jenyaalexanov/hp2-coop-multiplayer
+  checked: '2026-11-14'
+- game: Hitman 3
+  year: 2021
+  engine: Glacier
+  project: hitman-coop
+  url: https://github.com/JordanRodrigues021/hitman-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: '2'
+  networking: vpn-needed
+  open_source: unknown
+  last_activity: 2026-11
+  qa: community-reports
+  notes: 'Two-player co-op for HITMAN World of Assassination: both players share the same mission, NPCs, bodies, doors and
+    items, with marking, radar and a ready check. The setup installs Tailscale for connecting, and the mod updates itself.
+    The README calls the repo open source, but the API shows no license.'
+  sources:
+  - https://github.com/JordanRodrigues021/hitman-coop
+  checked: '2026-11-14'
+- game: 'Hitman: Blood Money'
+  year: 2006
+  engine: Glacier
+  project: hbm-coop
+  url: https://github.com/OrfeasZ/hbm-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Two-player online co-op for Hitman: Blood Money on Steam or GOG, chosen from a CO-OP entry in the main menu, with
+    host and join lobbies and a shared hideout. Co-op progress is kept separate from single-player. Death of a Showman and
+    Requiem are not available in co-op, and menus do not pause the game.'
+  sources:
+  - https://github.com/OrfeasZ/hbm-coop
+  checked: '2026-11-14'
+- game: Hollow Knight
+  year: 2017
+  engine: Unity
+  project: HollowConnect
+  url: https://github.com/gengsha/HollowConnect
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Co-op for Hollow Knight with monster and boss sync, optional shared progress such as abilities, charms and spells,
+    teammate map markers and a shadow rescue to revive a downed player. Players join by IP and UDP port through a LAN menu,
+    or through a Steam friends option. It ships with a modified HKMP engine and a Windows installer for two game versions.
+    GPL-3.0 license.
+  sources:
+  - https://github.com/gengsha/HollowConnect
+  checked: '2026-11-14'
+- game: Hollow Knight
+  year: 2017
+  engine: Unity
+  project: HollowKnight-couch-coop
+  url: https://github.com/Powback/HollowKnight-couch-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: up to 4
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-09
+  qa: none
+  notes: 'Local couch co-op for Hollow Knight: up to four Knights on one screen in one game, each on its own controller, with
+    no networking. It is a BepInEx plugin. Progress, health and soul are shared, and the README calls it early but playable.'
+  sources:
+  - https://github.com/Powback/HollowKnight-couch-coop
+  checked: '2026-11-14'
+- game: Hollow Knight
+  year: 2017
+  engine: Unity
+  project: HKMultiplayerMOD
+  url: https://github.com/Yesid-Robayo/HKMultiplayerMOD
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: up to 4
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Co-op mod for Hollow Knight, labelled beta, that shares the whole world and its DLCs between up to four players.
+    Players join through Steam invites with no port forwarding, or by host address and a game code. The README states an MIT
+    license, but the API shows none; the author says no long internet session has been played yet.
+  sources:
+  - https://github.com/Yesid-Robayo/HKMultiplayerMOD
+  checked: '2026-11-14'
+- game: Hotline Miami
+  year: 2012
+  engine: GameMaker
+  project: hotline-miami-coop
+  url: https://github.com/AHceky/hotline-miami-coop
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: 2-4
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Online co-op for Hotline Miami 1, labelled beta, where each player runs their own game and enemies, kills, floors
+    and floor weapons are synced. Players connect through a Steam room code or friend invite, or over Radmin VPN, ZeroTier
+    or LAN. The installer patches the player's own copy into a separate co-op executable. Networking has so far been tested
+    on one PC only. MIT license.
+  sources:
+  - https://github.com/AHceky/hotline-miami-coop
+  checked: '2026-11-14'
+- game: Hotline Miami
+  year: 2012
+  engine: GameMaker
+  project: Hotline-Miami-Redux-Redux-Co-op
+  url: https://github.com/kostyazobnin7-ctrl/Hotline-Miami-Redux-Redux-Co-op
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: up to 4
+  networking: direct-ip
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Online co-op for the Hotline Miami: Redux-Redux fan mod, a modification of Hotline Miami, for the whole story campaign.
+    The host runs the level and clients connect over IP, using LAN, Radmin VPN or ZeroTier. Includes revive, per-player masks,
+    three characters and a patch installer. All players need the same version.'
+  sources:
+  - https://github.com/kostyazobnin7-ctrl/Hotline-Miami-Redux-Redux-Co-op
+  checked: '2026-11-14'
+- game: Kenshi
+  year: 2018
+  engine: unknown
+  project: KenshiCoop
+  url: https://github.com/nhoral/KenshiCoop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-08
+  qa: none
+  notes: Experimental co-op plugin for Kenshi built on RE_Kenshi and KenshiLib, where a friend joins the host's world and
+    plays their own squad. Squads, NPCs, combat, trades, base building and a shared money pool are replicated, and saves are
+    shared. Connects over Steam P2P, with LAN or direct UDP as an option. The README calls it a work in progress and expects
+    desyncs and crashes. AGPL-3.0 license.
+  sources:
+  - https://github.com/nhoral/KenshiCoop
+  checked: '2026-11-14'
+- game: 'Kingdoms of Amalur: Reckoning'
+  year: 2012
+  engine: unknown
+  project: AmalurCoop
+  url: https://github.com/hardkiller2565123123/Kingdoms-of-Amalur-Re-Reckoning-coop-mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: partial
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: 'Early multiplayer prototype for Kingdoms of Amalur: Re-Reckoning with host and join UDP networking, an in-game multiplayer
+    menu and basic remote player spawning. Remote player visibility and animation are still inconsistent, and combat, enemies,
+    quests and inventory sync are listed as still in progress. It is built from source with Visual Studio. MIT license.'
+  sources:
+  - https://github.com/hardkiller2565123123/Kingdoms-of-Amalur-Re-Reckoning-coop-mod
+  checked: '2026-11-14'
+- game: Left 4 Dead 2
+  year: 2009
+  engine: Source
+  project: l4d2-coop-plugins
+  url: https://github.com/Tabing010102/l4d2-coop-plugins
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Server plugins for Left 4 Dead 2, a game that already has co-op: campaign match modes with enhanced special infected
+    and tank health scaling by player count, for a Linux dedicated server using LinuxGSM. The author lists known bugs and
+    asks for use at your own risk.'
+  sources:
+  - https://github.com/Tabing010102/l4d2-coop-plugins
+  checked: '2026-11-14'
+- game: LEGO The Lord of the Rings
+  year: 2012
+  engine: unknown
+  project: TeraCoop
+  url: https://github.com/TeraFurry/TeraCoop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'no'
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Online co-op for LEGO The Lord of the Rings (Steam), which only has local co-op. A proxy DLL and a small companion
+    program connect two PCs over Steam P2P or an IP mode, and the second player is driven over the network. The status doc
+    lists enemies, health, coins and breakables as not synced, and riding and some level transitions as broken. MIT license.
+  sources:
+  - https://github.com/TeraFurry/TeraCoop
+  checked: '2026-11-14'
+- game: Little Nightmares
+  year: 2017
+  engine: Unreal Engine 4
+  project: little-nightmares-1-coop
+  url: https://github.com/vladimirwoxi/little-nightmares-1-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: 'Same-PC split-screen co-op for Little Nightmares Enhanced Edition: two local players on two gamepads, with no networking.
+    It is a UE4SS Lua mod, and the release zip bundles UE4SS. The README calls it a playable prototype and lists known issues.
+    MIT license.'
+  sources:
+  - https://github.com/vladimirwoxi/little-nightmares-1-coop
+  checked: '2026-11-14'
+- game: Little Nightmares III
+  year: 2025
+  engine: Unreal Engine
+  project: LittleNightmares3-LocalCoopMod
+  url: https://github.com/EugeneErg/LittleNightmares3-LocalCoopMod
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Local couch co-op for Little Nightmares III: two players on one PC with two gamepads, in one game with a dynamic
+    split screen. Player 2 takes over the companion character, and players can boost each other. It is a UE4SS mod, and the
+    game itself only offers online co-op.'
+  sources:
+  - https://github.com/EugeneErg/LittleNightmares3-LocalCoopMod
+  checked: '2026-11-14'
+- game: 'Medal of Honor: Allied Assault'
+  year: 2002
+  engine: id Tech 3
+  project: hzm-mohaa-coop-mod
+  url: https://github.com/HaZardModding/hzm-mohaa-coop-mod
+  other_urls:
+  - https://www.moddb.com/mods/medal-of-honor-coop-hazardmodding
+  - http://www.HaZardModding.com
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Co-op mod from HaZardModding for Medal of Honor: Allied Assault and Breakthrough, packed as a pk3 file and started
+    from the multiplayer menu. Players connect through the game console to the project''s servers, or to their own. Developed
+    for the War Chest edition.'
+  sources:
+  - https://github.com/HaZardModding/hzm-mohaa-coop-mod
+  checked: '2026-11-14'
+- game: 'Metal Gear Rising: Revengeance'
+  year: 2013
+  engine: unknown
+  project: mgrr-multiplayer
+  url: https://github.com/Jacky720/mgrr-multiplayer
+  other_urls:
+  - https://www.nexusmods.com/metalgearrisingrevengeance/mods/797
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2025-11
+  qa: none
+  notes: 'Local couch co-op plugin for Metal Gear Rising: Revengeance that spawns extra player entities and gives each controller
+    its own input. It is an ASI plugin loaded with Ultimate ASI Loader or Rising Mod Manager. The author publishes the player
+    download on Nexus Mods.'
+  sources:
+  - https://github.com/Jacky720/mgrr-multiplayer
+  checked: '2026-11-14'
+- game: Metro Exodus
+  year: 2019
+  engine: 4A Engine
+  project: Metro-Exodus-co-op
+  url: https://github.com/BokiChan/Metro-Exodus-co-op
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Repo for a multiplayer mode for Metro Exodus. The README is one line and gives no details on features, install or
+    networking.
+  sources:
+  - https://github.com/BokiChan/Metro-Exodus-co-op
+  checked: '2026-11-14'
+- game: Mirror's Edge Catalyst
+  year: 2016
+  engine: Frostbite
+  project: mirrors-edge-catalyst-multiplayer
+  url: https://github.com/BB6847/mirrors-edge-catalyst-multiplayer
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: unknown
+  players: up to 4
+  networking: vpn-needed
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Unofficial co-op mod for Mirror's Edge Catalyst where up to four players share the open city, mission invites, the
+    host's progression and time of day. Shared story progression and shared combat are marked experimental. Players join by
+    host IP on UDP 27777, for example over Radmin VPN, and only game version 1.0.3.47248 is supported. MIT license.
+  sources:
+  - https://github.com/BB6847/mirrors-edge-catalyst-multiplayer
+  checked: '2026-11-14'
+- game: MiSide
+  year: 2024
+  engine: Unity
+  project: miside-coop
+  url: https://github.com/GLaziness/miside-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: 'Two-player co-op for MiSide as a BepInEx 6 IL2CPP mod: the guest follows the host''s level and story events, with
+    names above the players. Connects through Steam or by direct IP. The README calls version 0.1.0 early; Steam between two
+    accounts is untested, mini-games are not synced and the guest cannot see what the host holds. MIT license.'
+  sources:
+  - https://github.com/GLaziness/miside-coop
+  checked: '2026-11-14'
+- game: Moonlighter
+  year: 2018
+  engine: Unity
+  project: moonlighter-coop
+  url: https://github.com/Eldeallado/moonlighter-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: up to 5
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op for Moonlighter for up to five players with shared dungeons, shop, loot and money, and revives in the
+    style of The Binding of Isaac. Players create a game or join with a code or by IP from an in-game F2 menu, and it installs
+    with a batch file. An Android build with the same mod is mentioned, with its download not yet available. MIT license.
+  sources:
+  - https://github.com/Eldeallado/moonlighter-coop
+  checked: '2026-11-14'
+- game: 'Mount & Blade: Warband'
+  year: 2010
+  engine: unknown
+  project: WarbandTogether
+  url: https://github.com/Night1099/WarbandTogether
+  other_urls:
+  - https://warbandtogether.dev
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: unknown
+  networking: dedicated-server
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: 'Co-op campaign mod for Mount & Blade: Warband built on WSE2, where players share one campaign map with their own
+    persistent characters and fight battles on a pool of dedicated battle servers. The README calls it an early alpha and
+    tracks feature progress on a roadmap site.'
+  sources:
+  - https://github.com/Night1099/WarbandTogether
+  checked: '2026-11-14'
+- game: Nioh
+  year: 2017
+  engine: unknown
+  project: nioh4p
+  url: https://github.com/Kenja-mc/nioh4p
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: partial
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Three- and four-player co-op for Nioh: Complete Edition on Steam, installed as a dinput8.dll loader beside nioh.exe,
+    with optional add-on mods. It has been tested with four game instances in one Torii Gate mission, and the README says
+    the add-ons'' live behavior is still under test. All players need the same game build and mod version.'
+  sources:
+  - https://github.com/Kenja-mc/nioh4p
+  checked: '2026-11-14'
+- game: Omori
+  year: 2020
+  engine: unknown
+  project: omori-coop-patch
+  url: https://github.com/N1nji/omori-coop-patch
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-07
+  qa: none
+  notes: Community fixes for the existing Local Multiplayer mod for OMORI, aiming at softlocks, black screens, cutscene sync
+    and map transfers, with OneLoader compatibility. The README marks it as in development and the repo has no release. License
+    is MIT.
+  sources:
+  - https://github.com/N1nji/omori-coop-patch
+  checked: '2026-11-14'
+- game: Oni
+  year: 2001
+  engine: unknown
+  project: OniMP
+  url: https://github.com/odolinski/oni-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: up to 4
+  networking: lan
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Experimental DLL mod that adds campaign co-op to Oni on top of the Anniversary Edition, for up to four players over
+    a LAN or Radmin VPN. The host drives enemies and level scripts, and the README says many features are written but not
+    yet confirmed in a real game.
+  sources:
+  - https://github.com/odolinski/oni-coop
+  checked: '2026-11-14'
+- game: 'Onimusha: Way of the Sword'
+  year: 2026
+  engine: RE Engine
+  project: Onimusha-Way-of-the-Sword-PC-2-Player-Online-Co-op-Mod
+  url: https://github.com/Padinhow/Onimusha-Way-of-the-Sword-PC-2-Player-Online-Co-op-Mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Two-player online co-op for the Onimusha: Way of the Sword campaign on REFramework.NET, described in Portuguese.
+    The README has no further detail and the repo holds a zip of the mod.'
+  sources:
+  - https://github.com/Padinhow/Onimusha-Way-of-the-Sword-PC-2-Player-Online-Co-op-Mod
+  checked: '2026-11-14'
+- game: PC Building Simulator
+  year: 2019
+  engine: Unity
+  project: PCBS-Multiplayer
+  url: https://github.com/R3dWolfie/PCBS-Multiplayer
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'no'
+    story: unknown
+    enemies: unknown
+    world_state: partial
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-04
+  qa: none
+  notes: Co-op mod for PC Building Simulator using BepInEx, Harmony and Steam P2P, with the host as the authority. The README
+    lists shared money and job claims working, with inventory, shop, bench, time and remote-player presence still to do.
+  sources:
+  - https://github.com/R3dWolfie/PCBS-Multiplayer
+  checked: '2026-11-14'
+- game: 'Penumbra: Black Plague'
+  year: 2008
+  engine: unknown
+  project: penumbra-blackplague-coop
+  url: https://github.com/QuasiInteractive/penumbra-blackplague-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: up to 4
+  networking: direct-ip
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Online co-op add-on for Penumbra: Black Plague and Requiem, installed as a coop folder plus a loader file next to
+    the game. One player hosts and others join by IP or a server browser; the host needs UDP port 7790 open. Items, doors,
+    switches and scripted events are shared, and it has proximity voice chat.'
+  sources:
+  - https://github.com/QuasiInteractive/penumbra-blackplague-coop
+  checked: '2026-11-14'
+- game: 'Penumbra: Overture'
+  year: 2007
+  engine: HPL1
+  project: penumbra-overture-coop
+  url: https://github.com/QuasiInteractive/penumbra-overture-coop
+  other_urls:
+  - https://quasi-interactive.com
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: up to 4
+  networking: vpn-needed
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Online co-op built into the HPL1 engine for up to four players, with host-run physics, enemies and puzzle scripts,
+    shared loot and proximity voice chat. The README says joining over the internet currently needs a virtual LAN such as
+    Hamachi or Radmin VPN.
+  sources:
+  - https://github.com/QuasiInteractive/penumbra-overture-coop
+  checked: '2026-11-14'
+- game: Portal 2
+  year: 2011
+  engine: Source
+  project: Portal2-CoopTweaks
+  url: https://github.com/LittleBlueBoxx1/Portal2-CoopTweaks
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-05
+  qa: none
+  notes: Script mod for Portal 2, a game that already has co-op. It makes small changes to the co-op maps, such as hints,
+    door facing and faith plate colours, and installs as scripts or a VPK.
+  sources:
+  - https://github.com/LittleBlueBoxx1/Portal2-CoopTweaks
+  checked: '2026-11-14'
+- game: Portal 2
+  year: 2011
+  engine: Source
+  project: Portal-2-Multiplayer-Mod
+  url: https://github.com/Portal-2-Multiplayer-Mod/Portal-2-Multiplayer-Mod
+  other_urls:
+  - https://discord.com/invite/kW3nG6GKpF
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 33
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Server-side mod that lets up to 33 players join the Portal 2 co-op and single-player campaigns. Only the host needs
+    the mod, and joiners run stock Portal 2.
+  sources:
+  - https://github.com/Portal-2-Multiplayer-Mod/Portal-2-Multiplayer-Mod
+  checked: '2026-11-14'
+- game: Postal 2
+  year: 2003
+  engine: Unreal Engine 2
+  project: Postal2Multiplayer
+  url: https://github.com/honzacies/Postal2Multiplayer
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: lan
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Experimental LAN co-op for the Postal 2 campaign with a built-in host and join menu and separate player inventories.
+    The README says early development: no full campaign day has been tested with two players, NPC targeting and cutscenes
+    have bugs, and saving is not available.'
+  sources:
+  - https://github.com/honzacies/Postal2Multiplayer
+  checked: '2026-11-14'
+- game: Pragmata
+  year: 2026
+  engine: RE Engine
+  project: pragmata-coop-mod
+  url: https://github.com/elvaleto/pragmata-coop-mod
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Local two-player split-control mod on one PC through REFramework. Player 1 plays as Hugh, and Player 2 uses a second
+    controller for Diana to solve the hacking mini-games. It is not online co-op.
+  sources:
+  - https://github.com/elvaleto/pragmata-coop-mod
+  checked: '2026-11-14'
+- game: Raft
+  year: 2022
+  engine: Unity
+  project: RaftLocalCoop
+  url: https://github.com/spardanviro/RaftLocalCoop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Local split-screen co-op for Raft on one PC, keyboard and mouse on the left and a gamepad on the right, with its
+    own inventory for player 2. Source only with no packaged download, and it needs RaftModLoader or UnityModManager. License
+    is MIT.
+  sources:
+  - https://github.com/spardanviro/RaftLocalCoop
+  checked: '2026-11-14'
+- game: Rain World
+  year: 2017
+  engine: Unity
+  project: RainWorld-JollyReviveFix
+  url: https://github.com/zombieseatflesh7/RainWorld-JollyReviveFix
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-06
+  qa: none
+  notes: Small fix that makes the game's built-in Jolly Coop work with the Revivify mod. The repo has no README and no release,
+    and the license is CC0-1.0.
+  sources:
+  - https://github.com/zombieseatflesh7/RainWorld-JollyReviveFix
+  checked: '2026-11-14'
+- game: Red Dead Redemption 2
+  year: 2018
+  engine: RAGE
+  project: rdr2-coop
+  url: https://github.com/BigCheeseThe3st/rdr2-coop
+  other_urls:
+  - https://www.nexusmods.com/reddeadredemption2/mods/11238
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: up to 4
+  networking: dedicated-server
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Story mode co-op for up to three friends with the host, built on ScriptHookRDR2DotNet V2, where the host's world,
+    missions and save are shared. The README calls it early access, and a Windows setup program or a Linux installer is provided.
+    The source is GPL-3.0.
+  sources:
+  - https://github.com/BigCheeseThe3st/rdr2-coop
+  checked: '2026-11-14'
+- game: 'Remnant: From the Ashes'
+  year: 2019
+  engine: Unreal Engine 4
+  project: remnant-mod
+  url: https://github.com/JohnPitter/remnant-mod
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '6'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-03
+  qa: none
+  notes: 'Raises the co-op player limit of Remnant: From the Ashes from 3 to 6, with network tuning and optional enemy scaling.
+    Everyone installs a pak file and the host also installs UE4SS and a lua mod. The README is in Portuguese, and the license
+    is MIT.'
+  sources:
+  - https://github.com/JohnPitter/remnant-mod
+  checked: '2026-11-14'
+- game: Resident Evil
+  year: 2014
+  engine: unknown
+  project: 'Resident Evil: SHATTERED'
+  url: https://github.com/Depmify/Resident-Evil-SHATTERED
+  other_urls:
+  - https://depmify.github.io/Resident-Evil-SHATTERED/
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4
+  networking: unknown
+  open_source: 'no'
+  last_activity: 2026-11
+  qa: none
+  notes: Closed-source fan project that plays the original Resident Evil alone, in split-screen or online, using your own
+    PC copy of the game. Two-player online covers the whole campaign, while three and four players are experimental and cannot
+    finish it yet. The public repo holds releases and docs only.
+  sources:
+  - https://github.com/Depmify/Resident-Evil-SHATTERED
+  checked: '2026-11-14'
+- game: 'Resident Evil 7: Biohazard'
+  year: 2017
+  engine: RE Engine
+  project: Molded Together
+  url: https://github.com/xXCroissantXx/Re7-MoldedTogether
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: up to 4
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Online co-op for Resident Evil 7 over Steam with no port forwarding, sharing the Molded, bosses, story steps, doors
+    and puzzles. The README calls it a release candidate, with two real two-player sessions played to the Chapter 3 yard and
+    bot-driven runs of two game copies before each release. The repo was renamed from coop-re7. License is MIT.
+  sources:
+  - https://github.com/xXCroissantXx/Re7-MoldedTogether
+  checked: '2026-11-14'
+- game: Rogue Legacy 2
+  year: 2022
+  engine: Unity
+  project: rl2-coop
+  url: https://github.com/rain-on-roof/rl2-coop
+  other_urls:
+  - https://www.nexusmods.com/roguelegacy2/mods/54
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: partial
+    items: unknown
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: BepInEx mod where friends play the same castle from the host's seed, see each other and share the host's enemies,
+    with spectating after death. The README calls it early and says it has been tested with two players; the host opens a
+    UDP port. License is MIT.
+  sources:
+  - https://github.com/rain-on-roof/rl2-coop
+  checked: '2026-11-14'
+- game: 'S.T.A.L.K.E.R. 2: Heart of Chornobyl'
+  year: 2024
+  engine: Unreal Engine 5
+  project: NOLA-Stalker2-Coop
+  url: https://github.com/Joaovitor404silva/NOLA-Stalker2-Coop
+  other_urls:
+  - https://www.nexusmods.com/stalker2heartofchornobyl/mods/3050
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: up to 5
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: NOLA, short for No One Left Alone, adds co-op to S.T.A.L.K.E.R. 2 for the host plus four friends in the host's world,
+    each with their own character. Players connect through Steam friends or LAN and IP, and VPN works. The README says it
+    is not finished and lists known issues. License is GPL-3.0.
+  sources:
+  - https://github.com/Joaovitor404silva/NOLA-Stalker2-Coop
+  checked: '2026-11-14'
+- game: 'Sekiro: Shadows Die Twice'
+  year: 2019
+  engine: unknown
+  project: sekiro-coop
+  url: https://github.com/Tihvert/sekiro-coop
+  other_urls:
+  - https://www.nexusmods.com/sekiro/mods/2944
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: unknown
+  players: 2-6
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Sekiro Together is an online co-op mod for 2 to 6 players where the session survives deaths, warps and loading screens,
+    and a password is required to join. The README calls it a buggy beta, says 3 or more players were only unit tested, and
+    says it was written with a lot of AI help. The author may not keep developing it, and the source is open under MIT.
+  sources:
+  - https://github.com/Tihvert/sekiro-coop
+  checked: '2026-11-14'
+- game: Serious Sam 2
+  year: 2005
+  engine: unknown
+  project: SeriousSam2-Coop-Cutscenes
+  url: https://github.com/besshuma/SeriousSam2-Coop-Cutscenes
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: partial
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-07
+  qa: none
+  notes: Patch for Serious Sam 2 version 2.224.00:747079 that makes story cutscenes play for both host and client in co-op.
+    Every co-op player must install it with the included script, and it keeps backups of the files it changes. License is
+    MIT.
+  sources:
+  - https://github.com/besshuma/SeriousSam2-Coop-Cutscenes
+  checked: '2026-11-14'
+- game: 'Serious Sam: The Second Encounter'
+  year: 2002
+  engine: Serious Engine 1
+  project: CecilBotMod
+  url: https://github.com/DreamyCecil/CecilBotMod
+  other_urls:
+  - https://dreamycecil.itch.io/botmod
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-04
+  qa: none
+  notes: 'Adds customizable player bots to Serious Sam: The Second Encounter v1.07, for both cooperative and deathmatch games.
+    It is not a multiplayer netcode mod, and the README mostly covers building it. License is GPL-2.0.'
+  sources:
+  - https://github.com/DreamyCecil/CecilBotMod
+  checked: '2026-11-14'
+- game: Signalis
+  year: 2022
+  engine: Unity
+  project: SyncRADatiON
+  url: https://github.com/Warexpor/SyncRADatiON
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: 2-8
+  networking: vpn-needed
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: LAN and VPN co-op for Signalis built on LiteNetLib and MelonLoader 0.5.7, where the host owns the world and story.
+    The README calls it a pre-release in playtest, with only one chapter transition played by two players so far. License
+    is GPL-3.0.
+  sources:
+  - https://github.com/Warexpor/SyncRADatiON
+  checked: '2026-11-14'
+- game: Silent Hill 2 (2001)
+  year: 2001
+  engine: unknown
+  project: SH2Coop
+  url: https://github.com/sxplonely/Silent-Hill-2-EE-Coop-Lan-Mod
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: unknown
+    items: per-player
+  players: up to 4
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Co-op for Silent Hill 2 Enhanced Edition for up to four players, over LAN or Epic Online Services rooms with public
+    and PIN-protected rooms. The README calls the build a release candidate and says full campaign runs and four-player internet
+    play are not yet validated.
+  sources:
+  - https://github.com/sxplonely/Silent-Hill-2-EE-Coop-Lan-Mod
+  checked: '2026-11-14'
+- game: Slay the Spire II
+  year: 2026
+  engine: unknown
+  project: sts2-couch-coop
+  url: https://github.com/tfoxy/sts2-couch-coop
+  other_urls:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3799476240
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Lets phones, tablets and laptops on the local network join a Slay the Spire 2 multiplayer run as browser clients
+    through a QR code, with the mod installed only on the host. The README calls it a beta with some rough screens and actions.
+    License is Apache-2.0.
+  sources:
+  - https://github.com/tfoxy/sts2-couch-coop
+  checked: '2026-11-14'
+- game: Slime Rancher 2
+  year: 2022
+  engine: Unity
+  project: LYCOREIA
+  url: https://github.com/rylaix/LYCOREIA
+  other_urls:
+  - https://www.nexusmods.com/slimerancher2/mods/200
+  - https://discord.gg/EvD7WhSwqh
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: shared
+  players: two or more
+  networking: direct-ip
+  open_source: 'no'
+  last_activity: 2026-11
+  qa: community-reports
+  notes: Host-authoritative co-op for Slime Rancher 2 installed as a MelonLoader mod, with join codes, UPnP port mapping,
+    LAN or direct IP, and a shared ranch, slimes and progression. A 2.1.0 release candidate is out for testing, and players
+    are asked to send logs. The source is available but the README says it is not open source.
+  sources:
+  - https://github.com/rylaix/LYCOREIA
+  checked: '2026-11-14'
+- game: Spore
+  year: 2008
+  engine: unknown
+  project: spore-coop-mod
+  url: https://github.com/ArKoWol/spore-coop-mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: 'Experimental two-player mod for the creature stage of Spore: Galactic Adventures, connecting over Steam by Steam
+    ID with no port forwarding. The README calls it an early test build that can crash, and lists missing items such as running
+    animations and the other stages. It needs the GOG edition because the current Steam build does not work with mods.'
+  sources:
+  - https://github.com/ArKoWol/spore-coop-mod
+  checked: '2026-11-14'
+- game: Stellar Blade
+  year: 2024
+  engine: Unreal Engine 4
+  project: stellar-blade-coop
+  url: https://github.com/MotherSphere/stellar-blade-coop
+  other_urls:
+  - https://www.nexusmods.com/stellarblade/mods/4011
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: UE4SS Lua mod with a native DLL that links two players through a Steam lobby (host menu, invite dialog or join code).
+    Each player sees the other's EVE as a ghost in their own world, and items are not shared apart from sent consumables.
+    The README calls it an experimental beta tied to one game build. License GPL-3.0-or-later.
+  sources:
+  - https://github.com/MotherSphere/stellar-blade-coop
+  checked: '2026-11-14'
+- game: Stray
+  year: 2022
+  engine: Unreal Engine 4
+  project: Stray Local Co-op Mod
+  url: https://github.com/CyberLifeYT/Stray-Local-Co-op-Mod
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: partial
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: UE4SS Lua mod that adds a second cat and splits the screen for two players on one PC, using the game's own split-screen
+    support. It is local only, with no online play. The README calls it experimental, and enemy targeting may crash during
+    Zurk chases.
+  sources:
+  - https://github.com/CyberLifeYT/Stray-Local-Co-op-Mod
+  checked: '2026-11-14'
+- game: Weed Supermarket Simulator
+  engine: Unity
+  project: WeedSupermarketSimulator-MP
+  url: https://github.com/ifBars/WeedSupermarketSimulator-MP
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: 'yes'
+    items: unknown
+  players: up to 4
+  networking: steam-relay
+  open_source: unknown
+  last_activity: 2026-09
+  qa: automated
+  notes: MelonLoader mod with Steam co-op for up to four players, joined by Steam invite or a lobby launch argument. Local
+    two-client checks pass for shared shop state, stocking, checkout, growing and furniture. Real two-account Steam acceptance
+    is listed as still outstanding.
+  sources:
+  - https://github.com/ifBars/WeedSupermarketSimulator-MP
+  checked: '2026-11-14'
+- game: Supermarket Simulator
+  year: 2025
+  engine: Unity
+  project: SupermarketMorePlayers
+  url: https://github.com/MRoiban/SupermarketMorePlayers
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 8
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-05
+  qa: none
+  notes: BepInEx IL2CPP plugin source that raises the player limit of the game's existing multiplayer (default 8) by patching
+    lobby and room creation. The README describes game analysis and a build guide, and gives no release or test results.
+  sources:
+  - https://github.com/MRoiban/SupermarketMorePlayers
+  checked: '2026-11-14'
+- game: 'The Binding of Isaac: Rebirth'
+  year: 2014
+  engine: unknown
+  project: Isaac-Online-Modded
+  url: https://github.com/xADDBx/Isaac-Online-Modded
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-10
+  qa: none
+  notes: Patch tool for Windows and Linux that lets other mods run in the game's online co-op without disabling them, plus
+    co-op versions of two item mods and a fix for restart desyncs. It must be run again after each game update, and it is
+    meant for friends-only play.
+  sources:
+  - https://github.com/xADDBx/Isaac-Online-Modded
+  checked: '2026-11-14'
+- game: The House of the Dead 2
+  year: 1998
+  engine: unknown
+  project: hotd2-re
+  url: https://github.com/GitFist/hotd2-re
+  other_urls: []
+  kind: decomp-port
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Native Windows port of The House of the Dead 2 and The Typing of the Dead with two-player online co-op, shared lobbies
+    and leaderboards. Players use Create Room, Browse Lobby or Peer to Peer from the Online menu, and the download is a ready-to-run
+    zip. License MIT.
+  sources:
+  - https://github.com/GitFist/hotd2-re
+  checked: '2026-11-14'
+- game: 'The Lord of the Rings: The Return of the King'
+  year: 2003
+  engine: unknown
+  project: ROTKPlus
+  url: https://github.com/brig-dev/ROTKPlus
+  other_urls:
+  - https://www.moddb.com/mods/rotkplus
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Adds a third and fourth hero to the game's own 2-player co-op on one screen, with shared lives and level-ups, plus
+    a 2 to 4 player Versus mode and optional larger battles. It ships with a launcher built on Athelas and ROTK Fix, and is
+    tested on Windows 11 and SteamOS. License MIT.
+  sources:
+  - https://github.com/brig-dev/ROTKPlus
+  checked: '2026-11-14'
+- game: 'Total War: Rome II'
+  year: 2013
+  engine: unknown
+  project: Rome2-8Player-Coop
+  url: https://github.com/TasmanModding/Rome2-8Player-Coop
+  other_urls:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3827019251
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 8
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Extends the multiplayer campaign lobby to 8 slots and lets a campaign start with 2 to 8 players, with working kick
+    and invite buttons and lobby crash fixes. It replaces an engine DLL through an installer, so every player needs the same
+    files. The README calls it experimental. License MIT.
+  sources:
+  - https://github.com/TasmanModding/Rome2-8Player-Coop
+  checked: '2026-11-14'
+- game: 'Total War: Shogun 2'
+  year: 2011
+  engine: unknown
+  project: Shogun2-8Player-Coop
+  url: https://github.com/TasmanModding/Shogun2-8Player-Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 8
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Extends the multiplayer campaign to 8 players, with resume of saves with different players, desync recovery, correct
+    battle results for allies and working invite buttons. The README calls it experimental. License MIT.
+  sources:
+  - https://github.com/TasmanModding/Shogun2-8Player-Coop
+  checked: '2026-11-14'
+- game: 'Total War: Three Kingdoms'
+  year: 2019
+  engine: unknown
+  project: ThreeKingdoms-Coop
+  url: https://github.com/Thom-Ernst/ThreeKingdoms-Coop
+  other_urls:
+  - https://steamcommunity.com/sharedfiles/filedetails/?id=3816463449
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: up to 4
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Runtime DLL plus a Steam Workshop UI pack that extends the multiplayer campaign lobby to 4 players, with battle unit
+    lending and turn blending so players can manage their realm during another player's turn. It targets game version 1.7.2
+    and the README calls it experimental. License GPL-3.0.
+  sources:
+  - https://github.com/Thom-Ernst/ThreeKingdoms-Coop
+  checked: '2026-11-14'
+- game: 'Toy Story 2: Buzz Lightyear to the Rescue!'
+  year: 1999
+  engine: unknown
+  project: ToyStory2Coop
+  url: https://github.com/Gats1212/ToyStory2Coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: lan
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Experimental LAN co-op for the 1999 PC game through an x86 ASI plugin, on UDP port 27720. It needs the player's own
+    game files and the compatible English CD executable, and comes as an installed pack or a portable kit. License MIT.
+  sources:
+  - https://github.com/Gats1212/ToyStory2Coop
+  checked: '2026-11-14'
+- game: Tunic
+  year: 2022
+  engine: Unity
+  project: tunic-seamless-coop
+  url: https://github.com/AfroPK/tunic-seamless-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: 'yes'
+  players: 2-8
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: BepInEx 6 IL2CPP mod for 2 to 8 players in one shared world, with shared doors, chests, bosses and items, revive
+    and spectate, pings and quick chat. Players join by join code with automatic UPnP port forwarding or through Steam Join
+    Game, and an installer is provided. License MIT.
+  sources:
+  - https://github.com/AfroPK/tunic-seamless-coop
+  checked: '2026-11-14'
+- game: 'Turok: Evolution'
+  year: 2002
+  engine: unknown
+  project: turok-evolution-coop
+  url: https://github.com/DanDinosaur/turok-evolution-coop
+  other_urls: []
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: shared
+  players: '2'
+  networking: unknown
+  open_source: unknown
+  last_activity: 2026-11
+  qa: none
+  notes: Two-player split-screen co-op for the original Xbox version, applied to the player's own ISO with a patcher. Pickups
+    are shared and flight levels are still single-player. Tested on Xbox 360 backwards compatibility only.
+  sources:
+  - https://github.com/DanDinosaur/turok-evolution-coop
+  checked: '2026-11-14'
+- game: 'Warhammer 40,000: Rogue Trader'
+  year: 2023
+  engine: Unity
+  project: MultiplayerStability
+  url: https://github.com/Sternab/MultiplayerStability
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: community-reports
+  notes: Desync fixes, diagnostics and faster Steam save transfer for the game's existing co-op, built for game build 1.6.1.514.
+    Version 1.0.0 followed community testing, GOG and sessions with four to six players are untested, and known limitations
+    are listed. License MIT.
+  sources:
+  - https://github.com/Sternab/MultiplayerStability
+  checked: '2026-11-14'
+- game: We Happy Few
+  year: 2018
+  engine: Unreal Engine 4
+  project: we-happy-few-coop
+  url: https://github.com/SorrowMee/we-happy-few-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: per-player
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: UE4SS Lua mod plus a helper DLL for two-player local split screen with two gamepads, in the campaign and sandbox.
+    Each player has their own HUD and inventory, with downed and revive handling. The author tested it by hand and lists no
+    automated tests. License MIT.
+  sources:
+  - https://github.com/SorrowMee/we-happy-few-coop
+  checked: '2026-11-14'
+- game: Wizard of Legend
+  year: 2018
+  engine: Unity
+  project: wizard-of-legend-multiplayer-mod
+  url: https://github.com/slightlyepic/wizard-of-legend-multiplayer-mod
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: unknown
+    items: shared
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: BepInEx 5 mod for online co-op or free-for-all versus for 2 to 4 players, joined by the host's IP address on port
+    7890 or over LAN. Players share gold, relics and shop purchases, can join mid-game, and keep their own outfit and arcana.
+    License MIT.
+  sources:
+  - https://github.com/slightlyepic/wizard-of-legend-multiplayer-mod
+  checked: '2026-11-14'
+- game: 'X-COM: UFO Defense'
+  year: 1994
+  engine: OpenXcom
+  project: OpenXcom Coop Mod
+  url: https://github.com/OpenXcom-Coop/OpenXcom-Coop-Mod
+  other_urls: []
+  kind: fork
+  status: prototype
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Fork of OpenXcom that adds cooperative multiplayer over TCP/IP to UFO Defense and Terror from the Deep, for the main
+    campaign or custom battles, from an in-game CO-OP menu. The repository README is the upstream OpenXcom one and does not
+    describe the co-op state. License GPL-3.0.
+  sources:
+  - https://github.com/OpenXcom-Coop/OpenXcom-Coop-Mod
+  checked: '2026-11-14'
