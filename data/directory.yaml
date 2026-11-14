@@ -12871,22 +12871,31 @@
   engine: Unity
   project: Shoshone-Co-op-Firewatch
   url: https://github.com/Zwtzyyy/Shoshone-Co-op-Firewatch
-  other_urls: []
+  other_urls:
+  - https://github.com/Nanopaw-Studios/Two-Forks-MP
   kind: mod
   status: prototype
   coop_scope:
-    players_visible: unknown
-    story: unknown
-    enemies: unknown
-    world_state: unknown
-    items: unknown
-  players: unknown
-  networking: unknown
-  open_source: unknown
+    players_visible: 'yes'
+    story: partial
+    enemies: 'no'
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
   last_activity: 2026-10
-  qa: none
-  notes: Source for a multiplayer co-op mod for Firewatch. The README is one line, and the repo holds C# networking and player
-    sync code plus folders with zipped StoryCoop builds.
+  qa: automated
+  notes: 'Source for a Firewatch co-op mod (no license stated). Upstream 0.5.0 cannot sync
+    SECTR world objects: ids are transform paths and SECTR root names contain "/", so every
+    lookup fails. games/firewatch has the patch (escaped ids, spawn offset, host-authoritative
+    facts, day message), a two-client harness and a 9/9 automated result on Steam v1.1.2.
+    LAN only: no auth and BinaryFormatter snapshots.'
+  sources:
+  - https://github.com/Zwtzyyy/Shoshone-Co-op-Firewatch
+  - https://github.com/Nanopaw-Studios/Two-Forks-MP
+  checked: '2026-11-14'
+  made_with_coop_anything: true
   sources:
   - https://github.com/Zwtzyyy/Shoshone-Co-op-Firewatch
   checked: '2026-11-14'
