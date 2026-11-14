@@ -11030,6 +11030,107 @@
   - https://store.steampowered.com/app/214730/
   - https://github.com/murgesku/MatrixGame
   checked: '2026-11-07'
+- game: Thronefall
+  year: 2023
+  engine: Unity
+  project: Thronefall Multiplayer (Bemno fork)
+  url: https://github.com/Bemno/Thronefall_Multiplayer
+  other_urls:
+  - https://github.com/Bemno/Thronefall_Multiplayer/releases/tag/v1.2.7
+  kind: fork
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: unknown
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-11
+  qa: automated
+  notes: "BepInEx 5 plugin (GUID com.badwolf.thronefall_mp), Steam lobbies + SteamNetworkingMessages, host authoritative. 1.2.7 loads on Steam buildid 26487600 (Unity 6000.3, Craaghelm update); 1.2.6 does not (TMP MissingFieldException). Automated two-account tests by Co-op Anything, not by the mod's author, on Nordfels: building, shared gold, nights, defeat and end screen, save and continue, crash and rejoin, locked levels, enemy difficulty. Found nine bugs in 1.2.7 (second join hangs, Continue Run gives the joiner an empty map, rejoin ghost player, a friend cannot join a level locked on their side, end screen stays on screen, chat over ~60 characters not sent, Esc stops closing the mod's menus, the host's newer weapons added to the friend's loadout, the first Back on the end screen cuts the others' end screens so their win, quests and XP are not saved) and added optional co-op settings, all off by default: enemy and boss difficulty with per-player scaling, night vote, map pings with a ping wheel, ready check, match and night summaries, joining a running level, teammate revive and respawn rules, planning with coloured blueprints and build votes, destroyed buildings that stay destroyed with gold back and rebuilds, an endless mode, player colours and shared wardrobes, team HP, kill counter, extra game keys, changeable on the map without a new lobby; the game's Eternal Trials mode in co-op (host owns the run, any player picks the next card) and one team score; described in games/thronefall, code not published yet. Level progress and unlocks are the host's for the session (story: partial). Craaghelm maps untested. Source public, no license file; the original author invites forks with credit."
+  sources:
+  - https://github.com/Bemno/Thronefall_Multiplayer
+  - https://github.com/Bemno/Thronefall_Multiplayer/releases/tag/v1.2.7
+  checked: '2026-11-13'
+  made_with_coop_anything: false
+- game: Thronefall
+  year: 2023
+  engine: Unity
+  project: Thronefall Multiplayer (community-updated)
+  url: https://thunderstore.io/c/thronefall/p/BiggestBlackest/ThronefallMultiplayerContinued/
+  other_urls:
+  - https://github.com/Bwarhness/thronefall_multiplayer
+  kind: fork
+  status: unknown
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-06
+  qa: none
+  notes: "Thunderstore 1.2.2 (BiggestBlackest), source in Bwarhness/thronefall_multiplayer, last push 2026-06-15, before the Unity 6 Craaghelm update of 2026-11-11. Not tested on buildid 26487600; its successor Bemno 1.2.6 fails there with a TMP MissingFieldException. Continued by the Bemno fork."
+  sources:
+  - https://thunderstore.io/c/thronefall/p/BiggestBlackest/ThronefallMultiplayerContinued/
+  - https://github.com/Bwarhness/thronefall_multiplayer
+  checked: '2026-11-12'
+  made_with_coop_anything: false
+- game: Thronefall
+  year: 2023
+  engine: Unity
+  project: Thronefall Multiplayer (third fork)
+  url: https://gitlab.com/catro-creative/thronefall-multiplayer-thirdfork
+  other_urls: []
+  kind: fork
+  status: unknown
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-08
+  qa: none
+  notes: "GitLab fork by spencatro, 1.3.4 to 2.1.1 (2026-08-04): veto cards, endless and challenge modes, Steam Deck installer. The 2.1.1 DLL references SceneTransitionManager.levelSelectSceneFangmore, which Steam buildid 26487600 does not have, so it cannot run there unchanged (seen in the DLL, not run)."
+  sources:
+  - https://gitlab.com/catro-creative/thronefall-multiplayer-thirdfork
+  checked: '2026-11-12'
+  made_with_coop_anything: false
+- game: Thronefall
+  year: 2023
+  engine: Unity
+  project: Thronefall Multiplayer (BadWolf)
+  url: https://github.com/MunWolf/thronefall_multiplayer
+  other_urls:
+  - https://thunderstore.io/c/thronefall/p/Mods_for_the_Throne/ThronefallMultiplayer/
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2024-02
+  qa: none
+  notes: "The original mod by BadWolf, archived 2024-02-10 with an invitation to fork it with credit. All later forks build on it."
+  sources:
+  - https://github.com/MunWolf/thronefall_multiplayer
+  checked: '2026-11-12'
+  made_with_coop_anything: false
 
 - game: Star Fox 64
   year: 1997

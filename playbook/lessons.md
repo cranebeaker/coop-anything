@@ -197,3 +197,17 @@ error when the count is 0, and give every patch at least one test that fails wit
 (`Plugin.cs` in superflight-coop, `games/superflight/NOTES.md`).
 
 89. **Battle bots need real player stats, and a person watching catches what asserts miss.** BLACK SOULS II: a bot that skipped the intro played the placeholder actor (about 27 times normal HP and attack), so every fight one-shot, enemy hits showed "not affected", and a battle suite "passed" without exercising multi-turn sync. A tester watching the visible test windows spotted it, and also noticed that auto-battling bots never open the command menu. Load the real starting characters at a realistic level (read the class curves and the damage formula from the data), keep bot runs visible when someone wants to watch, and add one scenario that uses the real input menus instead of auto-battle.
+
+91. **A failed SteamNetworkingMessages session blocks every channel to that peer until someone closes it.** A session is
+per remote account, shared by all channels. In Thronefall Multiplayer a "recent partners" ping sent at start-up timed
+out while the friend's game was not ready; the session stayed failed, and the later join handshake on another channel got
+`k_EResultConnectFailed` on every retry. Close the session when a send returns `k_EResultConnectFailed`, but do not close
+a working one before a handshake: the other side may still hold it and let the new connection time out. And while a join
+is in progress, a failed session must mean "retry", not "go offline", or the host ends up with a player whose game never
+listens. Example: Thronefall (`games/thronefall/README.md`, fixes 1 and 3).
+
+92. **Put a virtual gamepad at the input library, not at the mod's copy of the input.** Thronefall Multiplayer copies
+movement and the night call from Rewired into its own `SharedData`, but reads Interact from Rewired directly, so a bot
+that only wrote `SharedData` could walk but never build. Harmony prefixes on `Rewired.Player.GetButton`,
+`GetButtonDown`, `GetButtonUp` and `GetAxis(string)` for the named gameplay actions make the game and the mod see the bot
+like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
