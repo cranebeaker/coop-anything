@@ -7198,8 +7198,8 @@
 - game: Far Cry 2
   year: 2008
   engine: Dunia (CryEngine 1 derivative)
-  project: 'fc2-coop-probe (co-op prototype: avatar, hit sync, host-run NPCs)'
-  url: https://github.com/HitchLangley/fc2-coop-probe
+  project: 'Far Cry 2 Campaign Coop (co-op prototype: avatar, hit sync, host-run NPCs)'
+  url: https://github.com/HitchLangley/far-cry-2-campaign-coop
   other_urls:
   - https://github.com/MortyRei/fc2-coop-probe
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
@@ -7217,23 +7217,23 @@
   last_activity: '2026-11'
   qa: automated
   notes: >-
-    Maintained by HitchLangley; started from MortyRei/fc2-coop-probe (initial import 2026-10-19, MIT). A
+    Maintained by HitchLangley (repository renamed from fc2-coop-probe in 2026-11); started from MortyRei/fc2-coop-probe (initial import 2026-10-19, MIT). A
     dinput8.dll proxy for Steam 1.03: the joiner loads the host's save and connects over a Steam relay (friend
     lobby, Join Game, Story Mode > Cooperative menu row). The other player is an animated avatar with weapons,
     shots, hit sync, doors, grenades, map and vehicle seats. The host runs all NPCs; the joiner shows them as
     puppets (movement, idle actions, smart terrain, mounted guns). An off-by-default experiment gives the host's
     avatar an AI component so that host NPCs shoot the joiner; on two copies on one PC their hits took the
-    joiner's health. Open: puppets' shots not visible on the joiner, missions and most world state not synced,
+    joiner's health; puppets' shots are shown on the joiner. Open: NPCs rarely attack the joiner in towns after the ceasefire breaks, missions and most world state not synced,
     the latest work not yet tested on two PCs. QA: tests/two_copy_walk.ps1 drives two copies and checks
     position and heading only; the rest was checked by hand on two copies.
   sources:
-  - https://github.com/HitchLangley/fc2-coop-probe
+  - https://github.com/HitchLangley/far-cry-2-campaign-coop
   - https://github.com/MortyRei/fc2-coop-probe
   - https://github.com/cranebeaker/coop-anything/tree/main/games/far-cry-2
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
-  checked: '2026-11-12'
+  checked: '2026-11-14'
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
