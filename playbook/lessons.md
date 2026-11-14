@@ -30,7 +30,7 @@ Drawn from six co-op projects (STALKER, Fallout New Vegas, Dungeon Keeper 1, Oca
 
 14. **Clean up after tests or you ship your test files.** A test archive left in an add-on made the server checksum differ, and other players saw "different versions". Remove test files, delete screenshots, and compare the installed patch byte for byte with the shipped one before handing anything over.
 
-15. **Delete the log before each run.** A boot test of many levels showed the next level failing with the previous level's error because the log still held it. Other logs only flush on clean exit or rarely; for data you must have, write your own file and flush it.
+15. **Delete the log before each run.** A boot test of many levels showed the next level failing with the previous level's error because the log still held it. Other logs only flush on clean exit or rarely; for data you must have, write your own file and flush it. The delete can itself fail: a copy stopped by the previous test may still hold its log for a few seconds, so retry the delete briefly instead of letting it abort the suite, and write the suite summary after every test so a crash part-way keeps the results so far. Example: Spooky Together (`scripts/launch-lab.ps1`, `scripts/lab-suite.ps1`).
 
 16. **Find a hook that actually fires.** In STALKER the obvious per-tick hook (the actor binder update) never ran on a dedicated server; an effect attached to an always-online restrictor did. In another game, client-side binders did not fire while server ones did. Probe each hook with a trivial log line on the exact setup (dedicated, listen, client) before building on it.
 
