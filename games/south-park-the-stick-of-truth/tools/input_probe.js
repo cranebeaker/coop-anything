@@ -44,6 +44,9 @@ const state = {
     pumpCalls: 0,
     keyCalls: 0,
     noReturn: 0,
+    keyboards: {},
+    formats: {},
+    dataCallers: {},
 };
 
 function note(text) {
@@ -52,6 +55,18 @@ function note(text) {
 
 // Who calls the key-state APIs, and for which key: the return address is inside the
 // engine's own input code, which is the place to look for the "input disabled" check.
+function recordDataCaller(bucket, caller) {
+    if (caller === null || caller === undefined) return;
+    try {
+        const module = moduleOf(caller);
+        const key = (module === null ? 'unknown' : module.name) + '+' +
+            (module === null ? String(caller) : caller.sub(module.base).toString(16));
+        bucket[key] = (bucket[key] || 0) + 1;
+    } catch (error) {
+        // a counter must never throw
+    }
+}
+
 function recordPump(kind, caller) {
     state.pumpCalls += 1;
     if (caller === null || caller === undefined) { state.noReturn += 1; return; }
@@ -229,10 +244,12 @@ function validObject(candidate) {
 
 function hookDeviceState(device) {
     try {
+        const key = device.toString();
         const vtable = device.readPointer();
-        // IDirectInputDevice8: GetDeviceState is slot 9, GetDeviceData is slot 10.
+        // IDirectInputDevice8: GetDeviceState 9, GetDeviceData 10, SetDataFormat 11.
         const method = vtable.add(9 * Process.pointerSize).readPointer();
         const dataMethod = vtable.add(10 * Process.pointerSize).readPointer();
+        const formatMethod = vtable.add(11 * Process.pointerSize).readPointer();
         // A wrong pointer level (or a non-COM object) would otherwise hook arbitrary
         // hot code: only attach to addresses that belong to a loaded module.
         if (state.deviceInfo.length < 4) {
@@ -250,8 +267,10 @@ function hookDeviceState(device) {
         if (!method.isNull() && Process.findModuleByAddress(method) !== null && Process.findModuleByAddress(dataMethod) !== null) {
             Interceptor.attach(method, {
                 onEnter(args) {
-                    this.size = args[0].toInt32();
-                    this.buffer = args[1];
+                    // thiscall: args[0] is `this`, so GetDeviceState(cbData, lpvData)
+                    // arrives as args[1], args[2].
+                    this.size = args[1].toInt32();
+                    this.buffer = args[2];
                 },
                 onLeave(retval) {
                     state.stateCalls += 1;
@@ -271,21 +290,46 @@ function hookDeviceState(device) {
                 },
             });
         }
+        if (!formatMethod.isNull()) {
+            // The data format tells us which device this is: a keyboard format has 256
+            // objects and a 256-byte state; a mouse format has 4..20.
+            Interceptor.attach(formatMethod, {
+                onEnter(args) {
+                    this.format = args[1];
+                },
+                onLeave() {
+                    try {
+                        const objects = this.format.add(16).readU32();
+                        const size = this.format.add(12).readU32();
+                        state.formats[key] = {objects: objects, dataSize: size};
+                        if (objects === 256 && size === 256) state.keyboards[key] = true;
+                    } catch (error) {
+                        note('data format: ' + error);
+                    }
+                },
+            });
+        }
         if (!dataMethod.isNull()) {
             // Buffered mode: the engine asks for the events since the last call. Feed it
             // our own DIDEVICEOBJECTDATA records (16 bytes each) instead.
             Interceptor.attach(dataMethod, {
                 onEnter(args) {
-                    this.stride = args[0].toInt32();
-                    this.array = args[1];
-                    this.count = args[2];
-                    this.flags = args[3].toInt32();
+                    // thiscall: args[0] is `this`; GetDeviceData(cbObjectData, rgdod,
+                    // pdwInOut, dwFlags) arrives as args[1..4].
+                    this.stride = args[1].toInt32();
+                    this.array = args[2];
+                    this.count = args[3];
+                    this.flags = args[4].toInt32();
                 },
                 onLeave(retval) {
                     state.dataCalls += 1;
+                    recordDataCaller(state.dataCallers, this.returnAddress);
                     if (this.array === null || this.count === null) return;
                     try {
                         state.dataSizes[this.stride] = (state.dataSizes[this.stride] || 0) + 1;
+                        // Only a keyboard carries DIK records for us; writing key events into
+                        // the mouse device's buffer would just confuse the game.
+                        if (!state.keyboards[key]) return;
                         const room = this.count.readU32();
                         if (state.keyQueue.length === 0 || room === 0) return;
                         if (this.stride < 16) return;
@@ -526,6 +570,11 @@ rpc.exports = {
             samples: state.samples,
             deviceInfo: state.deviceInfo,
             keys: state.keys,
+            keyboards: state.keyboards,
+            formats: state.formats,
+            dataCallers: Object.keys(state.dataCallers)
+                .map((key) => ({site: key, count: state.dataCallers[key]}))
+                .sort((a, b) => b.count - a.count).slice(0, 8),
             errors: state.errors,
         };
     },
@@ -570,3 +619,13 @@ rpc.exports = {
         };
     },
 };
+
+// Install before the game's first instruction. This script is loaded while the process is
+// still suspended, and Onyx initialises its input devices in the first milliseconds after
+// resume - later than a hook installed from Python. dinput8.dll is already mapped (static
+// import) and is not CEG-encrypted, so the export can be hooked this early.
+try {
+    installDinput();
+} catch (error) {
+    note('auto dinput: ' + error);
+}

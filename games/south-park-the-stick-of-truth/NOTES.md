@@ -228,6 +228,27 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead, DirectInput): the game owns no DirectInput device
+
+Hooks were installed at script load, i.e. while the process is still suspended and before the
+engine's first instruction, so nothing could be created before them. Result, in Clyde's Fort with
+all validity flags true:
+
+- `DirectInput8Create` is called once and creates **two devices**, both with a **joystick/controller
+  data format** (7 objects, 16 bytes) — and every `GetDeviceData` call comes from
+  `gameoverlayrenderer.dll` (`+85791` and `+82df7`, about 900k calls per run). They are the Steam
+  overlay's devices, not the game's.
+- `GetDeviceState` is called twice, at creation: the engine never polls a DirectInput device.
+- Written DIK key events therefore never reached the game: the only device that looked like a
+  keyboard was the overlay's, which re-set its format.
+
+So the DirectInput route is **closed**: Onyx in this build does not read DirectInput for gameplay.
+Together with `GetKeyState`/`GetAsyncKeyState` coming only from the overlay and `MSCTF`, the game's
+keyboard path is message-based and gated — the shape `games/the-witness/NOTES.md` describes
+(second `PeekMessage` loop, key handler behind an "input enabled" byte). That is the next probe,
+not more API hooking. Until it lands, the harness must drive the body by writing to it (position
+or the engine's own action call), never by synthetic keys.
+
 ## 2026-11-15 (lead, step 4 runtime): the player lives only in real gameplay
 
 Every earlier scan ran in the intro bedroom, reached by `-startsavegame` or by the menu's
