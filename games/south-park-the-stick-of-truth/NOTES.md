@@ -178,6 +178,25 @@ Source: `notes/04-object-model.md` (branch `game/south-park-the-stick-of-truth-s
 - Still needs runtime work (lock + guarded launch): find the module base, scan for vtable pointers,
   validate by moving the character, and count live instances. That is step 4's runtime half, not done.
 
+## 2026-11-15 (step 1, Gate 0): partial, undecided
+
+Source: `notes/01-net-reachability.md` (branch `game/south-park-the-stick-of-truth-step01-net`, commit
+`ebbea21`), merged by the integrator. Two launch series, both under the lock, all validity flags true.
+
+| Question | Verdict | Evidence |
+|---|---|---|
+| Host path | **No at the menu.** After a console `restart_server`: **unknown** (not triggerable yet). | `bind`, `listen`, `accept` = 0 in both runs; `SteamMatchmaking` never requested; `SteamGameServer()` returned NULL about 1,780 times; `SteamGameServer_Init` never called. |
+| Client path | **Unknown.** Blocked on console `connect` (step 3). | `ws2_32!connect` and `WSAConnect` = 0 in all instances; no console command could run on this branch. |
+| Two instances run | **Yes.** | Pair run: both alive at 80 s, guard clean. |
+| Two instances join | **Unknown.** No join attempted. | No connect, bind, listen, P2P or lobby call in the pair run. |
+
+- The menu polls `SteamNetworking` about 22 times a second; only vtable slot 2 runs (its name is unknown).
+- Pair instance A's screenshot was fully black while A stayed alive and the guard was clean. Cause unknown
+  (capture order or focus is the first suspect).
+- Implication: the thin-mod versus thick-mod decision is **not made**. Both the host and the client
+  trigger are console commands (step 3). If `restart_server` and `connect` reach `bind` and
+  `ws2_32!connect`, the engine's own netcode is the thin path. If they do not, the puppet path is the fallback.
+
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
