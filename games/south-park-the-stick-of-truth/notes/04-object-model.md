@@ -188,3 +188,11 @@ list, or behaviour. `.text` is never decoded.
   until the read-only model is stable. Record addresses as module+offset only.
 - Tool gaps to note in the write-up: 44 names kept mangled (none is a focus class); `near_matches`
   in `focus` are capped at 30 and alphabetical, so use `classes` for a full search.
+
+## Runtime half (appended 2026-11-15, repository-hygiene pass)
+
+The runtime half exists as `tools/object_model.py`. Its scan runs in a Clyde's Fort save and found
+`DS_Component_Player` at three stable addresses. The position triple at offset `0x5c` turned out to
+be a cached copy: writing to it changed the value but did not move the character.
+
+No runtime claim beyond those lines is made here; the static sections above are unchanged.
