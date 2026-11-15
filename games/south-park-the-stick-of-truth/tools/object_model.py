@@ -1172,20 +1172,41 @@ def run_series(mode='scan', wanted=None, skip_walk=False, skip_level=False, warm
 # Reporting
 # ---------------------------------------------------------------------------
 def class_table(record):
-    """Per-class live instance counts at the menu and in the level, focus first."""
+    """Per-class live instance counts at the menu and in the level, focus first.
+
+    The focus name's own vtable is often never instantiated: the live objects use a derived
+    class from the same family (`DS_Component_Player` for `Component_Player`). The cell sums
+    the family and names the class that actually has the instances, so a 0 in the focus row
+    can never again hide a live player object.
+    """
     menu = {entry['label']: entry for entry in (record.get('menu_scan') or {}).get('labels', [])}
     level = {entry['label']: entry for entry in (record.get('level_scan') or {}).get('labels', [])}
+    families = load_families()
 
-    def cell(mapping, label):
-        entry = mapping.get(label)
-        if not entry:
+    def cell(mapping, key):
+        entry = mapping.get(key)
+        if entry is None:
             return '-'
-        return '%d (%d image)' % (entry['outside'], entry['inImage'])
+        outside = entry.get('outside', 0)
+        in_image = entry.get('inImage', 0)
+        contributors = []
+        for member in families.get(key.split(':', 1)[1], []):
+            other = mapping.get(member)
+            if not other:
+                continue
+            outside += other.get('outside', 0)
+            in_image += other.get('inImage', 0)
+            if other.get('outside'):
+                contributors.append((member, other['outside']))
+        text = '%d (%d image)' % (outside, in_image)
+        if contributors:
+            best = max(contributors, key=lambda item: item[1])[0]
+            text += ' ' + best.split('::')[-1]
+        return text
 
     rows = []
     for label, rva in FOCUS:
-        key = 'focus:' + label
-        rows.append((label, hex(rva), cell(menu, key), cell(level, key)))
+        rows.append((label, hex(rva), cell(menu, 'focus:' + label), cell(level, 'focus:' + label)))
     return rows
 
 
