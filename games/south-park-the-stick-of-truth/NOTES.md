@@ -215,6 +215,30 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (step 3, console): pipeline works, no command is registered
+
+Source: `notes/02-console-and-devtools.md` (branch `game/south-park-the-stick-of-truth-step03-console`),
+merged by the integrator. Four launch series; the 4th is the one that settled it.
+
+- **Executed:** a script file in `data\global\console_scripts`, run through the engine's own `exec`
+  handler, was opened and split into lines. Each line was echoed and dispatched. The engine answered
+  `unknown var "<name>"` for `find`, `status` and `write_file`. Output is readable (the console print
+  hook is at RVA `0x107c60`).
+- **Not executed:** any real console command. `find`, `status` and `write_file` are **not registered
+  in this build**, so the engine has no command for them. `connect` and `restart_server` cannot be
+  reached by name. This is the same negative as "0 executed commands" in the earlier run.
+- **Found:** in the live process `.text` is decrypted, and all 15 console strings are referenced
+  from registration thunks (`push handler; push help; push flags; push name; mov ecx, <command
+  object>; call Console::add_command @ 0x51b6a0`). Registration is apparently not taking effect at
+  runtime. Cause unknown.
+- **Tool:** `tools/console_exec.py` (`run_commands`, `probe`, `call_handler`). Caveat: a direct call to
+  the handler without the wrapper faulted at address 0 in the agent's tests, so the wrapper matters.
+- **Still unknown:** whether a direct handler call (`status`, `restart_server`, `connect`) reaches the
+  network code. Follow-up is running on the same branch, under the lock.
+
+Consequence for Gate 0: host and client verdicts stay **unknown**, not "no". The thin-versus-thick
+decision waits for the follow-up.
+
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
