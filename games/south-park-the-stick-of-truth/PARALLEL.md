@@ -27,7 +27,15 @@ touches shared documents.
 | 5 Second body | `notes/05-second-player-input-camera.md`, `tools/two_players.py` | same |
 | 6 Transport | `notes/06-transport-and-relay.md`, `tools/relay.py`, `NETWORK.md` | same |
 | 7 Remote player | `notes/07-remote-player-and-session.md`, `SESSION.md` | same |
+| Lead / integrator (no step agent was given it) | `mod/` — mod DLL, bridge glue, transport, remote body | every step's `notes/` and step-owned `tools/` |
+| Lead / integrator (no step agent was given it) | `launcher/` | same |
+| Lead / integrator (no step agent was given it) | `tools/bridge` (the hub bridge at the repo root) | same |
 | Integrator (9th chat) | `NOTES.md`, `README.md`, `PLAN.md`, `prompts/`, `data/directory.yaml`, `DIRECTORY.md`, `playbook/` | nobody else's `notes/` or `tools/` |
+
+**`mod/src/mod.cpp` is announce-first.** Two agents collided on it once. Write the intended change
+and who is making it in `NOTES.md` under the current session **before** you edit it; if the note is
+not there, do not touch the file and ask the lead. The same applies to any shared file under `mod/`
+that another agent is editing.
 
 Write-up format inside your own notes file: `## <date> — step N — <agent name>`, then three
 separate lists **Observed / Derived / Unknown**, then a "Deliverable" line with the exact commands
