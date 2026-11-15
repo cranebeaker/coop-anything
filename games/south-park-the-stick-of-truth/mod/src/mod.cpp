@@ -777,6 +777,46 @@ void install_inline_hooks()
                 reinterpret_cast<void**>(&g_real_create_factory));
 }
 
+// First plausible position triple in an object: the same rule the log uses, returned instead.
+bool read_first_triple(uintptr_t address, float out[3], unsigned* offset_out)
+{
+    unsigned char raw[512];
+    SIZE_T got = 0;
+    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), raw,
+                           sizeof(raw), &got)) {
+        return false;
+    }
+    for (size_t offset = 0; offset + 12 <= got; offset += 4) {
+        float values[3];
+        memcpy(values, raw + offset, sizeof(values));
+        bool finite = true;
+        int non_zero = 0;
+        for (int index = 0; index < 3; ++index) {
+            if (!(values[index] == values[index]) || values[index] > 1.0e5f ||
+                values[index] < -1.0e5f) {
+                finite = false;
+            }
+            if (values[index] != 0.0f) {
+                ++non_zero;
+            }
+        }
+        if (!finite || non_zero < 2) {
+            continue;
+        }
+        if (values[0] == values[1] && values[1] == values[2]) {
+            continue;
+        }
+        out[0] = values[0];
+        out[1] = values[1];
+        out[2] = values[2];
+        if (offset_out != nullptr) {
+            *offset_out = static_cast<unsigned>(offset);
+        }
+        return true;
+    }
+    return false;
+}
+
 // --- in-game bridge ---------------------------------------------------------
 //
 // The hub's tools/bridge server, embedded: a loopback RPC that runs game calls on the tick
@@ -814,6 +854,19 @@ public:
             movers.push(Value(static_cast<double>(g_mover_hits[index])));
         }
         root.set("movers", movers);
+        if (g_player_count > 0) {
+            float values[3] = {0.0f, 0.0f, 0.0f};
+            unsigned offset = 0;
+            if (read_first_triple(g_player_hits[0], values, &offset)) {
+                Value position = Value::object();
+                position.set("x", static_cast<double>(values[0]));
+                position.set("y", static_cast<double>(values[1]));
+                position.set("z", static_cast<double>(values[2]));
+                position.set("offset", static_cast<double>(offset));
+                position.set("object", static_cast<double>(g_player_hits[0]));
+                root.set("position", position);
+            }
+        }
         return root;
     }
 
