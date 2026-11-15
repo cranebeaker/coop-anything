@@ -621,6 +621,12 @@ class Game:
     def __enter__(self):
         preflight()
         self.run_dir.mkdir(parents=True)
+        # Remember the owner's window now, so the run gives focus back when it ends: a test
+        # must not leave the game in front of whatever the owner was doing.
+        try:
+            self.owner_window = int(ctypes.windll.user32.GetForegroundWindow() or 0)
+        except Exception:                            # noqa: BLE001
+            self.owner_window = 0
         self.profile_before = snapshot(ORIGINAL_PROFILE)
         backup = self.run_dir / 'original-profile-backup'
         shutil.copytree(ORIGINAL_PROFILE, backup)
@@ -837,6 +843,15 @@ class Game:
         game_after = inventory(GAME)
         self.result['new_game_files'] = {path: size for path, size in game_after.items()
                                          if path not in self.game_before}
+        # Hand the desktop back to the owner.
+        try:
+            if getattr(self, 'owner_window', 0):
+                user = ctypes.windll.user32
+                if int(user.GetForegroundWindow() or 0) != self.owner_window:
+                    user.ShowWindow(self.owner_window, 9)
+                    user.SetForegroundWindow(self.owner_window)
+        except Exception:                            # noqa: BLE001
+            pass
         (self.run_dir / 'result.json').write_text(json.dumps(self.result, indent=2), encoding='utf-8')
         return False
 

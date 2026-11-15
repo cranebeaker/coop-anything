@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.20)
 project(south_park_coop CXX)
 
 # The game is 32-bit (PE32 i386), so everything here is Win32 x86.
@@ -24,4 +24,5 @@ set_target_properties(dinput8 PROPERTIES
 if (MINGW)
     # The export has to keep its name; MinGW marks it with __declspec(dllexport) or a .def.
     target_link_options(dinput8 PRIVATE -Wl,--kill-at)
+    target_link_libraries(dinput8 PRIVATE d3d9)
 endif()

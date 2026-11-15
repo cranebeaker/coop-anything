@@ -143,6 +143,28 @@ def focus_window(hwnd):
             user.AttachThreadInput(current, thread, False)
 
 
+def foreground_window():
+    """The window the owner is working in, so a test run can give it back afterwards."""
+    try:
+        return int(api().user.GetForegroundWindow() or 0)
+    except Exception:                                  # noqa: BLE001
+        return 0
+
+
+def restore_foreground(hwnd):
+    """Give focus back to the window that had it before the run. Best effort."""
+    if not hwnd:
+        return False
+    user = api().user
+    try:
+        if int(user.GetForegroundWindow() or 0) == hwnd:
+            return True
+        user.ShowWindow(hwnd, 9)                       # SW_RESTORE
+        return bool(user.SetForegroundWindow(hwnd))
+    except Exception:                                  # noqa: BLE001
+        return False
+
+
 def click_client(pid, fraction_x, fraction_y, settle=1.0):
     """Click a fractional position inside the client area (0.0-1.0, resolution free)."""
     import time
