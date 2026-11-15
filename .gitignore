@@ -27,3 +27,4 @@ local/
 /games/outlast-2/src/*.lib
 /games/outlast-2/src/*.exp
 games/*/tools/game-runs/
+games/*/mod/build/
