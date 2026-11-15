@@ -13,6 +13,8 @@
 
 #include <cstdio>
 
+#include "MinHook.h"
+
 extern "C" void coop_note(const char* text);
 
 namespace {
@@ -589,6 +591,31 @@ void scan_vtable(const char* label, unsigned rva, int limit)
     log_line(line);
 }
 
+// Inline hooks. The IAT patch above is not enough: the engine resolves the d3d11 entry points
+// from another module before our slot is installed, so the function itself is hooked.
+void install_inline_hooks()
+{
+    if (MH_Initialize() != MH_OK) {
+        log_line("MinHook: initialize failed");
+        return;
+    }
+    HMODULE d3d11 = LoadLibraryW(L"d3d11.dll");
+    if (d3d11 == nullptr) {
+        log_line("MinHook: d3d11.dll not loadable");
+        return;
+    }
+    FARPROC target = GetProcAddress(d3d11, "D3D11CreateDeviceAndSwapChain");
+    if (target != nullptr &&
+        MH_CreateHook(reinterpret_cast<void*>(target),
+                      reinterpret_cast<void*>(&create_swapchain_hook),
+                      reinterpret_cast<void**>(&g_real_create_swapchain)) == MH_OK &&
+        MH_EnableHook(reinterpret_cast<void*>(target)) == MH_OK) {
+        log_line("inline hook: D3D11CreateDeviceAndSwapChain");
+    } else {
+        log_line("inline hook: D3D11CreateDeviceAndSwapChain failed");
+    }
+}
+
 DWORD WINAPI worker(LPVOID)
 {
     wchar_t path[MAX_PATH];
@@ -611,6 +638,7 @@ DWORD WINAPI worker(LPVOID)
     }
     install_present_hook();
     install_dxgi_hook();
+    install_inline_hooks();
 
     // The thread still ticks, so a run is observable even before the first frame hook fires.
     LONG next_scan = 600;
