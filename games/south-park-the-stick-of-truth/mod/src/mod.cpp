@@ -394,6 +394,12 @@ FARPROC WINAPI get_proc_address_hook(HMODULE module, LPCSTR name)
         return nullptr;
     }
     proc = g_real_get_proc_address(module, name);
+    if (name != nullptr) {
+        // Prove whether our slot is used at all: every name the engine resolves comes here.
+        char line[160];
+        std::snprintf(line, sizeof(line), "gpa: %s -> %s", name, proc == nullptr ? "null" : "ok");
+        coop_note(line);
+    }
     if (name != nullptr && proc != nullptr &&
         lstrcmpA(name, "D3D11CreateDeviceAndSwapChain") == 0) {
         g_real_create_swapchain = reinterpret_cast<CreateSwapChainFn>(
