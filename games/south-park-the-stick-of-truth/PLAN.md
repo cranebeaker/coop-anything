@@ -77,6 +77,24 @@ Read `PARALLEL.md` before the first commit. The short version:
   what ran; (4) the directory entry is still truthful; (5) no agent-owned file was overwritten;
   (6) commit, then show the owner the diff before any draft PR.
 
+## Decision: thin path first (2026-11-15)
+
+Goal in one line: two friends on two PCs, each with their own copy of the game, one launcher button each, and a
+playable session with the least custom code.
+
+- **Thin path (first):** use the engine's own session and replication (Onyx). The mod is a launcher plus a small DLL
+  that starts the host or the client through the engine's own commands, with an overlay for the code and status.
+  Simplest for players, least code to maintain.
+- **Thick path (fallback only):** write our own network layer, replication and turn sync. Start it only if the thin path
+  is proven impossible.
+
+Trigger for the thin path: `restart_server` (host) and `connect <addr>` (client) reach `bind`/`listen` and
+`ws2_32!connect` in the instances, and both processes stay alive. Until that is shown, nothing in the thick path is
+built. The decision is revisited only on a clear "no" from the direct handler tests.
+
+Transport for the first release is still a VPN with a direct address (no port forwarding). It is not decided by this
+section.
+
 ## Run order
 
 Give one prompt per chat/agent, in this order. Do not start a step before the step it depends on
