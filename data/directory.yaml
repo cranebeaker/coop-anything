@@ -14855,7 +14855,7 @@
     Component_RPG_Player 2, NY_Component_Actor 29 and Component_Network 4. Synthetic keyboard and pad do not move the player;
     mouse clicks do reach the menus. Plan is a launcher plus an in-game mod (own transport over a
     VPN). Dated evidence, a guarded test harness and a per-agent plan are in
-    games/south-park-the-stick-of-truth.
+    games/south-park-the-stick-of-truth. Since then a mod DLL (dinput8 proxy, in-game bridge, UDP snapshot transport, interpolated remote body, self-tests) and a launcher exist in that folder; nothing is playable yet and the player position still has to be proven by motion.
   searched:
   - 'GitHub repository search for "stick of truth": 72 repos, only trainers, a localization patch,
     archive extractors and dialogue browsers (2026-11-04, 2026-11-15)'
