@@ -679,6 +679,14 @@ void inline_hook(const wchar_t* module_name, const char* name, void* detour, voi
 
 void install_inline_hooks()
 {
+    // OFF by default. With these enabled the game died during startup on 2026-11-15 (validity
+    // flags stayed clean, the process was simply gone), so the safe build keeps the DLL alive
+    // and the vtable hooks only. Re-enable one hook at a time and find which one kills it.
+    const bool enabled = false;
+    if (!enabled) {
+        coop_note("inline hooks disabled (crashed the game when enabled)");
+        return;
+    }
     if (MH_Initialize() != MH_OK) {
         log_line("MinHook: initialize failed");
         return;
