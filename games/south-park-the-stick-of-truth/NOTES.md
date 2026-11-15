@@ -158,6 +158,26 @@ Steps 2 (gameplay harness) and 3 (console) were started as parallel agents under
 own worktree and branch, own notes file, machine-wide launch lock. The integrator (me) keeps
 `NOTES.md`, `README.md`, `PLAN.md`, `data/` and merges their notes when they report.
 
+## 2026-11-15 (step 4, static): RTTI index merged
+
+Source: `notes/04-object-model.md` (branch `game/south-park-the-stick-of-truth-step04-objects`, commit
+`e560f6f`), merged by the integrator. Static only; no game launched, no lock used.
+
+- 937 classes recovered from the test copy (hash checked); 878 polymorphic, backed by 929 verified
+  MSVC COLs and vtables. Tool: `tools/rtti_index.py`, output `tools/rtti_index.json`.
+- **Correction (verified by the integrator with a raw byte search):** `Player_Object`,
+  `Secondary_Player_Object` and `Remote_Camera_Object` have **no bare RTTI class**. They occur only
+  as template arguments of `Host_Object_Controller<…>` / `Ghost_Object_Controller<…>` (Net-data
+  types). The same holds for `Creature`, `Companion` (which has AI-state classes such as
+  `Companion_Basic`, `Companion_Follow`, `Companion_Command`), `Actor` and `Level_State` (which has
+  `Component_Level_State`). `NetConnection` has no RTTI name at all.
+- Component classes that matter for the object model: `Component_Player` `0x7af064`,
+  `Component_RPG_Player` `0x7a1c0c`, `Component_Party_Member` `0x7b89ec`, `Component_Remote_Camera`
+  `0x7b8434`, `Component_Network` `0x7b2f3c`, `Game::State::Game_State` `0x7b9a3c`,
+  `Net::Session_Func` `0x7d6720`, `Net::Client_Node` `0x7bb448`. RVAs relative to ImageBase `0x400000`.
+- Still needs runtime work (lock + guarded launch): find the module base, scan for vtable pointers,
+  validate by moving the character, and count live instances. That is step 4's runtime half, not done.
+
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
