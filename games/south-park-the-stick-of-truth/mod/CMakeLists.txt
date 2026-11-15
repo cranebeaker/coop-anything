@@ -17,6 +17,7 @@ set(MINHOOK "${CMAKE_CURRENT_SOURCE_DIR}/third_party/minhook-1.3.4")
 add_library(dinput8 SHARED
     src/proxy.cpp
     src/mod.cpp
+    src/net.cpp
     ${MINHOOK}/src/hook.c
     ${MINHOOK}/src/buffer.c
     ${MINHOOK}/src/trampoline.c
@@ -34,5 +35,6 @@ target_link_libraries(dinput8 PRIVATE d3d9 d3d11 dxgi ws2_32)
 if (MINGW)
     target_link_options(dinput8 PRIVATE -Wl,--kill-at)
 endif()
+
 
 
