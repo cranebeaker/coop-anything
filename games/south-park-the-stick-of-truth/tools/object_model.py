@@ -36,6 +36,19 @@ Nothing is ever written: no ``Memory.write*``, no ``NativeFunction``, no ``Inter
 console calls. The only interaction with the game is synthesized keyboard/mouse input, the
 same path steps 2 and 3 use, plus read-only ``Memory.read*``/``Memory.scanSync``.
 
+Which vtable to look for
+-----------------------
+A live object rarely uses the vtable of the class the index names for a subsystem. The class
+that describes the player, ``OEI::Game_Component::Component_Player``, has a vtable that points
+at nothing in memory: the object is a ``DS_Component_Player``, and the vtable in its first
+dword is the ``DS_`` one. Counting only base-class vtables therefore reports zero live
+instances of ``Component_Actor`` while 35 ``NY_Component_Actor`` objects are running (measured
+in ``local/game-runs/object-model-029777b9``).
+
+So candidates come from a class *or any class whose RTTI base chain contains it*
+(``load_families``). Inside a family the rarest class is tried first, because "the player's own
+component" is usually a single instance while the shared base is everything else.
+
 Behaviour test
 --------------
 Candidate objects are the outside-image hits. Around each candidate the payload reads
@@ -60,10 +73,11 @@ first, which is what a merged branch looks like. Only reads happen in that folde
 
 Usage
 -----
-    py -3.14 -B tools/object_model.py selftest
-    py -3.14 -B tools/object_model.py scan                 # menu scan + level scan + walk
-    py -3.14 -B tools/object_model.py scan --no-walk       # instance counts only
-    py -3.14 -B tools/object_model.py watch --class Component_Player --seconds 2.5
+    py -3.14 -B tools/object_model.py selftest          # offline: index + analysis
+    py -3.14 -B tools/object_model.py selftest --live    # also exercise the payload, no game
+    py -3.14 -B tools/object_model.py scan               # menu scan + level scan + walk
+    py -3.14 -B tools/object_model.py scan --skip-walk   # instance counts only
+    py -3.14 -B tools/object_model.py watch --class Component_Player --hold 2.5
     py -3.14 -B tools/object_model.py watch --run <run folder>
 
 ``scan`` is one guarded launch series and takes about three minutes. ``watch`` re-launches and
@@ -166,17 +180,21 @@ FOCUS = [
 RADIUS = 0x400              # scan window around a candidate, both directions
 IDLE_SECONDS = 1.0          # the still-pair that rejects animation noise
 CHUNK = 4 * 1024 * 1024     # memory read granularity
-RANGE_CAP = 128 * 1024 * 1024
-SCAN_BUDGET = 768 * 1024 * 1024
+# Series 1 skipped a single 141 MB `rw-` range because of this cap, and with it every focus
+# class (the actor/component pool is one big allocation). Chunked reads mean a big range costs
+# time, not memory, so the cap now sits far above anything this process holds.
+RANGE_CAP = 512 * 1024 * 1024
+SCAN_BUDGET = 1536 * 1024 * 1024
 
 # How many outside-image hits are read as float windows, per class. Actor-heavy classes get
-# more because the player body is one actor among many.
+# more because the player body is one actor among many; `perClassFor` in the scan call must be
+# at least as large, or the sample list is shorter than this and the cap never applies.
 CANDIDATE_CAPS = {
-    'Component_Player': 6,
-    'Component_RPG_Player': 6,
-    'Component_Party_Member': 6,
+    'Component_Player': 8,
+    'Component_RPG_Player': 8,
+    'Component_Party_Member': 8,
     'Component_Remote_Camera': 4,
-    'Component_Actor': 12,
+    'Component_Actor': 48,
     'Component_Level_State': 3,
     'Component_Game_State': 3,
     'Component_Network': 4,
@@ -184,7 +202,8 @@ CANDIDATE_CAPS = {
     'Ghost_Object_Controller<Player_Object_Net_Data>': 4,
 }
 DEFAULT_CAP = 3
-MAX_CANDIDATES = 48
+MAX_CANDIDATES = 112
+SAMPLES_PER_CLASS = 64      # carried out of the payload, for the candidate choice above
 
 SESSION_JS = r"""
 const config = __CONFIG__;
@@ -284,7 +303,7 @@ function offsetOf(address) {
 
 function scan(list, options) {
     if (main === null) return {error: moduleReport.reason};
-    const perClass = options.perClassFor || 3;
+    const perClass = options.perClassFor || 4;
     const maxMillis = options.maxMillis || 180000;
     const values = [];
     const labels = [];
@@ -390,16 +409,61 @@ function windows(offsets, radius) {
     if (main === null) return {error: moduleReport.reason};
     const out = {};
     for (const slot of offsets) {
-        const offset = parseInt(slot.replace(/^0x/, ''), 16);
-        const base = main.base.add(offset);
-        out[slot] = {f: readFloats(base, -radius, radius), d: readDoubles(base, -radius, radius)};
+        const address = addressOf(slot);
+        if (address === null) { out[slot] = {error: 'unknown handle'}; continue; }
+        out[slot] = {f: readFloats(address, -radius, radius),
+                     d: readDoubles(address, -radius, radius)};
     }
     return {radius: radius, windows: out};
 }
 
+// Heap addresses are not expressible as module+offset when they sit below the image, so a
+// chased pointer travels as a handle ('p12') and the payload keeps the real address. Nothing
+// is written; the handle is just a lookup key.
+const handles = [];
+
+function addressOf(token) {
+    if (typeof token === 'number') return main.base.add(token >>> 0);
+    if (/^p\d+$/.test(token)) {
+        const address = handles[parseInt(token.slice(1), 10)];
+        return address === undefined ? null : address;
+    }
+    return main.base.add(parseInt(token.replace(/^0x/, ''), 16));
+}
+
+function pointerTargets(tokens, perToken) {
+    if (main === null) return {error: moduleReport.reason};
+    const baseValue = (main.base.toInt32() >>> 0);
+    const out = [];
+    for (const token of tokens) {
+        const address = addressOf(token);
+        if (address === null) continue;
+        let taken = 0;
+        for (let index = 0; index < 24 && taken < perToken; index++) {
+            let value;
+            try { value = address.add(index * 4).readU32(); } catch (error) { break; }
+            if (value < 0x10000 || (value & 3) !== 0) continue;
+            const relative = (value - baseValue) >>> 0;
+            if (relative < main.size) continue;              // into the image: not an object
+            let range = null;
+            try { range = Process.findRangeByAddress(ptr(value)); } catch (error) { continue; }
+            if (range === null || range.protection.indexOf('w') < 0) continue;
+            if (handles.length >= 256) break;
+            handles.push(ptr(value));
+            out.push({token: 'p' + (handles.length - 1),
+                      offset: relative > 0x7fffffff ? null : '0x' + relative.toString(16),
+                      from: token, field: '0x' + (index * 4).toString(16)});
+            taken += 1;
+        }
+    }
+    return {targets: out, handles: handles.length};
+}
+
 function dwords(offset, count) {
     if (main === null) return {error: moduleReport.reason};
-    const base = main.base.add(offset);
+    const address = addressOf(offset);
+    if (address === null) return {error: 'unknown handle'};
+    const base = address;
     const fields = [];
     for (let i = 0; i < count; i++) {
         const at = i * 4;
@@ -412,13 +476,15 @@ function dwords(offset, count) {
         fields.push({at: '0x' + at.toString(16), value: value === null ? null : hex32(value),
                      pointsIntoImageAt: asRva});
     }
-    return {offset: '0x' + (offset >>> 0).toString(16), fields: fields};
+    return {offset: typeof offset === 'string' ? offset : '0x' + offset.toString(16),
+            fields: fields};
 }
 
 rpc.exports = {
     info: moduleInfo,
     scan: scan,
     windows: windows,
+    pointers: pointerTargets,
     dwords: dwords
 };
 """
@@ -427,6 +493,52 @@ rpc.exports = {
 # ---------------------------------------------------------------------------
 # Index
 # ---------------------------------------------------------------------------
+def _index_key(classes, name):
+    """The key in ``rtti_index.json`` for a focus name, template arguments and all."""
+    if 'OEI::Game_Component::' + name in classes:
+        return 'OEI::Game_Component::' + name
+    if name in classes:
+        return name
+    leaf = name.split('<')[0]
+    for key in classes:
+        tail = key.split('::')[-1]
+        if tail == name or tail.split('<')[0] == leaf:
+            return key
+    return None
+
+
+def load_families(path=INDEX):
+    """Focus name -> every index key whose RTTI base chain contains that focus class.
+
+    This is what makes a scan find live objects at all: the vtable stored in an object is the
+    leaf class's, never its base's (see "Which vtable to look for" above). Only the static index
+    is read; nothing here touches the game.
+    """
+    data = json.loads(Path(path).read_text(encoding='utf-8'))
+    classes = data['classes']
+    parents = {name: [base['name'] for base in entry.get('base_classes') or []]
+               for name, entry in classes.items()}
+
+    def ancestors(name, seen=None):
+        seen = set() if seen is None else seen
+        if name in seen:
+            return seen
+        seen.add(name)
+        for parent in parents.get(name, []):
+            ancestors(parent, seen)
+        return seen
+
+    families = {}
+    for name, _ in FOCUS:
+        key = _index_key(classes, name)
+        if key is None:
+            families[name] = []
+            continue
+        families[name] = [other for other in classes
+                          if other != key and key in ancestors(other)]
+    return families
+
+
 def load_index(path=INDEX):
     """The static index: label -> vtable RVA for every class that has one.
 
@@ -688,22 +800,48 @@ def _probe(script, record, tag):
     return probe
 
 
-def _choose_candidates(scan, wanted=None):
-    """Outside-image hits, capped per class, focus order first, then the rest."""
+def _choose_candidates(scan, wanted=None, families=None):
+    """Outside-image hits for each wanted class, its rarest-derived family first.
+
+    ``families`` comes from :func:`load_families`. Members are ordered by how many live
+    instances the scan saw, fewest first: a subsystem's own object is usually a single
+    instance, the shared base class is the hundreds. Per-class cap applies to the whole
+    family, and ``focus:<name>`` (the base vtable itself) is kept first for the record.
+    Returns ``(chosen, classes)`` where ``classes`` maps a token to the class that matched it.
+    """
     wanted = wanted or [name for name, _ in FOCUS]
+    families = families if families is not None else {}
     by_label = {entry['label']: entry for entry in (scan.get('labels') or [])}
-    chosen = []
+    chosen, classes = [], {}
     for name in wanted:
-        entry = by_label.get('focus:' + name) or by_label.get(name)
-        if not entry:
-            continue
+        labels = ['focus:' + name] + [member for member in families.get(name) or []]
+        present = [by_label[label] for label in labels if label in by_label]
+        # Keep the focus label first, then family members with fewest instances first.
+        present[1:] = sorted(present[1:], key=lambda entry: (entry['outside'], entry['label']))
         cap = CANDIDATE_CAPS.get(name, DEFAULT_CAP)
-        for offset in entry['samples'][:cap]:
-            if offset not in chosen:
-                chosen.append(offset)
-            if len(chosen) >= MAX_CANDIDATES:
-                return chosen
-    return chosen
+        taken = 0
+        for entry in present:
+            for offset in entry['samples']:
+                if taken >= cap or len(chosen) >= MAX_CANDIDATES:
+                    break
+                if offset not in chosen:
+                    chosen.append(offset)
+                    classes[offset] = entry['label']
+                taken += 1
+            if taken >= cap or len(chosen) >= MAX_CANDIDATES:
+                break
+    return chosen, classes
+
+
+def _describe(record, token):
+    """Map a watched token back to what it is: an offset from module base, or a chased pointer."""
+    classes = record.get('candidate_classes') or {}
+    for entry in record.get('chased') or []:
+        if entry['token'] == token:
+            return {'chased_from': entry['from'], 'chased_field': entry['field'],
+                    'offset': entry.get('offset'), 'class': classes.get(entry['from'])}
+    return {'offset': token if str(token).startswith('0x') else None,
+            'class': classes.get(token)}
 
 
 def _wait_for_level(pid, run, record, plan):
@@ -756,7 +894,7 @@ def session_body(pid, guard_script, plan, record):
             time.sleep(wait)
         _capture(pid, run, 'menu', record)
         _probe(probe_script, record, 'menu')
-        record['menu_scan'] = api.scan(plan['all_targets'], {'perClass': 3, 'perClassFor': 4})
+        record['menu_scan'] = api.scan(plan['all_targets'], {'perClassFor': 4})
         record['menu_scan_at'] = round(time.time() - record['started_wall'], 1)
 
         if plan['mode'] == 'scan' and not plan['skip_level']:
@@ -769,23 +907,33 @@ def session_body(pid, guard_script, plan, record):
             time.sleep(plan['settle'])
             _capture(pid, run, 'level', record)
             _probe(probe_script, record, 'level')
-            record['level_scan'] = api.scan(plan['all_targets'], {'perClass': 3, 'perClassFor': 4})
+            record['level_scan'] = api.scan(plan['all_targets'],
+                                            {'perClassFor': SAMPLES_PER_CLASS})
             record['level_scan_at'] = round(time.time() - record['started_wall'], 1)
         elif plan['mode'] == 'watch':
             # `watch` starts from the same click but scans only the requested classes.
             record['level_seen'] = _wait_for_level(pid, run, record, plan)
             time.sleep(plan['settle'])
-            record['level_scan'] = api.scan(plan['all_targets'], {'perClass': 3, 'perClassFor': 6})
+            record['level_scan'] = api.scan(plan['all_targets'],
+                                            {'perClassFor': SAMPLES_PER_CLASS})
             record['level_scan_at'] = round(time.time() - record['started_wall'], 1)
 
         # 3. behaviour: the candidate objects' neighbourhood, before and after real input.
         if plan['mode'] == 'watch' or not plan['skip_walk']:
-            candidates = _choose_candidates(record.get('level_scan') or {},
-                                            wanted=plan['wanted'])
+            candidates, candidate_classes = _choose_candidates(
+                record.get('level_scan') or {}, wanted=plan['wanted'],
+                families=load_families())
             record['candidates'] = candidates
+            record['candidate_classes'] = candidate_classes
             if not candidates:
                 record['error'] = 'no outside-image instance to watch; walk test skipped'
                 return record
+            # The body may be the owning object, not the component itself: follow one pointer
+            # out of each of the first few candidates and watch those objects too.
+            chased = api.pointers(candidates[:48], 2)
+            record['chased'] = chased.get('targets') or []
+            watched = candidates + [entry['token'] for entry in record['chased']]
+            record['watched'] = watched
             snapshots = {}
             # One space press: leaves an intro dialogue if there is one, and is the cheapest
             # evidence that key input arrives at the game at all (see the frame dhash).
@@ -793,14 +941,14 @@ def session_body(pid, guard_script, plan, record):
                 {'axis': 'space', **send_keys(pid, ['space'])})
             time.sleep(plan['settle'])
             _capture(pid, run, 'before-walk', record)
-            snapshots['idle_before'] = api.windows(candidates, plan['radius'])['windows']
+            snapshots['idle_before'] = api.windows(watched, plan['radius'])['windows']
             time.sleep(plan['idle'])
-            snapshots['idle_after'] = api.windows(candidates, plan['radius'])['windows']
+            snapshots['idle_after'] = api.windows(watched, plan['radius'])['windows']
             for axis, seconds in (('w', plan['hold']), ('s', plan['hold']),
                                   ('a', plan['hold']), ('d', plan['hold'])):
                 record.setdefault('input', []).append(
                     {'axis': axis, **hold_key(pid, axis, seconds)})
-                snapshots[axis] = api.windows(candidates, plan['radius'])['windows']
+                snapshots[axis] = api.windows(watched, plan['radius'])['windows']
                 _capture(pid, run, 'after-' + axis, record)
             record['snapshots'] = snapshots
             analysis = movement_analysis(snapshots, radius=plan['radius'])
@@ -811,7 +959,7 @@ def session_body(pid, guard_script, plan, record):
                 # window; a still screen means the input never reached a controllable body.
                 record.setdefault('input', []).append(
                     {'axis': 'w-retry', **hold_key(pid, 'w', 3.0)})
-                record['retry_window'] = api.windows(candidates, plan['radius'])['windows']
+                record['retry_window'] = api.windows(watched, plan['radius'])['windows']
                 _capture(pid, run, 'after-retry', record)
                 record['retry_movers'] = big_movers(snapshots['d'], record['retry_window'],
                                                     radius=plan['radius'], limit=8)
@@ -824,10 +972,9 @@ def session_body(pid, guard_script, plan, record):
                     'offset_from_candidate': best['offset_from_candidate'],
                     'score': best['score'],
                     'values': best['values'],
+                    **_describe(record, best['candidate']),
                 }
-                record['winner_dwords'] = api.dwords(
-                    int(best['candidate'].replace('0x', ''), 16) +
-                    max(0, best['offset_from_candidate'] - 0x20), 24)
+                record['winner_dwords'] = api.dwords(best['candidate'], 24)
         return record
     except Exception as error:                      # noqa: BLE001 - a failed run is data
         record['error'] = repr(error)
@@ -846,21 +993,38 @@ def session_body(pid, guard_script, plan, record):
                 pass
 
 
+def select_targets(wanted=None):
+    """``(focus, everything)`` vtable targets for a series, after the ``--class`` filter.
+
+    Everything is kept unscoped for ``scan`` because a full index costs one pass either way.
+    For ``--class`` the filter keeps the class's derived leaves (``load_families``): the base
+    vtable alone has no live instance, so scanning only it would always find zero.
+    """
+    focus, everything = load_index()
+    families = load_families()
+    if not wanted:
+        return focus, everything
+    wanted_names = set(wanted)
+    unknown = sorted(name for name in wanted_names if name not in families)
+    if unknown:
+        raise SystemExit('not a focus class: ' + ', '.join(unknown))
+    focus = [(label, rva) for label, rva in focus
+             if label.split(':', 1)[1] in wanted_names]
+    everything = [(label, rva) for label, rva in everything
+                  if any(label == name or label.endswith('::' + name)
+                         or label in (families.get(name) or [])
+                         for name in wanted_names)]
+    if not focus and not everything:
+        raise SystemExit('no vtable RVA for ' + ', '.join(sorted(wanted_names)))
+    return focus, everything
+
+
 def run_series(mode='scan', wanted=None, skip_walk=False, skip_level=False, warmup=32.0,
                settle=3.0, hold=1.2, idle=IDLE_SECONDS, radius=RADIUS, owner='step04-objects',
                minutes=45, run_root=None):
     """One guarded launch series: lock, isolated copy, guard, session, run folder."""
     preflight()
-    focus, everything = load_index()
-    if wanted:
-        wanted_names = set(wanted)
-        focus = [(label, rva) for label, rva in focus
-                 if label.split(':', 1)[1] in wanted_names]
-        everything = [(label, rva) for label, rva in everything
-                      if any(label == name or label.endswith('::' + name)
-                             for name in wanted_names)]
-        if not focus and not everything:
-            raise SystemExit('no vtable RVA for ' + ', '.join(sorted(wanted_names)))
+    focus, everything = select_targets(wanted)
     all_targets = [list(item) for item in focus] if mode != 'scan' else \
         [list(item) for item in focus + everything]
 
@@ -1010,11 +1174,35 @@ def print_scan(record):
     best = record.get('player_candidate')
     if best:
         print('player candidate: %s (%s) position at %+d from it, score %s' % (
-            best['candidate'], best['kind'], best['offset_from_candidate'], best['score']))
+            best.get('offset') or best.get('candidate'), best['kind'],
+            best['offset_from_candidate'], best['score']))
+        if best.get('class'):
+            print('   (vtable is %s)' % best['class'])
+        if best.get('chased_from'):
+            print('   (reached by following field %s of %s)' % (
+                best['chased_field'], best['chased_from']))
         print(summarise_analysis(record.get('movement') or [], top=3))
     else:
         print('player candidate: none')
+        movers = record.get('retry_movers') or []
+        print('3 s W retry: %d triple(s) moved by more than 0.5' % len(movers))
+        for entry in movers[:4]:
+            print('   %s %+d  %s -> %s' % (entry['candidate'], entry['offset_from_candidate'],
+                                           entry['before'], entry['after']))
         print('warnings: %s' % (record.get('in_game') or {}).get('warnings'))
+    watched = record.get('watched') or record.get('candidates') or []
+    print('watched  : %d objects (%d of them chased pointers)' % (
+        len(watched), len(record.get('chased') or [])))
+    classes = record.get('candidate_classes') or {}
+    counts = {}
+    for token in record.get('candidates') or []:
+        label = classes.get(token) or '?'
+        counts[label] = counts.get(label, 0) + 1
+    for label in sorted(counts):
+        print('   %-3d %s' % (counts[label], label))
+    for entry in record.get('screen_changes') or []:
+        print('screen   : %s -> %s  same dhash=%s' % (
+            entry['from'], entry['to'], entry['same_dhash']))
 
 
 def replay(run_dir):
@@ -1115,9 +1303,70 @@ def selftest():
           [item[0] for item in hits] == ['focus:Component_Player'], str(hits))
     check('report: the summary prints the triple',
           'idle' in summarise_analysis(results, top=1), '')
-    chosen = _choose_candidates(record['level_scan'],
-                                wanted=['Component_Player', 'Component_Actor'])
+    chosen, chosen_classes = _choose_candidates(
+        record['level_scan'], wanted=['Component_Player', 'Component_Actor'])
     check('candidates: chosen from outside-image samples', chosen == ['0x1000'], str(chosen))
+    check('candidates: each token keeps its class',
+          chosen_classes == {'0x1000': 'focus:Component_Player'}, str(chosen_classes))
+
+    # The base vtable is dead; the live object carries a derived vtable. Candidates must come
+    # from the family, and the rarest family member must be tried first.
+    families = load_families()
+    check('index: Component_Player has a derived family',
+          'OEI::Game_Component::DS_Component_Player' in families.get('Component_Player', []),
+          str(families.get('Component_Player')))
+    check('index: Component_Actor has a derived family',
+          'OEI::Game_Component::NY_Component_Actor' in families.get('Component_Actor', []),
+          str(len(families.get('Component_Actor') or [])))
+    check('index: a focus class is not in its own family',
+          'OEI::Game_Component::Component_Actor' not in families.get('Component_Actor', []))
+    check('index: every focus class has a family key', len(families) == len(FOCUS),
+          str(len(families)))
+    derived_scan = {'labels': [
+        {'label': 'focus:Component_Actor', 'count': 0, 'inImage': 0, 'outside': 0,
+         'samples': []},
+        {'label': 'OEI::Game_Component::NY_Component_Actor', 'count': 35, 'inImage': 0,
+         'outside': 35, 'samples': ['0x%x' % (0x2000 + 0x10 * i) for i in range(35)]},
+        {'label': 'OEI::Game_Component::DS_Component_Player', 'count': 1, 'inImage': 0,
+         'outside': 1, 'samples': ['0x3000']},
+        {'label': 'OEI::Game_Component::DS_Component_Actor_Extra', 'count': 3, 'inImage': 0,
+         'outside': 3, 'samples': ['0x4000', '0x4010', '0x4020']}]}
+    derived = {'Component_Actor': ['OEI::Game_Component::NY_Component_Actor',
+                                   'OEI::Game_Component::DS_Component_Actor_Extra']}
+    actor_chosen, actor_classes = _choose_candidates(
+        derived_scan, wanted=['Component_Actor'], families=derived)
+    check('candidates: family hits are used when the base vtable has none',
+          '0x3000' not in actor_chosen and actor_chosen and actor_classes[actor_chosen[0]],
+          str(actor_chosen[:3]))
+    check('candidates: rarest family member first',
+          actor_classes[actor_chosen[0]] == 'OEI::Game_Component::DS_Component_Actor_Extra',
+          str(actor_classes.get(actor_chosen[0])))
+    check('candidates: the per-class cap covers the whole family',
+          len(actor_chosen) == 38, str(len(actor_chosen)))
+    wide = {'labels': [
+        {'label': 'focus:Component_Actor', 'count': 0, 'inImage': 0, 'outside': 0,
+         'samples': []},
+        {'label': 'OEI::Game_Component::NY_Component_Actor', 'count': 80, 'inImage': 0,
+         'outside': 80, 'samples': ['0x%x' % (0x5000 + 0x10 * i) for i in range(80)]}]}
+    wide_chosen, _ = _choose_candidates(
+        wide, wanted=['Component_Actor'],
+        families={'Component_Actor': ['OEI::Game_Component::NY_Component_Actor']})
+    check('candidates: cap stops the family at the focus cap',
+          len(wide_chosen) == CANDIDATE_CAPS['Component_Actor'], str(len(wide_chosen)))
+
+    # `watch --class X` must scan X's derived leaf, or it would scan a vtable nothing uses.
+    watch_focus, watch_everything = select_targets(['Component_Player'])
+    watch_labels = [label for label, _ in watch_everything]
+    check('watch: the derived vtable is in the target list',
+          'OEI::Game_Component::DS_Component_Player' in watch_labels, str(watch_labels))
+    check('watch: the base vtable is still counted separately',
+          [label for label, _ in watch_focus] == ['focus:Component_Player'],
+          str(watch_focus))
+    scan_focus, scan_everything = select_targets()
+    check('scan: the whole index is a target list', len(scan_everything) == 929,
+          str(len(scan_everything)))
+    check('scan: an unknown class name is refused',
+          _refuses(lambda: select_targets(['Component_Playr'])), '')
 
     failed = [item for item in checks if not item[1]]
     for name, passed, detail in checks:
@@ -1166,6 +1415,9 @@ def selftest_live():
               str(len((windows.get('windows') or {}).get('0x1000', {}).get('f') or [])))
         fields = api.dwords(0x1000, 4).get('fields') or []
         check('live: dwords shape', len(fields) == 4, str(len(fields)))
+        chased = api.pointers(['0x1000'], 1)
+        check('live: pointer chase returns handles',
+              'targets' in chased and 'handles' in chased, str(chased.get('handles')))
         script.unload()
     finally:
         session.detach()
