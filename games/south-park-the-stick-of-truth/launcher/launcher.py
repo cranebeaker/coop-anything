@@ -84,10 +84,30 @@ def status():
     return report
 
 
+def _target_allowed(folder: Path) -> bool:
+    """Only a copy named by SP_GAME_DIR is fair game; the retail install is not.
+
+    Ground rule 2: never touch the owner's game install. The launcher is meant for players, who
+    point it at their own install; in this workspace every test must use a copy, and touching the
+    real folder needs COOP_ALLOW_RETAIL=1 on purpose.
+    """
+    copy_root = os.environ.get('SP_GAME_DIR')
+    if copy_root:
+        try:
+            if Path(copy_root).resolve() == Path(folder).resolve():
+                return True
+        except OSError:
+            pass
+    return os.environ.get('COOP_ALLOW_RETAIL') == '1'
+
+
 def install():
     exe = find_game()
     if exe is None:
         raise SystemExit('game folder not found')
+    if not _target_allowed(exe.parent):
+        raise SystemExit('refusing to write into the retail install; set SP_GAME_DIR to a test '
+                         'copy, or COOP_ALLOW_RETAIL=1 if this is the player\'s own machine')
     if not MOD_DLL.is_file():
         raise SystemExit('mod not built: ' + str(MOD_DLL))
     target = exe.parent / 'dinput8.dll'
@@ -112,6 +132,12 @@ def uninstall():
 
 
 def launch():
+    exe = find_game()
+    if exe is None:
+        raise SystemExit('game folder not found')
+    if not _target_allowed(exe.parent):
+        raise SystemExit('refusing to start the retail install from a test run; set SP_GAME_DIR to '
+                         'a test copy, or COOP_ALLOW_RETAIL=1 if this is the player\'s own machine')
     subprocess.run(['cmd', '/c', 'start', '', 'steam://rungameid/' + APP_ID], check=False)
     return {'launched': APP_ID}
 
