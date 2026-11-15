@@ -228,6 +228,69 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead, step 4 runtime): the player lives only in real gameplay
+
+Every earlier scan ran in the intro bedroom, reached by `-startsavegame` or by the menu's
+"Продолжить", because that loads the newest save `Твой дом`. In that scene the engine is not
+in gameplay: no player component exists, `GetKeyState` is never called by the game, and
+`PeekMessageA` is hammered about 830k times a second — by `gameoverlayrenderer.dll` (the Steam
+overlay), not by the game. That is why the first runtime scan reported zero instances of every
+focus class.
+
+A save from the middle of the game is reached with four mouse clicks (menu "Загрузить игру",
+a row, the bottom "Загрузить игру", then the confirmation dialog at 0.43,0.572). With that
+route the scan runs in real gameplay and finds `tools/object_model.py --load-save fort`
+(run `object-model-b1c39528`, all validity flags true):
+
+| Class | Menu | Clyde's Fort |
+|---|---|---|
+| `OEI::Game_Component::DS_Component_Player` | 0 | **1** |
+| `OEI::Game_Component::DS_Component_RPG_Player` | 0 | 2 |
+| `OEI::Game_Component::NY_Component_Actor` | 1 | 29 |
+| `OEI::AI::State::Package::Follower::Player_Basic` | 0 | 1 |
+| `OEI::AI::State::Package::Follower::Companion_Follow` | 0 | 1 |
+| `bfx::MoverImpl` | 0 | 3 |
+| `NY_Component_Flash_Camera` | 0 | 5 |
+
+The bare focus names (`Component_Player`, `Component_Actor`, …) still read 0 because their own
+vtable is never instantiated — the live objects use the `DS_`/`NY_` derived vtables, which is
+what the family logic was for. So the object model's focal point is now
+`DS_Component_Player`, and the open question is its position offset, not its existence.
+
+Input remains a **test-harness** limitation, not a product one: a human keyboard is not
+affected. Synthetic keyboard, posted `WM_KEYDOWN`, the XInput pad and DirectInput state were all
+tried; the game never polls `GetKeyState`/`GetAsyncKeyState` itself (only the Steam overlay and
+`MSCTF` do), so the key path inside the engine is still unknown. The next probe is a one-off
+position write to the `DS_Component_Player` neighbourhood, which validates the body by motion
+and is the same write the puppet will need.
+
+## 2026-11-15 (lead, input): the harness reaches a scene, not controllable gameplay
+
+The step 3 notes already said "controllability is not shown". Nine guarded launch series on the
+isolated copy (all three validity flags true in every run) now pin down what that means.
+
+| Test | Result | Run |
+|---|---|---|
+| Keyboard at the main menu (Down/Up) | **works**: the highlight moves, frames differ | `input-check4-report.json` |
+| Synthetic pad (`XInputGetState` hook) at the menu | **works**, but only when the hook is installed right after resume and a neutral state is held from the first frame; the selection moves | `input-check6-report.json` |
+| Keyboard in the bedroom scene, then in the world after a click | **no change**: W/A/S/D, Enter, Space, Escape, clicks, pad A/B/Start/Back all leave the frame identical | `input-check2/3/4/8` |
+| Engine's own input polling in the bedroom | `GetKeyState` 60 calls at the menu, **0 more** in the bedroom; `GetRawInputData` 12 → 16; `XInputGetState` still polled about 480/s (probably the Steam overlay) | `input-check4`, `input-check8` |
+| Window activation | not the cause: `GetGUIThreadInfo` says active == focus == foreground == game window; `AttachThreadInput` + `SetForegroundWindow` + `WM_ACTIVATE`/`WM_SETFOCUS` change nothing | `input-check3` |
+| A dialog on top of the game | none: 260 top-level windows listed, the game owns only its window and two hidden IME windows; a full-screen capture shows no overlay | `input-check8` |
+| `-startlevel world\levels\1_southpark\2_hub.opf 0×7` | **does not load**: black frame, luma 2.2, no level | `input-check5` |
+| "Continue" on the Russian menu | loads the bedroom save `Твой дом` (14.07.2025 22:35) — the top of the load list, a scripted intro | `load-screen-report.json` |
+| Loading a mid-game save | the load list needs three clicks: row, bottom "Загрузить игру", then the **confirmation dialog** "все автосохранения будут стёрты" (button at 0.43,0.572). Without the third click the dialog just sits there | `fort-load-report.json` |
+
+So the single blocker for every later step is not input delivery: the engine is in a state where it
+does not poll the keyboard at all. The hub already has the technique for exactly this:
+`playbook/methods.md` §7, "Inject input inside the process so a bot needs no focus" (The Witness) —
+hook the input imports, find the input-manager bytes that gate the game, hold them, and post the
+messages the OS would. Next step is that, on this engine.
+
+Also recorded: the synthetic pad (`tools/input_probe.js`) is a working, focus-free input path for
+the menu and is reusable for the mod's tests; `XInputGetCapabilities` was never called, so what
+mattered was installing the hook before the engine's input init, not faking capabilities.
+
 ## 2026-11-15 (step 3, console): pipeline works, no command is registered
 
 Source: `notes/02-console-and-devtools.md` (branch `game/south-park-the-stick-of-truth-step03-console`),

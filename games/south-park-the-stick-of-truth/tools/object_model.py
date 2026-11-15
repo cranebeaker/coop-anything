@@ -94,6 +94,7 @@ stdout is forced to ASCII: the owner's console code page is cp1251.
 """
 import argparse
 import ctypes
+from ctypes import wintypes
 import hashlib
 import json
 import os
@@ -146,7 +147,8 @@ except ModuleNotFoundError as error:  # pragma: no cover - environment dependent
 
 import in_game                                   # step 2: guarded harness, probe, verdict
 import launch_lock                               # machine-wide launch lock
-from capture_game_window import (capture_game_window, click_client, hold_key, send_keys)
+from capture_game_window import (capture_game_window, click_client, hold_key, send_keys,
+                                 find_game_window, focus_window, api)
 from guard_session import run_guarded            # the only launcher used here
 
 GAME = in_game.GAME
@@ -157,6 +159,13 @@ WINDOW_TITLE = 'South Park\u2122: The Stick of Truth\u2122'
 
 RUN_ROOT = Path(os.environ.get('SP_RUN_ROOT', REPO / 'local' / 'game-runs'))
 INDEX = ROOT / 'rtti_index.json'
+
+# Click sequences for the game's own load list (Russian UI, 1280x720, fractions of the
+# client area): "Загрузить игру" in the menu, the Clyde's Fort row, the bottom "Загрузить
+# игру", then the overwrite-autosaves dialog's confirm button.
+LOAD_PRESETS = {
+    'fort': [(0.844, 0.744), (0.437, 0.503), (0.738, 0.918), (0.430, 0.572)],
+}
 
 # The image the index was parsed from: PE32, SizeOfImage 0x1e5b000, machine 0x14c.
 IMAGE_SIZE = 0x1e5b000
@@ -844,8 +853,47 @@ def _describe(record, token):
             'class': classes.get(token)}
 
 
+def _click_load_save(pid, plan, record):
+    """Load a save from the game's own load list: menu, row, load, confirm.
+
+    Each step needs a hover before the click: the menu ignores a click that arrives in the
+    same frame as the cursor move. Fractions come from the Russian UI at 1280x720 and are
+    recorded in the run so a different layout can be corrected in one place.
+    """
+    steps = plan.get('load_save') or []
+    window = find_game_window(pid)
+    if window is None:
+        record['load_error'] = 'no game window'
+        return False
+    user = api().user
+    clicks = []
+    for fx, fy in steps:
+        focus_window(window['hwnd'])
+        point = wintypes.POINT(int(window['width'] * fx), int(window['height'] * fy))
+        user.ClientToScreen(window['hwnd'], ctypes.byref(point))
+        user.SetCursorPos(point.x, point.y)
+        time.sleep(0.6)
+        user.mouse_event(0x0002, 0, 0, 0, 0)
+        time.sleep(0.1)
+        user.mouse_event(0x0004, 0, 0, 0, 0)
+        time.sleep(1.2)
+        _capture(pid, Path(record['run']), 'load-step-%d' % (len(clicks) + 1), record)
+        clicks.append({'fraction': [fx, fy], 'screen': [point.x, point.y]})
+    record['load_clicks'] = clicks
+    return True
+
+
 def _wait_for_level(pid, run, record, plan):
-    """Click "Continue" and wait until a frame correlates with step 2's level fingerprints."""
+    """Enter a level: by clicking Continue, or by loading a save chosen from the list."""
+    if plan.get('load_save'):
+        if not _click_load_save(pid, plan, record):
+            return False
+        # The load is deterministic when the four clicks land: list, confirm, black, world.
+        # Wait it out rather than guessing from frame fingerprints (the world frame is not
+        # in the front-end reference set, and a still-visible list must not be mistaken for it).
+        time.sleep(plan.get('load_wait', 55.0))
+        frame = _capture(pid, run, 'level', record)
+        return bool(frame.get('captured'))
     record['click'] = click_client(pid, 0.844, 0.657)
     deadline = time.time() + plan['level_timeout']
     while time.time() < deadline:
@@ -1021,7 +1069,7 @@ def select_targets(wanted=None):
 
 def run_series(mode='scan', wanted=None, skip_walk=False, skip_level=False, warmup=32.0,
                settle=3.0, hold=1.2, idle=IDLE_SECONDS, radius=RADIUS, owner='step04-objects',
-               minutes=45, run_root=None):
+               minutes=45, run_root=None, load_save=None, load_wait=35.0):
     """One guarded launch series: lock, isolated copy, guard, session, run folder."""
     preflight()
     focus, everything = select_targets(wanted)
@@ -1065,12 +1113,14 @@ def run_series(mode='scan', wanted=None, skip_walk=False, skip_level=False, warm
             'targets': len(all_targets),
             'plan': {'warmup': warmup, 'settle': settle, 'hold': hold, 'idle': idle,
                      'radius': radius, 'level_timeout': 90.0, 'level_poll': 4.0,
-                     'skip_walk': skip_walk, 'skip_level': skip_level},
+                     'skip_walk': skip_walk, 'skip_level': skip_level,
+                     'load_save': load_save, 'load_wait': load_wait},
         }
         plan = {
             'mode': mode, 'wanted': wanted, 'skip_walk': skip_walk, 'skip_level': skip_level,
             'warmup': warmup, 'settle': settle, 'hold': hold, 'idle': idle, 'radius': radius,
             'level_timeout': 90.0, 'level_poll': 4.0, 'all_targets': all_targets,
+            'load_save': load_save, 'load_wait': load_wait,
             'payload': _configure_payload(radius=radius),
         }
         result = {}
@@ -1241,6 +1291,15 @@ def _synthetic_snapshots():
         snapshots[name] = {offsets[0]: {'f': floats, 'd': doubles},
                            offsets[1]: {'f': second, 'd': [1.0] * length_d}}
     return snapshots, radius, offsets
+
+
+def _refuses(call):
+    """True when `call` raises SystemExit/ValueError, i.e. the tool refused bad input."""
+    try:
+        call()
+    except (SystemExit, ValueError, KeyError):
+        return True
+    return False
 
 
 def selftest():
@@ -1447,6 +1506,9 @@ def main(argv=None):
     scan.add_argument('--radius', type=int, default=RADIUS)
     scan.add_argument('--skip-walk', action='store_true', help='counts only, no input')
     scan.add_argument('--skip-level', action='store_true', help='menu scan only')
+    scan.add_argument('--load-save', choices=['fort', 'none'], default='none',
+                      help='enter a level by loading a save from the game list (fort: '
+                           'a Clyde\'s Fort save, real gameplay) instead of clicking Continue')
     scan.add_argument('--owner', default='step04-objects')
     scan.add_argument('--run-root', default=None)
 
@@ -1475,7 +1537,8 @@ def main(argv=None):
     if args.command == 'scan':
         record = run_series(mode='scan', skip_walk=args.skip_walk, skip_level=args.skip_level,
                             warmup=args.warmup, hold=args.hold, radius=args.radius,
-                            owner=args.owner, run_root=args.run_root)
+                            owner=args.owner, run_root=args.run_root,
+                            load_save=LOAD_PRESETS.get(args.load_save))
     else:
         record = run_series(mode='watch', wanted=args.classes, warmup=32.0, hold=args.hold,
                             radius=args.radius, owner=args.owner, run_root=args.run_root)
