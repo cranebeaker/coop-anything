@@ -129,7 +129,7 @@ day.
 | 1 | `prompts/01-net-reachability.md` | Can the shipped Onyx netcode host/join at all? | **done: no** | — |
 | 2 | `prompts/03-gameplay-harness.md` | Can a bot reach a loaded level and prove it? | **done: yes** | — |
 | 3 | `prompts/02-console-and-devtools.md` | Can an agent execute a console command and read the result? | **done: pipeline yes, no command registered** | — |
-| 4 | `prompts/04-object-model.md` | Where is the live player, the companion, the player list? | static RTTI done; runtime scan in progress | 2-3 sessions |
+| 4 | `prompts/04-object-model.md` | Where is the live player, the companion, the player list? | runtime scan done; position offset open (writing it does not move the character) | 2-3 sessions |
 | 5 | `prompts/05-second-player-input-camera.md` | Can a second body be driven by a second input? | waits on 4 | 2-4 sessions |
 | 6 | `prompts/06-transport-and-relay.md` | Do packets move between two PCs without port forwarding? | waits on 5 (may be prepared in parallel) | 2-3 sessions |
 | 7 | `prompts/07-remote-player-and-session.md` | Does the friend on the other PC actually play? | waits on 4, 5, 6 | 3-6 sessions |
