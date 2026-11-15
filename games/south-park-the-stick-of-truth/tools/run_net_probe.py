@@ -1,42 +1,44 @@
-"""Guarded probe: does the shipped build start its Onyx network layer?
+"""Gate 0 runner: does the shipped Onyx netcode have a host path, a client path, and a second instance?
 
-Read-only in spirit: it hooks Winsock and Steamworks exports, writes console
-scripts only into the isolated test copy, and never opens the original profile
-for writing (the guard redirects any such attempt into the run folder).
+Every launch is guarded, under the machine-wide launch lock (taken here, released in finally):
+
+    py -3.14 -B run_net_probe.py --mode single          # one instance, menu only
+    py -3.14 -B run_net_probe.py --mode pair            # A plain, B with -multiple_instance
+
+Read-only with respect to the game: the save guard redirects the profile into the run folder,
+the net probe only observes. There is no -connect here: the command-line route is dead in this
+build (see NOTES.md). A client needs a console `connect` or a direct call, which is not on this branch.
+
+Run folders go to local/game-runs/<uuid>/ (git-ignored). A run is valid only if
+original_profile_unchanged, guard_integrity and original_exe_hash_still_matches are all true.
 """
+import argparse
 import ctypes
 import hashlib
 import json
 import os
-import shutil
 import sys
+import time
 import uuid
+from collections import Counter
 from pathlib import Path
 
-from guard_session import run_guarded
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+try:
+    import frida  # noqa: F401 - guard_multi imports it too; PYTHONPATH must point at the runtime libs
+    from guard_multi import EXE, EXPECTED, GAME, ORIGINAL_PROFILE, Instance, snapshot
+except ModuleNotFoundError as error:
+    raise SystemExit('Missing frida or guard module (' + str(error) + '). '
+                     'Set PYTHONPATH to the folder that holds the pinned frida wheel.')
 from capture_game_window import capture_game_window
 import launch_lock
 
-ROOT = Path(__file__).resolve().parent
-GAME = Path(os.environ.get('SP_GAME_DIR', r'D:\coop-work\game-test'))
-EXE = GAME / 'South Park - The Stick of Truth.exe'
-EXPECTED = '54a83d055f97cad8beeb5aa027c96c0c2aa4a6c36394634270297dd47856a0d6'
-ORIGINAL_PROFILE = Path.home() / 'Documents' / 'My Games' / 'South Park - The Stick of Truth'
-CONSOLE_DIRS = [GAME / 'global' / 'console_scripts', GAME / 'data' / 'global' / 'console_scripts']
-# The engine string table shows global/console_scripts plus "%s/%s", "%s.txt" and
-# "unable to exec missing file %s"; the exact startup file name is unknown, so
-# each candidate writes a differently named dump and the surviving dump names the
-# script that actually ran.
-CANDIDATES = ['platform_win.txt', 'init.txt', 'console.txt', 'autoexec.txt']
-COMMANDS = ['con_echo_command 1', 'console_toggle', 'find multiplayer', 'find server',
-            'find session', 'status', 'multiplayer_local_enabled 1',
-            'multiplayer_remote_enabled 1']
-
-
-def snapshot(root):
-    return {path.relative_to(root).as_posix(): {'bytes': path.stat().st_size,
-            'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
-            for path in sorted(root.rglob('*')) if path.is_file()}
+RUNS = ROOT.parents[2] / 'local' / 'game-runs'
+OWNER = os.environ.get('SP_AGENT', 'step01')
+WINDOW_TITLE = 'South Park\u2122: The Stick of Truth\u2122'
+NET_KEYS = ['wsaStartup', 'socket', 'bind', 'listen', 'accept', 'connect', 'wsaConnect', 'sendto',
+            'send', 'recv', 'closesocket']
 
 
 def inventory(root):
@@ -44,118 +46,115 @@ def inventory(root):
             for path in sorted(root.rglob('*')) if path.is_file()}
 
 
-def install_console_scripts():
-    written = []
-    for directory in CONSOLE_DIRS:
-        directory.mkdir(parents=True, exist_ok=True)
-        for name in CANDIDATES:
-            marker = 'probe_' + Path(name).stem + '.txt'
-            body = '\n'.join(COMMANDS + ['write_file ' + marker]) + '\n'
-            (directory / name).write_text(body, encoding='ascii')
-            written.append(str(directory / name))
-    return written
+def summarise(instance_result):
+    telemetry = instance_result.get('telemetry') or {}
+    net = telemetry.get('net') or {}
+    counters = net.get('counters') or {}
+    steam = {key: value for key, value in counters.items()
+             if key.startswith('Steam') or key.startswith('SteamAPI') or key.startswith('SteamGameServer')}
+    return {
+        'alive_at_end': instance_result['alive_at_end'],
+        'net': {key: counters.get(key, 0) for key in NET_KEYS},
+        'steam_counters': steam,
+        'connect': (net.get('details') or {}).get('connect', []),
+        'wsaConnect': (net.get('details') or {}).get('wsaConnect', []),
+        'bind': (net.get('details') or {}).get('bind', []),
+        'listen': (net.get('details') or {}).get('listen', []),
+        'steam_details': (net.get('details') or {}).get('steam', []),
+        'interfaces': net.get('interfaces', []),
+        'guard_error': (telemetry.get('guard') or {}).get('error'),
+        'net_error': (telemetry.get('net') or {}).get('error'),
+    }
 
 
-if __name__ == '__main__':
+def entry_guard_ok(entry):
+    events = entry.get('events') or []
+    guard_telemetry = (entry.get('telemetry') or {}).get('guard') or {}
+    return (not entry['errors'] and 'error' not in guard_telemetry
+            and any(event.get('kind') == 'guard-ready' for event in events)
+            and not any(event.get('kind') == 'guard-error' for event in events))
+
+
+def run(mode, seconds):
     if hashlib.sha256(EXE.read_bytes()).hexdigest() != EXPECTED:
         raise SystemExit('Unexpected game executable; refusing launch')
     if not ORIGINAL_PROFILE.is_dir():
-        raise SystemExit('Expected original profile not found; refusing launch')
-    if ctypes.windll.user32.FindWindowW('South Park\u2122: The Stick of Truth\u2122', None):
+        raise SystemExit('Original profile not found; refusing launch')
+    if ctypes.windll.user32.FindWindowW(WINDOW_TITLE, None):
         raise SystemExit('A South Park window already exists; refusing to interfere')
-    owner = os.environ.get('SP_AGENT', 'run_net_probe')
-    lock_held = False
-    if '--no-lock' not in sys.argv:
-        if launch_lock.acquire(owner, minutes=30, wait=float(os.environ.get('SP_LOCK_WAIT', '1800')),
-                               pid=os.getpid()) != 0:
-            raise SystemExit('Another agent holds the launch lock; refusing to launch')
-        lock_held = True
-    run = ROOT / 'game-runs' / uuid.uuid4().hex
-    run.mkdir(parents=True)
-    backup = run / 'original-profile-backup'
-    profile = run / 'test-profile'
+    run_root = RUNS / uuid.uuid4().hex
+    run_root.mkdir(parents=True)
     before = snapshot(ORIGINAL_PROFILE)
-    shutil.copytree(ORIGINAL_PROFILE, backup)
-    shutil.copytree(backup, profile)
-    if snapshot(backup) != before or snapshot(ORIGINAL_PROFILE) != before:
-        raise SystemExit('Profile changed during backup; refusing launch')
-    config_backup = run / 'test-config-backup'
-    config_backup.mkdir()
-    for path in GAME.glob('*.ini'):
-        shutil.copy2(path, config_backup / path.name)
-    written_scripts = install_console_scripts()
-    launch_args = [str(EXE), '-window']
-    if '--connect' in sys.argv:
-        launch_args.extend(['-connect', sys.argv[sys.argv.index('--connect') + 1]])
-    if '--exec' in sys.argv:
-        body = '\n'.join(COMMANDS + ['write_file probe_dump.txt']) + '\n'
-        for directory in CONSOLE_DIRS:
-            directory.mkdir(parents=True, exist_ok=True)
-            (directory / 'probe_console.txt').write_text(body, encoding='ascii')
-            written_scripts.append(str(directory / 'probe_console.txt'))
-        launch_args.extend(['-exec', 'probe_console'])
     game_before = inventory(GAME)
     redirections = []
     for source, label in [
         (Path(r'C:\Program Files (x86)\Steam\logs'), 'steam-logs'),
         (Path.home() / 'AppData/Local/Microsoft/Windows/Caches', 'windows-cache'),
-        (Path(r'C:\ProgramData\NVIDIA Corporation\Drs'), 'nvidia-drs'),
-    ]:
-        destination = run / 'runtime-files' / label
-        destination.mkdir(parents=True)
-        if label == 'nvidia-drs' and source.is_dir():
-            for item in source.iterdir():
-                if item.is_file() and item.stat().st_size < 20 * 1024 * 1024:
-                    shutil.copy2(item, destination / item.name)
+        (Path(r'C:\ProgramData\NVIDIA Corporation\Drs'), 'nvidia-drs')]:
+        destination = run_root / 'runtime-files' / label
+        destination.mkdir(parents=True, exist_ok=True)
         redirections.append({'from': str(source), 'to': str(destination)})
-    temporary = run / 'runtime-files' / 'temp'
-    temporary.mkdir(parents=True)
-    config = {'originalSaves': str(ORIGINAL_PROFILE), 'testSaves': str(profile),
-              'writeRoots': [str(GAME), str(run)], 'redirections': redirections,
-              'nativeCandidates': [], 'traceNatives': [], 'scriptSignatures': [],
-              'blockRemoteStorage': False,
-              'logPaths': ['console_scripts', 'probe_console']}
-    result = {}
+    result = {'mode': mode, 'seconds': seconds, 'run': str(run_root), 'owner': OWNER,
+              'instances': {}, 'errors': []}
+    instances = []
     try:
-        result = run_guarded(launch_args, config, duration=50, cwd=GAME,
-                             environment={'SteamAppId': '213670', 'SteamGameId': '213670',
-                                          'TEMP': str(temporary), 'TMP': str(temporary)},
-                             observer=lambda pid, script: capture_game_window(pid, run / 'game-window.png'),
-                             observation_delay=0,
-                             extra_scripts=['net_probe.js'])
-    except Exception as exc:
-        result['launcher_error'] = repr(exc)
+        device = frida.get_local_device()
+        instances.append(Instance(device, 'A', [str(EXE), '-window'], run_root / 'A', redirections))
+        if mode == 'pair':
+            instances.append(Instance(device, 'B', [str(EXE), '-window', '-multiple_instance'],
+                                      run_root / 'B', redirections))
+        for instance in instances:
+            instance.resume()
+        time.sleep(seconds)
+        for instance in instances:
+            entry = {'pid': instance.pid,
+                     'alive_at_end': not any(event.get('kind') == 'detached' for event in instance.events),
+                     'events': instance.events[:200], 'errors': instance.errors,
+                     'telemetry': instance.telemetry()}
+            try:
+                capture_game_window(instance.pid, run_root / ('game-window-' + instance.name + '.png'))
+                entry['screenshot'] = 'game-window-' + instance.name + '.png'
+            except Exception as error:  # noqa: BLE001 - the screenshot is evidence, not a gate
+                entry['screenshot_error'] = repr(error)
+            result['instances'][instance.name] = entry
+    except Exception as error:  # noqa: BLE001 - recorded in result.json, the run is then invalid
+        result['errors'].append(repr(error))
     finally:
-        result.pop('extra_scripts', None)
+        for instance in instances:
+            try:
+                device.kill(instance.pid)
+            except Exception:  # noqa: BLE001 - already exited or not ours to keep
+                pass
         after = snapshot(ORIGINAL_PROFILE)
         game_after = inventory(GAME)
-        new_files = {path: size for path, size in game_after.items() if path not in game_before}
-        dumps = {}
-        for path in list(GAME.rglob('probe_*.txt')) + list(run.rglob('probe_*.txt')):
-            dumps[str(path)] = path.read_text(encoding='utf-8', errors='replace')[:20000]
-        result['console_scripts_written'] = written_scripts
-        result['probe_dumps'] = dumps
-        result['new_game_files'] = new_files
-        result['guard_integrity'] = not result.get('errors') and not any(
-            e.get('kind') == 'guard-error' for e in result.get('events', []))
+        result['new_game_files'] = {path: size for path, size in game_after.items()
+                                    if path not in game_before or game_before[path] != size}
         result['original_profile_unchanged'] = before == after
         result['original_exe_hash_still_matches'] = hashlib.sha256(EXE.read_bytes()).hexdigest() == EXPECTED
-        (run / 'result.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
-        if lock_held:
-            launch_lock.release(owner)
-    net = (result.get('extra_telemetry') or {}).get('net_probe.js', {})
-    summary = {
-        'run': str(run),
-        'report': str(run / 'result.json'),
-        'original_profile_unchanged': result.get('original_profile_unchanged'),
-        'guard_integrity': result.get('guard_integrity'),
-        'launcher_error': result.get('launcher_error'),
-        'net_counter_keys': sorted((net.get('counters') or {}).keys()),
-        'net_counters': net.get('counters'),
-        'binds': (net.get('details') or {}).get('bind'),
-        'connects': (net.get('details') or {}).get('connect'),
-        'probe_dumps': sorted(result.get('probe_dumps') or {}),
-        'new_game_files': result.get('new_game_files'),
-        'observation': result.get('observation'),
-    }
-    print(json.dumps(summary, indent=2))
+        result['guard_integrity'] = bool(result['instances']) and not result['errors'] and all(
+            entry_guard_ok(entry) for entry in result['instances'].values())
+        result['summary'] = {name: summarise(entry) for name, entry in result['instances'].items()}
+        result['event_kinds'] = {name: dict(Counter(event.get('kind') for event in entry.get('events') or []))
+                                 for name, entry in result['instances'].items()}
+        (run_root / 'result.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
+    return result
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--mode', choices=['single', 'pair'], default='single')
+    parser.add_argument('--seconds', type=float, default=80)
+    parser.add_argument('--lock-wait', type=float, default=float(os.environ.get('SP_LOCK_WAIT', '1800')))
+    arguments = parser.parse_args()
+    if launch_lock.acquire(OWNER, minutes=45, wait=arguments.lock_wait, pid=os.getpid()) != 0:
+        raise SystemExit('Another agent holds the launch lock; refusing to launch')
+    try:
+        outcome = run(arguments.mode, arguments.seconds)
+    finally:
+        launch_lock.release(OWNER)
+    print(json.dumps({'run': outcome['run'], 'report': str(Path(outcome['run']) / 'result.json'),
+                      'original_profile_unchanged': outcome['original_profile_unchanged'],
+                      'guard_integrity': outcome['guard_integrity'],
+                      'original_exe_hash_still_matches': outcome['original_exe_hash_still_matches'],
+                      'errors': outcome['errors'],
+                      'summary': outcome['summary']}, indent=2, default=str))
