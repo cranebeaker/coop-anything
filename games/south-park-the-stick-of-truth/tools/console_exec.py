@@ -63,7 +63,7 @@ EXE = GAME / 'South Park - The Stick of Truth.exe'
 EXPECTED_EXE_SHA256 = '54a83d055f97cad8beeb5aa027c96c0c2aa4a6c36394634270297dd47856a0d6'
 ORIGINAL_PROFILE = Path.home() / 'Documents' / 'My Games' / 'South Park - The Stick of Truth'
 WINDOW_TITLE = 'South Park\u2122: The Stick of Truth\u2122'
-RUNS = ROOT / 'game-runs'
+RUNS = Path(os.environ.get('SP_RUN_ROOT', ROOT.parents[2] / 'local' / 'game-runs'))
 
 # RVAs of image strings, from the retail image (file offset - 0x400). All plain ASCII
 # in .rdata; only the code that references them is encrypted at rest.

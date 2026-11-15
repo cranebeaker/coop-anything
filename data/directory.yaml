@@ -14844,10 +14844,17 @@
   qa: none
   notes: No co-op mod or project found. The retail exe still links Obsidian's Onyx multiplayer
     stack (Steam session and P2P managers, LAN session manager, chat and voice, host/ghost
-    replication for Player_Object, Secondary_Player_Object and Remote_Camera_Object, multiplayer_*
-    cvars, connect/status/restart_server/kick console commands), but in menu-only guarded runs the
-    game initialises Winsock, never binds, listens or dials out, and never creates a Steam lobby or
-    game server. Dated evidence, a guarded test harness and a per-agent plan are in
+    replication templates whose arguments name Player_Object, Secondary_Player_Object and
+    Remote_Camera_Object - those bare classes are not in RTTI -, multiplayer_* cvars,
+    connect/status/restart_server/kick console command strings). It cannot be started from
+    outside. The console registers no command (every name answers "unknown var"), and calling
+    restart_server or connect directly kills the game, at the menu and in a level, without reaching
+    a socket. In a menu-only run the game initialises Winsock, never binds, listens or dials out,
+    and never creates a Steam lobby or game server. Static RTTI has 937 classes and 929 verified vtables.
+    Runtime, in real gameplay (a Clyde's Fort save) it has DS_Component_Player 1,
+    Component_RPG_Player 2, NY_Component_Actor 29 and Component_Network 4. Synthetic keyboard and pad do not move the player;
+    mouse clicks do reach the menus. Plan is a launcher plus an in-game mod (own transport over a
+    VPN). Dated evidence, a guarded test harness and a per-agent plan are in
     games/south-park-the-stick-of-truth.
   searched:
   - 'GitHub repository search for "stick of truth": 72 repos, only trainers, a localization patch,
