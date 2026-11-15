@@ -14827,3 +14827,33 @@
   sources:
   - https://github.com/OpenXcom-Coop/OpenXcom-Coop-Mod
   checked: '2026-11-14'
+
+- game: 'South Park: The Stick of Truth'
+  year: 2014
+  engine: Onyx
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op mod or project found. The retail exe still links Obsidian's Onyx multiplayer
+    stack (Steam session and P2P managers, LAN session manager, chat and voice, host/ghost
+    replication for Player_Object, Secondary_Player_Object and Remote_Camera_Object, multiplayer_*
+    cvars, connect/status/restart_server/kick console commands), but in menu-only guarded runs the
+    game initialises Winsock, never binds, listens or dials out, and never creates a Steam lobby or
+    game server. Dated evidence, a guarded test harness and a per-agent plan are in
+    games/south-park-the-stick-of-truth.
+  searched:
+  - 'GitHub repository search for "stick of truth": 72 repos, only trainers, a localization patch,
+    archive extractors and dialogue browsers (2026-11-04, 2026-11-15)'
+  - 'GitHub issue search for "stick of truth" coop: 0 results (2026-11-15)'
+  - 'coop-anything directory search: no entry (2026-11-04)'
+  - 'Nexus Mods, ModDB, Reddit and Steam forums: not checked'
+  sources: []
+  checked: 2026-11-15

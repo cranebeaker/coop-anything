@@ -502,6 +502,20 @@ human. See [automated-qa.md](automated-qa.md).
    script archives, open engine rewrite.
 3. Classify the engine: has replication (Unreal, Source)? scriptable (Lua, UnrealScript,
    Papyrus-like)? Unity? decomp? Choose the tools in section 3.
+4. **Check whether the engine's own co-op netcode is still linked in.** Studios cut whole
+   subsystems from shipping builds but often leave the code, cvars, RTTI and debug commands in
+   the exe. Grep the image for session/lobby/peer/ghost/replication strings and for engine
+   files from a sibling game by the same developer (`*.cpp` names survive in `__FILE__`
+   strings). If a session manager, a host/ghost replication layer or a `connect`-style command
+   is present, find out whether it can be started *before* designing your own netcode: reusing
+   it is usually an order of magnitude cheaper than writing authority, interpolation and
+   transitions yourself. Evidence to collect: the strings with offsets, whether any socket is
+   bound or any lobby created at runtime, and whether the console/dev commands that drive it
+   exist in the command table (a string is not a command). Example: South Park: The Stick of
+   Truth still carries Dungeon Siege III's Onyx multiplayer (Steam P2P, LAN sessions,
+   host/ghost `Player_Object` replication, `connect IP<:port>`, `multiplayer_tether_*`) while
+   the retail build never opens a port — see
+   [games/south-park-the-stick-of-truth](../games/south-park-the-stick-of-truth/).
 
 ### Stage 1: pick the hook point
 
