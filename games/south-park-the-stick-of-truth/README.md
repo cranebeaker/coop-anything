@@ -88,7 +88,7 @@ No release exists. The game cannot currently be played in co-op through this wor
 
 ## Known issues
 
-- Nothing is known about reaching gameplay under the harness: the profile had no saves, and
+- Reaching gameplay is now shown only for a loaded level that idles; controllability is not shown. The profile does contain saves (corrected 2026-11-15); `-startsavegame` is still untested, and
   `PrintWindow` returns black frames (only the foreground `BitBlt` fallback produced a readable
   menu screenshot).
 - Console access, the multiplayer console command table, the actor/object model and the input

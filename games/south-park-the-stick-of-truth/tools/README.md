@@ -46,5 +46,5 @@ valid result if `original_profile_unchanged`, `guard_integrity` and
   guard blocks the child process and the game dies before the menu.
 - `PrintWindow` yields black frames here; use the foreground `BitBlt` fallback, which
   needs the game window focused and visible.
-- The retail profile folder in this owner's account contained no save files, so
+- The retail profile folder does contain saves (in `save\`); earlier notes said it had none because the check looked at the wrong folder. `-startsavegame` is still untested, so
   `-startsavegame` has nothing to load and gameplay must be reached by starting a new game.

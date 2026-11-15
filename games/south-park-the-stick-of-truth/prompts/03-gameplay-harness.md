@@ -46,8 +46,8 @@ verdict, evidence (run folders and commands), what your result unblocks, and wha
 
 No agent can currently prove anything about gameplay. Three facts block every other gate:
 
-- the owner's profile contains **no save files**, so `-startsavegame` has nothing to load;
-- `PrintWindow` returns a black frame for this title (D3D11 + Steam overlay), so the harness
+- the owner's profile **does** contain saves (`save\Save Slot 001–008.sav`, `Checkpoint 1–3.sav`); `-startsavegame` was never tested (corrected 2026-11-15);
+- `PrintWindow` returns a black frame for this title (this copy runs DX9, `use_directx_11 = false`), so the harness
   cannot see the screen;
 - no "am I in gameplay?" signal exists, so a bot cannot tell a menu from a level.
 

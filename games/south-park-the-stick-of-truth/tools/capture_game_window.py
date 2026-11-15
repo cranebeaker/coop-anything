@@ -1,6 +1,6 @@
 """Capture the game's client area as a PNG **and** as numbers a bot can assert on.
 
-`PrintWindow` returns an all-black frame for this D3D11 title (Steam overlay), so the
+`PrintWindow` returns an all-black frame for this title (DX9 copy, Steam overlay), so the
 foreground `BitBlt` of the client area is tried first and `PrintWindow` is only the
 fallback. Nothing here copies pixels from the desktop when the game window is not the
 foreground window: a capture that is not of the game is reported as `captured: False`.

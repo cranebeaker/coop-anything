@@ -31,7 +31,7 @@ and what counts as proof. The order to run them in is in the next section, becau
 | Netcode | Onyx Steam session + P2P + LAN + chat + voice managers, host/ghost replication RTTI, `LOCAL_WITH_NETWORK`, `connect/status/restart_server/kick/warp_to_player` console commands, `multiplayer_*` cvars — all linked, none observed active |
 | Runtime today | menu only: Winsock initialised, 0 bind/listen/connect, `SteamNetworking()` polled ~18/s, no lobby, no game server |
 | Protection | `.text` is Steam-CEG encrypted; static disassembly of game functions is unreliable |
-| Profile | `%USERPROFILE%\Documents\My Games\South Park - The Stick of Truth`; owner disabled Steam Cloud; **no save files exist** |
+| Profile | `%USERPROFILE%\Documents\My Games\South Park - The Stick of Truth`; owner disabled Steam Cloud; **save files exist** in `save\` (`Save Slot 001–008.sav`, `Checkpoint 1–3.sav`), corrected 2026-11-15 |
 
 ## Rules for every agent
 
@@ -147,7 +147,7 @@ read its output, machine-checkable, no game files patched if avoidable.
 
 ### Gate 2 — gameplay-state harness
 
-There is no save and `PrintWindow` is black, so no agent can currently prove anything about
+Saves exist, but `-startsavegame` was never tested, and `PrintWindow` returns black on this DX9 copy, so no agent can currently prove anything about
 gameplay. Needed by Gates 3-5. Deliverable: a scripted path from launch to a loaded level with an
 automatic "am I in gameplay" check (screenshot + a state signal), plus save isolation for
 new saves.

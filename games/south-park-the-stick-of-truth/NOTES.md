@@ -181,7 +181,7 @@ Source: `notes/04-object-model.md` (branch `game/south-park-the-stick-of-truth-s
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
-  UI Automation. **Not adopted for the game.** The game draws its UI in D3D11/Scaleform, so UIA
+  UI Automation. **Not adopted for the game.** The game draws its UI in DX9/Scaleform, so UIA
   exposes no elements and ref-based actions have nothing to click; only `--headed` coordinate
   clicks remain, which is what our own Win32 `SendInput` already does, and the capture problem is
   ours to solve anyway. It also does not touch any hard gate (netcode, console, object model,
