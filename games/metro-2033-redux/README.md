@@ -6,7 +6,7 @@
 | Versions tested | Steam (app 286690), Next-Gen update, `metro.exe` unpacked (SteamStub removed), SHA-256 `097df1a2be592e652e5f082bb7ecbcf4043d159034f65d2ec6ed34b7efb96f31`, Windows 11 x64 |
 | Projects | [metro2033redux-coop](https://github.com/realblastex/metro2033redux-coop) (MIT), directory entry "Metro 2033 Redux" |
 | QA level | automated (smoke test, see QA) |
-| Last updated | 2026-11-13 |
+| Last updated | 2026-11-15 |
 
 ## Where things stand
 
@@ -15,8 +15,10 @@ player has their own Artyom: both walk around the first level, and each sees the
 and an active monster follow the host. In the armed level `l19_defence` the joiner can fire, each sees the other's
 shots, and shooting the other player kills them on both sides; a killed joiner respawns. In `l03_chase` the joiner
 rides the handcar next to the host. When the host dies, both games restart from the host's last checkpoint. A story
-level change (console `change_map`, l03 to l04) takes the host to the next level, and the joiner's game restarts
-and joins it. Doors, the handcar and story scripts are not networked; each game runs its own copy of them.
+level change (console `change_map`, l03 to l04) takes the host to the next level; the joiner disconnects and joins
+it inside the same game process, and the host keeps the carried-over inventory. Doors and the handcar are not
+networked. Each game runs its own story scripts; the host forwards its player script actions to the joiner over a
+small message channel inside the engine's ENet link. Weapon switching on the joiner is broken (see Known issues).
 
 ## Existing work
 
@@ -54,7 +56,8 @@ and joins it. Doors, the handcar and story scripts are not networked; each game 
 | crashes on a second level (`l19_defence`): host at net start, client during load and when it fires | game code assumes one single player always exists (null controlled entity; ammo HUD index left unset when the cloned body has no ammo item) | link slot 0 in the net-start frame; three small guards (skip / disable the player-dependent part / zero the index) | both players armed in l19, client fires, both alive ~2.5 min |
 | host death ends the session | single-player death screen; any in-process load after hosting crashes | restart both games through the launcher from the host's last checkpoint; the client rejoins by itself | 2+ death cycles, ~65 s each |
 | saves written while hosting crash on load | the save stream depends on the engine's MP flag; the joiner's cloned body also broke the load | clear the MP flag while the save serializes (~15 ms); leave the body's entities out of the save loop; the joiner's game writes no saves | hosted saves load in a fresh game, a session restarts from one |
-| a story level change crashes the joiner | the joiner follows `change_map_cl` and applies the level's `.player` carry-over with no controlled entity; joining after the change crashed too (carried-over items get ids 0x0..0x23) | joiner skips the engine's level change and restarts into the host's new level; host hosts again there and skips the carry-over while hosting (it loses the carried-over items) | joiner in l04_riga with its own body after the host's l03 to l04 change |
+| a story level change crashes the joiner | the joiner follows `change_map_cl` and applies the level's `.player` carry-over with no controlled entity; joining after the change crashed too (carried-over items get ids 0x0..0x23) | joiner skips the engine's level change; host hosts again in the new level | joiner in l04_riga with its own body after the host's l03 to l04 change |
+| the joiner had to restart its game to follow a level change | the engine's own client path loads the level locally with no network; the joiner's MP flag is already 0 there, and the host stops sending to it after re-hosting | joiner keeps its ENet link (engine packets dropped both ways); the host sends "level ready" over the mod's own message type on ENet channel 0; the joiner then runs `disconnect` and joins again in the same process (restart as fallback) | joiner in l04_riga with its own body, same process, 2 runs |
 
 ## QA
 
@@ -68,8 +71,9 @@ and joins it. Doors, the handcar and story scripts are not networked; each game 
   too-short run gives `RESULT: FAIL (6 of 8)`. `-Respawn` adds a kill of the client and checks the automatic
   respawn: `l19_defence -Respawn` `RESULT: PASS (10 checks)`. Latest runs 2026-11-13 15:4x (after the save and
   level-change work): Hunter `PASS (8 checks)`, `l19_defence -Respawn` `PASS (10 checks)`, `-Launcher`
-  `PASS (8 checks)`. Death restarts and the level change were checked with scripted two-copy runs (not in the
-  smoke test yet).
+  `PASS (8 checks)`. Runs 2026-11-15 (launcher start, in-process level change build): `-Launcher`
+  `RESULT: PASS (8 checks)`, `-Launcher -Save coop_l19 -Respawn` `RESULT: PASS (10 checks)`. Death restarts and the
+  level change were checked with scripted two-copy runs (not in the smoke test yet).
 - Manual bot checks with screenshots: each side sees the other's Artyom; the host sees the client's tracer; the host
   shot the client's body to health -1.0 on both sides.
 
@@ -94,13 +98,18 @@ Not playable yet. Build from source per the project README; no release.
 - Damage, enemy AI, doors, pickups and story events are not checked for sync. In `l19_defence` the monsters stay
   dormant for the first minutes.
 - The handcar in `l03_chase` is not networked: the joiner's copy runs behind the host's.
-- Checkpoints while hosting overwrite the host player's real `auto_save` (with a loadable co-op save).
-- After a level change the host has the new level's default loadout, not the items carried over.
+- Weapon switching on the joiner is broken: AK to revolver leaves empty hands (the revolver is never drawn), and the
+  owner sometimes sees two weapons at once. The joiner's weapon HUD misses 6 of 11 ammo types because the cloned
+  body lacks most of the host player's ammo items (FINDINGS 5.7).
+- In `l04_riga`'s opening bar scene the joiner's body can't move and the joiner can't see the host (FINDINGS 5.12).
 - A joiner that rejoined while a scripted fight was running crashed once on load (cause unknown).
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
 - Diagnostics use fixed RVAs of one `metro.exe` build.
+- On the test PC, Windows Defender started blocking the project's DLL injector (`injector.exe`); starting through
+  the launcher still works.
 
 ## Next steps
 
-Test a level's own end trigger (not only console `change_map`); keep the carried-over items (find why their ids
-break the joiner's load); network the handcar and doors; LAN play. Details: FINDINGS 5.8 to 5.11.
+Fix weapon switching on the joiner (give its body the host player's full set of ammo items); unlock the joiner in
+scripted scenes; test a level's own end trigger (not only console `change_map`); network the handcar and doors; LAN
+play. Details: FINDINGS 5.7 to 5.13.

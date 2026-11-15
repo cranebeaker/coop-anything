@@ -11098,14 +11098,16 @@
     host turns a running story level into a server, the client joins and loads the host's quick save, the host clones
     the player through the engine's player spawn event for the joiner. Both players walk their own Artyom and see each
     other move; shots and damage between players work on an armed level. Host death restarts both from the last
-    checkpoint; a story level change takes the joiner along (its game restarts and rejoins). Doors, vehicles and
-    story scripts are not networked (each copy runs its own); loopback only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8 shared-state
-    facts (PASS on two levels). See games/metro-2033-redux.
+    checkpoint; a story level change takes the joiner along without a restart (it rejoins the new level in the same
+    game process; carried-over inventory kept). A small message channel inside the engine's ENet link forwards the
+    host's player script actions. Doors and vehicles are not networked; client weapon switching is broken; loopback
+    only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8-10
+    shared-state facts (PASS on three levels). See games/metro-2033-redux.
   sources:
   - https://github.com/realblastex/metro2033redux-coop
   - https://github.com/realblastex/metro2033redux-coop/blob/main/docs/FINDINGS.md
   - https://github.com/tsnest/MetroDeveloper
-  checked: '2026-11-13'
+  checked: '2026-11-15'
   made_with_coop_anything: true
 - game: Abo Khashem
   year: 2018
