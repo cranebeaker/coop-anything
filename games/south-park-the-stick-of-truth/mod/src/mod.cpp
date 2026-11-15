@@ -1,4 +1,4 @@
-// The mod core, loaded by the proxy. Stage 1 of the hub's build order: our code runs inside
+﻿// The mod core, loaded by the proxy. Stage 1 of the hub's build order: our code runs inside
 // the game, ticks once per rendered frame, and can read the local player's position.
 //
 // The frame hook patches the D3D9 device vtable, the way games/the-witness does it: a dummy
@@ -794,6 +794,7 @@ public:
     {
         coopbridge::Capabilities caps;
         caps.state = true;
+        caps.eval = true;
         return caps;
     }
 
@@ -814,6 +815,22 @@ public:
         }
         root.set("movers", movers);
         return root;
+    }
+
+    // A few named expressions, so a test can ask for one number without a state dump.
+    coopbridge::json::Value Eval(const std::string& expr, const std::string&) override
+    {
+        using coopbridge::json::Value;
+        if (expr == "ticks") {
+            return Value(static_cast<double>(g_ticks));
+        }
+        if (expr == "player_count") {
+            return Value(static_cast<double>(g_player_count));
+        }
+        if (expr == "mover_count") {
+            return Value(static_cast<double>(g_mover_count));
+        }
+        return Value();
     }
 };
 
@@ -926,3 +943,4 @@ BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID)
     }
     return TRUE;
 }
+
