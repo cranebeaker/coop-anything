@@ -228,6 +228,32 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead, handoff): mod state and the one measurement left for Stage 1
+
+Working, built and tested on the isolated copy:
+
+- `mod/` builds `dinput8.dll` with the i686 MinGW in `D:\mingw32` (VS Build Tools could not install:
+  0.7 GB free on C:, error `0x80070070`). CMake: `cmake -G "MinGW Makefiles" -B build`, then
+  `mingw32-make -C build`. MinHook 1.3.4 is vendored under `mod/third_party/` (SHA-256
+  `172708123DAA0C98D20D3A980B16A50BE14AF243DC95DEE6F79C24193AD010E4`).
+- The DLL loads through the `dinput8.dll` proxy, logs to `coop-mod.log` next to the exe, ticks, and
+  keeps the game alive; all run-validity flags stay true.
+- The player scan works: it finds live objects whose first dword is `module_base + 0x7d5684`
+  (`DS_Component_Player`) and logs their addresses and a float window. Two hits appeared even at the
+  menu, so the addresses must be confirmed in a level before anything is claimed.
+- Inline hooks are selected by `SP_COOP_INLINE` (`d3d11`, `d3d9`, `factory`, `all`) and are **off**
+  when unset. Enabling several at once killed the game during startup; enable one at a time.
+- A run hands the desktop back to the owner: `console_exec.Game` remembers the foreground window and
+  a watcher returns focus as soon as the game window appears. This is not full isolation - a run that
+  has to click through the menu still takes the mouse - so batch runs in an agreed time window, or
+  move them to a VM.
+
+The one measurement left for Stage 1: in a **fort load**, watch the log for `called: ...` from the
+inline hooks and for `frames = ...`. Whichever creation call logs `called:` is the path the engine
+uses; patching its swap chain there gives the per-frame tick, and the scan then gives the player
+position in a real level. Run one hook per launch (`SP_COOP_INLINE=d3d11`, then `factory`, then
+`d3d9`) and keep the first that both logs `called:` and leaves the game alive.
+
 ## 2026-11-15 (lead, mod): the renderer is D3D11/DXGI and is created through GetProcAddress
 
 The mod DLL loads, ticks and stays alive (log `coop-mod.log`, all validity flags true). It patches
