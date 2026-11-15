@@ -110,6 +110,34 @@ const config = __CONFIG__;
 const main = Process.mainModule;
 function va(rva) { return main.base.add(rva); }
 function rvaOf(address) { return address.sub(main.base).toInt32() >>> 0; }
+function valueHex(value) {
+    const bytes = [];
+    let v = value >>> 0;
+    for (let i = 0; i < 4; i++) { bytes.push((v & 0xff).toString(16).padStart(2, '0')); v >>>= 8; }
+    return bytes.join('');
+}
+function listInstructions(rva, count) {
+    const out = [];
+    let address = va(rva);
+    for (let i = 0; i < (count || 40); i++) {
+        let instruction;
+        try { instruction = Instruction.parse(address); }
+        catch (e) { out.push('<stop: ' + String(e) + '>'); break; }
+        let text = instruction.toString();
+        const immediates = text.match(/0x[0-9a-f]{5,8}/g) || [];
+        for (const immediate of immediates) {
+            try {
+                const offset = (parseInt(immediate, 16) - main.base.toInt32()) >>> 0;
+                if (offset >= main.size) continue;
+                const string = va(offset).readCString(48);
+                if (string !== null && string.length > 1) text += '   ; ' + JSON.stringify(string);
+            } catch (ignored) {}
+        }
+        out.push(rvaOf(address).toString(16) + '  ' + text);
+        address = instruction.next;
+    }
+    return out;
+}
 
 const state = {armed: false, lines: [], printHits: 0, notes: []};
 const u32 = (address) => { try { return address.readU32(); } catch (e) { return null; } };
@@ -233,17 +261,63 @@ function installPumpHook() {
     }
 }
 
+// --- crash-tolerant network evidence --------------------------------------
+// Net activity is reported with send() the moment it happens, so a call that kills the
+// process still leaves the record on the Python side. Counters are also read from
+// tools/net_probe.js on demand; these events are the fallback when it cannot be read.
+function installNetHooks() {
+    state.netHooked = [];
+    const winsock = [['bind', 1], ['listen', 0], ['connect', 1], ['WSAConnect', 1]];
+    let ws2 = null;
+    try { ws2 = Process.getModuleByName('ws2_32.dll'); } catch (e) { note('ws2_32 not loaded'); }
+    if (ws2 !== null) {
+        for (const [name, addressIndex] of winsock) {
+            let address = null;
+            try { address = ws2.getExportByName(name); } catch (e) { continue; }
+            try {
+                Interceptor.attach(address, {
+                    onEnter(args) {
+                        const entry = {api: name};
+                        if (addressIndex && args[addressIndex] && !args[addressIndex].isNull()) {
+                            try {
+                                const sockaddr = args[addressIndex];
+                                const family = sockaddr.readU16();
+                                entry.family = family;
+                                if (family === 2) {
+                                    entry.port = (sockaddr.add(2).readU8() << 8) | sockaddr.add(3).readU8();
+                                    entry.address = [4, 5, 6, 7].map(i => sockaddr.add(i).readU8()).join('.');
+                                }
+                            } catch (error) { entry.parseError = String(error); }
+                        }
+                        send({kind: 'net', ...entry});
+                    }
+                });
+                state.netHooked.push(name);
+            } catch (error) { note('net hook failed ' + name + ': ' + error); }
+        }
+    }
+    for (const name of ['SteamGameServer_Init', 'SteamMatchmaking', 'SteamGameServerNetworking']) {
+        let address = null;
+        try { address = Process.getModuleByName('steam_api.dll').getExportByName(name); } catch (e) { continue; }
+        try {
+            Interceptor.attach(address, { onEnter() { send({kind: 'net', api: name}); } });
+            state.netHooked.push(name);
+        } catch (error) { note('steam hook failed ' + name + ': ' + error); }
+    }
+}
+
 rpc.exports = {
     arm() {
         if (state.armed) return {armed: true, printHits: state.printHits};
         installPrintHook();
         state.lineStub = buildLineStub();
         state.execHandler = new NativeFunction(va(config.execHandlerRva), 'void', ['int', 'pointer']);
+        installNetHooks();
         installPumpHook();
         state.armed = true;
         note('armed print hook at ' + config.consolePrintRva.toString(16));
         return {armed: true, printHits: state.printHits, printTargets: state.printTargets,
-                pumpHooks: state.pumpHooks};
+                pumpHooks: state.pumpHooks, netHooked: state.netHooked};
     },
 
     // Queue the text for the game's own thread; returns immediately.
@@ -277,6 +351,13 @@ rpc.exports = {
         return {newLines: state.lines.length - before, printHits: state.printHits};
     },
 
+    // Call a handler whose signature reads no arguments (observed: no [ebp+8]/[esp+4]).
+    callVoid(rva) {
+        const before = state.lines.length;
+        new NativeFunction(va(rva), 'void', [])();
+        return {newLines: state.lines.length - before, printHits: state.printHits};
+    },
+
     // Call any cdecl handler that takes (int argc, char** argv-as-0x80-slots).
     callHandler(rva, argvStrings) {
         const handler = new NativeFunction(va(rva), 'void', ['int', 'pointer']);
@@ -290,29 +371,44 @@ rpc.exports = {
     output() { return {lines: state.lines.splice(0, state.lines.length), printHits: state.printHits}; },
     stats() { return {armed: state.armed, printHits: state.printHits, notes: state.notes}; },
 
-    // --- read-only inspection (documented in the notes, used by probe()) ---
-    disasm(rva, count) {
-        const out = [];
-        let address = va(rva);
-        for (let i = 0; i < (count || 40); i++) {
-            let instruction;
-            try { instruction = Instruction.parse(address); }
-            catch (e) { out.push('<stop: ' + String(e) + '>'); break; }
-            let text = instruction.toString();
-            const immediates = text.match(/0x[0-9a-f]{5,8}/g) || [];
-            for (const immediate of immediates) {
-                try {
-                    const offset = (parseInt(immediate, 16) - main.base.toInt32()) >>> 0;
-                    if (offset >= main.size) continue;
-                    const string = va(offset).readCString(48);
-                    if (string !== null && string.length > 1) text += '   ; ' + JSON.stringify(string);
-                } catch (ignored) {}
-            }
-            out.push(rvaOf(address).toString(16) + '  ' + text);
-            address = instruction.next;
-        }
-        return out;
+    // --- read-only inspection -------------------------------------------------
+    // Locate the code that references an image string (the strings are plain in
+    // .rdata, the referencing code is CEG-encrypted at rest, so this only works in
+    // the live process). Returns every hit with the enclosing function and a listing.
+    scanText(value) {
+        // ``value`` is an RVA of a string inside the image.
+        const startAddress = va(config.textRva);
+        const endAddress = va(config.textRva + config.textSize);
+        const found = Process.findRangeByAddress(startAddress);
+        if (found === null) return {error: 'text range unreadable'};
+        const limit = found.base.add(found.size);
+        const stop = endAddress.compare(limit) < 0 ? endAddress : limit;
+        const size = stop.sub(startAddress).toInt32();
+        if (size <= 0) return {error: 'text range empty'};
+        let matches;
+        try { matches = Memory.scanSync(startAddress, size, valueHex(va(value).toInt32() >>> 0)); }
+        catch (error) { return {error: String(error)}; }
+        return {hits: matches.slice(0, 8).map(match => {
+            let start = null;
+            try {
+                const budget = 0x500;
+                const bytes = new Uint8Array(match.address.sub(budget).readByteArray(budget));
+                for (let i = 0; i + 1 < bytes.length; i++) {
+                    if (bytes[i] === 0xcc && bytes[i + 1] === 0xcc) {
+                        let j = i;
+                        while (j < bytes.length && bytes[j] === 0xcc) j++;
+                        start = match.address.sub(budget).add(j);
+                        i = j;
+                    }
+                }
+            } catch (error) {}
+            return {rva: rvaOf(match.address).toString(16),
+                    functionStart: start === null ? null : rvaOf(start).toString(16),
+                    listing: start === null ? [] : listInstructions(rvaOf(start), 45)};
+        })};
     },
+
+    disasm(rva, count) { return listInstructions(rva, count); },
 
     dwords(rva, count) {
         const out = [];
@@ -508,11 +604,14 @@ class Game:
     itself is still the shared tools/save_guard.js, unmodified.
     """
 
-    def __init__(self, duration=60, extra_args=(), payload=SESSION_JS, config_extra=None):
+    def __init__(self, duration=60, extra_args=(), payload=SESSION_JS, config_extra=None,
+                 extra_scripts=None):
         self.duration = duration
         self.extra_args = list(extra_args)
         self.payload = payload
         self.config_extra = dict(config_extra or {})
+        self.extra_script_names = list(extra_scripts or [])
+        self.extra = {}
         self.run_dir = RUNS / uuid.uuid4().hex
         self.result = {}
         self.script = None
@@ -595,6 +694,14 @@ class Game:
             self.payload.replace('__CONFIG__', json.dumps(payload_config)), name='console-exec')
         self.script.on('message', on_message)
         self.script.load()
+        # Extra read-only probes (tools/net_probe.js) load as separate scripts so their
+        # own rpc.exports namespace does not collide with this one.
+        for extra_name in self.extra_script_names:
+            source = (ROOT / extra_name).read_text(encoding='utf-8')
+            extra = self.session.create_script(source, name=extra_name)
+            extra.on('message', on_message)
+            extra.load()
+            self.extra[extra_name] = extra
         self.device.resume(self.pid)
         self.started = time.time()
         return self
@@ -679,6 +786,9 @@ class Game:
     def call_handler(self, rva, argv):
         return self.script.exports_sync.call_handler(rva, argv)
 
+    def call_void(self, rva):
+        return self.script.exports_sync.call_void(rva)
+
     def output(self):
         return self.script.exports_sync.output()
 
@@ -690,6 +800,17 @@ class Game:
 
     def command_table(self):
         return self.script.exports_sync.command_table()
+
+    def scan_text(self, rva):
+        """Code that references the string at ``rva`` (live .text scan)."""
+        return self.script.exports_sync.scan_text(rva)
+
+    def extra_telemetry(self, name):
+        return self.extra[name].exports_sync.telemetry()
+
+    def net_events(self):
+        """Network events reported live by the session hooks (crash-tolerant)."""
+        return [message for message in self.messages if message.get('kind') == 'net']
 
     def _shutdown(self):
         try:

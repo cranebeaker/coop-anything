@@ -17,22 +17,103 @@ or `data/` — the integrator folds this file into them once no other agent is r
 - **Launch budget: 4 series, not 3.** Series 3 produced no answer because of a units bug of
   mine (absolute VAs scanned as RVAs); series 4 (25 s of game time) was run to settle it rather
   than hand over a step with no result. All four are listed below, including the two failures.
+- **Second experiment: 3 launches, not 2**, for the same reason (run `78b687a1…` was a wasted
+  discovery pass after an RVA/VA mix-up). The other two produced the verdicts.
+- **Third experiment (in a level): 2 launches, as allowed.** Both loaded a level and both died on
+  the handler under test; details below.
 
 ## Verdict
 
-The console is **reachable and readable, but empty**: the engine runs a console script, splits
-it into lines, echoes each line with its own `"] %s"` prefix and dispatches the name — and then
-answers `unknown var "<name>"` for `find`, `status` and `write_file`, because **no console
-command is registered in this build**. `tools/console_exec.py run_commands([...])` executes
-lines through the engine's own `exec` handler and returns that answer as data, with the three
-framework checks true. Running a *useful* command needs one more step: call a handler directly
-(`Game.call_handler`, addresses below) or register commands ourselves (`Console::add_command`),
-neither verified yet.
+**Third experiment (inside a loaded level, 2 series): both net triggers are dead ends.**
+- **Host path in a loaded level: `no`.** `restart_server` (handler rva `0x4d1bf0`, `void`) called in a
+  level confirmed by step 2's detector **kills the process** within ~3 s, with **zero** `bind`,
+  `listen`, `socket`, `SteamGameServer_Init` or `SteamMatchmaking` recorded (all seven live net
+  hooks armed). Run `6a12b4d66658428fbf0596e4e3730f83`.
+- **Client path in a loaded level: `no`.** `connect 127.0.0.1:2005` (handler rva `0x4d34b0`,
+  `argc`/`argv`) called in a level **kills the process**, again with **zero** network events — no
+  `ws2_32!connect` was ever attempted. Run `d07ec417f3c142548894370707b93597`.
+- **Direct handler calls are safe only for `status`**: it survives at the menu and in a level
+  (8-line status block both times). `restart_server` and `connect` do not survive.
+
+**Second experiment (direct handler calls at the menu):** `restart_server` survived but did
+nothing at all (no network call); `connect` killed the process.
+
+**First experiment (console pipeline):** the console is **reachable and readable, but empty** — it
+runs a script, echoes lines and dispatches names, then answers `unknown var "<name>"`, because no
+console command is registered in this build.
 
 ## Observed (ran and saw)
 
-### Series 1 — read-only reconnaissance (run `b294e9229544431d8cd0d6b643a182f0`)
+### Third experiment — the net handlers inside a loaded level (2 series)
 
+Level entry is step 2's path, not a new one: boot, wait 42 s, capture and classify (front-end
+fingerprint), `click_client(pid, 0.844, 0.657)`, then poll frames every 4 s and let
+`in_game.decide` rule on the evidence (screen class + working-set growth). Frames, samples and
+the verdict are in each run folder (`frames/`, `02-in-game.json`).
+
+1. **`6a12b4d66658428fbf0596e4e3730f83`** (host series): menu frame `front_end` (front-end
+   correlation 0.995), click accepted, the very next frame was a `level` frame (level correlation
+   0.9877, non-black 0.99), working set 239.6 → 274.4 MB, `in_game: true`
+   ("working set grew from front end"). Then, inside the level:
+   - armed console print hook + 7 live network hooks (`bind`, `listen`, `connect`, `WSAConnect`,
+     `SteamGameServer_Init`, `SteamMatchmaking`, `SteamGameServerNetworking`);
+   - `call_void(0x4d1bf0)` (`restart_server`) returned, then the process **died within 3 s**
+     (`script has been destroyed`); `printHits` 0, **0 `net` events**, and the run's `result.json`
+     keeps the event log: `net events: 0`, framework flags all `true`.
+2. **`d07ec417f3c142548894370707b93597`** (client series, `restart_server` not called): same level
+   entry (0.994 → 0.9879, 240.0 → 276.2 MB, `in_game: true`).
+   - `call_void(0x4d22f0)` (`status`) **survived**, 8 console lines (the same label-only capture as
+     at the menu: `hostname`, `version`, `client` "not connected", `server` "remote", `os`
+     "Windows", `level`, `cell`, `players`), net delta only the engine's own
+     `SteamNetworking`/`SteamGameServer` polling (45-47 in ~1.5 s);
+   - `call_handler(0x4d34b0, ['connect','127.0.0.1:2005'])` then **killed the process**;
+     **0 `net` events**, so nothing dialled. Framework flags all `true`.
+   - This run doubles as the control for the crash: the same process, same level, survived a
+     `status` call and ~1.5 s of idle, and died only on `connect`.
+
+
+
+### Second experiment — direct handler calls (runs `78b687a1…`, `6ebdc2a2…`, `6052be13…`)
+
+Three guarded launches, all with `tools/net_probe.js` loaded as a second Frida script, all with
+the three framework flags `true` and no guard errors.
+
+1. **`78b687a179fd4982ba631b251f6693c1`** (30 s): discovery returned no candidates — my
+   `scan_text` RPC was handed RVAs while the scan compares absolute VAs, the same units mistake
+   as before. No call was made. Fixed in the tool (the RPC now takes an RVA).
+2. **`6ebdc2a277c14ca3a74c42c87eaf68f9`** (~35 s): handlers resolved by scanning live `.text` for
+   the command-name strings and reading the registration thunk's first `push`:
+   `status` → thunk `0x714de0` → handler `0x4d22f0`; `restart_server` → thunk `0x714c90` →
+   handler `0x4d1bf0`; `connect` → thunk `0x714d50` → handler `0x4d34b0`. Signatures read before
+   any call:
+   - `status` `0x4d22f0`: `push ebp / mov ebp, esp / sub esp, 0x104`, then straight into
+     `push <string>; push "%8s: %s"; call 0x507c60` — **no argument reads**, i.e. `void(void)`.
+   - `restart_server` `0x4d1bf0`: `push ebp / mov ebp, esp / sub esp, 0x460`, then
+     `call 0x7e0e90; test eax,eax; je …; call 0x723290 …` — **no argument reads**, i.e. `void(void)`.
+   - `connect` `0x4d34b0`: `cmp dword ptr [ebp + 8], 2` and `push "usage: connect IP<:port>"` —
+     the same `(argc, argv)` convention as `exec`/`find`.
+   Only `connect` passed my first (too strict) check, so it was the only one called:
+   `call_handler(0x4d34b0, ['connect', '127.0.0.1:2005'])` **killed the process**
+   (`alive_after: false`, `script has been destroyed`). No output, no net telemetry could be read
+   afterwards. Recorded, **not retried**.
+3. **`6052be13c272438082349985f8be5ad5`** (~40 s): `status` and `restart_server` called with
+   **zero arguments** (their signature) via `Game.call_void`, plus live network hooks that
+   `send()` each `bind`/`listen`/`connect`/`WSAConnect`/`SteamGameServer_Init`/`SteamMatchmaking`
+   the moment it happens, so a crash cannot destroy the record.
+   - `status`: process survived. The console print hook fired **8 times**, with the labels
+     `hostname`, `version`, `client` ("not connected"), `server` ("remote"), `os` ("Windows"),
+     `level`, `cell`, `players` — the status block really was produced. My printf renderer did not
+     substitute that call's varargs (the captured text starts *at* each label and runs into the
+     neighbouring `.rdata`), so the **values** (host name, build, level, player count) are not
+     readable yet. Net delta: no `bind`/`listen`/`connect`/`socket`, only
+     `SteamNetworking` 46 (the normal per-frame poll).
+   - `restart_server`: process survived, **no console line at all**, and **no** `bind` (0),
+     `listen` (0), `connect` (0), `socket` (0), `SteamGameServer_Init` (0), `SteamMatchmaking` (0);
+     only `SteamNetworking` 46. Nothing was listening and nothing dialled after the call.
+
+### First experiment — the console pipeline (4 series)
+
+#### Series 1 — read-only reconnaissance (run `b294e9229544431d8cd0d6b643a182f0`)
 `py -3.14 -B tools/console_exec.py probe --duration 40`; 41 s at the main menu. The script only
 read memory (no hooks, no calls). `original_profile_unchanged`, `guard_integrity`,
 `original_exe_hash_still_matches` all `true`, no guard errors.
@@ -151,6 +232,32 @@ write_file coop_step03_exec
   block even lists `-connect` and `-startlevel` as command names). Evidence: series 4 behaviour +
   the command-name string block at `.rdata` `0x7c98f8` (`-connect`, `-startlevel`, `quit`). The
   earlier sessions could not tell "wrong trigger" from "empty registry"; now it is the registry.
+- **The console route to both net triggers is closed** — not because the console is broken, but
+  because calling the two handlers faults the process: `restart_server` in-level (run
+  `6a12b4d6…`), `connect` in-level (`d07ec417…`) and `connect` at the menu (`6ebdc2a2…`). With
+  all seven live net hooks armed and zero `net` events in either run folder, neither call got as
+  far as a socket or Steamworks call. Confidence: high for "these calls kill the process and do
+  not dial", medium for the cause (see Unknown).
+- **`status` is the one safe handler** and works in both states; its values are still not
+  rendered (only labels), so it is a liveness probe, not a state reader.
+- **Level entry by click is reliable in this build**: 0.844/0.657 "Continue" produced a `level`
+  frame (correlation 0.988-0.988) on every attempt (2 of 2 this session), 4-8 s after the click,
+  with working-set growth 240 → 274-276 MB. Step 2's detector agreed both times.
+- **`restart_server` does not start anything in this build at the main menu**: zero `bind`,
+  `listen`, `socket`, `connect`, `SteamGameServer_Init`, `SteamMatchmaking` in the 1.5 s after the
+  call, while the same probe counted 46 `SteamNetworking` polls in the same window (so the hooks
+  were alive and the session was running). That menu observation is superseded by the in-level
+  attempt, which crashed; both point the same way.
+  Confidence: high for the observation, medium for the reason.
+- **`connect` as a console command is not usable**: the handler is the same `(argc, argv)` shape
+  as `exec`, and calling it with a valid argv block killed the process at the menu **and** in a
+  level. A working client path would not do that, so the console route to `connect` is closed;
+  whether the session manager itself can dial remains open (step 1's problem). Confidence: high
+  for "this call kills", medium for "the client path is impossible".
+- **The print hook is not a general printf.** It renders `"] %s"` and `'unknown var "%s"'`
+  correctly (series 4), but for the `status` block it captured the label pointer instead of the
+  formatted line, so numeric/string arguments are not reliable yet. That limits "read the
+  result" to commands whose output is a plain format at argument 0.
 - **Static analysis alone cannot find any of this**, because `.text` is CEG-encrypted at rest and
   decrypted lazily in the live process: the file contains zero references to the console strings
   while the process contains 15 for 15. Any later step needing an engine function address in this
@@ -173,9 +280,22 @@ write_file coop_step03_exec
 - The exact wrapper that prepares the line executor (direct calls fault at `0x0` while the
   engine's own path works). This is the main loose end of this step.
 - Whether calling a handler directly (`call_handler`) or registering our own command objects
-  makes the useful commands work. Both are one small test away; neither is verified.
-- What `status`, `getpos` or the net commands print in a loaded level — moot until a command can
-  run at all, and a Gate 2 dependency anyway.
+  makes the useful commands work. **Answered for the net commands:** `status` works, the two net
+  triggers fault the process (menu and level). Registration was not attempted and is now pointless
+  for `restart_server`/`connect`, since their handlers themselves fault.
+- Why `restart_server` and `connect` fault: no session object to restart / no session manager to
+  dial, a missing console singleton, or a deliberate abort. Cheap way to find out: hook
+  `0x7e0e90` and `0x723290` (the first two calls inside `restart_server`) and
+  `0x78edc0`/`0x6f3080` (inside `connect`) and log how far each gets, plus a Frida
+  `Process.setExceptionHandler` dump of the faulting address and registers.
+- Whether a **second instance** can host anything: the fallback (two copies with
+  `-multiple_instance`, `connect` in the guest) needs a host process first, and no host trigger we
+  have tried starts one. If step 1 finds a session-manager entry point, that becomes the test.
+- Whether the `status` values are readable: the print function's argument order for multi-argument
+  calls is unresolved (labels captured, values not). Answer: hook `0x107c60` and log `args[0..4]`
+  raw for one `status` call, then fix the renderer.
+- What `getpos` or the other net commands do in a level — untested; their handlers may fault the
+  same way, and each test costs a launch.
 
 ## Deliverable
 
@@ -189,47 +309,71 @@ write_file coop_step03_exec
     the engine's answer is in `output` (`unknown var "<name>"` in this build).
   - `Game(...)` session object with `arm()`, `exec_file(name)`, `exec_line(text)`,
     `exec_line_main(text)` (queues for the game's message pump), `call_handler(rva, argv)`,
+    `call_void(rva)` (zero-argument handlers), `scan_text(rva)` (live `.text` xref scan),
+    `net_events()` (crash-tolerant network record), `extra_scripts=['net_probe.js']`,
     `command_table()`, `disasm(rva, n)`, `dwords(rva, n)`, `output()`.
   - `probe()` / `py -3.14 -B tools/console_exec.py probe` — the live-`.text` xref scan that found
     every address above; reuse it for any other engine string.
   - `py -3.14 -B tools/console_exec.py run "status"` — takes the launch lock itself (unless
     `--no-lock`), prints the JSON result.
-- Known-good addresses (RVAs, base `0x400000`, all from series 1 and 4):
+- Known-good addresses (RVAs, base `0x400000`, all from the live process):
   print `0x107c60`; line executor `0x107f50` (eax argument, unsafe entry); add_command
   `0x51b6a0`; handlers `exec 0x107e50`, `find 0x107d00`, `write_file 0x107e80`,
   `revert 0x107df0`, `revert_all 0x107d60`, `con_queue_disable 0x107eb0`, `if 0x108090`,
-  `console_open 0x100a10`.
+  `console_open 0x100a10`, `status 0x4d22f0` (void), `restart_server 0x4d1bf0` (void),
+  `connect 0x4d34b0` (argc/argv, **crashes**), `quit 0x3e1f20` (not called).
 - Run folders under `tools/game-runs/`: `b294e9229544431d8cd0d6b643a182f0` (reconnaissance),
   `481c25a6c29641cfa2a60d2c0ff49cad` (armed too early, crashed), `c1ebf8ef02a04251b6587c8a24dec9e4`
   (readiness gate refused to call), `235566a1423345e297beca06ca0090e5` (executed the script,
-  captured `] `/`unknown var` output).
+  captured `] `/`unknown var` output), `78b687a179fd4982ba631b251f6693c1` (discovery units bug),
+  `6ebdc2a277c14ca3a74c42c87eaf68f9` (`connect` call at the menu, process killed),
+  `6052be13c272438082349985f8be5ad5` (`status` + `restart_server` at the menu, both survived, no
+  network), `6a12b4d66658428fbf0596e4e3730f83` (in a level: `restart_server` killed the process),
+  `d07ec417f3c142548894370707b93597` (in a level: `status` survived, `connect` killed the process).
 - Files this step created in the test copy `D:\coop-work\game-test` (all inert, listed so nobody
   mistakes them for game files): `data\global\console_scripts\step03_script.txt` and
   `global\console_scripts\step03_script.txt` (75 bytes each). Earlier sessions' `platform_win`,
-  `init`, `console`, `autoexec`, `probe_console`, `quit` scripts are untouched.
+  `init`, `console`, `autoexec`, `probe_console`, `quit` scripts are untouched. The handler
+  experiments wrote no files (no `write_file` was reachable).
 - **Honesty note:** `run_commands()` is a repackaging of the exact call sequence the series-4
   driver used (`arm` → `exec_file` → drain `output`). The *CLI* form was not re-run after that
   refactor, because the launch budget was already exceeded at four series.
+- **Launch count for the second experiment: 3, not 2.** The first was wasted on the RVA/VA units
+  bug in `scan_text` (run `78b687a1…`, no call made). All three are listed above.
 
 ## Handoff notes for the integrator
 
 - `README.md`: replace "no agent can execute a console command" with "the console pipeline runs
   and its output can be read (`tools/console_exec.py`), but this build registers **no** console
-  commands: every name answers `unknown var`. Useful console commands are therefore not available
-  yet; the next two cheap options are calling the known handlers directly and registering our own
-  commands through `Console::add_command`."
+  commands, so console text answers `unknown var`. Handlers can be called directly instead:
+  `status` and `restart_server` run and return; calling `connect` kills the process."
+- `NOTES.md`, Gate 0 section: add "`restart_server` called directly at the main menu does **not**
+  start a server: no `bind`, `listen`, `socket`, `SteamGameServer_Init` or `SteamMatchmaking`
+  (run `6052be13…`). Its help text says it restarts the server *at the current position*, so it
+  must be retried in a loaded level before the host path is called impossible."
 - `NOTES.md`, under "Still unknown": drop "whether the multiplayer commands are registered in the
   command table" and replace with "the command table is empty at runtime; why registration does
   not take effect is open (hook `0x51b6a0`)".
-- `PLAN.md` Gate 1: mark it **partially answered** — execution and read-back: yes; useful commands:
-  no, because the registry is empty. Do not let Gate 4/5 count on `startlevel`/`status`/`connect`
-  working through the console.
-- For step 1 (net reachability): the `-connect` command-line switch and the console `connect`
-  command are both dead for the same reason (empty registry); Gate 0's client path must go
-  through the session manager or through a directly-called handler, not the console.
+- `PLAN.md` Gate 1: mark it **answered, with a negative for the net commands** — execution and
+  read-back: yes; console commands: none registered; direct handlers: `status` works,
+  `restart_server` and `connect` fault the process at the menu and in a level.
+- `PLAN.md`, "Decision: thin path first": the console cannot be the thin path's trigger. Both net
+  handlers fault, so the host/client entry points have to be found in the session manager itself
+  (step 1's area) or through the in-game UI, not through `restart_server`/`connect`.
+- `NOTES.md`, Gate 0 section: state plainly that `restart_server` was called **inside a loaded
+  level** (run `6a12b4d6…`) and killed the process with no `bind`/`listen`/`SteamGameServer_Init`/
+  `SteamMatchmaking`, and that `connect 127.0.0.1:2005` did the same in a level (run `d07ec417…`).
+  Neither verdict should be softened to "unknown": what is unknown is *why* they fault.
+- For step 1 (net reachability): stop looking for a console trigger. Two of the three console
+  entry points fault; the third (`status`) is read-only. The next honest options are (a) hook the
+  session manager's own host/join functions, (b) drive the in-game UI (multiplayer menu), or
+  (c) declare the thin path unproven and move to a custom layer, as `PLAN.md` allows.
+- For step 2 (gameplay harness): the click route works every time; my driver
+  (`local/step03_inlevel.py`, private) reuses `in_game.decide` and is a ready-made
+  "level → do something → record" template.
 - For step 4 (object model): `tools/console_exec.py probe` is the working way to find engine code
   in this build (static xrefs do not exist because `.text` is encrypted at rest), and
   `Game.disasm`/`Game.dwords` read live `.text`/`.data` through the same guarded session.
-- If you publish this, keep the four series and the two failed ones in the story: "the console
-  works but is empty" is a different claim from "the console does not work", and only the run
-  folders support the first one.
+- If you publish this, keep the failures in the story: "the console works but is empty, and
+  `restart_server` at the menu does nothing" is a different claim from "the console/netcode does
+  not work", and only the run folders support the first one.
