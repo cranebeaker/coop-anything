@@ -507,6 +507,88 @@ void hook_get_proc_address()
     }
 }
 
+// --- Stage 1: find the live player object by its vtable ---------------------
+//
+// DS_Component_Player's vtable RVA comes from the static RTTI index (0x7d5684). An object of
+// that class starts with a pointer to it, so a dword equal to module_base + rva in committed
+// writable memory is a live instance. Reads go through ReadProcessMemory, so a bad page is an
+// error code, never a crash.
+const unsigned kPlayerVtableRva = 0x7d5684;
+
+void scan_vtable(const char* label, unsigned rva, int limit)
+{
+    HMODULE exe = GetModuleHandleW(nullptr);
+    if (exe == nullptr) {
+        return;
+    }
+    unsigned target = static_cast<unsigned>(reinterpret_cast<uintptr_t>(exe)) + rva;
+    MEMORY_BASIC_INFORMATION info = {};
+    unsigned char buffer[64 * 1024];
+    int found = 0;
+    uintptr_t address = 0x10000;
+    for (;;) {
+        if (VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) == 0) {
+            break;
+        }
+        uintptr_t start = reinterpret_cast<uintptr_t>(info.BaseAddress);
+        uintptr_t end = start + info.RegionSize;
+        const bool usable = info.State == MEM_COMMIT &&
+                            (info.Protect & (PAGE_READWRITE | PAGE_WRITECOPY |
+                                             PAGE_EXECUTE_READWRITE));
+        if (usable) {
+            for (uintptr_t at = start; at < end; at += sizeof(buffer)) {
+                SIZE_T want = end - at > sizeof(buffer) ? sizeof(buffer) : end - at;
+                SIZE_T got = 0;
+                if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(at), buffer,
+                                       want, &got)) {
+                    break;
+                }
+                for (SIZE_T offset = 0; offset + 4 <= got; offset += 4) {
+                    unsigned value = 0;
+                    memcpy(&value, buffer + offset, 4);
+                    if (value != target) {
+                        continue;
+                    }
+                    char line[128];
+                    std::snprintf(line, sizeof(line), "%s object at 0x%08llx", label,
+                                  static_cast<unsigned long long>(at + offset));
+                    log_line(line);
+                    if (found == 0) {
+                        // First hit: dump a float window, so the position triple can be found
+                        // by inspection instead of another blind scan.
+                        float values[48] = {};
+                        SIZE_T read = 0;
+                        if (ReadProcessMemory(GetCurrentProcess(),
+                                              reinterpret_cast<void*>(at + offset), values,
+                                              sizeof(values), &read)) {
+                            for (int row = 0; row < 6; ++row) {
+                                char floats[200];
+                                std::snprintf(floats, sizeof(floats),
+                                              "  +%02x: %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f",
+                                              row * 32, values[row * 8 + 0], values[row * 8 + 1],
+                                              values[row * 8 + 2], values[row * 8 + 3],
+                                              values[row * 8 + 4], values[row * 8 + 5],
+                                              values[row * 8 + 6], values[row * 8 + 7]);
+                                log_line(floats);
+                            }
+                        }
+                    }
+                    if (++found >= limit) {
+                        return;
+                    }
+                }
+            }
+        }
+        if (end <= address) {
+            break;
+        }
+        address = end;
+    }
+    char line[96];
+    std::snprintf(line, sizeof(line), "%s objects found: %d", label, found);
+    log_line(line);
+}
+
 DWORD WINAPI worker(LPVOID)
 {
     wchar_t path[MAX_PATH];
@@ -531,10 +613,15 @@ DWORD WINAPI worker(LPVOID)
     install_dxgi_hook();
 
     // The thread still ticks, so a run is observable even before the first frame hook fires.
+    LONG next_scan = 600;
     for (;;) {
         ++g_ticks;
         if ((g_ticks % 300) == 0) {
             log_value("ticks", g_ticks);
+        }
+        if (g_ticks >= next_scan) {
+            next_scan = g_ticks + 600;
+            scan_vtable("player", kPlayerVtableRva, 3);
         }
         Sleep(16);
     }
