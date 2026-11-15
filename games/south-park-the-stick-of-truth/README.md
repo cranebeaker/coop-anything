@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Engine | Onyx (Obsidian), inherited from Dungeon Siege III; evidence: `engine.ini` `project_name = Onyx`, `onyx` and `c_00101_ds3_logo_00` strings, and Onyx multiplayer replication templates in the exe (their arguments name player classes; no bare player class in RTTI). Signature-based engine detection returns `unknown`. |
+| Engine | Onyx (Obsidian), inherited from Dungeon Siege III; evidence: `engine.ini` `project_name = Onyx`, `onyx` and `c_00101_ds3_logo_00` strings, and Onyx multiplayer replication templates in the exe (their arguments name player classes; no bare player class in RTTI). Signature-based engine detection returns `unknown`. `engine.ini` says `use_directx_11 = false`, but the process loads `d3d9.dll`, `d3d11.dll`, `dxgi.dll` and `d3dx11_43.dll`, and resolves the D3D11 entry points through `GetProcAddress`; which path presents is **not yet proven** (the Steam overlay loads D3D11 too). |
 | Versions tested | Steam app 213670, build 228353, Windows x86; exe 11,468,656 bytes, SHA-256 `54a83d05…56a0d6`, `build_version.txt` `1380--2014-03-30_08-32PM` |
 | Projects | None found (see "Existing work") |
 | QA level | none |

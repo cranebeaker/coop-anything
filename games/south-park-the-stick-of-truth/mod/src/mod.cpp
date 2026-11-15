@@ -516,6 +516,48 @@ void hook_get_proc_address()
 // writable memory is a live instance. Reads go through ReadProcessMemory, so a bad page is an
 // error code, never a crash.
 const unsigned kPlayerVtableRva = 0x7d5684;
+const unsigned kMoverVtableRva = 0x773748;
+
+// Log plausible position triples inside an object: three consecutive finite floats in a sane
+// range, at least two of them non-zero. Pointers, string ids and counters never pass this.
+void log_triples(const char* label, uintptr_t address, size_t bytes)
+{
+    unsigned char raw[1024];
+    size_t want = bytes < sizeof(raw) ? bytes : sizeof(raw);
+    SIZE_T got = 0;
+    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), raw, want, &got)) {
+        return;
+    }
+    int logged = 0;
+    for (size_t offset = 0; offset + 12 <= got && logged < 6; offset += 4) {
+        float values[3];
+        memcpy(values, raw + offset, sizeof(values));
+        bool finite = true;
+        int non_zero = 0;
+        for (int index = 0; index < 3; ++index) {
+            if (!(values[index] == values[index])) {              // NaN
+                finite = false;
+            }
+            if (values[index] > 1.0e5f || values[index] < -1.0e5f) {
+                finite = false;
+            }
+            if (values[index] != 0.0f) {
+                ++non_zero;
+            }
+        }
+        if (!finite || non_zero < 2) {
+            continue;
+        }
+        if (values[0] == values[1] && values[1] == values[2]) {
+            continue;
+        }
+        char line[160];
+        std::snprintf(line, sizeof(line), "  %s +0x%03x: %.3f %.3f %.3f", label,
+                      static_cast<unsigned>(offset), values[0], values[1], values[2]);
+        log_line(line);
+        ++logged;
+    }
+}
 
 void scan_vtable(const char* label, unsigned rva, int limit)
 {
@@ -556,24 +598,9 @@ void scan_vtable(const char* label, unsigned rva, int limit)
                                   static_cast<unsigned long long>(at + offset));
                     log_line(line);
                     if (found == 0) {
-                        // First hit: dump a float window, so the position triple can be found
-                        // by inspection instead of another blind scan.
-                        float values[48] = {};
-                        SIZE_T read = 0;
-                        if (ReadProcessMemory(GetCurrentProcess(),
-                                              reinterpret_cast<void*>(at + offset), values,
-                                              sizeof(values), &read)) {
-                            for (int row = 0; row < 6; ++row) {
-                                char floats[200];
-                                std::snprintf(floats, sizeof(floats),
-                                              "  +%02x: %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f",
-                                              row * 32, values[row * 8 + 0], values[row * 8 + 1],
-                                              values[row * 8 + 2], values[row * 8 + 3],
-                                              values[row * 8 + 4], values[row * 8 + 5],
-                                              values[row * 8 + 6], values[row * 8 + 7]);
-                                log_line(floats);
-                            }
-                        }
+                        // First hit: log the plausible position triples, so the offset can be
+                        // read from the log instead of another blind scan.
+                        log_triples(label, at + offset, 0x200);
                     }
                     if (++found >= limit) {
                         return;
@@ -746,6 +773,7 @@ DWORD WINAPI worker(LPVOID)
         if (g_ticks >= next_scan) {
             next_scan = g_ticks + 600;
             scan_vtable("player", kPlayerVtableRva, 3);
+            scan_vtable("mover", kMoverVtableRva, 3);
         }
         Sleep(16);
     }
