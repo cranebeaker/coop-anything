@@ -89,8 +89,16 @@ playable session with the least custom code.
   is proven impossible.
 
 Trigger for the thin path: `restart_server` (host) and `connect <addr>` (client) reach `bind`/`listen` and
-`ws2_32!connect` in the instances, and both processes stay alive. Until that is shown, nothing in the thick path is
-built. The decision is revisited only on a clear "no" from the direct handler tests.
+`ws2_32!connect` in the instances, and both processes stay alive.
+
+**Revised 2026-11-15 after the console results.** Calling the console handlers directly does not work: `restart_server`
+and `connect` kill the game both at the menu and inside a loaded level, and neither reaches a socket. That is a
+no for the console route. We do not know the cause, so the thin path gets **one timeboxed attempt** through the session
+manager directly (hook the host and join functions, catch the fault), capped at two launch series. If that shows a host
+and a client that both stay alive and reach `bind`/`connect`, the thin path continues. If not, the thin path is closed
+and the **thick path is the plan**: our own network layer and turn sync, built against the decided product shape
+(launcher plus in-game mod, direct address over a VPN). Thick is larger work, and it starts only when the timebox is
+used up.
 
 Transport for the first release is still a VPN with a direct address (no port forwarding). It is not decided by this
 section.

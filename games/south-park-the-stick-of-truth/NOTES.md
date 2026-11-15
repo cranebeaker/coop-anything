@@ -239,6 +239,25 @@ merged by the integrator. Four launch series; the 4th is the one that settled it
 Consequence for Gate 0: host and client verdicts stay **unknown**, not "no". The thin-versus-thick
 decision waits for the follow-up.
 
+## 2026-11-15 (step 3, direct handler calls): console route is a no
+
+Source: `notes/02-console-and-devtools.md`, branch `game/south-park-the-stick-of-truth-step03-console`
+(commits `38d1ab1`, `8b71b93`), merged by the integrator.
+
+| Call | Where | Result |
+|---|---|---|
+| `status` (0x4d22f0) | menu and level | survives; prints labels (`hostname`, `version`, `client`, `server`, `os`, `level`, `cell`, `players`); values not yet readable |
+| `restart_server` (0x4d1bf0) | menu | survives, prints nothing; no bind, listen, connect, Steam server or matchmaking |
+| `restart_server` | inside a loaded level | **process dies** within 3 s; 0 net events |
+| `connect 127.0.0.1:2005` (0x4d34b0) | menu | **process dies**, 0 net events |
+| `connect 127.0.0.1:2005` | inside a loaded level | **process dies**, 0 net events |
+
+- The level was entered by the same route as step 2 (menu, Continue, level verdict true).
+- So neither multiplayer entry point reaches a socket or a Steam interface from the console. Cause unknown
+  (no session object to restart, a missing singleton, or a deliberate abort).
+- Decision rule (PLAN.md): one timeboxed attempt through the session manager's callees, capped at two launch series;
+  if it fails, the thin path is closed and the thick path is the plan.
+
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
