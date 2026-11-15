@@ -91,6 +91,21 @@ playable session with the least custom code.
 Trigger for the thin path: `restart_server` (host) and `connect <addr>` (client) reach `bind`/`listen` and
 `ws2_32!connect` in the instances, and both processes stay alive.
 
+**Closed 2026-11-15 (final).** The session-manager attempt also failed: `restart_server` jumps to a non-executable
+address before any session function runs, with zero net events. The thin path is closed. The thick path is now the plan.
+
+**Thick-path MVP (decided 2026-11-15).** The smallest version that is still playable together:
+- two friends, two PCs, each with their own copy of the game and their own screen;
+- shared exploration of the hub, host owns the world, the guest controls a second body (a puppet built on the
+  companion or a second player object, whichever Gate 3 shows is cheaper to control);
+- synced: positions, facing and animation of both bodies, joining on a loaded level, leave and reconnect;
+- **not in the MVP:** combat, quest and story sync, saves on the guest side, cutscenes. Written as the next milestone.
+- transport: a direct address over a VPN, launcher plus in-game mod (see SHAPE.md).
+
+The order is: runtime object model (Gate 3 runtime half) → second body (Gate 4) → two-PC transport (Gate 5) →
+remote player and session (Gate 6). Each step has a stop rule in `prompts/`.
+
+Earlier note (superseded):
 **Revised 2026-11-15 after the console results.** Calling the console handlers directly does not work: `restart_server`
 and `connect` kill the game both at the menu and inside a loaded level, and neither reaches a socket. That is a
 no for the console route. We do not know the cause, so the thin path gets **one timeboxed attempt** through the session
