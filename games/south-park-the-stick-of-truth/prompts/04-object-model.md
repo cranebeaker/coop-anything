@@ -45,7 +45,8 @@ verdict, evidence (run folders and commands), what your result unblocks, and wha
 ## Why
 
 Both possible co-op paths need the same thing: find the live player character, the companions,
-and the list the engine keeps players in. The exe contains Onyx RTTI for `Player_Object`,
+and the list the engine keeps players in. The exe contains Onyx replication templates whose arguments name `Player_Object` (for example
+`Host_Object_Controller<UPlayer_Object_Net_Data>`; checked 2026-11-15, there is no bare `Player_Object` class in RTTI),
 `Secondary_Player_Object`, `Remote_Camera_Object`, `Companion`, `Creature`, `Item`, `Door`,
 `Level_State`, `Game_State`, and host/ghost replication controllers for each. That is a map of
 what to look for, not a map of where it is.

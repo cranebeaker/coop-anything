@@ -50,7 +50,7 @@ source. That is what this gate buys, and nothing more: a local second character 
 milestone, not the deliverable.
 
 The companion half of the problem is already shipped: the game has a follower actor that moves,
-animates and fights next to the New Kid, and RTTI for `Secondary_Player_Object` and
+animates and fights next to the New Kid, and replication templates whose arguments name `Secondary_Player_Object` and
 `Remote_Camera_Object`. Pick whichever body Gate 3 says is cheapest to control.
 
 ## Inputs you can reuse

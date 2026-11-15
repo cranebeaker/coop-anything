@@ -84,7 +84,7 @@ File offsets are from the retail test-copy executable (`South Park - The Stick o
 | `steam_online_p2p_communicator.cpp`, `steam p2p hub`, `steam p2p channel` | 7976xxx / 7812936 | Steam P2P transport is linked |
 | `steam_online_voice_manager.cpp`, `network_chat_manager.cpp` | 7976316 / — | voice and chat managers are linked |
 | `lan_online_session_manager.cpp`, `lan session manager` | 7975800 | LAN session manager is linked |
-| `.?AV?$Host_Object_Controller@…`, `.?AV?$Ghost_Object_Controller@UPlayer_Object_Net_Data…` | RTTI, `.data` | Onyx host/ghost replication classes for Player, Creature, Item, Door, Level_State, … |
+| `.?AV?$Host_Object_Controller@…`, `.?AV?$Ghost_Object_Controller@UPlayer_Object_Net_Data…` | RTTI, `.data` | Onyx host/ghost replication template instances whose arguments name Player, Creature, Item, Door, Level_State (no bare class of those names exists in RTTI; checked 2026-11-15) |
 | `usage: connect IP<:port>`, `Connects to a server at the given address` | 8341252 / 8341780 | console command `connect` |
 | `restart_server`, `server`, `status`, `kick <player_index>`, `warp_to_player`, `disconnect` | 8341xxx | the rest of the multiplayer console command set, with help text |
 | `LOCAL_WITH_NETWORK`, `localWithNetwork` | 8413656 | a local game can run through the network stack |
@@ -128,8 +128,8 @@ would be far cheaper than writing netcode from scratch.
 - Whether the in-game console can be opened by a key or by `console_toggle`, and whether the
   multiplayer commands are registered in the command table.
 - Which actor class the game uses for the New Kid at runtime, and whether a second
-  `Player_Object` can exist (the RTTI has `Secondary_Player_Object` and
-  `Remote_Camera_Object`, which is what Dungeon Siege III used for its extra players).
+  `Player_Object` can exist (replication templates name `Secondary_Player_Object` and
+  `Remote_Camera_Object`; no bare class of those names is in RTTI, so this is open).
 - Turn-based combat: whether a second controller can share a fight, and what happens to the
   companion slot the game already fills.
 
