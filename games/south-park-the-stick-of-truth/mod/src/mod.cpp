@@ -13,6 +13,8 @@
 
 #include <cstdio>
 
+extern "C" void coop_note(const char* text);
+
 namespace {
 
 FILE* g_log = nullptr;
@@ -325,6 +327,131 @@ void install_dxgi_hook()
     DestroyWindow(window);
 }
 
+// --- capture the engine's own swap chain -----------------------------------
+//
+// The exe imports no d3d/dxgi DLL: it resolves D3D11CreateDeviceAndSwapChain through
+// GetProcAddress (measured). A dummy device therefore shares nothing with the game's chain.
+// Patching the exe's import slot for GetProcAddress is a plain memory write, safe from
+// DllMain, and it runs before the engine asks for anything.
+typedef HRESULT(WINAPI* CreateSwapChainFn)(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT,
+                                           const D3D_FEATURE_LEVEL*, UINT, UINT,
+                                           const DXGI_SWAP_CHAIN_DESC*, IDXGISwapChain**,
+                                           ID3D11Device**, D3D_FEATURE_LEVEL*,
+                                           ID3D11DeviceContext**);
+typedef FARPROC(WINAPI* GetProcAddressFn)(HMODULE, LPCSTR);
+
+CreateSwapChainFn g_real_create_swapchain = nullptr;
+GetProcAddressFn g_real_get_proc_address = nullptr;
+
+void patch_chain(IDXGISwapChain* chain, const char* label)
+{
+    if (chain == nullptr) {
+        return;
+    }
+    void** vtable = *reinterpret_cast<void***>(chain);
+    DWORD old_protect = 0;
+    if (vtable[8] != reinterpret_cast<void*>(&dxgi_present_hook)) {
+        g_dxgi_present = reinterpret_cast<DxgiPresentFn>(vtable[8]);
+        if (VirtualProtect(&vtable[8], sizeof(void*), PAGE_READWRITE, &old_protect)) {
+            vtable[8] = reinterpret_cast<void*>(&dxgi_present_hook);
+            VirtualProtect(&vtable[8], sizeof(void*), old_protect, &old_protect);
+        }
+    }
+    if (vtable[22] != reinterpret_cast<void*>(&dxgi_present1_hook)) {
+        g_dxgi_present1 = reinterpret_cast<DxgiPresent1Fn>(vtable[22]);
+        if (VirtualProtect(&vtable[22], sizeof(void*), PAGE_READWRITE, &old_protect)) {
+            vtable[22] = reinterpret_cast<void*>(&dxgi_present1_hook);
+            VirtualProtect(&vtable[22], sizeof(void*), old_protect, &old_protect);
+        }
+    }
+    char line[96];
+    std::snprintf(line, sizeof(line), "game swap chain captured and patched (%s)", label);
+    coop_note(line);
+}
+
+HRESULT WINAPI create_swapchain_hook(IDXGIAdapter* adapter, D3D_DRIVER_TYPE driver_type,
+                                     HMODULE software, UINT flags,
+                                     const D3D_FEATURE_LEVEL* levels, UINT level_count,
+                                     UINT sdk_version, const DXGI_SWAP_CHAIN_DESC* desc,
+                                     IDXGISwapChain** chain, ID3D11Device** device,
+                                     D3D_FEATURE_LEVEL* chosen, ID3D11DeviceContext** context)
+{
+    HRESULT result = E_FAIL;
+    if (g_real_create_swapchain != nullptr) {
+        result = g_real_create_swapchain(adapter, driver_type, software, flags, levels, level_count,
+                                         sdk_version, desc, chain, device, chosen, context);
+        if (SUCCEEDED(result) && chain != nullptr && *chain != nullptr) {
+            patch_chain(*chain, "game");
+        }
+    }
+    return result;
+}
+
+FARPROC WINAPI get_proc_address_hook(HMODULE module, LPCSTR name)
+{
+    FARPROC proc = nullptr;
+    if (g_real_get_proc_address == nullptr) {
+        return nullptr;
+    }
+    proc = g_real_get_proc_address(module, name);
+    if (name != nullptr && proc != nullptr &&
+        lstrcmpA(name, "D3D11CreateDeviceAndSwapChain") == 0) {
+        g_real_create_swapchain = reinterpret_cast<CreateSwapChainFn>(
+            reinterpret_cast<void*>(proc));
+        return reinterpret_cast<FARPROC>(&create_swapchain_hook);
+    }
+    return proc;
+}
+
+// Patch the exe's own import slot, so the engine gets our wrapper when it resolves the call.
+void hook_get_proc_address()
+{
+    HMODULE exe = GetModuleHandleW(nullptr);
+    if (exe == nullptr) {
+        return;
+    }
+    auto* base = reinterpret_cast<BYTE*>(exe);
+    auto* dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
+        return;
+    }
+    auto* nt = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+    if (nt->Signature != IMAGE_NT_SIGNATURE) {
+        return;
+    }
+    IMAGE_DATA_DIRECTORY directory =
+        nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if (directory.VirtualAddress == 0) {
+        return;
+    }
+    auto* descriptor = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(base + directory.VirtualAddress);
+    for (; descriptor->Name != 0; ++descriptor) {
+        const char* dll = reinterpret_cast<const char*>(base + descriptor->Name);
+        if (lstrcmpiA(dll, "kernel32.dll") != 0 && lstrcmpiA(dll, "kernelbase.dll") != 0) {
+            continue;
+        }
+        auto* lookup = reinterpret_cast<IMAGE_THUNK_DATA*>(base + descriptor->OriginalFirstThunk);
+        auto* iat = reinterpret_cast<IMAGE_THUNK_DATA*>(base + descriptor->FirstThunk);
+        for (; lookup->u1.Function != 0; ++lookup, ++iat) {
+            if ((lookup->u1.Ordinal & IMAGE_ORDINAL_FLAG) != 0) {
+                continue;
+            }
+            auto* by_name = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(base + lookup->u1.AddressOfData);
+            if (lstrcmpA(reinterpret_cast<const char*>(by_name->Name), "GetProcAddress") != 0) {
+                continue;
+            }
+            g_real_get_proc_address = reinterpret_cast<GetProcAddressFn>(
+                reinterpret_cast<void*>(iat->u1.Function));
+            DWORD old_protect = 0;
+            if (VirtualProtect(&iat->u1.Function, sizeof(void*), PAGE_READWRITE, &old_protect)) {
+                iat->u1.Function = reinterpret_cast<ULONG_PTR>(&get_proc_address_hook);
+                VirtualProtect(&iat->u1.Function, sizeof(void*), old_protect, &old_protect);
+            }
+            return;
+        }
+    }
+}
+
 DWORD WINAPI worker(LPVOID)
 {
     wchar_t path[MAX_PATH];
@@ -363,6 +490,10 @@ DWORD WINAPI worker(LPVOID)
 // Notes written before the worker opens its file are buffered and flushed by the worker.
 extern "C" void coop_note(const char* text)
 {
+    if (g_log != nullptr) {
+        log_line(text);
+        return;
+    }
     size_t length = 0;
     while (text[length] != '\0') {
         ++length;
@@ -396,6 +527,9 @@ BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID)
         // lock deadlocks the process (and Frida then cannot even attach). The worker starts
         // from DirectInput8Create, which the game calls after the loader is done.
         DisableThreadLibraryCalls(self);
+        // Memory-only: patch the exe's GetProcAddress slot before any game code runs, so the
+        // D3D11 device the engine creates can be captured. No threads, no file I/O here.
+        hook_get_proc_address();
     }
     return TRUE;
 }
