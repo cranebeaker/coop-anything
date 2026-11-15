@@ -4138,6 +4138,142 @@
   - https://allthings.how/hollow-knight-silksong-multiplayer-mod-co-op-and-pvp-install-and-setup-guide/
   - https://www.dsogaming.com/pc-performance-analyses/hollow-knight-silksong-got-a-multiplayer-mod-with-pvp-support/
   checked: 2026-10-16
+- game: 'Hollow Knight: Silksong'
+  year: 2025
+  engine: Unity
+  project: Silksong Co-op (Nirok85)
+  url: https://github.com/Nirok85/silksong-coop-mod
+  other_urls:
+  - https://github.com/Nirok85/silksong-coop-mod/releases/tag/v3.3.7
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: 2 (3 or more experimental over Steam)
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: BepInEx 5 plugin, MIT per its README. Shares currency (rosaries and shell shards in one wallet), upgrades and
+    unlocks; health, silk and equipped gear stay per player; each player is free to go anywhere. Steam P2P lobby or UDP
+    room code (port 7777, no relay for UDP). Its README says some scripted doors and boss phases can differ between
+    players. A Co-op Anything run on Steam build 22479045 (game 1.0.30000) with v3.3.7 checked the shared wallet with two
+    real game copies on one PC, see games/hollow-knight-silksong; enemies, bosses and world objects were not tested there.
+  sources:
+  - https://github.com/Nirok85/silksong-coop-mod
+  - https://github.com/Nirok85/silksong-coop-mod/blob/master/docs/architecture.md
+  - https://github.com/Nirok85/silksong-coop-mod/blob/master/src/SilksongCoop.Mod/Hooks/CurrencyHooks.cs
+  checked: '2026-11-15'
+- game: 'Hollow Knight: Silksong'
+  year: 2025
+  engine: Unity
+  project: Multiple Hornets
+  url: https://github.com/SiroxCW/Multiple-Hornets
+  other_urls: []
+  kind: mod
+  status: partial
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: shared
+  players: unknown
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: GPL-3.0 BepInEx plugin on LiteNetLib (UDP 26960, port forward or a VPN). Every player keeps their own save and
+    the mod syncs progression (abilities, tools, crests, fragments, key items, opened shortcuts, defeated bosses, wishes,
+    maps); enemy drops and repeatable shop purchases stay personal, so rosaries are not shared. Enemies are owned by one
+    player and mirrored to the others; runtime summons are not shared. Replaces SSMP, BasicItemSync and BasicEnemySync.
+  sources:
+  - https://github.com/SiroxCW/Multiple-Hornets
+  checked: '2026-11-15'
+- game: 'Hollow Knight: Silksong'
+  year: 2025
+  engine: Unity
+  project: Silksong Together
+  url: https://github.com/Ceplargo/SilksongTogether
+  other_urls:
+  - https://github.com/cranebeaker/coop-anything/issues/300
+  kind: fork
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: partial
+  players: 2-4
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Modified SSMP (world-sync branch, LGPL-2.1) plus a MIT boss-fight add-on. One shared save for the group; story,
+    world and quests shared, health, silk, crest, tools and rosaries per player. Boss fights start when everyone is in
+    the arena, downed players spectate. Steam invites only (each player needs a Steam account). The README says Act 1 is
+    tested with two players; the claim issue mentions an automated two-copy suite, not checked here.
+  sources:
+  - https://github.com/Ceplargo/SilksongTogether
+  - https://github.com/cranebeaker/coop-anything/issues/300
+  checked: '2026-11-15'
+- game: 'Hollow Knight: Silksong'
+  year: 2025
+  engine: Unity
+  project: SSMP
+  url: https://github.com/Extremelyd1/SSMP
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: unknown
+    world_state: 'no'
+    items: per-player
+  players: unknown
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Silksong Multiplayer by the HKMP author, LGPL-2.1, BepInEx. Steam lobbies, a matchmaking service with NAT hole
+    punching, or direct IP on port 26960; standalone server builds. The save a player picks is used locally and does not
+    sync with the server. Latest release v0.3.1 (2026-07). Base for several sync add-ons and forks (Silksong Together,
+    SSMPEnemySync).
+  sources:
+  - https://github.com/Extremelyd1/SSMP
+  - https://github.com/Extremelyd1/SSMP/releases/tag/v0.3.1
+  checked: '2026-11-15'
+- game: 'Hollow Knight: Silksong'
+  year: 2025
+  engine: Unity
+  project: HK2SS Two Player (Knight co-op)
+  url: https://github.com/gjt-x/silksong-knight-coop
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: '2'
+  networking: unknown
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: none
+  notes: Local co-op in one game on one PC with one camera; player 2 (keyboard number pad or a gamepad) or a computer
+    companion plays the Knight from Hollow Knight next to Hornet. The setup builds the Knight's animations and sounds from
+    the player's own Hollow Knight install, so both games are needed. MIT, release v1.0.0.
+  sources:
+  - https://github.com/gjt-x/silksong-knight-coop
+  checked: '2026-11-15'
 - game: Celeste
   year: 2018
   engine: XNA/FNA

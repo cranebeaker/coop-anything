@@ -188,6 +188,15 @@ The owner may be playing the game on the same PC while your tests run. A kill by
 - Hash the owner's save folder and settings files before and after a test run. A changed hash is a bug in the
   harness, not in the game.
 - A test that loads a save loads a copy of it into the instance's own save folder.
+- Unity games keep options in the registry (`HKCU\Software\<company>\<product>`, PlayerPrefs), one key for every
+  copy and for the owner's normal game. Windowed test copies write their window size there, and a game's own flags
+  can live there too (Hollow Knight: Silksong keeps "language chosen" in it, so a copy without it stops at the
+  language screen). Export the key before the first run and put it back after, or point the game's PlayerPrefs
+  wrapper at a file in the copy's folder (Silksong: `DesktopPlatform.localSharedData`, see
+  `games/hollow-knight-silksong`).
+- If your shell runs in a sandbox, check whether it shows the real registry: in the Silksong session `reg query`
+  from the sandboxed shell listed no key while the game had already written one. Hash and export from an
+  unsandboxed shell.
 - Do not run your copy against online services or anti-cheat. Copies are for your own LAN or loopback tests.
 
 ## 8. Cold start or warm pool
