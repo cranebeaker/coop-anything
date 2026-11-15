@@ -601,6 +601,37 @@ void scan_vtable(const char* label, unsigned rva, int limit)
                         // First hit: log the plausible position triples, so the offset can be
                         // read from the log instead of another blind scan.
                         log_triples(label, at + offset, 0x200);
+                        // The component may not hold the transform itself: follow up to three
+                        // pointers out of it and look for triples there too.
+                        unsigned char head[256];
+                        SIZE_T got_head = 0;
+                        if (ReadProcessMemory(GetCurrentProcess(),
+                                              reinterpret_cast<void*>(at + offset), head,
+                                              sizeof(head), &got_head)) {
+                            int chased = 0;
+                            for (size_t slot = 0; slot + 4 <= got_head && chased < 3; slot += 4) {
+                                unsigned value = 0;
+                                memcpy(&value, head + slot, 4);
+                                if (value < 0x10000) {
+                                    continue;
+                                }
+                                MEMORY_BASIC_INFORMATION target = {};
+                                if (VirtualQuery(reinterpret_cast<void*>(value), &target,
+                                                 sizeof(target)) == 0) {
+                                    continue;
+                                }
+                                if (target.State != MEM_COMMIT ||
+                                    (target.Protect & (PAGE_READWRITE | PAGE_WRITECOPY |
+                                                       PAGE_EXECUTE_READWRITE)) == 0) {
+                                    continue;
+                                }
+                                char label_line[96];
+                                std::snprintf(label_line, sizeof(label_line), "chase%02x",
+                                              static_cast<unsigned>(slot));
+                                log_triples(label_line, value, 0x100);
+                                ++chased;
+                            }
+                        }
                     }
                     if (++found >= limit) {
                         return;
