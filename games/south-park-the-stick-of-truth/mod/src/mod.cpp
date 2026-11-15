@@ -591,29 +591,107 @@ void scan_vtable(const char* label, unsigned rva, int limit)
     log_line(line);
 }
 
-// Inline hooks. The IAT patch above is not enough: the engine resolves the d3d11 entry points
-// from another module before our slot is installed, so the function itself is hooked.
+// --- all device-creation entry points, inline -------------------------------
+//
+// The engine resolves the graphics entry points early and caches the pointers, so returning a
+// wrapper from GetProcAddress is not enough. Each creation call is hooked in the function
+// itself, logs that it ran, and patches the object it returns.
+typedef IDirect3D9*(WINAPI* Direct3DCreate9Fn)(UINT);
+typedef HRESULT(WINAPI* Direct3DCreate9ExFn2)(UINT, IDirect3D9Ex**);
+typedef HRESULT(WINAPI* CreateDeviceFn)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD,
+                                        D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+typedef HRESULT(WINAPI* CreateSwapChainForHwndFn)(IDXGIFactory2*, IUnknown*, HWND,
+                                                  const DXGI_SWAP_CHAIN_DESC1*,
+                                                  const DXGI_SWAP_CHAIN_FULLSCREEN_DESC*,
+                                                  IDXGIOutput*, IDXGISwapChain1**);
+
+Direct3DCreate9Fn g_real_d3d9_create = nullptr;
+Direct3DCreate9ExFn2 g_real_d3d9_create_ex = nullptr;
+CreateDeviceFn g_real_d3d9_create_device = nullptr;
+CreateSwapChainForHwndFn g_real_create_swapchain_hwnd = nullptr;
+
+HRESULT WINAPI d3d9_create_device_hook(IDirect3D9* self, UINT adapter, D3DDEVTYPE type,
+                                       HWND window, DWORD flags, D3DPRESENT_PARAMETERS* params,
+                                       IDirect3DDevice9** device)
+{
+    HRESULT result = E_FAIL;
+    coop_note("called: IDirect3D9::CreateDevice");
+    if (g_real_d3d9_create_device != nullptr) {
+        result = g_real_d3d9_create_device(self, adapter, type, window, flags, params, device);
+        if (SUCCEEDED(result) && device != nullptr && *device != nullptr) {
+            patch_swapchain(*device, "d3d9-device");
+        }
+    }
+    return result;
+}
+
+IDirect3D9* WINAPI direct3d_create9_hook(UINT sdk)
+{
+    coop_note("called: Direct3DCreate9");
+    IDirect3D9* d3d = g_real_d3d9_create != nullptr ? g_real_d3d9_create(sdk) : nullptr;
+    if (d3d != nullptr) {
+        void** vtable = *reinterpret_cast<void***>(d3d);
+        if (vtable[15] != reinterpret_cast<void*>(&d3d9_create_device_hook)) {
+            g_real_d3d9_create_device = reinterpret_cast<CreateDeviceFn>(vtable[15]);
+            DWORD old_protect = 0;
+            if (VirtualProtect(&vtable[15], sizeof(void*), PAGE_READWRITE, &old_protect)) {
+                vtable[15] = reinterpret_cast<void*>(&d3d9_create_device_hook);
+                VirtualProtect(&vtable[15], sizeof(void*), old_protect, &old_protect);
+            }
+        }
+    }
+    return d3d;
+}
+
+HRESULT WINAPI create_swapchain_hwnd_hook(IDXGIFactory2* self, IUnknown* device, HWND window,
+                                          const DXGI_SWAP_CHAIN_DESC1* desc,
+                                          const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* fullscreen,
+                                          IDXGIOutput* restrict, IDXGISwapChain1** out)
+{
+    coop_note("called: CreateSwapChainForHwnd");
+    HRESULT result = E_FAIL;
+    if (g_real_create_swapchain_hwnd != nullptr) {
+        result = g_real_create_swapchain_hwnd(self, device, window, desc, fullscreen, restrict, out);
+        if (SUCCEEDED(result) && out != nullptr && *out != nullptr) {
+            patch_chain(reinterpret_cast<IDXGISwapChain*>(*out), "hwnd");
+        }
+    }
+    return result;
+}
+
+void inline_hook(const wchar_t* module_name, const char* name, void* detour, void** original)
+{
+    HMODULE module = LoadLibraryW(module_name);
+    if (module == nullptr) {
+        return;
+    }
+    FARPROC target = GetProcAddress(module, name);
+    if (target == nullptr) {
+        return;
+    }
+    if (MH_CreateHook(reinterpret_cast<void*>(target), detour, original) == MH_OK &&
+        MH_EnableHook(reinterpret_cast<void*>(target)) == MH_OK) {
+        char line[128];
+        std::snprintf(line, sizeof(line), "inline hook: %s", name);
+        coop_note(line);
+    }
+}
+
 void install_inline_hooks()
 {
     if (MH_Initialize() != MH_OK) {
         log_line("MinHook: initialize failed");
         return;
     }
-    HMODULE d3d11 = LoadLibraryW(L"d3d11.dll");
-    if (d3d11 == nullptr) {
-        log_line("MinHook: d3d11.dll not loadable");
-        return;
-    }
-    FARPROC target = GetProcAddress(d3d11, "D3D11CreateDeviceAndSwapChain");
-    if (target != nullptr &&
-        MH_CreateHook(reinterpret_cast<void*>(target),
-                      reinterpret_cast<void*>(&create_swapchain_hook),
-                      reinterpret_cast<void**>(&g_real_create_swapchain)) == MH_OK &&
-        MH_EnableHook(reinterpret_cast<void*>(target)) == MH_OK) {
-        log_line("inline hook: D3D11CreateDeviceAndSwapChain");
-    } else {
-        log_line("inline hook: D3D11CreateDeviceAndSwapChain failed");
-    }
+    inline_hook(L"d3d11.dll", "D3D11CreateDeviceAndSwapChain",
+                reinterpret_cast<void*>(&create_swapchain_hook),
+                reinterpret_cast<void**>(&g_real_create_swapchain));
+    inline_hook(L"d3d9.dll", "Direct3DCreate9", reinterpret_cast<void*>(&direct3d_create9_hook),
+                reinterpret_cast<void**>(&g_real_d3d9_create));
+    inline_hook(L"dxgi.dll", "CreateDXGIFactory", reinterpret_cast<void*>(&create_factory_hook),
+                reinterpret_cast<void**>(&g_real_create_factory));
+    inline_hook(L"dxgi.dll", "CreateDXGIFactory1", reinterpret_cast<void*>(&create_factory_hook),
+                reinterpret_cast<void**>(&g_real_create_factory));
 }
 
 DWORD WINAPI worker(LPVOID)
