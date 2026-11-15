@@ -922,8 +922,10 @@ public:
     }
 };
 
-CoopAdapter g_adapter;
-coopbridge::Server g_server;
+// Created in the worker, never at DLL load: a constructor that touches sockets or threads runs
+// under the loader lock otherwise, and the process can hang before Frida can even attach.
+CoopAdapter* g_adapter = nullptr;
+coopbridge::Server* g_server = nullptr;
 bool g_bridge_started = false;
 
 DWORD WINAPI worker(LPVOID)
@@ -955,7 +957,9 @@ DWORD WINAPI worker(LPVOID)
     options.build = "228353";
     options.tcpPort = 27990;
     options.endpointFile = "coop-bridge.json";
-    if (g_server.Start(options, g_adapter)) {
+    g_adapter = new CoopAdapter();
+    g_server = new coopbridge::Server();
+    if (g_server != nullptr && g_adapter != nullptr && g_server->Start(options, *g_adapter)) {
         g_bridge_started = true;
         log_line("bridge: tcp://127.0.0.1:27990");
     } else {
@@ -976,8 +980,8 @@ DWORD WINAPI worker(LPVOID)
             scan_vtable("player", kPlayerVtableRva, 3, g_player_hits, &g_player_count);
             scan_vtable("mover", kMoverVtableRva, 3, g_mover_hits, &g_mover_count);
         }
-        if (g_bridge_started) {
-            g_server.Pump();
+        if (g_bridge_started && g_server != nullptr) {
+            g_server->Pump();
         }
         Sleep(16);
     }

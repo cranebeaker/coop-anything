@@ -680,7 +680,18 @@ class Game:
         self.device = frida.get_local_device()
         self.pid = self.device.spawn(argv, cwd=str(GAME), stdio='pipe',
                                      env=environment)
-        self.session = self.device.attach(self.pid)
+        try:
+            self.session = self.device.attach(self.pid)
+        except Exception as error:                   # noqa: BLE001 - a dead spawn is data
+            # "connection closed" / "timeout" hides the reason: report the process exit code,
+            # which names a loader failure (0xC0000142) or a normal early exit (0).
+            code = ctypes.c_ulong(0)
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, self.pid)   # QUERY_LIMITED_INFORMATION
+            if handle:
+                kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+                kernel32.CloseHandle(handle)
+            raise RuntimeError('attach failed (%r); exit code 0x%08x' % (error, code.value))
         guard_source = (ROOT / 'save_guard.js').read_text(encoding='utf-8').replace(
             '__CONFIG__', json.dumps(self.config))
         guard = self.session.create_script(guard_source, name='south-park-save-guard')
