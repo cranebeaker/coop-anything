@@ -124,36 +124,29 @@ Give one prompt per chat/agent, in this order. Do not start a step before the st
 has an answer in `NOTES.md`. "Session" below means one working block of an agent, not a calendar
 day.
 
-| # | Prompt | Question it settles | Depends on | Parallel with | Rough size |
-|---|---|---|---|---|---|
-| 1 | `prompts/01-net-reachability.md` | Can the shipped Onyx netcode host/join at all? | — | 2 and 3 may start the same day | 1-2 sessions |
-| 2 | `prompts/03-gameplay-harness.md` | Can a bot reach a loaded level and prove it? | — | 1, and 3 | 1-2 sessions |
-| 3 | `prompts/02-console-and-devtools.md` | Can an agent execute a console command and read the result? | — | 1, and 2 | 1-2 sessions |
-| 4 | `prompts/04-object-model.md` | Where is the live player, the companion, the player list? | 2 (needs gameplay), static part can start earlier | — | 2-3 sessions |
-| 5 | `prompts/05-second-player-input-camera.md` | Can a second body be driven by a second input? | 4 | Track B's 6 | 2-4 sessions |
-| 6 | `prompts/06-transport-and-relay.md` | Do packets move between two PCs without port forwarding? | 1; and 5 for the custom branch | 5 (Track B only) | 1-2 (A) / 2-3 (B) |
-| 7 | `prompts/07-remote-player-and-session.md` | Does the friend on the other PC actually play? | 1, 4, 5, 6 | — | 3-6 sessions |
-| 8 | Gate 7 sync scope (no prompt yet) | Turns, story, saves, transitions agree | 7 | — | 4-8 sessions |
+| # | Prompt | Question it settles | State | Rough size |
+|---|---|---|---|---|
+| 1 | `prompts/01-net-reachability.md` | Can the shipped Onyx netcode host/join at all? | **done: no** | — |
+| 2 | `prompts/03-gameplay-harness.md` | Can a bot reach a loaded level and prove it? | **done: yes** | — |
+| 3 | `prompts/02-console-and-devtools.md` | Can an agent execute a console command and read the result? | **done: pipeline yes, no command registered** | — |
+| 4 | `prompts/04-object-model.md` | Where is the live player, the companion, the player list? | static RTTI done; runtime scan in progress | 2-3 sessions |
+| 5 | `prompts/05-second-player-input-camera.md` | Can a second body be driven by a second input? | waits on 4 | 2-4 sessions |
+| 6 | `prompts/06-transport-and-relay.md` | Do packets move between two PCs without port forwarding? | waits on 5 (may be prepared in parallel) | 2-3 sessions |
+| 7 | `prompts/07-remote-player-and-session.md` | Does the friend on the other PC actually play? | waits on 4, 5, 6 | 3-6 sessions |
+| 8 | Gate 7 sync scope (no prompt yet) | Turns, story, saves, transitions agree | next milestone, not the MVP | 4-8 sessions |
 
-### Two tracks after step 1
+### One track: build it
 
-**Track A — Gate 0 answers "yes, the netcode starts".** Steps 2, 3, 4, 6, 7. Step 6 becomes
-"make the engine's own host/join work across two PCs" and step 5 is a short sanity check rather
-than a design job, because the engine already replicates `Player_Object` and `Remote_Camera_Object`.
-This is the cheap world.
-
-**Track B — Gate 0 answers "no" (or only local play).** Steps 2, 3, 4, 5, then 6 and 7 built from
-zero on the Gate 5 layer. Steps 5 and 6 can run in the same period: the body/input layer and the
-transport/protocol layer meet at a documented interface (the replicated-field list from step 4).
+Gate 0 answered "no", so there is no cheap world to fall back on. Steps 2 and 3 are done and paid
+for; steps 4, 5, 6 and 7 are one sequence. Steps 5 and 6 can still run in the same period, because
+the body/input layer and the transport/protocol layer meet at a documented interface — the
+replicated-field list from step 4. Do not start a transport before that list exists.
 
 ### Gates that stop the queue
 
-- Step 1 "no" for all three tests → do not spend on Track A at all; go Track B and say so in the
-  write-up.
-- Step 2 fails (no reliable way into a level) → stop: every later gate needs it. Fix the harness
-  before paying for anything else.
-- Step 4 shows there is exactly one player object and no second body candidate → the project
-  becomes "engine netcode or nothing": re-open step 1 with the console (step 3) before continuing.
+- Step 2 fails (no reliable way into a level) → stop: every later gate needs it. (Passed.)
+- Step 4 finds no second body the engine can drive → use the existing follower companion as the
+  guest's body; only if that also fails does the project lose its smallest playable shape.
 - Step 7 fails on the guest's own camera or on join-after-load → still a valid prototype, but not
   co-op; write down what a player would experience.
 
@@ -165,14 +158,17 @@ Without a second machine, steps 6 and 7 can only be prepared, not finished.
 
 ## Gate details
 
-### Gate 0 — can Onyx netcode be started? (decisive, do first)
+### Gate 0 — can Onyx netcode be started? — **closed, no**
 
-Everything else is optional if this is "no", and the whole project becomes cheaper if it is
-"yes". Three escalating tests: (a) does the session manager have a callable host path at all;
-(b) can a client `connect 127.0.0.1:<port>` and reach a join error instead of a refusal;
-(c) does a second instance (`-multiple_instance`) join and produce a second `Player_Object`.
-Deliverable: a recorded run per test plus a one-line verdict, and if "yes", a note on which
-replication classes actually appear.
+**Answer (2026-11-15):** no. The console registers no commands, the console handlers behind
+`restart_server` and `connect` kill the process at the menu and in a level, and the session manager
+behind `restart_server` jumps to a non-executable address before it runs. No run ever reached
+`bind`, `listen`, `ws2_32!connect`, `SteamGameServer_Init` or `SteamMatchmaking`. Evidence:
+`NOTES.md` sections of 2026-11-15, `notes/01-net-reachability.md`, `notes/02-console-and-devtools.md`.
+
+Original test plan, kept for the record: three escalating tests — (a) does the session manager have
+a callable host path at all; (b) can a client `connect 127.0.0.1:<port>` and reach a join error
+instead of a refusal; (c) does a second instance join and produce a second `Player_Object`.
 
 → `prompts/01-net-reachability.md`
 
@@ -216,9 +212,11 @@ animation, tag, health) taken from Gate 3.
 
 ### Gate 5 — transport for two machines
 
-Only when Gates 0-4 are answered. Prefer reusing Onyx/Steam P2P if Gate 0 says yes; otherwise
-Steam Spacewar relay or a VPN, and a relay wrapper for the UDP/TCP path with a chaos run.
-Acceptance: host on PC A, guest on PC B, no port forwarding.
+Gate 0 said no, so the transport is ours. **First release: a direct address inside a VPN**
+(ZeroTier, Radmin VPN, Tailscale) — no port forwarding and no router setup. Keep the socket layer
+swappable so a Steam relay (Spacewar) can carry the same protocol later. Run one chaos pass
+(latency, jitter, loss, reorder). Acceptance: host on PC A, guest on PC B, VPN on, no port
+forwarding, one walk from each side.
 
 → `prompts/06-transport-and-relay.md`
 
@@ -241,14 +239,14 @@ into a prompt — do not start it before Gate 6.
 
 The order in "Run order" is the authority; this is only what may overlap.
 
-- Steps 1, 2 and 3 can run at the same time: Gate 0 is independent of the harness and console work.
-- Step 4's static half (RTTI/vtable index) can start while step 2 is still being written.
-- Track B's steps 5 and 6 can overlap, meeting at the replicated-field list from step 4.
+- Steps 1, 2 and 3 were run partly in parallel; all three are done.
+- Step 4's runtime half needs the launch lock and a loaded level, so it runs alone.
+- Steps 5 and 6 can overlap, meeting at the replicated-field list from step 4.
 - Steps 6 and 7 need two machines (or two VMs) and the owner's other PC; ask early, never assume
   access to a friend's machine.
 - One agent per step, one branch per step, one `NOTES.md` section per agent with its name and date.
 
-## What "done" looks like for a first release
+## What a full release looks like (the MVP above is narrower)
 
 Two players on two PCs, same campaign, host owns story and combat, the guest controls a real
 character and sees their own screen, turns and quest transitions stay synced through a 30-minute
