@@ -19,6 +19,7 @@ add_library(dinput8 SHARED
     src/proxy.cpp
     src/mod.cpp
     src/net.cpp
+    src/remote.cpp
     ${MINHOOK}/src/hook.c
     ${MINHOOK}/src/buffer.c
     ${MINHOOK}/src/trampoline.c
@@ -40,4 +41,12 @@ endif()
 add_executable(net_selftest src/net_selftest.cpp src/net.cpp)
 target_compile_definitions(net_selftest PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_link_libraries(net_selftest PRIVATE ws2_32)
+# `-static` also folds in libwinpthread, so the test runs from a shell with no MinGW on PATH.
+target_link_options(net_selftest PRIVATE -static)
+
+# The remote body can be tested the same way: snapshots in, poses out, no sockets used.
+add_executable(remote_selftest src/remote_selftest.cpp src/remote.cpp src/net.cpp)
+target_compile_definitions(remote_selftest PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(remote_selftest PRIVATE ws2_32)
+target_link_options(remote_selftest PRIVATE -static)
 
