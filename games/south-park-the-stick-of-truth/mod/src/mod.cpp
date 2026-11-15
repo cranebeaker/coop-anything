@@ -885,8 +885,17 @@ public:
         float dx = 0.0f;
         float dy = 0.0f;
         float dz = 0.0f;
+        if (line == "hooks graphics") {
+            install_present_hook();
+            install_dxgi_hook();
+            return {true, "graphics hooks requested"};
+        }
+        if (line == "hooks inline") {
+            install_inline_hooks();
+            return {true, "inline hooks requested"};
+        }
         if (std::sscanf(line.c_str(), "tp %f %f %f", &dx, &dy, &dz) != 3) {
-            return {false, "usage: tp dx dy dz"};
+            return {false, "usage: tp dx dy dz | hooks graphics | hooks inline"};
         }
         if (!g_position_known || g_player_count == 0) {
             return {false, "no player position yet"};
@@ -948,9 +957,19 @@ DWORD WINAPI worker(LPVOID)
         g_notes[g_notes_length] = '\0';
         log_line(g_notes);
     }
-    install_present_hook();
-    install_dxgi_hook();
-    install_inline_hooks();
+    // Nothing is hooked at startup: creating a dummy device while the engine initialises its
+    // own graphics is exactly what killed the process on 2026-11-15. Hooks are installed on
+    // demand from the bridge (`exec "hooks d3d11"`), once the game is already up.
+    wchar_t hooks_env[32] = {};
+    if (GetEnvironmentVariableW(L"SP_COOP_HOOKS", hooks_env, 32) > 0) {
+        if (lstrcmpiW(hooks_env, L"all") == 0 || lstrcmpiW(hooks_env, L"graphics") == 0) {
+            install_present_hook();
+            install_dxgi_hook();
+        }
+        if (lstrcmpiW(hooks_env, L"all") == 0) {
+            install_inline_hooks();
+        }
+    }
 
     coopbridge::Options options;
     options.game = "south-park";
@@ -1029,9 +1048,13 @@ BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID)
         // lock deadlocks the process (and Frida then cannot even attach). The worker starts
         // from DirectInput8Create, which the game calls after the loader is done.
         DisableThreadLibraryCalls(self);
-        // Memory-only: patch the exe's GetProcAddress slot before any game code runs, so the
-        // D3D11 device the engine creates can be captured. No threads, no file I/O here.
-        hook_get_proc_address();
+        // Memory-only: patch the exe's GetProcAddress slot. OFF by default: it runs before the
+        // engine's own init and a wrong wrapper there kills startup (2026-11-15: the game never
+        // got as far as an attach). Enable with SP_COOP_IAT=1 when that path is being tested.
+        wchar_t iat[8] = {};
+        if (GetEnvironmentVariableW(L"SP_COOP_IAT", iat, 8) > 0 && lstrcmpW(iat, L"1") == 0) {
+            hook_get_proc_address();
+        }
     }
     return TRUE;
 }
