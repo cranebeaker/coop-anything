@@ -13,6 +13,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
 # MinHook (BSD-2, pinned 1.3.4): the engine resolves the d3d11 entry points before our
 # GetProcAddress patch is installed, so the function itself has to be hooked inline.
 set(MINHOOK "${CMAKE_CURRENT_SOURCE_DIR}/third_party/minhook-1.3.4")
+set(BRIDGE "${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/bridge/include")
 
 add_library(dinput8 SHARED
     src/proxy.cpp
@@ -23,9 +24,8 @@ add_library(dinput8 SHARED
     ${MINHOOK}/src/trampoline.c
     ${MINHOOK}/src/hde/hde32.c
 )
-target_include_directories(dinput8 PRIVATE ${MINHOOK}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/bridge/include)
+target_include_directories(dinput8 PRIVATE ${MINHOOK}/include ${BRIDGE})
 target_compile_definitions(dinput8 PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-# A proxy DLL must be named exactly dinput8.dll and sit next to the game exe.
 set_target_properties(dinput8 PROPERTIES
     OUTPUT_NAME "dinput8"
     PREFIX ""
@@ -36,5 +36,7 @@ if (MINGW)
     target_link_options(dinput8 PRIVATE -Wl,--kill-at)
 endif()
 
-
-
+# The transport can be tested without the game: two endpoints on loopback.
+add_executable(net_selftest src/net_selftest.cpp src/net.cpp)
+target_compile_definitions(net_selftest PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(net_selftest PRIVATE ws2_32)
