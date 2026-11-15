@@ -117,6 +117,10 @@ would be far cheaper than writing netcode from scratch.
   `-record`, `-multiple_instance` (the build otherwise refuses a second instance),
   `-startlevel`, `-startsavegame`, `-godmode`, `-noplayer`, `-enumerate`, `-forcepack`,
   `-disablecaching`, `-no_timeout`.
+- `-connect 127.0.0.1:2005` as a **command-line** parameter produced no `ws2_32!connect` and no
+  error (run `879854ab…`, 50 s, guard clean, profile unchanged). So `-connect` is not a working
+  launch parameter in this build, or it needs another form: the client path is still unproven and
+  the string is probably a leftover from Dungeon Siege III.
 
 ### Still unknown
 

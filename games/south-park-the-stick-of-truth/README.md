@@ -106,3 +106,9 @@ Gate 3: the actor/object model. Gate 4: a second controllable body and input (lo
 milestone, not co-op). Gate 5: transport between two machines. Gate 6: the remote player, the
 guest's own screen, join and reconnect — the point at which it is actually co-op. Gate 7: sync
 scope (turns, story, saves, transitions). Details and one prompt per agent: `PLAN.md`, `prompts/`.
+
+## Release shape
+
+Co-op ships as a **launcher plus an in-game mod**: the mod does the work, the launcher does host,
+join, version checks, install and uninstall. The launcher alone cannot do co-op. Details, first
+release scope, transport choice and what each player must own: `SHAPE.md`.

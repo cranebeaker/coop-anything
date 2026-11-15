@@ -85,6 +85,8 @@ if __name__ == '__main__':
         shutil.copy2(path, config_backup / path.name)
     written_scripts = install_console_scripts()
     launch_args = [str(EXE), '-window']
+    if '--connect' in sys.argv:
+        launch_args.extend(['-connect', sys.argv[sys.argv.index('--connect') + 1]])
     if '--exec' in sys.argv:
         body = '\n'.join(COMMANDS + ['write_file probe_dump.txt']) + '\n'
         for directory in CONSOLE_DIRS:
