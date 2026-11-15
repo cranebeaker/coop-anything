@@ -233,6 +233,24 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead): `tpbody` kills the game - mover write is not safe yet
+
+The movement agent wrote a `tpbody` that picks the plausible triple nearest to the player's cached
+position among `bfx::MoverImpl` objects and writes there. Its build was taken as-is and run once:
+
+- `exec "tpbody 3 0 0"` -> the game process died immediately (`GameCrashed`, read failed on the
+  bridge socket). No screenshot, no position read after the write.
+- So the candidate selection (or the offset within the mover) is wrong, and the write lands on
+  something the engine uses. Not retried; the driver is back on the safe `tp`, which is known to
+  change a value without moving the character and without crashing.
+- The agent's work is uncommitted in `D:\sp-move` (585 lines, branch
+  `game/south-park-the-stick-of-truth-move`). Treat it as a lead, not as code to merge: the nearest-
+  position rule needs to be checked against a live `MoverImpl` before any write, e.g. read the
+  mover's candidate triples first and require one to be within a metre of the player's reported
+  position *and* to stay stable for a second, and only then write.
+
+Recorded so nobody repeats the crash thinking it was a fluke.
+
 ## 2026-11-15 (lead): what the mod, the bridge and the transport actually are
 
 Written because the audit found fifteen commits without a record. Observed:
