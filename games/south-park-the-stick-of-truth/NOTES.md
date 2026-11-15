@@ -133,6 +133,31 @@ would be far cheaper than writing netcode from scratch.
 - Turn-based combat: whether a second controller can share a fight, and what happens to the
   companion slot the game already fills.
 
+## 2026-11-15 (second run): two instances, and the command-line client path is dead
+
+QA: still no co-op. Ran one guarded **two-instance** session (`local/guard_multi.py`, 45 s, instances
+A and B alive at the same time, each with its own redirected profile, launch lock held). Original
+profile hashes unchanged, exe hash matched, no guard errors.
+
+- `-multiple_instance` works: two copies of the game ran side by side on one PC. That is the local
+  test bed for everything up to Gate 5, and it is the only way to test a client without a second PC.
+- **Neither instance called `ws2_32!connect`, and neither called `bind`/`listen`.** Instance B was
+  started with `-connect 127.0.0.1:2005`; instance A ran plain. Both only did `WSAStartup`, 3
+  sockets, 2 closes and the usual `SteamNetworking` polling (742 and 1286 calls in 45 s).
+- So `-connect` is **not** a working launch parameter in this build (it is a leftover string, same
+  family as the `-journal`/`-record` flags), and the earlier single-instance `-connect` run said the
+  same. The client path now has to come from the console command `connect`, or from calling the
+  session manager directly — both are Gate 1 work, not Gate 0 evidence.
+- What remains for Gate 0: (a) does a host path exist at all (session manager reachable, or
+  `restart_server`), (b) can the console `connect` be executed. Command-line and file-based
+  autoexec routes are closed.
+
+## 2026-11-15 (third run): scheduling
+
+Steps 2 (gameplay harness) and 3 (console) were started as parallel agents under `PARALLEL.md`:
+own worktree and branch, own notes file, machine-wide launch lock. The integrator (me) keeps
+`NOTES.md`, `README.md`, `PLAN.md`, `data/` and merges their notes when they report.
+
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
