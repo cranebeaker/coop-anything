@@ -672,10 +672,14 @@ class Game:
                 self.errors.append(message.get('stack', message.get('description')))
 
         argv = [str(EXE)] + (self.extra_args or ['-window'])
+        environment = {'SteamAppId': '213670', 'SteamGameId': '213670',
+                       'TEMP': str(temporary), 'TMP': str(temporary)}
+        # Test-only switch: which inline hooks the mod should enable (see mod/src/mod.cpp).
+        if os.environ.get('SP_COOP_INLINE'):
+            environment['SP_COOP_INLINE'] = os.environ['SP_COOP_INLINE']
         self.device = frida.get_local_device()
         self.pid = self.device.spawn(argv, cwd=str(GAME), stdio='pipe',
-                                     env={'SteamAppId': '213670', 'SteamGameId': '213670',
-                                          'TEMP': str(temporary), 'TMP': str(temporary)})
+                                     env=environment)
         self.session = self.device.attach(self.pid)
         guard_source = (ROOT / 'save_guard.js').read_text(encoding='utf-8').replace(
             '__CONFIG__', json.dumps(self.config))

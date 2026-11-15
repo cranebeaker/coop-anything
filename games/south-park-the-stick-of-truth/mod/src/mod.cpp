@@ -679,25 +679,35 @@ void inline_hook(const wchar_t* module_name, const char* name, void* detour, voi
 
 void install_inline_hooks()
 {
-    // OFF by default. With these enabled the game died during startup on 2026-11-15 (validity
-    // flags stayed clean, the process was simply gone), so the safe build keeps the DLL alive
-    // and the vtable hooks only. Re-enable one hook at a time and find which one kills it.
-    const bool enabled = false;
-    if (!enabled) {
-        coop_note("inline hooks disabled (crashed the game when enabled)");
+    // Which hooks to enable is read from SP_COOP_INLINE, so each one can be tested alone
+    // (2026-11-15: enabling them together killed the game during startup): "d3d11",
+    // "factory", "d3d9", or "all". Unset or empty means none.
+    wchar_t wanted[64] = {};
+    DWORD length = GetEnvironmentVariableW(L"SP_COOP_INLINE", wanted, 64);
+    if (length == 0) {
+        coop_note("inline hooks: none requested (SP_COOP_INLINE unset)");
         return;
     }
+    const bool all = lstrcmpiW(wanted, L"all") == 0;
     if (MH_Initialize() != MH_OK) {
         log_line("MinHook: initialize failed");
         return;
     }
-    inline_hook(L"d3d11.dll", "D3D11CreateDeviceAndSwapChain",
-                reinterpret_cast<void*>(&create_swapchain_hook),
-                reinterpret_cast<void**>(&g_real_create_swapchain));
-    inline_hook(L"d3d9.dll", "Direct3DCreate9", reinterpret_cast<void*>(&direct3d_create9_hook),
-                reinterpret_cast<void**>(&g_real_d3d9_create));
-    inline_hook(L"dxgi.dll", "CreateDXGIFactory", reinterpret_cast<void*>(&create_factory_hook),
-                reinterpret_cast<void**>(&g_real_create_factory));
+    if (all || lstrcmpiW(wanted, L"d3d11") == 0) {
+        inline_hook(L"d3d11.dll", "D3D11CreateDeviceAndSwapChain",
+                    reinterpret_cast<void*>(&create_swapchain_hook),
+                    reinterpret_cast<void**>(&g_real_create_swapchain));
+    }
+    if (all || lstrcmpiW(wanted, L"d3d9") == 0) {
+        inline_hook(L"d3d9.dll", "Direct3DCreate9",
+                    reinterpret_cast<void*>(&direct3d_create9_hook),
+                    reinterpret_cast<void**>(&g_real_d3d9_create));
+    }
+    if (all || lstrcmpiW(wanted, L"factory") == 0) {
+        inline_hook(L"dxgi.dll", "CreateDXGIFactory",
+                    reinterpret_cast<void*>(&create_factory_hook),
+                    reinterpret_cast<void**>(&g_real_create_factory));
+    }
     inline_hook(L"dxgi.dll", "CreateDXGIFactory1", reinterpret_cast<void*>(&create_factory_hook),
                 reinterpret_cast<void**>(&g_real_create_factory));
 }
