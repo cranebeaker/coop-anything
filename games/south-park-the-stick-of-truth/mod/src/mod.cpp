@@ -14,6 +14,10 @@
 #include <cstdio>
 
 #include "MinHook.h"
+#include "coopbridge/server.h"
+
+#include <string>
+#include <vector>
 
 extern "C" void coop_note(const char* text);
 
@@ -559,7 +563,7 @@ void log_triples(const char* label, uintptr_t address, size_t bytes)
     }
 }
 
-void scan_vtable(const char* label, unsigned rva, int limit)
+void scan_vtable(const char* label, unsigned rva, int limit, uintptr_t* hits, int* hit_count)
 {
     HMODULE exe = GetModuleHandleW(nullptr);
     if (exe == nullptr) {
@@ -597,6 +601,9 @@ void scan_vtable(const char* label, unsigned rva, int limit)
                     std::snprintf(line, sizeof(line), "%s object at 0x%08llx", label,
                                   static_cast<unsigned long long>(at + offset));
                     log_line(line);
+                    if (hit_count != nullptr && hits != nullptr && *hit_count < 8) {
+                        hits[(*hit_count)++] = at + offset;
+                    }
                     if (found == 0) {
                         // First hit: log the plausible position triples, so the offset can be
                         // read from the log instead of another blind scan.
@@ -770,6 +777,50 @@ void install_inline_hooks()
                 reinterpret_cast<void**>(&g_real_create_factory));
 }
 
+// --- in-game bridge ---------------------------------------------------------
+//
+// The hub's tools/bridge server, embedded: a loopback RPC that runs game calls on the tick
+// thread and answers `state` with what the scan found. This is the channel later tests and
+// bots use (playbook/in-game-bridge.md); it does not depend on the frame hook.
+uintptr_t g_player_hits[8];
+int g_player_count = 0;
+uintptr_t g_mover_hits[8];
+int g_mover_count = 0;
+
+class CoopAdapter : public coopbridge::Adapter
+{
+public:
+    coopbridge::Capabilities capabilities() const override
+    {
+        coopbridge::Capabilities caps;
+        caps.state = true;
+        return caps;
+    }
+
+    coopbridge::json::Value State(const std::vector<std::string>&) override
+    {
+        using coopbridge::json::Value;
+        Value root = Value::object();
+        root.set("pid", static_cast<double>(GetCurrentProcessId()));
+        root.set("ticks", static_cast<double>(g_ticks));
+        Value players = Value::array();
+        for (int index = 0; index < g_player_count; ++index) {
+            players.push(Value(static_cast<double>(g_player_hits[index])));
+        }
+        root.set("players", players);
+        Value movers = Value::array();
+        for (int index = 0; index < g_mover_count; ++index) {
+            movers.push(Value(static_cast<double>(g_mover_hits[index])));
+        }
+        root.set("movers", movers);
+        return root;
+    }
+};
+
+CoopAdapter g_adapter;
+coopbridge::Server g_server;
+bool g_bridge_started = false;
+
 DWORD WINAPI worker(LPVOID)
 {
     wchar_t path[MAX_PATH];
@@ -794,6 +845,18 @@ DWORD WINAPI worker(LPVOID)
     install_dxgi_hook();
     install_inline_hooks();
 
+    coopbridge::Options options;
+    options.game = "south-park";
+    options.build = "228353";
+    options.tcpPort = 27990;
+    options.endpointFile = "coop-bridge.json";
+    if (g_server.Start(options, g_adapter)) {
+        g_bridge_started = true;
+        log_line("bridge: tcp://127.0.0.1:27990");
+    } else {
+        log_line("bridge: start failed");
+    }
+
     // The thread still ticks, so a run is observable even before the first frame hook fires.
     LONG next_scan = 600;
     for (;;) {
@@ -803,8 +866,13 @@ DWORD WINAPI worker(LPVOID)
         }
         if (g_ticks >= next_scan) {
             next_scan = g_ticks + 600;
-            scan_vtable("player", kPlayerVtableRva, 3);
-            scan_vtable("mover", kMoverVtableRva, 3);
+            g_player_count = 0;
+            g_mover_count = 0;
+            scan_vtable("player", kPlayerVtableRva, 3, g_player_hits, &g_player_count);
+            scan_vtable("mover", kMoverVtableRva, 3, g_mover_hits, &g_mover_count);
+        }
+        if (g_bridge_started) {
+            g_server.Pump();
         }
         Sleep(16);
     }

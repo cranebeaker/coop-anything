@@ -22,7 +22,7 @@ add_library(dinput8 SHARED
     ${MINHOOK}/src/trampoline.c
     ${MINHOOK}/src/hde/hde32.c
 )
-target_include_directories(dinput8 PRIVATE ${MINHOOK}/include)
+target_include_directories(dinput8 PRIVATE ${MINHOOK}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/bridge/include)
 target_compile_definitions(dinput8 PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
 # A proxy DLL must be named exactly dinput8.dll and sit next to the game exe.
 set_target_properties(dinput8 PROPERTIES
@@ -30,7 +30,9 @@ set_target_properties(dinput8 PROPERTIES
     PREFIX ""
     SUFFIX ".dll"
 )
-target_link_libraries(dinput8 PRIVATE d3d9 d3d11 dxgi)
+target_link_libraries(dinput8 PRIVATE d3d9 d3d11 dxgi ws2_32)
 if (MINGW)
     target_link_options(dinput8 PRIVATE -Wl,--kill-at)
 endif()
+
+
