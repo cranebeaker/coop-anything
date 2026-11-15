@@ -14,7 +14,8 @@ cmake -G "MinGW Makefiles" -B build -DCMAKE_BUILD_TYPE=Release
 mingw32-make -C build
 ```
 
-Output: `build/dinput8.dll` (~130 KB, statically linked runtime, no extra DLLs beside the game).
+Output: `build/dinput8.dll` (~1.0 MB, statically linked runtime, no extra DLLs beside the game;
+the size grew with MinHook and the embedded bridge).
 
 ## What it does today
 
@@ -50,6 +51,8 @@ instead of from input.
 - **The Steam overlay owns the noise**: it creates the DirectInput devices, it polls them, and its
   message pump is the one that calls `PeekMessageA` hundreds of thousands of times per second. The
   game itself reads no DirectInput device. Do not attribute those calls to the engine.
-- **Hooks that kill the game**: enable one at a time and keep the build that survives.
-- `mod/build/` and `mod/third_party/*.zip` are not committed; MinHook 1.3.4 sources are vendored,
+- **Hooks that kill the game**: enable one at a time and keep the build that survives. The
+  `GetProcAddress` IAT patch and the dummy-device creation both killed startup; neither runs unless
+  asked for.
+- `mod/build/` is not committed. MinHook 1.3.4 is vendored in full (sources and its release zip),
   pinned by the SHA-256 in `NOTES.md`.

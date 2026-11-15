@@ -2,9 +2,10 @@
 // the game, ticks once per rendered frame, and can read the local player's position.
 //
 // The frame hook patches the D3D9 device vtable, the way games/the-witness does it: a dummy
-// device is created, its vtable is shared with the game's device, and slot 17 (Present) is
-// replaced after the original pointer is saved. No code is overwritten, so there is no
-// trampoline to get wrong, and the patch is visible to every device of the implementation.
+// device is created and slot 17 (Present) is replaced after the original pointer is saved. No
+// code is overwritten. NOTE: for this title the dummy device's vtable is NOT the engine's (none
+// of these hooks fires), so the frame hook is groundwork for engines that share it, not a proven
+// path here - see mod/README.md.
 #include <windows.h>
 #include <d3d9.h>
 #include <d3d11.h>
