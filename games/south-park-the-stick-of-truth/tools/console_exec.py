@@ -773,6 +773,7 @@ class Game:
         def watch():
             user = ctypes.windll.user32
             deadline = time.time() + 30
+            moved = False
             while time.time() < deadline:
                 try:
                     game_window = user.FindWindowW(WINDOW_TITLE, None)
@@ -780,6 +781,13 @@ class Game:
                         if int(user.GetForegroundWindow() or 0) == int(game_window):
                             user.ShowWindow(owner_window, 9)
                             user.SetForegroundWindow(owner_window)
+                        if not moved:
+                            # Park the window outside the visible desktop: the owner must not have
+                            # a game window on top of their work while a test runs.
+                            screen = user.GetSystemMetrics(0)
+                            user.SetWindowPos(game_window, 0, screen + 80, 0, 0, 0,
+                                              0x0001 | 0x0004 | 0x0010)  # NOSIZE|NOZORDER|NOACTIVATE
+                            moved = True
                 except Exception:                    # noqa: BLE001
                     pass
                 time.sleep(0.7)
