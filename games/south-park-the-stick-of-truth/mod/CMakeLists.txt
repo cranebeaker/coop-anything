@@ -33,10 +33,11 @@ set_target_properties(dinput8 PROPERTIES
 )
 target_link_libraries(dinput8 PRIVATE d3d9 d3d11 dxgi ws2_32)
 if (MINGW)
-    target_link_options(dinput8 PRIVATE -Wl,--kill-at)
+    target_link_options(dinput8 PRIVATE -Wl,--kill-at -static -static-libgcc -static-libstdc++)
 endif()
 
 # The transport can be tested without the game: two endpoints on loopback.
 add_executable(net_selftest src/net_selftest.cpp src/net.cpp)
 target_compile_definitions(net_selftest PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_link_libraries(net_selftest PRIVATE ws2_32)
+
