@@ -228,6 +228,28 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead, mod): the renderer is D3D11/DXGI and is created through GetProcAddress
+
+The mod DLL loads, ticks and stays alive (log `coop-mod.log`, all validity flags true). It patches
+every known present path of a device it creates itself: D3D9 `Present` (17), Ex `Present` (17),
+`PresentEx` (121), `IDirect3DSwapChain9::Present` (3), DXGI `Present` (8), `Present1` (22). **None
+of them fires**, so the game presents through a chain that is not the one the mod created.
+
+What the engine actually does, measured by hooking `GetProcAddress` and logging names (rule:
+attribute every call to its module):
+
+- the exe imports no `d3d*.dll` or `dxgi.dll` at all: everything is resolved at runtime;
+- `D3D11CreateDeviceAndSwapChain` is called **once**, `D3D11CreateDevice` once,
+  `D3DX11CompileFromFileA` / `D3DX11CreateTextureFromFileA` once — the D3D11 render path;
+- `Direct3DCreate9`, `Direct3DCreate9Ex`, `DirectInput8Create`, `CreateDXGIFactory*` show 422–423
+  calls each, which is the Steam overlay probing, not the game (`gameoverlayrenderer.dll` owns the
+  DirectInput devices and the `PeekMessageA` storm).
+
+So the next step is not another dummy device: hook `GetProcAddress` in the exe's import table and,
+when the engine asks for `D3D11CreateDeviceAndSwapChain` (or `CreateDXGIFactory*`), take the object
+it creates and patch **its** vtable. That is the playbook's order: find who creates the object,
+then patch the object.
+
 ## 2026-11-15 (lead, DirectInput): the game owns no DirectInput device
 
 Hooks were installed at script load, i.e. while the process is still suspended and before the

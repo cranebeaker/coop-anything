@@ -537,7 +537,44 @@ rpc.exports = {
             .slice(0, limit || 12);
         return {entries: entries, keyCalls: state.keyCalls, noReturn: state.noReturn};
     },
-    // Hold DIK keys from inside the process: {w: true, space: false, ...}
+    // Which graphics entry points does the engine resolve at runtime? The exe imports no
+    // d3d/dxgi DLL, so this is the only way to know what to hook.
+    gpa: function () {
+        if (state.gpaHooked) return state.gpaHooked;
+        const counts = {};
+        const names = [];
+        let address = null;
+        for (const attempt of [
+            () => Module.getGlobalExportByName('GetProcAddress'),
+            () => Module.getExportByName(null, 'GetProcAddress'),
+            () => Process.getModuleByName('kernel32.dll').findExportByName('GetProcAddress'),
+        ]) {
+            try {
+                address = attempt();
+                if (address !== null) break;
+            } catch (error) {
+                note('GetProcAddress: ' + error);
+            }
+        }
+        if (address !== null) {
+            Interceptor.attach(address, {
+                onEnter(args) {
+                    try {
+                        const name = args[1].readUtf8String();
+                        if (name === null) return;
+                        if (!/d3d|dxgi|Create|SwapChain|Present/i.test(name)) return;
+                        counts[name] = (counts[name] || 0) + 1;
+                        if (names.length < 60) names.push(name);
+                    } catch (error) {
+                        // a non-string argument is not interesting
+                    }
+                },
+            });
+        }
+        state.gpaHooked = {hooked: address !== null, counts: counts, names: names};
+        return state.gpaHooked;
+    },
+
     keys: function (wanted) {
         installDinput();
         const next = {};
