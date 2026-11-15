@@ -6,23 +6,17 @@
 // replaced after the original pointer is saved. No code is overwritten, so there is no
 // trampoline to get wrong, and the patch is visible to every device of the implementation.
 #include <windows.h>
-
 #include <d3d9.h>
 #include <d3d11.h>
 #include <dxgi1_2.h>
-
 #include <cstdio>
-
 #include "MinHook.h"
 #include "coopbridge/server.h"
-
+#include "net.h"
 #include <string>
 #include <vector>
-
 extern "C" void coop_note(const char* text);
-
 namespace {
-
 FILE* g_log = nullptr;
 volatile LONG g_ticks = 0;
 volatile LONG g_frames = 0;
@@ -30,7 +24,6 @@ volatile LONG g_frame_mark = 0;
 DWORD g_frame_second = 0;
 char g_notes[4096];
 size_t g_notes_length = 0;
-
 typedef HRESULT(WINAPI* PresentFn)(IDirect3DDevice9*, const RECT*, const RECT*, HWND,
                                    const RGNDATA*);
 PresentFn g_present = nullptr;
@@ -39,16 +32,13 @@ typedef HRESULT(WINAPI* PresentExFn)(IDirect3DDevice9*, const RECT*, const RECT*
                                      const RGNDATA*);
 PresentExFn g_present_ex_slot = nullptr;
 PresentFn g_present_chain = nullptr;
-
 void note_frame();
-
 HRESULT WINAPI swapchain_present_hook(IDirect3DSwapChain9* chain, const RECT* source,
                                       const RECT* dest, HWND window, const RGNDATA* dirty)
 {
     note_frame();
     return g_present_chain(reinterpret_cast<IDirect3DDevice9*>(chain), source, dest, window, dirty);
 }
-
 void log_line(const char* text)
 {
     if (g_log == nullptr) {
@@ -58,14 +48,12 @@ void log_line(const char* text)
     std::fputc('\n', g_log);
     std::fflush(g_log);
 }
-
 void log_value(const char* label, long long value)
 {
     char line[160];
     std::snprintf(line, sizeof(line), "%s = %lld", label, value);
     log_line(line);
 }
-
 void note_frame()
 {
     LONG frames = InterlockedIncrement(&g_frames);
@@ -81,21 +69,18 @@ void note_frame()
         g_frame_second = now;
     }
 }
-
 HRESULT WINAPI present_hook(IDirect3DDevice9* device, const RECT* source, const RECT* dest,
                             HWND window, const RGNDATA* dirty)
 {
     note_frame();
     return g_present(device, source, dest, window, dirty);
 }
-
 HRESULT WINAPI present_hook_ex(IDirect3DDevice9Ex* device, const RECT* source, const RECT* dest,
                                HWND window, const RGNDATA* dirty)
 {
     note_frame();
     return g_present_ex(reinterpret_cast<IDirect3DDevice9*>(device), source, dest, window, dirty);
 }
-
 HRESULT WINAPI present_ex_slot_hook(IDirect3DDevice9* device, const RECT* source,
                                     const RECT* dest, HWND window, DWORD flags,
                                     const RGNDATA* dirty)
@@ -103,7 +88,6 @@ HRESULT WINAPI present_ex_slot_hook(IDirect3DDevice9* device, const RECT* source
     note_frame();
     return g_present_ex_slot(device, source, dest, window, flags, dirty);
 }
-
 void patch_swapchain(IDirect3DDevice9* device, const char* label)
 {
     IDirect3DSwapChain9* chain = nullptr;
@@ -123,12 +107,10 @@ void patch_swapchain(IDirect3DDevice9* device, const char* label)
     }
     chain->Release();
 }
-
 LRESULT CALLBACK dummy_window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
     return DefWindowProcW(window, message, wparam, lparam);
 }
-
 bool install_present_hook()
 {
     if (g_present != nullptr) {
@@ -239,7 +221,6 @@ bool install_present_hook()
     d3d->Release();
     return g_present != nullptr || g_present_ex != nullptr;
 }
-
 // The game loads d3d11.dll and dxgi.dll (checked live), so the picture is presented by a
 // DXGI swap chain, not by D3D9: the hooks above exist for builds that render through D3D9,
 // and this one is the one that actually fires here. Slot 8 is IDXGISwapChain::Present.
@@ -248,20 +229,17 @@ typedef HRESULT(WINAPI* DxgiPresent1Fn)(IDXGISwapChain1*, UINT, UINT,
                                         const DXGI_PRESENT_PARAMETERS*);
 DxgiPresentFn g_dxgi_present = nullptr;
 DxgiPresent1Fn g_dxgi_present1 = nullptr;
-
 HRESULT WINAPI dxgi_present_hook(IDXGISwapChain* chain, UINT interval, UINT flags)
 {
     note_frame();
     return g_dxgi_present(chain, interval, flags);
 }
-
 HRESULT WINAPI dxgi_present1_hook(IDXGISwapChain1* chain, UINT interval, UINT flags,
                                   const DXGI_PRESENT_PARAMETERS* params)
 {
     note_frame();
     return g_dxgi_present1(chain, interval, flags, params);
 }
-
 void install_dxgi_hook()
 {
     if (g_dxgi_present != nullptr) {
@@ -332,7 +310,6 @@ void install_dxgi_hook()
     chain->Release();
     DestroyWindow(window);
 }
-
 // --- capture the engine's own swap chain -----------------------------------
 //
 // The exe imports no d3d/dxgi DLL: it resolves D3D11CreateDeviceAndSwapChain through
@@ -345,10 +322,8 @@ typedef HRESULT(WINAPI* CreateSwapChainFn)(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODU
                                            ID3D11Device**, D3D_FEATURE_LEVEL*,
                                            ID3D11DeviceContext**);
 typedef FARPROC(WINAPI* GetProcAddressFn)(HMODULE, LPCSTR);
-
 CreateSwapChainFn g_real_create_swapchain = nullptr;
 GetProcAddressFn g_real_get_proc_address = nullptr;
-
 void patch_chain(IDXGISwapChain* chain, const char* label)
 {
     if (chain == nullptr) {
@@ -374,7 +349,6 @@ void patch_chain(IDXGISwapChain* chain, const char* label)
     std::snprintf(line, sizeof(line), "game swap chain captured and patched (%s)", label);
     coop_note(line);
 }
-
 HRESULT WINAPI create_swapchain_hook(IDXGIAdapter* adapter, D3D_DRIVER_TYPE driver_type,
                                      HMODULE software, UINT flags,
                                      const D3D_FEATURE_LEVEL* levels, UINT level_count,
@@ -392,14 +366,11 @@ HRESULT WINAPI create_swapchain_hook(IDXGIAdapter* adapter, D3D_DRIVER_TYPE driv
     }
     return result;
 }
-
 typedef HRESULT(WINAPI* CreateFactoryFn)(REFIID, void**);
 typedef HRESULT(WINAPI* FactoryCreateSwapChainFn)(IDXGIFactory*, IUnknown*, DXGI_SWAP_CHAIN_DESC*,
                                                  IDXGISwapChain**);
-
 CreateFactoryFn g_real_create_factory = nullptr;
 FactoryCreateSwapChainFn g_real_factory_create_swapchain = nullptr;
-
 HRESULT WINAPI factory_create_swapchain_hook(IDXGIFactory* self, IUnknown* device,
                                              DXGI_SWAP_CHAIN_DESC* desc, IDXGISwapChain** out)
 {
@@ -412,7 +383,6 @@ HRESULT WINAPI factory_create_swapchain_hook(IDXGIFactory* self, IUnknown* devic
     }
     return result;
 }
-
 HRESULT WINAPI create_factory_hook(REFIID riid, void** out)
 {
     HRESULT result = E_FAIL;
@@ -436,7 +406,6 @@ HRESULT WINAPI create_factory_hook(REFIID riid, void** out)
     }
     return result;
 }
-
 FARPROC WINAPI get_proc_address_hook(HMODULE module, LPCSTR name)
 {
     FARPROC proc = nullptr;
@@ -463,7 +432,6 @@ FARPROC WINAPI get_proc_address_hook(HMODULE module, LPCSTR name)
     }
     return proc;
 }
-
 // Patch the exe's own import slot, so the engine gets our wrapper when it resolves the call.
 void hook_get_proc_address()
 {
@@ -512,7 +480,6 @@ void hook_get_proc_address()
         }
     }
 }
-
 // --- Stage 1: find the live player object by its vtable ---------------------
 //
 // DS_Component_Player's vtable RVA comes from the static RTTI index (0x7d5684). An object of
@@ -521,7 +488,6 @@ void hook_get_proc_address()
 // error code, never a crash.
 const unsigned kPlayerVtableRva = 0x7d5684;
 const unsigned kMoverVtableRva = 0x773748;
-
 // Log plausible position triples inside an object: three consecutive finite floats in a sane
 // range, at least two of them non-zero. Pointers, string ids and counters never pass this.
 void log_triples(const char* label, uintptr_t address, size_t bytes)
@@ -562,7 +528,6 @@ void log_triples(const char* label, uintptr_t address, size_t bytes)
         ++logged;
     }
 }
-
 void scan_vtable(const char* label, unsigned rva, int limit, uintptr_t* hits, int* hit_count)
 {
     HMODULE exe = GetModuleHandleW(nullptr);
@@ -655,7 +620,6 @@ void scan_vtable(const char* label, unsigned rva, int limit, uintptr_t* hits, in
     std::snprintf(line, sizeof(line), "%s objects found: %d", label, found);
     log_line(line);
 }
-
 // --- all device-creation entry points, inline -------------------------------
 //
 // The engine resolves the graphics entry points early and caches the pointers, so returning a
@@ -669,12 +633,10 @@ typedef HRESULT(WINAPI* CreateSwapChainForHwndFn)(IDXGIFactory2*, IUnknown*, HWN
                                                   const DXGI_SWAP_CHAIN_DESC1*,
                                                   const DXGI_SWAP_CHAIN_FULLSCREEN_DESC*,
                                                   IDXGIOutput*, IDXGISwapChain1**);
-
 Direct3DCreate9Fn g_real_d3d9_create = nullptr;
 Direct3DCreate9ExFn2 g_real_d3d9_create_ex = nullptr;
 CreateDeviceFn g_real_d3d9_create_device = nullptr;
 CreateSwapChainForHwndFn g_real_create_swapchain_hwnd = nullptr;
-
 HRESULT WINAPI d3d9_create_device_hook(IDirect3D9* self, UINT adapter, D3DDEVTYPE type,
                                        HWND window, DWORD flags, D3DPRESENT_PARAMETERS* params,
                                        IDirect3DDevice9** device)
@@ -689,7 +651,6 @@ HRESULT WINAPI d3d9_create_device_hook(IDirect3D9* self, UINT adapter, D3DDEVTYP
     }
     return result;
 }
-
 IDirect3D9* WINAPI direct3d_create9_hook(UINT sdk)
 {
     coop_note("called: Direct3DCreate9");
@@ -707,7 +668,6 @@ IDirect3D9* WINAPI direct3d_create9_hook(UINT sdk)
     }
     return d3d;
 }
-
 HRESULT WINAPI create_swapchain_hwnd_hook(IDXGIFactory2* self, IUnknown* device, HWND window,
                                           const DXGI_SWAP_CHAIN_DESC1* desc,
                                           const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* fullscreen,
@@ -723,7 +683,6 @@ HRESULT WINAPI create_swapchain_hwnd_hook(IDXGIFactory2* self, IUnknown* device,
     }
     return result;
 }
-
 void inline_hook(const wchar_t* module_name, const char* name, void* detour, void** original)
 {
     HMODULE module = LoadLibraryW(module_name);
@@ -741,7 +700,6 @@ void inline_hook(const wchar_t* module_name, const char* name, void* detour, voi
         coop_note(line);
     }
 }
-
 void install_inline_hooks()
 {
     // Which hooks to enable is read from SP_COOP_INLINE, so each one can be tested alone
@@ -776,7 +734,6 @@ void install_inline_hooks()
     inline_hook(L"dxgi.dll", "CreateDXGIFactory1", reinterpret_cast<void*>(&create_factory_hook),
                 reinterpret_cast<void**>(&g_real_create_factory));
 }
-
 // First plausible position triple in an object: the same rule the log uses, returned instead.
 bool read_first_triple(uintptr_t address, float out[3], unsigned* offset_out)
 {
@@ -816,12 +773,10 @@ bool read_first_triple(uintptr_t address, float out[3], unsigned* offset_out)
     }
     return false;
 }
-
 // Offset of the triple reported by `position`, so a test can nudge it and watch the character
 // move (the only honest way to prove a float triple is the player's position).
 unsigned g_position_offset = 0;
 bool g_position_known = false;
-
 // --- in-game bridge ---------------------------------------------------------
 //
 // The hub's tools/bridge server, embedded: a loopback RPC that runs game calls on the tick
@@ -831,6 +786,7 @@ uintptr_t g_player_hits[8];
 int g_player_count = 0;
 uintptr_t g_mover_hits[8];
 int g_mover_count = 0;
+coop::Net* g_net = nullptr;
 
 class CoopAdapter : public coopbridge::Adapter
 {
@@ -843,7 +799,6 @@ public:
         caps.eval = true;
         return caps;
     }
-
     coopbridge::json::Value State(const std::vector<std::string>&) override
     {
         using coopbridge::json::Value;
@@ -860,6 +815,22 @@ public:
             movers.push(Value(static_cast<double>(g_mover_hits[index])));
         }
         root.set("movers", movers);
+        if (g_net != nullptr) {
+            Value net = Value::object();
+            net.set("sent", static_cast<double>(g_net->SentCount()));
+            net.set("received", static_cast<double>(g_net->ReceivedCount()));
+            net.set("has_peer", g_net->HasPeer());
+            const DWORD now = GetTickCount();
+            net.set("peer_age_ms", static_cast<double>(g_net->PeerAgeMs(now)));
+            coop::PlayerState peer = g_net->Peer();
+            Value peer_state = Value::object();
+            peer_state.set("x", static_cast<double>(peer.x));
+            peer_state.set("y", static_cast<double>(peer.y));
+            peer_state.set("z", static_cast<double>(peer.z));
+            peer_state.set("yaw", static_cast<double>(peer.yaw));
+            net.set("peer", peer_state);
+            root.set("net", net);
+        }
         if (g_player_count > 0) {
             float values[3] = {0.0f, 0.0f, 0.0f};
             unsigned offset = 0;
@@ -877,11 +848,45 @@ public:
         }
         return root;
     }
-
     // A test hook, not a player feature: `tp dx dy dz` shifts the triple the scan reported, so
     // "is this really the player's position?" is answered by watching the character move.
     coopbridge::ExecResult Exec(const std::string& line, const std::string&) override
     {
+        if (line.rfind("host ", 0) == 0) {
+            if (g_net == nullptr) {
+                g_net = new coop::Net();
+            }
+            const int port = std::atoi(line.c_str() + 5);
+            if (port <= 0 || port > 65535) {
+                return {false, "usage: host <port>"};
+            }
+            if (!g_net->Listen(static_cast<uint16_t>(port))) {
+                return {false, g_net->LastError()};
+            }
+            return {true, "listening on " + std::to_string(port)};
+        }
+        if (line.rfind("join ", 0) == 0) {
+            if (g_net == nullptr) {
+                g_net = new coop::Net();
+            }
+            char host[64] = {};
+            int port = 0;
+            if (std::sscanf(line.c_str() + 5, "%63s %d", host, &port) != 2 || port <= 0 ||
+                port > 65535) {
+                return {false, "usage: join <host> <port>"};
+            }
+            if (!g_net->Connect(host, static_cast<uint16_t>(port))) {
+                return {false, g_net->LastError()};
+            }
+            return {true, "sending to " + std::string(host) + ":" + std::to_string(port)};
+        }
+        if (line == "net") {
+            if (g_net == nullptr) {
+                return {false, "transport not started"};
+            }
+            return {true, "sent=" + std::to_string(g_net->SentCount()) +
+                              " received=" + std::to_string(g_net->ReceivedCount())};
+        }
         float dx = 0.0f;
         float dy = 0.0f;
         float dz = 0.0f;
@@ -913,7 +918,6 @@ public:
                            sizeof(current), nullptr);
         return {true, "tp applied"};
     }
-
     // A few named expressions, so a test can ask for one number without a state dump.
     coopbridge::json::Value Eval(const std::string& expr, const std::string&) override
     {
@@ -930,13 +934,11 @@ public:
         return Value();
     }
 };
-
 // Created in the worker, never at DLL load: a constructor that touches sockets or threads runs
 // under the loader lock otherwise, and the process can hang before Frida can even attach.
 CoopAdapter* g_adapter = nullptr;
 coopbridge::Server* g_server = nullptr;
 bool g_bridge_started = false;
-
 DWORD WINAPI worker(LPVOID)
 {
     wchar_t path[MAX_PATH];
@@ -970,7 +972,6 @@ DWORD WINAPI worker(LPVOID)
             install_inline_hooks();
         }
     }
-
     coopbridge::Options options;
     options.game = "south-park";
     options.build = "228353";
@@ -984,7 +985,6 @@ DWORD WINAPI worker(LPVOID)
     } else {
         log_line("bridge: start failed");
     }
-
     // The thread still ticks, so a run is observable even before the first frame hook fires.
     LONG next_scan = 600;
     for (;;) {
@@ -1002,12 +1002,25 @@ DWORD WINAPI worker(LPVOID)
         if (g_bridge_started && g_server != nullptr) {
             g_server->Pump();
         }
+        if (g_net != nullptr) {
+            const DWORD now = GetTickCount();
+            g_net->Poll(now);
+            coop::PlayerState state;
+            if (g_player_count > 0) {
+                float values[3] = {0.0f, 0.0f, 0.0f};
+                unsigned offset = 0;
+                if (read_first_triple(g_player_hits[0], values, &offset)) {
+                    state.x = values[0];
+                    state.y = values[1];
+                    state.z = values[2];
+                }
+            }
+            g_net->Publish(state, now);
+        }
         Sleep(16);
     }
 }
-
 }  // namespace
-
 // Notes written before the worker opens its file are buffered and flushed by the worker.
 extern "C" void coop_note(const char* text)
 {
@@ -1027,7 +1040,6 @@ extern "C" void coop_note(const char* text)
     }
     g_notes[g_notes_length++] = '\n';
 }
-
 // Called by the proxy export, i.e. after the loader has released its lock.
 extern "C" void coop_start_worker()
 {
@@ -1040,7 +1052,6 @@ extern "C" void coop_start_worker()
         CloseHandle(thread);
     }
 }
-
 BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID)
 {
     if (reason == DLL_PROCESS_ATTACH) {
@@ -1058,5 +1069,3 @@ BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID)
     }
     return TRUE;
 }
-
-
