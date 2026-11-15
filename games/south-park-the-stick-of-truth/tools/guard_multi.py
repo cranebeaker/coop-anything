@@ -102,6 +102,17 @@ def main():
         raise SystemExit('Unexpected game executable; refusing launch')
     if not ORIGINAL_PROFILE.is_dir():
         raise SystemExit('Original profile not found; refusing launch')
+    # The pair run is still a launch: it must hold the machine-wide lease like every other one.
+    import atexit
+
+    import launch_lock
+
+    owner = os.environ.get('SP_AGENT', 'guard-multi')
+    if launch_lock.acquire(owner, minutes=20,
+                           wait=float(os.environ.get('SP_LOCK_WAIT', '600')),
+                           pid=os.getpid()) != 0:
+        raise SystemExit('Another agent holds the launch lock; refusing to launch')
+    atexit.register(lambda: launch_lock.release(owner))
     before = snapshot(ORIGINAL_PROFILE)
     run_root = ROOT / 'game-runs' / ('two-' + uuid.uuid4().hex)
     run_root.mkdir(parents=True)
