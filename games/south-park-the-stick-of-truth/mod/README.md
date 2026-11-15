@@ -29,6 +29,10 @@ Output: `build/dinput8.dll` (~130 KB, statically linked runtime, no extra DLLs b
   presents through a chain of its own.
 - Reads `SP_COOP_INLINE` to enable inline hooks one at a time (`d3d11`, `d3d9`, `factory`, `all`);
   unset means none. Enabling several at once killed the game during startup, so this switch exists.
+- Embeds the hub's `tools/bridge` server on `tcp://127.0.0.1:27990` (endpoint also written to
+  `coop-bridge.json` next to the exe). It answers `ping`, `version` and `state`; `state` returns the
+  pid, the tick count and the player and mover addresses the scan found. That is the channel the
+  later bots and tests use, and it does not depend on the frame hook.
 
 ## What it is for
 
