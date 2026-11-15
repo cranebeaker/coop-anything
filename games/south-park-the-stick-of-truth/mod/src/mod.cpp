@@ -499,23 +499,25 @@ void log_triples(const char* label, uintptr_t address, size_t bytes)
         return;
     }
     int logged = 0;
-    for (size_t offset = 0; offset + 12 <= got && logged < 6; offset += 4) {
+    for (size_t offset = 4; offset + 12 <= got && logged < 6; offset += 4) {
         float values[3];
         memcpy(values, raw + offset, sizeof(values));
         bool finite = true;
-        int non_zero = 0;
+        int z_axis = 0;
         for (int index = 0; index < 3; ++index) {
             if (!(values[index] == values[index])) {              // NaN
                 finite = false;
             }
-            if (values[index] > 1.0e5f || values[index] < -1.0e5f) {
+            if (values[index] > 1.0e4f || values[index] < -1.0e4f) {
                 finite = false;
             }
-            if (values[index] != 0.0f) {
-                ++non_zero;
+            if (values[index] >= 1.0f || values[index] <= -1.0f) {
+                ++z_axis;
             }
         }
-        if (!finite || non_zero < 2) {
+        // Offset 0 is the vtable pointer; vtable bytes read as floats are ~1e-38 denormals.
+        // A real level position has at least two axes of magnitude 1 .. 10 000.
+        if (!finite || z_axis < 2) {
             continue;
         }
         if (values[0] == values[1] && values[1] == values[2]) {
@@ -743,21 +745,21 @@ bool read_first_triple(uintptr_t address, float out[3], unsigned* offset_out)
                            sizeof(raw), &got)) {
         return false;
     }
-    for (size_t offset = 0; offset + 12 <= got; offset += 4) {
+    for (size_t offset = 4; offset + 12 <= got; offset += 4) {
         float values[3];
         memcpy(values, raw + offset, sizeof(values));
         bool finite = true;
-        int non_zero = 0;
+        int axis = 0;
         for (int index = 0; index < 3; ++index) {
-            if (!(values[index] == values[index]) || values[index] > 1.0e5f ||
-                values[index] < -1.0e5f) {
+            if (!(values[index] == values[index]) || values[index] > 1.0e4f ||
+                values[index] < -1.0e4f) {
                 finite = false;
             }
-            if (values[index] != 0.0f) {
-                ++non_zero;
+            if (values[index] >= 1.0f || values[index] <= -1.0f) {
+                ++axis;
             }
         }
-        if (!finite || non_zero < 2) {
+        if (!finite || axis < 2) {
             continue;
         }
         if (values[0] == values[1] && values[1] == values[2]) {
