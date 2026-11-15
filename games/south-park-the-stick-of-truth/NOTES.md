@@ -178,10 +178,11 @@ Source: `notes/04-object-model.md` (branch `game/south-park-the-stick-of-truth-s
 - Still needs runtime work (lock + guarded launch): find the module base, scan for vtable pointers,
   validate by moving the character, and count live instances. That is step 4's runtime half, not done.
 
-## 2026-11-15 (step 1, Gate 0): partial, undecided
+## 2026-11-15 (step 1, Gate 0): partial at the time, closed as "no" later that day
 
 Source: `notes/01-net-reachability.md` (branch `game/south-park-the-stick-of-truth-step01-net`, commit
 `ebbea21`), merged by the integrator. Two launch series, both under the lock, all validity flags true.
+The table below is what was known before the console work; the final verdicts follow it.
 
 | Question | Verdict | Evidence |
 |---|---|---|
@@ -196,6 +197,18 @@ Source: `notes/01-net-reachability.md` (branch `game/south-park-the-stick-of-tru
 - Implication: the thin-mod versus thick-mod decision is **not made**. Both the host and the client
   trigger are console commands (step 3). If `restart_server` and `connect` reach `bind` and
   `ws2_32!connect`, the engine's own netcode is the thin path. If they do not, the puppet path is the fallback.
+
+**Final verdicts (closed the same day, after the console work below).**
+
+| Question | Verdict | Evidence |
+|---|---|---|
+| Host path | **No.** | Console `restart_server` survives at the menu but opens nothing; in a level it kills the process; a direct call to the session-manager callee faults on a non-executable address. `bind`, `listen`, `accept` = 0 in every run. |
+| Client path | **No.** | Console `connect` kills the process both at the menu and in a level, with 0 net events; `ws2_32!connect` was never reached. |
+| Two instances run | **Yes.** | Pair run: both alive at 80 s, guard clean. |
+| Two instances join | **No.** | Nothing to join: no host ever came up. |
+
+The shipped Onyx multiplayer is dead code in this build and cannot be started from outside. The plan is
+the thick path (own transport and replication), MVP in `PLAN.md`, release shape in `SHAPE.md`.
 
 ## 2026-11-15 (lead): `-startsavegame` does not load a save in this harness
 

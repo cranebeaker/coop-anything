@@ -10,9 +10,10 @@
 
 ## Where things stand
 
-There is no playable co-op mod, and nobody has shown a second player in this game. Two
-menu-only guarded sessions were run (2026-11-04, 2026-11-15); they established how to test
-safely and what the engine still contains, not co-op.
+There is no playable co-op mod, and nobody has shown a second player in this game. What exists is
+a tested way to drive the game safely and a settled answer to the one question that decides how
+co-op gets built here: **the engine's own multiplayer cannot be started** (see below), so co-op is
+built as our own transport and replication driven from inside the process.
 
 Target, so no later reader relaxes it: **two players on two PCs, each with their own screen,
 over the network, without port forwarding**. A second character on one machine is a development
@@ -48,7 +49,24 @@ That is Dungeon Siege III's co-op engine, linked in and unused.
 
 In a menu-only run the engine initialises Winsock but never binds or listens, never dials out,
 never creates a Steam lobby or game server, and only keeps polling `SteamNetworking()`. So the
-code is present and idle; whether it can be started is the open question.
+code is present and idle.
+
+**It cannot be woken up from outside (settled 2026-11-15).** Three routes were tried, all on the
+isolated copy under the guard:
+
+- **Console commands.** The engine's own `exec` handler runs a script file, echoes every line and
+  dispatches each name — then answers `unknown var` for `find`, `status` and `write_file`. No
+  console command is registered in this build, so `connect` and `restart_server` cannot be reached
+  by name.
+- **Direct handler calls.** `status` works and prints its labels. `restart_server` and `connect`
+  kill the process, at the menu and inside a loaded level, without reaching `bind`, `listen`,
+  `ws2_32!connect`, `SteamGameServer_Init` or `SteamMatchmaking`.
+- **The session manager behind `restart_server`.** The handler jumps to a non-executable address
+  before any session function runs; zero network events.
+
+So the multiplayer classes in the exe are dead code in a single-player build, and the plan is the
+thick path: our own transport and replication, built on the runtime object model. Release shape and
+scope: `SHAPE.md`; decision and MVP: `PLAN.md`.
 
 The scripting layer cannot help here: the 314 native imports in the 316 AMX scripts include no
 session, server or network entry point, and the archived bytecode is marked `CRYPT`. The
@@ -76,9 +94,10 @@ No game files were changed and no freight was shipped. This session added:
 
 ## QA
 
-- 4 guarded launches (`py -3.14 -B tools/run_net_probe.py`, ~50 s each, isolated copy):
-  `original_profile_unchanged`, `guard_integrity` and `original_exe_hash_still_matches` were
-  `true` in every run.
+- Guarded launches on an isolated copy, `original_profile_unchanged`, `guard_integrity` and
+  `original_exe_hash_still_matches` true in every run: 4 menu-only, 2 two-instance, 3 reaching a
+  loaded level, 2 `-startsavegame`, and the console/handler experiments that settled the netcode
+  question.
 - Guard unit tests from 2026-11-04: 8 x64 and 7 x86 synthetic checks passed.
 - None of this tests co-op. QA level stays `none`.
 
@@ -88,24 +107,33 @@ No release exists. The game cannot currently be played in co-op through this wor
 
 ## Known issues
 
-- Reaching gameplay is now shown only for a loaded level that idles; controllability is not shown. The profile does contain saves (corrected 2026-11-15); `-startsavegame` is still untested, and
-  `PrintWindow` returns black frames (only the foreground `BitBlt` fallback produced a readable
-  menu screenshot).
-- Console access, the multiplayer console command table, the actor/object model and the input
-  path for a second player are all unverified.
-- `.text` is Steam-CEG protected, so static disassembly of the game's functions is not
-  trustworthy; conclusions must come from runtime evidence.
+- Reaching gameplay is shown only for a loaded level that idles; controllability is not shown. The
+  profile does contain saves (corrected 2026-11-15), but `-startsavegame` does not load one in this
+  build (two runs, with and without `.sav`), and `PrintWindow` returns black frames (only the
+  foreground `BitBlt` fallback produced a readable menu screenshot).
+- The multiplayer console commands cannot be executed and their handlers fault, so the actor/object
+  model must come from memory scanning, not from game commands.
+- `.text` is Steam-CEG protected and decrypted page by page, so live disassembly of `call` targets is
+  not trustworthy; conclusions must come from behaviour and memory values.
 
 ## Next steps
 
-Product target: two players, two PCs, two screens, over the network, no port forwarding.
+Product target: two players, two PCs, two screens, over the network, no port forwarding. Release
+shape: a launcher plus an in-game mod (`SHAPE.md`).
 
-Gate 0: prove whether Onyx netcode can be started (host, then client, then two instances in one
-PC with `-multiple_instance`). Gate 1: get console/dev access. Gate 2: a gameplay-state harness.
-Gate 3: the actor/object model. Gate 4: a second controllable body and input (local development
-milestone, not co-op). Gate 5: transport between two machines. Gate 6: the remote player, the
-guest's own screen, join and reconnect — the point at which it is actually co-op. Gate 7: sync
-scope (turns, story, saves, transitions). Details and one prompt per agent: `PLAN.md`, `prompts/`.
+Gate 0 is **closed with a no**: the shipped Onyx netcode cannot be started (see "How the game
+works"). From here the plan is the thick path, in this order:
+
+1. Gate 2 (done): a way into a loaded level that proves itself.
+2. Gate 3 (static done, runtime in progress): the live actor/object model, which values to
+   replicate, and whether a second player body can exist.
+3. Gate 4: a second controllable body driven by real input (local development milestone, not co-op).
+4. Gate 5: transport between two machines — a direct address inside a VPN, no port forwarding.
+5. Gate 6: the remote player and the guest's own screen, join after load, leave, reconnect. This is
+   where it becomes co-op.
+6. Gate 7, next milestone: sync scope (combat turns, story, saves, transitions).
+
+MVP scope and stop rules: `PLAN.md`; one prompt per agent: `prompts/`.
 
 ## Release shape
 

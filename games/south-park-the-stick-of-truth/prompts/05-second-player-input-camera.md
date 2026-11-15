@@ -53,6 +53,12 @@ The companion half of the problem is already shipped: the game has a follower ac
 animates and fights next to the New Kid, and replication templates whose arguments name `Secondary_Player_Object` and
 `Remote_Camera_Object`. Pick whichever body Gate 3 says is cheapest to control.
 
+**Start from `../MODEL.md`.** It gives the live classes, the player body's address as module+offset,
+the offset of its position triple, and whether a second player object exists at all. If it says the
+engine cannot hold a second `Player_Object`, use the existing follower companion as the guest's body
+and say so — that is the cheaper path, and the MVP only needs a body that walks, animates and is
+visible to the other machine.
+
 ## Inputs you can reuse
 
 - `../tools/object_model.py` from Gate 3: live player and companion objects with positions.

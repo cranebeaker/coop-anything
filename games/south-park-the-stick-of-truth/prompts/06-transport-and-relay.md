@@ -46,7 +46,9 @@ verdict, evidence (run folders and commands), what your result unblocks, and wha
 
 ## Prerequisite
 
-Gate 0 (prompt 01) and Gate 4 (prompt 05) must have answers. Do not start this gate on guesses.
+Gate 0 (prompt 01) has its answer: **no**, the shipped netcode cannot be started, so this gate owns
+the wire. Gate 4 (prompt 05) must have an answer in its notes file — a second body the mod can move
+— before you start; do not build a transport for a body that does not exist.
 
 ## Scope
 
@@ -60,17 +62,19 @@ forwarding, with one short walk from each side.
 
 ## Two branches, pick from evidence
 
-**Branch A — Gate 0 said the Onyx net layer starts.** Then the transport already exists: Steam
-P2P or the LAN session manager. Your job is to make it work between two machines without port
-forwarding, and to find out what the engine needs to agree on (version string, level name, player
-count, host authority). Start by replaying the exact sequence that worked on one PC (host + client)
-with the relay in between, and capture the engine's own error strings (`Server is full`,
-`incompatible version`, `invalid connection params - bad level name`) as your diagnostics.**Branch B — Gate 0 said no, or only local play works.** Then you own the transport for a mod
-built on the Gate 4 input/actor layer:
-- prefer the Steam Spacewar relay (app 480) so friends connect without port forwarding;
-- wrap the mod's UDP socket in a relay so the same wrapper can also run through a VPN;
+**Branch A — Gate 0 said the Onyx net layer starts.** Closed: Gate 0 said no (see
+`../PLAN.md`, "Decision: thin path first"). Do not spend time trying to start the shipped session
+manager.
+
+**Branch B — the plan.** You own the transport for the mod built on the Gate 4 input/actor layer:
+- **first release: a direct address inside a VPN** (ZeroTier, Radmin VPN, Tailscale). One player
+  hosts, the other pastes the VPN address, nothing is port-forwarded and no router is touched.
+  Write the VPN steps a player can follow; test with the VPN actually on, not on loopback.
 - keep the protocol small and versioned, with a handshake that refuses mixed builds;
-- run one chaos pass (latency, jitter, loss, reorder) and record what the game does.
+- make the socket layer swappable so the same code can later run through a Steam relay
+  (`playbook/networking-steam-spacewar.md`) without changing the mod;
+- run one chaos pass (latency, jitter, loss, reorder) and record what the game does
+  (`playbook/network-chaos-testing.md`).
 
 ## Work that is the same in both branches
 

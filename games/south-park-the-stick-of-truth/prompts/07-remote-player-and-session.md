@@ -75,10 +75,10 @@ If either of the first two is missing, stop and say so; do not invent a session 
 4. **Who owns what.** Write it down in one table: world/quest flags, NPC state, doors and loot,
    combat turns, inventory, saves, level transitions. The host owns story; the guest owns their own
    body and their own UI. Anything else is either shared or refused, never silently divergent.
-5. **Turn-based combat.** The game is not a shooter: fights are turn-based with a companion slot.
-   Establish what the guest can do in a fight (act on their own turn? only watch? own their
-   companion?) and implement the smallest honest version. A guest who watches fights is a valid
-   first release if it is written down.
+5. **Turn-based combat — next milestone, not the MVP.** The MVP (see `../PLAN.md`) is shared
+   exploration of the hub with synced bodies. When you get to fights, establish what the guest can
+   do (act on their own turn? only watch? own their companion?) and implement the smallest honest
+   version. A guest who watches fights is a valid first release if it is written down.
 6. **A two-PC acceptance run.** Host on machine A, guest on B: walk, quest trigger, one fight, one
    level transition, one deliberate disconnect + reconnect. Logs from **both** machines, screenshots
    from **both** screens, and a checklist with pass/fail per item.
@@ -95,6 +95,7 @@ If either of the first two is missing, stop and say so; do not invent a session 
 - Do not call it co-op because two clients connected and one character moved.
 - Do not test only on one machine and write "online" — a loopback test is a transport test, not a
   product test.
-- Do not require port forwarding, a manual IP, or editing a config file: Steam relay or a VPN
-  wrapper, one button each side.
+- Do not require port forwarding and do not require the player to edit a config file. The first
+  release asks for one thing only: the other player's address inside a VPN that the launcher helps
+  them set up.
 - Do not publish the owner's Steam IDs, friend codes or machine names.
