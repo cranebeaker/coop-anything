@@ -197,6 +197,24 @@ Source: `notes/01-net-reachability.md` (branch `game/south-park-the-stick-of-tru
   trigger are console commands (step 3). If `restart_server` and `connect` reach `bind` and
   `ws2_32!connect`, the engine's own netcode is the thin path. If they do not, the puppet path is the fallback.
 
+## 2026-11-15 (lead): `-startsavegame` does not load a save in this harness
+
+Two guarded launches of `tools/in_game.py --once --startsavegame …` under the lock, both
+`run_valid: true` (profile unchanged, guard clean, exe hash matched):
+
+| Run | Argument | in_game | Last frame | Notes |
+|---|---|---|---|---|
+| `in-game-6ae6719d…` | `Save Slot 001` | false at 84 s | front end, correlation 0.995 | no new saves, 14 profile files unchanged |
+| `in-game-1857544d…` | `Save Slot 001.sav` | false at 84 s | front end, correlation 0.996 | same |
+
+Observed in both: the level manifest `2_hub` is resident (held 9 times), 0 AMX script headers, working
+set about 455 MB, and the screen never leaves the front end. So the save name is not the cause (the
+`.sav` form was tried after the bare form), and command-line `-startsavegame` does not reach gameplay
+in this build. The reliable way into a level is still the menu: click Continue, as in the step 2 runs.
+
+Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
+so console execution is **not proven** on this branch.
+
 ### Tools considered and rejected (2026-11-15)
 
 - `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
