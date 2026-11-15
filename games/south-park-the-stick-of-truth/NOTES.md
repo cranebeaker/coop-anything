@@ -57,8 +57,11 @@ wrong or overstated, and one was expensive.
    notes say a playable menu was "not verified". The evidence resolves it in favour of the
    menu: the private-workspace frame `screens/console_tilde.png` is a readable 1280x720 main menu
    (Continue / New Game / Load / DLC / Settings / Quit), and the runs stayed alive for the
-   full 25-55 s. *(Correction: this is a menu, not gameplay. There is no save in the
-   profile, so no save load was ever possible with `-startsavegame`.)*
+   full 25-55 s. *(Correction: this is a menu, not gameplay.)* ~~There is no save in the
+   profile, so no save load was ever possible with `-startsavegame`.~~ **Superseded 2026-11-15:
+   the profile does contain saves (`Save Slot 001-008.sav`, `Checkpoint 1-3.sav`). The later
+   `-startsavegame` runs still did not reach gameplay, so "no save load was observed" stands; the
+   reason given here does not.**
 2. **`runtime_name_pointer_layout_verified` over-claims.** What the probe actually checks is
    that the record's name field reads back the expected string and that the handler field
    equals the static candidate address. The run reports show *identical* 12-instruction
@@ -194,9 +197,11 @@ The table below is what was known before the console work; the final verdicts fo
 - The menu polls `SteamNetworking` about 22 times a second; only vtable slot 2 runs (its name is unknown).
 - Pair instance A's screenshot was fully black while A stayed alive and the guard was clean. Cause unknown
   (capture order or focus is the first suspect).
-- Implication: the thin-mod versus thick-mod decision is **not made**. Both the host and the client
+- ~~Implication: the thin-mod versus thick-mod decision is **not made**. Both the host and the client
   trigger are console commands (step 3). If `restart_server` and `connect` reach `bind` and
-  `ws2_32!connect`, the engine's own netcode is the thin path. If they do not, the puppet path is the fallback.
+  `ws2_32!connect`, the engine's own netcode is the thin path. If they do not, the puppet path is the fallback.~~
+  **Superseded by the final verdicts below (2026-11-15): the thin path is closed and the thick path
+  is the plan.**
 
 **Final verdicts (closed the same day, after the console work below).**
 
