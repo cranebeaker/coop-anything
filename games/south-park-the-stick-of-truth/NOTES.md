@@ -129,6 +129,23 @@ would be far cheaper than writing netcode from scratch.
 - Turn-based combat: whether a second controller can share a fight, and what happens to the
   companion slot the game already fills.
 
+### Tools considered and rejected (2026-11-15)
+
+- `vercel-labs/agent-desktop` (Apache-2.0, Rust, CLI + MCP, Windows 10 1809+): computer-use через
+  UI Automation. **Not adopted for the game.** The game draws its UI in D3D11/Scaleform, so UIA
+  exposes no elements and ref-based actions have nothing to click; only `--headed` coordinate
+  clicks remain, which is what our own Win32 `SendInput` already does, and the capture problem is
+  ours to solve anyway. It also does not touch any hard gate (netcode, console, object model,
+  second body, transport). Risks if adopted: unsigned binary, AV/SmartScreen and Smart App Control
+  blocking, screenshots/clipboard can capture private desktop content, `--headed` steals the
+  foreground from a capture in progress, and it would need the same machine-wide launch lock.
+  **Possible later use:** Steam/crash-reporter dialogs during Gate 2, and installer QA for Gate 8
+  (install → run → uninstall with UI text checks) where the UI is ordinary Win32/WPF/Chromium and
+  UIA does work. If used: pin the version and SHA-256, install locally (not globally), with the
+  owner's approval, under `tools/launch_lock.py`. Sources: the repo README and
+  `agent-browser.dev/desktop/platforms/windows` (read 2026-11-15; Windows behaviour "not run for
+  these docs" by its own authors, so unproven on this title).
+
 ### Next gate (replaces the AMX-loader gate)
 
 Answer, with a test, whether Onyx netcode can be started in this build — host first, client
