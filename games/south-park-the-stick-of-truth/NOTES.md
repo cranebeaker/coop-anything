@@ -228,6 +228,24 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead, launch blocker): the game exits by itself after a Steam restart
+
+After the Steam client was restarted (19:58), every guarded launch fails the same way:
+
+- Frida reports `timeout` or `connection is closed` while attaching to the spawned process;
+- the harness now reports the exit code, which is **0x00000000** - the game ends cleanly, it does not
+  crash (no event in the Windows Application log, no WER report);
+- it happens **with and without** `dinput8.dll` in the test copy, so the mod is not the cause;
+- Frida itself is healthy: it spawns and attaches to `notepad.exe` without trouble;
+- the profile and the exe hash stay unchanged (`run_valid: true`), `working_set_mb: null` - the
+  process never reaches the window;
+- adding `steam_appid.txt` (the usual fix for `RestartAppIfNecessary`) did not help, and removing it
+  again changed nothing.
+
+Conclusion: the launch environment, not the project. Cheapest next step is a Steam restart or a
+machine reboot and then the same command (`local/stage1_accept.py`), which already carries the
+position-and-motion acceptance test.
+
 ## 2026-11-15 (lead, handoff): mod state and the one measurement left for Stage 1
 
 Working, built and tested on the isolated copy:
