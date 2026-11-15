@@ -581,6 +581,34 @@ def snapshot(root):
             for path in sorted(Path(root).rglob('*')) if path.is_file()}
 
 
+def steam_userdata_roots():
+    """Steam's per-account save tree for this app, one folder per account id.
+
+    The playbook (methods.md) is explicit: steam.exe writes FileWrite calls into
+    `Steam\\userdata\\<id>\\<appid>\\remote` even when Cloud is switched off for the game, so a
+    guard that only hashes the Documents profile is not enough.
+    """
+    candidates = [Path(r'C:\Program Files (x86)\Steam'), Path(r'D:\Steam'),
+                  Path(r'D:\SteamLibrary')]
+    roots = []
+    for steam in candidates:
+        userdata = steam / 'userdata'
+        if not userdata.is_dir():
+            continue
+        for account in userdata.iterdir():
+            app = account / '213670'
+            if app.is_dir():
+                roots.append(app)
+    return roots
+
+
+def steam_userdata_snapshot():
+    trees = {}
+    for root in steam_userdata_roots():
+        trees[str(root)] = snapshot(root)
+    return trees
+
+
 def inventory(root):
     return {path.relative_to(root).as_posix(): path.stat().st_size
             for path in sorted(Path(root).rglob('*')) if path.is_file()}
@@ -628,6 +656,7 @@ class Game:
         except Exception:                            # noqa: BLE001
             self.owner_window = 0
         self.profile_before = snapshot(ORIGINAL_PROFILE)
+        self.userdata_before = steam_userdata_snapshot()
         backup = self.run_dir / 'original-profile-backup'
         shutil.copytree(ORIGINAL_PROFILE, backup)
         self.profile_dir = self.run_dir / 'test-profile'
@@ -879,6 +908,11 @@ class Game:
         self._shutdown()
         after = snapshot(ORIGINAL_PROFILE)
         self.result['original_profile_unchanged'] = after == self.profile_before
+        userdata_after = steam_userdata_snapshot()
+        self.result['steam_userdata_unchanged'] = userdata_after == self.userdata_before
+        self.result['steam_userdata_changed'] = sorted(
+            root for root in userdata_after
+            if userdata_after.get(root) != self.userdata_before.get(root))
         self.result['original_exe_hash_still_matches'] = sha256(EXE) == EXPECTED_EXE_SHA256
         self.result['guard_integrity'] = not self.errors and not any(
             isinstance(e, dict) and e.get('kind') == 'guard-error' for e in self.events)
