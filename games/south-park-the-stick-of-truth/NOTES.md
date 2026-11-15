@@ -228,6 +228,40 @@ in this build. The reliable way into a level is still the menu: click Continue, 
 Also: the step 3 launch of 2026-11-15 wrote its `exec` file but recorded **0 executed commands**,
 so console execution is **not proven** on this branch.
 
+## 2026-11-15 (lead): what the mod, the bridge and the transport actually are
+
+Written because the audit found fifteen commits without a record. Observed:
+
+- **Mod DLL**: `dinput8.dll` proxy next to the exe, loaded before game code, forwards
+  `DirectInput8Create` to the system DLL. Logs to `coop-mod.log`, ticks on its own thread, finds
+  `DS_Component_Player` and `bfx::MoverImpl` objects by their vtables every 10 s. Nothing is hooked
+  at startup: the `GetProcAddress` IAT patch in `DllMain` is what made the game exit at launch
+  (`0x0`), and creating a dummy D3D device during init killed it too. Hooks are opt-in
+  (`SP_COOP_HOOKS`, or `exec "hooks graphics"` through the bridge).
+- **Bridge**: the hub's `tools/bridge` embedded, `tcp://127.0.0.1:27990`, methods `ping`, `version`,
+  `state`, `eval` (`ticks`, `player_count`, `mover_count`), `exec` (`tp`, `host`, `join`, `net`,
+  `hooks ...`). `state` returns pid, ticks, player and mover addresses, the best position triple and
+  the network block. Verified: `version` answered with game/build/pid on a live run.
+- **Transport**: `mod/src/net.*`, UDP snapshots at 20 Hz, newer-wins by sequence, peer address
+  learned from the first packet. Self-test `net_selftest.exe`: 7/7 checks, `ALL OK`.
+- **Remote body**: `mod/src/remote.*`, 16-snapshot ring, render 100 ms in the past, yaw interpolated
+  the short way, `stale` flag on gaps > 500 ms with hold instead of extrapolation.
+  Self-test `remote_selftest.exe`: 26/26 checks, `ALL OK`; mutation checks catch naive yaw lerp and
+  gap extrapolation.
+- **Launcher**: `launcher/launcher.py`, finds the install in Steam libraries, checks the exe SHA-256,
+  installs/removes the mod, starts the game. It refuses to write into a folder that is not
+  `SP_GAME_DIR` (the retail install is protected).
+- **Position**: a run in Clyde's Fort reported a plausible triple at **offset 0x5c** with values
+  `(0, 7, 45)`. Writing +2 to it via `tp` changed the value but **did not move the character**
+  (`moved: false`, both screenshots captured and identical) - the triple is a cached copy that the
+  simulation recomputes from the physics body, the pattern the hub documents for Far Cry 2. The next
+  write must target the mover.
+
+Unknown, recorded on purpose: which of `bfx::MoverImpl`'s triples is the transform; whether the
+`movers` list in `state` is booked correctly (it converged with `players` after the first scan);
+whether any run ever wrote to Steam `userdata\<id>\213670` - the guard hashes only the Documents
+profile, which is weaker than `playbook/methods.md` asks for.
+
 ## 2026-11-15 (lead, launch blocker): the game exits by itself after a Steam restart
 
 After the Steam client was restarted (19:58), every guarded launch fails the same way:
