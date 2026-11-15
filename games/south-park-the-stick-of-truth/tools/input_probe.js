@@ -448,6 +448,10 @@ rpc.exports = {
     modules: function () {
         return inputModules();
     },
+    allModules: function () {
+        return Process.enumerateModules().map((m) => m.name).filter((n) =>
+            /d3d|dxgi|opengl|vulkan|scaleform|gfx/i.test(n));
+    },
     // Count-only hooks on the input APIs a Windows game can use. Tells the harness
     // which delivery path the engine actually reads, without changing anything.
     apis: function () {

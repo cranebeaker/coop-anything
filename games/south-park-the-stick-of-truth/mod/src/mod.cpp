@@ -8,6 +8,8 @@
 #include <windows.h>
 
 #include <d3d9.h>
+#include <d3d11.h>
+#include <dxgi1_2.h>
 
 #include <cstdio>
 
@@ -24,6 +26,20 @@ size_t g_notes_length = 0;
 typedef HRESULT(WINAPI* PresentFn)(IDirect3DDevice9*, const RECT*, const RECT*, HWND,
                                    const RGNDATA*);
 PresentFn g_present = nullptr;
+PresentFn g_present_ex = nullptr;
+typedef HRESULT(WINAPI* PresentExFn)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, DWORD,
+                                     const RGNDATA*);
+PresentExFn g_present_ex_slot = nullptr;
+PresentFn g_present_chain = nullptr;
+
+void note_frame();
+
+HRESULT WINAPI swapchain_present_hook(IDirect3DSwapChain9* chain, const RECT* source,
+                                      const RECT* dest, HWND window, const RGNDATA* dirty)
+{
+    note_frame();
+    return g_present_chain(reinterpret_cast<IDirect3DDevice9*>(chain), source, dest, window, dirty);
+}
 
 void log_line(const char* text)
 {
@@ -42,8 +58,7 @@ void log_value(const char* label, long long value)
     log_line(line);
 }
 
-HRESULT WINAPI present_hook(IDirect3DDevice9* device, const RECT* source, const RECT* dest,
-                            HWND window, const RGNDATA* dirty)
+void note_frame()
 {
     LONG frames = InterlockedIncrement(&g_frames);
     DWORD now = GetTickCount();
@@ -57,7 +72,48 @@ HRESULT WINAPI present_hook(IDirect3DDevice9* device, const RECT* source, const 
         g_frame_mark = frames;
         g_frame_second = now;
     }
+}
+
+HRESULT WINAPI present_hook(IDirect3DDevice9* device, const RECT* source, const RECT* dest,
+                            HWND window, const RGNDATA* dirty)
+{
+    note_frame();
     return g_present(device, source, dest, window, dirty);
+}
+
+HRESULT WINAPI present_hook_ex(IDirect3DDevice9Ex* device, const RECT* source, const RECT* dest,
+                               HWND window, const RGNDATA* dirty)
+{
+    note_frame();
+    return g_present_ex(reinterpret_cast<IDirect3DDevice9*>(device), source, dest, window, dirty);
+}
+
+HRESULT WINAPI present_ex_slot_hook(IDirect3DDevice9* device, const RECT* source,
+                                    const RECT* dest, HWND window, DWORD flags,
+                                    const RGNDATA* dirty)
+{
+    note_frame();
+    return g_present_ex_slot(device, source, dest, window, flags, dirty);
+}
+
+void patch_swapchain(IDirect3DDevice9* device, const char* label)
+{
+    IDirect3DSwapChain9* chain = nullptr;
+    if (device == nullptr || FAILED(device->GetSwapChain(0, &chain)) || chain == nullptr) {
+        return;
+    }
+    void** vtable = *reinterpret_cast<void***>(chain);
+    g_present_chain = reinterpret_cast<PresentFn>(vtable[3]);
+    DWORD old_protect = 0;
+    if (g_present_chain != nullptr &&
+        VirtualProtect(&vtable[3], sizeof(void*), PAGE_READWRITE, &old_protect)) {
+        vtable[3] = reinterpret_cast<void*>(&swapchain_present_hook);
+        VirtualProtect(&vtable[3], sizeof(void*), old_protect, &old_protect);
+        char line[96];
+        std::snprintf(line, sizeof(line), "SwapChain Present hook installed (%s)", label);
+        log_line(line);
+    }
+    chain->Release();
 }
 
 LRESULT CALLBACK dummy_window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
@@ -117,10 +173,156 @@ bool install_present_hook()
     } else {
         log_line("Present hook: VirtualProtect failed");
     }
+    // The engine may create an IDirect3DDevice9Ex: it has its own vtable and its own Present
+    // implementation, so patching the plain device alone would never fire.
+    typedef HRESULT(WINAPI* Direct3DCreate9ExFn)(UINT, IDirect3D9Ex**);
+    HMODULE d3d9_module = GetModuleHandleW(L"d3d9.dll");
+    if (d3d9_module == nullptr) {
+        d3d9_module = LoadLibraryW(L"d3d9.dll");
+    }
+    if (d3d9_module != nullptr) {
+        Direct3DCreate9ExFn create_ex = reinterpret_cast<Direct3DCreate9ExFn>(
+            reinterpret_cast<void*>(GetProcAddress(d3d9_module, "Direct3DCreate9Ex")));
+        if (create_ex != nullptr) {
+            IDirect3D9Ex* d3d_ex = nullptr;
+            if (SUCCEEDED(create_ex(D3D_SDK_VERSION, &d3d_ex)) && d3d_ex != nullptr) {
+                IDirect3DDevice9* device_ex = nullptr;
+                if (SUCCEEDED(d3d_ex->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window,
+                                                   D3DCREATE_SOFTWARE_VERTEXPROCESSING, &params,
+                                                   &device_ex))
+                    && device_ex != nullptr) {
+                    void** vtable_ex = *reinterpret_cast<void***>(device_ex);
+                    g_present_ex = reinterpret_cast<PresentFn>(vtable_ex[17]);
+                    DWORD old_ex = 0;
+                    if (VirtualProtect(&vtable_ex[17], sizeof(void*), PAGE_READWRITE, &old_ex)) {
+                        vtable_ex[17] = reinterpret_cast<void*>(&present_hook_ex);
+                        VirtualProtect(&vtable_ex[17], sizeof(void*), old_ex, &old_ex);
+                        log_line("Present hook (Ex) installed");
+                    } else {
+                        log_line("Present hook (Ex): VirtualProtect failed");
+                    }
+                    // IDirect3DDevice9Ex adds PresentEx at slot 121, and a game that uses the
+                    // Ex device usually calls that one instead of Present.
+                    void** present_ex_slot = &vtable_ex[121];
+                    g_present_ex_slot = reinterpret_cast<PresentExFn>(*present_ex_slot);
+                    DWORD old_present_ex = 0;
+                    if (g_present_ex_slot != nullptr &&
+                        VirtualProtect(present_ex_slot, sizeof(void*), PAGE_READWRITE,
+                                       &old_present_ex)) {
+                        *present_ex_slot = reinterpret_cast<void*>(&present_ex_slot_hook);
+                        VirtualProtect(present_ex_slot, sizeof(void*), old_present_ex,
+                                       &old_present_ex);
+                        log_line("PresentEx hook (slot 121) installed");
+                    }
+                    patch_swapchain(device_ex, "ex");
+                    device_ex->Release();
+                } else {
+                    log_line("Present hook (Ex): CreateDevice failed");
+                }
+                d3d_ex->Release();
+            } else {
+                log_line("Present hook (Ex): Direct3DCreate9Ex failed");
+            }
+        }
+    }
+    patch_swapchain(device, "plain");
     device->Release();
     DestroyWindow(window);
     d3d->Release();
-    return g_present != nullptr;
+    return g_present != nullptr || g_present_ex != nullptr;
+}
+
+// The game loads d3d11.dll and dxgi.dll (checked live), so the picture is presented by a
+// DXGI swap chain, not by D3D9: the hooks above exist for builds that render through D3D9,
+// and this one is the one that actually fires here. Slot 8 is IDXGISwapChain::Present.
+typedef HRESULT(WINAPI* DxgiPresentFn)(IDXGISwapChain*, UINT, UINT);
+typedef HRESULT(WINAPI* DxgiPresent1Fn)(IDXGISwapChain1*, UINT, UINT,
+                                        const DXGI_PRESENT_PARAMETERS*);
+DxgiPresentFn g_dxgi_present = nullptr;
+DxgiPresent1Fn g_dxgi_present1 = nullptr;
+
+HRESULT WINAPI dxgi_present_hook(IDXGISwapChain* chain, UINT interval, UINT flags)
+{
+    note_frame();
+    return g_dxgi_present(chain, interval, flags);
+}
+
+HRESULT WINAPI dxgi_present1_hook(IDXGISwapChain1* chain, UINT interval, UINT flags,
+                                  const DXGI_PRESENT_PARAMETERS* params)
+{
+    note_frame();
+    return g_dxgi_present1(chain, interval, flags, params);
+}
+
+void install_dxgi_hook()
+{
+    if (g_dxgi_present != nullptr) {
+        return;
+    }
+    WNDCLASSEXW klass = {};
+    klass.cbSize = sizeof(klass);
+    klass.lpfnWndProc = dummy_window_proc;
+    klass.hInstance = GetModuleHandleW(nullptr);
+    klass.lpszClassName = L"coop-mod-dxgi";
+    RegisterClassExW(&klass);
+    HWND window = CreateWindowExW(0, klass.lpszClassName, L"coop", WS_POPUP, 0, 0, 8, 8, nullptr,
+                                  nullptr, klass.hInstance, nullptr);
+    if (window == nullptr) {
+        log_line("DXGI hook: dummy window failed");
+        return;
+    }
+    DXGI_SWAP_CHAIN_DESC desc = {};
+    desc.BufferCount = 1;
+    desc.BufferDesc.Width = 8;
+    desc.BufferDesc.Height = 8;
+    desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    desc.OutputWindow = window;
+    desc.SampleDesc.Count = 1;
+    desc.Windowed = TRUE;
+    desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    ID3D11Device* device = nullptr;
+    ID3D11DeviceContext* context = nullptr;
+    IDXGISwapChain* chain = nullptr;
+    D3D_FEATURE_LEVEL level = D3D_FEATURE_LEVEL_11_0;
+    HRESULT created = D3D11CreateDeviceAndSwapChain(
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &desc,
+        &chain, &device, &level, &context);
+    if (FAILED(created) || chain == nullptr) {
+        char line[96];
+        std::snprintf(line, sizeof(line), "DXGI hook: CreateDeviceAndSwapChain 0x%08lx",
+                      static_cast<unsigned long>(created));
+        log_line(line);
+        DestroyWindow(window);
+        return;
+    }
+    void** vtable = *reinterpret_cast<void***>(chain);
+    g_dxgi_present = reinterpret_cast<DxgiPresentFn>(vtable[8]);
+    DWORD old_protect = 0;
+    if (g_dxgi_present != nullptr &&
+        VirtualProtect(&vtable[8], sizeof(void*), PAGE_READWRITE, &old_protect)) {
+        vtable[8] = reinterpret_cast<void*>(&dxgi_present_hook);
+        VirtualProtect(&vtable[8], sizeof(void*), old_protect, &old_protect);
+        log_line("DXGI Present hook installed (slot 8)");
+    }
+    // A flip-model chain presents through IDXGISwapChain1::Present1, slot 22.
+    void** present1_slot = &vtable[22];
+    g_dxgi_present1 = reinterpret_cast<DxgiPresent1Fn>(*present1_slot);
+    DWORD old_present1 = 0;
+    if (g_dxgi_present1 != nullptr &&
+        VirtualProtect(present1_slot, sizeof(void*), PAGE_READWRITE, &old_present1)) {
+        *present1_slot = reinterpret_cast<void*>(&dxgi_present1_hook);
+        VirtualProtect(present1_slot, sizeof(void*), old_present1, &old_present1);
+        log_line("DXGI Present1 hook installed (slot 22)");
+    }
+    if (context != nullptr) {
+        context->Release();
+    }
+    if (device != nullptr) {
+        device->Release();
+    }
+    chain->Release();
+    DestroyWindow(window);
 }
 
 DWORD WINAPI worker(LPVOID)
@@ -144,6 +346,7 @@ DWORD WINAPI worker(LPVOID)
         log_line(g_notes);
     }
     install_present_hook();
+    install_dxgi_hook();
 
     // The thread still ticks, so a run is observable even before the first frame hook fires.
     for (;;) {

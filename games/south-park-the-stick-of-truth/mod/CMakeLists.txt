@@ -24,5 +24,5 @@ set_target_properties(dinput8 PROPERTIES
 if (MINGW)
     # The export has to keep its name; MinGW marks it with __declspec(dllexport) or a .def.
     target_link_options(dinput8 PRIVATE -Wl,--kill-at)
-    target_link_libraries(dinput8 PRIVATE d3d9)
+    target_link_libraries(dinput8 PRIVATE d3d9 d3d11 dxgi)
 endif()
