@@ -710,7 +710,37 @@ class Game:
             self.extra[extra_name] = extra
         self.device.resume(self.pid)
         self.started = time.time()
+        self._hand_focus_back()
         return self
+
+    def _hand_focus_back(self):
+        """Give the desktop back as soon as the game window appears, and keep doing it.
+
+        A run must not leave the game in front of the owner. The window stays where it is, but
+        focus returns to whatever they were using; captures that need the foreground ask for it
+        explicitly and briefly.
+        """
+        import threading
+
+        owner_window = getattr(self, 'owner_window', 0)
+        if not owner_window:
+            return
+
+        def watch():
+            user = ctypes.windll.user32
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                try:
+                    game_window = user.FindWindowW(WINDOW_TITLE, None)
+                    if game_window:
+                        if int(user.GetForegroundWindow() or 0) == int(game_window):
+                            user.ShowWindow(owner_window, 9)
+                            user.SetForegroundWindow(owner_window)
+                except Exception:                    # noqa: BLE001
+                    pass
+                time.sleep(0.7)
+
+        threading.Thread(target=watch, daemon=True, name='coop-focus-back').start()
 
     # -- session helpers ---------------------------------------------------
     def wait(self, seconds):

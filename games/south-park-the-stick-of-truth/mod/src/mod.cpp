@@ -387,6 +387,50 @@ HRESULT WINAPI create_swapchain_hook(IDXGIAdapter* adapter, D3D_DRIVER_TYPE driv
     return result;
 }
 
+typedef HRESULT(WINAPI* CreateFactoryFn)(REFIID, void**);
+typedef HRESULT(WINAPI* FactoryCreateSwapChainFn)(IDXGIFactory*, IUnknown*, DXGI_SWAP_CHAIN_DESC*,
+                                                 IDXGISwapChain**);
+
+CreateFactoryFn g_real_create_factory = nullptr;
+FactoryCreateSwapChainFn g_real_factory_create_swapchain = nullptr;
+
+HRESULT WINAPI factory_create_swapchain_hook(IDXGIFactory* self, IUnknown* device,
+                                             DXGI_SWAP_CHAIN_DESC* desc, IDXGISwapChain** out)
+{
+    HRESULT result = E_FAIL;
+    if (g_real_factory_create_swapchain != nullptr) {
+        result = g_real_factory_create_swapchain(self, device, desc, out);
+        if (SUCCEEDED(result) && out != nullptr && *out != nullptr) {
+            patch_chain(*out, "factory");
+        }
+    }
+    return result;
+}
+
+HRESULT WINAPI create_factory_hook(REFIID riid, void** out)
+{
+    HRESULT result = E_FAIL;
+    if (g_real_create_factory == nullptr) {
+        return result;
+    }
+    result = g_real_create_factory(riid, out);
+    if (SUCCEEDED(result) && out != nullptr && *out != nullptr) {
+        auto* factory = reinterpret_cast<IDXGIFactory*>(*out);
+        void** vtable = *reinterpret_cast<void***>(factory);
+        if (vtable[10] != reinterpret_cast<void*>(&factory_create_swapchain_hook)) {
+            g_real_factory_create_swapchain =
+                reinterpret_cast<FactoryCreateSwapChainFn>(vtable[10]);
+            DWORD old_protect = 0;
+            if (VirtualProtect(&vtable[10], sizeof(void*), PAGE_READWRITE, &old_protect)) {
+                vtable[10] = reinterpret_cast<void*>(&factory_create_swapchain_hook);
+                VirtualProtect(&vtable[10], sizeof(void*), old_protect, &old_protect);
+                coop_note("DXGI factory hooked (CreateSwapChain, slot 10)");
+            }
+        }
+    }
+    return result;
+}
+
 FARPROC WINAPI get_proc_address_hook(HMODULE module, LPCSTR name)
 {
     FARPROC proc = nullptr;
@@ -399,6 +443,11 @@ FARPROC WINAPI get_proc_address_hook(HMODULE module, LPCSTR name)
         char line[160];
         std::snprintf(line, sizeof(line), "gpa: %s -> %s", name, proc == nullptr ? "null" : "ok");
         coop_note(line);
+    }
+    if (name != nullptr && proc != nullptr &&
+        (lstrcmpA(name, "CreateDXGIFactory") == 0 || lstrcmpA(name, "CreateDXGIFactory1") == 0)) {
+        g_real_create_factory = reinterpret_cast<CreateFactoryFn>(reinterpret_cast<void*>(proc));
+        return reinterpret_cast<FARPROC>(&create_factory_hook);
     }
     if (name != nullptr && proc != nullptr &&
         lstrcmpA(name, "D3D11CreateDeviceAndSwapChain") == 0) {
