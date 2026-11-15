@@ -817,6 +817,11 @@ bool read_first_triple(uintptr_t address, float out[3], unsigned* offset_out)
     return false;
 }
 
+// Offset of the triple reported by `position`, so a test can nudge it and watch the character
+// move (the only honest way to prove a float triple is the player's position).
+unsigned g_position_offset = 0;
+bool g_position_known = false;
+
 // --- in-game bridge ---------------------------------------------------------
 //
 // The hub's tools/bridge server, embedded: a loopback RPC that runs game calls on the tick
@@ -834,6 +839,7 @@ public:
     {
         coopbridge::Capabilities caps;
         caps.state = true;
+        caps.exec = true;
         caps.eval = true;
         return caps;
     }
@@ -865,9 +871,38 @@ public:
                 position.set("offset", static_cast<double>(offset));
                 position.set("object", static_cast<double>(g_player_hits[0]));
                 root.set("position", position);
+                g_position_offset = offset;
+                g_position_known = true;
             }
         }
         return root;
+    }
+
+    // A test hook, not a player feature: `tp dx dy dz` shifts the triple the scan reported, so
+    // "is this really the player's position?" is answered by watching the character move.
+    coopbridge::ExecResult Exec(const std::string& line, const std::string&) override
+    {
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float dz = 0.0f;
+        if (std::sscanf(line.c_str(), "tp %f %f %f", &dx, &dy, &dz) != 3) {
+            return {false, "usage: tp dx dy dz"};
+        }
+        if (!g_position_known || g_player_count == 0) {
+            return {false, "no player position yet"};
+        }
+        float current[3] = {0.0f, 0.0f, 0.0f};
+        unsigned offset = 0;
+        if (!read_first_triple(g_player_hits[0], current, &offset)) {
+            return {false, "no plausible triple in the object"};
+        }
+        current[0] += dx;
+        current[1] += dy;
+        current[2] += dz;
+        WriteProcessMemory(GetCurrentProcess(),
+                           reinterpret_cast<void*>(g_player_hits[0] + offset), current,
+                           sizeof(current), nullptr);
+        return {true, "tp applied"};
     }
 
     // A few named expressions, so a test can ask for one number without a state dump.
@@ -996,4 +1031,5 @@ BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID)
     }
     return TRUE;
 }
+
 
