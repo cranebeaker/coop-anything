@@ -552,6 +552,27 @@ QA 0.6.3 (bots):
     - The host log of that session was not kept (its window was restarted).
     - Why the elements outlive their box: unknown (not traced in the game's code).
 
+## 0.6.4 (2026-11-16), from a playtest of 0.6.3
+1. A secret hand found in one run carried into the next run of the same session.
+   - Playtest: Five of a Kind found and levelled, then a new run. In the new run it was
+     listed in Run Info (played 0 times), its planet showed up in shops and packs, and an
+     Orbital Tag offered to level it.
+   - Cause: `G.FUNCS.start_run` resets the co-op run state at once (`D.reset_run_state`:
+     `hv_sent`, `peer_known`). The old run stays in `G.GAME` until the screen wipe's events
+     swap in the new one. In that moment `D.hands_update` saw the old run's visible secret
+     hand as not yet sent and sent `hv` again. The partner, already in its new run, took it
+     in.
+   - Fix: `hv` carries the run id (`G.GAME.duo.id`). A hand for another run is kept in
+     `D.hv_pending` and applied only if that run is played (a continue of it).
+   - Bot scenario `-NewRun` (with `-Secret`): the guest finds Five of a Kind in run 1, the
+     host starts run 2 at the end of ante 2, and the guest follows.
+     - Log: host `START ... id=...5033` at 112.3 s, then at 112.6 s `HV peer
+       h=Five_of_a_Kind for run ...1842, ours ...5033: kept until that run`.
+     - Both sides' first shop of run 2: `visible=false played=0 known=false`. 44/44
+       (`-Diff 0.1`: at the default the bots lost run 1 before the end).
+   - Secret hands scenario `-HostShopLag 6 -Secret -Planets` 46/46.
+   - Full suite not rerun.
+
 ## Network play
 - Steam store categories for 2379780 have no Remote Play Together (only Single-player,
   Full controller support, DualSense, Steam Cloud, Family Sharing...). So Steam does not

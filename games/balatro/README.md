@@ -4,9 +4,9 @@
 |---|---|
 | Engine | LÖVE 11 (fused exe: `love.exe` + a zip of Lua sources), LuaJIT, luasteam |
 | Versions tested | Steam, appid 2379780, build 17459173, version 1.0.1o-FULL, `Balatro.exe` SHA-256 `0d75fe164accf3312734d4b37ac98788dd15f0b8e4f9bb8b7f90c4e59de93f47`, Windows 10 x64 |
-| Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.3), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
-| QA level | automated (bot clients, 13 scenarios incl. crashes, restarts, tag stacks, boss rerolls, a paused score count and ante vouchers) plus playtests to ante 8 |
-| Last updated | 2026-11-13 |
+| Projects | [Balatro Duo](https://github.com/dobrodeetel/balatro-duo) (local co-op on one PC, release 0.6.4), directory entry "Balatro Duo"; [BalatroCoop](https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/) (LAN, same run), directory entry "BalatroCoop" |
+| QA level | automated (bot clients, 14 scenarios incl. crashes, restarts, tag stacks, boss rerolls, a paused score count, ante vouchers and a second run in one session) plus playtests to ante 8 |
+| Last updated | 2026-11-16 |
 
 ## Where things stand
 
@@ -78,11 +78,13 @@ found: [NOTES.md](NOTES.md).
   split, partner's secret hands). Each side sends its whole run position (`sy`). The side
   further along wins: the one behind catches up on its blind screen or joins the blind the
   partner is already in. A dead guest window is reopened by the host.
+- Secret hand messages carry the run id, so a hand from the previous run cannot reach the
+  next one.
 - Text in all 15 game languages (`duo_lang.lua`), using the game's own terms.
 
 ## QA
 
-- `tools/run_all.ps1` in the mod repo: 13 scenarios, each two bot clients playing real games to
+- `tools/run_all.ps1` in the mod repo: 14 scenarios, each two bot clients playing real games to
   the end of ante 2, logs compared by `tools/check_logs.ps1`. It checks selections, skips,
   targets, equal totals in every round, score sent only after counting, tags, levels and
   wishes.
@@ -90,7 +92,8 @@ found: [NOTES.md](NOTES.md).
   both), guest wishes + slow guest, own decks, host killed at 110 s, guest killed at 45 s,
   both killed at 130 s, guest killed and reopened by the host, tag stack with bots sitting 6 s
   in each pack, boss rerolls on both sides, host paused 30 s while its hand counts, ante
-  vouchers on both sides. Any run also fails on `ERR two packs at once`.
+  vouchers on both sides, a second run in one session. Any run also fails on `ERR two packs
+  at once`.
 - 0.6.0 (2026-10-27): 9/9 passed (46, 46, 41, 44, 39, 20, 25, 17, 25 checks).
 - 0.6.1 (2026-10-29): scenarios 1-2 (46/46 each); a wish run (47/47); language screenshots
   (`tools/lang_test.ps1`, 15/15).
@@ -104,6 +107,7 @@ found: [NOTES.md](NOTES.md).
   - 2026-11-12, after later changes: 12/13. The failure was the wish check (a wish sent
     while the host was still in the shop was dropped). After the fix, the wish scenario
     passed 4 runs in a row (48/48); the full suite was not run again.
+- 0.6.4 (2026-11-16): second run in one session 44/44, secret hands 46/46.
 - Long sessions are checked in the logs: `PERF` (fps, ms per frame, memory, object
   counts), `MOVE` (census of `G.MOVEABLES`), `PROF` (sampling profiler when the game
   update is slow), `LEAK` (UI elements taken out of the update).
