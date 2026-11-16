@@ -3,30 +3,28 @@
 | | |
 |---|---|
 | Engine | Dunia (a CryEngine 1 derivative), 32-bit x86. The 28 KB `FarCry2.exe` is a stub that calls `Dunia.dll!RunGame`; engine and netcode are in `Dunia.dll`, Lua game logic is in the archives |
-| Versions tested | Steam, app id 19900, version 1.03, build id 52164. `Dunia.dll` SHA-256 `6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765` (20,183,176 bytes). Every address in this write-up is for that file. Reproduced on a second PC (Windows 11 23H2) with the identical file on 2026-10-24, and run between that PC and a third one (Windows 11 Pro, same file) over Steam on 2026-10-25 |
-| Projects | No public co-op project. A research prototype (position + heading puppet, below): https://github.com/MortyRei/fc2-coop-probe (MIT); fixes, the relay and the tests are in its open PRs #1-#3 |
-| QA level | automated, for the position puppet only (two-copy test on one PC: 20/20, 22/22 through relays; see QA), plus one manual two-PC run over Steam. Story, enemies and world state are not synced, so there is nothing to test there yet |
-| Last updated | 2026-10-25 |
+| Versions tested | Steam, app id 19900, version 1.03, build id 52164. `Dunia.dll` SHA-256 `6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765` (20,183,176 bytes). Every address in this write-up is for that file. Two PCs (Windows 11) on different networks over Steam since 2026-10-25; most later work on two copies on one PC |
+| Projects | **Far Cry 2 Campaign Coop**, https://github.com/HitchLangley/far-cry-2-campaign-coop (MIT, maintained by HitchLangley; renamed from `fc2-coop-probe` in 2026-11). It started from the research probe https://github.com/MortyRei/fc2-coop-probe (initial import 2026-10-19) |
+| QA level | automated for position and heading (two-copy test on one PC); everything newer was checked by hand on two copies on one PC, with logs. Story and most world state are not synced |
+| Last updated | 2026-11-14 |
 
 ## Where things stand
 
-There is no campaign co-op for Far Cry 2, and the stock multiplayer cannot carry the
-campaign today (see below). A research prototype shows that a second player can be done:
-two copies of the game load the same save and exchange the player's position and heading;
-each copy spawns an invincible avatar of the peer, moves it smoothly and turns it. This works
-with both copies on one PC and, through a relay over Steam (no IP addresses or port forwarding),
-between two PCs on different networks (one manual run, 2026-10-25). It is not playable as
-co-op: the avatar has no walking animation, no weapons or health sync, and mission state is
-not shared. Details and the dated evidence
-are in [NOTES.md](NOTES.md).
+Two players can start the campaign together from the host's save, joining from the game's own menu over Steam,
+and see each other as animated avatars with weapons, shots and hit damage; they can share a car. The host runs
+every NPC and the joiner sees the same NPCs as puppets. It is a playable prototype for walking around and fighting
+together, not campaign co-op yet: missions, pickups, destruction, death and revive and most world state are not
+synced, enemies attacking the joiner is an experiment, and the newest work has only run on one PC. The project's
+own estimate is about 38 %. Open problems are tracked in the project's issues:
+https://github.com/HitchLangley/far-cry-2-campaign-coop/issues
 
 ## Existing work
 
-Searched on 2026-10-19 (web search, GitHub, Nexus, ModDB, Steam forums; Reddit only through
-search summaries): no Far Cry 2 co-op campaign project found. Searches were "Far Cry 2
-campaign co-op mod", the same with "Dunia" and "moddb", an extended co-op / Nexus / Reddit
-query, a Russian query and a dedicated-server query.
+Searched on 2026-10-19 (web search, GitHub, Nexus, ModDB, Steam forums; Reddit only through search summaries): no
+other Far Cry 2 co-op campaign project found.
 
+- **Far Cry 2 Campaign Coop** (this write-up's project, above). Before 2026-10-26 the work happened as open PRs on the
+  MortyRei repository; it moved to the maintained repository, which left the fork network on 2026-11-14.
 - A 2013 Steam thread says the game is single player outside multiplayer
   (a user answer): https://steamcommunity.com/app/19900/discussions/0/864973123475897875
 - FCSE (Far Cry 2 Engine Extension), Nexus mod 368, a launcher that loads DLL plugins from
@@ -36,7 +34,6 @@ query, a Russian query and a dedicated-server query.
 - FC2MPPatcher (GPL-2.0) restores the online multiplayer after Ubisoft's services closed
   on 2021-06-01, for version 1.03. No co-op or campaign: https://github.com/halvors/FC2MPPatcher
 - ModDB lists overhaul mods and a 16-player deathmatch map, none co-op.
-
 ## How the game works (for co-op)
 
 What follows was observed on the test copies; each point is dated and sourced in [NOTES.md](NOTES.md).
@@ -89,173 +86,87 @@ What follows was observed on the test copies; each point is dated and sourced in
   real profile folder, and on a PC where the game never ran it lists none, only New Story
   (2026-10-25). All three patches change 17 bytes. The profile file `GamerProfile.xml` must
   exist, otherwise the client quits.
+- **Network player code drives the avatar.** The sender encodes its own player with the game's ThirdParty encoder
+  (`FUN_100a6ec0`) into a memento; the receiver writes those fields into the avatar's memento and the stock NetPlayer
+  code applies position, velocity, aim, stance and fire, so the avatar walks and runs with the game's own animations.
+  The avatar archetype `player.MainCharacter.PawnPlayerNetwork` comes from the Far Cry 2 modding guide's entity library
+  patch.
+- **AI.** Each NPC has a `CPawnAgent` (component `FE4090`, agent at `+0x14`); `vf+0x164(1)` pauses it. The AI world
+  `[0x11607608]` keeps a class map at `+0x44` whose `CPawnAgent` entry lists every agent; walking it replaces a memory
+  scan (a 16 MB scan step took 47-78 ms in paged-out memory, a visible hitch). NPC target selection reads the other
+  entity's AI component, so an avatar without one is invisible to them; a copy of the player's AI component with
+  `CPawn.bIsAI = 1` makes host NPCs fight the avatar (with `bIsAI = 0` the agent takes over the global player agent
+  `[0x11652108]` and the game crashes).
+- **Town ceasefire.** Towns are ceasefire zones. A status object `[[0x11607408]+0xC]` holds "town alarmed" at `+0x198`,
+  set each tick (`FUN_1095d5a0`) when an NPC with zone flag 0x02 is in combat states 2-5; `FUN_109613a0` shows the
+  "Escape the cease-fire zone" message from it. An agent's zone kind is at `+0x998` (6 = town) and its zone flags at
+  `+0x99C`. The ceasefire logic only knows the global player agent, which matters for a second player.
 
 ## What we changed
 
-All changes are in test copies only; nothing touched the owner's install, profile or saves.
+All changes are in test copies only; nothing touched an owner's install, profile or saves. The code, the build and
+the full feature list are in the project repository; the dated evidence for the early steps is in [NOTES.md](NOTES.md).
 
-1. **Single-instance and profile patches** (same-length string replacements in a test
-   copy's `Dunia.dll`: the mutex at 0xE08950, the save-list folder at 0xE089A0 and the profile
-   folder at 0xE0E094): lets two copies run at once, each with its own windowed profile and
-   saves. Proof: the probe's `CreateFileW` log shows copy A opening `FC2test_A\GamerProfile.xml`
-   and `FC2test_A\saved games\<save>.sav`, copy B the `FC2test_B` ones, with an 800x600 window
-   as set in each test profile (2026-10-24). The 2026-10-19 recipe patched only 0xE089A0, which
-   does not redirect the profile; the 2026-10-24 write-up then called 0xE089A0 unneeded, which was
-   wrong: a copy on a fresh PC patched without it listed no saves (2026-10-25).
-2. **In-process probe** (`dinput8.dll` proxy for the test copies, built with MinGW,
-   about 850 lines of C, source in https://github.com/MortyRei/fc2-coop-probe). It hooks the engine's Winsock, file and `PeekMessage` imports and
-   adds: a Lua channel (a file `coop_cmd.lua` is run on the main thread through
-   `lua_dobuffer`, the result is read back from a Lua global), native commands (peek,
-   entity lookup, body search by class, teleport of the body), memory scans, and the
-   transport and avatar code below. Proof: the Lua result `alive 3`, and the position
-   readings that matched the entity (notes, dated 2026-10-19).
-3. **Own UDP transport** (loopback ports 9101 and 9102, not the engine's 9000 to 9004):
-   a 28-byte packet with sequence, position and direction about 16 times per second per
-   copy. Proof: both logs show `rx` growing and each copy's `remote` equal to the other's
-   `local`; a teleport in one copy appeared in the other's log at once.
-4. **Avatar of the peer.** `SpawnEntityFromArchetype(name, x, y, z, rx, ry, rz)` with the
-   player's own entity name creates a second pawn; the engine event
-   `CFCXCountersComponent_SetInvincible` makes it invincible (without it the pawn took damage
-   from the pinned writes and ended the mission with "Game over" in both copies); the probe
-   writes its body position every main-loop tick with 25 % smoothing. Proof: the owner
-   watched the avatar of the other copy ride a 3 m circle smoothly, no falling, no Game over.
-5. **Avatar body binding fix** (2026-10-24). Bug: when both copies load the same save and nobody
-   has moved yet, the avatar is spawned where the local player stands, and the body search
-   (nearest body of the class within 1 m) returned the **local player's own body**. Both copies
-   logged the avatar body equal to the local body, so the probe wrote the peer's position into the
-   local player instead of the avatar. Fix (8 lines in `find_body` / `av_tick` / `av_valid`): the
-   avatar search skips the local body and waits until it is known. Proof (logs and `pos` readings,
-   not an automated test): after the fix the two bodies differ in both copies; with `walk 3 20 2`
-   in copy A, copy B's avatar followed A's circle 0.5-1 m behind while B's own player stayed put
-   (about 0.1 m drift). The fix is in the probe's PR #1, not merged yet.
-6. **Avatar heading** (2026-10-24). The physics body is an upright capsule whose rotation is
-   always identity; mouse look changes only the yaw rows of the entity matrix (`entity+0x30`:
-   `(d0,d1,0)`, `(-d1,d0,0)`). The avatar has no controller, so a rotation written there stays;
-   writing the body's rotation or calling `TeleportEntity` with angles changes nothing, and
-   `SpawnEntityFromArchetype` uses its last argument (yaw, degrees) only at spawn. The probe now
-   writes the received direction into the avatar's entity matrix every tick (25 % smoothing).
-   Proof: the two-copy test turns A with the mouse three times and B's avatar matched within
-   0.0 degrees (a probe without the change failed, avatar stuck at 0 degrees); the owner saw the
-   avatar turn on screen.
-7. **Network mode** (2026-10-24). With a peer address other than 127.x the probe binds on all
-   interfaces and uses only packets from the peer's IP (others counted as `drop`). Proof on one
-   PC with its own LAN address: 19/19, 30 forged packets from 127.0.0.1 all dropped. Not run
-   between two PCs (the two test PCs were on different networks).
-8. **Relay over Steam** (`relay/fc2_relay.py`, 2026-10-24/25). The probe talks only to a local
-   relay; the relay carries its packets as Steam P2P messages (Spacewar, AppID 480, friends-only
-   lobby, session accepted only from lobby members, keep-alive and 20 s timeout), or over plain
-   UDP as a stand-in for tests. Scripts `scripts/setup-copy.ps1` (copy + three patches + test
-   profile) and `scripts/start-coop.ps1` (one side of a session) prepare and run each PC.
-   Proof: see QA, two-PC run.
+- **Two copies on one PC** (2026-10-19 / 24): three same-length string patches in a copy's `Dunia.dll` (mutex,
+  profile folder, save list; see "How the game works").
+- **In-process probe** (`dinput8.dll` proxy, C, MinGW): Lua channel, native commands, own UDP transport, and a Python
+  relay that carries it over Steam (friends lobby under Far Cry 2's AppID 19900, invites, Join Game).
+- **Joining from the game's menu** (2026-11): Story Mode offers Singleplayer / Cooperative, then "Host a game" or
+  "Join a friend's game" with the friends hosting; the joiner loads the host's save, reloads with it, and returns to
+  the main menu when the host leaves; corner notices with Steam names.
+- **Animated avatar** (2026-10-26 on): network player code instead of position writes; weapons with holster and draw
+  animations, shots, grenade throws, doors, the map and GPS in the hand, the other player's arrow on the map.
+- **Hits** (2026-11): the shooter's copy decides; a hit on the avatar damages that player; the joiner's hits on NPCs
+  are applied on the host (bullets and crossbow bolts, counted by instigator).
+- **Vehicles** (2026-11): cars move for both, the avatar gets in, drives and gets out with the game's animations.
+- **Host-run NPCs** (2026-11): the host's AI runs every NPC within 80 m of either player; the joiner pauses its own AI
+  and shows puppets that follow the host's path, idle actions, smart terrain (sitting, smoking), mounted guns,
+  weapons and visible shots; NPCs the joiner's world lacks are spawned there. Fixed 2026-11-13: the joiner had copied
+  save NPCs that were still streaming in (a timer compared unsigned) and removed the originals, so NPCs differed and
+  the joiner crashed twice.
+- **Enemies fight the joiner** (experiment, off by default): the avatar gets the player's AI component (patched
+  entity library), so host NPCs shoot it and their hits take the joiner's health.
+- **Performance** (2026-11-13): NPCs from the game's agent list instead of a memory scan; no frame over 50 ms in the
+  check runs (before: 2-5 hitches of 60-95 ms every 10 s on both copies).
 
 ## QA
 
-One automated test: `tests/two_copy_walk.ps1` in the probe repository (added in
-https://github.com/MortyRei/fc2-coop-probe/pull/1, not merged yet). It drives two real game
-clients on one PC; both copies must already be patched and have their test profiles.
-
-```
-powershell -ExecutionPolicy Bypass -File tests\two_copy_walk.ps1 -CopyA <test copy A> -CopyB <test copy B> -OutDir <results folder>
-```
-
-It starts both copies, presses Enter until each probe log shows its own save being opened,
-reads the player id through the Lua channel, runs `netstart` on both, walks copy A's player
-with `walk 3 20 2`, and samples `pos <avatar>` / `pos <player>` in copy B. It asserts: each copy
-reads its own profile and save; the same player id in both; the avatar's body differs from the
-local body; at least 10 packets/s each way; the avatar moves (span at least 1.5 x radius); the
-avatar stays within 1.5 m (mean) and 2.5 m (max) of A's position as received by B; B's own
-player drifts at most 0.5 m; no `CRASH` / `ACCESS VIOLATION` lines; the real profile folder is
-unchanged (snapshot before and after). A kill switch stops both copies if a log line names the
-real profile folder. It presses Enter in the game windows, so the keyboard must be left alone.
-
-Last results (2026-10-24, Steam 1.03, one PC, Windows 11 23H2):
-
-```
-probe with the avatar-body fix:
-RESULT: 16 checks, 0 failed -> PASS   (~2 min)
-  link A/B 16.0 / 16.0 packets/s; avatar span 5.92 m; distance to A mean 0.43 m, max 1.07 m;
-  B player drift 0.12 m; real profile: new 0, changed 0, removed 0
-
-negative control, probe before the fix:
-RESULT: 16 checks, 3 failed -> FAIL
-  B player stays put: max drift 16.46 m (B's own player dragged); avatar body A/B: no pointers in the old log line
-```
-
-The drift check is the one that catches the avatar-body bug; `avatar moved` and
-`avatar follows A` passed with the old probe too. Earlier checks, by hand and from logs, are
-listed with dates in [NOTES.md](NOTES.md).
-
-Later additions to the same test (probe PRs #1-#3): a heading phase (A turned three times with
-the mouse; `avatar heading follows A` within 15 degrees), window titles A/B, `-PeerIp` (network
-mode, plus a forged-packet check) and `-Relay` (the chain through two udp relays):
-
-```
-heading added:               RESULT: 18 checks, 0 failed (headings A/B 128.1/128.1, -145.4/-145.4, 149.8/149.8)
-  negative control (no heading code): 1 failed, avatar stayed at 0 degrees
-peer = own LAN address:      RESULT: 19 checks, 0 failed (30/30 forged packets dropped)
-window titles checked:       RESULT: 20 checks, 0 failed
-through two udp relays:      RESULT: 22 checks, 0 failed (relay A 837 out / 715 in, 0 dropped)
-```
-
-**Two PCs over Steam, manual run (2026-10-25).** Two PCs on different networks, two Steam
-accounts that are friends, Steam 1.03 on both, `scripts/start-coop.ps1` on each side (host /
-join). The joining relay found the host's lobby through the friends list and its session was
-accepted; the first message decoded with the sender identity at offset 16 (64-bit layout,
-confirmed only with two real accounts). Probe packets went both ways at about 16/s for ~7
-minutes with 0 dropped and no disconnect. `walk 3 20 2` on the host: on the joining PC the avatar
-(sampled every 2 s) went round about two circles of radius ~3 m around the expected centre
-(2 m/s x 20 s = 40 m), while that PC's own player stayed within ~0.1 m; the owner saw the avatar
-move on both screens. When the joining side stopped, the host's relay marked the peer down after
-its 20 s timeout. There is no scripted pass/fail for these runs yet; the evidence is the two sides'
-logs.
-
-Later the same day, same two PCs (the joining relay in `--join wait` mode for the last two):
-- **Heading across PCs:** the host turned its player with the mouse 171.3 → 81.3 → -171.3 → 77.6
-  degrees; the joining PC's avatar (sampled every 2 s) showed the same four headings 1-2 s later,
-  staying in place.
-- **Steam invite:** host `--invite <name>`; the invite was accepted on the second PC, the relay got
-  callback 333, joined the lobby, and the link and avatar were up within 3 s.
-- **Join Game** from the Steam friends list (the host sent no invite): joined the host's new lobby,
-  also through callback 333 (Steam reports Join Game on a friend in a joinable lobby as
-  GameLobbyJoinRequested; 337 was not observed).
-- Every run: 0 dropped, no crash lines, no real profile folder in either probe log.
-
-Not covered: an invite or Join Game while the joining relay is not running, longer sessions, loss.
+- `tests/two_copy_walk.ps1` in the project repository drives two real game clients on one PC: the joiner's avatar
+  must follow the host's position (mean within 1.5 m) and heading (within 15 degrees), the joiner's own player must
+  stay put, no crash lines, the real profile folder unchanged. Last recorded pass: 22 of 22 checks through two relays
+  (2026-10-24/25). The early results and the two-PC runs are in [NOTES.md](NOTES.md).
+- The later features were checked by hand on two copies on one PC, from the probe logs (packet counts, applied hits,
+  puppet states) and the owner's view; menu joining, the animated avatar, hits and the map arrows also ran between two
+  PCs over Steam. The probe logs frame times (`perf`) and the town ceasefire state (`cflog`).
+- Not covered by an automated test: fights, NPC sync, vehicles. Not yet run on two PCs: everything since early
+  November (NPCs, fights, vehicles).
 
 ## How to play
 
-Not playable. The probe is a research tool, not an installer: it lives in patched test copies,
-and both players must load the same save. `scripts/setup-copy.ps1` and `scripts/start-coop.ps1`
-in the probe repository (PR #3) set up and start one side each; the Steam relay needs 64-bit
-Python and `steam_api64.dll` from Steamworks.NET (downloaded and hash-checked by
-`scripts/get-steam-api.ps1`), and shows both players as "playing Spacewar". Source, build
-steps, the command list and the two-copy recipe are in
-https://github.com/MortyRei/fc2-coop-probe (MIT); the game code is kept there, not in this repo.
+Prototype. Steam 1.03 only. Follow the quick start in https://github.com/HitchLangley/far-cry-2-campaign-coop: make a
+test copy with `scripts/setup-copy.ps1`, build the entity library patch from the modding guide's files with the
+project's tools, fetch `steam_api64.dll` with `scripts/get-steam-api.ps1`, put the probe into the copy, and start
+`scripts/start-coop.ps1 -Role menu` on both PCs; then Story Mode > Cooperative > Host a game / Join a friend's game.
+Both Steam accounts must own the game and be friends. There is no release build yet.
 
 ## Known issues
 
-- The avatar slides in an idle pose: no walking animation, no weapon, no health or damage
-  sync. It faces where the other player looks, not where it moves.
-- The avatar passes through scenery (it mirrors the peer's already-collided position; in a
-  test where the source was moved by script it went through a tree).
-- No mission, objective or world-state sync; no vehicles.
-- A script-spawned pawn made from the player's archetype looks like the player; other
-  `PawnPlayer.<name>` archetypes also looked the same in the campaign.
-- Scanning memory with direct reads crashed one copy once; `findbody` now reads in chunks, but the
-  `scan` command still reads memory directly and can crash a copy.
-- In the probe as published (without PR #1), the avatar can bind to the local player's body
-  when both players start on the same spot, and it never turns (see "What we changed", 5 and 6).
-- In network mode the probe's UDP port is reachable by anyone who can route to it (only the
-  peer's packets are used; no encryption). The Steam relay avoids open ports.
-- Everything depends on the exact 1.03 build; the offsets above are not portable.
+- Missions, objectives, pickups, destruction, fire and most world state are not synced; death and revive are not.
+- Enemies attacking the joiner is off by default. In towns, after the ceasefire breaks, NPCs attack the host's
+  player but rarely the joiner, and without a target they turn in place.
+- A wounded NPC finished by the joiner can stay alive on the host.
+- NPCs spawned for the joiner can look different from the host's; at most 24 NPCs are synced.
+- The avatar has no animation at mounted guns and can keep a seated pose after leaving a vehicle.
+- The two players can damage each other when they touch.
+- Everything depends on the exact 1.03 build; the offsets are not portable.
 
 ## Next steps
 
-1. Locomotion animation: decode the typed sub-objects of `CPawnControllerMemento` and
-   `CPawnThirdPartyMemento` (about eleven fields at `0x70 .. 0x120`), or compare memory of a
-   walking and a standing pawn and write what differs.
-2. Mission state: reproduce the set of active mission layers and Domino state in the
-   second copy; `Game:MissionSetState` and `SaveGame` are the entry points seen.
-3. Two-PC run with scripted checks (the joining side already samples the avatar; compare it
-   with the host's path and headings automatically).
-4. Extend the two-copy test as features land (mission state next).
+1. Make NPCs choose the joiner as a target in towns after the ceasefire breaks, then make enemies attacking the
+   joiner the default.
+2. Run everything since early November between two PCs.
+3. Wire the hub's sync test tools into the probe: `animcheck` (pose and weapon stream from the probe) and `inspect`
+   (both copies side by side) first, then `chaos` for loss and delay.
+4. World state with one owner per object (the plan is in the project): pickups, destruction, outposts.
+5. Missions: capture the host's mission effects instead of running the scripts twice
+   ([effect-capture-story-sync](../../playbook/effect-capture-story-sync.md)).
