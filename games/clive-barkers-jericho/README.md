@@ -441,11 +441,9 @@ other, the same video settings on both), live checks on the release build:
   release feed (the download checked against its SHA-256, both shortcuts kept and refreshed), then
   was removed back to the folder as it was. After the publication the published 0.3.3 launcher
   updated a stand-in folder through the real GitHub feed: 10 of 10 checks, on a hidden desktop.
-- Not seen: a whole boss fight with a client against the boss's own AI (only forced boss cycles
-  and single hits were checked); the level pictures for joining players (an automatic test only;
-  the lab profile had them unlocked already); the ghost bullet and grenade kinds of the rewards
-  (automatic test); the flight of Cole's grenade on the other PC on a picture (it was in the log;
-  the blast was seen). Not run: a Steam session between two different networks.
+- Not covered by the lab runs: a whole boss fight with a client against the boss's own AI, the
+  joining players' level pictures and ghost bullet and grenade rewards in a running game, the
+  grenade's flight on a picture, the other players' sounds, and Steam between two networks.
 
 Results for 0.3.3 (2026-11-11), the test PC of 0.3.2 below (Windows 10, Russian game copies), nothing
 played by hand:
@@ -653,9 +651,6 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
   0.3.4, between two PCs), and 0.3.1 to 0.3.3 were only checked on one test PC. Story scripts that
   assume one player are fixed per level as playtesting finds them. A report from that session (a
   cutscene taking a client's controls while the host walked) could not be reproduced.
-- Not seen for 0.3.4: a whole boss fight with a client against the boss's own AI, the level
-  pictures and the ghost bullet and grenade reward kinds for joining players (automatic tests
-  only), and the flight of Cole's grenade on the other PC on a picture.
 - In a split screen game without network players, player 2 joins after the level's opening
   scene, so player 1 alone can skip that scene.
 - Split screen: a climb, a lever or a door use of the other player still shows no third-person
@@ -664,7 +659,6 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
   barrier itself works).
 - Joining a session that is already in a level is not available; lifts and moving set pieces
   are each PC's own (not synced in time).
-- The sounds of the other players were not listened to (the tests run muted).
 - The 0.3.3 texts were seen in the running game in Russian (the 0.3.4 menus in Russian and English); German only on a copy that draws with
   the Russian edition's font, so German, French, Spanish and Italian letters on their own editions
   are proven by the text test, not by eye.
