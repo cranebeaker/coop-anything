@@ -3,17 +3,17 @@
 | | |
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
-| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 to 0.3.3 on a Windows 10 test PC with a Russian game copy (0.3.2 also with Ultimate ASI Loader 10.0.2, 0.3.3 also on a copy with the SMOD Add-ons' German texts) |
+| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 to 0.3.3 on a Windows 10 test PC with a Russian game copy (0.3.2 also with Ultimate ASI Loader 10.0.2, 0.3.3 also on a copy with the SMOD Add-ons' German texts); 0.3.4 on two test PCs over a LAN with the same video settings, menus in Russian and English |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
-| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 to 0.3.3: offline tests plus live checks on one test PC); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1, 0.3.2 or 0.3.3 |
-| Last updated | 2026-11-11 (0.3.3) |
+| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 to 0.3.3: offline tests plus live checks on one test PC; 0.3.4: the whole campaign over a LAN between two PCs again, split screen with two gamepads, real skip votes and a real QTE scene); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1 to 0.3.4 |
+| Last updated | 2026-11-16 (0.3.4) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), 0.3.3 at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), [0.3.4](https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.4) at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
@@ -53,10 +53,17 @@ while co-op is installed, and restored on removal), and adds a hint for SMOD's f
 six languages (the Russian story texts now speak of Church, Cole and Black as women, German uses
 "Sie" and Spanish "tú" throughout, French and Italian the feminine forms, every language the
 game's own names), and the bug-report collector's window and the setup exe's messages come in 16
-languages. Honest status: 0.3.1 to 0.3.3 were checked by offline tests and by live checks on one
-test PC (below); the whole-campaign regression over two PCs was last run on 0.3.0, and nobody has
-played 0.3.1, 0.3.2 or 0.3.3 by hand outside the lab. A whole campaign played through by people is
-still to come.
+languages. 0.3.4 (2026-11-16) comes from a check of every kind of sync the Resident Evil
+Revelations co-op mods have, against Jericho, and makes what one player does visible to the
+others: in split screen each half sees the other player reload, strike and cast on the
+character; every player votes to skip a cutscene (split screen player 2 too, and the vote line
+now shows over the scene); the level-start screen names the players still loading; Cole's
+grenades and mines fly, lie and blow up on every PC; a partner off the screen gets a marker at the
+side of the view; and a joining player's kills count towards the game's artwork unlocks. Honest
+status: 0.3.1 to 0.3.3 were checked by offline tests and by live checks on one test PC; 0.3.4 by
+offline tests and live checks on two test PCs over a LAN, the whole campaign included (below).
+Nobody has played 0.3.1 to 0.3.4 by hand outside the lab. A whole campaign played through by
+people is still to come.
 
 ## Existing work
 
@@ -348,6 +355,33 @@ restored on uninstall.
   else Windows' language; the report inside the zip stays in English for the developers. The setup
   exe's messages (a damaged download, PowerShell blocked, the installer window not started) follow
   Windows' language in 16 languages instead of six.
+- **The other player's actions in split screen (0.3.4):** both characters of a split screen are
+  real bodies of one game, and the game shows a player's reload, melee strike or power only on
+  that player's own first-person arms, so the other half saw the character standing still. Each
+  half now sees the other player reload, strike and cast on the character (Church's blood spell,
+  Black's telekinesis, Rawlings's heals ...); a spell's life cost and a strike's hits still count
+  once, and one player's screen effect (Cole's power) stays in that player's half.
+- **A skip vote per player (0.3.4):** up to 0.3.3 a PC was one vote, so either player of a split
+  screen skipped a scene for both. Now split screen player 2 votes with their own START (player 1
+  with START or Esc), and the vote message names the voter (the client's player 1 or 2). The line
+  "Skip scene: 1 of 2 players" had never been drawn over a scene (the game hides its label line
+  while a scene plays); it now shows and names the player on this PC who still has to press.
+- **Who is still loading (0.3.4):** the black screen at a level start says "Waiting for
+  <name>..." with the nicknames of the players still loading.
+- **Cole's grenades and mines on every PC (0.3.4):** the other players saw Cole's throw but no
+  grenade, no mine and no blast. The thrower's PC now sends the grenade's start (place, speed,
+  angles, mode), its resting place and its blast through the host; every other PC flies a
+  passive copy with no explosion or damage of its own, puts a resting mine where it came to rest
+  and shows the blast and its shake where it went off. The damage is still counted once, by the
+  thrower's PC.
+- **A partner off the screen (0.3.4)** gets a marker at the side of the view
+  ("< Name 25 m" / "Name 25 m >"), in each half of a split screen too; Jericho has no map.
+- **Rewards for joining players (0.3.4):** the game's artwork unlocks (50 / 100 / 250 melee
+  kills, ghost bullet kills, enemies blown up, the level pictures) were earned only by the host.
+  A client's hit now carries the kind of kill (melee, ghost bullet, an explosion's direct target),
+  the host credits a kill of that kind to the client's own counter, and the level pictures the
+  host unlocks at a level's end unlock for every player. Players of 0.3.3 and 0.3.4 do not play
+  together (the lobby's version check), so no older version has to read the new messages.
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -374,6 +408,44 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.3.4 (2026-11-16), two test PCs on a local network (the host on one, a client on the
+other, the same video settings on both), live checks on the release build:
+
+- Live, split screen: player 2's spell, reload and strikes seen on the character in player 1's
+  half and the other way round; the spell's life cost taken once; player 2 moves normally
+  afterwards; one player's screen effect (Cole's power) only in that player's half.
+- Live, the skip vote: a real Esc on the host's keyboard, a real START on the client's gamepad and
+  on a split screen player 2's gamepad; the line shown over the scene on both PCs; the scene ended
+  on both after the last vote.
+- Live, a real QTE scene (the Behemoth's death, Church's four QTEs) with Church held by the client
+  and pressed on its gamepad: the client's branches (wrong keys, then right ones) played on the
+  host too, and the scene ended on both within a second.
+- Live, Cole's grenade thrown on the client: shown on the host, the blast where the client's went
+  off, the enemy's life lowered once (one hit sent, one applied); a client's 50th melee kill
+  counted on the client (MeleeKills 49 -> 50); the level-start screen naming the client while it
+  loaded; the off-screen marker in full screen and in both split halves.
+- Live, the whole campaign, 33 levels, with the host ending each level the real way and the client
+  (with a split screen player 2) following every one: no crash, no script error. Split screen with
+  two gamepads, player 2 as Delgado and as Rawlings pressing every button: no crash, no script
+  error. The Co-op menus (root, host, lobby, session settings, join, Video) in Russian and English.
+- Offline: the Lua mock tests (17 files; `grenade_mock_test.lua` and `hud_mock_test.lua` are new),
+  the text test (1219 checks), the installer tests (56 checks, with the published 0.3.3 as the
+  old version, updated by this installer), the ASI loader test (13), the setup exe's self-test (87
+  files equal to the zip) and its install / reinstall / uninstall test, and the bug-report
+  collector's own test (114 checks). Every published version 0.1.0, 0.2.2, 0.2.9 and 0.3.3
+  updated by this installer and then removed (the folder ends as the clean game), also in a chain
+  (0.2.9 -> 0.3.3 -> 0.3.4) and removed by the new installer directly.
+- The update: before the publication the published 0.3.3, installed into a test folder with two
+  shortcut folders, updated itself to 0.3.4 through its own launcher from a local copy of the
+  release feed (the download checked against its SHA-256, both shortcuts kept and refreshed), then
+  was removed back to the folder as it was. After the publication the published 0.3.3 launcher
+  updated a stand-in folder through the real GitHub feed: 10 of 10 checks, on a hidden desktop.
+- Not seen: a whole boss fight with a client against the boss's own AI (only forced boss cycles
+  and single hits were checked); the level pictures for joining players (an automatic test only;
+  the lab profile had them unlocked already); the ghost bullet and grenade kinds of the rewards
+  (automatic test); the flight of Cole's grenade on the other PC on a picture (it was in the log;
+  the blast was seen). Not run: a Steam session between two different networks.
 
 Results for 0.3.3 (2026-11-11), the test PC of 0.3.2 below (Windows 10, Russian game copies), nothing
 played by hand:
@@ -577,10 +649,23 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 ## Known issues
 
 - One human session over Steam so far (missions 1-8, on 0.2.x); a tester's split screen report on
-  0.3.0 led to 0.3.1. The full campaign has been run by scripts, not finished by people, and
-  0.3.1 to 0.3.3 were only checked on one test PC. A report from that session (a cutscene taking a client's
-  controls while the host walked) could not be reproduced.
-- The 0.3.3 texts were seen in the running game in Russian; German only on a copy that draws with
+  0.3.0 led to 0.3.1. The full campaign has been run by scripts, not finished by people (last on
+  0.3.4, between two PCs), and 0.3.1 to 0.3.3 were only checked on one test PC. Story scripts that
+  assume one player are fixed per level as playtesting finds them. A report from that session (a
+  cutscene taking a client's controls while the host walked) could not be reproduced.
+- Not seen for 0.3.4: a whole boss fight with a client against the boss's own AI, the level
+  pictures and the ghost bullet and grenade reward kinds for joining players (automatic tests
+  only), and the flight of Cole's grenade on the other PC on a picture.
+- In a split screen game without network players, player 2 joins after the level's opening
+  scene, so player 1 alone can skip that scene.
+- Split screen: a climb, a lever or a door use of the other player still shows no third-person
+  gesture of its own (the game has none; the closest is played); Delgado's dragon arm and Cole's
+  squad re-arm (Reequip) are not mirrored; Delgado's fire barrier flames are not shown (the
+  barrier itself works).
+- Joining a session that is already in a level is not available; lifts and moving set pieces
+  are each PC's own (not synced in time).
+- The sounds of the other players were not listened to (the tests run muted).
+- The 0.3.3 texts were seen in the running game in Russian (the 0.3.4 menus in Russian and English); German only on a copy that draws with
   the Russian edition's font, so German, French, Spanish and Italian letters on their own editions
   are proven by the text test, not by eye.
 - Steam is tested between two real accounts on one LAN; across networks (Steam relay) and
@@ -602,4 +687,6 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
   are not preloaded by the shims), only with a live check that the plugins load.
 - Fix what human playthroughs report (real gamepads, Steam between real accounts); open items
   are tracked in the mod repo's issues.
+- A boss fight with a client against the boss's own AI, and the split screen gestures the game
+  has no third-person twin for (climbs, levers, doors, Delgado's dragon arm, Cole's re-arm).
 - A full co-op playthrough by people, written up, would move this to `verified-playthrough`.
