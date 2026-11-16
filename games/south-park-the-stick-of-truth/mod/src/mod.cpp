@@ -11,6 +11,9 @@
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <cstdio>
+#include <cstdarg>
+#include <cstring>
+#include <cmath>
 #include "MinHook.h"
 #include "coopbridge/server.h"
 #include "net.h"
@@ -481,135 +484,988 @@ void hook_get_proc_address()
         }
     }
 }
-// --- Stage 1: find the live player object by its vtable ---------------------
+// --- debug probe: tags [OK] / [ADDR] / [ERR], safe reads only -----------------
 //
-// DS_Component_Player's vtable RVA comes from the static RTTI index (0x7d5684). An object of
-// that class starts with a pointer to it, so a dword equal to module_base + rva in committed
-// writable memory is a live instance. Reads go through ReadProcessMemory, so a bad page is an
-// error code, never a crash.
-const unsigned kPlayerVtableRva = 0x7d5684;
-const unsigned kMoverVtableRva = 0x773748;
-// Log plausible position triples inside an object: three consecutive finite floats in a sane
-// range, at least two of them non-zero. Pointers, string ids and counters never pass this.
-void log_triples(const char* label, uintptr_t address, size_t bytes)
+// Every read goes through a pointer check (VirtualQuery) and ReadProcessMemory. MinGW has
+// no __try/__except (an MSVC extension); ReadProcessMemory is the equivalent guarantee: a
+// bad pointer comes back as an error code, never as an exception. Nothing here writes to
+// the game.
+FILE* g_debug = nullptr;
+
+void dbg(const char* tag, const char* format, ...)
 {
-    unsigned char raw[1024];
-    size_t want = bytes < sizeof(raw) ? bytes : sizeof(raw);
+    if (g_debug == nullptr) {
+        return;
+    }
+    std::fprintf(g_debug, "%s ", tag);
+    va_list args;
+    va_start(args, format);
+    std::vfprintf(g_debug, format, args);
+    va_end(args);
+    std::fputc('\n', g_debug);
+    std::fflush(g_debug);
+}
+
+// The pointer check: every byte of [address, address+size) must be committed and readable.
+// A null, temporary or freed pointer therefore becomes an [ERR] line and a skipped frame,
+// never a crash. ReadProcessMemory below is the second line of defence.
+bool checked_pointer(uintptr_t address, size_t size)
+{
+    if (address < 0x10000 || size == 0 || address + size < address) {
+        return false;
+    }
+    uintptr_t at = address;
+    const uintptr_t end = address + size;
+    while (at < end) {
+        MEMORY_BASIC_INFORMATION info = {};
+        if (VirtualQuery(reinterpret_cast<void*>(at), &info, sizeof(info)) == 0) {
+            return false;
+        }
+        if (info.State != MEM_COMMIT || (info.Protect & PAGE_NOACCESS) != 0 ||
+            (info.Protect & PAGE_GUARD) != 0) {
+            return false;
+        }
+        const uintptr_t region_end =
+            reinterpret_cast<uintptr_t>(info.BaseAddress) + info.RegionSize;
+        if (region_end <= at) {
+            return false;
+        }
+        at = region_end;
+    }
+    return true;
+}
+
+bool safe_read_quiet(uintptr_t address, void* out, size_t size)
+{
+    if (out == nullptr || !checked_pointer(address, size)) {
+        return false;
+    }
     SIZE_T got = 0;
-    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), raw, want, &got)) {
+    return ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), out, size,
+                             &got) != 0 && got == size;
+}
+
+bool safe_read(uintptr_t address, void* out, size_t size)
+{
+    if (out == nullptr || !checked_pointer(address, size)) {
+        dbg("[ERR]", "read refused: address 0x%08llx size %u failed the pointer check",
+            static_cast<unsigned long long>(address), static_cast<unsigned>(size));
+        return false;
+    }
+    SIZE_T got = 0;
+    const BOOL ok = ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), out,
+                                      size, &got);
+    if (!ok || got != size) {
+        dbg("[ERR]", "read failed at 0x%08llx (got %u of %u)",
+            static_cast<unsigned long long>(address), static_cast<unsigned>(got),
+            static_cast<unsigned>(size));
+        return false;
+    }
+    return true;
+}
+
+bool safe_read_u32(uintptr_t address, unsigned* out)
+{
+    return out != nullptr && safe_read(address, out, sizeof(*out));
+}
+
+bool finite_triple(const float* v)
+{
+    if (!(v[0] == v[0]) || !(v[1] == v[1]) || !(v[2] == v[2])) {
+        return false;
+    }
+    int axes = 0;
+    for (int i = 0; i < 3; ++i) {
+        if (v[i] > 1.0e4f || v[i] < -1.0e4f) {
+            return false;
+        }
+        if (v[i] >= 1.0f || v[i] <= -1.0f) {
+            ++axes;
+        }
+    }
+    return axes >= 2 && !(v[0] == v[1] && v[1] == v[2]);
+}
+
+// The first plausible triple in a raw block; no logging, so pointer chasing can try many
+// candidates without filling the log with guesses.
+bool find_triple(const unsigned char* raw, size_t size, float out[3], unsigned* offset_out)
+{
+    for (size_t offset = 4; offset + 12 <= size; offset += 4) {
+        float v[3];
+        memcpy(v, raw + offset, sizeof(v));
+        if (!finite_triple(v)) {
+            continue;
+        }
+        out[0] = v[0];
+        out[1] = v[1];
+        out[2] = v[2];
+        if (offset_out != nullptr) {
+            *offset_out = static_cast<unsigned>(offset);
+        }
+        return true;
+    }
+    return false;
+}
+
+// The best position triple in an object, with the offset it was found at.
+bool probe_position(const char* who, uintptr_t object, float out[3], unsigned* offset_out)
+{
+    unsigned char raw[0x300];
+    if (!safe_read(object, raw, sizeof(raw))) {
+        return false;
+    }
+    if (find_triple(raw, sizeof(raw), out, offset_out)) {
+        dbg("[OK]", "%s position at +0x%x: %.3f %.3f %.3f", who, *offset_out, out[0], out[1],
+            out[2]);
+        return true;
+    }
+    dbg("[ERR]", "%s: no plausible position triple in the first 0x300 bytes", who);
+    return false;
+}
+
+// A yaw candidate: a float in [-180, 180] that is not part of the position triple. It is
+// labelled a candidate because only a turn-and-watch test can prove which float is yaw.
+void probe_yaw(const char* who, uintptr_t object, unsigned skip_offset)
+{
+    unsigned char raw[0x300];
+    if (!safe_read(object, raw, sizeof(raw))) {
         return;
     }
     int logged = 0;
-    for (size_t offset = 4; offset + 12 <= got && logged < 6; offset += 4) {
-        float values[3];
-        memcpy(values, raw + offset, sizeof(values));
-        bool finite = true;
-        int z_axis = 0;
-        for (int index = 0; index < 3; ++index) {
-            if (!(values[index] == values[index])) {              // NaN
-                finite = false;
-            }
-            if (values[index] > 1.0e4f || values[index] < -1.0e4f) {
-                finite = false;
-            }
-            if (values[index] >= 1.0f || values[index] <= -1.0f) {
-                ++z_axis;
-            }
-        }
-        // Offset 0 is the vtable pointer; vtable bytes read as floats are ~1e-38 denormals.
-        // A real level position has at least two axes of magnitude 1 .. 10 000.
-        if (!finite || z_axis < 2) {
+    for (size_t offset = 0; offset + 4 <= sizeof(raw) && logged < 4; offset += 4) {
+        if (offset >= skip_offset && offset < skip_offset + 12) {
             continue;
         }
-        if (values[0] == values[1] && values[1] == values[2]) {
+        float value = 0.0f;
+        memcpy(&value, raw + offset, sizeof(value));
+        if (!(value == value) || value < -180.0f || value > 180.0f || value == 0.0f) {
             continue;
         }
-        char line[160];
-        std::snprintf(line, sizeof(line), "  %s +0x%03x: %.3f %.3f %.3f", label,
-                      static_cast<unsigned>(offset), values[0], values[1], values[2]);
-        log_line(line);
+        dbg("[ADDR]", "%s yaw candidate at +0x%x = %.3f (rad or deg unproven)", who,
+            static_cast<unsigned>(offset), value);
         ++logged;
     }
+    if (logged == 0) {
+        dbg("[ERR]", "%s: no yaw candidate in the first 0x300 bytes", who);
+    }
 }
-void scan_vtable(const char* label, unsigned rva, int limit, uintptr_t* hits, int* hit_count)
+
+// --- runtime address discovery: PE sections + byte patterns -------------------
+//
+// The static RTTI index (tools/rtti_index.json) supplies expected RVAs. Each is checked at
+// runtime against the loaded image: the class-name string and the COL pointer are located
+// with find_pattern(), and every live object's own RTTI is then resolved from its vtable.
+// A mismatch is logged as [ERR]; the index value is only used as a labelled fallback.
+struct ImageLayout {
+    uintptr_t base = 0;
+    size_t size = 0;
+    uintptr_t rdata = 0;
+    size_t rdata_size = 0;
+    uintptr_t data = 0;
+    size_t data_size = 0;
+    uintptr_t text = 0;
+    size_t text_size = 0;
+    bool valid = false;
+};
+ImageLayout g_image;
+
+bool in_range(uintptr_t address, size_t size, uintptr_t start, size_t range)
+{
+    return size != 0 && address >= start && address + size >= address &&
+           address + size <= start + range;
+}
+
+bool load_image_layout()
 {
     HMODULE exe = GetModuleHandleW(nullptr);
     if (exe == nullptr) {
+        return false;
+    }
+    auto* base = reinterpret_cast<unsigned char*>(exe);
+    auto* dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
+        return false;
+    }
+    auto* nt = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+    if (nt->Signature != IMAGE_NT_SIGNATURE) {
+        return false;
+    }
+    g_image.base = reinterpret_cast<uintptr_t>(exe);
+    g_image.size = nt->OptionalHeader.SizeOfImage;
+    IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(nt);
+    for (WORD index = 0; index < nt->FileHeader.NumberOfSections; ++index, ++section) {
+        if (memcmp(section->Name, ".rdata", 6) == 0) {
+            g_image.rdata = g_image.base + section->VirtualAddress;
+            g_image.rdata_size = section->Misc.VirtualSize;
+        } else if (memcmp(section->Name, ".data", 5) == 0) {
+            g_image.data = g_image.base + section->VirtualAddress;
+            g_image.data_size = section->Misc.VirtualSize;
+        } else if (memcmp(section->Name, ".text", 5) == 0) {
+            g_image.text = g_image.base + section->VirtualAddress;
+            g_image.text_size = section->Misc.VirtualSize;
+        }
+    }
+    g_image.valid = g_image.rdata != 0 && g_image.rdata_size != 0 && g_image.text != 0;
+    return g_image.valid;
+}
+
+// Small exact/wildcard byte-pattern scan over one mapped range. `mask` may be null (all
+// bytes exact) or a string of 'x' / '?' per pattern byte. Reads are checked per chunk.
+bool find_pattern(const void* pattern, const char* mask, size_t length, uintptr_t start,
+                  size_t size, uintptr_t* found)
+{
+    if (pattern == nullptr || found == nullptr || length == 0 || length > 4096) {
+        return false;
+    }
+    const auto* needle = static_cast<const unsigned char*>(pattern);
+    unsigned char buffer[64 * 1024];
+    size_t offset = 0;
+    while (offset + length <= size) {
+        const size_t want = size - offset < sizeof(buffer) ? size - offset : sizeof(buffer);
+        if (!checked_pointer(start + offset, want) ||
+            !safe_read_quiet(start + offset, buffer, want)) {
+            dbg("[ERR]", "pattern scan: unreadable range at 0x%08llx size %u",
+                static_cast<unsigned long long>(start + offset), static_cast<unsigned>(want));
+            return false;
+        }
+        const size_t limit = want - length;
+        for (size_t index = 0; index <= limit; ++index) {
+            bool match = true;
+            for (size_t byte = 0; byte < length; ++byte) {
+                if (mask != nullptr && mask[byte] == '?') {
+                    continue;
+                }
+                if (buffer[index + byte] != needle[byte]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                *found = start + offset + index;
+                return true;
+            }
+        }
+        const size_t step = want > length ? want - length + 1 : want;
+        if (step == 0) {
+            break;
+        }
+        offset += step;
+    }
+    return false;
+}
+
+struct ClassSpec {
+    const char* label;
+    const char* mangled;
+    unsigned type_descriptor_rva;
+    unsigned vtable_rva;
+    unsigned col_rva;
+};
+const ClassSpec kClassSpecs[] = {
+    {"player", ".?AVDS_Component_Player@Game_Component@OEI@@", 0x927f88, 0x7d5684, 0x893eb4},
+    {"party", ".?AVComponent_Party_Member@Game_Component@OEI@@", 0x8f6384, 0x7b89ec,
+     0x89185c},
+    {"buddy_ai", ".?AVCompanion_Basic@Follower@Package@State@AI@OEI@@", 0x99709c, 0x7f88b4,
+     0x897a3c},
+    {"mover", ".?AVMoverImpl@bfx@@", 0x8d95d0, 0x773748, 0x88a818},
+    {"anim", ".?AVComponent_Anim_Controller@Game_Component@OEI@@", 0x8f5b14, 0x7b6eac,
+     0x891480},
+    {"anim2", ".?AVComponent_Animation_Controller_2@Game_Component@OEI@@", 0x8f5e90, 0x7b7aa4,
+     0x8915fc},
+    {"anim3", ".?AVNY_Component_Anim_Controller@Game_Component@OEI@@", 0x97e450, 0x7f2f44,
+     0x89656c},
+};
+const int kClassCount = static_cast<int>(sizeof(kClassSpecs) / sizeof(kClassSpecs[0]));
+uintptr_t g_class_vtable[kClassCount] = {};
+bool g_class_ready[kClassCount] = {};
+uintptr_t g_class_hits[kClassCount][8] = {};
+int g_class_counts[kClassCount] = {};
+
+// Follow this_offset from a vtable to its COL, then the COL to the type descriptor name.
+// This is the full single-inheritance COL walk for the classes used here (all have
+// this_offset 0 in tools/rtti_index.json); multiple-inheritance vtables would need mdisp.
+bool resolve_object_class(uintptr_t object, char* name_out, size_t name_size,
+                          uintptr_t* vtable_out)
+{
+    if (name_out == nullptr || name_size == 0) {
+        return false;
+    }
+    name_out[0] = '\0';
+    uintptr_t vtable = 0;
+    if (!safe_read(object, &vtable, sizeof(vtable))) {
+        return false;
+    }
+    if (vtable_out != nullptr) {
+        *vtable_out = vtable;
+    }
+    if (!in_range(vtable, 4, g_image.rdata, g_image.rdata_size)) {
+        dbg("[ERR]", "RTTI: object 0x%08llx vtable 0x%08llx is outside .rdata",
+            static_cast<unsigned long long>(object), static_cast<unsigned long long>(vtable));
+        return false;
+    }
+    uintptr_t col = 0;
+    if (!safe_read(vtable - 4, &col, sizeof(col))) {
+        return false;
+    }
+    if (!in_range(col, 20, g_image.rdata, g_image.rdata_size)) {
+        dbg("[ERR]", "RTTI: vtable 0x%08llx COL 0x%08llx is outside .rdata",
+            static_cast<unsigned long long>(vtable), static_cast<unsigned long long>(col));
+        return false;
+    }
+    unsigned signature = 0;
+    unsigned offset = 0;
+    unsigned cd_offset = 0;
+    unsigned type_descriptor = 0;
+    unsigned class_descriptor = 0;
+    if (!safe_read(col, &signature, 4) || !safe_read(col + 4, &offset, 4) ||
+        !safe_read(col + 8, &cd_offset, 4) || !safe_read(col + 12, &type_descriptor, 4) ||
+        !safe_read(col + 16, &class_descriptor, 4)) {
+        return false;
+    }
+    if (signature != 0 || offset != 0) {
+        dbg("[ERR]", "RTTI: COL 0x%08llx has signature %u offset %u; not a this_offset-0 COL",
+            static_cast<unsigned long long>(col), signature, offset);
+        return false;
+    }
+    if (!in_range(type_descriptor, 8, g_image.base, g_image.size)) {
+        dbg("[ERR]", "RTTI: COL 0x%08llx type descriptor 0x%08x is outside the image",
+            static_cast<unsigned long long>(col), type_descriptor);
+        return false;
+    }
+    char raw[192];
+    if (!safe_read(type_descriptor + 8, raw, sizeof(raw) - 1)) {
+        return false;
+    }
+    raw[sizeof(raw) - 1] = '\0';
+    if (strncmp(raw, ".?AV", 4) != 0) {
+        dbg("[ERR]", "RTTI: type descriptor 0x%08x name is not a class name: %.32s",
+            type_descriptor, raw);
+        return false;
+    }
+    strncpy(name_out, raw, name_size - 1);
+    name_out[name_size - 1] = '\0';
+    return true;
+}
+
+// Pattern-verify each class against the loaded image and remember the vtable address.
+void verify_rtti_classes()
+{
+    if (!load_image_layout()) {
+        dbg("[ERR]", "image layout: PE headers or .rdata/.text not found; address checks off");
         return;
     }
-    unsigned target = static_cast<unsigned>(reinterpret_cast<uintptr_t>(exe)) + rva;
+    dbg("[ADDR]", "image base=0x%08llx size=0x%x .rdata=0x%08llx+0x%x .data=0x%08llx+0x%x "
+                  ".text=0x%08llx+0x%x",
+        static_cast<unsigned long long>(g_image.base), static_cast<unsigned>(g_image.size),
+        static_cast<unsigned long long>(g_image.rdata),
+        static_cast<unsigned>(g_image.rdata_size),
+        static_cast<unsigned long long>(g_image.data),
+        static_cast<unsigned>(g_image.data_size),
+        static_cast<unsigned long long>(g_image.text),
+        static_cast<unsigned>(g_image.text_size));
+    for (int index = 0; index < kClassCount; ++index) {
+        const ClassSpec& spec = kClassSpecs[index];
+        const uintptr_t expected_vtable = g_image.base + spec.vtable_rva;
+        g_class_vtable[index] = expected_vtable;
+        g_class_ready[index] = true;
+
+        uintptr_t name_at = 0;
+        // MSVC type descriptors (and their names) live in .data in this build, not .rdata;
+        // the vtables and COLs are in .rdata. Search the right section and say which one.
+        bool name_found = false;
+        const char* name_section = ".data";
+        if (g_image.data != 0) {
+            name_found = find_pattern(spec.mangled, nullptr, strlen(spec.mangled) + 1,
+                                      g_image.data, g_image.data_size, &name_at);
+        }
+        if (!name_found) {
+            name_section = "whole image";
+            name_found = find_pattern(spec.mangled, nullptr, strlen(spec.mangled) + 1,
+                                      g_image.base, g_image.size, &name_at);
+        }
+        if (name_found) {
+            const uintptr_t expected_name = g_image.base + spec.type_descriptor_rva + 8;
+            if (name_at == expected_name) {
+                dbg("[OK]", "RTTI %s class-name at 0x%08llx in %s (index 0x%x matches)",
+                    spec.label, static_cast<unsigned long long>(name_at), name_section,
+                    spec.type_descriptor_rva);
+            } else {
+                dbg("[ERR]", "RTTI %s class-name at 0x%08llx in %s but index says 0x%08llx",
+                    spec.label, static_cast<unsigned long long>(name_at), name_section,
+                    static_cast<unsigned long long>(expected_name));
+            }
+        } else {
+            dbg("[ERR]", "RTTI %s class-name '%s' not found in .data or the image", spec.label,
+                spec.mangled);
+        }
+
+        const unsigned col_value = static_cast<unsigned>(g_image.base + spec.col_rva);
+        uintptr_t col_slot = 0;
+        if (find_pattern(&col_value, nullptr, sizeof(col_value), g_image.rdata,
+                         g_image.rdata_size, &col_slot)) {
+            const uintptr_t vtable = col_slot + 4;
+            if (vtable == expected_vtable) {
+                g_class_vtable[index] = vtable;
+                dbg("[OK]", "RTTI %s COL pointer at 0x%08llx -> vtable 0x%08llx "
+                            "(index 0x%x matches)",
+                    spec.label, static_cast<unsigned long long>(col_slot),
+                    static_cast<unsigned long long>(vtable), spec.vtable_rva);
+            } else {
+                dbg("[ERR]", "RTTI %s COL pointer at 0x%08llx -> vtable 0x%08llx but index "
+                             "says 0x%08llx; using index value",
+                    spec.label, static_cast<unsigned long long>(col_slot),
+                    static_cast<unsigned long long>(vtable),
+                    static_cast<unsigned long long>(expected_vtable));
+            }
+        } else {
+            dbg("[ERR]", "RTTI %s COL pointer 0x%08x not found in .rdata; using index vtable "
+                         "0x%08llx",
+                spec.label, col_value, static_cast<unsigned long long>(expected_vtable));
+        }
+
+        int text_slots = 0;
+        for (int slot = 0; slot < 6; ++slot) {
+            uintptr_t function = 0;
+            if (safe_read_quiet(g_class_vtable[index] + slot * 4, &function,
+                                sizeof(function)) &&
+                in_range(function, 1, g_image.text, g_image.text_size)) {
+                ++text_slots;
+            }
+        }
+        if (text_slots >= 2) {
+            dbg("[OK]", "RTTI %s vtable 0x%08llx has %d/6 slots inside .text", spec.label,
+                static_cast<unsigned long long>(g_class_vtable[index]), text_slots);
+        } else {
+            dbg("[ERR]", "RTTI %s vtable 0x%08llx has only %d/6 slots inside .text", spec.label,
+                static_cast<unsigned long long>(g_class_vtable[index]), text_slots);
+        }
+    }
+}
+
+// A position reached by following a pointer out of an object, which is where the live
+// transform sits for the player component (its own triple at +0x5c is a cached copy).
+bool find_chased_position(uintptr_t object, float out[3], unsigned* via_out,
+                          uintptr_t* target_out, unsigned* offset_out)
+{
+    unsigned char head[0x100];
+    if (!safe_read_quiet(object, head, sizeof(head))) {
+        return false;
+    }
+    for (size_t slot = 4; slot + 4 <= sizeof(head); slot += 4) {
+        unsigned value = 0;
+        memcpy(&value, head + slot, sizeof(value));
+        if (value == 0) {
+            continue;
+        }
+        const uintptr_t target = value;
+        if (target < 0x10000) {
+            dbg("[ERR]", "chase +0x%x: pointer 0x%08x refused (null/temporary)",
+                static_cast<unsigned>(slot), value);
+            continue;
+        }
+        if (in_range(target, 4, g_image.base, g_image.size)) {
+            continue;  // vtable or other image data, not a heap object
+        }
+        MEMORY_BASIC_INFORMATION info = {};
+        if (VirtualQuery(reinterpret_cast<void*>(target), &info, sizeof(info)) == 0 ||
+            info.State != MEM_COMMIT ||
+            (info.Protect & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE)) == 0) {
+            continue;
+        }
+        unsigned char raw[0x120];
+        if (!safe_read_quiet(target, raw, sizeof(raw))) {
+            continue;
+        }
+        float v[3];
+        unsigned offset = 0;
+        if (!find_triple(raw, sizeof(raw), v, &offset)) {
+            continue;
+        }
+        out[0] = v[0];
+        out[1] = v[1];
+        out[2] = v[2];
+        if (via_out != nullptr) {
+            *via_out = static_cast<unsigned>(slot);
+        }
+        if (target_out != nullptr) {
+            *target_out = target;
+        }
+        if (offset_out != nullptr) {
+            *offset_out = offset;
+        }
+        return true;
+    }
+    return false;
+}
+
+void log_triple_at(const char* who, uintptr_t object, unsigned offset)
+{
+    unsigned char raw[12];
+    if (!safe_read(object + offset, raw, sizeof(raw))) {
+        return;
+    }
+    float v[3];
+    memcpy(v, raw, sizeof(v));
+    if (!finite_triple(v)) {
+        dbg("[ERR]", "%s +0x%x is not a plausible triple", who, offset);
+        return;
+    }
+    dbg("[OK]", "%s +0x%x: %.3f %.3f %.3f (offset candidate, semantics unproven)", who, offset,
+        v[0], v[1], v[2]);
+}
+
+bool read_triple_at(uintptr_t object, unsigned offset, float out[3])
+{
+    unsigned char raw[12];
+    if (!safe_read(object + offset, raw, sizeof(raw))) {
+        return false;
+    }
+    memcpy(out, raw, sizeof(raw));
+    return out[0] == out[0] && out[1] == out[1] && out[2] == out[2];
+}
+
+// The world-position test from the verified write run (28c1ea9e...): Clyde's Fort characters
+// stand at a small positive height (0.4) and a real horizontal distance from the origin.
+// Unit axes, matrix rows and counters fail this; a real (x, y, z) passes.
+bool world_position(const float v[3])
+{
+    const double height = v[1] < 0.0f ? -static_cast<double>(v[1]) : static_cast<double>(v[1]);
+    const double horizontal =
+        std::sqrt(static_cast<double>(v[0]) * v[0] + static_cast<double>(v[2]) * v[2]);
+    return height >= 0.05 && height <= 50.0 && horizontal >= 5.0 && horizontal <= 5000.0;
+}
+
+double distance3(const float a[3], const float b[3])
+{
+    const double dx = static_cast<double>(a[0]) - b[0];
+    const double dy = static_cast<double>(a[1]) - b[1];
+    const double dz = static_cast<double>(a[2]) - b[2];
+    return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+bool find_triple_at_object(uintptr_t object, float out[3], unsigned* offset_out);
+
+// The live probe from the verified movement run: chase every pointer in the player
+// component's head, keep only triples that pass world_position(), and pick the one nearest
+// the component's own (cached) triple. This is the anchor that identifies the hero's mover.
+bool find_live_probe(uintptr_t player, float out[3], unsigned* slot_out, uintptr_t* target_out,
+                     unsigned* offset_out)
+{
+    float anchor[3] = {0.0f, 0.0f, 0.0f};
+    unsigned anchor_offset = 0;
+    const bool have_anchor = find_triple_at_object(player, anchor, &anchor_offset);
+    if (have_anchor) {
+        dbg("[ADDR]", "component cache anchor 0x%08llx +0x%x = %.3f %.3f %.3f",
+            static_cast<unsigned long long>(player), anchor_offset, anchor[0], anchor[1],
+            anchor[2]);
+    }
+    unsigned char head[0x100];
+    if (!safe_read_quiet(player, head, sizeof(head))) {
+        return false;
+    }
+    bool found = false;
+    double best = 0.0;
+    for (size_t slot = 4; slot + 4 <= sizeof(head); slot += 4) {
+        unsigned value = 0;
+        memcpy(&value, head + slot, sizeof(value));
+        if (value == 0) {
+            continue;
+        }
+        const uintptr_t target = value;
+        if (target < 0x10000) {
+            dbg("[ERR]", "probe chase +0x%x: pointer 0x%08x refused (null/temporary)",
+                static_cast<unsigned>(slot), value);
+            continue;
+        }
+        if (in_range(target, 4, g_image.base, g_image.size)) {
+            continue;
+        }
+        MEMORY_BASIC_INFORMATION info = {};
+        if (VirtualQuery(reinterpret_cast<void*>(target), &info, sizeof(info)) == 0 ||
+            info.State != MEM_COMMIT ||
+            (info.Protect & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE)) == 0) {
+            continue;
+        }
+        unsigned char raw[0x120];
+        if (!safe_read_quiet(target, raw, sizeof(raw))) {
+            continue;
+        }
+        for (size_t offset = 4; offset + 12 <= sizeof(raw); offset += 4) {
+            float v[3];
+            memcpy(v, raw + offset, sizeof(v));
+            if (!world_position(v)) {
+                continue;
+            }
+            const double gap = have_anchor ? distance3(v, anchor) : 0.0;
+            dbg("[ADDR]", "probe chase +0x%x -> 0x%08llx +0x%x = %.3f %.3f %.3f (d=%.3f)",
+                static_cast<unsigned>(slot), static_cast<unsigned long long>(target),
+                static_cast<unsigned>(offset), v[0], v[1], v[2], gap);
+            if (!found || gap < best) {
+                found = true;
+                best = gap;
+                out[0] = v[0];
+                out[1] = v[1];
+                out[2] = v[2];
+                if (slot_out != nullptr) {
+                    *slot_out = static_cast<unsigned>(slot);
+                }
+                if (target_out != nullptr) {
+                    *target_out = target;
+                }
+                if (offset_out != nullptr) {
+                    *offset_out = static_cast<unsigned>(offset);
+                }
+            }
+        }
+    }
+    return found;
+}
+
+// The hero transform is mover+0x12c. Each of the three movers has a world-position-looking
+// triple there, so "first mover" is not enough: the hero mover is the one whose +0x12c
+// matches the live position reached by chasing the player component's pointer (slot 0x0c ->
+// object+0x10). Motion was proven on 2026-11-16, run 28c1ea9e..., all validity flags true:
+// writing +3 on X changed 32.380 -> 35.380 and the frame changed; the component's own +0x5c
+// triple (0, 7, 45) never changed, so it is a cache.
+bool resolve_hero_position(float out[3], uintptr_t* mover_out, unsigned* offset_out)
+{
+    if (g_class_counts[0] == 0) {
+        dbg("[ERR]", "hero position: no DS_Component_Player object; cannot resolve the mover");
+        return false;
+    }
+    float probe[3] = {0.0f, 0.0f, 0.0f};
+    unsigned probe_slot = 0;
+    uintptr_t probe_object = 0;
+    unsigned probe_offset = 0;
+    const bool have_probe = find_live_probe(g_class_hits[0][0], probe, &probe_slot,
+                                            &probe_object, &probe_offset);
+    if (have_probe) {
+        dbg("[ADDR]", "hero probe: component 0x%08llx +0x%x -> 0x%08llx +0x%x = %.3f %.3f %.3f",
+            static_cast<unsigned long long>(g_class_hits[0][0]), probe_slot,
+            static_cast<unsigned long long>(probe_object), probe_offset, probe[0], probe[1],
+            probe[2]);
+    } else {
+        dbg("[ERR]", "hero probe: no chased live triple from the player component");
+    }
+
+    bool found = false;
+    double best = 0.0;
+    uintptr_t chosen = 0;
+    for (int index = 0; index < g_class_counts[3]; ++index) {
+        const uintptr_t mover = g_class_hits[3][index];
+        float v[3] = {0.0f, 0.0f, 0.0f};
+        if (!read_triple_at(mover, 0x12c, v)) {
+            dbg("[ERR]", "mover[%d] 0x%08llx +0x12c refused; skipped", index,
+                static_cast<unsigned long long>(mover));
+            continue;
+        }
+        if (!world_position(v)) {
+            dbg("[ERR]", "mover[%d] 0x%08llx +0x12c %.3f %.3f %.3f fails the world-position test",
+                index, static_cast<unsigned long long>(mover), v[0], v[1], v[2]);
+            continue;
+        }
+        const double gap = have_probe ? distance3(v, probe) : 0.0;
+        if (have_probe && gap > 1.0) {
+            dbg("[ADDR]", "mover[%d] 0x%08llx +0x12c %.3f %.3f %.3f is not the hero (gap %.3f "
+                          "from probe)",
+                index, static_cast<unsigned long long>(mover), v[0], v[1], v[2], gap);
+            continue;
+        }
+        if (!found || gap < best) {
+            found = true;
+            best = gap;
+            chosen = mover;
+            out[0] = v[0];
+            out[1] = v[1];
+            out[2] = v[2];
+            if (mover_out != nullptr) {
+                *mover_out = mover;
+            }
+            if (offset_out != nullptr) {
+                *offset_out = 0x12c;
+            }
+        }
+    }
+    if (!found) {
+        dbg("[ERR]", "hero position: no mover +0x12c passed the world-position test%s",
+            have_probe ? " within 1.0 of the component probe" : "");
+        return false;
+    }
+    dbg("[OK]", "hero position = mover 0x%08llx +0x12c: %.3f %.3f %.3f (motion-proven "
+                "2026-11-16 run 28c1ea9e; gap from component probe %.3f)",
+        static_cast<unsigned long long>(chosen), out[0], out[1], out[2], best);
+    return true;
+}
+
+// Best position for a party/AI object: its own triple first, then a chased pointer target.
+bool find_triple_at_object(uintptr_t object, float out[3], unsigned* offset_out)
+{
+    unsigned char raw[0x300];
+    if (!safe_read_quiet(object, raw, sizeof(raw))) {
+        return false;
+    }
+    return find_triple(raw, sizeof(raw), out, offset_out);
+}
+
+bool position_of_object(uintptr_t object, float out[3], unsigned* via_out, uintptr_t* target_out,
+                        unsigned* offset_out)
+{
+    if (find_chased_position(object, out, via_out, target_out, offset_out)) {
+        return true;
+    }
+    unsigned offset = 0;
+    if (find_triple_at_object(object, out, &offset)) {
+        if (via_out != nullptr) {
+            *via_out = 0xffffffffu;
+        }
+        if (target_out != nullptr) {
+            *target_out = object;
+        }
+        if (offset_out != nullptr) {
+            *offset_out = offset;
+        }
+        return true;
+    }
+    return false;
+}
+
+void log_object(const char* role, uintptr_t object)
+{
+    if (object == 0 || !checked_pointer(object, 4)) {
+        dbg("[ERR]", "%s object 0x%08llx refused; frame skipped", role,
+            static_cast<unsigned long long>(object));
+        return;
+    }
+    char name[192] = {};
+    uintptr_t vtable = 0;
+    if (!resolve_object_class(object, name, sizeof(name), &vtable)) {
+        dbg("[ERR]", "%s object 0x%08llx: RTTI resolution failed; frame skipped", role,
+            static_cast<unsigned long long>(object));
+        return;
+    }
+    dbg("[ADDR]", "%s object 0x%08llx class=%s vtable=0x%08llx", role,
+        static_cast<unsigned long long>(object), name,
+        static_cast<unsigned long long>(vtable));
+
+    float direct[3] = {0.0f, 0.0f, 0.0f};
+    unsigned direct_offset = 0;
+    const bool has_direct = probe_position(role, object, direct, &direct_offset);
+    if (has_direct) {
+        probe_yaw(role, object, direct_offset);
+    }
+
+    float live[3] = {0.0f, 0.0f, 0.0f};
+    unsigned via = 0;
+    uintptr_t target = 0;
+    unsigned live_offset = 0;
+    if (find_chased_position(object, live, &via, &target, &live_offset)) {
+        if (!has_direct || target != object) {
+            dbg("[OK]", "%s live position via +0x%x -> 0x%08llx at +0x%x: %.3f %.3f %.3f",
+                role, via, static_cast<unsigned long long>(target), live_offset, live[0],
+                live[1], live[2]);
+            probe_yaw(role, target, live_offset);
+        }
+    } else if (!has_direct) {
+        dbg("[ERR]", "%s: no position triple direct or via pointers; frame skipped", role);
+    }
+}
+
+// Integers small enough to be an animation id or an AI state enum. They are logged as
+// candidates with their offsets, never as a value of the field.
+void log_int_candidates(const char* label, const char* field, uintptr_t object, bool detailed)
+{
+    unsigned char raw[0x200];
+    if (!safe_read(object, raw, sizeof(raw))) {
+        return;
+    }
+    int inspected = 0;
+    int logged = 0;
+    for (size_t offset = 4; offset + 4 <= sizeof(raw); offset += 4) {
+        int value = 0;
+        memcpy(&value, raw + offset, sizeof(value));
+        ++inspected;
+        if (!detailed || value <= 0 || value > 4096 || logged >= 8) {
+            continue;
+        }
+        dbg("[ADDR]", "%s %s candidate int at +0x%x = %d (semantic unproven)", label, field,
+            static_cast<unsigned>(offset), value);
+        ++logged;
+    }
+    dbg("[UNKNOWN]", "%s %s: offset not proven; inspected +0x004..+0x%x at 4-byte stride "
+                      "(%d ints), %d small-int candidates above",
+        label, field, static_cast<unsigned>(sizeof(raw) - 4), inspected, logged);
+}
+
+void log_snapshot(const char* reason)
+{
+    dbg("[ADDR]", "snapshot %s tick=%ld player=%d party=%d buddy_ai=%d mover=%d anim=%d/%d/%d",
+        reason, static_cast<long>(g_ticks), g_class_counts[0], g_class_counts[1],
+        g_class_counts[2], g_class_counts[3], g_class_counts[4], g_class_counts[5],
+        g_class_counts[6]);
+    if (g_class_counts[0] == 0) {
+        dbg("[ERR]", "hero: no DS_Component_Player object in this scan; frame skipped");
+    }
+    for (int index = 0; index < g_class_counts[0]; ++index) {
+        log_object("hero", g_class_hits[0][index]);
+    }
+    float hero[3] = {0.0f, 0.0f, 0.0f};
+    const bool have_hero = resolve_hero_position(hero, nullptr, nullptr);
+    for (int index = 0; index < g_class_counts[3]; ++index) {
+        const uintptr_t mover = g_class_hits[3][index];
+        log_object("mover", mover);
+        // Verified 2026-11-16 (run 28c1ea9e...): mover+0x12c is the live transform; +0x10 is a
+        // unit-scale triple. Both are logged, and "hero position" above names the one that
+        // matches the component's chased live triple.
+        log_triple_at("mover", mover, 0x10);
+        log_triple_at("mover", mover, 0x12c);
+        if (have_hero) {
+            float v[3] = {0.0f, 0.0f, 0.0f};
+            if (read_triple_at(mover, 0x12c, v)) {
+                dbg("[ADDR]", "mover[%d] 0x%08llx +0x12c distance from hero = %.3f", index,
+                    static_cast<unsigned long long>(mover), distance3(v, hero));
+            }
+        }
+    }
+    for (int index = 0; index < g_class_counts[1]; ++index) {
+        const uintptr_t party = g_class_hits[1][index];
+        log_object("party", party);
+        if (have_hero) {
+            float p[3] = {0.0f, 0.0f, 0.0f};
+            unsigned via = 0;
+            uintptr_t target = 0;
+            unsigned offset = 0;
+            if (position_of_object(party, p, &via, &target, &offset)) {
+                const double gap = distance3(p, hero);
+                dbg("[OK]", "party[%d] 0x%08llx position %.3f %.3f %.3f, distance from hero "
+                            "%.3f%s",
+                    index, static_cast<unsigned long long>(party), p[0], p[1], p[2], gap,
+                    gap > 2.0 ? " (companion candidate)" : " (same spot as hero)");
+            }
+        }
+        dbg("[UNKNOWN]", "party[%d] BuddyState: Component_Party_Member has no proven AI-state "
+                          "offset; see buddy_ai candidates", index);
+    }
+    for (int index = 0; index < g_class_counts[2]; ++index) {
+        const uintptr_t buddy = g_class_hits[2][index];
+        log_object("buddy_ai", buddy);
+        log_int_candidates("buddy_ai", "BuddyState", buddy, index == 0);
+    }
+    for (int kind = 4; kind < kClassCount; ++kind) {
+        for (int index = 0; index < g_class_counts[kind] && index < 2; ++index) {
+            const uintptr_t anim = g_class_hits[kind][index];
+            log_object("anim", anim);
+            log_int_candidates("anim", "animation-id", anim, kind == 4 && index == 0);
+        }
+        if (g_class_counts[kind] == 0) {
+            dbg("[UNKNOWN]", "animation-id: no %s object in this scan; offset unknown",
+                kClassSpecs[kind].label);
+        }
+    }
+    dbg("[UNKNOWN]", "yaw: offset not proven; inspected +0x000..+0x2ff at 4-byte stride on "
+                      "hero/mover/party objects; candidate lines above are floats in [-180,180]");
+}
+
+void scan_buffer(const unsigned char* buffer, size_t got, uintptr_t base, uintptr_t lowest,
+                 uintptr_t highest)
+{
+    for (size_t offset = 0; offset + 4 <= got; offset += 4) {
+        unsigned value = 0;
+        memcpy(&value, buffer + offset, sizeof(value));
+        if (value < lowest || value > highest) {
+            continue;
+        }
+        for (int index = 0; index < kClassCount; ++index) {
+            if (value != static_cast<unsigned>(g_class_vtable[index])) {
+                continue;
+            }
+            const uintptr_t object = base + offset;
+            char name[192] = {};
+            uintptr_t vtable = 0;
+            if (!resolve_object_class(object, name, sizeof(name), &vtable)) {
+                dbg("[ERR]", "%s candidate 0x%08llx failed RTTI resolution",
+                    kClassSpecs[index].label, static_cast<unsigned long long>(object));
+                break;
+            }
+            if (strcmp(name, kClassSpecs[index].mangled) != 0) {
+                dbg("[ERR]", "%s candidate 0x%08llx RTTI says %s", kClassSpecs[index].label,
+                    static_cast<unsigned long long>(object), name);
+                break;
+            }
+            dbg("[ADDR]", "%s object 0x%08llx (RTTI %s)", kClassSpecs[index].label,
+                static_cast<unsigned long long>(object), name);
+            if (g_class_counts[index] < 8) {
+                g_class_hits[index][g_class_counts[index]++] = object;
+            }
+            break;
+        }
+    }
+}
+
+// One pass over committed writable memory. A dword equal to a verified vtable address is
+// an object candidate; it is accepted only if its own COL resolves to the expected class.
+void scan_objects()
+{
+    for (int index = 0; index < kClassCount; ++index) {
+        g_class_counts[index] = 0;
+    }
+    if (!g_image.valid) {
+        dbg("[ERR]", "scan skipped: image layout is not available");
+        return;
+    }
+    uintptr_t lowest = g_class_vtable[0];
+    uintptr_t highest = g_class_vtable[0];
+    for (int index = 1; index < kClassCount; ++index) {
+        if (g_class_vtable[index] < lowest) {
+            lowest = g_class_vtable[index];
+        }
+        if (g_class_vtable[index] > highest) {
+            highest = g_class_vtable[index];
+        }
+    }
     MEMORY_BASIC_INFORMATION info = {};
     unsigned char buffer[64 * 1024];
-    int found = 0;
     uintptr_t address = 0x10000;
+    int skipped_pages = 0;
     for (;;) {
         if (VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) == 0) {
             break;
         }
-        uintptr_t start = reinterpret_cast<uintptr_t>(info.BaseAddress);
-        uintptr_t end = start + info.RegionSize;
+        const uintptr_t start = reinterpret_cast<uintptr_t>(info.BaseAddress);
+        const uintptr_t end = start + info.RegionSize;
         const bool usable = info.State == MEM_COMMIT &&
                             (info.Protect & (PAGE_READWRITE | PAGE_WRITECOPY |
-                                             PAGE_EXECUTE_READWRITE));
+                                             PAGE_EXECUTE_READWRITE)) != 0;
         if (usable) {
             for (uintptr_t at = start; at < end; at += sizeof(buffer)) {
-                SIZE_T want = end - at > sizeof(buffer) ? sizeof(buffer) : end - at;
-                SIZE_T got = 0;
-                if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(at), buffer,
-                                       want, &got)) {
-                    break;
+                const size_t want = end - at > sizeof(buffer) ? sizeof(buffer) : end - at;
+                bool scanned = false;
+                if (checked_pointer(at, want)) {
+                    SIZE_T got = 0;
+                    if (ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(at),
+                                          buffer, want, &got)) {
+                        scan_buffer(buffer, got, at, lowest, highest);
+                        scanned = true;
+                    }
                 }
-                for (SIZE_T offset = 0; offset + 4 <= got; offset += 4) {
-                    unsigned value = 0;
-                    memcpy(&value, buffer + offset, 4);
-                    if (value != target) {
-                        continue;
-                    }
-                    char line[128];
-                    std::snprintf(line, sizeof(line), "%s object at 0x%08llx", label,
-                                  static_cast<unsigned long long>(at + offset));
-                    log_line(line);
-                    if (hit_count != nullptr && hits != nullptr && *hit_count < 8) {
-                        hits[(*hit_count)++] = at + offset;
-                    }
-                    if (found == 0) {
-                        // First hit: log the plausible position triples, so the offset can be
-                        // read from the log instead of another blind scan.
-                        log_triples(label, at + offset, 0x200);
-                        // The component may not hold the transform itself: follow up to three
-                        // pointers out of it and look for triples there too.
-                        unsigned char head[256];
-                        SIZE_T got_head = 0;
-                        if (ReadProcessMemory(GetCurrentProcess(),
-                                              reinterpret_cast<void*>(at + offset), head,
-                                              sizeof(head), &got_head)) {
-                            int chased = 0;
-                            for (size_t slot = 0; slot + 4 <= got_head && chased < 3; slot += 4) {
-                                unsigned value = 0;
-                                memcpy(&value, head + slot, 4);
-                                if (value < 0x10000) {
-                                    continue;
-                                }
-                                MEMORY_BASIC_INFORMATION target = {};
-                                if (VirtualQuery(reinterpret_cast<void*>(value), &target,
-                                                 sizeof(target)) == 0) {
-                                    continue;
-                                }
-                                if (target.State != MEM_COMMIT ||
-                                    (target.Protect & (PAGE_READWRITE | PAGE_WRITECOPY |
-                                                       PAGE_EXECUTE_READWRITE)) == 0) {
-                                    continue;
-                                }
-                                char label_line[96];
-                                std::snprintf(label_line, sizeof(label_line), "chase%02x",
-                                              static_cast<unsigned>(slot));
-                                log_triples(label_line, value, 0x100);
-                                ++chased;
-                            }
+                if (!scanned) {
+                    // A region can mix readable pages with guard/no-access pages. Fall back
+                    // to 4 KiB pages and count the unreadable ones in one [ERR] line.
+                    for (size_t page = 0; page < want; page += 0x1000) {
+                        const uintptr_t page_at = at + page;
+                        if (page_at >= end) {
+                            break;
                         }
-                    }
-                    if (++found >= limit) {
-                        return;
+                        const size_t page_want =
+                            end - page_at > 0x1000 ? 0x1000 : end - page_at;
+                        SIZE_T got = 0;
+                        if (!checked_pointer(page_at, page_want) ||
+                            !ReadProcessMemory(GetCurrentProcess(),
+                                               reinterpret_cast<void*>(page_at), buffer,
+                                               page_want, &got)) {
+                            ++skipped_pages;
+                            continue;
+                        }
+                        scan_buffer(buffer, got, page_at, lowest, highest);
                     }
                 }
             }
@@ -619,9 +1475,12 @@ void scan_vtable(const char* label, unsigned rva, int limit, uintptr_t* hits, in
         }
         address = end;
     }
-    char line[96];
-    std::snprintf(line, sizeof(line), "%s objects found: %d", label, found);
-    log_line(line);
+    if (skipped_pages > 0) {
+        dbg("[ERR]", "scan: skipped %d unreadable page(s) in writable regions", skipped_pages);
+    }
+    dbg("[OK]", "scan complete: player=%d party=%d buddy_ai=%d mover=%d anim=%d/%d/%d",
+        g_class_counts[0], g_class_counts[1], g_class_counts[2], g_class_counts[3],
+        g_class_counts[4], g_class_counts[5], g_class_counts[6]);
 }
 // --- all device-creation entry points, inline -------------------------------
 //
@@ -741,40 +1600,10 @@ void install_inline_hooks()
 bool read_first_triple(uintptr_t address, float out[3], unsigned* offset_out)
 {
     unsigned char raw[512];
-    SIZE_T got = 0;
-    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), raw,
-                           sizeof(raw), &got)) {
+    if (!safe_read_quiet(address, raw, sizeof(raw))) {
         return false;
     }
-    for (size_t offset = 4; offset + 12 <= got; offset += 4) {
-        float values[3];
-        memcpy(values, raw + offset, sizeof(values));
-        bool finite = true;
-        int axis = 0;
-        for (int index = 0; index < 3; ++index) {
-            if (!(values[index] == values[index]) || values[index] > 1.0e4f ||
-                values[index] < -1.0e4f) {
-                finite = false;
-            }
-            if (values[index] >= 1.0f || values[index] <= -1.0f) {
-                ++axis;
-            }
-        }
-        if (!finite || axis < 2) {
-            continue;
-        }
-        if (values[0] == values[1] && values[1] == values[2]) {
-            continue;
-        }
-        out[0] = values[0];
-        out[1] = values[1];
-        out[2] = values[2];
-        if (offset_out != nullptr) {
-            *offset_out = static_cast<unsigned>(offset);
-        }
-        return true;
-    }
-    return false;
+    return find_triple(raw, sizeof(raw), out, offset_out);
 }
 // Offset of the triple reported by `position`, so a test can nudge it and watch the character
 // move (the only honest way to prove a float triple is the player's position).
@@ -789,7 +1618,31 @@ uintptr_t g_player_hits[8];
 int g_player_count = 0;
 uintptr_t g_mover_hits[8];
 int g_mover_count = 0;
+uintptr_t g_party_hits[8];
+int g_party_count = 0;
+uintptr_t g_buddy_hits[8];
+int g_buddy_count = 0;
+uintptr_t g_anim_hits[8];
+int g_anim_count = 0;
 coop::Net* g_net = nullptr;
+
+void sync_bridge_lists()
+{
+    g_player_count = g_class_counts[0];
+    memcpy(g_player_hits, g_class_hits[0], sizeof(g_player_hits));
+    g_party_count = g_class_counts[1];
+    memcpy(g_party_hits, g_class_hits[1], sizeof(g_party_hits));
+    g_buddy_count = g_class_counts[2];
+    memcpy(g_buddy_hits, g_class_hits[2], sizeof(g_buddy_hits));
+    g_mover_count = g_class_counts[3];
+    memcpy(g_mover_hits, g_class_hits[3], sizeof(g_mover_hits));
+    g_anim_count = 0;
+    for (int kind = 4; kind < kClassCount; ++kind) {
+        for (int index = 0; index < g_class_counts[kind] && g_anim_count < 8; ++index) {
+            g_anim_hits[g_anim_count++] = g_class_hits[kind][index];
+        }
+    }
+}
 
 class CoopAdapter : public coopbridge::Adapter
 {
@@ -818,6 +1671,22 @@ public:
             movers.push(Value(static_cast<double>(g_mover_hits[index])));
         }
         root.set("movers", movers);
+        Value party = Value::array();
+        for (int index = 0; index < g_party_count; ++index) {
+            party.push(Value(static_cast<double>(g_party_hits[index])));
+        }
+        root.set("party", party);
+        Value buddy_ai = Value::array();
+        for (int index = 0; index < g_buddy_count; ++index) {
+            buddy_ai.push(Value(static_cast<double>(g_buddy_hits[index])));
+        }
+        root.set("buddy_ai", buddy_ai);
+        Value anims = Value::array();
+        for (int index = 0; index < g_anim_count; ++index) {
+            anims.push(Value(static_cast<double>(g_anim_hits[index])));
+        }
+        root.set("anim_controllers", anims);
+        root.set("debug_log", "coop_debug.log");
         if (g_net != nullptr) {
             Value net = Value::object();
             net.set("sent", static_cast<double>(g_net->SentCount()));
@@ -844,9 +1713,23 @@ public:
                 position.set("z", static_cast<double>(values[2]));
                 position.set("offset", static_cast<double>(offset));
                 position.set("object", static_cast<double>(g_player_hits[0]));
+                position.set("cached", true);
                 root.set("position", position);
                 g_position_offset = offset;
                 g_position_known = true;
+            }
+            float live_values[3] = {0.0f, 0.0f, 0.0f};
+            uintptr_t hero_mover = 0;
+            unsigned live_offset = 0;
+            if (resolve_hero_position(live_values, &hero_mover, &live_offset)) {
+                Value live = Value::object();
+                live.set("x", static_cast<double>(live_values[0]));
+                live.set("y", static_cast<double>(live_values[1]));
+                live.set("z", static_cast<double>(live_values[2]));
+                live.set("offset", static_cast<double>(live_offset));
+                live.set("mover", static_cast<double>(hero_mover));
+                live.set("source", "mover+0x12c, motion-proven 2026-11-16 run 28c1ea9e");
+                root.set("position_live", live);
             }
         }
         return root;
@@ -902,8 +1785,14 @@ public:
             install_inline_hooks();
             return {true, "inline hooks requested"};
         }
+        if (line == "probe") {
+            scan_objects();
+            sync_bridge_lists();
+            log_snapshot("bridge probe");
+            return {true, "scan and snapshot written to coop_debug.log"};
+        }
         if (std::sscanf(line.c_str(), "tp %f %f %f", &dx, &dy, &dz) != 3) {
-            return {false, "usage: tp dx dy dz | hooks graphics | hooks inline"};
+            return {false, "usage: tp dx dy dz | probe | hooks graphics | hooks inline"};
         }
         if (!g_position_known || g_player_count == 0) {
             return {false, "no player position yet"};
@@ -934,6 +1823,15 @@ public:
         if (expr == "mover_count") {
             return Value(static_cast<double>(g_mover_count));
         }
+        if (expr == "party_count") {
+            return Value(static_cast<double>(g_party_count));
+        }
+        if (expr == "buddy_count") {
+            return Value(static_cast<double>(g_buddy_count));
+        }
+        if (expr == "anim_count") {
+            return Value(static_cast<double>(g_anim_count));
+        }
         return Value();
     }
 };
@@ -962,6 +1860,18 @@ DWORD WINAPI worker(LPVOID)
         g_notes[g_notes_length] = '\0';
         log_line(g_notes);
     }
+    wchar_t debug_path[MAX_PATH];
+    lstrcpyW(debug_path, path);
+    wchar_t* debug_name = wcsrchr(debug_path, L'\\');
+    if (debug_name != nullptr) {
+        lstrcpyW(debug_name + 1, L"coop_debug.log");
+        g_debug = _wfopen(debug_path, L"w");
+    }
+    dbg("[ADDR]", "--- coop debug probe: pid=%lu build=228353 exe=%ls ---",
+        static_cast<unsigned long>(GetCurrentProcessId()), debug_path);
+    dbg("[ADDR]", "safety: every read is checked with VirtualQuery and ReadProcessMemory; "
+                  "MinGW has no __try/__except, a bad pointer is an [ERR] line, never a crash");
+    verify_rtti_classes();
     // Nothing is hooked at startup: creating a dummy device while the engine initialises its
     // own graphics is exactly what killed the process on 2026-11-15. Hooks are installed on
     // demand from the bridge (`exec "hooks d3d11"`), once the game is already up.
@@ -989,7 +1899,7 @@ DWORD WINAPI worker(LPVOID)
         log_line("bridge: start failed");
     }
     // The thread still ticks, so a run is observable even before the first frame hook fires.
-    LONG next_scan = 600;
+    LONG next_scan = 60;
     for (;;) {
         ++g_ticks;
         if ((g_ticks % 300) == 0) {
@@ -997,10 +1907,9 @@ DWORD WINAPI worker(LPVOID)
         }
         if (g_ticks >= next_scan) {
             next_scan = g_ticks + 600;
-            g_player_count = 0;
-            g_mover_count = 0;
-            scan_vtable("player", kPlayerVtableRva, 3, g_player_hits, &g_player_count);
-            scan_vtable("mover", kMoverVtableRva, 3, g_mover_hits, &g_mover_count);
+            scan_objects();
+            sync_bridge_lists();
+            log_snapshot("periodic");
         }
         if (g_bridge_started && g_server != nullptr) {
             g_server->Pump();

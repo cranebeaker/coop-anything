@@ -502,3 +502,52 @@ second, two instances on one PC third. Only if that is answered "no" drop to the
 build-from-zero puppet path. `PLAN.md` and `prompts/` split this into seven agent-sized jobs, with
 two PCs and two screens over the network as the product target and local two-player only as a
 development milestone.
+
+## 2026-11-16 (step 1): detailed debug log, safe pointers, RTTI-derived addresses
+
+Announced before editing `mod/src/mod.cpp` (two agents already collided on the file). The edit
+adds `coop_debug.log` next to the exe with tags `[OK]` / `[ADDR]` / `[ERR]` / `[UNKNOWN]`, a
+`VirtualQuery` + `ReadProcessMemory` pointer check (MinGW has no `__try/__except`), a small
+`find_pattern` used to verify each class-name string and COL pointer in `.rdata`, full
+single-inheritance RTTI/COL resolution for live objects, and a one-pass vtable scan for
+`DS_Component_Player`, `Component_Party_Member`, `Companion_Basic`, `MoverImpl` and the three
+animation-controller classes. The hero position is read from the mover whose `+0x12c` triple
+matches the player component's chased live probe; the component's `+0x5c` triple is logged as
+the cache it is. Yaw, animation id and BuddyState stay `[UNKNOWN]` with candidate offsets.
+
+No writes to the game: this step only reads. One control run on the isolated copy loads Clyde's
+Fort, waits 5 s after the level, calls the bridge `probe` command once, and closes the game.
+
+
+### Step 1 result (2026-11-16, run 6ac3c71b2e44323a0808bfd41117284)
+
+- Build: `mingw32-make -C build` with the i686 MinGW at `D:\mingw32`, no errors.
+  Run: `SP_GAME_DIR=D:\coop-work\game-test py -3.14 -B local\step1_probe.py`, one launch
+  under the shared lock, Clyde's Fort loaded, 5 s wait, bridge `probe`, game killed. All
+  validity flags true (profile, guard, exe hash).
+- `coop_debug.log` is 1978 lines. The first attempt (run 2d4ae189...) scanned but found zero
+  objects: MSVC type descriptors and their class-name strings are in **`.data`**, not
+  `.rdata` (only the vtables and COLs are in `.rdata`). The failed log is kept in
+  `local/step1-coop-debug-failed.log`; the corrected build was the one run above.
+- Hero: `DS_Component_Player` at `0x256f6890`; its own triple `+0x5c = (0, 7, 45)` is the
+  cache. Live position via component `+0x0c -> 0x0adc8830 +0x10 = (32.380, 0.400, 15.119)`,
+  matching `mover 0x1287b298 +0x12c = (32.380, 0.400, 15.119)` with gap 0.000. This is the
+  motion-proven transform from run 28c1ea9e.
+- Active companion: `Component_Party_Member` at `0x25700ee0`, live via `+0x0c ->
+  0x0adc88d0 +0x10 = (38.375, 0.400, 16.769)`, 6.218 from the hero. The single real
+  `Companion_Basic` object at `0x0b04d4c0` chases the same pointer (`+0x1c -> 0x0adc88d0`),
+  which cross-checks that this is Buddy.
+- Yaw: still unproven. All floats in `[-180, 180]` in the first `0x300` bytes of the hero,
+  movers and party objects were zero/denormal; no candidate offset is claimed.
+- Animation id: still unproven. `NY_Component_Anim_Controller` at `0x256f4d60` and
+  `0x256ffa60`; small-int candidates at `+0x30 = 1`, `+0x60 = 44` in the first object, none
+  in the second. The other two controller classes had object candidates that later failed
+  RTTI, so their ids are unknown too.
+- BuddyState: still unproven. `Companion_Basic` small-int candidates at `+0x10 = 1`,
+  `+0xfc = 75`, `+0x110 = 20`, `+0x11c = 1`, `+0x124 = 24`, `+0x128 = 23`, `+0x134 = 1`,
+  `+0x140 = 1`; none is claimed as the state.
+- Known scan defect for the next step: the one-pass dword scan also accepts table-like
+  runs where consecutive dwords are class vtables (e.g. `0x27d9f7b4`, `0x6f1812a0`), so the
+  counts (`player=2 party=3 buddy_ai=8 mover=8`) over-report. The real heap objects are
+  logged first and are the ones used for the result. A follow-up should reject a candidate
+  whose `+4` dword is another known class vtable.
