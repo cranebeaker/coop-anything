@@ -14827,3 +14827,30 @@
   sources:
   - https://github.com/OpenXcom-Coop/OpenXcom-Coop-Mod
   checked: '2026-11-14'
+- game: Parkasaurus
+  year: 2020
+  engine: Unity
+  project: Parkasaurus Co-op
+  url: https://github.com/oshoubber/parkasaurus-coop
+  other_urls:
+  - https://github.com/oshoubber/parkasaurus-coop/releases/tag/v0.1.1
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'no'
+    story: unknown
+    enemies: unknown
+    world_state: partial
+    items: shared
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Two players manage the host's park over Steam or Direct IP. Shared park state, finances and inventory. Guest management tools and campaign coverage are incomplete. MIT source.
+  sources:
+  - https://store.steampowered.com/app/591460/Parkasaurus/
+  - https://github.com/oshoubber/parkasaurus-coop#readme
+  - https://github.com/oshoubber/parkasaurus-coop/releases/tag/v0.1.1
+  checked: '2026-11-15'
+  made_with_coop_anything: true
