@@ -58,6 +58,7 @@ small message channel inside the engine's ENet link.
 | saves written while hosting crash on load | the save stream depends on the engine's MP flag; the joiner's cloned body also broke the load | clear the MP flag while the save serializes (~15 ms); leave the body's entities out of the save loop; the joiner's game writes no saves | hosted saves load in a fresh game, a session restarts from one |
 | a story level change crashes the joiner | the joiner follows `change_map_cl` and applies the level's `.player` carry-over with no controlled entity; joining after the change crashed too (carried-over items get ids 0x0..0x23) | joiner skips the engine's level change; host hosts again in the new level | joiner in l04_riga with its own body after the host's l03 to l04 change |
 | the joiner had to restart its game to follow a level change | the engine's own client path loads the level locally with no network; the joiner's MP flag is already 0 there, and the host stops sending to it after re-hosting | joiner keeps its ENet link (engine packets dropped both ways); the host sends "level ready" over the mod's own message type on ENet channel 0; the joiner then runs `disconnect` and joins again in the same process (restart as fallback) | joiner in l04_riga with its own body, same process, 2 runs |
+| a new joiner body holds two weapons (l19: AK + revolver) until its first switch | the cloned body has a second firearm in the drawn state (pointer at entity+0x5B8) besides the inventory's current weapon | 3 s and 6 s after the body arrives, holster and hide such strays with the game's own item calls (vtbl+0xE8, +0x240) | first idle inspect shows one weapon; smoke PASS 8 and 10 |
 
 ## QA
 
@@ -98,9 +99,7 @@ Not playable yet. Build from source per the project README; no release.
 - Damage, enemy AI, doors, pickups and story events are not checked for sync. In `l19_defence` the monsters stay
   dormant for the first minutes.
 - The handcar in `l03_chase` is not networked: the joiner's copy runs behind the host's.
-- A new joiner body starts with two weapons active (l19: AK and revolver) until its first weapon switch; the mod
-  works around it by switching away and back (two pad Y presses) a few seconds after the body arrives (FINDINGS
-  5.7). The joiner's weapon HUD misses 6 of 11 ammo types (cosmetic) because the cloned body lacks most of the host
+- The joiner's weapon HUD misses 6 of 11 ammo types (cosmetic) because the cloned body lacks most of the host
   player's ammo items.
 - In `l04_riga`'s opening bar scene the joiner's body can't move and the joiner can't see the host (FINDINGS 5.12).
 - A joiner that rejoined while a scripted fight was running crashed once on load (cause unknown).
@@ -111,6 +110,6 @@ Not playable yet. Build from source per the project README; no release.
 
 ## Next steps
 
-Replace the two-weapons workaround with a direct fix; give the joiner's body the host player's full set of ammo items; unlock the joiner in
+Give the joiner's body the host player's full set of ammo items; unlock the joiner in
 scripted scenes; test a level's own end trigger (not only console `change_map`); network the handcar and doors; LAN
 play. Details: FINDINGS 5.7 to 5.13.
