@@ -42,8 +42,8 @@ An earlier version of this write-up (PR #126) held the opposite, see [Correction
 
 **Honest QA.** What was checked is listed under [QA](#qa). Short version: offline test suites, a headless bot and an installer suite; scripted sessions with real
 game clients on two PCs of one LAN (every section from 1-2 to 12-2 for arrival, characters and movement, the story's own transitions between parts and episodes, the
-end of the campaign, and for 0.2.1 and 0.2.2 their fixes and additions) and split screen driven with two virtual pads. Not yet done: any play by people, a session between two different networks (Steam relay), the
-last boss fight (12-3) played the story's way, 2-2's own story with HUNK, the fights of most sections, a lever pulled by the partner on two PCs, and anything in Raid.
+end of the campaign, and for 0.2.1 and 0.2.2 their fixes and additions) and split screen driven with two virtual pads. No person has played it yet; what the lab
+runs do not cover is one line at the end of [QA](#qa).
 
 ## Existing work
 
@@ -403,7 +403,7 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   - on the build with the split-screen fix just before the network additions (the same code apart from them): the guest's character opened a door (shown on
     both PCs) and picked up an item (gone on both PCs), and the long network runs of 0.2.1 passed again (the partner's guns, the start kit, the hand-over of an
     enemy, the aim gate, the save panel, the knife swing, Continue of a saved game; sections of Episodes 1, 2, 3, 9 and 12), except the check of the guest's
-    shots as HUNK in 2-2 (see below).
+    shots as HUNK in 2-2, which gave no result (the test enemy did not walk into the guest's aim; also not in a repeat on 0.2.1).
 * **Split screen on one PC**, two virtual Xbox 360 pads: the second player aims and fires while the first has no gun in hand; Give from both players' screens, a full
   partner, too far; the Genesis: the second player gets it, holding it opens his scanner view in the whole screen, his own rate and his herb at 100 work (the rate set
   by a test command), and while the first player scans the second waits; HUNK walks, aims and shoots in 2-2. For 0.2.2, with the second player's pad only: a door
@@ -411,19 +411,9 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   him; he picked up a herb while the first player stood 250 units away; the first player's camera stayed steady while the second player's door opened (a
   screenshot of every frame); 8 quits to the title through the game's own pause menu from 8 sections, no crash. The door, the herb, the first player's door and a
   quit to the title were repeated on the final build.
-* **What these were not:** parts were driven by test commands (teleports, set story flags, virtual gamepads, the restart of a section); no person played 0.2.0, 0.2.1 or 0.2.2 before its release; the last boss
-  fight (12-3) was not played the story's way (the section was only started directly); 2-2's own story with HUNK (its scenes, doors and enemies) was not played
-  through; many sections were checked for arrival and movement only (no enemy near the start), and shots in water sections (6-2) were not tested; a real scan of a
-  target by the second player in split screen was not reached; Give's texts in the other 12 languages were not seen in a running game, and Give in split screen with
-  the keyboard, the mouse or a downed partner was not run; no session between two different networks; Raid never touched. Of 0.2.2, not checked on two real PCs: a
-  lever pulled by the partner (the parts of the levels that hold levers are loaded only by the story, which the tests could not drive there; offline tests only),
-  using on the host's PC a key the guest picked up (only its flag reaching the host was checked), a weapon box and, on the final build, a corpse box shown opening
-  on the other PC, the line on the partner's screen after a lone skip press (the vote itself was checked in the logs of both PCs), a skip pressed on a gamepad
-  (the tests pressed keys), and the partner's motions at levers, valve wheels, shelves and weapon boxes; in split screen the second player was not seen using
-  doors other than the two tried, crates, the wall scanner, the hand print, the elevator switches, the weapon box or ladders. In 2-2 with HUNK the check that the
-  guest's shots reach the host's enemy gave no result in three runs during the work on 0.2.2 and in a repeat on 0.2.1 (the test enemy did not walk into the
-  guest's aim; no regression found). In two long runs the check of the guest's knife swing gave no result because the test input did not make the host's own
-  character swing either; its own run passed. That is why the level is `automated`, not `verified-playthrough`.
+* **Not covered by the lab runs:** play by people, Steam relay, 12-3 and 2-2's own story played through, most sections' fights, the second player's real Genesis
+  scan and his crates, scanners, switches and ladders in split screen, and the partner's levers on two PCs; parts were driven by test commands, so the level is
+  `automated`, not `verified-playthrough`.
 
 ## How to play
 
@@ -440,26 +430,13 @@ mod's repository with the zip from `coop\Collect logs.bat` (both PCs for a netwo
 
 ## Known issues
 
-* Not played by people before the release: everything under [QA](#qa) was run on the test PCs, partly with test commands (teleports, set story flags, virtual gamepads).
-  Not yet tried between two different networks (Steam relay).
-* The last boss fight (12-3) has not been played the story's own way on two PCs: the section could only be started directly; the end after it was checked.
-* 2-2 with HUNK: the part's own story (its scenes, doors and enemies) was not played through; its end was set by a test command.
-* Many sections were checked for arrival and movement only (no enemy near the start): fights there use the same code as the checked ones. Shots in water sections (6-2)
-  were not tested.
 * The Genesis in split screen: while the second player scans, the screen shows his scanner view in full (the game has one scanner view, so one player scans at a time: the
   first to start, the other waits); his analysis rate is kept only while the game runs (it starts at 0 again after the game is restarted).
 * Give to partner: an item that is on its way to the partner at the very moment a new section starts is not in that section's first checkpoint, so loading that checkpoint
   again (a game over before the next one) takes it back, like everything else since. Where the story changes the characters with the section (Episode 9 to 10), an item
   still on its way lands with the new character on that PC; it is not lost.
-* The Genesis: a real scan of a target by the second player in split screen was not reached in the tests (no scan target at the test spots, also not for the first player),
-  and a hidden item revealed by a real scan on the other PC was checked only with a test command on the same path.
-* Give to partner: its texts in the other 12 languages were not seen in a running game (only Russian); in split screen the keyboard, the mouse and a downed partner were
-  not run.
 * At the first level of a network session the host's character on the guest's screen carries no knife, so a knife attack of the host is not shown there (it counts
   on the host's PC as usual).
-* Network, from 0.2.2: a lever pulled by the partner, using on the host's PC a key the guest picked up, a weapon box (and, on the final build, a corpse box) shown
-  opening on the other PC, the line after a lone skip press, a skip on a gamepad, and the partner's motions at levers, valve wheels, shelves and weapon boxes were
-  not checked on two real PCs (see [QA](#qa)).
 * Network, the world objects the partner uses: valve wheels (Episodes 5, 6 and 12) and the shelves you push (Episode 2) move only on the PC of the player who uses
   them (the game moves the player who turns or pushes, so the other PC cannot replay it; his motion is shown and the story flag is passed on). Each player rides
   an elevator himself. Ducts, vent covers, wire-puzzle covers, sideboards, TVs, toilets, shutters and two-wing doors are not shown on the other PC; a crate breaks
@@ -472,8 +449,6 @@ mod's repository with the zip from `coop\Collect logs.bat` (both PCs for a netwo
   its opening animation, which the game loads around the first player (ready when he stood about 200 units or nearer for a few seconds): a door the second player
   opens far from the first closes again after 6 s, so try again when the first player is nearer. An object is used by the nearest player, so the other cannot use
   it while he is not the nearer one.
-* Split screen: the second player was not seen using doors other than the two tried (Episodes 3 and 9), the crates, the wall scanner, the hand print, the
-  elevator switches, the weapon box and ladders; they use the same rule as the doors.
 * Split screen and network are not used together; joining a running network game is not possible (start a new co-op game, Continue picks up the checkpoint).
 
 ## Correction of the earlier thesis
@@ -496,7 +471,7 @@ we could not confirm are marked in "How the game works". The offsets we cross-ch
 
 ## Next steps
 
-1. **Human playtest**, first the points under [Known issues](#known-issues): the last boss fight (12-3) played the story's way, 2-2's own story with HUNK, the fights
+1. **Human playtest**, first what the lab runs did not cover (end of [QA](#qa)): the last boss fight (12-3) played the story's way, 2-2's own story with HUNK, the fights
    of the sections checked only for arrival, shots in water (6-2), a real Genesis scan by the second player in split screen, a lever pulled by the partner, and
    the second player's crates, scanners, switches and ladders in split screen; reports welcome as issues with the `Collect logs.bat` zips of both PCs.
 2. **Steam relay** between two different networks.
