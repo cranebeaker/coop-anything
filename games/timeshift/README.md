@@ -5,8 +5,8 @@
 | Engine | Saber3D (Saber Interactive), Direct3D 9, Havok, FMOD, Bink; its own typed, event-driven level scripts; GameSpy-era client-server multiplayer |
 | Versions tested | PC patch 1.2 (menu "Ver 1.02"), 32-bit `bin\TimeShift.exe` SHA-256 `689c63da36cd5902edcad2abe1111d4697a92b12c4e17fe0659b856752641be4`, and the community's pre-patched exe of the same code; Windows 10 and 11. Steam copies are patch 1.0 and need a community 1.2 update package that the player supplies (simulated Steam folder tested, a real Steam install not yet) |
 | Projects | [TimeShift Co-op](https://github.com/dolbaras/timeshift-coop) (directory entry "TimeShift Co-op") |
-| QA level | automated (a bot drives a host and a client through all 24 campaign levels with the level changes; menus, split screen and the installer are driven by scripts). Nobody has played 0.1.4 to 0.1.6 by hand |
-| Last updated | 2026-11-16 (0.1.6) |
+| QA level | automated (a bot drives a host and a client through all 24 campaign levels with the level changes; menus, split screen and the installer are driven by scripts). Nobody has played 0.1.4 to 0.1.7 by hand |
+| Last updated | 2026-11-16 (0.1.7) |
 
 ## Where things stand
 
@@ -14,14 +14,16 @@ Two to four players can play the story campaign together over a local network (t
 and direct IP is written but not yet tested between two real homes), and two players can share one PC in split screen.
 The mod is a `dinput8.dll` proxy plus data built on the player's own machine from their own game archives; it
 uses the game's own network code, not a second one. A bot has run a host and a client through all 24 levels, with the
-level changes, for 0.1.0, 0.1.1 and 0.1.3 (the last full run); 0.1.4 to 0.1.6 were checked in lab sessions on test PCs
+level changes, for 0.1.0, 0.1.1 and 0.1.3 (the last full run); 0.1.4 to 0.1.7 were checked in lab sessions on test PCs
 and by offline tests (see QA), and nobody has played them by hand yet. A whole campaign played by people is still to come, and
 sound has only been checked in logs, not by ear. Releases come with a one-file setup exe or a zip, and the "TimeShift Co-op" shortcut
 installs a newer release from GitHub before each start ([releases](https://github.com/dolbaras/timeshift-coop/releases)).
-The newest release is [0.1.6](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.6). It keeps a player whose
-PC is still loading a level in the game (the host used to drop it after 15 silent seconds), makes every level wait for the
-players still loading, turns Skip in a cutscene into a vote of every player, hides the partner in cutscenes and lets
-split-screen player 2 follow player 1's teleports, movement locks and lifts. 0.1.5 (2026-11-11) changed texts only.
+The newest release is [0.1.7](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.7). On the clients it plays
+the scripted people of the level openings, starts the soldiers' voices and melee-hit sounds, and stands up a soldier the
+host's rewind brings back to life; in split screen player 2 now sets off the story and time-power zones. 0.1.6
+(2026-11-16) keeps a player whose PC is still loading a level in the game, makes every level wait for the players still
+loading, turns Skip in a cutscene into a vote of every player, hides the partner in cutscenes and lets split-screen
+player 2 follow player 1's teleports, movement locks and lifts. 0.1.5 (2026-11-11) changed texts only.
 
 ## Existing work
 
@@ -67,7 +69,8 @@ Added after 0.1.1 (release notes: [0.1.2](https://github.com/dolbaras/timeshift-
 [0.1.3](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.3),
 [0.1.4](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.4),
 [0.1.5](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.5),
-[0.1.6](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.6)):
+[0.1.6](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.6),
+[0.1.7](https://github.com/dolbaras/timeshift-coop/releases/tag/v0.1.7)):
 
 - **Walking speed in split screen (0.1.2):** the game smooths the walk through two values that both local players shared:
   player 1 raised them every update and the idle player 2 took them back, so player 1 crept along. Each player has its own
@@ -133,6 +136,22 @@ Added after 0.1.1 (release notes: [0.1.2](https://github.com/dolbaras/timeshift-
   20 seconds; player 2 is brought to player 1 when it stays more than 40 m away for 10 seconds.
 - **Level 19's armoured car (0.1.6):** the ride no longer stays set on the host after a level change (the host kept looking
   for the car in the next level).
+- **Level openings on clients (0.1.7):** the scripted people of a level's opening scene (for example the kneeling rebels
+  at the start of level 2) stood idle on the clients while the host saw the scene. The client now makes its copy's
+  requested behaviour active, so the scene plays there too, also for a player who joins later and after a team restart.
+  Checked on two test PCs: the scene's own animation on both machines at every check.
+- **Soldiers heard on clients (0.1.7):** the host sends each soldier sound call (shouts, calls, the melee-hit sound) and
+  every client starts it at the soldier. Counted on two test PCs: level 3's opening fight 46 sent, 46 played; the melee hit
+  38 sent, 38 played.
+- **The other player's jump and crouch sounds (0.1.7, partial):** started at its body on the other machines; the client's
+  sound system still refuses many of them, and there is no landing sound.
+- **Rewind revive on clients (0.1.7):** a soldier the host's rewind brings back to life stayed a corpse on the clients; the
+  client's copy now leaves its ragdoll state and stands up with the host's animations. Measured as well: soldiers and loose
+  objects already follow the host while its rewind plays back (a barrel thrown 13.8 m ended 0.04 m from the host's).
+- **Split screen: player 2 sets off the story (0.1.7):** story trigger zones and the time-power zones now react to
+  player 2 as to player 1 (checked: player 2 alone, 34 m from player 1, set off a time-power zone and a story zone of
+  level 2, whose soldiers appeared). The hint boxes stay shared. When the story teleports player 1, player 2 is put beside
+  it; before, a repeated teleport could leave player 2 inside the floor under player 1 (found by the release check).
 - **Steam and installer:** the installer recognises a Steam copy, asks for explicit consent, applies the player's 1.2 package
   with a backup and restores it exactly on uninstall; a single-file setup exe; a bug-report collector that removes user
   names, computer names and the public IP.
@@ -174,6 +193,14 @@ Added after 0.1.1 (release notes: [0.1.2](https://github.com/dolbaras/timeshift-
   lift that waited for player 2 and put it in at 20 s, player 1's teleport repeated on player 2. The Co-op menu and its
   Host frame in German, French, Italian, Spanish (in the game for the first time) and English. While the features were made:
   the cutscenes of levels 1, 8, 23 and 24 on both PCs with no partner body or name tag in any frame.
+- 0.1.7: offline tests all pass (the text test, 41 checks; the native tests; the installer test, 51 checks, with the
+  published 0.1.6 as the old version; the setup exe's tests, 20 + 7 checks; the collector's test, 114 checks). The
+  published 0.1.6 updated itself to 0.1.7 through its own launcher, before the publication with a local feed and after it
+  through the real GitHub feed (10 of 10 each). With the release DLL on two test PCs: the opening scene of level 2 on a
+  late client and after a level change, the soldiers' voices (46 of 46 on level 3), the rewind revive on a client, plus
+  the 0.1.6 checks again (ready room, two level exits, level 19 -> 1 with no drop, the skip vote, a client held back 25 s at
+  a team restart and a level change). Split screen on one PC: player 2 in a story and a time-power zone, the lift, the
+  pull from 57 m and the teleport fix. The Co-op menu and its Host frame in German, French, Italian, Spanish and English.
 - Not covered by the lab runs: a whole campaign played by people, the Internet between two homes, a real Steam install and
   the Program Files (x86) prompt, sound by ear, the in-game camera scenes of levels 8 and 22, a pad's skip vote on the second
   test PC, the Tab table in the ready room, mouse clicks on Accept and Continue, a change of resolution, an ASI loader under
@@ -188,23 +215,21 @@ Co-op in the main menu to host a chapter or join by LAN list, Internet list or a
 
 ## Known issues
 
-- Soldiers' voices and gibbing sounds are heard only by the host; another player's jump, landing and crouch sounds are not
-  heard on the other machines.
-- Scripted people in some level openings (for example the kneeling rebels at the start of level 2) stand idle on a
-  client's screen while the host sees them play their scene. A fix is in the code but stays off: it does not yet work for
-  every kind of scene.
+- Another player's landing sound is not heard on the other machines, and its jump and crouch sounds are often missing on a
+  client (the client's sound system refuses them).
+- A joining player appears where the host's player stood at the level's last checkpoint; when the host still stands there
+  (for example in the ready room of level 2) the two bodies overlap until the game pushes them about 1 m apart or one walks
+  away. Seen since 0.1.4; no harm seen.
 - Joining over a very bad link (around 30 % loss) can need a second click on Join.
-- Ready step (0.1.4, still in 0.1.6): a split-screen player 2 in a network game is not held in the ready room and does not
+- Ready step (0.1.4, still in 0.1.7): a split-screen player 2 in a network game is not held in the ready room and does not
   take part in the ready check.
 - In the Host frame the row labels are narrow: in several languages "Max. players" (and the game's own "Server type" /
   "Difficulty") touches its value's arrow (seen in 0.1.5).
-- While the host's rewind plays back, the soldiers, loose objects and doors on the clients' screens get no update from the
-  host until it ends, and a soldier the rewind brings back to life stays a corpse there. After the rewind, clients take the
+- Whether the doors follow the host while its rewind plays back was not checked; after the rewind, clients take the
   rewound machinery's state from the host on level 2 (the walkway) only.
-- In split screen the story's zones, the hint boxes and the automatic time power follow player 1 only, so the RB auto-power
-  on the level 2 walkway reverses time only while player 1 stands on it (the reverse button itself works for both players).
-  Cutscenes, the pause menu and loading screens are full screen, and each half runs at half of the game's frame rate unless
-  "Show both views" (`BothViews=1`) helps on your card.
+- In split screen the hint boxes still show in both halves and name player 1's keys. Cutscenes, the pause menu and loading
+  screens are full screen, and each half runs at half of the game's frame rate unless "Show both views" (`BothViews=1`)
+  helps on your card.
 - Split screen on a client is basic (its second player's pick-ups work).
 - A Start or Esc pressed when no scene runs (for example right after one ended) opens the game's pause menu as usual.
 - The setup exe is not code-signed, so Windows SmartScreen can warn.
@@ -212,10 +237,10 @@ Co-op in the main menu to host a chapter or join by LAN list, Internet list or a
 
 ## Next steps
 
-- A whole campaign played by people (nobody has played 0.1.4 to 0.1.6 by hand), and the Internet between two homes.
+- A whole campaign played by people (nobody has played 0.1.4 to 0.1.7 by hand), and the Internet between two homes.
 - Hold a split-screen player 2 in the ready room of a network game; check the Tab table there.
-- The scripted people of level openings on clients (the rule is in the code, switched off).
-- Rewound machinery on levels other than level 2, and the soldiers, objects and doors on clients during the host's rewind.
-- Soldiers' voices and gibbing sounds on clients.
+- Rewound machinery on levels other than level 2, and the doors on clients during the host's rewind.
+- The other player's landing sound, and the jump and crouch sounds the client's sound system refuses.
+- Hint boxes per split-screen half with player 2's own keys.
 - A real Steam installation and the Program Files (x86) permission path.
 - Sound judged by ear; split screen on a client with its own time power.
