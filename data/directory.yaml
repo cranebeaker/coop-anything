@@ -14827,3 +14827,35 @@
   sources:
   - https://github.com/OpenXcom-Coop/OpenXcom-Coop-Mod
   checked: '2026-11-14'
+- game: The Outer Worlds 2
+  year: 2025
+  engine: Unreal Engine 5
+  project: tow2-coop
+  url: https://github.com/nicoNaeg/tow2-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: >-
+    Native two-world co-op mod (dsound.dll loader + tow2coop.dll, MIT) for Steam build 24225441. The friend joins from
+    the main menu by receiving the host's campaign; the other player is a stand-in NPC with the player's look; the host
+    owns NPC health and deaths, quest progress (completions arrive by a short reload), map travel, doors and container
+    contents. Direct IP (UDP 27960 and TCP 27961, port forwarding or a VPN) with an optional shared key; installer
+    included. v0.1.0 is a test build, tested with two copies on one PC (automated suite and a 30-minute soak), not yet
+    across two PCs. Write-up in games/the-outer-worlds-2.
+  sources:
+  - https://github.com/nicoNaeg/tow2-coop
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
+  - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
+  checked: '2026-11-16'
+  made_with_coop_anything: true
