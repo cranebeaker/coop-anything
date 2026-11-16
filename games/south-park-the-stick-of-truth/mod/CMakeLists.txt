@@ -18,6 +18,7 @@ set(BRIDGE "${CMAKE_CURRENT_SOURCE_DIR}/../../../tools/bridge/include")
 add_library(dinput8 SHARED
     src/proxy.cpp
     src/mod.cpp
+    src/aihook.cpp
     src/net.cpp
     src/remote.cpp
     ${MINHOOK}/src/hook.c
@@ -49,4 +50,16 @@ add_executable(remote_selftest src/remote_selftest.cpp src/remote.cpp src/net.cp
 target_compile_definitions(remote_selftest PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_link_libraries(remote_selftest PRIVATE ws2_32)
 target_link_options(remote_selftest PRIVATE -static)
+
+# The signature-neutral AI hook stubs run without the game: cdecl, stdcall, no-argument and
+# thiscall-shaped targets, with the hold continuation restoring a global after each return.
+add_executable(aihook_selftest src/aihook_selftest.cpp src/aihook.cpp
+    ${MINHOOK}/src/hook.c
+    ${MINHOOK}/src/buffer.c
+    ${MINHOOK}/src/trampoline.c
+    ${MINHOOK}/src/hde/hde32.c
+)
+target_include_directories(aihook_selftest PRIVATE ${MINHOOK}/include)
+target_compile_definitions(aihook_selftest PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_options(aihook_selftest PRIVATE -static)
 

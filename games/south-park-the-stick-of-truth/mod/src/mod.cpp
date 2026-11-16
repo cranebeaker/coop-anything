@@ -16,6 +16,7 @@
 #include <cstring>
 #include <cmath>
 #include "MinHook.h"
+#include "aihook.h"
 #include "coopbridge/server.h"
 #include "net.h"
 #include <string>
@@ -2047,6 +2048,607 @@ std::string read_hex(uintptr_t address, size_t length)
     return text;
 }
 
+// --- buddy AI hook (step 2) ---------------------------------------------------
+//
+// The file is CEG-packed, so .text cannot be disassembled statically; the live pages are
+// decrypted and the vtable slots are readable. The update function is therefore found by
+// experiment: every slot of the Companion_Basic / Companion_Follow / Companion_Command
+// vtables gets a signature-neutral counting hook, and the slot that fires every frame with
+// `this` equal to the live plan-level state is the update. `aihold` swaps that one function
+// to the hold detour (aihook.cpp), which lets the original run and then rewrites the buddy's
+// anchor. Command states are detected from the state object's own RTTI and passed through.
+//
+// Safety: no __try/__except here (MinGW does not have it). Every read goes through
+// VirtualQuery + ReadProcessMemory in safe_read_quiet, and every write is preceded by a
+// flushed [BUDDY] line naming the address and values. A bad pointer is an [ERR] line, not a
+// crash. The command-mode check, the anchor capture and the restore all take the same path.
+uintptr_t g_follow_vtable = 0;
+uintptr_t g_command_vtable = 0;
+uintptr_t g_command_hint_vtable = 0;
+uintptr_t g_buddy_companion = 0;
+uintptr_t g_buddy_ds = 0;
+uintptr_t g_buddy_mover = 0;
+uintptr_t g_hero_mover_cached = 0;
+uintptr_t g_buddy_state_ptr = 0;
+char g_buddy_state_class[192] = {};
+bool g_command_mode = false;
+bool g_hold_active = false;
+int g_hold_id = -1;
+float g_hold_anchor[3] = {0.0f, 0.0f, 0.0f};
+DWORD g_hold_last_write_log = 0;
+DWORD g_hold_last_cmd_log = 0;
+DWORD g_state_next_check = 0;
+unsigned long long g_hold_restores = 0;
+ULONGLONG g_stats_last_tick = 0;
+unsigned long long g_stats_last_calls[64] = {};
+bool g_stats_seen = false;
+
+// A COL pointer is the dword immediately before a vtable, so the next vtable's COL marks the
+// end of this vtable. Without this check the slot walk can run into the next vtable when two
+// state vtables are adjacent in .rdata (Companion_Command and Companion_Command_Hint are).
+bool looks_like_col_pointer(uintptr_t value)
+{
+    if (!in_range(value, 20, g_image.rdata, g_image.rdata_size)) {
+        return false;
+    }
+    unsigned signature = 0;
+    unsigned offset = 0;
+    unsigned cd_offset = 0;
+    unsigned type_descriptor = 0;
+    unsigned class_descriptor = 0;
+    if (!safe_read_quiet(value, &signature, 4) || !safe_read_quiet(value + 4, &offset, 4) ||
+        !safe_read_quiet(value + 8, &cd_offset, 4) ||
+        !safe_read_quiet(value + 12, &type_descriptor, 4) ||
+        !safe_read_quiet(value + 16, &class_descriptor, 4)) {
+        return false;
+    }
+    if (signature != 0 || offset != 0 || cd_offset != 0) {
+        return false;
+    }
+    if (!in_range(type_descriptor, 8, g_image.base, g_image.size)) {
+        return false;
+    }
+    char raw[8] = {};
+    if (!safe_read_quiet(type_descriptor + 8, raw, sizeof(raw))) {
+        return false;
+    }
+    return strncmp(raw, ".?AV", 4) == 0;
+}
+
+// Verify one known class from the static RTTI index against the live image. Returns the
+// runtime vtable address only when the class-name string and the COL pointer both agree.
+bool resolve_named_vtable(const char* label, const char* mangled, unsigned type_descriptor_rva,
+                          unsigned vtable_rva, unsigned col_rva, uintptr_t* out)
+{
+    if (out == nullptr || !g_image.valid) {
+        return false;
+    }
+    const uintptr_t expected_vtable = g_image.base + vtable_rva;
+    uintptr_t name_at = 0;
+    bool name_found = false;
+    if (g_image.data != 0) {
+        name_found = find_pattern(mangled, nullptr, strlen(mangled) + 1, g_image.data,
+                                  g_image.data_size, &name_at);
+    }
+    if (!name_found && g_image.base != 0) {
+        name_found = find_pattern(mangled, nullptr, strlen(mangled) + 1, g_image.base,
+                                  g_image.size, &name_at);
+    }
+    if (!name_found) {
+        dbg("[ERR]", "ai vtable %s: class-name '%s' not found in the image", label, mangled);
+        return false;
+    }
+    const uintptr_t expected_name = g_image.base + type_descriptor_rva + 8;
+    if (name_at != expected_name) {
+        dbg("[ERR]", "ai vtable %s: class-name at 0x%08llx, index says 0x%08llx", label,
+            static_cast<unsigned long long>(name_at),
+            static_cast<unsigned long long>(expected_name));
+        return false;
+    }
+    unsigned col = 0;
+    if (!safe_read_quiet(expected_vtable - 4, &col, sizeof(col)) ||
+        col != static_cast<unsigned>(g_image.base + col_rva)) {
+        dbg("[ERR]", "ai vtable %s: COL at 0x%08llx is 0x%08x, expected 0x%08x", label,
+            static_cast<unsigned long long>(expected_vtable - 4), col,
+            static_cast<unsigned>(g_image.base + col_rva));
+        return false;
+    }
+    int text_slots = 0;
+    for (int slot = 0; slot < 64; ++slot) {
+        uintptr_t function = 0;
+        if (!safe_read_quiet(expected_vtable + slot * 4, &function, sizeof(function))) {
+            break;
+        }
+        if (looks_like_col_pointer(function)) {
+            break;
+        }
+        if (!in_range(function, 1, g_image.text, g_image.text_size)) {
+            break;
+        }
+        ++text_slots;
+    }
+    dbg("[OK]", "ai vtable %s 0x%08llx (index 0x%x, %d text slot(s))", label,
+        static_cast<unsigned long long>(expected_vtable), vtable_rva, text_slots);
+    *out = expected_vtable;
+    return true;
+}
+
+bool object_ascii_name(uintptr_t object, char* out, size_t size)
+{
+    if (out == nullptr || size == 0) {
+        return false;
+    }
+    out[0] = '\0';
+    if (!safe_read_quiet(object + 0x30, out, size - 1)) {
+        return false;
+    }
+    out[size - 1] = '\0';
+    for (size_t index = 0; index < size; ++index) {
+        if (out[index] == '\0') {
+            break;
+        }
+        if (out[index] < 0x20 || out[index] > 0x7e) {
+            out[0] = '\0';
+            return false;
+        }
+    }
+    return out[0] != '\0';
+}
+
+// The live buddy is the Companion_Basic whose +0x1c points at a DS_Game_Object named
+// anything but the hero, and whose Component_Party_Member also points at the same transform.
+// The plan-level state is Companion_Basic +0x2b4, the pointer proven in step 1b.
+bool resolve_buddy(bool quiet)
+{
+    uintptr_t best_companion = 0;
+    uintptr_t best_ds = 0;
+    int best_score = -1;
+    char best_name[64] = {};
+    float best_position[3] = {0.0f, 0.0f, 0.0f};
+    for (int index = 0; index < g_class_counts[2]; ++index) {
+        const uintptr_t candidate = g_class_hits[2][index];
+        uintptr_t ds = 0;
+        if (!safe_read_quiet(candidate + 0x1c, &ds, sizeof(ds)) || ds < 0x10000) {
+            continue;
+        }
+        char class_name[192] = {};
+        uintptr_t vtable = 0;
+        if (!resolve_object_class(ds, class_name, sizeof(class_name), &vtable, true) ||
+            strstr(class_name, "DS_Game_Object") == nullptr) {
+            continue;
+        }
+        char name[64] = {};
+        if (!object_ascii_name(ds, name, sizeof(name)) || strstr(name, "_player") != nullptr) {
+            continue;
+        }
+        float position[3] = {0.0f, 0.0f, 0.0f};
+        if (!read_triple_quiet(ds, 0x10, position) || !world_position(position)) {
+            continue;
+        }
+        int score = 1;
+        for (int party_index = 0; party_index < g_party_count; ++party_index) {
+            uintptr_t target = 0;
+            if (safe_read_quiet(g_party_hits[party_index] + 0x0c, &target, sizeof(target)) &&
+                target == ds) {
+                score = 2;
+                break;
+            }
+        }
+        if (score > best_score) {
+            best_score = score;
+            best_companion = candidate;
+            best_ds = ds;
+            strncpy(best_name, name, sizeof(best_name) - 1);
+            best_name[sizeof(best_name) - 1] = '\0';
+            memcpy(best_position, position, sizeof(best_position));
+        }
+    }
+    if (best_companion == 0 || best_ds == 0) {
+        if (!quiet) {
+            dbg("[ERR]", "buddy resolve: no Companion_Basic with a live non-player transform");
+        }
+        return false;
+    }
+    const bool changed = best_companion != g_buddy_companion || best_ds != g_buddy_ds;
+    g_buddy_companion = best_companion;
+    g_buddy_ds = best_ds;
+
+    // Find the mover whose +0x12c is the buddy transform. Never select the hero's mover: a
+    // wrong mover write once crashed a run, so the candidate must differ from the hero's.
+    uintptr_t mover = 0;
+    float hero_position[3] = {0.0f, 0.0f, 0.0f};
+    uintptr_t hero_mover = g_hero_mover_cached;
+    bool have_hero = false;
+    // `resolve_hero_position` writes its candidate lines to the debug log. The bridge calls
+    // State() often, so only run the full probe when this is a deliberate scan, or before a
+    // first cache exists; the steady-state path reuses the proven mover address.
+    if (!quiet || hero_mover == 0) {
+        have_hero = resolve_hero_position(hero_position, &hero_mover, nullptr);
+        if (have_hero) {
+            g_hero_mover_cached = hero_mover;
+        }
+    }
+    double best_gap = 0.15;
+    for (int index = 0; index < g_mover_count; ++index) {
+        const uintptr_t candidate = g_mover_hits[index];
+        if (candidate == hero_mover) {
+            continue;
+        }
+        float value[3] = {0.0f, 0.0f, 0.0f};
+        if (!read_triple_quiet(candidate, 0x12c, value) || !world_position(value)) {
+            continue;
+        }
+        const double gap = distance3(value, best_position);
+        if (gap > best_gap) {
+            continue;
+        }
+        if (have_hero && distance3(value, hero_position) < 0.15) {
+            continue;
+        }
+        best_gap = gap;
+        mover = candidate;
+    }
+    g_buddy_mover = mover;
+    uintptr_t state = 0;
+    if (safe_read_quiet(best_companion + 0x2b4, &state, sizeof(state)) && state >= 0x10000) {
+        g_buddy_state_ptr = state;
+    }
+    if (!quiet || changed) {
+        dbg("[BUDDY]", "resolve companion=0x%08llx ds=0x%08llx name=%s pos=%.3f %.3f %.3f "
+                       "party=%s mover=0x%08llx state=0x%08llx",
+            static_cast<unsigned long long>(best_companion),
+            static_cast<unsigned long long>(best_ds), best_name, best_position[0],
+            best_position[1], best_position[2], best_score == 2 ? "linked" : "unlinked",
+            static_cast<unsigned long long>(g_buddy_mover),
+            static_cast<unsigned long long>(g_buddy_state_ptr));
+    }
+    return true;
+}
+
+// Read Companion_Basic +0x2b4 and resolve its class. The transition log is the evidence
+// for command mode: Companion_Command / Companion_Command_Hint means the engine owns the
+// buddy until the state pointer returns to Companion_Follow.
+bool buddy_plan_state(bool force_log)
+{
+    if (g_buddy_companion == 0) {
+        return false;
+    }
+    uintptr_t state = 0;
+    if (!safe_read_quiet(g_buddy_companion + 0x2b4, &state, sizeof(state)) ||
+        state < 0x10000) {
+        return false;
+    }
+    char name[192] = {};
+    uintptr_t vtable = 0;
+    if (!resolve_object_class(state, name, sizeof(name), &vtable, true)) {
+        return false;
+    }
+    const bool command = strstr(name, "Command") != nullptr;
+    const bool changed = state != g_buddy_state_ptr || strcmp(name, g_buddy_state_class) != 0;
+    if (changed || force_log) {
+        dbg("[BUDDY]", "plan state 0x%08llx class=%s command=%d",
+            static_cast<unsigned long long>(state), name, command ? 1 : 0);
+    }
+    if (changed && g_buddy_state_class[0] != '\0') {
+        if (command) {
+            dbg("[BUDDY]", "command mode ON (engine control while class=%s)", name);
+        } else if (g_command_mode) {
+            dbg("[BUDDY]", "command mode OFF (back to class=%s; co-op control resumes)",
+                name);
+        }
+    }
+    g_buddy_state_ptr = state;
+    strncpy(g_buddy_state_class, name, sizeof(g_buddy_state_class) - 1);
+    g_buddy_state_class[sizeof(g_buddy_state_class) - 1] = '\0';
+    g_command_mode = command;
+    return true;
+}
+
+void ai_hold_after(int id, uintptr_t self)
+{
+    if (!g_hold_active || id != g_hold_id || g_buddy_ds == 0) {
+        return;
+    }
+    const DWORD now = GetTickCount();
+    if (now >= g_state_next_check) {
+        buddy_plan_state(false);
+        g_state_next_check = now + 100;
+    }
+    if (g_command_mode) {
+        if (now - g_hold_last_cmd_log >= 1000) {
+            dbg("[BUDDY]", "hold id=%d yields to command state %s (self=0x%08llx); "
+                           "engine keeps control", id, g_buddy_state_class,
+                static_cast<unsigned long long>(self));
+            g_hold_last_cmd_log = now;
+        }
+        return;
+    }
+    float current[3] = {0.0f, 0.0f, 0.0f};
+    if (!read_triple_quiet(g_buddy_ds, 0x10, current)) {
+        return;
+    }
+    if (!world_position(current) || distance3(current, g_hold_anchor) <= 0.001) {
+        return;
+    }
+    if (now - g_hold_last_write_log >= 1000) {
+        dbg("[BUDDY]", "hold id=%d restore ds=0x%08llx current=%.3f %.3f %.3f anchor=%.3f "
+                       "%.3f %.3f state=%s%s",
+            id, static_cast<unsigned long long>(g_buddy_ds), current[0], current[1],
+            current[2], g_hold_anchor[0], g_hold_anchor[1], g_hold_anchor[2],
+            g_buddy_state_class,
+            g_buddy_mover != 0 ? " (also mover+0x12c)" : "");
+        g_hold_last_write_log = now;
+    }
+    SIZE_T wrote = 0;
+    WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_ds + 0x10),
+                       g_hold_anchor, sizeof(g_hold_anchor), &wrote);
+    if (g_buddy_mover != 0) {
+        WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_mover + 0x12c),
+                           g_hold_anchor, sizeof(g_hold_anchor), &wrote);
+    }
+    ++g_hold_restores;
+}
+
+void ai_first_call(int id, uintptr_t self, unsigned long long count)
+{
+    char name[192] = {};
+    uintptr_t vtable = 0;
+    const bool known = self >= 0x10000 &&
+                       resolve_object_class(self, name, sizeof(name), &vtable, true);
+    dbg("[HOOK]", "first call id=%d label=%s self=0x%08llx class=%s count=%llu", id,
+        aihook::label(id), static_cast<unsigned long long>(self),
+        known ? name : "unknown", count);
+}
+
+// Hook every .text slot of one vtable. Slots 0 and 1 are the destructor and the deleting
+// destructor (the same two addresses in every class here); they are counted in the slot
+// total but not hooked, so shutdown cannot walk one of our stubs.
+void hook_one_vtable(const char* class_label, uintptr_t vtable, std::string* out)
+{
+    if (vtable == 0 || out == nullptr) {
+        return;
+    }
+    int text_slots = 0;
+    for (int slot = 0; slot < 64; ++slot) {
+        uintptr_t function = 0;
+        if (!safe_read_quiet(vtable + slot * 4, &function, sizeof(function))) {
+            break;
+        }
+        if (looks_like_col_pointer(function)) {
+            // The next vtable's COL pointer is not a slot.
+            break;
+        }
+        if (!in_range(function, 1, g_image.text, g_image.text_size)) {
+            break;
+        }
+        ++text_slots;
+        if (slot < 2) {
+            continue;
+        }
+        int existing = -1;
+        for (int index = 0; index < aihook::count(); ++index) {
+            if (static_cast<uintptr_t>(aihook::target(index)) == function) {
+                existing = index;
+                break;
+            }
+        }
+        char label[64];
+        std::snprintf(label, sizeof(label), "%s#%d", class_label, slot);
+        const int id = aihook::install(function, label);
+        if (id < 0) {
+            dbg("[ERR]", "[HOOK] install failed class=%s slot=%d target=0x%08llx", class_label,
+                slot, static_cast<unsigned long long>(function));
+            continue;
+        }
+        if (existing >= 0) {
+            dbg("[HOOK]", "slot %s=%d target=0x%08llx shares id=%d (first label %s)",
+                class_label, slot, static_cast<unsigned long long>(function), id,
+                aihook::label(id));
+        } else {
+            dbg("[HOOK]", "slot %s=%d target=0x%08llx id=%d", class_label, slot,
+                static_cast<unsigned long long>(function), id);
+        }
+        char line[192];
+        std::snprintf(line, sizeof(line), "SLOT %s %d %d 0x%08llx\n", class_label, slot, id,
+                      static_cast<unsigned long long>(function));
+        *out += line;
+    }
+    dbg("[HOOK]", "%s vtable 0x%08llx has %d text slot(s)", class_label,
+        static_cast<unsigned long long>(vtable), text_slots);
+}
+
+std::string ai_scan_command()
+{
+    std::string out;
+    if (!aihook::initialize()) {
+        dbg("[ERR]", "ai scan: MinHook or TLS initialization failed");
+        return "ERROR MinHook/TLS initialization failed";
+    }
+    if (g_class_counts[2] == 0) {
+        scan_objects();
+        sync_bridge_lists();
+    }
+    aihook::set_notify(&ai_first_call);
+    aihook::reset_counts();
+    resolve_named_vtable("Companion_Basic", ".?AVCompanion_Basic@Follower@Package@State@AI@OEI@@",
+                         0x99709c, 0x7f88b4, 0x897a3c, &g_class_vtable[2]);
+    resolve_named_vtable("Companion_Follow",
+                         ".?AVCompanion_Follow@Follower@Plan_Level@State@AI@OEI@@", 0x99f598,
+                         0x7fa46c, 0x898128, &g_follow_vtable);
+    resolve_named_vtable("Companion_Command",
+                         ".?AVCompanion_Command@Follower@Plan_Level@State@AI@OEI@@", 0x99f5d8,
+                         0x7fa4a8, 0x898184, &g_command_vtable);
+    resolve_named_vtable("Companion_Command_Hint",
+                         ".?AVCompanion_Command_Hint@Follower@Plan_Level@State@AI@OEI@@",
+                         0x99f620, 0x7fa4d8, 0x8981e0, &g_command_hint_vtable);
+    if (!resolve_buddy(false)) {
+        dbg("[ERR]", "ai scan: buddy not resolved; run `probe` first");
+        return "ERROR buddy not resolved";
+    }
+    buddy_plan_state(true);
+    hook_one_vtable("Basic", g_class_vtable[2], &out);
+    hook_one_vtable("Follow", g_follow_vtable, &out);
+    hook_one_vtable("Command", g_command_vtable, &out);
+    hook_one_vtable("CommandHint", g_command_hint_vtable, &out);
+    dbg("[HOOK]", "ai scan done: %d unique hook(s), buddy_companion=0x%08llx ds=0x%08llx "
+                  "state=%s",
+        aihook::count(), static_cast<unsigned long long>(g_buddy_companion),
+        static_cast<unsigned long long>(g_buddy_ds), g_buddy_state_class);
+    char header[96];
+    std::snprintf(header, sizeof(header), "HOOKS %d\n", aihook::count());
+    return header + out;
+}
+
+std::string ai_stats_command()
+{
+    std::string out;
+    const ULONGLONG now = GetTickCount64();
+    const ULONGLONG elapsed = g_stats_seen && now > g_stats_last_tick
+                                  ? now - g_stats_last_tick
+                                  : 0;
+    for (int id = 0; id < aihook::count(); ++id) {
+        const unsigned long long total = aihook::calls(id);
+        const unsigned long long previous = g_stats_last_calls[id];
+        const unsigned long long delta = g_stats_seen && total >= previous ? total - previous : 0;
+        const double rate = elapsed > 0 ? static_cast<double>(delta) * 1000.0 /
+                                              static_cast<double>(elapsed)
+                                        : 0.0;
+        const uintptr_t self = aihook::last_self(id);
+        char name[192] = {};
+        uintptr_t vtable = 0;
+        const bool known = self >= 0x10000 &&
+                           resolve_object_class(self, name, sizeof(name), &vtable, true);
+        dbg("[HOOK]", "stats id=%d label=%-16s target=0x%08llx calls=%llu delta=%llu "
+                      "rate=%.1f/s self=0x%08llx class=%s hold=%d",
+            id, aihook::label(id), static_cast<unsigned long long>(aihook::target(id)), total,
+            delta, rate, static_cast<unsigned long long>(self), known ? name : "unknown",
+            aihook::is_hold(id) ? 1 : 0);
+        char line[320];
+        std::snprintf(line, sizeof(line), "ID %d RATE %.1f CALLS %llu SELF 0x%08llx CLASS %s "
+                                          "LABEL %s\n",
+                      id, rate, total, static_cast<unsigned long long>(self),
+                      known ? name : "unknown", aihook::label(id));
+        out += line;
+        g_stats_last_calls[id] = total;
+    }
+    g_stats_last_tick = now;
+    g_stats_seen = true;
+
+    resolve_buddy(true);
+    buddy_plan_state(false);
+    float buddy[3] = {0.0f, 0.0f, 0.0f};
+    float hero[3] = {0.0f, 0.0f, 0.0f};
+    uintptr_t hero_mover = 0;
+    const bool have_buddy = g_buddy_ds != 0 && read_triple_quiet(g_buddy_ds, 0x10, buddy);
+    const bool have_hero = resolve_hero_position(hero, &hero_mover, nullptr);
+    dbg("[BUDDY]", "stats state=0x%08llx class=%s command=%d buddy=%.3f %.3f %.3f "
+                   "hero=%.3f %.3f %.3f hold=%d hold_id=%d restores=%llu",
+        static_cast<unsigned long long>(g_buddy_state_ptr), g_buddy_state_class,
+        g_command_mode ? 1 : 0, have_buddy ? buddy[0] : 0.0f, have_buddy ? buddy[1] : 0.0f,
+        have_buddy ? buddy[2] : 0.0f, have_hero ? hero[0] : 0.0f, have_hero ? hero[1] : 0.0f,
+        have_hero ? hero[2] : 0.0f, g_hold_active ? 1 : 0, g_hold_id, g_hold_restores);
+    char state[512];
+    std::snprintf(state, sizeof(state),
+                  "STATE 0x%08llx %s command=%d buddy=%.3f,%.3f,%.3f hero=%.3f,%.3f,%.3f "
+                  "hold=%d hold_id=%d restores=%llu\n",
+                  static_cast<unsigned long long>(g_buddy_state_ptr), g_buddy_state_class,
+                  g_command_mode ? 1 : 0, have_buddy ? buddy[0] : 0.0f,
+                  have_buddy ? buddy[1] : 0.0f, have_buddy ? buddy[2] : 0.0f,
+                  have_hero ? hero[0] : 0.0f, have_hero ? hero[1] : 0.0f,
+                  have_hero ? hero[2] : 0.0f, g_hold_active ? 1 : 0, g_hold_id,
+                  g_hold_restores);
+    return out + state;
+}
+
+bool ai_hold_command(const char* argument, std::string* out)
+{
+    if (argument == nullptr || out == nullptr) {
+        return false;
+    }
+    while (*argument == ' ') {
+        ++argument;
+    }
+    if (strcmp(argument, "off") == 0) {
+        if (g_hold_active && g_hold_id >= 0) {
+            aihook::revert_to_counting(g_hold_id);
+        }
+        g_hold_active = false;
+        dbg("[BUDDY]", "hold OFF (id=%d); counting hooks stay in place", g_hold_id);
+        g_hold_id = -1;
+        *out = "hold off";
+        return true;
+    }
+    char* end = nullptr;
+    const long requested = std::strtol(argument, &end, 10);
+    if (end == argument || requested < 0 || requested >= aihook::count()) {
+        return false;
+    }
+    const int id = static_cast<int>(requested);
+    if (!resolve_buddy(false)) {
+        *out = "ERROR buddy not resolved";
+        return true;
+    }
+    if (!buddy_plan_state(true)) {
+        *out = "ERROR plan state not readable";
+        return true;
+    }
+    float anchor[3] = {0.0f, 0.0f, 0.0f};
+    if (!read_triple_quiet(g_buddy_ds, 0x10, anchor) || !world_position(anchor)) {
+        *out = "ERROR buddy transform is not a world position";
+        return true;
+    }
+    memcpy(g_hold_anchor, anchor, sizeof(g_hold_anchor));
+    g_hold_restores = 0;
+    g_hold_last_write_log = 0;
+    g_hold_last_cmd_log = 0;
+    g_state_next_check = 0;
+    g_hold_active = true;
+    g_hold_id = id;
+    g_hold_last_write_log = GetTickCount() - 1000;  // log the first restore immediately
+    dbg("[BUDDY]", "hold ON id=%d label=%s target=0x%08llx ds=0x%08llx mover=0x%08llx "
+                   "anchor=%.3f %.3f %.3f state=%s command=%d - line flushed before the "
+                   "first write",
+        id, aihook::label(id), static_cast<unsigned long long>(aihook::target(id)),
+        static_cast<unsigned long long>(g_buddy_ds),
+        static_cast<unsigned long long>(g_buddy_mover), anchor[0], anchor[1], anchor[2],
+        g_buddy_state_class, g_command_mode ? 1 : 0);
+    if (!aihook::switch_to_hold(id, &ai_hold_after)) {
+        g_hold_active = false;
+        g_hold_id = -1;
+        dbg("[ERR]", "hold: switch_to_hold failed for id=%d; original hook restored", id);
+        *out = "ERROR switch_to_hold failed";
+        return true;
+    }
+    dbg("[OK]", "hold detour installed id=%d; the original still runs, the anchor is restored "
+                "after it unless the state is a Command state",
+        id);
+    *out = "hold on id=" + std::to_string(id);
+    return true;
+}
+
+bool run_ai_command(const std::string& line, bool* ok, std::string* out)
+{
+    if (ok == nullptr || out == nullptr) {
+        return false;
+    }
+    if (line == "aiscan") {
+        *out = ai_scan_command();
+        *ok = out->rfind("ERROR", 0) != 0;
+        return true;
+    }
+    if (line == "aistats") {
+        *out = ai_stats_command();
+        *ok = true;
+        return true;
+    }
+    if (line.rfind("aihold", 0) == 0 &&
+        (line.size() == 6 || line[6] == ' ')) {
+        *ok = ai_hold_command(line.c_str() + 6, out);
+        return true;
+    }
+    return false;
+}
+
 class CoopAdapter : public coopbridge::Adapter
 {
 public:
@@ -2097,6 +2699,40 @@ public:
         }
         if (g_party_count > 0) {
             root.set("party_transform", describe_transform(g_party_hits[0]));
+        }
+        if (resolve_buddy(true)) {
+            Value buddy = Value::object();
+            buddy.set("companion", static_cast<double>(g_buddy_companion));
+            buddy.set("ds", static_cast<double>(g_buddy_ds));
+            buddy.set("mover", static_cast<double>(g_buddy_mover));
+            if (g_buddy_mover != 0) {
+                float values[3] = {0.0f, 0.0f, 0.0f};
+                if (read_triple_quiet(g_buddy_mover, 0x12c, values)) {
+                    Value mover_position = Value::object();
+                    mover_position.set("x", static_cast<double>(values[0]));
+                    mover_position.set("y", static_cast<double>(values[1]));
+                    mover_position.set("z", static_cast<double>(values[2]));
+                    mover_position.set("offset", 0x12c);
+                    buddy.set("mover_position", mover_position);
+                }
+            }
+            float values[3] = {0.0f, 0.0f, 0.0f};
+            if (read_triple_quiet(g_buddy_ds, 0x10, values)) {
+                Value position = Value::object();
+                position.set("x", static_cast<double>(values[0]));
+                position.set("y", static_cast<double>(values[1]));
+                position.set("z", static_cast<double>(values[2]));
+                position.set("offset", 0x10);
+                buddy.set("position", position);
+            }
+            buddy_plan_state(false);
+            buddy.set("state", static_cast<double>(g_buddy_state_ptr));
+            buddy.set("state_class", std::string(g_buddy_state_class));
+            buddy.set("command", g_command_mode);
+            buddy.set("hold", g_hold_active);
+            buddy.set("hold_id", static_cast<double>(g_hold_id));
+            buddy.set("hold_restores", static_cast<double>(g_hold_restores));
+            root.set("buddy", buddy);
         }
         if (g_net != nullptr) {
             Value net = Value::object();
@@ -2149,6 +2785,11 @@ public:
     // "is this really the player's position?" is answered by watching the character move.
     coopbridge::ExecResult Exec(const std::string& line, const std::string&) override
     {
+        bool ai_ok = false;
+        std::string ai_out;
+        if (run_ai_command(line, &ai_ok, &ai_out)) {
+            return {ai_ok, ai_out};
+        }
         if (line.rfind("host ", 0) == 0) {
             if (g_net == nullptr) {
                 g_net = new coop::Net();
