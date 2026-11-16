@@ -26,3 +26,5 @@ local/
 # Generated import libs (build.bat and tests/run.bat regenerate these from the .def files)
 /games/outlast-2/src/*.lib
 /games/outlast-2/src/*.exp
+games/*/tools/game-runs/
+games/*/mod/build/
