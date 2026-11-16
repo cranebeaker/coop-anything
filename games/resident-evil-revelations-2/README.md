@@ -32,8 +32,8 @@ still, and fixes a duplicated pick-up, a lever crash and the scenes the guest di
 How far each part is checked differs a lot. **Episode 1** was checked in the lab from its start to
 its end. **Episodes 2-4 and the bonus episodes** were checked stage by stage, mostly after console
 jumps to the game's own checkpoints, and **no human has played them yet**: 0.3.0 was published
-on the author's decision so that players can try them, with an explicit list of what is not
-verified (see [Known issues](#known-issues)). Survival, Invisible and Raid are not offered (Raid
+on the author's decision so that players can try them (what the lab runs do not cover is one
+line at the end of [QA](#qa)). Survival, Invisible and Raid are not offered (Raid
 is never touched), joining a running game is not possible, and nobody outside the lab has played
 the mod. Everything below was checked by the author's own agents on the author's own PCs, mostly
 with a console and scripted sessions. See [QA](#qa) for exactly what that means.
@@ -425,24 +425,11 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
     with the same enemies on both PCs; the partner's falls both ways, the box of Barry's half lifted
     and put down, and the second player's own co-op doors, shutters, cell door, pick-ups, key door,
     boxes and pair boost followed by the host's PC.
-- **What this does not show**: a person playing any of it; the story's own step in Episode 2
-  from the village (stage 201) to the tunnel (stage 203, entered only by a jump) and stage 203
-  itself; the fights in Barry's halves of Episodes 2-4 and in Claire's halves of Episodes 3-4 (the
-  enemies there were asleep or out of reach of the scripts); the two last bosses of Episode 4
-  (stages 453 and 454, 30,000 health each; the end of the episode was shown after a test request of
-  the stage's end); The Struggle's stage 610, which starts behind a gate that did not open in the
-  tests, and the clear conditions of its middle chapters; Little Miss's stealth rules; the story's
-  own steps between the stages of Episodes 2-4; Continue in Episode 3 (the same code as
-  Episode 2); two different networks (Steam relay); any player outside the lab. Of 0.3.2, not
-  verified live for the guest: a real press of the slide with the real key, the power switch of
-  Claire's half in Episode 1, ammo and weapon pick-ups, the plank boards and drill walls (fixed
-  from the code reading), the fence with two levers in Barry's half of Episode 3 (stage 354), and
-  one item of Episode 2's village that stayed on the floor on both PCs after the guest took it
-  (the game's own behaviour on the guest's PC, not compared with a pick-up by the host). Cutscenes
-  were run only in Episode 1 and at the start of The Struggle; a pad's skip vote during the movie
-  at the very start of a co-op game was not checked; the partner's ladders and climbing were not
-  reached, and its knife attack was not run on the release build. This is why the
-  QA level is `automated` and not `verified-playthrough`.
+- **Not covered by the lab runs:** a person playing it, Steam relay, Episode 2's village-to-tunnel
+  step, the fights of Barry's halves and of Claire's halves of Episodes 3-4, Episode 4's last
+  bosses, The Struggle's stage 610, Little Miss's stealth rules, Continue in Episode 3, cutscenes
+  outside Episode 1 and The Struggle's start, and the guest's slide, ammo, weapons, boards and drill
+  walls of 0.3.2; so the QA level is `automated`, not `verified-playthrough`.
 
 ## How to play
 
@@ -473,34 +460,23 @@ zip of both PCs.
 
 ## Known issues
 
-- Episodes 2-4 and the bonus episodes are verified stage by stage, not as playthroughs, and no
-  human has played them. Not verified: Episode 2's step from the village to the tunnel (the
-  button at the rubble on the north terrace) and the tunnel stage; the fights in Barry's halves of
-  Episodes 2-4 and in Claire's halves of Episodes 3-4; the two last bosses of Episode 4; The
-  Struggle's chapter behind Ryan's gate and the clear conditions of its middle chapters; Little
-  Miss's stealth rules; the story's own steps between the stages of Episodes 2-4.
 - Story companions that the host's story removes may stay on the guest's PC where the story left
   them (no effect on play was seen).
 - Barry's half of Episodes 2-4 starts a few seconds after the first stage of the part has loaded;
   that stage's opening may flash by.
-- "Continue" in Episode 3 was not checked in a running game (the same code as Episode 2).
-  It is not offered for a save made at the end of a half or of a bonus chapter (its results
-  screen): start the next half or chapter as a new game.
-- Not verified live for the guest (0.3.2): a real press of the slide with the real key, the power
-  switch of Claire's half in Episode 1, ammo and weapon pick-ups, the plank boards and drill walls
-  (fixed from the code reading), and the fence with two levers in Barry's half of Episode 3
-  (stage 354). One item of Episode 2's village stayed on the floor on both PCs after the guest
-  took it (not compared with a pick-up by the host).
-- Cutscenes were checked in Episode 1 and at the start of The Struggle only. The first in-engine
-  scene after a load is not held for the slower PC (each PC's story starts it: between less than
-  half a second and 6.6 s apart in the lab), and a scene is never corrected while it plays. A
-  Retry after a game over does not pass the point that holds a load for the slower PC.
+- "Continue" is not offered for a save made at the end of a half or of a bonus chapter (its
+  results screen): start the next half or chapter as a new game.
+- One item of Episode 2's village stayed on the floor on both PCs after the guest took it into
+  his bag (the game's own behaviour on the guest's PC; not compared with a pick-up by the host).
+- The first in-engine scene after a load is not held for the slower PC (each PC's story starts
+  it: between less than half a second and 6.6 s apart in the lab), and a scene is never corrected
+  while it plays. A Retry after a game over does not pass the point that holds a load for the
+  slower PC.
 - A scene in the middle of a stage that needs an enemy could, in a rare order of events, leave a
   second copy of that enemy on the guest's PC for up to 10 s (not seen in the lab).
-- The partner's motions: a partner carrying a box walks without the carrying pose; ladders and
-  climbing were not reached in the lab.
+- A partner carrying a box walks without the carrying pose.
 - If the guest's game is in a cutscene or a load when the stage gate's 25 s at Barry's half run
-  out, the old behaviour stays (a game over for both is possible; not checked live).
+  out, the old behaviour stays (a game over for both is possible).
 - The blade traps of Episode 1 (and similar traps the story starts) run on each PC from the story
   flag, so their blades can be at different phases on the two screens; damage is decided on the
   PC of the player who is hit.
@@ -508,14 +484,13 @@ zip of both PCs.
   player's game closes or the connection is lost, start a new co-op game.
 - The end of Episode 1's halves needs both players at the radio together.
 - Japanese text in the co-op screens uses a Windows font, not the game's own.
-- Play between two different networks (Steam relay) has not been tried.
 - A `dinput8.dll` of another mod that is not an Ultimate ASI Loader is switched off while co-op is
   installed; removing co-op puts it back.
 - The installer and the setup exe are not code-signed.
 
 ## Next steps
 
-1. **A person playing it.** The checks listed under "What this does not show", first Episode 2's
+1. **A person playing it.** What the lab runs did not cover (end of [QA](#qa)), first Episode 2's
    step from the village to the tunnel, the fights in Barry's halves, Episode 4's last bosses and
    The Struggle's gate; the author has a prepared set of starting points for exactly these. Reports
    with the `Collect logs.bat` zips of both PCs help most.

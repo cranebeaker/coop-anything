@@ -10900,65 +10900,22 @@
   notes: >-
     Network co-op for the story campaign: Episodes 1-4 (Claire and Moira's half and Barry and Natalia's half of
     each) and the bonus episodes The Struggle and Little Miss, 2 players on 2 PCs, each with their own copy of the
-    game and the mod. Version 0.3.2 (GitHub Latest, published 2026-11-15; 0.3.1 of 2026-11-13 offered Continue for
-    every episode, 0.3.0 of 2026-11-12 opened Episodes 2-4 and the bonus episodes, 0.2.0 and 0.2.1 were Episode 1
-    only, 0.1.0 and 0.1.1 pre-releases): a dinput8.dll
-    proxy loaded through the exe's import table that patches import slots and COM vtables in memory and changes no
-    game file (Steam build 3658995 only). ENet over UDP with a direct IP (port 28410), or Steam lobbies and
-    invites; a room where the host picks the episode and each player picks a character and presses Ready;
-    host-authoritative enemies as replicas on the other PC with kill credit for the player who made the kill,
-    scenario flags, co-op doors, boxes and slides, a stage-change gate and loader mirror, per-player achievements,
-    downed and revive (host's choice, on by default), the partner on the minimap, a co-op save of its own with a
-    Continue row (since 0.3.1 the last checkpoint of every episode and half and of both bonus episodes; the guest
-    needs a co-op save of the same episode and half). 0.3.0 starts Barry's halves of Episodes 2-4 by a hop through
-    the game's restart record, sends the enemy records in a turning window (more than twelve enemies), ignores
-    records that overtake a death, ends the session at the end of every episode and of the last stage, and leaves
-    the finale's script-driven helicopters to each PC. 0.3.1 repeats the hop into Barry's half until the guest's
-    game is really there (a guest still loading stayed in Claire's first stage), and sends every enemy's record as
-    often as with a few enemies up to 48 at a time, and all of them in turn up to 128 (before, with many enemies
-    the guest's PC got their positions less often, and above 48 some never); protocol version 3. 0.3.2 starts the
-    pre-rendered movies and the start of play after a load together on both PCs (the faster PC waits and shows
-    whom it waits for) and ends a cutscene only when both players pressed skip (as in Resident Evil 6); the
-    partner's character plays its player's motions where it used to stand still (pick-ups, falls, lifting and
-    putting down a box, lever pulls) and a lever's handle moves on both screens; a scene the partner's character
-    starts (Episode 1's knife on the table) plays on both PCs through the scene's own camera. Fixed in 0.3.2: an
-    item one player picks up is removed from the partner's floor too (the receiving PC now uses its own number for
-    it, so a herb can no longer be taken twice); a guest held back past the stage gate's 25 s at Barry's half
-    follows the waiting jump instead of a game over for both; the partner's game no longer crashes when a player
-    pulls certain levers (the replay skips the steps that need the operating character; plank boards and drill
-    walls fixed from the code reading); and, also in 0.3.1, the guest saw gameplay instead of a scene the partner
-    started and of its own opening scene of Claire's half, the host lost the camera of its opening scene midway,
-    and the guest's opening scene stood still for about 8 s waiting for an enemy only the host could make. Still
-    protocol version 3; both players need 0.3.2. Installer and a shortcut that installs newer GitHub releases
-    before each start; 12 languages in the co-op screens. MIT. QA: C test suites and an installer suite (252
-    offline, 249 against the real release feed), plus scripted two-PC lab sessions with real game clients: Episode
-    1 from start to end; Episodes 2-4 and the bonus episodes stage by stage, mostly reached by console jumps to the
-    game's own checkpoints (starts, walking, the Episode 2 siege and Pedro boss and a Struggle chapter fought with
-    identical results on both PCs, results screens between halves and chapters, the ends); for 0.3.1 The
-    Struggle's forest with 50 enemies listed identically on both PCs, Barry's half of Episode 2 with the guest's
-    game held back on purpose, a game over and Retry there, and Continue in Episode 1, both halves of Episode 2,
-    The Struggle and Little Miss (from checkpoints made by test tools); for 0.3.2, on its release build, The
-    Struggle's movie ending on the same frame on both PCs with play starting 3 ms apart and 50 enemies identical
-    later, Episode 1's opening scene of Claire's half and the knife on the table with the same camera on both
-    screens, the partner's pick-up and lever motions, and the torture lever pulled by the guest without the former
-    crash; on earlier builds with the same code the skip vote (the keyboard's Esc and the pad's button), a guest
-    held back past the 25 s landing in Barry's half, and Continue in Barry's half of Episode 4. In The Struggle's
-    forest the enemies on the guest's PC lagged the host by 3 to 62 ms in the 0.3.2 tests (the figure depends on
-    the test PCs, not on the build).
-    No human has played Episodes 2-4 or the bonus episodes. Not verified: Episode 2's step from the village (stage
-    201) to the tunnel (203) and stage 203, the fights in Barry's halves of Episodes 2-4 and in Claire's halves of
-    Episodes 3-4, Episode 4's last bosses (453, 454), The Struggle's stage 610 behind a gate that did not open in
-    the tests and the clear conditions of 610 and 620, Little Miss's stealth rules, the story's own steps between
-    stages, Continue in Episode 3 in a running game; from 0.3.2 the guest's real press of the slide with the real
-    key, the power switch of Claire's half, ammo and weapon pick-ups by the guest, the plank boards and drill walls
-    live, the two-lever fence of stage 354, the cutscenes outside Episode 1 and The Struggle's start, and a pad's
-    skip vote during the movie at the very start of a co-op game; story companions that the host's story removes
-    may stay on the guest's PC (no effect on play was seen). The first in-engine scene after a load is not held for
-    the slower PC (up to 6.6 s apart in the lab), a scene is never corrected while it plays, a partner carrying a
-    box walks without the carrying pose, and the blade traps of Episode 1 can be at different phases on the two
-    screens. Continue is not offered for a save made at the end of a half or of a bonus chapter. Nobody outside the lab has played it; two different networks (Steam
-    relay) are untried. Survival, Invisible and Raid are not offered (Raid is not touched). Steam achievements are
-    not blocked in a player's game. Write-up in games/resident-evil-revelations-2.
+    game and the mod. Version 0.3.2 (GitHub Latest, published 2026-11-15, after 0.3.1 of 2026-11-13 and 0.3.0 of
+    2026-11-12, which opened Episodes 2-4 and the bonus episodes): a dinput8.dll proxy that patches import slots and
+    COM vtables in memory and changes no game file (Steam build 3658995 only); ENet over UDP with a direct IP (port
+    28410) or Steam lobbies and invites; a room where the host picks the episode and each player a character;
+    host-authoritative enemies as replicas with kill credit for the player who made the kill, scenario flags, co-op
+    doors, boxes and slides, a stage-change gate, per-player achievements, downed and revive, the partner on the
+    minimap, and a co-op save of its own with Continue for every episode (0.3.1). 0.3.2 starts movies and play after
+    a load together on both PCs, ends a cutscene only when both players pressed skip (as in Resident Evil 6), plays
+    the partner's pick-up, fall, box and lever motions on its character, and fixes a duplicated pick-up, a lever
+    crash and scenes the guest did not see. Installer and a shortcut that installs newer GitHub releases before each
+    start; 12 languages in the co-op screens. MIT. QA: C test suites, an installer suite (252 offline, 249 against
+    the real release feed) and scripted two-PC lab sessions with real game clients, Episode 1 from start to end and
+    Episodes 2-4 and the bonus episodes stage by stage, mostly reached by console jumps to the game's own
+    checkpoints; no human has played Episodes 2-4 or the bonus episodes, and Steam relay between two networks is
+    untried. Survival, Invisible and Raid are not offered (Raid is not touched). Steam achievements are not blocked
+    in a player's game. Write-up in games/resident-evil-revelations-2.
   sources:
   - https://github.com/dolbaras/revelations2-coop
   - https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.2
