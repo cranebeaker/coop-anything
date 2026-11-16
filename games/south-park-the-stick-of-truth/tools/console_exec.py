@@ -706,6 +706,9 @@ class Game:
         # Test-only switch: which inline hooks the mod should enable (see mod/src/mod.cpp).
         if os.environ.get('SP_COOP_INLINE'):
             environment['SP_COOP_INLINE'] = os.environ['SP_COOP_INLINE']
+        # Test-only switch: turn the mod's periodic memory scan off (see mod/src/mod.cpp).
+        if os.environ.get('SP_COOP_SCAN'):
+            environment['SP_COOP_SCAN'] = os.environ['SP_COOP_SCAN']
         self.device = frida.get_local_device()
         self.pid = self.device.spawn(argv, cwd=str(GAME), stdio='pipe',
                                      env=environment)
