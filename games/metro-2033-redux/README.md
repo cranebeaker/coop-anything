@@ -98,9 +98,10 @@ Not playable yet. Build from source per the project README; no release.
 - Damage, enemy AI, doors, pickups and story events are not checked for sync. In `l19_defence` the monsters stay
   dormant for the first minutes.
 - The handcar in `l03_chase` is not networked: the joiner's copy runs behind the host's.
-- The owner sometimes sees two weapons at once on the joiner right after a weapon switch (FINDINGS 5.7); automated
-  captures have not reproduced it yet. The joiner's weapon HUD misses 6 of 11 ammo types (cosmetic) because the
-  cloned body lacks most of the host player's ammo items.
+- A new joiner body starts with two weapons active (l19: AK and revolver) until its first weapon switch; the mod
+  works around it by switching away and back (two pad Y presses) a few seconds after the body arrives (FINDINGS
+  5.7). The joiner's weapon HUD misses 6 of 11 ammo types (cosmetic) because the cloned body lacks most of the host
+  player's ammo items.
 - In `l04_riga`'s opening bar scene the joiner's body can't move and the joiner can't see the host (FINDINGS 5.12).
 - A joiner that rejoined while a scripted fight was running crashed once on load (cause unknown).
 - Only tested on one PC over loopback. Windows Firewall must allow `metro.exe` for LAN play.
@@ -110,6 +111,6 @@ Not playable yet. Build from source per the project README; no release.
 
 ## Next steps
 
-Reproduce the two-weapons report; give the joiner's body the host player's full set of ammo items; unlock the joiner in
+Replace the two-weapons workaround with a direct fix; give the joiner's body the host player's full set of ammo items; unlock the joiner in
 scripted scenes; test a level's own end trigger (not only console `change_map`); network the handcar and doors; LAN
 play. Details: FINDINGS 5.7 to 5.13.
