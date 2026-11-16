@@ -4,9 +4,9 @@
 |---|---|
 | Engine | MT Framework (Capcom), 32-bit, Direct3D 9, XInput; the engine's own class registry ("DTI") and a story script machine (FSM) |
 | Versions tested | Steam app 287290, the only public branch, build **3658995** (2019-03-19); `rerev2.exe` 18,315,248 bytes, SHA-256 `55ac7d2bd80704c6a8a1fa7bd2371726adbaa01ae0fda056198fb042404367f9`; x86, image base 0x400000, no ASLR; Steam stub (`.text` is encrypted on disk and decrypted by the stub at start-up); Windows 10 and 11 |
-| Projects | [Resident Evil Revelations 2 Co-op](https://github.com/dolbaras/revelations2-coop) (MIT), directory entry "Resident Evil Revelations 2 Co-op"; version [0.3.0](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0), published 2026-11-12, GitHub "Latest" (0.2.1 of 2026-11-10 was Episode 1 only). Sibling game: [Resident Evil Revelations](../resident-evil-revelations/README.md) (the first game, its own write-up and mod, same engine family, different binary) |
+| Projects | [Resident Evil Revelations 2 Co-op](https://github.com/dolbaras/revelations2-coop) (MIT), directory entry "Resident Evil Revelations 2 Co-op"; version [0.3.2](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.2), published 2026-11-15, GitHub "Latest": cutscenes together on both PCs, the partner's motions and fixes on top of [0.3.1](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1) of 2026-11-13 (Continue for every episode) and [0.3.0](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0) of 2026-11-12, which opened Episodes 2-4 and the bonus episodes (0.2.1 of 2026-11-10 was Episode 1 only). Sibling game: [Resident Evil Revelations](../resident-evil-revelations/README.md) (the first game, its own write-up and mod, same engine family, different binary) |
 | QA level | automated (C test suites, an installer suite and scripted two-PC lab sessions with real game clients; Episode 1 from start to end, Episodes 2-4 and the bonus episodes stage by stage); no human playthrough, nobody outside the lab has played it |
-| Last updated | 2026-11-12 (0.3.0) |
+| Last updated | 2026-11-16 (0.3.2) |
 
 Claim issue: [#298](https://github.com/cranebeaker/coop-anything/issues/298).
 
@@ -19,14 +19,21 @@ Miss** (Natalia and Dark Natalia), over a direct IP or through Steam. Each playe
 character in a lobby, both press Ready, and the host's PC runs the enemies. There is an installer,
 a shortcut that installs newer GitHub releases before each start, and a one-click log collector
 for bug reports. 0.2.0 (2026-11-09) was the first full release (Episode 1; 0.1.0 and 0.1.1 were
-pre-releases), 0.2.1 (2026-11-10) gave a co-op game its own save and a **Continue** row, and
-**0.3.0** (2026-11-12) opens Episodes 2-4 and the bonus episodes.
+pre-releases), 0.2.1 (2026-11-10) gave a co-op game its own save and a **Continue** row,
+**0.3.0** (2026-11-12) opened Episodes 2-4 and the bonus episodes, **0.3.1** (2026-11-13)
+offers Continue for every episode and fixes the start of Barry's halves and the enemy updates in
+big groups (see
+[Continue for every episode and fixes (0.3.1)](#continue-for-every-episode-and-fixes-031)), and
+**0.3.2** (2026-11-15) starts cutscenes together on both PCs, skips them only when both players
+press skip (as in Resident Evil 6), shows the partner's motions where its character used to stand
+still, and fixes a duplicated pick-up, a lever crash and the scenes the guest did not see (see
+[Cutscenes together, the partner's motions and fixes (0.3.2)](#cutscenes-together-the-partners-motions-and-fixes-032)).
 
 How far each part is checked differs a lot. **Episode 1** was checked in the lab from its start to
 its end. **Episodes 2-4 and the bonus episodes** were checked stage by stage, mostly after console
 jumps to the game's own checkpoints, and **no human has played them yet**: 0.3.0 was published
-on the author's decision so that players can try them, with an explicit list of what is not
-verified (see [Known issues](#known-issues)). Survival, Invisible and Raid are not offered (Raid
+on the author's decision so that players can try them (what the lab runs do not cover is one
+line at the end of [QA](#qa)). Survival, Invisible and Raid are not offered (Raid
 is never touched), joining a running game is not possible, and nobody outside the lab has played
 the mod. Everything below was checked by the author's own agents on the author's own PCs, mostly
 with a console and scripted sessions. See [QA](#qa) for exactly what that means.
@@ -150,7 +157,8 @@ Steam account) and the solo save image kept in memory is put back when the title
 back. The campaign save, and Steam's own record of it, are therefore not opened by a co-op game.
 The first co-op game starts from a copy of the solo save's settings and unlocks. When the host's
 co-op save holds an Episode 1 checkpoint, the room shows a **Continue** row; the guest follows
-the host's checkpoint record with his own items. The co-op save is not in Steam Cloud.
+the host's checkpoint record with his own items. The co-op save is not in Steam Cloud. Since
+0.3.1 the Continue row covers every episode (see below).
 
 ### Episodes 2-4 and the bonus episodes (0.3.0)
 
@@ -179,6 +187,95 @@ the host's checkpoint record with his own items. The co-op save is not in Steam 
   over, and the game crashed; they are now left to each PC's own script. In the same stage the
   second human could stay parked at the edge of the map after the load; the mod places that human
   next to the partner.
+
+### Continue for every episode and fixes (0.3.1)
+
+- **Continue for every episode.** The room shows the Continue row whenever the host's co-op save
+  holds a checkpoint of Episodes 1-4 (either half) or of a bonus episode, whatever episode the room
+  shows; Yes switches the room to that checkpoint's episode, half and difficulty. Each player's
+  hello and lobby row now carries a key of his co-op save's checkpoint (the room's episode x 2 +
+  the half, 0 = none; protocol version 3, so both players need 0.3.1), and Start continues only
+  when the guest's key equals the host's: the guest follows the host's checkpoint, with the
+  characters and items of that half from his own co-op save. A save made at the end of a half or
+  of a bonus chapter (its results screen) is not offered, because the stock Continue would go on
+  into the next part; Episode 1 works as in 0.3.0. A model of the 0.3.0 rule (Episode 1 only)
+  must fail `tests/test_coopsave.c`.
+- **Barry's half started on both PCs.** The start of Barry's half of Episodes 2-4 is one hop of
+  the host that the partner takes through the coupled retry. In 0.3.0 the host sent it once, and a
+  partner whose game was still loading at that moment ignored it and stayed in Claire's first
+  stage. The host now repeats the step until the partner answers that it is in play in part 1 of
+  Barry's half; a repeat is idempotent (already in the target stage: answer only; the same step
+  applied a moment ago: being loaded). `tests/test_warp.c` checks it, and the 0.3.0 model fails.
+- **Every enemy in big groups.** The host read at most 48 living enemies and sent one batch of
+  twelve records per 66 ms tick, so with n enemies each got a record every `ceil(n / 12)` ticks
+  (every 264 ms with 40 in The Struggle's forest: steps on the guest's PC) and beyond 48 never.
+  The host's list now holds up to 128 (the game's two enemy arrays of 64), and a tick sends
+  `ceil(n / 12)` batches, at most four: up to 48 enemies each one has a record every tick, above
+  that the window turns. With twelve or fewer the tick is exactly 0.3.0's. Traffic stays small
+  (about 24 KB/s with 40 enemies, about 28 KB/s with 128, only while more than twelve live).
+  `tests/test_wrec.c` covers it, and the 0.3.0 tick fails.
+
+### Cutscenes together, the partner's motions and fixes (0.3.2)
+
+Details: the "Cutscenes (0.3.2)" and "Motion mirror" sections of
+[world.md](https://github.com/dolbaras/revelations2-coop/blob/main/docs/world.md). No message
+layout changed (still protocol version 3: a new event kind and trailing bytes that older decoders
+ignore); both players need 0.3.2 by the package version check. Each change has a model test that
+fails on the rule before it.
+
+- **Cutscenes start together.** Each PC plays its own scenes, and before 0.3.2 the faster PC
+  left the stage loader and started a level's first scene while the slower PC still loaded (3 to
+  19 s apart in the lab). The game's own Raid code has "wait for every peer" points that pass at
+  once outside a Raid session: one at the end of the stage loader, one when a pre-rendered movie
+  is prepared. The mod holds both until the partner reports the same point (at most 300 s for a
+  load, 30 s for a movie); the held PC shows "Waiting for <name> to finish loading...". In the
+  tests both PCs then started play within a few hundredths of a second, and movies ended within
+  two frames of each other. A scene is never corrected while it plays (no seek or step exists for
+  movies or scenes), and the first in-engine scene after a load is left to each PC's story.
+- **Skipping needs both players.** In co-op a press of the stock skip input (the pad's BACK
+  button, the keyboard's skip key) on a skippable scene is that player's vote, with a line on
+  both screens; when both voted, each PC ends the scene through its stock path (the movie's skip
+  query, the mini demo's vote bit, the player demo's own skip). A lone vote changes nothing.
+- **One start per in-engine scene, and the partner's trigger.** A received scene request
+  restarted a scene that already ran on this PC, and a request of the other PC holds that PC's
+  own pointers (its camera director), so the copy ran without a director and that player kept
+  seeing gameplay. Now a scene is keyed by the LayoutID of its camera director (or of the player
+  demo that lists it), a received request is not submitted while this PC's own copy of it plays,
+  and a scene that the partner's character starts (Episode 1's knife on the table) is started on
+  this PC through the stock trigger of its own set model with the partner's character as the
+  player, so both stock sequences run from the same moment with local objects only. The view
+  guard and the role set-up after a load no longer take the view away from a playing scene.
+- **The scene's enemy on the guest's PC.** A scene that needs an enemy as an actor (Claire's
+  opening scene in Episode 1) waited on the guest's PC until the host's record made the enemy
+  (7 to 8 s of a frozen camera). The guest's PC now makes the enemy itself, only one that the
+  scene's units name and only while the scene waits for them, and the host's record takes it
+  over (no second enemy). A first form of the rule let every creation through during a scene and
+  made wildlife the host never had at The Struggle's opening; `tests/test_scene.c` fails on it.
+- **The partner's motions** (`native/pmot_logic.h`). The action mirror replays only the actions
+  of its list; pick-ups, falls, the box lift and put-down and lever pulls need the owner's world
+  in their action's start (a bare action change of a lever pull crashed the partner). For those
+  the owner's PC sends the motions of its human's 16 layers in the state message's tail, and the
+  receiver only shows them: its puppet is held in the wait action and each layer is set through
+  the puppet's own motion setter at the owner's frame; a set-model interaction (the lever pull)
+  puts the same set model's motion list into the puppet's bank and gives the puppet's own list
+  back at the end.
+- **Pick-ups by the receiving PC's own number** (`native/pickup_logic.h`). The replayed pick-up
+  passed the sender's object id to the stock AddItem, whose tail removes the object with that id.
+  The id is a per-PC creation counter, so after a stage change the other PC kept the picked item
+  (a herb could be taken twice) or removed another one. The receiver now passes its own id.
+- **The stage gate and a waiting jump.** At the end of the gate's 25 s the game changed the
+  stage under the guest's character, which stayed behind, and showed a game over for both. Now a
+  waiting jump of the partner into Barry's half is applied there through the stock restart. If
+  the guest's game is in a cutscene or a load at that moment, the old behaviour stays.
+- **Levers, plank boards and drill walls.** The door mirror replayed steps that read the
+  operating character without a null check, and the partner's game crashed (seen live with
+  Episode 1's torture lever). The mirror now skips those steps and puts the object into its end
+  position; the story flag comes with the flag sync. The other hand-operated classes were read in
+  the decompile (all 49 player events and the set-model actions they start) and are null-safe.
+- **An item the story grants during a scene.** The host's copy of a grant (Moira's flashlight)
+  could reach the guest's PC before the guest's own scene gave it, and the light stayed out of
+  her hand. A grant for the receiving PC's own human now waits while a scene plays there and 2 s
+  after it; that PC's own story grants the item and the waiting copy is dropped.
 
 ### Installing, updating and other mods
 
@@ -209,6 +306,13 @@ in the repository's docs).
 | With 13 or more enemies (Episode 3's sewers: 14 on the host, 12 on the guest) some never existed on the guest's PC | A batch of enemy records holds twelve; the host always sent the first twelve, so the rest had no record, and their one-time spawn message could arrive while the guest was still loading. | The record window turns from batch to batch (`tests/test_wrec.c`, 1657 checks; the old model fails). Shown on the pair: 14 of 14 on both PCs, twice. |
 | Enemies killed on the host came back alive on the guest's PC | A record sent before the death arrived after the death message and set the replica's health again. | Records for an enemy that died less than ten seconds ago are ignored; shown in the siege: the alive counts of both PCs equal at every sample. |
 | Both games died in Episode 4's finale | The finale's helicopters are script-driven set models; mirroring their actions like doors freed a moving unit still linked in the engine's update list. | Those set models are excluded from the door mirror (`tests/test_objsync.c` plus a model of the old rule that must fail); both games ran more than eight minutes in the finale afterwards. |
+| Barry's half of Episodes 2-4 could start on the host's PC only, with the guest left in Claire's first stage | The host sent the hop into Barry's half once; a guest whose game was still loading at that moment ignored it. | The host repeats the step until the guest answers from part 1 of Barry's half (`tests/test_warp.c`; the 0.3.0 model fails). Shown on the pair for 0.3.1: with the guest's game held back on purpose, the guest followed into Barry's half (stage 250) as soon as its game was free, with one load only. |
+| With many enemies (The Struggle's forest, big waves) they moved in steps on the guest's PC, and above 48 some were not updated at all | One batch of twelve records per tick from a list of at most 48 living enemies. | Up to four batches a tick from a list of up to 128 (`tests/test_wrec.c`; the 0.3.0 tick fails). Shown on the pair for 0.3.1: The Struggle's forest (stage 600), 50 enemies listed identically on both PCs, each at most 15 ms behind the host on the guest's PC, none lost. |
+| An item one player picked up stayed on the partner's floor after a stage change (a herb could be taken twice), or another item vanished | The replayed pick-up passed the sender's object id; the id is a per-PC creation counter, and the stock AddItem removes the object with that id. | The receiving PC passes its own id (`native/pickup_logic.h`; `tests/test_pickup.c`, which the 0.3.1 rule fails). Shown on the pair for 0.3.2: before and after the fix; the guest's herb, key item and stackable item. |
+| A guest held back past the stage gate's 25 s at Barry's half got a game over together with the host | The game changed the stage under the guest's character, which stayed at the old place. | The waiting jump is applied through the stock restart (`tests/test_gate.c`; the 0.3.1 model fails). Shown on the pair: the 0.3.1 game over reproduced twice; with the fix the same hold lands in Barry's half and plays on. |
+| The host's game crashed when the guest pulled Episode 1's torture lever | The door mirror replayed a step that reads the operating character without a null check. | Those steps are skipped and the object takes its end position (`tests/test_objsync.c`; the 0.3.1 model fails). Shown on the pair: the host skipped the pull, took the story flag and played on for 12 more minutes. Plank boards and drill walls: fixed from the code reading, not reproduced live. |
+| The guest saw gameplay during a scene the host's character started (Episode 1's knife on the table) and from the middle of its own opening scene on; the host lost its opening scene's camera midway | The received scene request held the sender's camera director; the view guard and the role set-up after a load put the view back on the own character during a scene. | The partner's trigger starts this PC's own set model; the view is left to a playing scene (`tests/test_scene.c`). Shown on the pair: the same scene with the same camera on both screens 1, 3 and 5 s into each scene (screenshots of both PCs). |
+| The guest's opening scene of Claire's half stood still for about 8 s | The scene needs an enemy that only the host's PC was allowed to make. | The guest's PC makes only the enemy its scene names, while the scene waits for it, and the host's copy takes it over (`tests/test_scene.c`). Shown on the pair: a wait of 1.4 s instead of about 8, the enemy made once on each PC. |
 
 ## Lessons that carry over
 
@@ -234,6 +338,18 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
    whatever comes after its limit every time, always the same objects, and nothing logs it. When
    a world can hold more objects than one batch, rotate the window and test that every object is
    covered within `ceil(n / per_batch)` batches.
+5. **A step sent once is lost on a PC that is still loading.** A one-time order to the partner's
+   PC (here: hop into Barry's half) arrives while that game may still be loading and is then
+   dropped. Repeat such a step until the partner answers from the target state, and make the step
+   idempotent, so that a repeat during the load does nothing.
+6. **An object number handed out per PC is not a shared id.** The engine numbers its objects in
+   the order each PC creates them, so after a stage change the same item had different numbers on
+   the two PCs, and a replayed pick-up removed the wrong object or none. Identify objects across
+   PCs by a placement id (here the LayoutID) and let each PC translate it into its own number.
+7. **Replay a scene by its trigger, not by its bytes.** A scene request carries the sending PC's
+   own pointers (its camera director), so a copy of the request runs without a director on the
+   other PC. Send the trigger instead and let each PC start its own copy of the scene through the
+   stock trigger with the partner's character as the player.
 
 ## QA
 
@@ -242,15 +358,22 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   version before its fix. Suites at the 0.3.0 gate, with their check counts: ach 786, aim 159730,
   bgl 85, combat3 19072, downed 443, grapple 603859, lang 3587 (texts in 12 languages), lobby
   1735, lobbymust 133, meleehit 15066, objsync 150, proto 121435, warp 6750, wrec 1657 (the
-  enemy-record window) and more; `tests/test_steam_real32.c` calls the real Steam code against fake
-  interfaces that use the game's C++ calling conventions; `python -I tests/run_net_tests.py` runs the
-  session over real UDP through a network emulator with loss, duplication and reordering. A
-  headless bot (`tests/coop_bot.c`) speaks the protocol for the refusal, version and lost-peer cases.
-- **Installer**: `powershell -File tests\test_installer.ps1`: 252 of 252 before the 0.3.0
-  publication (with the 0.2.1 package as the old version) and 257 of 257 with `-Online` (the real
-  GitHub feed, read only); after the publication the published 0.2.1 updated a stand-in copy to
-  0.3.0 through the real feed (checksum against GitHub's digest, install, version file) and the
-  uninstall gave the copy back byte for byte.
+  enemy-record window) and more; for 0.3.1 new checks in `test_coopsave`, `test_warp` and
+  `test_wrec` that fail on the logic of 0.3.0; for 0.3.2 new checks in `test_pickup` (the
+  receiving PC's object number, the grant held during a scene), `test_gate` (a waiting jump at
+  the gate's end), `test_objsync` (the steps of a lever, a plank board and a drill wall that need
+  the operating character), `test_pmot` (the partner's motions) and `test_scene` (the cutscene
+  start, skip and scene rules), each failing on the logic of 0.3.1; every suite green; `tests/test_steam_real32.c`
+  calls the real Steam code against fake interfaces that use the game's C++ calling conventions;
+  `python -I tests/run_net_tests.py` runs the session over real UDP through a network emulator
+  with loss, duplication and reordering. A headless bot (`tests/coop_bot.c`) speaks the protocol
+  for the refusal, version and lost-peer cases.
+- **Installer**: `powershell -File tests\test_installer.ps1`: 252 of 252 before the 0.3.2
+  publication (with the published 0.3.1 package as the old version) and 249 of 249 with `-Online`
+  (the real GitHub feed, read only) after it; after the publication the published 0.3.1 updated a
+  stand-in copy to 0.3.2 through the real feed (checksum against GitHub's digest, install, version
+  file), a second start installed nothing, and the uninstall gave the copy back byte for byte. The
+  same counts and checks held for 0.3.1 with the published 0.3.0 as the old version.
 - **Live, two PCs on one LAN** (the author's test copies of the game, one PC as the host and the
   other as the guest, driven by a console and scripts, not by a person):
   - Episode 1: every checkpoint of both halves, reached with a lab warp or teleport, with the doors,
@@ -266,32 +389,68 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
     between The Struggle's chapters; the ends of Episodes 2 and 3, of both bonus episodes and of
     Episode 4's last stage; the stages after the first of each half mostly reached by console jumps
     to the game's own checkpoints. Scripted walking, aiming and kept health were used.
-- **What this does not show**: a person playing any of it; the story's own step in Episode 2
-  from the village (stage 201) to the tunnel (stage 203, entered only by a jump) and stage 203
-  itself; the fights in Barry's halves of Episodes 2-4 and in Claire's halves of Episodes 3-4 (the
-  enemies there were asleep or out of reach of the scripts); the two last bosses of Episode 4
-  (stages 453 and 454, 30,000 health each; the end of the episode was shown after a test request of
-  the stage's end); The Struggle's stage 610, which starts behind a gate that did not open in the
-  tests, and the clear conditions of its middle chapters; Little Miss's stealth rules; the story's
-  own steps between the stages of Episodes 2-4; two different networks (Steam relay); any player
-  outside the lab. This is why the QA level is `automated` and not `verified-playthrough`.
+  - 0.3.1, with its release build: The Struggle's forest (stage 600) with 50 enemies listed
+    identically on both PCs, every enemy on the guest's PC at most 15 ms behind the host, none
+    lost; Barry's half of Episode 2 with the guest's game held back on purpose (the host repeated
+    the step, and the guest followed into stage 250 as soon as its game was free, with one load);
+    a game over in Barry's half and Retry (both players back at the checkpoint); Episode 1 from the
+    room (its start and first stages, the same enemies on both PCs); Continue in the room for
+    Episode 1, Claire's and Barry's halves of Episode 2, The Struggle and Little Miss (both PCs at
+    the same checkpoint with the right pair of characters, the enemies listed on both, no game over
+    on arrival; the checkpoints were made by the test tools: the game's own checkpoint, its flag
+    set by hand).
+  - 0.3.2, with its release build (six runs): The Struggle's forest (the chapter's movie ended on
+    the same frame on both PCs and play started 3 ms apart; later 50 enemies identical on both PCs,
+    none lost); Barry's half of Episode 2 with the guest's game held back on purpose, then a death
+    and Retry back at the checkpoint; Episode 1's opening scene of Claire's half and the knife on
+    the table (the same scene with the same camera on both screens 1, 3 and 5 s into each scene,
+    the guest's view back on its own character afterwards, the scene's enemy made once on each PC,
+    the same items and story flags on both PCs, Moira's flashlight in her hand on both); the knife
+    on the table again with the guest's scene forced 0.6 s late, so that the host's grant of the
+    flashlight came first (held, and the light still in her hand on both PCs); the partner's
+    pick-up of the rusty key and the guest's pull of the torture lever seen on the other PC; the
+    torture lever pulled by the guest in a run of its own (the host skipped the pull, took the
+    story flag and played on for 12 more minutes). In The Struggle's forest the enemies on the
+    guest's PC lagged the host by 3 to 62 ms in these runs (the published 0.3.1 measured 63 ms on
+    the same PCs that day, so the figure depends on the PCs, not on the build; no figure is
+    promised).
+  - 0.3.2, on earlier builds with the same code for each part: the opening movies of both halves
+    of Episode 1 started within 0.03 s on both PCs; a single skip vote let the movie play on, the
+    second ended it on both PCs within two frames (the keyboard's Esc for the movies, the pad's
+    button in an in-engine scene); a guest held back 10 s into the stage gate followed by the
+    host's repeat, and one held back past the 25 s (a game over for both on the build before the
+    fix, both times it was tried) landed in Barry's half and played on; Episode 4's first stages
+    with the jumps into Barry's half and Continue in Barry's half of Episode 4 (checked live for
+    the first time); Continue in The Struggle, Little Miss, both halves of Episode 2 and Episode 1
+    with the same enemies on both PCs; the partner's falls both ways, the box of Barry's half lifted
+    and put down, and the second player's own co-op doors, shutters, cell door, pick-ups, key door,
+    boxes and pair boost followed by the host's PC.
+- **Not covered by the lab runs:** a person playing it, Steam relay, Episode 2's village-to-tunnel
+  step, the fights of Barry's halves and of Claire's halves of Episodes 3-4, Episode 4's last
+  bosses, The Struggle's stage 610, Little Miss's stealth rules, Continue in Episode 3, cutscenes
+  outside Episode 1 and The Struggle's start, and the guest's slide, ammo, weapons, boards and drill
+  walls of 0.3.2; so the QA level is `automated`, not `verified-playthrough`.
 
 ## How to play
 
 Both players need the Steam game (app 287290, build 3658995) and the same mod version.
 
-1. Download `revelations2-coop-setup-0.3.0.exe` (or the zip: extract it and run
+1. Download `revelations2-coop-setup-0.3.2.exe` (or the zip: extract it and run
    `Install Co-op.bat`) from the
-   [release](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0) on **both** PCs. The
+   [release](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.2) on **both** PCs. The
    installer is not code-signed, so Windows SmartScreen may warn. An installed 0.1.1 or later
-   updates itself to 0.3.0 at the next start from its shortcut.
+   updates itself to 0.3.2 at the next start from its shortcut; both players need 0.3.2.
 2. Start the game from the **Resident Evil Revelations 2 Co-op** shortcut: Campaign, then
    **Co-Op Play**.
 3. One player picks **Find a Partner** (Steam friend or System Link; for a direct IP the host
    forwards UDP port 28410 and allows the game in the firewall), the other **Join a Partner**.
    The host picks the episode (1-4, The Struggle, Little Miss) and the difficulty, each player
-   picks a character (Claire's or Barry's half), both press Ready; the host starts the game.
-4. Steam achievements are **not** blocked: what a co-op game earns is unlocked on your account.
+   picks a character (Claire's or Barry's half), both press Ready; the host starts the game. To go
+   on from the last checkpoint of a co-op game, the host picks **Continue** (the guest needs a co-op
+   save of the same episode and half).
+4. A cutscene is skipped when both players press the skip input (Esc, or the pad's skip button);
+   a single press is a vote and the scene plays on.
+5. Steam achievements are **not** blocked: what a co-op game earns is unlocked on your account.
 
 Bug reports: double-click `coop\Collect logs.bat` in the game folder right after the problem; it
 writes one zip with the mod's logs, settings and a system summary, with user, computer and player
@@ -301,34 +460,45 @@ zip of both PCs.
 
 ## Known issues
 
-- Episodes 2-4 and the bonus episodes are verified stage by stage, not as playthroughs, and no
-  human has played them. Not verified: Episode 2's step from the village to the tunnel (the
-  button at the rubble on the north terrace) and the tunnel stage; the fights in Barry's halves of
-  Episodes 2-4 and in Claire's halves of Episodes 3-4; the two last bosses of Episode 4; The
-  Struggle's chapter behind Ryan's gate and the clear conditions of its middle chapters; Little
-  Miss's stealth rules; the story's own steps between the stages of Episodes 2-4.
 - Story companions that the host's story removes may stay on the guest's PC where the story left
   them (no effect on play was seen).
 - Barry's half of Episodes 2-4 starts a few seconds after the first stage of the part has loaded;
   that stage's opening may flash by.
-- "Continue" in the room works for Episode 1 checkpoints only.
+- "Continue" is not offered for a save made at the end of a half or of a bonus chapter (its
+  results screen): start the next half or chapter as a new game.
+- One item of Episode 2's village stayed on the floor on both PCs after the guest took it into
+  his bag (the game's own behaviour on the guest's PC; not compared with a pick-up by the host).
+- The first in-engine scene after a load is not held for the slower PC (each PC's story starts
+  it: between less than half a second and 6.6 s apart in the lab), and a scene is never corrected
+  while it plays. A Retry after a game over does not pass the point that holds a load for the
+  slower PC.
+- A scene in the middle of a stage that needs an enemy could, in a rare order of events, leave a
+  second copy of that enemy on the guest's PC for up to 10 s (not seen in the lab).
+- A partner carrying a box walks without the carrying pose.
+- If the guest's game is in a cutscene or a load when the stage gate's 25 s at Barry's half run
+  out, the old behaviour stays (a game over for both is possible).
+- The blade traps of Episode 1 (and similar traps the story starts) run on each PC from the story
+  flag, so their blades can be at different phases on the two screens; damage is decided on the
+  PC of the player who is hit.
 - Survival, Invisible and Raid are not offered. Joining a running game is not possible: if one
   player's game closes or the connection is lost, start a new co-op game.
 - The end of Episode 1's halves needs both players at the radio together.
 - Japanese text in the co-op screens uses a Windows font, not the game's own.
-- Play between two different networks (Steam relay) has not been tried.
 - A `dinput8.dll` of another mod that is not an Ultimate ASI Loader is switched off while co-op is
   installed; removing co-op puts it back.
 - The installer and the setup exe are not code-signed.
 
 ## Next steps
 
-1. **A person playing it.** The checks listed under "What this does not show", first Episode 2's
+1. **A person playing it.** What the lab runs did not cover (end of [QA](#qa)), first Episode 2's
    step from the village to the tunnel, the fights in Barry's halves, Episode 4's last bosses and
    The Struggle's gate; the author has a prepared set of starting points for exactly these. Reports
    with the `Collect logs.bat` zips of both PCs help most.
 2. **Test the Steam relay** between two different networks, and a click in the real friends list
    and the overlay's invite dialog.
-3. **Continue for Episodes 2-4**: the room offers Continue for Episode 1 checkpoints only.
-4. See the sibling [Revelations 1](../resident-evil-revelations/README.md) write-up for the
+3. **Continue in Episode 3** checked in a running game, and Continue from a save made at
+   the end of a half or of a bonus chapter.
+4. **The cutscenes outside Episode 1** run in the lab, and the first in-engine scene after a load
+   held for the slower PC without starting its camera early.
+5. See the sibling [Revelations 1](../resident-evil-revelations/README.md) write-up for the
    first game; the offsets of the two builds do not transfer, only the structure ideas.
