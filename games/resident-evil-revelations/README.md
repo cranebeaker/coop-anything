@@ -4,14 +4,14 @@
 |---|---|
 | Engine | MT Framework (`KATARIBE`, project tree `bhr\biorevhd`), Direct3D 9, x86 |
 | Versions tested | PC/Steam appid **222480**, build 13298487; `rerev.exe` 14,260,576 bytes, SHA-256 `1573B79EB921B1E7F571E6DEB71C39961C7F1940FAD6D19283FC3AEA7FCA48AA`; image base 0x400000, no ASLR |
-| Projects | [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) (MIT, a `dinput8.dll` proxy); version [0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1), published 2026-11-13, GitHub "Latest", a fix release for network play on top of [0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0) (2026-11-12): split screen for the whole campaign, network co-op section by section through the whole story (0.1.0 of 2026-11-10 had network co-op for Episode 1 only). Claim issue: [#299](https://github.com/cranebeaker/coop-anything/issues/299). Earlier probe `re1coop`: superseded, see [Existing work](#existing-work) |
-| QA level | automated (offline suites, a headless bot, an installer suite and scripted sessions with real game clients on two PCs of one LAN, plus split screen on one PC); no human playthrough, 0.2.1 was not played by people before its release |
-| Last updated | 2026-11-13 (0.2.1) |
+| Projects | [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) (MIT, a `dinput8.dll` proxy); version [0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2), published 2026-11-15, GitHub "Latest", a fix release on top of [0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1) (2026-11-13, fixes of network play) and [0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0) (2026-11-12): split screen for the whole campaign, network co-op section by section through the whole story (0.1.0 of 2026-11-10 had network co-op for Episode 1 only). Claim issue: [#299](https://github.com/cranebeaker/coop-anything/issues/299). Earlier probe `re1coop`: superseded, see [Existing work](#existing-work) |
+| QA level | automated (offline suites, a headless bot, an installer suite and scripted sessions with real game clients on two PCs of one LAN, plus split screen on one PC); no human playthrough, 0.2.2 was not played by people before its release |
+| Last updated | 2026-11-16 (0.2.2) |
 
 ## Where things stand
 
-**Two players can play the story campaign today, with a mod.** [Version 0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1)
-(published 2026-11-13, GitHub "Latest"; a fix release for network play on top of 0.2.0 of 2026-11-12) takes over the campaign's AI partner (Parker,
+**Two players can play the story campaign today, with a mod.** [Version 0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2)
+(published 2026-11-15, GitHub "Latest"; a fix release on top of 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12) takes over the campaign's AI partner (Parker,
 Jessica, Chris and so on) with a second human:
 
 * **Split screen on one PC, whole campaign**, two gamepads, each player with an own camera, HUD, ammunition and pause/item menu; side by side or top/bottom.
@@ -27,6 +27,11 @@ Jessica, Chris and so on) with a second human:
   between the PCs), an enemy no longer vanishes from the guest's screen over floor the guest's PC has not loaded, the partner's character holds exactly the
   partner's guns, the guest's character starts the session's first level with its knife, spare ammunition and herbs, and the guest's game no longer crashes
   when the first level begins after a long wait. See [What 0.2.1 fixes](#what-021-fixes).
+* **Fixed and new in 0.2.2:** in split screen the **second player's action button** works: he opens doors, takes items and uses the other objects with his own
+  button (the game answered such actions for the first player only). Over the network the **story flags of every key item** of every episode and the flags of
+  the game's objects in Episodes 2 to 12 reach the other PC (before, only Episode 1's did, so the partner's game could take the "no key" path); the partner's
+  character plays his door and pickup motions, the lockers and weapon boxes he opens are shown opening, a lever he pulls moves on both PCs, and the
+  pre-rendered **movies start together and are skipped only when both players press skip** (as in Resident Evil 6). See [What 0.2.2 fixes and adds](#what-022-fixes-and-adds).
 * A **"Co-Op Play" row in the game's own main menu** (F6 or the pad's BACK button also open it), ready buttons in the room, the **partner on the minimap and
   map**, a **co-op save of its own** (a co-op game never writes the solo `DATA0.DAT`), an installer and a self-updating shortcut, 13 installer/lobby languages.
 * Raid mode and the game's own online play are never touched by the mod.
@@ -37,14 +42,14 @@ An earlier version of this write-up (PR #126) held the opposite, see [Correction
 
 **Honest QA.** What was checked is listed under [QA](#qa). Short version: offline test suites, a headless bot and an installer suite; scripted sessions with real
 game clients on two PCs of one LAN (every section from 1-2 to 12-2 for arrival, characters and movement, the story's own transitions between parts and episodes, the
-end of the campaign, and for 0.2.1 its fixes of network play) and split screen driven with two virtual pads. Not yet done: any play by people, a session between two different networks (Steam relay), the
-last boss fight (12-3) played the story's way, 2-2's own story with HUNK, the fights of most sections, and anything in Raid.
+end of the campaign, and for 0.2.1 and 0.2.2 their fixes and additions) and split screen driven with two virtual pads. Not yet done: any play by people, a session between two different networks (Steam relay), the
+last boss fight (12-3) played the story's way, 2-2's own story with HUNK, the fights of most sections, a lever pulled by the partner on two PCs, and anything in Raid.
 
 ## Existing work
 
 | project | state |
 |---|---|
-| [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.2.1 (MIT) | Described in this page. Release notes and checksums: [v0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1). Before it: 0.2.0 ([v0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0), 2026-11-12, network co-op through the whole story, Give to partner, the Genesis and HUNK for the second player), the first full release 0.1.0 ([v0.1.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0), 2026-11-10, network co-op for Episode 1 only) and the pre-releases 0.0.1 and 0.0.2. |
+| [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.2.2 (MIT) | Described in this page. Release notes and checksums: [v0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2). Before it: 0.2.1 ([v0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1), 2026-11-13, fixes of network play: the zone hand-over of an enemy, the partner's real guns, the guest's start kit), 0.2.0 ([v0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0), 2026-11-12, network co-op through the whole story, Give to partner, the Genesis and HUNK for the second player), the first full release 0.1.0 ([v0.1.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0), 2026-11-10, network co-op for Episode 1 only) and the pre-releases 0.0.1 and 0.0.2. |
 | `re1coop` (an earlier probe proxy, as described in PR #126; unpublished) | A diagnostic `dinput8.dll` that read the mode field and the network manager, walked the game's type registry and registered one payload type of its own. It sent no traffic and ran no session; it is not the mod above. Its measurements are kept below where they could be cross-checked. |
 | Hub PR #115 (another contributor's study of the same build) | Agrees that mode 1 is Raid. Its "route B" (running the campaign inside the Raid session) was not taken; its patterns and offsets were used as reading material and checked against the exe before use. |
 
@@ -218,6 +223,51 @@ A fix release for network play; everything of 0.2.0 stays as it was. All of it *
 * **The save panel and the room note.** While co-op is on, the Campaign page's save panel (chapter, play time) shows the co-op save, and the host's room note
   names the co-op save's characters (for example Parker and Jessica in 3-1).
 
+### What 0.2.2 fixes and adds
+
+A fix release for split screen and network play on top of 0.2.1; everything else of 0.2.1 stays as it was. All of it **ours**, build 13298487 (the code and its
+comments are in the repository's `native/`). The new message kinds are additions (`CP_PROTO_VERSION` stays 3); the hello's version string refuses 0.2.1 with a reason.
+
+* **The second player's action button in split screen** (`native/interact1.h`, the pickup guard in `native/guards1.c`; `tests/test_interact1.c`). A player
+  reported that the second player could not use doors. Everything an object does for "the player" asks the own slot (`FUN_00882D60`, about 190 callers): the
+  door decides its opener from "the own unit" (`FUN_0067AF10`, read by 85 object functions), the prompt is an action command owned by that slot and read from
+  the raw pad of the current pad slot, and the pickup commit asks `FUN_00881DF0(slot)`, which is "slot == 0" offline. In split screen the own slot stays the
+  first human's for good (the camera managers and the HUD set depend on it), so the second human was invisible to every door, item and switch. Now an object
+  is operated by the human who stands nearest to it (within 450 units on the same floor and nearer than the first human, with a 30-unit hysteresis for the
+  one who had it; an object in the middle of an action stays with the one who started it while he is within 800 units). The object's own phases then run in
+  the second human's context (his pad slot, his view, the own-slot answer is his slot), the one update that reads the buttons runs for the human who presses
+  a button of his own pad, and the pickup guard answers from a mask of the slots that may pick up (both humans in split screen). A door he opened no longer
+  stops halfway (the game had treated him as a remote player and ended his part of the action at once), and a door that cannot start its opening for him
+  goes back to closed after 6 s. A door's opening animation is loaded around the first human, so a door far from the first player is not ready for the second.
+* **Key-item and object flags of every episode** (`native/sf1.c`, `native/sfobj1.h`; `tests/test_sf1.c`). The story mirror passed Episode 1's scenario
+  flags only (380 ids). The key item vanished on the partner's PC, but its story flag stayed on the PC that took it, so where the story asks for that key the
+  partner's game took the "no key" path. 0.2.2 adds the story flags of the game's key items of every episode (21 more ids), in both directions, and 89 flags
+  that the game's objects set in Episodes 2 to 12 (490 ids in all). An object flag crosses only when the store comes from a world object's own path: the objects' flag setter
+  `FUN_0067DB80` (crates, shutters, valves, load-room doors, the ground lift, the elevator switch, lockers, the weapon box), an emptied box or an item
+  entering the bag. A store from the Genesis scan's end, a hand print, a lever (replayed itself, below) or an enemy stays on its PC, so a scan result or a
+  reward stays with its player.
+* **Levers** (`native/objsync1.h`; `tests/test_objsync1.c`). A lever (`uOMCommonLeverWall` / `uOMCommonLeverFloor`) has five states: OffWait, OffMove, OnWait,
+  OnMove, EndWait. The PC whose own human starts a move announces the lever, the state it leaves and the move. The other PC, when its copy is still in that
+  state, requests the move through the manager's own deferred request with the operator -1 ("nobody", which the stock code uses for a flag-driven move and
+  the auto-return), so its copy plays its own pull and its own end (pose, the type's next state, its story flag) and no player is touched. A move with the
+  operator -1 is never announced, so nothing echoes.
+* **The partner's interaction motions** (`native/pmot1.h`; `tests/test_pmot1.c`). The partner's character here never enters an interaction state, because
+  every object takes this PC's own human as its operator. The partner's PC reports its human's interaction (its start, the motion changes, a keep-alive every
+  300 ms, its end). This PC, while the partner's character is free (walking or in a standing wait) and nothing holds it (pause, cutscene, load, death,
+  downed), holds it in the stock `EventWaitState` (the way the scenes' `CharacterSetMotion` plays a motion from outside), binds the event motion bank from
+  its own copy of the same object and sets the reported motions; the end, 1.2 s without a report or 20 s in all release it. A stock wait of the partner's
+  character that the mod did not start and no report of the partner explains is released after 1.5 s: it had frozen the host's character on the guest's
+  screen after a door the guest opened by hand.
+* **Lockers and weapon boxes as a picture** (`native/lid1.h`; `tests/test_lid1.c`). Replaying a box's state machine would spawn a second content item on
+  this PC (the opening state's enter) or open the weapon screen here. So only the box's own motion plays the partner's opening or closing, on a copy of the
+  same class that is closed on this PC. The copy stays closed in logic and in collision, and its content stays this player's.
+* **Movies start together and are skipped together** (`native/cut1.h`; `tests/test_cut1.c`). The movie player's update (`FUN_00785B30`) runs a state
+  machine. When this PC's movie is ready, it tells the partner (a hash of the movie's name and the how-manyth start of that name it is) and holds the start
+  on the first frame until the partner's movie of the same name is ready, 30 s pass or the session ends. A skip press (the game's own test decides it: the
+  pad's Start, the keys, the mouse) is that player's vote: the stock stop is not run in that frame, the movie plays on on both PCs and the partner's screen
+  says so; when both voted for the same movie, each PC skips it through the stock path. No seek of a playing movie was found, so a drift is not corrected;
+  the barrier removes the start gap. In-engine cutscenes are not movies: each PC starts them by its own story, and both leave them together as before.
+
 ## What we changed
 
 The mod, by what a player sees (code and design notes in the [repository](https://github.com/dolbaras/revelations-coop)):
@@ -237,13 +287,16 @@ The mod, by what a player sees (code and design notes in the [repository](https:
 * **Network fixes (0.2.1):** an enemy that chased the guest into another area is handed over between the PCs with its place and health; enemy copies are
   spared the engine's fall-out timer, so only the PC that runs an enemy decides its death; the partner's character holds the partner's real guns; the guest's
   start kit at the session's first level; the shared world starts with each PC's own level.
+* **Split screen and network (0.2.2):** the second player of the split screen uses doors, items and the other objects with his own action button; over the
+  network the key-item flags of every episode and the object flags of Episodes 2-12 are mirrored, a lever the partner pulls moves on both PCs, his door and
+  pickup motions play on his character, the lockers and weapon boxes he opens are shown opening, and movies start together and are skipped by both players' votes.
 * **Co-op save of its own**, with the guest's weapons taken from the guest's own co-op save and Continue restoring the save's characters (0.2.1: an unarmed
   guest gets the guns of the host's save, and the Campaign page's save panel shows the co-op save while co-op is on).
 * **Gamepad routing** for virtual, duplicated or unplugged pads; **partner on the minimap/map**; **achievements** credited to the PC whose player earned them.
 * **Other mods:** an Ultimate ASI Loader the player had as `dinput8.dll` keeps running as `winmm.dll`; a foreign `dinput8.dll` is kept and restored.
 * **One-click log zip** (`coop\Collect logs.bat`) with names, paths, e-mail, MAC and public IP addresses removed.
 
-Bugs found on the way to 0.2.0 and 0.2.1, with cause, fix and the check that shows it (the full history is in the repository's code comments and docs):
+Bugs found on the way to 0.2.0, 0.2.1 and 0.2.2, with cause, fix and the check that shows it (the full history is in the repository's code comments and docs):
 
 | Problem | Cause | Fix and proof |
 |---|---|---|
@@ -253,6 +306,11 @@ Bugs found on the way to 0.2.0 and 0.2.1, with cause, fix and the check that sho
 | An enemy that chased the guest into another area jumped back, and the guest's damage to it was lost, when the host came there (known since 0.1.0) | The guest's PC ran the enemy, while the host's engine kept its copy asleep where its zone pass had reset it, with the old health; 0.2.0 mirrored the guest's state only farther than 1500 units from the host's human. | The zone hand-over (`native/watch1.h`, `native/local1.h`); `tests/test_handover1.c`, which the 0.2.0 rules fail. Live on two PCs: the host's PC took the enemy back with the health the guest's shots had left, and it died once on both PCs. |
 | An enemy vanished for good from the guest's screen while it was still alive for the host | The guest's PC streams only its own human's stage parts; a copy kept awake over floor that PC had not loaded fell, was put back over the same missing floor, and the engine's fall-out timer killed it after 5 s without ground. | The fall-out timer of every copy that the other PC runs is held at 0 (`native/rguard1.h`, `tests/test_rguard1.c`). Lab check on two PCs: a copy on the guest's PC that stood awake over floor its PC had not loaded (8.6 s in all) was held, not killed, and the host's enemy kept its health. |
 | The guest's game crashed when the first level began after a long wait in the title menus | The first level's load barrier counted from the room's Start and ran out during the 1-2 opening movie; the host's enemy spawns then reached the guest before its own scene had placed them. | The shared world waits for each PC's own level (`native/wgate1.h`, `tests/test_wgate1.c`). Live: a first level that began more than five minutes after the Start, no crash on either PC. |
+| Split screen: the second player could not use doors, take items or do anything else of the action button (a player's report) | Every object asks the own slot, which stays the first human's in split screen; the prompt reads the current pad slot; the pickup check is "slot == 0" offline. | The nearest human operates an object and its phases run in his context; the pickup guard answers from a mask of slots (`native/interact1.h`, `native/guards1.c`; `tests/test_interact1.c`). Live in split screen: with his own pad he opened doors in Episodes 3 and 9 and walked through, and took a herb; in 0.2.1 the same door and herb did nothing for him. |
+| A door the second player opened stopped halfway for good | The game treated the second player as a remote player and ended his part of the action at once. | The door and the player keep their own state as for the first player; a door that cannot start for him goes back to closed after 6 s. Live: he walked through, and the first player used the same door right after him. |
+| Network, Episodes 2-12: where the story asks for a key the other player had picked up, the partner's game took the "no key" path | Only Episode 1's story flags were mirrored: the key item vanished on both PCs, but its flag stayed on the PC that took it. | The key-item flags of every episode and the object flags of Episodes 2-12, filtered by the path that set them (`native/sf1.c`, `native/sfobj1.h`; `tests/test_sf1.c`, which the 0.2.1 rule fails). Live: the guest picked up the Voice Recorder in Episode 12, and the host's game had its flag at once. |
+| Network: after the guest opened a door by hand, the host's character on the guest's screen stood frozen and only jumped after the host now and then | A wait of the game itself held that character and was never ended. | Such a wait is released after 1.5 s when nothing else holds the character (`native/pmot1.h`; `tests/test_pmot1.c`). Live: after the guest's door the character followed the host without a single jump; before the fix it ended 29 units behind and had to jump. |
+| Network: the slower PC started a movie up to about a second later, and a skip acted on one PC only | Each PC ran its own movie player; the stock skip stops the movie on its own PC and tells nobody. | A start barrier and a skip vote (`native/cut1.h`; `tests/test_cut1.c`). Live: every movie of an Episode 1 run started together on both PCs; a lone skip press kept the movie playing on both, and the partner's press then skipped it on both. |
 
 ## Lessons that carry over
 
@@ -273,6 +331,15 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
    never loaded and die there while it lives on the PC that runs it. List those death paths and hold them for copies, so that only the owner decides a death.
 5. **An enemy the engine puts to sleep is a hand-over, not a pause.** When one PC's engine sleeps an enemy that the other PC keeps running, keep the sleeping
    copy in step from the records of the PC that runs it, take it back from that state when it wakes, and count the blows of the hand-over moment once.
+6. **A second local human is invisible to an engine that asks "the own slot".** Doors, items, prompts and the pickup check all asked one answer that stays
+   player 1's in split screen. Give each object to the nearest human (with a hysteresis, and keep a busy object with the one who started it) and run the
+   object's own phases in that human's context.
+7. **A pickup in step is not a story fact in step.** The key vanished on both PCs, but its story flag stayed on the PC that took it, and the partner's story
+   went the "no key" way. Mirror the flags the scripts read as well, and filter by the path that set them, so a scan result or a reward stays per player.
+8. **Mirror a box's look, not its logic.** Replaying a locker's or a weapon box's states on the other PC would spawn a second item or open a menu there;
+   playing only its motion shows the partner's action and keeps each player's loot his own.
+9. **A one-sided skip splits the PCs.** A movie skip that acts on one PC leaves the other in the movie. Hold the movie's start until both PCs have it ready,
+   and treat a skip press as a vote that skips only when both players voted.
 
 ## QA
 
@@ -282,12 +349,15 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   13-language texts), the Genesis (`tests/test_scan1.c`), HUNK (`tests/test_hunk1.c`), the fall-out rescue (`tests/test_fallres1.c`) and the aim gate
   (`tests/test_aimgate1.c`); for 0.2.1 the zone hand-over (`tests/test_handover1.c`, a model of both PCs that the 0.2.0 rules fail), the fall-out guard
   (`tests/test_rguard1.c`), the start of the shared world (`tests/test_wgate1.c`) and the bags (`tests/test_bag1.c`: the partner's guns, the start kit, the
-  guns of the host's save); suites that rely on the exe compare their facts with the bytes of the supported build when its image is at hand. A headless bot
-  (`tests/coop_bot.c`, with a network emulator and a Steam mock) speaks the protocol. All pass at the 0.2.1 release; the check counts are not quoted here (rerun with
+  guns of the host's save); for 0.2.2 the second player's interactions (`tests/test_interact1.c`), the key-item and object flags (`tests/test_sf1.c`), the levers
+  (`tests/test_objsync1.c`), the partner's motions (`tests/test_pmot1.c`), the lockers and weapon boxes (`tests/test_lid1.c`) and the movies (`tests/test_cut1.c`),
+  model tests that fail on the rules of 0.2.1; suites that rely on the exe compare their facts with the bytes of the supported build when its image is at hand. A headless bot
+  (`tests/coop_bot.c`, with a network emulator and a Steam mock) speaks the protocol. All pass at the 0.2.2 release; the check counts are not quoted here (rerun with
   `tests/build.sh`).
-* **Installer** (`powershell -File tests\test_installer.ps1`): 288 of 288 offline with the published 0.2.0 zip as the old version; 286 of 286 after the publication
-  with `-Online` (the real GitHub feed, read only). After the publication the published 0.2.0 launcher updated a stand-in copy to 0.2.1 through the real feed (checksum
-  against GitHub's digest, installer exit 0, version file 0.2.1), a second start installed nothing, and the uninstall gave the copy back byte for byte.
+* **Installer** (`powershell -File tests\test_installer.ps1`): 289 of 289 offline with the published 0.2.1 zip as the old version; 286 of 286 after the publication
+  with `-Online` (the real GitHub feed, read only). After the publication the published 0.2.1 launcher updated a stand-in copy to 0.2.2 through the real feed (checksum
+  against GitHub's digest, installer exit 0, version file 0.2.2), a second start installed nothing, and the uninstall gave the copy back byte for byte. The same was
+  done for 0.2.1 with the published 0.2.0 launcher (288 of 288 offline, 286 of 286 online).
 * **Live, two PCs on one LAN, for 0.2.0** (one copy of the game per PC, one PC as the host and the other as the guest, driven by a console and scripts, not by a person):
   - every section from 1-2 to 12-2 (25 sections), started directly or reached by the story's own transitions: arrival with the right characters, both players alive,
     the host's walk followed by the partner's character on the other PC;
@@ -318,25 +388,53 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
     shots as HUNK hit the host's enemy;
   - the fall-out guard: a copy on the guest's PC that stood awake over floor its PC had not loaded (8.6 s in all) was held, not killed, and the host's enemy
     kept its health.
+* **Live for 0.2.2** (the same two PCs, driven the same way, on the build of the release unless named otherwise):
+  - Episode 1 the game's own way from the lobby (the host's New Game): the guest's real shots killed the host's enemy, both PCs went on into the next parts of
+    the episode by the story, the partner's guns and the guest's start kit were right, and every movie of the run started together on both PCs;
+  - Episode 9: the guest opened a door by hand and the host's screen showed his character's door motions; after that door the host walked and his character
+    followed him on the guest's screen without a single jump (before the fix it ended 29 units behind and had to jump); the guest's and the host's pickups each
+    showed the pickup motion on the other PC; a restart into 9-1 brought both PCs there with the right characters;
+  - a section restarted by a test command replayed its movie, which started together on both PCs; the guest's lone skip press was his vote and the movie
+    played on on both PCs, and the host's press then skipped it on both PCs together;
+  - Episode 12: the guest picked up a key item (the Voice Recorder): the host's game had its story flag at once, the recorder was gone there too, and the
+    host's screen showed the guest's character picking it up;
+  - no crash in any of these runs. A corpse box the guest opened was shown opening on the host's PC (and stayed closed there) on an earlier build of 0.2.2 with
+    the same code for the boxes; on the final build the test did not get the box open;
+  - on the build with the split-screen fix just before the network additions (the same code apart from them): the guest's character opened a door (shown on
+    both PCs) and picked up an item (gone on both PCs), and the long network runs of 0.2.1 passed again (the partner's guns, the start kit, the hand-over of an
+    enemy, the aim gate, the save panel, the knife swing, Continue of a saved game; sections of Episodes 1, 2, 3, 9 and 12), except the check of the guest's
+    shots as HUNK in 2-2 (see below).
 * **Split screen on one PC**, two virtual Xbox 360 pads: the second player aims and fires while the first has no gun in hand; Give from both players' screens, a full
   partner, too far; the Genesis: the second player gets it, holding it opens his scanner view in the whole screen, his own rate and his herb at 100 work (the rate set
-  by a test command), and while the first player scans the second waits; HUNK walks, aims and shoots in 2-2.
-* **What these were not:** parts were driven by test commands (teleports, set story flags, virtual gamepads); no person played 0.2.0 or 0.2.1 before its release; the last boss
+  by a test command), and while the first player scans the second waits; HUNK walks, aims and shoots in 2-2. For 0.2.2, with the second player's pad only: a door
+  in Episode 9 and another kind of door at the start of Episode 3 opened for him and he walked through, and the first player then used the same door right after
+  him; he picked up a herb while the first player stood 250 units away; the first player's camera stayed steady while the second player's door opened (a
+  screenshot of every frame); 8 quits to the title through the game's own pause menu from 8 sections, no crash. The door, the herb, the first player's door and a
+  quit to the title were repeated on the final build.
+* **What these were not:** parts were driven by test commands (teleports, set story flags, virtual gamepads, the restart of a section); no person played 0.2.0, 0.2.1 or 0.2.2 before its release; the last boss
   fight (12-3) was not played the story's way (the section was only started directly); 2-2's own story with HUNK (its scenes, doors and enemies) was not played
   through; many sections were checked for arrival and movement only (no enemy near the start), and shots in water sections (6-2) were not tested; a real scan of a
   target by the second player in split screen was not reached; Give's texts in the other 12 languages were not seen in a running game, and Give in split screen with
-  the keyboard, the mouse or a downed partner was not run; no session between two different networks; Raid never touched. That is why the level is `automated`,
-  not `verified-playthrough`.
+  the keyboard, the mouse or a downed partner was not run; no session between two different networks; Raid never touched. Of 0.2.2, not checked on two real PCs: a
+  lever pulled by the partner (the parts of the levels that hold levers are loaded only by the story, which the tests could not drive there; offline tests only),
+  using on the host's PC a key the guest picked up (only its flag reaching the host was checked), a weapon box and, on the final build, a corpse box shown opening
+  on the other PC, the line on the partner's screen after a lone skip press (the vote itself was checked in the logs of both PCs), a skip pressed on a gamepad
+  (the tests pressed keys), and the partner's motions at levers, valve wheels, shelves and weapon boxes; in split screen the second player was not seen using
+  doors other than the two tried, crates, the wall scanner, the hand print, the elevator switches, the weapon box or ladders. In 2-2 with HUNK the check that the
+  guest's shots reach the host's enemy gave no result in three runs during the work on 0.2.2 and in a repeat on 0.2.1 (the test enemy did not walk into the
+  guest's aim; no regression found). In two long runs the check of the guest's knife swing gave no result because the test input did not make the host's own
+  character swing either; its own run passed. That is why the level is `automated`, not `verified-playthrough`.
 
 ## How to play
 
-Download `revelations-coop-setup-0.2.1.exe` (or the zip and `Install Co-op.bat`) from the [release](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1),
-on both PCs for network play; an installed 0.0.1, 0.0.2, 0.1.0 or 0.2.0 updates itself to 0.2.1 at the next start from its shortcut (both PCs need 0.2.1 for a network
+Download `revelations-coop-setup-0.2.2.exe` (or the zip and `Install Co-op.bat`) from the [release](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2),
+on both PCs for network play; an installed 0.0.1, 0.0.2, 0.1.0, 0.2.0 or 0.2.1 updates itself to 0.2.2 at the next start from its shortcut (both PCs need 0.2.2 for a network
 game: another version is refused and the lobby says so). The installer finds the Steam copy (only build 13298487 is accepted), adds the mod and a "Resident Evil Revelations
 Co-op" shortcut; play from the shortcut and choose **Co-Op Play** in the main menu. For network play the host picks "Host", the other player joins from the Steam friends
 list or types the host's IP address (UDP 28410), both mark themselves ready, and the host starts New Game or Continue; from then on the guest's game follows the host's
 story section by section. For split screen switch co-op on in the lobby, pick the layout and start the story as usual with two gamepads. To give an item, open the game's
-item screen (BACK on a gamepad) and choose "Give to partner" on a herb, a grenade or ammunition while the partner stands close and is not down. The mod adds only
+item screen (BACK on a gamepad) and choose "Give to partner" on a herb, a grenade or ammunition while the partner stands close and is not down. In split screen a door
+or an item answers the player who stands nearest to it. A movie of a network game is skipped when both players press skip. The mod adds only
 `dinput8.dll` and a `coop` folder; "Uninstall Co-op.bat" puts everything back. Setup exe and zip are not code-signed (SmartScreen may warn). Bug reports: an issue in the
 mod's repository with the zip from `coop\Collect logs.bat` (both PCs for a network game).
 
@@ -359,6 +457,23 @@ mod's repository with the zip from `coop\Collect logs.bat` (both PCs for a netwo
   not run.
 * At the first level of a network session the host's character on the guest's screen carries no knife, so a knife attack of the host is not shown there (it counts
   on the host's PC as usual).
+* Network, from 0.2.2: a lever pulled by the partner, using on the host's PC a key the guest picked up, a weapon box (and, on the final build, a corpse box) shown
+  opening on the other PC, the line after a lone skip press, a skip on a gamepad, and the partner's motions at levers, valve wheels, shelves and weapon boxes were
+  not checked on two real PCs (see [QA](#qa)).
+* Network, the world objects the partner uses: valve wheels (Episodes 5, 6 and 12) and the shelves you push (Episode 2) move only on the PC of the player who uses
+  them (the game moves the player who turns or pushes, so the other PC cannot replay it; his motion is shown and the story flag is passed on). Each player rides
+  an elevator himself. Ducts, vent covers, wire-puzzle covers, sideboards, TVs, toilets, shutters and two-wing doors are not shown on the other PC; a crate breaks
+  on each PC by the hits that PC sees (not checked). A locker, corpse box, safe or weapon box the partner opened looks open on your screen but is still closed for
+  you, with your own loot. On ladders, climbs and jumps the partner's character is moved by the position correction, without the climbing motion.
+* Network, in-engine cutscenes (not movies): each PC starts them by its own story and both leave each scene together; the game has no skip for them and nothing
+  corrects a drift inside a scene. After a movie both start the next scene within a few hundredths of a second; where a section begins without a movie, its first
+  scene can start about a second apart (a few seconds in the worst cases measured).
+* Split screen: the prompt of a door or an item is drawn in both halves wherever it is visible (the game does not let it be shown in one half only). A door needs
+  its opening animation, which the game loads around the first player (ready when he stood about 200 units or nearer for a few seconds): a door the second player
+  opens far from the first closes again after 6 s, so try again when the first player is nearer. An object is used by the nearest player, so the other cannot use
+  it while he is not the nearer one.
+* Split screen: the second player was not seen using doors other than the two tried (Episodes 3 and 9), the crates, the wall scanner, the hand print, the
+  elevator switches, the weapon box and ladders; they use the same rule as the doors.
 * Split screen and network are not used together; joining a running network game is not possible (start a new co-op game, Continue picks up the checkpoint).
 
 ## Correction of the earlier thesis
@@ -382,9 +497,10 @@ we could not confirm are marked in "How the game works". The offsets we cross-ch
 ## Next steps
 
 1. **Human playtest**, first the points under [Known issues](#known-issues): the last boss fight (12-3) played the story's way, 2-2's own story with HUNK, the fights
-   of the sections checked only for arrival, shots in water (6-2), a real Genesis scan by the second player in split screen; reports welcome as issues with the
-   `Collect logs.bat` zips of both PCs.
+   of the sections checked only for arrival, shots in water (6-2), a real Genesis scan by the second player in split screen, a lever pulled by the partner, and
+   the second player's crates, scanners, switches and ladders in split screen; reports welcome as issues with the `Collect logs.bat` zips of both PCs.
 2. **Steam relay** between two different networks.
 3. **Downed/revive in split screen** (offered in network games through the lobby; a local variant exists behind an environment switch, off by default).
 4. **The second player's Genesis rate in split screen** kept across a restart of the game.
 5. **The host's knife on the guest's screen** at the first level of a network session.
+6. **The world objects not shown on the other PC** (valve wheels, pushed shelves, ducts, vent covers, shutters, two-wing doors) and the partner's climbing motions.
