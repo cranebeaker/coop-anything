@@ -746,3 +746,20 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
   apply skipped, and no WER/Application Error event. Actor path ruled out; environment limit stands.
 - Two-machine play still untested. Hub write-up PR prepared locally, not published (owner approval
   required); `games/.../README.md` was previously untracked and is now part of the change.
+
+### Round 5 (2026-11-16 evening): loss retry, pose probe, hardware limits
+
+- Loss retry: player-action, chest-request, death-visibility and story packets go out three times;
+  the receiver's key+10 s dedupe keeps them idempotent. The `good_wifi` proof was interrupted by
+  the code-3 exit; delivery under loss is implemented but unproven.
+- Pose probe: `pose [all|local|clone|bones]` returns root yaw and rig bones; the animcheck probe
+  now emits `rot` and `bones`. Animcheck compares pose (`pose_err_p95=37.9`, no missing fields) and
+  still finds 39.8 % group mismatch plus one sliding episode (`qa-20261116-180917`).
+- Two-machine play is not possible here: no second PC answers on 192.168.8.x/192.168.1.x and no
+  usable VM/GPU path exists (hypervisor present, no Hyper-V management/VM). A second Windows
+  profile was not retried. Quests/cutscenes/other unlocks remain design-only; no client-side quest
+  script suppression point was found, so no raw quest write was risked.
+- Code-3 isolation on a second OS/VM remains untested. Same-machine sessions degraded to exits
+  within ~30 s in the last runs; stop live work and let the machine cool.
+- State: 0 warnings, 132/132 tests, save B34D9065...A4AD, guard 74 05, no games. PR #397 remains a
+  draft with the earlier evidence; this round's text is added to the same branch.

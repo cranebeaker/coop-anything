@@ -122,9 +122,9 @@ Tools from this hub were used and their own suite passed with `python -I tools/t
   interaction with 3 drops (movement/positions/scene OK); `bad_wifi` and `hell` ended when both
   games exited `0x3` before comparison. No convergence failure was measured; a 0.5 % loss profile
   does show that one-shot interactions have no retry.
-- **animcheck**: 400 samples, 99 avatar comparisons, `group_mismatch_pct=39.39`, one sliding
-  episode, no T-pose/jitter/rubber-band/stuck/death-pose findings. Pose and facing are not
-  comparable: the bridge has no bone or yaw command (the report names those missing fields).
+- **animcheck**: the new `pose` command exposes root yaw and rig bones, so pose is compared
+  (`pose_err_p95=37.9`, no missing fields). 398 samples, `group_mismatch_pct=39.8`, one sliding
+  episode, no T-pose/jitter/rubber-band/stuck/death-pose findings.
 - **fuzz**: `qa/fuzz` wraps the lower-HP, 4 m position match, one-shot death, ownership epoch and
   deferred-activation rules in the hub target. 200 seeds on 2 players, 200 on 3 and a 2-minute
   4-player `bad_wifi` run held every oracle; five twins (`hp_overwrite`, `death_all`,
@@ -133,6 +133,9 @@ Tools from this hub were used and their own suite passed with `python -I tools/t
 - **mutants**: the scorer self-test rejects 15 bad fixtures; the lower-HP twin is unit-proven
   (`HpMergeTests`). Live `no-actors`/`death-all` twins were interrupted by the host `0x3` exit at
   the kill step and are reported as attempted, not passes.
+- **loss retry**: player-action, chest, death-visibility and story packets are sent three times;
+  the receiver's 10 s key dedupe keeps them idempotent. The `good_wifi` delivery proof was
+  interrupted by the code-3 exit, so this is implemented but not yet proven under loss.
 - **flight / gameslot / inspect**: flight ran its own tests but no `.cofr` emitter is wired into the
   mod yet; gameslot serialised the live lane; inspect was not adapted (optional item).
 
@@ -167,8 +170,9 @@ version, IL2CPP metadata and Addressables catalog hashes. Saves are per machine;
 - Story, quests, dialogue, cutscenes and ability unlocks are not synchronised.
 - Saves are per machine; there is no live shared progression (manual copy only).
 - Connected WorldPortal transitions can exit the game with code `0x3` after both clients arrive.
-- Two-machine play has not been tested (no second PC); the LAN-address two-client run is the
-  closest validation.
+- Two-machine play has not been tested: no second PC is reachable on either interface and no
+  usable GPU VM exists; the LAN-address two-client run is the closest validation. Code-3 was not
+  isolated on a second OS/VM.
 - The second player is a cloned body: no inventory, abilities or camera. Remote attacks animate but
   do not deal damage; damage authority is the HP-stream model.
 - Player health is per player; only death/respawn visibility is shared.
