@@ -11100,8 +11100,7 @@
     other move; shots and damage between players work on an armed level. Host death restarts both from the last
     checkpoint; a story level change takes the joiner along without a restart (it rejoins the new level in the same
     game process; carried-over inventory kept). A small message channel inside the engine's ENet link forwards the
-    host's player script actions. Doors and vehicles are not networked; client weapon switching is broken; loopback
-    only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8-10
+    host's player script actions. Doors and vehicles are not networked; loopback only. scripts/smoke_test.ps1 drives both copies (fake XInput pad, console command lists) and checks 8-10
     shared-state facts (PASS on three levels). See games/metro-2033-redux.
   sources:
   - https://github.com/realblastex/metro2033redux-coop
