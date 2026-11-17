@@ -512,9 +512,52 @@ handoff). Announced before editing (shared-file rule): `tools/console_exec.py` g
 South Park process and its window instead of launching Steam, and `preflight()` skips the
 "window already exists" refusal in adopt mode. `tools/step2_hook.py` gains
 `SP_STEP2_ADOPT=1`: skip `wait_for_ready` and the four menu clicks, check through the
-bridge that the level is loaded (`players > 0`), and only then run `probe`/`aiscan`.
+bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): buddy offsets verified live; MCP debugging tools; adopt mode
+
+Continuation of the step-2 handoff. QA: co-op still not implemented; what ran this session is
+listed per claim.
+
+New harness paths (committed, announced above): attach `adopt` mode; a local MCP server
+(`local/mcp/sp_bridge_mcp.py`, stdlib only, nothing downloaded) exposing `bridge_ping/version/
+state/eval/exec`, `mem_read`, `mem_classof` and an offline `rtti_lookup`. The bridge listens on
+the guest loopback, so every call runs `local/mcp/guest_bridge_call.py` inside the VM through
+`VBoxManage guestcontrol` (the proven channel); `copyto` needs a read-back poll before the first
+use (the write is not finished when the command returns — reproduced, and handled). Project
+`opencode.json` (untracked, machine-local) wires the server and the routine allow rules.
+
+One live session, no relaunch, no writes: `probe` + 13 read-only bridge calls against the game
+the owner started in the VM (pid 4064, base `0x400000`, new game, forest, Butters following;
+all answers also logged as `[ADDR]` lines to the guest `coop_debug.log`). Report:
+`local/vm-out/offset-verify-report.json`, **14/14 PASS**:
+
+- Observed: `Component_Party_Member` party list = 3 entries; `party[1] +0x0c -> 0x082f06f0`,
+  name at `+0x30` = `butters`, `+0x10` = `(2998.768, 0.400, -0.094)` == what `state` reports;
+  `party[0] +0x0c -> 0x082f0640` name `_player_1` (the hero). `classof` resolves the live
+  vtables of `DS_Component_Player` (`0x1c002020`), `Companion_Basic` (`0x0857d4c0`,
+  vtable `0x00bf88b4`), `DS_Game_Object` (vtable `0x00bfb3c4`).
+- Observed, **correction to the Fort notes**: the party index is not stable. In Clyde's Fort
+  `party[0]` chased `butters`; here the hero has his own party component at `[0]` and Butters
+  is `[1]`. Always match by the chased pointer and the name at `+0x30`, never by index.
+- Observed, **correction 2**: `Companion_Basic +0x2b4` is a *state slot*, not always a Follow.
+  Fort: the slot held the live `Companion_Follow`. This level: the slot holds
+  `OEI::AI::AI_State_Manager` (vtable `0x00bbd358`, in the static index; its fields name
+  `Showtime`/`Patrol`/nested managers). Consequence for step 2: the command-mode detection that
+  reads the slot's vtable cannot see a Command state in this level - `aiscan` must be judged by
+  which hooked slot actually ticks with `this` equal to the live Follow.
+- Observed: `scanclass` for the Follow vtable (`base+0x7fa46c`) returns 19 candidates; exactly
+  one is live: `0x0857e4b0`, RTTI `.?AVCompanion_Follow@Follower@Plan_Level@State@AI@OEI@@`,
+  and **its `+0x78` equals the hero's `DS_Game_Object` (`0x082f0640`)** - the handoff's
+  "Follow +0x78 -> hero" is now pointer-proven, and the known scanclass over-report is the
+  table-like runs noted in step 1 (rejecting a hit whose `+4` is another class vtable would
+  still help).
+- Observed: no crash on any of it: `ticks` grew across all reads, process alive after the run;
+  code audit confirmed there is no `__try/__except` anywhere (MinGW does not have it) - the
+  11 `ReadProcessMemory` call sites and their `VirtualQuery` guards are the equivalent.
+
+## 2026-11-16 (step 1): detailed debug log, safe pointers, RTTI-derived addresses
 
 Announced before editing `mod/src/mod.cpp` (two agents already collided on the file). The edit
 adds `coop_debug.log` next to the exe with tags `[OK]` / `[ADDR]` / `[ERR]` / `[UNKNOWN]`, a
