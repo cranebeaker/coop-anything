@@ -342,7 +342,13 @@ Decided (owner, 2026-11-16):
   of the mission harder.
 - **No scoring.**
 - **Saved operators:** players keep their operators between sessions instead of rebuilding the squad each time,
-  and each operator counts the missions completed with it.
+  and each operator counts the missions completed with it. Each player's operators are saved on their own PC and
+  sent to the host during mission setup. Operators are kept when they die in a mission.
+- **Difficulty modifiers:** a mix of more enemy HP, more enemies, and enemies from a later game stage appearing.
+- **"Harder" after a missed objective** can use the same kinds of change: more enemies, reinforcements, a lost
+  advantage. Further ideas (suggestions, not decided): enemy HP or armor up for the rest of the mission, a shorter
+  turn limit on the next set, the next set's zone placed farther away, an alerted pod or a Chosen arriving, the
+  evac zone offered later.
 
 Item and class names in the game data (SDK source, read only): weapons by tier `AssaultRifle_CV`, `_MG`, `_BM`
 (the same suffixes for the other weapon families); armor `KevlarArmor`, `MediumPlatedArmor` (Predator),
@@ -377,9 +383,11 @@ Open questions (owner):
   a set's order follows any rule (extract last).
 - Failure: which objectives fail the mission when missed, and what "harder" means for the others (more enemies,
   reinforcements, a lost advantage...).
-- Saved operators: where they live (on each player's PC, like the game's character pool, or with the host); what
-  happens to an operator who dies in a scenario (lost, or kept with the death counted); whether a saved operator
-  can be taken into a different game stage, and how its rank and bought items fit that stage's rules.
+- Saved operators: whether one can be taken into a different game stage, and how its rank and bought items fit
+  that stage's rules (cost re-checked, items downgraded to the stage's tier, rank kept above the minimum);
+  whether deaths are counted alongside missions; whether the host checks each sent operator against the budget.
+- Difficulty modifiers: whether the host picks them per mission, how they combine with the game stage, and how
+  much each one adds.
 - Saved operator pools and a record of scenarios played, or everything fresh each time.
 
 What has to be checked before building it (unknown so far):
@@ -395,6 +403,12 @@ What has to be checked before building it (unknown so far):
 - Whether the Skirmish start state can be built on a co-op host and sent to guests like a campaign mission (our
   join and mission handoff assume a campaign behind the mission).
 - Whether the game stage maps cleanly to Skirmish's tech level and the enemy force level.
+- Modifiers through sitreps: the game's sitrep effects already change pod size and force level per mission
+  (`X2SitRepEffect_ModifyPodSize`, `X2SitRepEffect_ModifyForceLevel`, see "Found in the SDK source" above), which
+  covers "more enemies" and "later enemies" if they can be applied to a scenario mission; an enemy HP modifier
+  was not looked for yet.
+- Sending operators to the host: a remote command carrying each operator's data during setup, like the mod list
+  check already does in chunks (`CoopModCheck`); the host then builds the units into the mission's start state.
 - Saving operators: the game's character pool (`CharacterPool` files, outside any campaign save) stores soldiers'
   appearance outside any campaign; whether it can carry the extra data (bought abilities, stats, items, mission
   count) or the mode needs its own file is unknown.

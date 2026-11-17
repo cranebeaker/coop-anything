@@ -1600,3 +1600,7 @@ with no limit + extract in 5).
 Further owner decisions: operators are saved between sessions, each with a count of missions completed; objective
 sets are random, with exclusion rules (extract and kill the officer never together); some objectives fail the
 mission when missed, others make it harder; no scoring.
+Further owner decisions: difficulty modifiers (a mix of more enemy HP, more enemies, later-stage enemies
+appearing); operators saved on each player's own PC and sent to the host during mission setup; operators kept
+when they die; "harder" after a missed objective uses the same kinds of change; objective kinds and all numbers
+later.
