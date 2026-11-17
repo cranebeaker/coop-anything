@@ -6,14 +6,21 @@
 | Versions tested | Steam app 213670, build 228353, Windows x86; exe 11,468,656 bytes, SHA-256 `54a83d05…56a0d6`, `build_version.txt` `1380--2014-03-30_08-32PM` |
 | Projects | None found (see "Existing work") |
 | QA level | none |
-| Last updated | 2026-11-15 |
+| Last updated | 2026-11-17 |
 
 ## Where things stand
 
-There is no playable co-op mod, and nobody has shown a second player in this game. What exists is
-a tested way to drive the game safely and a settled answer to the one question that decides how
-co-op gets built here: **the engine's own multiplayer cannot be started** (see below), so co-op is
-built as our own transport and replication driven from inside the process.
+No release yet, and two machines have not been joined yet - but the two hard control points are
+now measured on the live game, not planned: **the buddy's AI update is one function we can freeze
+and re-anchor** (Follow vtable slot 5, RVA `0x4f2610`; freeze: hero moved 6.16 m while the buddy
+moved 0.00 m with our anchor rewrites counting, baseline with it off: 6.67/5.67 m), and **the
+buddy's body follows a network path** (puppet mode: 715 UDP snapshots from a second client, the
+buddy walked the remote circle, stale-free, and AI control came back cleanly on `puppet off`).
+The friend's machine drives the buddy it owns, the host sees it replicated - that was the design
+bet; both halves now have runs behind them. What is still owed: a second real PC (the owner's
+friend, same Steam build 228353, one shared VPN), the guest's own input on the buddy, and
+turn/story sync. Everything above ran in the isolated VM under the guard; identities and commands
+are in `NOTES.md` (sections dated 2026-11-17) and `TODO.md`.
 
 Target, so no later reader relaxes it: **two players on two PCs, each with their own screen,
 over the network, without port forwarding**. A second character on one machine is a development
@@ -94,7 +101,14 @@ No game files were changed and no freight was shipped. This session added:
 
 ## QA
 
-- Guarded launches on an isolated copy, `original_profile_unchanged`, `guard_integrity` and
+- 2026-11-17 (all in the isolated VM, guarded, `run_valid` true; reports under `local/vm-out/`
+  and data in `NOTES.md`): buddy offsets verified live 14/14 through the MCP bridge tools;
+  AI slot proven by freeze + baseline walk; puppet walk over UDP verified 5/5 (loopback peer
+  inside the guest); `net_selftest` 11/11 incl. the new PSC0 hello and mixed-build refusal;
+  `remote_selftest` 26/26; `aihook_selftest` ALL OK; launcher net commands tested on the
+  workspace copy.
+- Cross-machine join, guest input on the buddy, combat/story sync: not run, not claimed.
+- Earlier: Guarded launches on an isolated copy, `original_profile_unchanged`, `guard_integrity` and
   `original_exe_hash_still_matches` true in every run: 4 menu-only, 2 two-instance, 3 reaching a
   loaded level, 2 `-startsavegame`, and the console/handler experiments that settled the netcode
   question.

@@ -555,6 +555,30 @@ South Park process and its window instead of launching Steam, and `preflight()` 
 bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): launcher Host/Join wired; camera objects measured; SP_GAME_DIR fix
+
+- `launcher/launcher.py`: `Host` / `Join` are real now. `net host|join <addr>|off`
+  (CLI and buttons) writes `coop-net.cfg` next to the exe - the file the mod auto-starts
+  the transport from (round 5). `Host` prints the join code: this machine's IPv4s,
+  default-route adapter first. Measured on the owner's PC: `192.168.0.40` (LAN),
+  **`26.5.72.176` (ZeroTier is already installed)**, `192.168.56.1` (VirtualBox host-only).
+  Tested on the workspace test copy only (`SP_GAME_DIR`), file verified then removed.
+- Fix from the same test: `find_game()` never honoured `SP_GAME_DIR` (skeleton bug from
+  `75cd4a4` that the retail guard `7ca1544` then made fatal for test runs - the launcher
+  could only ever point at the retail install and then refused). It now checks
+  `SP_GAME_DIR` first. Verified: `net host` writes into the test copy; retail remains
+  refused without `COOP_ALLOW_RETAIL=1`.
+- Camera (read-only scanclass + reads in the live game): the gameplay camera object is
+  `OEI::Camera::Game::Orthographic_Camera` (single live instance in the heap this session
+  at `0x082199e0`, vtable RVA `0x7d8a14`) - the same object the step-2 hook noise showed
+  (Basic#11, ~7k calls/s, camera updates). Floats at `+0x1c..+0x24` track the hero's x
+  (`2998.2`), with `200.0` and `10.0` beside (far/near or fov candidates, unproven).
+  `Object_Camera` and the `*Remote_Camera*` component vtables matched only heap-table
+  pseudo-hits (`0x2005eddc...` resolved to a DIFFERENT class per query - scanclass junk,
+  rule from 2026-11-16 stands: a hit is real only if it ticks with `this`= or is the
+  pointer-proven target). Guest-side camera stays local for the MVP: no camera fields in
+  PSC1 yet; this is recorded so the decision is evidence-based, not a gap we forgot.
+
 ## 2026-11-17 (lead): announced mod.cpp/net.cpp edit round 5 - auto-net config + wire handshake
 
 Announced before editing (shared-file rule). Two additions, both off by default in
