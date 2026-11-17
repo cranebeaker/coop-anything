@@ -5486,26 +5486,29 @@
   project: ocarina-coop
   url: https://github.com/cranebeaker/ocarina-coop
   other_urls:
-  - https://github.com/fReEsPiRiT-Spiritsoft/Shipwright-Online
+  - https://github.com/lukegrahamSydney/ShipwrightOnline
   kind: fork
-  status: prototype
+  status: playable
   coop_scope:
     players_visible: true
-    story: partial
-    enemies: partial
-    world_state: partial
-    items: partial
-  players: unknown
-  networking: hosted-relay
+    story: true
+    enemies: true
+    world_state: true
+    items: true
+  players: 2+
+  networking: steam-relay
   open_source: unknown
-  last_activity: 2026-10
-  qa: none
-  notes: Fork of Shipwright-Online that fixes its listed co-op bugs (switch sync, cutscene softlocks, day and night,
-    water levels so far; bosses, enemies and later dungeons in progress). Fixes are checked by code review and
-    compilation only; no two-client session has run yet. No release yet.
+  last_activity: 2026-11
+  qa: automated
+  notes: Story Co-op party mode for Ship of Harkinian on the ShipwrightOnline netcode by lukegrahamSydney. The whole
+    game as one playthrough with a team save on the server; items, songs, story flags, dungeon keys, switches and
+    chests shared live; story cutscenes watched together; the party time travels together. Enemies and bosses synced.
+    Host and join over Steam with no port forwarding. Windows, Linux and Steam Deck releases (v1.0.5). Checked with a
+    two-client bot test harness.
   sources:
   - https://github.com/cranebeaker/ocarina-coop
-  checked: 2026-10-16
+  - https://github.com/cranebeaker/ocarina-coop/releases/tag/v1.0.5
+  checked: '2026-11-17'
 - game: 'The Legend of Zelda: Ocarina of Time'
   year: 1998
   engine: N64 decompilation port (OOT True Co-op fork)
