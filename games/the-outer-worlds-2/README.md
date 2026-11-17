@@ -4,19 +4,21 @@
 |---|---|
 | Engine | Unreal Engine 5.4.4 (Obsidian's `Arkansas` project, Microsoft GDK build) |
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
-| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.2.0-beta.3](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.3), Steam), directory entry "tow2-coop" |
-| QA level | automated (two copies on one PC; not yet across two PCs) |
+| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.2.0-beta.5](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.5), Steam), directory entry "tow2-coop" |
+| QA level | automated (two copies on one PC) and one manual session across two PCs |
 | Last updated | 2026-11-17 |
 
 ## Where things stand
 
 Two players can share one campaign with tow2-coop: the friend joins from the main menu by receiving the host's save,
 both see each other, and NPC health and deaths, quest progress, map travel, doors and containers follow the host.
-v0.1.0 connects by IP; the v0.2.0-beta.3 test build connects Steam friends through the game's own Steam session (no IP
+v0.1.0 connects by IP; the v0.2.0-beta.5 test build connects Steam friends through the game's own Steam session (no IP
 or port), keeps the friend's own saves untouched (saving is off in the joined game) and shows armor and helmet
-changes. Everything was tested with two copies of the game on one PC (automated suite and a 30-minute soak). The first
-two-PC test (beta.2) never linked. The mod looked for the game's Steam session once, before a game started by Steam
-had set it up. beta.3 waits for the session; it has not been tested across two PCs yet.
+changes. Everything was tested with two copies of the game on one PC (automated suite and a 30-minute soak). The
+third try across two PCs worked (2026-11-17, beta.4 on the host): the friend joined over Steam, both played for 15
+minutes and the friend followed four map changes. Before that, beta.2 looked for the game's Steam session too early,
+and beta.3's host never accepted the friend's connection. beta.5 fixes what the players reported: stand-ins without
+walk animation or hair, dead enemies' loot, and the wait after a map change.
 
 ## Existing work
 
@@ -82,15 +84,23 @@ sources, layouts and pitfalls.
   (`qa/test_steam_late.py`, one copy with Steam held back 40 s): the mod waited, linked up 41 s after it started, and
   logged no caught faults. Installer 10/10 on a fake game folder (new check: installing over an older build
   replaces it, so players update without uninstalling).
+- beta.4 (2026-11-17, not published; part of beta.5): in the second two-PC test (beta.3), Steam was up on both PCs and the friend found the
+  host. The host never accepted the session: the friend timed out every 10 s and received nothing. beta.4's host
+  accepts a pending session from any Steam friend and logs what it sees. Test 55 (one copy on real Steam): the accept
+  pass ran over the account's 10 friends, with no caught faults. The third two-PC test confirmed it (the host accepted
+  the friend; the session-request callback never came).
+- v0.2.0-beta.5 (2026-11-17, runs 57-58, two copies on one PC): join, the stand-in's look and hair, its walk
+  (animation speed 400 while the client walks, 0 when it stops) and jump, doors, chests, dead-enemy loot, map travel
+  (the host hands over 8 s after its map changed, before ~15 s), no caught faults, owner's files unchanged.
 
 ## How to play
 
 Each player needs their own copy of the game (a Steam Families copy can't be played by two people at once).
 
-- **Over Steam** ([v0.2.0-beta.3](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.3), test build, the players are Steam friends): the
+- **Over Steam** ([v0.2.0-beta.5](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.5), test build, the players are Steam friends): the
   host runs `install.ps1 -Role host`, the friend `install.ps1 -Role client [-Friend "<host's Steam name>"]`. No address
   or port.
-- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or beta.3 with `-Transport udp`): the host runs
+- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or beta.5 with `-Transport udp`): the host runs
   `install.ps1 -Role host` and gives the printed key to the friend, who runs
   `install.ps1 -Role client -Peer <host address> -Key <key>`. The host's PC must accept UDP 27960 and TCP 27961 (port
   forwarding or a VPN).
@@ -99,12 +109,14 @@ The host loads their campaign; the friend waits at the main menu and is pulled i
 
 ## Known issues
 
-- Not yet played across two PCs: the first try (beta.2) never linked over Steam (fixed in beta.3).
+- The joined player plays a copy of the host's character, renewed at every hand-over: ammo, items, money and XP
+  become the host's again after a map change or a quest resync.
+- An enemy attacked by one player only takes the damage in the other player's world; it doesn't move or fight there.
 - Keep the host's window un-minimized while the friend joins or follows a map change (a minimized copy can't finish a
   save).
 - Enemies don't attack the friend's stand-in; each player is attacked in their own world.
-- Two players only. Both players need beta.3 (beta.2 doesn't link when the game is started by Steam; v0.1.0 / beta.1
-  don't connect to it).
+- Two players only. Use beta.5 on both PCs (beta.2 doesn't link when the game is started by Steam; a beta.3 host never
+  accepts the friend; v0.1.0 / beta.1 don't connect).
 - Quest completions reach the friend through a short reload.
 
 ## Next steps

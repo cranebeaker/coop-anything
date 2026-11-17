@@ -483,6 +483,98 @@ Fix (beta.3): the Steam link retries every 2 s on the game thread until the sess
 "waiting for the game's Steam session", then "Steam link ready (app 1449110), 41 s after the mod started", with no
 caught faults. Not yet retested across two PCs.
 
+## Second two-PC test (2026-11-17, beta.3)
+
+Observed:
+
+- Both logs: "Steam link ready (app 1449110)" at the first frame, 0 s and 2 s after the mod started (GameEngine up after
+  14.3 s and 15.0 s).
+- Friend (client, no host name set): "steam: joining the host <host>" 8 s after its link was ready, so it found the
+  host by rich presence. Its session state then cycled every ~10 s for 3 minutes: 1 (connecting), then 5 (problem
+  detected locally). It sent 97 messages and received 0.
+- Host: nothing after "Steam link ready", no "a friend joins". It never matched the friend's `join:<host>` presence
+  among the friends playing the game. The session-request callback (set with
+  `SetGlobalCallback_MessagesSessionRequest`, accepts Steam friends) never accepted either. beta.3 logged neither path,
+  so which one failed is unknown.
+
+Guesses (not checked):
+
+- The host can't see the friend's game. Steam privacy hides it, so the friend is missing from the host's list of
+  friends playing.
+- The game doesn't deliver the global session-request callback to the mod, or the callback doesn't accept.
+
+Fix (beta.4): while it has no client, the host calls `AcceptSessionWithUser` for every immediate friend every 2 s. The
+call does nothing when that friend has no pending session. The host now logs:
+- each session request that reaches the callback;
+- each session accepted this way;
+- the friend it adopts when the first message arrives;
+- every 30 s, the friends playing, with their `tow2coop` presence and the relay status.
+
+Test 55 (`qa/test_steam_late.py` on one copy on real Steam): the accept pass ran over the account's 10 friends, with no
+caught faults. It could not be tested with a second account on one PC.
+
+## Third two-PC test (2026-11-17, beta.4 on the host, beta.3 on the friend)
+
+Observed in both logs:
+
+- **Link and join:**
+  - The host logged "steam: no client yet; friends playing: none" every 30 s. The friend's game details were not visible
+    to it.
+  - Then "accepted a session from <friend>" and "a friend joins", with the session connected.
+  - The campaign went over Steam: 2.1 MB in 7 s. The friend loaded it, and its saves went off.
+- **During play:** both stand-ins were shown, and packets flowed both ways for 15 minutes. Map changes repeated the
+  hand-over four times.
+- **Callback:** no "session request" line appeared, so the session-request callback never reached the mod. Polling
+  `AcceptSessionWithUser` did the job.
+
+Reported by the players:
+
+- **Worked:** damage with firearms reaches the other world, both ways. Armor and helmet changes follow.
+- **Stand-in:** it moves and jumps, but in a frozen pose. Without a helmet, it is bald.
+- **Enemies:** an enemy attacked by one player only takes the damage in the other world; it doesn't move.
+- **Map changes:** the friend follows, but only after a wait.
+- **Loot:** items looted from a dead enemy are still there in the other world.
+- **Ammo:** after a map change, the friend's magazine has the host's ammo count. Every hand-over replaces the friend's
+  character with a copy of the host's.
+
+Probe 56 (one copy, bridge and posted keys):
+
+- **Hair:** an NPC body ignores `AppearanceComponent.Customization` (hair, beard, colours) unless
+  `bEnableCustomization` is set. The dock-worker NPCs have it off. With it on, the copied hair shows (pictures
+  hair-1/hair-2).
+- **Animation:** an NPC that keeps its AI controller runs its movement component (mode `MOVE_NavWalking`), which zeroes
+  a written `CharacterMovement.Velocity` every frame:
+  - with the component ticking, the anim instance's `SmoothedSpeed` stays at 0;
+  - with its tick off, `SmoothedSpeed` reaches 400 within 0.5 s;
+  - `MOVE_Falling` sets the anim's `bMovementStateIsInAir`.
+
+  The one-PC walk check (anim speed 400) predates the change that kept the controller.
+- **Dead NPCs:** a killed NPC stays the same character, with health 0 and its own `CharacterInventoryComponent`. After a
+  save and reload it keeps the same level name and `IDComponent.ID` (ObsidianIDComponent, a GUID). `Corpse` actors did
+  not appear for a killed sprat or soldier; the class has its own inventory and `HandleItemRemoved`, probably for
+  bodies placed in the level.
+- **Looting through the UI** (E, then R): the trace shows `<item>:OnInventoryItemRemoved`,
+  `EquipmentComponent:OnItemRemovedFromInventory`, `<NPC class>:ItemRemoved` (`IndianaCharacter.ItemRemoved`, with an
+  `ItemStack` parameter: Item, Count, bLootable) and `ItemContainer_BP_C:OnItemRemoved`. Then the player's
+  `ItemAdded` calls follow.
+- **Inventory API:** `GiveItemToActor`, `RemoveItemFromActor`, `GetItemCountOnActor`, `AddCurrency` and `RemoveCurrency`
+  on `InventoryComponent`. The player has a `PlayerInventoryComponent`.
+
+Runs 57-58, probe 59 and test 60 (beta.5, two copies on one PC):
+
+- The fixes for the stand-in hold:
+  - with its movement tick off, the animation speed reaches 400 while the client walks and drops to 0 when it stops;
+  - it goes into the in-air state during a jump;
+  - with customization enabled, the stand-in wears the player's hair asset.
+- **Loot at death:** the game rebuilds a dead NPC's inventory from its loot table. Items given to the NPC before its
+  death were gone after it, and its own NPC gear stays, marked not lootable. On a joined pair, the generated loot of
+  the same OA soldier was identical in both worlds: a Zenith drug and a lucky sprat foot. Taking one item in either
+  world removed it in the other. A death sends no take.
+- **Travel:** the host hands the campaign over 8.4 s after its world changed, without waiting 10 s to settle and 5 s
+  of "client elsewhere". The client was in the new map 21 s after the host.
+- **Steam send rate:** `GetConfigValueInfo` names ids 9, 10 and 11 `SendBufferSize`, `SendRateMin` and `SendRateMax`
+  in this `steam_api64.dll`. The mod sets them to 8 MB, 1 MB/s and 1 MB/s.
+
 ## Tools on the test PC (2026-11-15)
 
 Present: Python 3.13, git, gh, Java 21 (Temurin), .NET SDK. Missing: any C/C++ compiler (the Visual Studio

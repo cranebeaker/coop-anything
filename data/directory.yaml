@@ -14850,16 +14850,16 @@
     Native two-world co-op mod (dsound.dll loader + tow2coop.dll, MIT) for Steam build 24225441. The friend joins from
     the main menu by receiving the host's campaign; the other player is a stand-in NPC with the player's look, armor
     and helmet; the host owns NPC health and deaths, quest progress (completions arrive by a short reload), map travel,
-    doors and container contents. v0.2.0-beta.3 (test build) connects Steam friends through the game's own Steam
-    session and Valve's relay (no IP or port) and keeps the joined player's own saves untouched; v0.1.0 and beta.3 also
-    connect by direct IP (UDP 27960 and TCP 27961) with an optional shared key. Tested with two copies on one PC
-    (automated suite and a 30-minute soak). A first two-PC test (beta.2) never linked over Steam because the mod checked
-    for the game's Steam session too early; beta.3 waits for it and has not been tested across two PCs yet.
+    doors, container and dead-enemy loot. v0.2.0-beta.5 (test build) connects Steam friends through the game's own
+    Steam session and Valve's relay (no IP or port) and keeps the joined player's own saves untouched; v0.1.0 and beta.5
+    also connect by direct IP (UDP 27960 and TCP 27961) with an optional shared key. Tested with two copies on one PC
+    (automated suite and a 30-minute soak) and in one session across two PCs (2026-11-17: joined over Steam, played,
+    followed map changes). The joined player still plays a copy of the host's character, renewed at every hand-over.
     Write-up in games/the-outer-worlds-2.
   sources:
   - https://github.com/nicoNaeg/tow2-coop
   - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
-  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.3
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.5
   - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
   checked: '2026-11-17'
   made_with_coop_anything: true

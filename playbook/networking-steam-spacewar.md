@@ -205,6 +205,13 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
   up 14 s after the mod loaded, and every one-PC test passed. In the first two-PC test, both games were started by
   Steam and had no Steam session 15-22 s in. The mod had checked once, so co-op stayed off. A retry every 2 s fixed it.
   Test the late path with a test-only delay.
+- **Accept sessions by polling, not only from the callback.** In The Outer Worlds 2, a native mod installed a session
+  callback with `SetGlobalCallback_MessagesSessionRequest`, and the game dispatches Steam callbacks
+  (`SteamAPI_RunCallbacks`). The callback still never ran (it logs every call; zero lines in a 15-minute two-PC
+  session). The host couldn't see the friend's game either ("friends playing: none"; guess: the friend's game details
+  are private), so it never sent first. The friend's connection timed out every 10 s until the host called
+  `AcceptSessionWithUser` for each immediate friend every 2 s. That call does nothing for a friend with no pending
+  session.
 - **Session accept:** the first message from an unknown SteamID raises
   SessionRequest (1251). Call `AcceptSessionWithUser` there, or messages are held
   or dropped. The host accepts strangers; clients accept only the host.
