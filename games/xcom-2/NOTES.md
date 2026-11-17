@@ -801,3 +801,782 @@ A no longer holds the single-instance mutex). Harness: `@waitjoins N` (N-th Play
 - Frames the client made after its last batch and before dying are lost (by design: the
   host's history is the campaign).
 - Full suite with `rejoin` 2026-10-25 23:35: 11/11 PASS.
+
+## Session 4 — 2026-11-11: design research for the full campaign (second agent)
+
+A second agent (another owner, same build 8270065) researched the parts the prototype
+does not cover yet: unit ownership, squad slot split, per-player tactical control, mod
+matching, appearance and voices. Nothing built or run. Write-up:
+[DESIGN-campaign-coop.md](DESIGN-campaign-coop.md).
+
+### Observed
+- Correction to Session 1: Team Dragonpunk's source IS public:
+  https://github.com/quixotic-cloud/Tactical-Co-Op (GPL-3.0 per GitHub, created
+  2016-07-22, last push 2017-03-30, vanilla XCOM 2) and
+  https://github.com/quixotic-cloud/Long-War-2-Coop (one commit 2017-03-30, no license).
+  Found by GitHub code search for `XComCoOp`, not by repo-name search. Its `Src/XComGame/`
+  folder (about 2,010 files) is the Firaxis SDK source copied by the old ModBuddy
+  template, so don't reuse that part. Its own classes use `XComGameStateNetworkManager`
+  (`SendHistory`, `SendMergeGameState`, `SendRemoteCommand`) and subclass
+  `X2TacticalGameRuleset` (about 4,000 lines).
+- WOTC exe `XCom2-WarOfTheChosen/Binaries/Win64/XCom2.exe` SHA-256
+  `d830aad0bdc5aea35e3a62f51cbd7f0c22b4d297ac3c02cdea37a746fde110ae` (32,006,600 bytes,
+  `Version.txt` changelist 699445); SDK `Binaries/Win64/XComGame.exe` SHA-256
+  `336338a2477c5cf0b9858e5214ac0b40d4ad42670619af499b74a89c32e4c7d9`.
+- WOTC tactical turn order holds XComGameState_AIGroup entries ordered by
+  `InitiativePriority`, and only the group with initiative can act; all XCom units start
+  in one group. Details and line references in the design doc.
+
+### Derived
+- Splitting the XCom group in two by owner gives alternating per-player control with the
+  game's own initiative code (to be tested).
+- Mod parity needs a helper outside the game (no Workshop API in UnrealScript).
+
+## Session 4 (cont.) — 2026-11-12: two copies on one PC, mission handoff runs
+
+Game: Steam WOTC build 8270065, exe SHA-256 as above. Two test copies on one PC (127.0.0.1),
+mod clone of EvilMask587/xcom2-wotc-coop-campaign at cb1828b plus local changes (not pushed).
+Full attempt log with log evidence: [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md),
+"Mission scenario: blockers and attempts".
+
+### Observed (test runs)
+- With a network server open, `CreateTacticalGame` waits forever on the `CIN_XP_UI_LogoSpin.bk2`
+  map-change movie: the engine does not report it as a loading movie, so `HideLoadingScreen` never
+  stops it. Stopping it once the map is generated and streamed lets the mission start.
+- The strategy batch sync (`SendMergeGameState`) must be off in missions: a merge sent while the host
+  generated the mission map crashed it ("Object is not packaged: XComGameState_EnvironmentDamage None").
+- A guest that receives a running mission's full history while on the Avenger builds tactical
+  visualizers there ("Accessed None 'PRES'"), and once crashed. `EnableBuildVisualization(false)` on that
+  map's visualization manager, from the receive delegate, stops it.
+- A guest that joins a mission through `LoadTacticalGame` keeps the base ruleset's `bLoadingSavedGame`
+  (`privatewrite`) set until the base `TurnPhase_UnitActions.BeginState` load path runs. While it is set,
+  no turn-begin or turn-end frames are submitted.
+- `BattleData.UnitActionInitiativeRef` is written for groups (`UnitGroupTurnBegin`) and players
+  (`PlayerTurnBegin`) only by the machine that begins that initiative. Handing over "the initiative in
+  BattleData" was wrong. The switch command now names the initiative id, its index and the interrupt
+  flags, and the receiver begins it.
+- Result: scenario `mission` 22/22, twice. Afterwards: `squad` 13/13, `exp12` 11/11, `join` 7/7,
+  `joinmismatch` 5/5. Install and saves unchanged after every run.
+
+### Unknown
+- An alien turn with real AI actions handed back to a guest: the test mission (Guerrilla Op added with
+  `SpawnMission` in a fresh debug campaign) had no enemies ("units ... alien=0").
+- Whether the first guest hang (log lost) was the visualizer race or the strategy batch.
+
+## Session 4 (cont.) — 2026-11-12 afternoon: enemies, reconnect, disconnect, three copies
+
+### Observed (test runs, same build and PC as above)
+- `XComEngine.IsSinglePlayerGame()` is false whenever `XComGameStateNetworkManager` has a server or
+  connection open (`NetMode` stays `NM_Standalone`). With a server open, the mission start skips alien
+  spawning (`SetupUnits`), mission objectives (`XComParcelManager`), the drop-ship and the intro. Closing
+  it before launch gave 6 aliens on the same kind of mission (scenario `netprobe`).
+- The host now closes the connection in `X2DownloadableContentInfo.OnPreMission` and reopens it at its
+  first unit actions. The mission had aliens and the Lost, and the alien AI took its turn.
+- A client whose host closes the connection is sent back to the main menu by the engine
+  ("IpNetDriverSteamworks_0 shut down", "Failed; returning to Entry"). It can reconnect from there and
+  load the host's mission. A load from the main menu needs the Firaxis Live login delegates cleared
+  first (GC assert UnGame.cpp:3107 otherwise).
+- The join request URL seen by the host (`PlayerJoined`) carries only the player's name, not URL
+  options.
+- Results: `mission` 30/30 (two rounds, enemies), `dropguest` 15/15 (guest killed in its turn, host
+  takes over, guest restarts and rejoins), `join3` 12/12 (three copies, slots 1 and 2, same campaign
+  fingerprint everywhere).
+
+### Unknown
+- A mission with three or four copies (the guest-frame relay and guest-to-guest switch code is built,
+  not run).
+- Steam invites (needs two Steam accounts on two PCs).
+
+## Session 4 (cont.) — 2026-11-12 night: mission end and three players
+
+### Observed (test runs)
+- Mission end with a guest (`missionend` 11/11): the host closes at `EndTacticalGame`, reopens after
+  `OnPostMission`, and sends the campaign. The guest enters the Avenger, and both end with the same
+  fingerprint. Problems found on the way:
+  - a guest inside a mission keeps its client net driver when the host closes;
+  - a campaign received on the mission map crashed the guest;
+  - the PvP replay manager's `ReceiveHistory` delegate kept the mission World alive (GC assert);
+  - `UIDropShipBriefing_MissionEnd` waits for a key.
+- Three players in one mission (`mission3` 24/24):
+  - a broadcast slot assignment gave two guests that reconnected together the same slot, so slots are now
+    agreed by a nonce (`CoopHello`/`CoopSlotFor`), and closed connections are found by a roll call;
+  - the host's relayed partial history fails for one guest, and the engine resends the whole history
+    instead (`OnSendError_RequestNewHistory`, about 400 KB), which must be acknowledged as the partial.
+- A failed join attempt reloads the main menu; with the Firaxis Live login screen open that asserted.
+- Once, a guest hung while loading the main menu (no crash record); not seen again in about 10 runs.
+
+### Reach goal
+- After the campaign co-op works end to end: add a second co-op mode. Current idea, not final: horde
+  defense (waves of enemies).
+  Tracked in [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md), "Reach goal".
+
+## Session 4 (cont.) — 2026-11-12/13: saves, second mission, buttons, rules, relay
+
+### Observed (test runs, one final build, all 11 scenarios pass)
+- Host saves on the Avenger, quits, restarts, loads and hosts again; the guest rejoins by itself and the
+  soldier owners survive the reload; a second mission with a handover follows (`saveload` 17/17).
+- "Host co-op" on the Avenger HUD and "Join co-op" with an address dialog on the main menu (`buttons` 14/14).
+  Bug found: `SplitString(...).Length` read directly from the call's result was always 0.
+- With the connection open, missions take the multiplayer branch for flank crit, suppression, Shadowbind and
+  the pause menu. Swapped for single-player values (`mission` 36/36 shows the co-op classes in place and the
+  pause menu pausing). `ModClassOverrides` did not reach the standard-aim objects built in X2Ability's
+  `defaultproperties`; they are replaced in `OnPostTemplatesCreated` (13 abilities, 4 objects).
+- Relay to a third player: a partial history carries the size and hash of its base; the host's base after
+  guest 1's turn is a frame guest 2 lacks, so a relayed partial can never apply. The relay is now a full
+  `SendHistory` (one send, no error round trip; `mission3` 27/27, no base mismatch logged).
+- The script compiler crashed with no message on `(new class'X').Class.Name` inline and on `foreach` over an
+  array reached through a function result; with locals it compiled.
+- The real install and the saves were unchanged after every run.
+
+### Unknown
+- Flank crit in an actual shot with the connection open.
+- Ironman; a guest restarting between sessions; loading a mid-mission save; four copies; Steam invites.
+
+## Session 4 (cont.) — 2026-11-13: untested features, saves, flags
+
+### Observed (test runs)
+- `features` 20/20 (two copies, Avenger):
+  - the host's Armory "Owner" button gives a soldier to Host, then to Player 2; the guest sees the new owner;
+  - squad select's "Slot N" / "Player" buttons assign slot 2 to a player;
+  - guest rights (now on by default): the guest opens its own soldier (baton granted), cannot give it away,
+    and has another player's soldier and the research screen closed;
+  - "Chat" button both ways.
+- Bugs found: the Avenger HUD's "Chat" button was added only when the HUD opened, so the host (who presses
+  "Host co-op" later) never had one. The status panel now adds it once a connection is open.
+- Test lesson: `@spawnmission` opens the Geoscape (an edit screen). While the host keeps it open, a guest's
+  baton request waits, as designed. The bot now closes screens by class (`@closescreen`).
+- `mission` 40/40: both players pan the camera with the keyboard while watching the other's turn (input state
+  `Multiplayer_Inactive`, about 2,660 units in 2 s); pings and chat both ways inside the mission.
+- Debug "red screens" (`UIRedScreen`) appear in the test copies in every scenario (the bot dismisses them).
+  A screenshot of one in a mission listed the game's own map warnings ("Unable to determine destructible actor
+  dimensions for Plot_TUN_Sewer_Guerilla_02...") and a sound package load, nothing from this mod.
+- `mission` 48/48 with unit flag owner tags (`CoopFlags: flag unit=N owner=1 label=P2` on both copies) and
+  turn banners ("YOUR TURN" on the player's own machine, "PLAYER 2'S TURN" / "HOST'S TURN" on the other).
+  Screenshots taken with the console command `shot` land in `XComGame\ScreenShots\PCConsole\*.bmp` of the copy.
+- `mission4` 33/33: four copies, one soldier each, three guest turns in a row relayed through the host, back
+  to the host's group after the aliens.
+- `guestrestart` 19/19: both guests quit their game on the Avenger and start again, the second guest first;
+  each asks for its old slot (remembered in `XComCoopGuest.ini`) and gets it and its soldiers back.
+- `midsave` 16/16 and `ironman` 18/18: the host saves inside a mission (pause menu offers "Save"; Ironman writes
+  its autosave at the start of the XCom turn), quits, loads it and hosts again by itself (new: no button exists
+  inside a mission); the guest, sent to the main menu, rejoins the mission and both play on.
+- Found by the screenshots, not the logs:
+  - the guest showed the game's PvP notice "Opponent left - connection to the session has been lost" during
+    its own turn. It was queued when the host closed the connection for the mission build. Now dropped from
+    the queue (and closed if already up) once a game has hosted or joined (`CoopLink.SweepNotices`).
+  - the bot's `@dismiss` inside a mission closes the tactical HUD, the turn overlay and the unit flag
+    manager along with the red screen; screenshots now close only the red screen.
+- Test lesson: the game's save list comes from a cached index in `profile.bin`, so moving old save files
+  aside does not shorten it; `@loadnewest tactical` picks the newest save made inside a mission.
+- Full regression on that build (16 scenarios): 14 passed. Two failures:
+  - `guestrestart` 17/19, a real bug: the host sent the campaign to rejoining player 2 while it still counted
+    player 3, whose connection had closed a second earlier (player 3's script quit). It waited for 2 acks,
+    got 1, and never sent "enter the Avenger"; player 2 sat on the main menu. Fix: the host now waits for acks
+    by slot (`CoopMissionHistoryAck` carries the guest's slot) and stops waiting for a slot that disconnects
+    (`CoopTacticalNet.OnGuestGone`), for the campaign, the mission history and the host's relay of a
+    guest's frames during a mission (`CoopHistoryAck` carries the slot too; a guest-to-guest turn switch that
+    waits for the relay is forwarded once the last guest still missing it has acked or left).
+  - `midsave` 12/16: the guest crashed 1.3 s after reaching the main menu with an engine assert, "Failed to
+    find function None in XComMCP" (UnObj.cpp:2456). It passed on rerun, then the next full regression hit
+    it twice (`saveload`, `midsave`), always on a guest leaving a mission for the main menu after the host
+    closed the connection. Cause, from the SDK source: the dropped connection runs the game's PvP
+    `XComTacticalController.LostConnection`, which queues the "Opponent left" notice and starts an
+    asynchronous `MCPManager.PingMCP` with a completion delegate on the tactical controller. The guest
+    leaves the map at once; when the ping completes on the main menu, its delegate's object is gone. A race.
+    Fix: `CoopTacticalController` skips `LostConnection` (global and in state `PlayerWaiting`) while co-op
+    is active; co-op reconnects by itself. This also stops the "Opponent left" notice at its source.
+- The turn banner never showed on screen: four screenshots 1 to 2.3 s after "YOUR TURN" show the teal
+  turn glow and the owner tags, but no text. The game's code says why: `XComPresentationLayer.UIEndTurn`
+  shows "no banner for the start of the XCom turn", and `m_sXComTurn` is the Resistance banner. The banner
+  is now the mod's own box (`CoopTurnBannerPanel`) on the turn overlay screen, in the player's flag color,
+  for 3.5 s. Seen on a screenshot of the guest 1 s after its turn began: "YOUR TURN" in player 2's green,
+  below the turn order icons.
+- Final runs, two builds (the second adds only the `LostConnection` skip, which is in the tactical
+  controller):
+  - build 1, Avenger only: `squad` 13/13, `exp12` 11/11, `join` 7/7, `joinmismatch` 5/5, `join3` 12/12,
+    `buttons` 14/14, `features` 20/20, `guestrestart` 19/19;
+  - build 2, every scenario that enters a mission: `mission` 53/53, `dropguest` 15/15, `missionend` 11/11,
+    `mission3` 27/27, `mission4` 33/33, `ironman` 18/18, `saveload` 18/18 twice, `midsave` 16/16 three times.
+  - On build 2 the skip line ("co-op: skipped the game's multiplayer lost-connection handling") appears in
+    9 of 11 runs; the two without it (`mission`, `dropguest`) have no running guest that loses the host during a mission (in `dropguest` the guest quits its game).
+    No run logged `XComMCP` or "Crash Detected". The real install was unchanged and the saves matched the
+    backup after every run.
+
+### Unknown
+- A guest leaving while a relay is in flight (the case the relay fix covers) has no test scenario yet.
+
+## Session 4 (cont.) — 2026-11-13 evening: game content tests
+
+Goal: run content that is likely to break turns or soldier ownership, on two copies, with new bot steps
+(`CoopContentTests`: `@useability SRC ABILITY TGT` as the game's `X2UseAbility` cheat does, `@mcstate`,
+`@removemc`, `@trysel SPEC`, `@dropunit TEMPLATE TEAM`, `@captured`, `@mark`; `@spawnmission SOURCE REWARD`
+and `@launch SOURCE` in `CoopExperiments`).
+
+### Observed (test runs)
+- `mindcontrol`, first run (24 checks, 11 failed, all from the test itself; see below). The mission ran
+  through three host turns and two guest turns without a crash or a handoff warning.
+  - An alien used `Domination` on a guest soldier (host's turn): the soldier left the guest's group for the
+    alien's group (`XComGameState_AIPlayerData.UpdateForMindControlledUnit` found the guest's group; the
+    groups added by the mod's split are seen). In the guest's turn it had 0 action points.
+  - The guest's soldier used `Domination` on an alien (guest's turn): the alien joined the guest's group,
+    is run by the guest's machine, and had 2 action points in the guest's next turn.
+  - Freeing the guest's soldier (host's turn, effect removed as a cleanse would) put it back into the
+    guest's group (`m_arrDisplaced`), with 2 action points in the guest's next turn.
+  - The freed soldier gets 2 action points at once, during the host's turn (`X2Effect_MindControl.OnEffectRemoved`
+    gives them when the XCom player is active; all XCom groups share one player). The selection gate keeps
+    the host from moving it.
+- Test lessons: the log printed teams as numbers (`ETeam` is a sparse enum: XCom = 8, Alien = 16), so the
+  checks never matched; now `GetEnum`. And `Visualizer_SelectUnit` does not check the unit's side in the game
+  either (clicks and Tab only offer your own units), so "can select" is no test for a unit the other side
+  controls; the checks use action points there.
+
+- `mindcontrol` rerun with fixed checks: 24/24. `lostchosen` 21/21: two Lost and a Chosen Assassin dropped
+  next to the squad (`DropUnit` cheat's `DropUnitAt`); the Chosen kidnapped a guest soldier (`ChosenKidnap`,
+  forced); the guest played on with its other soldier; the Lost got their own turns (turn order host, guest,
+  aliens, Lost, ...); the host ended the mission. On the Avenger both machines list the soldier as captured
+  by the Assassin with owner tag 1, and both campaign fingerprints match.
+- `retaliation` 14/14 (the game made it a `ChosenRetaliation`: 6 resistance fighters, 14 civilians, 9 aliens;
+  their turns run on the host) and `blacksite` 14/14 (story mission `GP_Blacksite`, two rounds; no pod was
+  active, so the alien turns were short; its objective cutscene was not reached).
+- `mcall` (new, both guest soldiers mind-controlled), first run 14/16, a real hang: the guest's group was
+  empty and the host skipped it as the game does, but in the next round the guest got the switch
+  ("taking over initiative") and never started its turn. The guest's replay waits for an idle visualizer
+  before it stops (`XComMPReplayMgr.PlayingReplay.Tick`), and an `X2Action_RevealAIBegin` there never ended
+  (game redscreen: "detected a time out, which will likely result in a hang"). Fix: while a machine waits to
+  take over, once the game marks a visualization action as timed out, `CoopTacticalRuleset` finishes it the
+  way the game's debug command does (`XComGameStateVisualizationMgr.DebugClearHangs`) and logs it.
+  - Test lesson: the bot's `@waitmyturn` took the host's run of the guest's empty group for the host's turn;
+    it now ignores empty groups.
+- Build with the fix: `mcall` 16/16 twice (the reveal did not hang in either run), `mindcontrol` 24/24,
+  `lostchosen` 21/21, `mission` 53/53, `mission3` 27/27, `midsave` 16/16; real install unchanged after each.
+  In the `mindcontrol` run the fix fired on the guest: "takeover waits on a timed-out visualization action:
+  X2Action_RevealAIBegin after 36 s", then "finished 1 timed-out visualization action(s)", and the guest
+  played its turn. So the reveal hang is not tied to mind control; it is intermittent.
+- `dropguest` failed once (9 of 15): the guest's log stops at 113 s, while it loads the main-menu map
+  after the host closed the connection to build the mission (same lines as passing runs up to
+  `LoadMap: XPACK_Shell_Intro`, then nothing; no crash line). That is before any of this session's changes
+  run. Two reruns: 15/15 each. The first `avengerdefense` run froze the same way (4 of 15 failed).
+  Across all kept logs: 5 freezes in 844 such main-menu loads, every one right after the host closed
+  the connection (mission build 4 times, host quit once; `missionend -180015`, `features -063502`,
+  `ironman -085005`, `dropguest -213040`, `avengerdefense -220011`). No crash dump in the copy's Logs.
+  Guess (not checked): an engine assert dialog waiting for a click, such as the "World ... not cleaned up by
+  garbage collection" assert of item 4 in the first session. The runner now records a copy's windows and a
+  screenshot when its log stops for 30 s after a main-menu load (`window_titles.py`); it has not caught one yet.
+- `avengerdefense` (new: `@avengerdefense` makes a UFO with the `SpawnUFO` cheat's code and calls its
+  `CreateAvengerDefenseMission` in the Avenger's region; `@launch MissionSource_AvengerDefense` then does
+  what the defense's squad screen does on close, `SquadSelectionCompleted`): 15/15 three times in a row.
+  Map `Plot_WLD_AvDef_LgObj_Stream`, 13 aliens; the guest played its two soldiers.
+- Found in those runs: the defense adds XCom soldiers during the mission (`SeqAct_SpawnUnitFromAvenger`
+  picks any free soldier in the barracks and gives it to the XCom player); soldier 435 arrived at turn 2 in
+  the host's group. Two more XCom units (owner none) start in groups of their own that the game empties into
+  the host's group; what they are is unknown. A soldier a guest owns would have stayed in the host's group,
+  and `ControllerOfInitiative` hands a group to the first guest-owned member, so the host's whole group would
+  have gone to that guest. Fix: on the host, at each XCom player turn begin, `CoopTactical.RegroupOwnedUnits`
+  moves every soldier a guest owns into that guest's group (priority = lowest XCom group + slot, as the start
+  split makes it; a new group if the guest has none). New test `avdefreinf` (`@tagbarracks 1` gives the
+  barracks to the guest first): 15/15. Reinforcements 433 (turn 2) and 439 (turn 4) moved to the guest's
+  group in the turn they arrived, before the host's group acted; the guest had 433 with 2 action points
+  in its next turn; the host's group never went to the guest.
+- Regression batch on that build (9 scenarios): `mission` 53/53, `mission3` 27/27, `mindcontrol` 24/24,
+  `mcall` 16/16, `lostchosen` 21/21, `dropguest` 15/15, `midsave` 16/16; `avengerdefense` 11/15 and
+  `avdefreinf` 10/15, both with the guest's log ending right after the main-menu load. The runner's stall
+  check did not fire for them, because it skips a copy whose process has exited: the guest had died.
+
+### The guest "freeze" is a crash in the game's Wwise callback (2026-11-14)
+
+Observed:
+- Windows Error Reporting keeps minidumps in `%LOCALAPPDATA%\CrashDumps` when the `LocalDumps`
+  registry key exists (other installed software often creates it; Windows keeps the newest 10, so older
+  crashes are gone). Ten `XCom2.exe` dumps from
+  2026-11-12/13, all from test copy 1 (the guest in two-player runs; the exe path in each dump's module list).
+  Four are the old "opponent left" crash (fault `+0x36569a`, before that fix). The six others, at the times of
+  the "freezes", are one crash: access violation reading address `0x90` at `XCom2.exe+0x6d0695`.
+- Read with `local/scripts/minidump_info.py` (exception record, registers, stack scan; no debugger installed)
+  and `llvm-objdump` on the test copy's exe. `+0x6d0690` is `f(this, x) { if (!x) x = this->[0x90]; g(x) }`,
+  called with this = a global that is null. The caller (`+0xa7d5b0`) runs only for callback type 8 and
+  references the names `Engine`, `AkAudio`, `InterpTrackInstAkEvent`; the crashing thread's start routine
+  references `AK::EventManager`. So it is Wwise's event thread delivering a callback to the game's handler for
+  matinee sound tracks. (`local/scripts/pe_strrefs.py` prints the strings code near an address refers to.)
+- In the runlogs (`local/scripts/avenger_exit_times.py`): 7 of 269 guest departures from the Avenger ended
+  the log (2.6%), at 42-46 s and once 185 s after the Avenger load. Four of them came 46.2-46.5 s after it, where
+  4 of about 16 departures crashed; 0 of 58 at 45.x s. Departures from other maps: none ended the log.
+- The guest leaves the Avenger in the same frame the host's close arrives: the engine reports
+  `PMT_ConnectionFailure`, `XComGameViewportClient.NotifyConnectionError` calls
+  `XComPlayerController.NotifyConnectionError`, which goes to `OnDestroyedOnlineGame` ->
+  `XComOnlineEventMgr.ReturnToMPMainMenu` -> `DisconnectAll` (`EngineLevelDisconnect`: "Failed; returning to
+  Entry") -> `LoadMap: XPACK_Shell_Intro?closed`.
+- Ruled out on the way: the 2K online client. Its presence heartbeat goes out every 30 s from login
+  (`ctpHttp.log`), and one was in flight at one of the crashes, but the crashing thread is Wwise's. That
+  log holds a login token and location data; it stays out of notes and PRs.
+
+Derived:
+- A sound an Avenger matinee posted in the last frames before the unload calls back after the map unload has
+  nulled the world, and the handler dereferences it.
+
+Guess (not checked): callback type 8 is `AK_Duration` (flag value recalled from Wwise's `AkCallback.h`, which
+is not at hand; Audiokinetic describes AK_Duration as sent once the sound engine knows the sound's duration,
+https://www.audiokinetic.com/qa/1336/is-it-possible-to-know-when-a-sound-has-finished-playing). The fix does
+not depend on which callback it is.
+
+Derived:
+- It is a race that depends on what the Avenger's matinees are doing at that moment, which is why one
+  scripted timing (46 s) hit it often.
+
+Fix (`CoopHeadquartersController`, ModClassOverrides on `XComHeadquartersController`; `CoopLink.StartQuietLeave`):
+- On a co-op guest whose host connection just closed, `NotifyConnectionError` on the Avenger skips the game's
+  handling and sets `bIgnoreNetworkMessages` (the engine repeats the error every frame otherwise; seen 35 times
+  in the first test). CoopLink drops the dead connection, pauses the world (`WorldInfo.Pauser`: no Kismet or
+  matinee updates, so nothing new is posted), and `QuietLeaveSeconds` (1.0) later calls the same
+  `ReturnToMPMainMenu(QuitReason_OpponentDisconnected)`. `CoopLinkTimer` has `bAlwaysTick` so it fires while
+  paused. A guest leaving a mission map takes the same pause before its `disconnect`.
+- First run on the fix build: `avengerdefense` 15/15; the guest logged "world paused=True", left 1.0 s later
+  and rejoined the mission.
+
+### Unknown
+- Mind control by the Chosen or by an Avatar has not run. The AI reveal's root cause on the guest (why it
+  timed out) is unknown; the fix only unblocks it.
+- Whether the host's own departure from the Avenger (the game's launch flow) can hit the same Wwise race: no
+  host crash in about 270 departures. Whether vanilla single player can: not checked.
+- What exactly the handler at `+0xa7d5b0` reads from the world, and the symbol of the null global: not
+  decompiled (no symbols); "world" is derived from the null-during-unload behaviour.
+- Other ways a soldier joins mid-mission (a rescued soldier, the Chosen stronghold) have not run; the regroup
+  covers any XCom soldier with a guest's owner tag, by its code.
+- A Blacksite objective cutscene was not reached by the bot (it plays two rounds only).
+
+### Regression on the crash fix, and new content tests (2026-11-14)
+
+Regression batch on the quiet-leave build (19 runs, one copy of each scenario unless noted): `avengerdefense`
+16/16 three times, `avdefreinf` 16/16 twice, `mission3` 27/27, `mission4` 33/33, `dropguest` 15/15, `midsave`
+16/16, `saveload` 18/18, `ironman` 18/18, `missionend` 11/11, `guestrestart` 19/19, `mindcontrol` 24/24,
+`mcall` 16/16, `lostchosen` 21/21, `retaliation` 14/14, `blacksite` 14/14. `mission` failed 1 of 53: it
+expected the guest's "opponent left" notice, which the guest no longer gets (it leaves quietly). New
+expectation: the guest logs "leaving the Avenger now" and never the notice; then 54/54. No crash dump in any
+run (the runner now fails a run on a new `XCom2.exe.*.dmp` in `%LOCALAPPDATA%\CrashDumps`). Real install
+unchanged after every run.
+
+New scenarios (new bot commands `@owned`, `@shotinfo`, `@stronghold`, `@chosenassault`):
+
+Observed:
+- `flankcrit` 10/10 (map `Plot_ABN_Guerilla_ElTrain_01`): the shot breakdown of a host soldier and of a guest
+  soldier on a flanked trooper uses `CoopToHitCalc_StandardAim` with the multiplayer flags on
+  (`coopmp=true mpgame=true`); the flanking crit bonus is 40 = the shooter's `eStat_FlankingCritChance`, not
+  the multiplayer constant 30.
+- `bigsquad` 13/13 (`Plot_TUN_Sewer_Guerilla_02`): 12 soldiers on the mission (the bot fills the HQ squad past
+  squad select), 6 per player, two rounds played.
+- `stronghold` 13/13 (`Plot_CSH_Stronghold_Short_03`, the Hunter's stronghold from the HQ cheat) and
+  `chosenassault` 13/13 (`Plot_WLD_ChosenDef_Stream_01`, the Assassin's attack on the Avenger): three rounds
+  each, guest turns and selection work.
+- `finalmission` failed: `@launch MissionSource_Final` found no mission, since the bot only launched missions
+  with a Skyranger flight (`MissionSource_Final` has `bRequiresSkyRangerTravel = false`; the Avenger flies
+  there). Fixed in the bot; rerun pending.
+- `avatarmc` failed 2 of 17: the Avatar (`AdvPsiWitchM3`) mind-controls a guest's soldier, the soldier joins
+  the aliens (`owned 1 xcom=1 alien=1` on both machines), but it was still mind-controlled four player turns
+  later. The game's countdown (`X2Effect_MindControl`): `MIND_CONTROL_AI_TURNS_DURATION=2`, +1 for the turn it
+  is applied, ticking at `PlayerTurnBegun` of the effect's player. The earlier `mindcontrol` test freed the
+  soldier with `@removemc`, so natural expiry had never run. `@mcstate` now logs the turns left and the
+  ticking player; rerun pending.
+- `relayleave` failed 2 of 16, both on the rejoin: the restarted guest never started. With three copies the
+  last one started (C) still holds the single-instance mutex, and the runner's kill-and-restart path did not
+  close it (the other restart path did). Runner fixed; rerun pending. The relay part passed: guest 1 died
+  while the host relayed guest 2's turn, guest 2 resumed at index 3, the host took over guest 1's soldiers at
+  index 4 and the round went on (turn 2).
+
+Rerun on the fixed bot and runner: `finalmission` 13/13 (the Avenger flies to the fortress map; three rounds),
+`relayleave` 16/16 (the restarted guest rejoined the running mission and got its soldiers back),
+`avengerdefense` 16/16. The two unowned XCom units at the start of an Avenger defense are `XComTurretM1`
+(the Avenger's defense turrets; the group dump now names unowned XCom units). `soak` was stopped partway by
+the owner (PC restart); no result.
+
+#### Effects lose their countdown at a handoff (2026-11-14)
+
+Observed (`avatarmc` with `@mcstate` logging the effect's countdown and `IsRegistered` on its tick listener):
+- Host, right after the Avatar's `PsiMindControl` on a guest's soldier: `mcleft=3 tickTeam=eTeam_XCom
+  tickTurns=1 listening=true`.
+- Host, its next turns (after the guest handed the turn back each time): `listening=false`, `mcleft=3` at
+  `tickTurns` 2, 3 and 4. The guest: `listening=false` in every turn.
+- The XCom player's own turn counter (`XComGameState_Player`, its 'PlayerTurnBegun' listener registered at
+  mission start) kept counting on the host.
+
+Derived: a listener that an object registers during the mission on one machine is missing after that machine
+receives a partial history from the other. The game's mind control ticks on 'PlayerTurnBegun' of the
+target's old player (`X2Effect_MindControl`, `WatchRule=eGameRule_PlayerTurnBegin`; `XComGameState_Effect.PostCreateInit`
+registers it), so it never ends. Every timed effect applied in a co-op mission is likely hit the same way
+(burning, poison, stun, disorient...), and so are effects' removal on the source's death.
+
+Unknown: what the native partial-history receive does with the event manager (`X2TacticalMPGameRuleset`
+only rebuilds a cache in script; the shipping build's `AllEventListenersToString` returns nothing). Whether
+ability listeners and triggers of units that spawn mid-mission are also lost (now counted, not repaired).
+
+Fix (`CoopListenerRepair`, run after each received partial history and when a machine takes over a turn):
+each active effect whose first core listener is missing gets the listeners of `PostCreateInit` again (same
+events, filters and order) and its template's `RegisterForEvents`. Ability listeners missing are counted in
+the log, not repaired: some abilities unregister their own listener after it fires; the game's challenge-mode
+cheat (`XComCheatManager`) shows the repair with `FixupRegisterListener` if it turns out to be needed.
+
+First version of the repair (every machine, every effect) and what went wrong:
+- The host kept the listener after it took the turn back (the guest had repaired it and sent it with its
+  partial history; the host's repair found nothing missing). Derived: a machine that receives a partial
+  history ends up with the sender's listeners; listeners the host registers mid-mission do not reach the guest.
+- `avatarmc` still failed: the Avatar's `NullLance` killed two soldiers in the first alien turn (a new
+  `UnitDied` log names the ability and its user), the squad hit heavy losses and the mission ended. Ordinary
+  combat; the scenario now runs the game's `SkipAI` cheat on the host after the mind control.
+- In one of three runs the guest crashed in native code as its first turn began (`XCom2.exe+0xb158a7`, no
+  game crash report; minidump in `%LOCALAPPDATA%\CrashDumps`), right after it had registered 17 effects it
+  never had. Not seen in any run before the repair. Cause not analysed further.
+
+Second version (host only, effects with `WatchRule` = player turn begin or end only; the guest is untouched,
+player turns always begin and end on the host): `avatarmc` 17/17 twice (with `SkipAI`), `mindcontrol` 24/24,
+`mission` 54/54, no crash dump. The host repaired 2 to 4 effects after the guest's first turn (the mind
+control, `Regeneration`, `RedAlert`). The countdown then ran: `mcleft` 3 at XCom turn 2, 2 at turn 3, and the
+soldier was back with its owner at turn 4 on both machines; that matches the game's numbers (2 AI turns + 1,
+ticks at XCom turns 2, 3 and 4). Why turn 2 still read 3: unknown (guess: logged before that tick's frame).
+
+Still open:
+- Effects that tick on a group's turn (`WatchRule` = unit group turn begin or end) of a guest's group, and
+  effects ticking on every action of a guest's soldier: not repaired (they would have to be repaired on that
+  guest). Which effects use those rules was not listed.
+- 4 ability listeners are missing on both machines after every handoff (counted, not repaired); which ones
+  and whether it matters: unknown.
+
+#### The 4-mission soak hung the guest (2026-11-14)
+
+Run `soak` (host and one guest, four missions in a row with Geoscape time between them) on the host-only
+listener-repair build. It never finished: it was found stopped hours later, and the guest's
+`Launch.log` was 23 GB.
+
+Observed (host log `soak-20261114-142213-A-partial.log`, first 1700 lines of the guest log kept; both local):
+- Mission 1 went through on both. The guest was back on the Avenger first; the host then played the movie
+  `CIN_TP_WelcomeResistance` after the first mission's after-action. The host's log has no line for its
+  98 s (`Movie Finished Event: CIN_TP_WelcomeResistance, 98.08`).
+- The guest's connection timed out 60 s into it (`Connection timed out after 60.000000 seconds`). The guest
+  left the Avenger for the main menu and reconnected, as designed, 38 s later.
+- Host, in the same 0.1 s: the old connection closed (roll call sent), the new one was accepted, and the
+  guest's `CoopHello` arrived. No `partner joined: player slot` line followed, and 2.7 s later the roll call
+  ended with `guest slot 1 disconnected; the host controls its soldiers`. The campaign was never sent.
+- The host's strategy batches still went out (`merge not acknowledged after 5 s` from then on). The guest,
+  at the main menu, got `CoopAlign` and logged `Accessed None 'GameRuleset'` in `CoopSession.AlignHistory`
+  157 million times, all with the same timestamp: one endless loop in one frame.
+- The host launched missions 2 to 4 alone (`guests at launch: [] single=true`), finished all four and quit.
+- No crash dump. The real install unchanged (checked after the restart).
+
+Derived:
+- `CoopJoin.HostOnHello` took the hello for a duplicate: the guest is the same process, so its nonce was
+  known, and its old slot was still connected while the roll call ran. That branch answers the slot but
+  skips `CoopLink.HostGuestJoined`, so the campaign never went out. The guest got its slot after the roll call
+  had been sent, so it never answered it, and the roll call dropped the slot.
+- `AlignHistory` adds empty frames with `GameRuleset.SubmitGameState` until the history reaches the target;
+  with no ruleset (main menu) nothing is added and the loop never ends.
+- The runner searched the whole log every 3 s, which takes minutes on a log that size, so the run's deadline
+  was not checked in time, and it would then have read the whole log into memory. Guess: that is what slowed
+  the PC earlier the same day.
+- Any host movie longer than the 60 s connection timeout drops the guests the same way. This one plays after
+  the first mission of every campaign.
+
+Fixes:
+- `CoopJoin`: a hello counts as a duplicate only if no connection closed since that guest's last hello.
+  Otherwise it is a reconnect: the same slot, counted as present in a running roll call
+  (`CoopRole.MarkPresent`), and `HostGuestJoined` sends the campaign or mission as for any join.
+- `CoopSession.AlignHistory`: does nothing off the Avenger, and stops when a submit adds no frame.
+- Runner: a copy whose log passes 200 MB is killed and the run fails ("runaway log"). Logs over the limit are
+  kept as their first 20,000 and last 2,000 lines.
+- Not changed: the connection timeout (the game's own 60 s). A longer timeout would also delay noticing a
+  guest that really dropped. With the reconnect fixed, a guest that times out during a host movie comes back
+  by itself, after a trip through the main menu.
+
+Not covered by the soak: `EndBattle true` wins a mission without completing its objectives, so the
+Blacksite (id 850) stayed on the map and missions 2 to 4 were that mission again.
+
+#### Rerun on the reconnect fix (2026-11-15)
+
+Results:
+- `dropguest` 15/15, `relayleave` 16/16; real install unchanged after each.
+- `soak` 9/13. Missions 1 and 2 went through with both players. The guest timed out during the host's movie
+  after mission 1 again and came back by itself (`guest: reconnected, given player 1`); a second timeout,
+  during the host's Geoscape scan before mission 3, used the new path on the host (`partner reconnected:
+  player slot 1`, then `the campaign goes out in 3 s`). Mission 3 was a retaliation where a Chosen appeared
+  for the first time: the host's game opened `UIChosenReveal` and paused itself until the player clicks it
+  away (`X2Action_RevealAIBegin` waits for `UIChosenReveal_OnRemoved`, then unpauses). The bot never clicked,
+  so the host sat there for the rest of the run. A test-bot gap, not a co-op fault.
+- `stunguest` 11/13. A Stun Lancer stunned a guest's soldier during the host's turn (`stunned 1 count=1
+  stunAP=1`). In guest turn 1 the soldier's turn setup used up the stun action point (`stunAP=0`), as in the
+  game. The Stunned effect then stayed through guest turns 2 and 3 on both machines (`count=1`), and the
+  soldier could still be selected. In the game, `X2Effect_Stunned`'s tick removes the effect at the start of
+  the next group turn once `StunnedActionPoints` is 0, and that tick listens on `UnitGroupTurnBegun` of the
+  soldier's group, whose turn runs on the guest. The guest does not have that listener (see the handoff
+  listener section above).
+- `mission3` 9/27: the host crashed 4 s into loading the mission map, at `@launch`. Minidump: access violation
+  reading `0x90` at `XCom2.exe+0x6d0695` on a worker thread, the same Wwise matinee sound callback as the
+  guest's Avenger exit before its fix (see "The guest freeze is a crash in the game's Wwise callback"). It
+  answers that section's open question: the host's own departure can hit it too. First host crash of this
+  kind in about 280 bot launches.
+
+Derived: the bot launches with `PrepareTacticalBattle` + `ConfirmMission` straight from the Avenger, while
+its room matinees play. A player launches after the Skyranger flight, from the Geoscape. Whether that path
+can hit the race, in co-op or in single player: unknown.
+
+Fixes (build of 2026-11-15 01:20):
+- Bot: while waiting for its turn it closes a `UIChosenReveal`, as a player would (`CoopHarness.CloseChosenReveal`).
+- Bot: `@launch` pauses the world and launches one second later, as the guest's exit does
+  (`CoopExperiments.FinishLaunch`, `bAlwaysTick`). This covers the bot's launch only.
+- `CoopListenerRepair`: every machine now also repairs effects that tick on the turn of a group that this
+  machine runs (stun, daze on a guest's own soldiers; the host for alien groups and for a dropped guest's
+  groups). The guest still repairs nothing else, so the broad guest-side repair that came before the earlier
+  guest crash stays out.
+- Runner stopped with `TaskStop` mid-scenario: the runner's config backups (`*.runpair-bak`) were left in two
+  copies and were moved back by hand, as the runner does at its end.
+
+#### Results on the build of 2026-11-15 01:20
+
+Run one after another, real install unchanged after each, no crash dump:
+- `mission3` 27/27 (the bot's launch now pauses a second first), `avatarmc` 17/17, `midsave` 16/16, `mission`
+  54/54.
+- `soak` 13/13: four missions with both players (a Guerrilla Op, then the Blacksite three times, since the
+  bot's `EndBattle` wins without completing objectives). No Chosen appeared this time, so the bot's reveal
+  close did not run: still untested.
+- `stunguest` 12/13. The guest repaired the stun's tick just before taking its turn (`listener repair: effect
+  2939 Stunned turnsLeft=1`); the stunned soldier started guest turn 1 with `ap=1` (the other guest soldier
+  `ap=2`) and `stunned=false`, and the host showed `count=0` from its turn 2 on. That is the single-player
+  behaviour. The failing check expected the guest to still see the stun 9 s into its turn 1, which was wrong:
+  the tick removes it at that turn's start. The checks now look for the repair line and the lost action
+  point. Rerun: `stunguest` 14/14.
+
+#### Daze on a guest's soldier (2026-11-15)
+
+Source read (SDK): `X2Effect_Dazed` extends `X2Effect_Stunned`; `CreateDazedStatusEffect` builds it infinite,
+ticking on `eGameRule_UnitGroupTurnBegin`, with `StunLevel` = the daze turns (Mind Scorch: 4, from
+`XComGameData_SoldierSkills.ini`). It is also `bCanTickEveryAction`, but that only applies when the target's
+template has `bCanTickEffectsEveryAction`, which soldiers don't, so on a soldier it takes the group-turn path,
+the one `CoopListenerRepair` now repairs on the machine that runs the group. Derived: it should cost two full
+turns and end at the start of the third.
+
+New bot output: `@stunned P` and `@mcstate` also print `dazed` (`IsDazed`; `IsStunned` is false for a daze).
+New scenario `dazeguest`: the host drops a `ChosenWarlock` and forces `MindScorch` on a guest's soldier
+(`contest:1`, the 1-4 band).
+
+Result: 15/15, real install unchanged. Observed: host after the hit `stunAP=4 dazed=1`; the guest repaired
+`effect 2965 Dazed turnsLeft=1` before its turn; guest turn 1 `ap=0 stunAP=2 dazed=true`, turn 2 `ap=0
+stunAP=0 dazed=true`, turn 3 `ap=2 dazed=false`; the host agreed each turn. Dropping the Warlock with the
+cheat opened no Chosen reveal screen. `stunguest` again 14/14 on the same build.
+
+#### Story progress in the soak (2026-11-15)
+
+`EndBattle` (the cheat) wins without completing objectives, so the old `soak` launched the same Blacksite
+three times. New bot step `@winmission` (host): marks every objective of the active mission complete
+(`XComGameState_BattleData.CompleteObjective`), submits it, then ends the battle as a win. New scenario
+`soakstory` is `soak` with that step.
+
+Result: `soakstory` 14/14, real install unchanged, no crash dump. Observed (host log): four different missions,
+`winmission mission=Hack_Train objectives=2 strategy=1 allDone=true`, then `GP_Blacksite` (1 objective),
+`Recover` and `SabotageTransmitter` (2 each), all `allDone=true`. The Blacksite was not offered again after it
+was won. The guest rejoined each mission and Avenger return (`guests back [1] of [1]`), reconnected once after
+the host's long movie (`partner reconnected: player slot 1`), and both ended with the same campaign
+fingerprint (`samefp`).
+
+#### Eight missions (`soakstory8`, 2026-11-15)
+
+`soakstory` with four more mission blocks (generated from the mission-2 block), timeout 8400 s.
+
+Result: 22/22, real install unchanged, no crash dump. Observed (host log): eight different missions,
+NeutralizeFieldCommander, GP_Blacksite, Recover_ADV, ProtectDevice, a retaliation (`Terror`, 4 objectives),
+DestroyRelay, Recover_Vehicle, SabotageTransmitter, all `allDone=true`. In the retaliation a Chosen appeared for
+the first time, and the host bot closed `UIChosenReveal` while waiting for its turn (`closed UIChosenReveal (as
+a player would)`), the first run of that fix. The guest reconnected twice after the host's long movies
+(`partner reconnected: player slot 1`) and rejoined every mission and Avenger return.
+
+Observed, slow return after the retaliation: the host's after-action showed `UIChosenMissionSummary`, which the
+bot's `@afteraction` did not know, so the host stayed in the mission map for 200 s until a later strategy step
+closed it. Meanwhile the guest, back at the main menu, tried to join every 64 s and timed out twice (60 s each,
+no server: the host reopens it only on the Avenger), then got in 1 s after the server reopened. The runner's
+stall check took a screenshot of the guest then (`soakstory8-stall-B-...png`, local). Derived: a bot gap, not a
+co-op fault; a player clicks that screen away. Fix: `@afteraction` closes `UIChosenMissionSummary` (closing it
+opens the regular `UIMissionSummary`, per `UIChosenMissionSummary.CloseScreen`). A Chosen dropped in with the
+cheat (`lostchosen`) does not produce that screen, so the check is a rerun of `soakstory8`.
+
+Rerun on the `@afteraction` fix: 22/22, real install unchanged, no crash dump. Eight missions (Hack_ADV,
+GP_Blacksite, DestroyRelay, Recover_Train, a `Terror` retaliation, NeutralizeFieldCommander,
+SabotageTransmitter, DestroyRelay). The Chosen appeared again in mission 5, a retaliation; the bot closed the
+reveal and then `UIChosenMissionSummary` (`afteraction screen=UIChosenMissionSummary`, then
+`UIMissionSummary`), and the host was back on the Avenger 89 s after the win (200 s in the first run). The
+guest's first join attempt timed out while the host was still in the mission and the second got in 1 s after
+the server reopened. Two `soakstory8` runs in a row put a Chosen retaliation at mission 5: guess, the game's
+pacing of the first Chosen encounter, not chance.
+
+#### Two-PC package and a rehearsal on one PC (2026-11-15)
+
+Made for the first two-PC test (direct IP over a home network, one Steam account; Steam invites need two):
+- Runner, host side: `-RemoteB` runs only the host copy and marks the guest's expectations PENDING; `-ExportB FILE
+  -HostIP IP` writes the guest's bot steps with `127.0.0.1` replaced; `-CheckOnly -ALog -BLog` grades two kept
+  logs (checked on the last `mission` logs: 54/54, as in the normal run). Scenarios that start, kill or restart
+  copies are refused for now.
+- Guest PC: one PowerShell script. `setup` checks the War of the Chosen exe's SHA-256 against the host's, makes
+  a hard-linked test copy on the same NTFS drive (folders the game writes into are real copies, as in the
+  gamepool copies here), installs the mod in the copy only; `run -Scenario X` writes the steps, starts the copy
+  with `-nohomedir`, waits for the bot and saves the log; `remove` deletes the copy. Setup on the host PC: 52 s,
+  83,482 links, 231 copied files, real install unchanged.
+
+Rehearsal on one PC (host-only runner + the guest script with its own copy, guest aimed at that PC's own LAN
+address instead of 127.0.0.1). Observed: the guest logged `Host name resolution failed with 11001` 3 s after
+`connecting to 192.168.1.x:7778`, went back to the main menu, and waited until its timeout; the host never saw
+it. Derived: `CoopLink.TryConnect` packs the four octets into one signed 32-bit int (the network driver needs
+the address as one decimal number, see "CreateClient with a dotted host" above). Every address from
+128.0.0.0 up comes out negative (`-1062731...`), which the driver then tries to resolve as a host name. Only
+127.0.0.1 ever worked, so every one-PC test passed, and every join over a home network (192.168.x.x) would
+have failed, from the menu's Join button too.
+
+Fixes:
+- `CoopLink.DecimalIPv4` builds the unsigned decimal in base 10000 (checked against Python's `ipaddress` for
+  127.0.0.1, 10.0.0.5, 172.16.0.1, 192.168.0.1, 192.168.1.x and 255.255.255.255).
+- A first join now retries like a reconnect (`bJoinRetry`, every `ReconnectInterval`, for `JoinRetrySeconds`
+  = 300 s); before, a failed first attempt left the guest on the main menu for good. A refusal by the host
+  (mods differ) stops the retries.
+
+Results on the fixed build (real install unchanged, no crash dump each time):
+- Rehearsal `join`: the guest joined at the PC's LAN address in under a second (`the host gave us player slot
+  1`); host 3/3 plus guest 4/4 by `-CheckOnly`: 7/7.
+- Rehearsal `mission`: host 30/30 plus guest 24/24 by `-CheckOnly`: 54/54. After the host built the mission
+  the guest reconnected by the LAN address (`guest: reconnected, given player 1`).
+- One PC over 127.0.0.1: `joinmismatch` 5/5 (the refused guest logged no retry), `join` 7/7, `dropguest` 15/15.
+- Not covered: two real PCs, Steam in offline mode on the guest PC, a real network between two machines.
+
+#### First run on two PCs: `join` 7/7 (2026-11-15)
+
+Setup (owner): guest PC with XCOM 2 + War of the Chosen from Steam (same account), started once from Steam,
+then `coop-guest.ps1 setup` (build hash matched), Steam put in offline mode. Host PC: `run_pair.ps1 -Scenario join
+-RemoteB`. Both PCs on the same home network; the host's test copy needs an inbound firewall allowance for its
+`XCom2.exe` (UDP), which Windows asks for the first time the server opens.
+
+Observed: the guest connected 0.35 s after `connecting to 192.168.1.x:7778`; `compare received=1/1 match=true`,
+mods hash and MP ini hash equal; `the host gave us player slot 1`; `ReceiveHistory frames=228`; the host's chat
+arrived; host and guest fingerprints the same apart from the frame count (228 on the host at its `@histinfo`,
+229 on the guest at its own). Host 3/3, guest 4/4 by `-CheckOnly`: 7/7. No crash on either PC; the host PC's
+real install unchanged.
+
+Answered: the game's network driver (`IpNetDriverSteamworks`) works for direct IP with Steam offline on the
+guest PC and one Steam account on both PCs. Not covered yet: a mission over two PCs, Steam online on both.
+
+Second run on two PCs: `mission` 54/54 (host 30/30, guest 24/24 by `-CheckOnly`), no crash, host PC's install
+unchanged. Observed on the guest: first join at 66 s; the host closed the connection to build the mission
+(`lost the host ... reconnecting`), the guest reconnected over the network 31 s later (`reconnected, given
+player 1`); it took over its group in both rounds (`switch turn received: taking over initiative ... index 2`,
+`resumed unit actions`), sent a ping and a chat, received the host's ping, and its watcher camera moved
+(`camtest ... moved=3585`). The guest kept its slot from the `join` run (`slot wanted=1`, `CoopGuestMemory`).
+
+Third run on two PCs: `missionend` 11/11 (host 6/6, guest 5/5), same campaign fingerprint on both
+(`t2035-3-1h3...`), no crash, host PC's install unchanged. Observed on the guest: it left the Avenger when the
+host closed the connection to build the mission (`leaving the Avenger for the main menu in 1 s, world
+paused=True`), reconnected, left the mission map the same way when the mission ended, reconnected 35 s later,
+loaded the Avenger and got the campaign.
+
+#### A guest's soldier moves and shoots (`guestaction`, 2026-11-15)
+
+Gap found by the owner watching the two-PC runs: the guest bots took their turn and handed it back without
+acting. Only `mindcontrol` had a guest's soldier act, through a forced cheat-style ability. No test had a guest
+move or shoot normally and then compared the result on the host.
+
+New bot steps: `@move SPEC TILES` (a reachable tile about TILES away, path from the unit's
+`X2ReachableTilesCache`, submitted with `XComTacticalController.GameStateMoveUnitSingle(..., bUserCreated=true)`,
+the move a click on a tile makes); `@shoot SPEC` (the first matching unit whose `StandardShot` is `AA_Success`
+fires at the first offered target through `XComGameStateContext_Ability.ActivateAbility`, the HUD fire button's
+call: normal validation and hit roll); `@ustate ABILITY P` (finds the last frame in which a unit of slot P used
+ABILITY and logs every XCom and alien unit as of that frame: tile, HP, alive, action points). Runner:
+`sameustate` compares those lines between the host and guest logs (also in `-CheckOnly`).
+
+Scenario `guestaction`: the host drops an `AdvTrooperM1` 7 tiles from the squad and skips the AI; on its turn
+the guest moves one soldier about 4 tiles and fires; both machines dump the unit states after the move and
+after the shot. One PC: 13/13, both comparisons equal (13 lines each). Observed: unit 421 moved 11,37,1 ->
+15,37,1, fired at the trooper (`result=eHit_Crit`), trooper HP 6 -> 1; the same frame indices on both machines
+(444, 447). Not covered: whether the host's screen shows the walk and the shot (visualization); the state check
+is on the history.
+
+#### Overwatch, the AI's turn and three players (2026-11-15, night)
+
+New bot steps: `@moveto SPEC TARGET` (the reachable tile nearest TARGET, at least 2 tiles from it, through the
+same move as `@move`); spec `newest:TEMPLATE` (the living unit of that template with the highest ObjectID, the
+one dropped last; `template:` finds the first, which may be a pod's unit far away); `@ustate` takes `*` for any
+ability and `alien`/`any` for the user; `@listeners SPEC` (for one unit, whether each event-listener trigger of
+its abilities is registered on this machine, and its reserved action points). Runner: `sameustate` compares every
+copy of the run (A, B, C).
+
+Scenarios and results (one PC):
+- `aiturnguest` 8/8: two troopers dropped near the squad, AI left on; after the alien turn both machines agree on
+  every unit as of the last alien action (a trooper's `StandardShot` at a host soldier, `eHit_Miss`).
+- `guestaction3` 11/11: three players; guest 1's soldier moved and hit a dropped trooper (`eHit_Success`), guest
+  2's soldier moved; host and both guests agree on every unit after each of the three actions.
+- `overwatchhost` (control) 8/8 once the setup targeted the dropped trooper (`newest:`): the trooper on overwatch
+  fired at the host's soldier as it walked into view (`OverwatchShot ... eHit_Miss`), the same on both machines.
+- `overwatchguest`: the same with the guest's soldier walking: no overwatch shot in 3 runs of 3 (host and guest
+  agree there was none).
+
+Observed (`@listeners` on the dropped trooper, host turn and guest turn): host `OverwatchShot event=ObjectMoved
+registered=true`, guest `registered=false`; reserved points 1 on both. Derived: a unit created mid-mission on the
+host (`DropUnit`, and so reinforcements, Lost swarms, a Chosen arriving) reaches a guest only as data; the
+ability triggers that `X2TacticalGameRuleset.InitAbilityForUnit` registers never exist there, so its overwatch
+never fires at a guest's soldiers (and other triggered abilities of such units likely don't either). Units
+present at the mission start are registered by the guest's load path. The "4 ability listeners missing" counted
+since 2026-11-14 were counted on the host only.
+
+Fix: `CoopListenerRepair.RepairAbilityListeners`, every machine, in the same places as the effect repair (after a
+received partial history, when taking over a turn): every alive unit's missing ability listeners and
+event-listener triggers are registered again with the game's own filters, as `XComCheatManager`'s fixup does
+(`FixupRegisterListener`) and as loading a save does for every unit. Abilities that unregister their own listener
+after firing get it back, as on a load.
+
+A guest crash, again at `XCom2.exe+0xb158a7`: in the first `overwatchguest` run (the setup still put a far pod
+trooper on overwatch), the guest died as its first turn began (`resumed unit actions`, then `Crash Detected`),
+access violation reading address 0. The same address as the guest crash of 2026-11-14 (avatarmc, then blamed on
+the guest repairing 17 effects); this time the guest had repaired nothing. Both times the host had just changed
+an alien (mind control, overwatch) before the guest's turn. Not seen in the next 4 `overwatchguest` runs. Cause
+unknown; noted as an open rare guest crash, and the 2026-11-14 attribution to the effect repair is weaker now.
+
+#### Full one-PC suite on the night's build (2026-11-16)
+
+40 runs (every scenario but `soak` and `soakstory8`, plus `squad` and `exp12` on one copy), 23:25 to 04:30, the
+ability-listener repair and the join fix in. 38 passed; real install unchanged in every run.
+
+Two failures:
+- `guestaction3` 9/11: guest 1's only soldier walked 4 tiles out of the trooper's sight (`AA_NoTargets`) and had
+  nothing to shoot. A test setup gap: `guestaction` and `guestaction3` now walk toward the trooper
+  (`@moveto owner:1 newest:AdvTrooperM1`).
+- `chosenassault` 7/13: the guest crashed (`XCom2.exe+0xccc6a7`, access violation reading 0) on the Avenger map
+  during the mission. Observed, host: the guest rejoined on the Avenger at 193.6 (`the campaign goes out in 3 s`);
+  at 197.2 the delayed campaign send went out (`campaign history sent to guests, waiting for ack`) and 0.1 s
+  later the host closed the connection to build the Chosen's assault. After the build the guest rejoined and the
+  host sent the mission history; the guest acknowledged it, the host's still pending campaign wait took that ack
+  (`guests have the campaign: telling them to enter the Avenger`), and the guest opened the Avenger with the
+  mission's history (`entering Avenger as mirror, frames=487`), logged 2,326 `Accessed None 'UnitVisualizer'`
+  from `XGUnit.CreateVisualizer` and died. Derived: both histories are acknowledged with the same command, and a
+  stale campaign wait wins. A player who launches a mission seconds after a guest rejoins can hit it.
+  Fix (`CoopTacticalNet`): sending the mission drops a pending campaign wait and sending the campaign drops a
+  pending mission wait; a campaign ack counts only while the host is outside a mission.
+
+Also seen: `relayleave` and `mission3` ran until the runner's timeout although they passed. A guest whose host
+had quit reconnects from the main menu every ~64 s, each reload re-created the test bot, and the bot restarted
+its 90 s step delay each time, so the step never came (in every earlier `mission3` run too, which is why it
+always took 25 min). Fix (`CoopHarness`): the pending step's due time is kept on the wall clock across map loads.
+
+Reruns on the fixed build (all four test copies on the same build): `chosenassault` 13/13 three times (once on a
+mixed build, see below; one run hit the same window and logged `a pending campaign ack is dropped: the mission
+replaces it`, then `guest has the mission history: telling it to load the map`), `guestaction3` 11/11,
+`guestaction` 13/13, `relayleave` 16/16 in 6 min (25 min before the bot's timer fix), `mission3` 27/27 in 6 min,
+`missionend` 11/11, `join` 7/7, `mission` 54/54. Real install unchanged in all 48 runs that ended normally.
+
+Also seen in the first `chosenassault` rerun: the guest got its slot on the main menu 5 s before the host closed
+the connection for the mission build, never saw the close, and stayed "connected" without a history until the
+host quit 190 s later (no timeout: guess, the host's reopened server on the same port kept the old connection's
+traffic alive). Fix: `CoopLink` reconnects a guest that has a slot but no history after `JoinNoHistorySeconds`
+(150 s, longer than the host's 120 s wait for other guests). Not reproduced on purpose; untested.
+
+Process slip (test tooling, no effect on results reported above): a build was started while a rerun batch ran;
+its copy step blocked on the running guest's files and left copy 0 on a newer build than copies 1-3. The loop
+was stopped, one run finished on the mixed build (counted above as such), the build was redone with no game
+running, and the reruns restarted.
+
+#### Red screens with Steam's launch options (2026-11-16)
+
+Observed: Steam's own launch configuration for XCOM 2 passes `-noRedScreens -review` (Steam's app info);
+the test copies leave `-noRedScreens` out. `mission` with `-review -noRedScreens` added (the copies' other
+options `-allowconsole -log -nohomedir` kept): 54/54, and the bot still closed red screens (1 on the host, 2 on
+the guest; 2 and 3 in the run before). Every red-screen message in both logs is the base game's own (destructible
+actor sizes on a sewer plot, `LIST_TheLost_PrePlaced`, `Plot_Multiplayer_Test`, DLC narrative sounds loading
+synchronously); none names a mod class. Unknown: whether a plain Steam launch (without `-allowconsole -log`)
+shows them.
