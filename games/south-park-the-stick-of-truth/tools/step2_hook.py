@@ -146,6 +146,10 @@ def parse_stats(text):
 
 
 def rank_candidates(hooks, limit=3):
+    """Rank the counted AI slots for the freeze test. The frame-rate companion state slots
+    must win over shared noise: Basic#11/B#18 are generic state functions whose `self` is
+    a camera or an unknown object at thousands of calls/s (live aistats, 2026-11-17), so
+    class and label carry the score and the raw rate only breaks ties."""
     pool = []
     for hook in hooks:
         try:
@@ -155,13 +159,18 @@ def rank_candidates(hooks, limit=3):
             continue
         if calls <= 0 or rate < 8.0:
             continue
-        score = rate
-        if 'Companion_Follow' in hook.get('CLASS', ''):
-            score += 1000.0
+        klass = hook.get('CLASS', '')
+        if 'Camera' in klass:
+            continue
+        score = min(rate, 1000.0)            # tie-break only, never the driver
+        if klass == 'unknown':
+            score -= 1000000.0               # unattributable: last resort
+        if 'Companion_Follow' in klass:
+            score += 1000000.0
         if hook.get('LABEL', '').startswith('Follow#'):
-            score += 100.0
-        if 'Companion_Basic' in hook.get('CLASS', ''):
-            score += 10.0
+            score += 100000.0
+        if 'Companion_Basic' in klass:
+            score += 10000.0
         pool.append((score, hook))
     pool.sort(key=lambda pair: pair[0], reverse=True)
     return [hook for _score, hook in pool[:limit]]

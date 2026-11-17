@@ -2118,6 +2118,7 @@ float g_hold_anchor[3] = {0.0f, 0.0f, 0.0f};
 DWORD g_hold_last_write_log = 0;
 DWORD g_hold_last_cmd_log = 0;
 DWORD g_state_next_check = 0;
+ULONGLONG g_state_fallback_next = 0;
 unsigned long long g_hold_restores = 0;
 ULONGLONG g_stats_last_tick = 0;
 unsigned long long g_stats_last_calls[64] = {};
@@ -2354,21 +2355,10 @@ bool resolve_buddy(bool quiet)
 // Read Companion_Basic +0x2b4 and resolve its class. The transition log is the evidence
 // for command mode: Companion_Command / Companion_Command_Hint means the engine owns the
 // buddy until the state pointer returns to Companion_Follow.
-bool buddy_plan_state(bool force_log)
+// Set the state-pointer globals and log Follow/Command transitions. Shared by the slot
+// path and the vtable fallback below.
+void apply_plan_state(uintptr_t state, const char* name, bool force_log)
 {
-    if (g_buddy_companion == 0) {
-        return false;
-    }
-    uintptr_t state = 0;
-    if (!safe_read_quiet(g_buddy_companion + 0x2b4, &state, sizeof(state)) ||
-        state < 0x10000) {
-        return false;
-    }
-    char name[192] = {};
-    uintptr_t vtable = 0;
-    if (!resolve_object_class(state, name, sizeof(name), &vtable, true)) {
-        return false;
-    }
     const bool command = strstr(name, "Command") != nullptr;
     const bool changed = state != g_buddy_state_ptr || strcmp(name, g_buddy_state_class) != 0;
     if (changed || force_log) {
@@ -2387,6 +2377,74 @@ bool buddy_plan_state(bool force_log)
     strncpy(g_buddy_state_class, name, sizeof(g_buddy_state_class) - 1);
     g_buddy_state_class[sizeof(g_buddy_state_class) - 1] = '\0';
     g_command_mode = command;
+}
+
+// The plan-level state lives at Companion_Basic +0x2b4 in Clyde's Fort (a live
+// Companion_Follow), but the second forest save of 2026-11-17 read 0 there on every
+// companion object, and the first forest save held an AI_State_Manager instead. The slot
+// is only trusted when it resolves to a Companion_* class; otherwise the state is found
+// the way the verification run proved: exactly one live object with the Follow vtable
+// whose +0x78 equals the hero's DS_Game_Object. That scan is heap-wide, so it runs at
+// most every 5 s and the found pointer is cached in between.
+bool buddy_plan_state(bool force_log)
+{
+    if (g_buddy_companion == 0) {
+        return false;
+    }
+    uintptr_t state = 0;
+    char name[192] = {};
+    uintptr_t vtable = 0;
+    if (safe_read_quiet(g_buddy_companion + 0x2b4, &state, sizeof(state)) &&
+        state >= 0x10000 &&
+        resolve_object_class(state, name, sizeof(name), &vtable, true) &&
+        strstr(name, "Companion_") != nullptr) {
+        apply_plan_state(state, name, force_log);
+        return true;
+    }
+    const ULONGLONG now = GetTickCount64();
+    if (g_buddy_state_ptr != 0 && now < g_state_fallback_next &&
+        resolve_object_class(g_buddy_state_ptr, name, sizeof(name), &vtable, true)) {
+        apply_plan_state(g_buddy_state_ptr, name, force_log);
+        return true;
+    }
+    g_state_fallback_next = now + 5000;
+    if (g_follow_vtable == 0) {
+        resolve_named_vtable("Companion_Follow",
+                             ".?AVCompanion_Follow@Follower@Plan_Level@State@AI@OEI@@",
+                             0x99f598, 0x7fa46c, 0x898128, &g_follow_vtable);
+    }
+    if (g_follow_vtable == 0) {
+        dbg("[ERR]", "plan fallback: Follow vtable not resolved");
+        return false;
+    }
+    uintptr_t hero_object = 0;
+    float hero_position[3] = {0.0f, 0.0f, 0.0f};
+    if (!hero_object_triple(hero_position, &hero_object) || hero_object == 0) {
+        dbg("[ERR]", "plan fallback: hero object not identified; cannot match +0x78");
+        return false;
+    }
+    uintptr_t hits[32] = {};
+    int matched = 0;
+    const int stored = scan_vtable_objects(g_follow_vtable, "plan-fallback", hits, 32, &matched);
+    uintptr_t found = 0;
+    for (int index = 0; index < stored; ++index) {
+        uintptr_t link = 0;
+        if (safe_read_quiet(hits[index] + 0x78, &link, sizeof(link)) && link == hero_object) {
+            found = hits[index];
+            break;
+        }
+    }
+    if (found == 0) {
+        dbg("[ERR]", "plan fallback: no live Follow chases the hero object 0x%08llx (%d hits)",
+            static_cast<unsigned long long>(hero_object), stored);
+        return false;
+    }
+    if (!resolve_object_class(found, name, sizeof(name), &vtable, true)) {
+        return false;
+    }
+    dbg("[BUDDY]", "plan fallback state=0x%08llx (vtable+hero link, slot was 0/manager)",
+        static_cast<unsigned long long>(found));
+    apply_plan_state(found, name, force_log);
     return true;
 }
 

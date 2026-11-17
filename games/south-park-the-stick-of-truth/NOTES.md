@@ -503,6 +503,19 @@ build-from-zero puppet path. `PLAN.md` and `prompts/` split this into seven agen
 two PCs and two screens over the network as the product target and local two-player only as a
 development milestone.
 
+## 2026-11-17 (lead): announced mod.cpp edit round 2 - plan-state fallback by vtable+hero link
+
+Round 1 (above) shipped as F48729da. The host-driven step-2 experiment (game pid 1116,
+second forest save) then proved: `Companion_Basic +0x2b4` reads 0 on every companion object
+in that save, so `aihold` answered `ERROR plan state not readable` and nothing was held; the
+live plan-level state is still uniquely findable - `scanclass` for Follow vtable `0x7fa46c`
+plus the pointer-proven rule `state+0x78 == hero DS_Game_Object` (single hit 0x0864ecb0,
+Follow#5 ticking 29.7/s, Follow#8 118.9/s). Announced before editing (shared-file rule):
+`buddy_plan_state` keeps the slot path when the slot resolves to a `Companion_*` class (Fort
+behaviour), and otherwise (slot zero, unresolvable, or an `AI_State_Manager` host) re-discovers
+the state by vtable scan with the hero-link filter, throttled to one scan per 5 s and cached
+between scans. No other writes, no new offsets: 0x2b4/0x78 stay exactly as measured.
+
 ## 2026-11-17 (lead): announced mod.cpp edit — direct hero-object triple, buddy-safe wblock
 
 The step-2 adopt run (report `local/vm-out/step2-hook-report-25607.json`) found the hooks
