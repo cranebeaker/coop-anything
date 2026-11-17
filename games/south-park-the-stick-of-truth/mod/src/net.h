@@ -44,6 +44,21 @@ public:
     PlayerState Peer() const { return peer_; }
     uint32_t PeerAgeMs(uint32_t now_ms) const;
 
+    // Identity for the 'PSC0' hello: a protocol version and a build id. Mixed builds must
+    // not pretend to be synced, so PeerHandshakeOk() stays false until the peer's hello
+    // matches both. SetIdentity must run before the first Publish.
+    void SetIdentity(uint32_t build_id, uint32_t version = 1)
+    {
+        build_id_ = build_id;
+        version_ = version;
+    }
+    bool PeerHandshakeOk() const
+    {
+        return peer_hello_ && peer_build_ == build_id_ && peer_version_ == version_;
+    }
+    uint32_t PeerBuildId() const { return peer_build_; }
+    uint32_t PeerProtocol() const { return peer_version_; }
+
     const std::string& LastError() const { return last_error_; }
     uint32_t SentCount() const { return sent_; }
     uint32_t ReceivedCount() const { return received_; }
@@ -63,6 +78,12 @@ private:
     uint32_t peer_received_ms_ = 0;
     uint32_t sent_ = 0;
     uint32_t received_ = 0;
+    uint32_t build_id_ = 0;
+    uint32_t version_ = 1;
+    bool peer_hello_ = false;
+    bool hello_sent_ = false;
+    uint32_t peer_build_ = 0;
+    uint32_t peer_version_ = 0;
     PlayerState peer_;
     std::string peer_host_;
     uint16_t peer_port_ = 0;

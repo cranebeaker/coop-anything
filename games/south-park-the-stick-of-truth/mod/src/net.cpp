@@ -10,6 +10,8 @@ namespace coop {
 namespace {
 
 constexpr uint32_t kMagic = 0x50534331;   // "PSC1"
+constexpr uint32_t kHelloMagic = 0x50534330;  // "PSC0": {magic, version, build_id, seq}
+constexpr int kHelloBytes = 16;
 constexpr int kPacketBytes = 8 + sizeof(float) * 4 + sizeof(uint32_t) * 2;
 
 struct Packet {
@@ -111,6 +113,27 @@ void Net::Publish(const PlayerState& state, uint32_t now_ms)
         return;
     }
     last_send_ms_ = now_ms;
+    sockaddr_in peer = {};
+    peer.sin_family = AF_INET;
+    peer.sin_port = htons(peer_port_);
+    ::inet_pton(AF_INET, peer_host_.c_str(), &peer.sin_addr);
+    // 'PSC0' hello: before the first snapshot and every 20th send, so a peer that starts
+    // late still hears the identity quickly.
+    if (!hello_sent_ || (sequence_ % 20) == 0) {
+        unsigned char hello[kHelloBytes] = {};
+        uint32_t value = kHelloMagic;
+        std::memcpy(hello, &value, 4);
+        value = version_;
+        std::memcpy(hello + 4, &value, 4);
+        value = build_id_;
+        std::memcpy(hello + 8, &value, 4);
+        value = sequence_;
+        std::memcpy(hello + 12, &value, 4);
+        if (::sendto(static_cast<SOCKET>(socket_), reinterpret_cast<const char*>(hello),
+                     kHelloBytes, 0, reinterpret_cast<sockaddr*>(&peer), sizeof(peer)) > 0) {
+            hello_sent_ = true;
+        }
+    }
     Packet packet = {};
     packet.magic = kMagic;
     packet.sequence = ++sequence_;
@@ -120,10 +143,6 @@ void Net::Publish(const PlayerState& state, uint32_t now_ms)
     packet.yaw = state.yaw;
     packet.animation = state.animation;
     packet.body_id = state.body_id;
-    sockaddr_in peer = {};
-    peer.sin_family = AF_INET;
-    peer.sin_port = htons(peer_port_);
-    ::inet_pton(AF_INET, peer_host_.c_str(), &peer.sin_addr);
     if (::sendto(static_cast<SOCKET>(socket_), reinterpret_cast<const char*>(&packet),
                  kPacketBytes, 0, reinterpret_cast<sockaddr*>(&peer), sizeof(peer)) > 0) {
         ++sent_;
@@ -137,20 +156,24 @@ bool Net::Poll(uint32_t now_ms)
     }
     bool fresh = false;
     for (;;) {
-        Packet packet = {};
+        unsigned char buf[64] = {};
         sockaddr_in from = {};
         int from_length = sizeof(from);
-        const int got = ::recvfrom(static_cast<SOCKET>(socket_), reinterpret_cast<char*>(&packet),
-                                   sizeof(packet), 0, reinterpret_cast<sockaddr*>(&from),
+        const int got = ::recvfrom(static_cast<SOCKET>(socket_), reinterpret_cast<char*>(&buf[0]),
+                                   sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from),
                                    &from_length);
         if (got <= 0) {
             break;
         }
-        if (got < kPacketBytes || packet.magic != kMagic) {
+        uint32_t magic = 0;
+        if (got < 4) {
             continue;
         }
-        ++received_;
-        // The guest learns where the host is from the first packet it hears.
+        std::memcpy(&magic, buf, 4);
+        if (got < kHelloBytes || (magic != kMagic && magic != kHelloMagic)) {
+            continue;
+        }
+        // The guest learns where the host is from the first valid packet it hears.
         if (!connected_ && from_length >= static_cast<int>(sizeof(sockaddr_in))) {
             char host[64] = {};
             ::inet_ntop(AF_INET, &from.sin_addr, host, sizeof(host));
@@ -158,6 +181,21 @@ bool Net::Poll(uint32_t now_ms)
             peer_port_ = ntohs(from.sin_port);
             connected_ = true;
         }
+        if (magic == kHelloMagic) {
+            if (got >= kHelloBytes) {
+                std::memcpy(&peer_version_, buf + 4, 4);
+                std::memcpy(&peer_build_, buf + 8, 4);
+                peer_hello_ = true;
+            }
+            continue;
+        }
+        if (got < kPacketBytes) {
+            continue;
+        }
+        Packet packet = {};
+        std::memcpy(&packet, buf, sizeof(packet) <= static_cast<size_t>(got)
+                                   ? sizeof(packet) : static_cast<size_t>(got));
+        ++received_;
         if (!has_peer_ || packet.sequence > sequence_peer_) {
             sequence_peer_ = packet.sequence;
             peer_.x = packet.x;

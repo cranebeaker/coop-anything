@@ -555,6 +555,26 @@ South Park process and its window instead of launching Steam, and `preflight()` 
 bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): announced mod.cpp/net.cpp edit round 5 - auto-net config + wire handshake
+
+Announced before editing (shared-file rule). Two additions, both off by default in
+behaviour terms (nothing changes for the manual bridge commands):
+
+1. `coop-net.cfg` next to the exe (line format `key value`, written by the launcher):
+   `role host|join`, `port <n>`, `host <addr>` for join. The worker auto-starts the
+   transport and RemoteBody with it, so a friend needs no console at all. Malformed or
+   missing file: normal manual mode, logged as [UNKNOWN].
+2. Wire handshake: a 16-byte 'PSC0' hello {magic, protocol_version, build_id, seq} is sent
+   before the first snapshot and every 20th send; `Net::PeerHandshakeOk()` is true only
+   when the peer's hello matches version AND build id (mixed builds refuse to look
+   synced). This closes the "no handshake/mixed builds" gap NOTES recorded for step 6.
+   `state.net` gains `handshake` and `peer_build`.
+
+`net_selftest` gains the hello checks; the transport stays otherwise byte-for-byte the
+same for PSC1 snapshots. Camera findings from this session are recorded separately in the
+step-3 note above (live `Orthographic_Camera` object found; guest-side camera stays local
+for the MVP, so no camera fields in PSC1 yet).
+
 ## 2026-11-17 (lead): step 3a RESULT - the buddy walks a network-driven path (puppet proven)
 
 Same session type as before (owner launched in the VM, new-game forest, Butters following;

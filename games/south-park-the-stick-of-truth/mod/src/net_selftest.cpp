@@ -27,6 +27,8 @@ int main()
 {
     coop::Net host;
     coop::Net guest;
+    host.SetIdentity(228353);
+    guest.SetIdentity(228353);
     check("host listens", host.Listen(27991));
     check("guest connects", guest.Connect("127.0.0.1", 27991));
 
@@ -47,6 +49,7 @@ int main()
         ::Sleep(10);
     }
     check("first snapshot arrives", host.HasPeer());
+    check("hello from the guest arrives", host.PeerHandshakeOk());
     coop::PlayerState peer = host.Peer();
     check("position matches", peer.x == 1.5f && peer.y == -2.25f && peer.z == 0.75f);
     check("yaw and ids match", peer.yaw == 90.0f && peer.animation == 7 && peer.body_id == 3);
@@ -62,6 +65,21 @@ int main()
         ::Sleep(10);
     }
     check("newer snapshot wins", guest.Peer().x == 9.0f);
+    check("hello from the host arrives", guest.PeerHandshakeOk());
+
+    // A third endpoint with a different build id must not pass the handshake.
+    coop::Net other;
+    other.SetIdentity(999999);
+    coop::PlayerState tiny;
+    tiny.x = 0.25f;
+    other.Connect("127.0.0.1", 27991);
+    other.Publish(tiny, 2400);
+    for (int attempt = 0; attempt < 20; ++attempt) {
+        host.Poll(2410 + attempt * 10);   // the stranger's hello lands on the host
+        ::Sleep(10);
+    }
+    check("mixed build refused", !host.PeerHandshakeOk() && host.HasPeer());
+    std::printf("host sees peer build %u\n", host.PeerBuildId());
 
     // Age grows once packets stop; the test waits long enough to see it.
     const uint32_t age = host.PeerAgeMs(2600);

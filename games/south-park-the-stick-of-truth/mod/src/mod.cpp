@@ -2443,6 +2443,19 @@ bool puppet_pose(float out[3], bool* stale_out)
     return true;
 }
 
+// The transport and the interpolator, created once, carrying this build's identity for
+// the 'PSC0' hello. Shared by the bridge commands and the auto-net config file.
+void net_ensure()
+{
+    if (g_net == nullptr) {
+        g_net = new coop::Net();
+        g_net->SetIdentity(228353);
+    }
+    if (g_remote == nullptr) {
+        g_remote = new coop::RemoteBody();
+    }
+}
+
 // Read Companion_Basic +0x2b4 and resolve its class. The transition log is the evidence
 // for command mode: Companion_Command / Companion_Command_Hint means the engine owns the
 // buddy until the state pointer returns to Companion_Follow.
@@ -2964,6 +2977,8 @@ public:
             net.set("sent", static_cast<double>(g_net->SentCount()));
             net.set("received", static_cast<double>(g_net->ReceivedCount()));
             net.set("has_peer", g_net->HasPeer());
+            net.set("handshake", g_net->PeerHandshakeOk());
+            net.set("peer_build", static_cast<double>(g_net->PeerBuildId()));
             const DWORD now = GetTickCount();
             net.set("peer_age_ms", static_cast<double>(g_net->PeerAgeMs(now)));
             coop::PlayerState peer = g_net->Peer();
@@ -3030,9 +3045,7 @@ public:
             return {ai_ok, ai_out};
         }
         if (line.rfind("host ", 0) == 0) {
-            if (g_net == nullptr) {
-                g_net = new coop::Net();
-            }
+            net_ensure();
             const int port = std::atoi(line.c_str() + 5);
             if (port <= 0 || port > 65535) {
                 return {false, "usage: host <port>"};
@@ -3046,9 +3059,7 @@ public:
             return {true, "listening on " + std::to_string(port)};
         }
         if (line.rfind("join ", 0) == 0) {
-            if (g_net == nullptr) {
-                g_net = new coop::Net();
-            }
+            net_ensure();
             char host[64] = {};
             int port = 0;
             if (std::sscanf(line.c_str() + 5, "%63s %d", host, &port) != 2 || port <= 0 ||
@@ -3481,6 +3492,61 @@ DWORD WINAPI worker(LPVOID)
         log_line(endpoint_line.c_str());
     } else {
         log_line("bridge: start failed");
+    }
+    // Auto-net for players: the launcher writes `coop-net.cfg` next to the exe before
+    // starting the game, one `key value` per line:
+    //   role host
+    //   port 27991
+    // or
+    //   role join
+    //   port 27991
+    //   host 26.150.0.7
+    // Missing or incomplete file: manual mode (`host/join` through the bridge) as before.
+    wchar_t net_path[MAX_PATH];
+    lstrcpyW(net_path, path);
+    wchar_t* net_name = wcsrchr(net_path, L'\\');
+    if (net_name != nullptr) {
+        lstrcpyW(net_name + 1, L"coop-net.cfg");
+    }
+    FILE* net_file = _wfopen(net_path, L"r");
+    if (net_file != nullptr) {
+        char line[160];
+        char role[32] = {};
+        char peer_text[96] = {};
+        int port = 0;
+        while (std::fgets(line, sizeof(line), net_file) != nullptr) {
+            char key[32] = {};
+            char value[120] = {};
+            if (std::sscanf(line, "%31s %119s", key, value) == 2) {
+                if (strcmp(key, "role") == 0) {
+                    std::strncpy(role, value, sizeof(role) - 1);
+                } else if (strcmp(key, "port") == 0) {
+                    port = std::atoi(value);
+                } else if (strcmp(key, "host") == 0) {
+                    std::strncpy(peer_text, value, sizeof(peer_text) - 1);
+                }
+            }
+        }
+        std::fclose(net_file);
+        if (strcmp(role, "host") == 0 && port > 0 && port <= 65535) {
+            net_ensure();
+            if (g_net->Listen(static_cast<uint16_t>(port))) {
+                dbg("[OK]", "auto-net: listening on %d (coop-net.cfg)", port);
+            } else {
+                dbg("[ERR]", "auto-net: listen %d failed: %s", port,
+                    g_net->LastError().c_str());
+            }
+        } else if (strcmp(role, "join") == 0 && port > 0 && peer_text[0] != '\0') {
+            net_ensure();
+            if (g_net->Connect(peer_text, static_cast<uint16_t>(port))) {
+                dbg("[OK]", "auto-net: dialling %s:%d (coop-net.cfg)", peer_text, port);
+            } else {
+                dbg("[ERR]", "auto-net: connect failed: %s", g_net->LastError().c_str());
+            }
+        } else if (role[0] != '\0') {
+            dbg("[UNKNOWN]", "auto-net: coop-net.cfg incomplete (role=%s port=%d host=%s)",
+                role, port, peer_text);
+        }
     }
     // The thread still ticks, so a run is observable even before the first frame hook fires.
     // Periodic scans are off when SP_COOP_SCAN=off: a scan during a level load reads a lot of
