@@ -4,16 +4,18 @@
 |---|---|
 | Engine | Unreal Engine 5.4.4 (Obsidian's `Arkansas` project, Microsoft GDK build) |
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
-| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0)), directory entry "tow2-coop" |
+| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.2.0-beta.2](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.2), Steam), directory entry "tow2-coop" |
 | QA level | automated (two copies on one PC; not yet across two PCs) |
-| Last updated | 2026-11-16 |
+| Last updated | 2026-11-17 |
 
 ## Where things stand
 
-Two players can share one campaign with tow2-coop v0.1.0: the friend joins from the main menu by receiving the host's
-save, both see each other, and NPC health and deaths, quest progress, map travel, doors and containers follow the
-host. Everything was tested with two copies of the game on one PC (automated suite and a 30-minute soak); a session
-across two PCs has not been played yet.
+Two players can share one campaign with tow2-coop: the friend joins from the main menu by receiving the host's save,
+both see each other, and NPC health and deaths, quest progress, map travel, doors and containers follow the host.
+v0.1.0 connects by IP; the v0.2.0-beta.2 test build connects Steam friends through the game's own Steam session (no IP
+or port), keeps the friend's own saves untouched (saving is off in the joined game) and shows armor and helmet
+changes. Everything was tested with two copies of the game on one PC (automated suite and a 30-minute soak); the Steam
+link was checked on one copy only, and a session across two PCs has not been played yet.
 
 ## Existing work
 
@@ -50,6 +52,14 @@ sources, layouts and pitfalls.
 - **Player install:** `install.ps1` finds the game through Steam, writes `tow2coop.ini` (role, host address, port,
   optional shared key) and uninstalls cleanly; strangers with another key are ignored and the campaign goes only to
   the joined player's address.
+- **Steam transport (v0.2):** `ISteamNetworkingMessages` through the game's own `steam_api64.dll` (SDK 1.57, flat API):
+  game packets unreliable on channel 0, the campaign hand-over reliable on channel 1; the players find each other with a
+  rich-presence key (`tow2coop` = `host` / `join:<host id>`); the host accepts friends only.
+- **Joined player's saves (v0.2):** the joined game's autosave and quicksave slots are the same files as in its owner's
+  own campaign, so the client calls `SaveGameManager.DisableSaves` once settled in each world (lifted for a hand-over
+  load); a hand-over never sends an old campaign (a refused host save cancels it and the client asks again).
+- **Outfit (v0.2):** the armor set and helmet each player wears go to the other every 2 s and dress the stand-in; the
+  stand-in body's own cap is hidden when the player wears no helmet.
 
 ## QA
 
@@ -60,13 +70,26 @@ sources, layouts and pitfalls.
 - Last results (2026-11-16): suite all PASS (run 33, melee re-run in runs 37 and 39 on a hostile NPC); 30-minute soak
   PASS (run 38: 60 checks, no problems, stand-in to player median 0.2 units, NPC health difference 0, no crash);
   shared key: same key joins in about 15 s, different keys are ignored; installer 8/8 on a fake game folder.
+- v0.2.0-beta.2 (2026-11-17, runs 50-53): the suite gained an outfit check, a client-saves check and a check that the
+  core's fault guard caught nothing during the run. Run 50: 15/15 PASS. Run 52: 14/16, both FAILs were test faults
+  (fixed in the tests). Run 53 on the final build: the first 10 steps PASS, then the agent environment stopped the run
+  for low memory during map travel; the 6 later steps had passed in run 52, whose build differs only by the helmet
+  visibility. Installer 9/9 on a fake game folder. Steam link: relay up and a message to the own SteamID came back,
+  and a campaign sent to the own SteamID arrived byte-identical and loaded (one copy).
 
 ## How to play
 
-Download the [v0.1.0 release](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0). Each player needs their own
-copy of the game. The host runs `install.ps1 -Role host` and gives the printed key to the friend, who runs
-`install.ps1 -Role client -Peer <host address> -Key <key>`. The host's PC must accept UDP 27960 and TCP 27961 (port
-forwarding or a VPN). The host loads their campaign; the friend waits at the main menu and is pulled in.
+Each player needs their own copy of the game (a Steam Families copy can't be played by two people at once).
+
+- **Over Steam** ([v0.2.0-beta.2](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.2), test build, the players are Steam friends): the
+  host runs `install.ps1 -Role host`, the friend `install.ps1 -Role client [-Friend "<host's Steam name>"]`. No address
+  or port.
+- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or beta.2 with `-Transport udp`): the host runs
+  `install.ps1 -Role host` and gives the printed key to the friend, who runs
+  `install.ps1 -Role client -Peer <host address> -Key <key>`. The host's PC must accept UDP 27960 and TCP 27961 (port
+  forwarding or a VPN).
+
+The host loads their campaign; the friend waits at the main menu and is pulled in about a minute later.
 
 ## Known issues
 
@@ -74,11 +97,10 @@ forwarding or a VPN). The host loads their campaign; the friend waits at the mai
 - Keep the host's window un-minimized while the friend joins or follows a map change (a minimized copy can't finish a
   save).
 - Enemies don't attack the friend's stand-in; each player is attacked in their own world.
-- Armor changed after the join isn't shown to the other player. Two players only.
+- Two players only. v0.2.0-beta.2 and v0.1.0 / beta.1 don't connect to each other (both players need the same version).
 - Quest completions reach the friend through a short reload.
 
 ## Next steps
 
-- A two-PC session, then a Steam transport (lobby invite and Valve's relay instead of IP and ports; see
-  [networking-steam-spacewar.md](../../playbook/networking-steam-spacewar.md)).
-- Enemies that target the remote player, armor changes after the join, dialogue sync, items beyond containers.
+- A two-PC session over Steam (two accounts), which one PC can't test.
+- Enemies that target the remote player, dialogue sync, items beyond containers.

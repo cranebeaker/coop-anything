@@ -402,6 +402,11 @@ Observed (runs 30-33):
   started alone once peaked at 7.8 / 4.1 GB; both copies wrote the same driver cache file (keyed by the exe, not the
   path). With the client started 60 s after the host, the full suite peaked at 9.9 GB per copy. Unverified that the
   cap was the cause.
+- **The burst came back after an evening of other use (2026-11-16, run 49):** the host copy sat at 7 GB at the menu
+  (runs 42-47: 3-5 GB), the map-travel load took free RAM under the 2 GB guard, and the next start after that forced
+  stop reached 17 GB. One copy started alone and closed normally (`qa/warmup.ps1`) peaked at 17.2 GB and wrote a 1 GB
+  driver cache file on exit; the next start of the same copy peaked at 4.5 GB, the other copy at 4.3 GB. So: before a
+  two-copy session, warm one copy up alone and close it normally (a forced stop does not write the cache).
 - **Real-input melee:** posted left clicks hit hostile NPCs, but swings at a friendly one (the game offers "Talk")
   do no damage; tests must pick targets with `CharacterBlueprintFunctionLibrary.GetTeamAttitudeTowards` = Hostile.
 - **Suite (run 33, two copies on one PC):** auto-join from the main menu, NPC authority, story, doors and containers,
@@ -419,8 +424,24 @@ reach the open port are ignored, and the campaign hand-over accepts only the joi
   and `EquipmentComponent.SetArmorVisualOverride(ArmorSet, Helmet)` with the player's equipped items, then
   `RefreshFullAppearance`, makes gender, head, customization and `CurrentBody` match the player in both worlds.
 
-Not done yet (see the acceptance matrix in the mod repo): armor changes after the join, enemies attacking the remote
-player, loot and inventory rules beyond containers, dialogue sync, two-machine test.
+- **Armor changes after the join (run 50):** each player sends the class paths of its worn armor set and helmet every
+  2 s; the other side applies them with `SetArmorVisualOverride`, using the class default object when it doesn't hold
+  the same piece (checked first: a `/Game/` class whose default object is an `ArmorSet` / `Helmet`). The client took
+  its helmet off, put another armor set on and both back; the override in the host's world followed each change within
+  10 s (read back with `GetArmorVisualOverride`). Probe 53 (pictures from the host's idle camera, which orbits the
+  player in third person after a while without input): the stand-in wore the player's suit and helmet; with the helmet
+  override cleared it wore its own dock worker's hard hat (`HeadGear_DockWorker_01_Var1`, merged into the head mesh, no
+  separate component); `AppearanceComponent.bHelmetVisible=false` + `RefreshFullAppearance` showed a bare head. So the
+  look message also carries "helmet shown" (worn and the player's own `bHelmetVisible`), mirrored on the stand-in;
+  run 53: helmet off -> no override and `bHelmetVisible` false, back on -> both restored.
+- **Faults after a hand-over load (run 50):** the client's per-frame sync hit 23 caught access violations within
+  1.4 s, 5-7 s after a resync `LoadGame`, in `ue::alive` reading a freed actor of the old world (the guard now logs the
+  offset in the core: `+0x1f6c5`, mapped with `llvm-nm`). The old world is torn down over several frames before the
+  world pointer changes, later than the 5 s pause then used. Fix: after a `LoadGame` the core started and the game
+  accepted, wait until the world pointer changes (60 s at most), and read network data only after that world check.
+
+Not done yet (see the acceptance matrix in the mod repo): enemies attacking the remote player, loot and inventory
+rules beyond containers, dialogue sync, two-machine test.
 
 ## Tools on the test PC (2026-11-15)
 
