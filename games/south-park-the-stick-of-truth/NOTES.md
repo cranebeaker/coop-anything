@@ -555,6 +555,30 @@ South Park process and its window instead of launching Steam, and `preflight()` 
 bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): announced mod.cpp edit round 3 - network puppet for the buddy (step 3a)
+
+Step 3 begins: bind the buddy to the network. Announced before editing (shared-file rule),
+changes in `mod/src/mod.cpp` only (`remote.cpp/net.cpp` already compiled in; no new files):
+
+1. `SP_COOP_BRIDGE_PORT` env (default 27990, endpoint file name gets the port when
+   overridden) so two game instances can run side by side in the VM testbed.
+2. Outgoing snapshot source: hero triple via the proven direct chase
+   (`hero_object_triple`) or the buddy (`resolve_buddy` + `ds+0x10`), plus yaw computed
+   from the `+0x1c` quaternion as `2*atan2(y,w)` normalized to [-180,180). The cached
+   `+0x5c` triple is NOT used. New bridge commands `send hero|buddy`.
+3. `coop::RemoteBody` wired into the worker: after `Net::Poll`, the fresh peer snapshot is
+   pushed and, when puppet mode is on, the interpolated pose (render 100 ms in the past)
+   is cached under a CRITICAL_SECTION for the game thread.
+4. New bridge command `puppet on|off`: `on` finds the AI hook labelled `Follow#5` by label
+   (the slot step 2 proved is the buddy update), activates the hold detour on it and makes
+   the detour write the NETWORK pose instead of the static anchor; `off` restores normal
+   AI. Every written triple still passes `world_position()` before any write; a stale pose
+   holds rather than extrapolates (RemoteBody rule); nothing is ever written on yaw.
+5. `state` gains a `remote` block: pose, stale, history count, send source.
+
+Safety unchanged: reads via VirtualQuery+RPM, every write logged with old/new values
+before it happens, no new offsets (ds+0x10 is the step-1-proven buddy transform).
+
 ## 2026-11-17 (lead): step 2 RESULT - buddy AI slot found and proven (freeze + baseline + restore)
 
 One game session (pid 6828, new-game forest save, Butters in party, VM), no relaunches

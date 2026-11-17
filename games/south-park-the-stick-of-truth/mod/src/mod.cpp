@@ -19,6 +19,7 @@
 #include "aihook.h"
 #include "coopbridge/server.h"
 #include "net.h"
+#include "remote.h"
 #include <string>
 #include <vector>
 extern "C" void coop_note(const char* text);
@@ -1942,6 +1943,13 @@ int g_buddy_count = 0;
 uintptr_t g_anim_hits[8];
 int g_anim_count = 0;
 coop::Net* g_net = nullptr;
+coop::RemoteBody* g_remote = nullptr;
+int g_send_source = 0;                  // 0 = hero, 1 = buddy (bridge: `send hero|buddy`)
+bool g_puppet_active = false;           // bridge: `puppet on|off`
+CRITICAL_SECTION g_puppet_cs;
+bool g_puppet_cs_ready = false;
+coop::RemoteBody::Pose g_puppet_pose = {};
+bool g_puppet_pose_valid = false;
 
 void sync_bridge_lists()
 {
@@ -2352,6 +2360,91 @@ bool resolve_buddy(bool quiet)
     return true;
 }
 
+// Yaw from the proven quaternion triple at DS_Game_Object +0x1c (x,y,z,w): the hero reads
+// 270 deg normalized to -90, Butters 180; checked against the step-1 values. A non-unit
+// or non-finite quaternion is refused - yaw is only ever PUBLISHED, never written back.
+bool object_yaw(uintptr_t object, float* yaw_out)
+{
+    float q[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    if (!safe_read_quiet(object + 0x1c, q, sizeof(q))) {
+        return false;
+    }
+    for (int index = 0; index < 4; ++index) {
+        if (!std::isfinite(q[index])) {
+            return false;
+        }
+    }
+    const double norm2 = static_cast<double>(q[0]) * q[0] + static_cast<double>(q[1]) * q[1] +
+                         static_cast<double>(q[2]) * q[2] + static_cast<double>(q[3]) * q[3];
+    if (norm2 < 0.25 || norm2 > 4.0) {
+        return false;
+    }
+    double yaw = 2.0 * std::atan2(static_cast<double>(q[1]), static_cast<double>(q[3])) *
+                 180.0 / 3.14159265358979323846;
+    while (yaw >= 180.0) {
+        yaw -= 360.0;
+    }
+    while (yaw < -180.0) {
+        yaw += 360.0;
+    }
+    if (yaw_out != nullptr) {
+        *yaw_out = static_cast<float>(yaw);
+    }
+    return true;
+}
+
+// Build the snapshot this machine sends. The position comes from the proven logic
+// transforms (hero: DS_Component_Player +0x0c -> object +0x10; buddy: resolve_buddy then
+// its object +0x10); the stale component cache at +0x5c is never sent.
+bool fill_outgoing(coop::PlayerState* state)
+{
+    uintptr_t object = 0;
+    if (g_send_source == 1) {
+        if (!resolve_buddy(true) || g_buddy_ds == 0) {
+            state->body_id = 0;
+            return false;
+        }
+        object = g_buddy_ds;
+    } else {
+        float hero_position[3] = {0.0f, 0.0f, 0.0f};
+        if (!hero_object_triple(hero_position, &object) || object == 0) {
+            state->body_id = 0;
+            return false;
+        }
+    }
+    float values[3] = {0.0f, 0.0f, 0.0f};
+    if (!read_triple_quiet(object, 0x10, values) || !world_position(values)) {
+        state->body_id = 0;
+        return false;
+    }
+    state->x = values[0];
+    state->y = values[1];
+    state->z = values[2];
+    float yaw = 0.0f;
+    state->yaw = object_yaw(object, &yaw) ? yaw : 0.0f;
+    state->animation = 0;  // numeric animation id is still unproven (TODO line)
+    state->body_id = g_send_source == 1 ? 2 : 1;
+    return true;
+}
+
+// Read the cached puppet pose for the game thread. False until the worker has seen one.
+bool puppet_pose(float out[3], bool* stale_out)
+{
+    if (!g_puppet_cs_ready || !g_puppet_pose_valid) {
+        return false;
+    }
+    EnterCriticalSection(&g_puppet_cs);
+    out[0] = g_puppet_pose.x;
+    out[1] = g_puppet_pose.y;
+    out[2] = g_puppet_pose.z;
+    const bool stale = g_puppet_pose.stale;
+    LeaveCriticalSection(&g_puppet_cs);
+    if (stale_out != nullptr) {
+        *stale_out = stale;
+    }
+    return true;
+}
+
 // Read Companion_Basic +0x2b4 and resolve its class. The transition log is the evidence
 // for command mode: Companion_Command / Companion_Command_Hint means the engine owns the
 // buddy until the state pointer returns to Companion_Follow.
@@ -2471,24 +2564,37 @@ void ai_hold_after(int id, uintptr_t self)
     if (!read_triple_quiet(g_buddy_ds, 0x10, current)) {
         return;
     }
-    if (!world_position(current) || distance3(current, g_hold_anchor) <= 0.001) {
+    if (!world_position(current)) {
+        return;
+    }
+    // The target is either the frozen anchor captured at `aihold` or, in puppet mode, the
+    // interpolated pose from the peer. A pose that fails the world-position test, or that
+    // has not arrived at all, leaves the buddy exactly where it is: no teleport, no guess.
+    float target[3] = {g_hold_anchor[0], g_hold_anchor[1], g_hold_anchor[2]};
+    bool stale = false;
+    if (g_puppet_active) {
+        if (!puppet_pose(target, &stale) || !world_position(target)) {
+            return;
+        }
+    }
+    if (distance3(current, target) <= 0.001) {
         return;
     }
     if (now - g_hold_last_write_log >= 1000) {
-        dbg("[BUDDY]", "hold id=%d restore ds=0x%08llx current=%.3f %.3f %.3f anchor=%.3f "
-                       "%.3f %.3f state=%s%s",
+        dbg("[BUDDY]", "hold id=%d restore ds=0x%08llx current=%.3f %.3f %.3f target=%.3f "
+                       "%.3f %.3f state=%s%s%s",
             id, static_cast<unsigned long long>(g_buddy_ds), current[0], current[1],
-            current[2], g_hold_anchor[0], g_hold_anchor[1], g_hold_anchor[2],
-            g_buddy_state_class,
-            g_buddy_mover != 0 ? " (also mover+0x12c)" : "");
+            current[2], target[0], target[1], target[2], g_buddy_state_class,
+            g_buddy_mover != 0 ? " (also mover+0x12c)" : "",
+            g_puppet_active ? (stale ? " PUPPET stale-hold" : " PUPPET") : "");
         g_hold_last_write_log = now;
     }
     SIZE_T wrote = 0;
     WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_ds + 0x10),
-                       g_hold_anchor, sizeof(g_hold_anchor), &wrote);
+                       target, sizeof(target), &wrote);
     if (g_buddy_mover != 0) {
         WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_mover + 0x12c),
-                           g_hold_anchor, sizeof(g_hold_anchor), &wrote);
+                           target, sizeof(target), &wrote);
     }
     ++g_hold_restores;
 }
@@ -2852,6 +2958,20 @@ public:
             peer_state.set("z", static_cast<double>(peer.z));
             peer_state.set("yaw", static_cast<double>(peer.yaw));
             net.set("peer", peer_state);
+            net.set("send_source", g_send_source == 1 ? "buddy" : "hero");
+            if (g_remote != nullptr) {
+                Value remote = Value::object();
+                remote.set("snapshots", static_cast<double>(g_remote->Count()));
+                const coop::RemoteBody::Pose pose =
+                    g_remote->At(static_cast<uint32_t>(GetTickCount()));
+                remote.set("x", static_cast<double>(pose.x));
+                remote.set("y", static_cast<double>(pose.y));
+                remote.set("z", static_cast<double>(pose.z));
+                remote.set("yaw", static_cast<double>(pose.yaw));
+                remote.set("stale", pose.stale);
+                remote.set("puppet", g_puppet_active);
+                net.set("remote", remote);
+            }
             root.set("net", net);
         }
         if (g_player_count > 0) {
@@ -2905,6 +3025,9 @@ public:
             if (!g_net->Listen(static_cast<uint16_t>(port))) {
                 return {false, g_net->LastError()};
             }
+            if (g_remote == nullptr) {
+                g_remote = new coop::RemoteBody();
+            }
             return {true, "listening on " + std::to_string(port)};
         }
         if (line.rfind("join ", 0) == 0) {
@@ -2920,6 +3043,9 @@ public:
             if (!g_net->Connect(host, static_cast<uint16_t>(port))) {
                 return {false, g_net->LastError()};
             }
+            if (g_remote == nullptr) {
+                g_remote = new coop::RemoteBody();
+            }
             return {true, "sending to " + std::string(host) + ":" + std::to_string(port)};
         }
         if (line == "net") {
@@ -2928,6 +3054,73 @@ public:
             }
             return {true, "sent=" + std::to_string(g_net->SentCount()) +
                               " received=" + std::to_string(g_net->ReceivedCount())};
+        }
+        if (line.rfind("send ", 0) == 0) {
+            const char* what = line.c_str() + 5;
+            while (*what == ' ') {
+                ++what;
+            }
+            if (strcmp(what, "hero") == 0) {
+                g_send_source = 0;
+                dbg("[OK]", "net: send source = hero");
+                return {true, "sending hero"};
+            }
+            if (strcmp(what, "buddy") == 0) {
+                if (!resolve_buddy(false) || g_buddy_ds == 0) {
+                    return {false, "ERROR buddy not resolved; run probe first"};
+                }
+                g_send_source = 1;
+                dbg("[OK]", "net: send source = buddy ds=0x%08llx",
+                    static_cast<unsigned long long>(g_buddy_ds));
+                return {true, "sending buddy"};
+            }
+            return {false, "usage: send hero|buddy"};
+        }
+        if (line.rfind("puppet ", 0) == 0) {
+            const char* what = line.c_str() + 7;
+            while (*what == ' ') {
+                ++what;
+            }
+            if (strcmp(what, "on") == 0) {
+                int follow5 = -1;
+                for (int id = 0; id < aihook::count(); ++id) {
+                    if (strcmp(aihook::label(id), "Follow#5") == 0) {
+                        follow5 = id;
+                        break;
+                    }
+                }
+                if (follow5 < 0) {
+                    return {false, "ERROR Follow#5 hook missing; run aiscan in a loaded level"};
+                }
+                if (g_remote == nullptr) {
+                    g_remote = new coop::RemoteBody();
+                }
+                if (!g_puppet_cs_ready) {
+                    InitializeCriticalSection(&g_puppet_cs);
+                    g_puppet_cs_ready = true;
+                }
+                char id_text[16];
+                std::snprintf(id_text, sizeof(id_text), "%d", follow5);
+                std::string hold_out;
+                if (!ai_hold_command(id_text, &hold_out) || hold_out.rfind("ERROR", 0) == 0) {
+                    return {false, hold_out};
+                }
+                EnterCriticalSection(&g_puppet_cs);
+                g_puppet_pose_valid = false;
+                LeaveCriticalSection(&g_puppet_cs);
+                g_puppet_active = true;
+                dbg("[OK]", "puppet ON via hold id=%d; the buddy pose now follows the peer "
+                            "snapshots (world-position-guarded, stale poses hold)", follow5);
+                return {true, "puppet on (hold id " + std::to_string(follow5) + ")"};
+            }
+            if (strcmp(what, "off") == 0) {
+                g_puppet_active = false;
+                std::string off_out;
+                ai_hold_command("off", &off_out);
+                dbg("[OK]", "puppet OFF; hold released, buddy AI resumes");
+                return {true, "puppet off"};
+            }
+            return {false, "usage: puppet on|off"};
         }
         float dx = 0.0f;
         float dy = 0.0f;
@@ -3251,13 +3444,26 @@ DWORD WINAPI worker(LPVOID)
     coopbridge::Options options;
     options.game = "south-park";
     options.build = "228353";
-    options.tcpPort = 27990;
-    options.endpointFile = "coop-bridge.json";
+    // Two game instances side by side in the VM test bed need different bridge ports; the
+    // default stays 27990 so every existing tool keeps working.
+    int bridge_port = 27990;
+    wchar_t port_env[16] = {};
+    if (GetEnvironmentVariableW(L"SP_COOP_BRIDGE_PORT", port_env, 16) > 0) {
+        const int requested = ::_wtoi(port_env);
+        if (requested >= 1 && requested <= 65534) {
+            bridge_port = requested;
+        }
+    }
+    options.tcpPort = bridge_port;
+    options.endpointFile = bridge_port == 27990
+                               ? "coop-bridge.json"
+                               : "coop-bridge-" + std::to_string(bridge_port) + ".json";
     g_adapter = new CoopAdapter();
     g_server = new coopbridge::Server();
     if (g_server != nullptr && g_adapter != nullptr && g_server->Start(options, *g_adapter)) {
         g_bridge_started = true;
-        log_line("bridge: tcp://127.0.0.1:27990");
+        const std::string endpoint_line = "bridge: tcp://127.0.0.1:" + std::to_string(bridge_port);
+        log_line(endpoint_line.c_str());
     } else {
         log_line("bridge: start failed");
     }
@@ -3286,17 +3492,22 @@ DWORD WINAPI worker(LPVOID)
         }
         if (g_net != nullptr) {
             const DWORD now = GetTickCount();
-            g_net->Poll(now);
             coop::PlayerState state;
-            if (g_player_count > 0) {
-                float values[3] = {0.0f, 0.0f, 0.0f};
-                unsigned offset = 0;
-                if (read_first_triple(g_player_hits[0], values, &offset)) {
-                    state.x = values[0];
-                    state.y = values[1];
-                    state.z = values[2];
+            if (g_remote != nullptr) {
+                // Pull polls the socket and records fresh snapshots in the history.
+                g_remote->Pull(*g_net, static_cast<uint32_t>(now));
+                if (g_puppet_active && g_puppet_cs_ready) {
+                    const coop::RemoteBody::Pose pose =
+                        g_remote->At(static_cast<uint32_t>(now));
+                    EnterCriticalSection(&g_puppet_cs);
+                    g_puppet_pose = pose;
+                    g_puppet_pose_valid = true;
+                    LeaveCriticalSection(&g_puppet_cs);
                 }
+            } else {
+                g_net->Poll(now);
             }
+            fill_outgoing(&state);          // a failed fill sends body_id=0 placeholders
             g_net->Publish(state, now);
         }
         Sleep(16);
