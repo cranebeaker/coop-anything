@@ -199,6 +199,12 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
 
 ### Messaging rules learned the hard way
 
+- **Wait for the game's own `SteamAPI_Init`.** A mod that uses the game's Steam session must keep polling until
+  `SteamAPI_GetHSteamUser()` is non-zero; a single check at start is not enough. On The Outer Worlds 2 (UE 5.4,
+  Obsidian's platform layer starts the Steam subsystem), test copies started directly with `steam_appid.txt` had Steam
+  up 14 s after the mod loaded, and every one-PC test passed. In the first two-PC test, both games were started by
+  Steam and had no Steam session 15-22 s in. The mod had checked once, so co-op stayed off. A retry every 2 s fixed it.
+  Test the late path with a test-only delay.
 - **Session accept:** the first message from an unknown SteamID raises
   SessionRequest (1251). Call `AcceptSessionWithUser` there, or messages are held
   or dropped. The host accepts strangers; clients accept only the host.

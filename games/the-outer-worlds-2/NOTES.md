@@ -443,6 +443,46 @@ reach the open port are ignored, and the campaign hand-over accepts only the joi
 Not done yet (see the acceptance matrix in the mod repo): enemies attacking the remote player, loot and inventory
 rules beyond containers, dialogue sync, two-machine test.
 
+## First two-PC test (2026-11-17, beta.2: the owner's PC and a friend's PC, both started by Steam)
+
+Observed:
+
+- Both `tow2coop.log` files: build check OK, "GameEngine instance up after 22125 ms" (host) and "15718 ms" (friend),
+  then "co-op: Steam is not initialised in this game", and nothing after it. beta.2 checked `SteamAPI_GetHSteamUser()`
+  once, at the mod's start, and left co-op off for the whole session.
+- Test copies (started directly, `steam_appid.txt` plus `SteamAppId`/`SteamGameId` in the environment): the proxy's
+  Steam guard saw `SteamAPI_Init` about 0.4 s after the start. The core found the Steam session up 14 s after it
+  loaded (copy 0, "Steam link ready (app 1449110)"). So no one-PC test met the late case.
+- `SteamAPI_Init` is a delay import of `steam_api64.dll`. Only UE's `FSteamSharedModule::ObtainSteamClientInstanceHandle`
+  (exe+0x1b3cc10) calls it, and that function has two callers:
+  - `FOnlineSubsystemSteam::InitSteamworksClient` (exe+0x1b3c9a0), the only caller of `SteamAPI_RestartAppIfNecessary`.
+    It is called from `FOnlineSubsystemSteam::Init` (exe+0x245b2ac: `OnlineSubsystemSteam`, `SteamSockets`,
+    `OnlineAsyncTaskThreadSteam %s`).
+  - A Steam Deck check (exe+0x3f94790: `Valve`, `Jupiter`, `Galileo`, `SteamDeck`) that drops its handle when it returns.
+- Obsidian's platform layer checks the default platform service in `OEIPlatformServiceSubsystem::Initialize`
+  (exe+0x1e701c4, a vtable entry; source path `Plugins/OEIPlatformService/.../OEIPlatformServiceSubsystem.cpp`). Its
+  messages: "Game not started from Steam and failed to relaunch in Steam, please delete the steam_appid.txt file if it
+  exists in game's binary directory"; "Failed to initialize default platform service %s which is necessary, game
+  exiting...".
+
+Derived:
+
+- A game started by Steam sets up its Steam session after the point where the mod starts. A direct start (test copies)
+  sets it up before that point.
+- The Steam Deck check's early init does not last. `SteamShared` keeps only a weak pointer (the stored handle bumps the
+  weak count), so releasing the handle shuts Steam down again. Read from the code, not observed.
+
+Unknown:
+
+- When exactly a Steam launch sets up Steam. beta.3 logs it: "Steam link ready (app ...), N s after the mod started".
+- Whether the title screen ("PRESS ANY KEY") plays a part. The platform check runs in a subsystem `Initialize`, so it is
+  probably part of the engine start, before the first map. Not checked on a real launch.
+
+Fix (beta.3): the Steam link retries every 2 s on the game thread until the session is up. Checked by test 54
+(`qa/test_steam_late.py`: one copy as Steam client at the menu, the mod told to ignore Steam for 40 s): the log reads
+"waiting for the game's Steam session", then "Steam link ready (app 1449110), 41 s after the mod started", with no
+caught faults. Not yet retested across two PCs.
+
 ## Tools on the test PC (2026-11-15)
 
 Present: Python 3.13, git, gh, Java 21 (Temurin), .NET SDK. Missing: any C/C++ compiler (the Visual Studio
