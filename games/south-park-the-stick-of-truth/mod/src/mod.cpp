@@ -1156,6 +1156,40 @@ bool find_live_probe(uintptr_t player, float out[3], unsigned* slot_out, uintptr
 // object+0x10). Motion was proven on 2026-11-16, run 28c1ea9e..., all validity flags true:
 // writing +3 on X changed 32.380 -> 35.380 and the frame changed; the component's own +0x5c
 // triple (0, 7, 45) never changed, so it is a cache.
+bool object_ascii_name(uintptr_t object, char* out, size_t size);  // defined with the buddy code
+
+// The chase proven in both recorded levels: DS_Component_Player +0x0c -> DS_Game_Object,
+// whose +0x10 equals the hero mover's +0x12c (Fort: 32.380, 0.400, 15.119; forest 2026-11-17:
+// 3000.000, 0.400, 2.250). Identifying the object needs no nearest-anchor game: the ASCII name
+// at +0x30 starts with "_player". Returns false when no player component chases such an object.
+bool hero_object_triple(float out[3], uintptr_t* object_out)
+{
+    for (int index = 0; index < g_class_counts[0]; ++index) {
+        uintptr_t object = 0;
+        if (!safe_read_quiet(g_class_hits[0][index] + 0x0c, &object, sizeof(object)) ||
+            object < 0x10000) {
+            continue;
+        }
+        char name[64] = {};
+        if (!object_ascii_name(object, name, sizeof(name)) ||
+            strstr(name, "_player") == nullptr) {
+            continue;
+        }
+        if (!read_triple_quiet(object, 0x10, out) || !world_position(out)) {
+            continue;
+        }
+        if (object_out != nullptr) {
+            *object_out = object;
+        }
+        dbg("[ADDR]", "hero direct: component 0x%08llx +0x0c -> object 0x%08llx '%s' "
+                      "+0x10 = %.3f %.3f %.3f",
+            static_cast<unsigned long long>(g_class_hits[0][index]),
+            static_cast<unsigned long long>(object), name, out[0], out[1], out[2]);
+        return true;
+    }
+    return false;
+}
+
 bool resolve_hero_position(float out[3], uintptr_t* mover_out, unsigned* offset_out)
 {
     if (g_class_counts[0] == 0) {
@@ -1166,8 +1200,14 @@ bool resolve_hero_position(float out[3], uintptr_t* mover_out, unsigned* offset_
     unsigned probe_slot = 0;
     uintptr_t probe_object = 0;
     unsigned probe_offset = 0;
-    const bool have_probe = find_live_probe(g_class_hits[0][0], probe, &probe_slot,
-                                            &probe_object, &probe_offset);
+    bool have_probe = hero_object_triple(probe, &probe_object);
+    if (!have_probe) {
+        // Fallback kept for builds where the direct chase fails; its nearest-anchor rule
+        // picked a wrong triple (1541,0.17,0) in the 2026-11-17 forest run, which is why
+        // the direct chase is tried first now.
+        have_probe = find_live_probe(g_class_hits[0][0], probe, &probe_slot,
+                                     &probe_object, &probe_offset);
+    }
     if (have_probe) {
         dbg("[ADDR]", "hero probe: component 0x%08llx +0x%x -> 0x%08llx +0x%x = %.3f %.3f %.3f",
             static_cast<unsigned long long>(g_class_hits[0][0]), probe_slot,
@@ -2268,6 +2308,12 @@ bool resolve_buddy(bool quiet)
             g_hero_mover_cached = hero_mover;
         }
     }
+    if (!have_hero) {
+        // Even without a mover match, the direct triple says where the hero is, and the
+        // exclusion below needs it: choosing the hero's mover as the buddy's once crashed
+        // a tpbody run (NOTES 2026-11-15), so never skip the exclusion for lack of a probe.
+        have_hero = hero_object_triple(hero_position, nullptr);
+    }
     double best_gap = 0.15;
     for (int index = 0; index < g_mover_count; ++index) {
         const uintptr_t candidate = g_mover_hits[index];
@@ -2954,12 +3000,11 @@ public:
             unsigned hero_offset = 0;
             const bool have_hero = resolve_hero_position(hero_before, &hero_mover, &hero_offset);
             bool have_buddy = false;
-            if (g_party_count > 0) {
-                unsigned via = 0;
-                uintptr_t target = 0;
-                unsigned offset = 0;
-                have_buddy = position_of_object(g_party_hits[0], buddy_before, &via, &target,
-                                                &offset);
+            // Measure the buddy from the name-verified ds object, not g_party_hits[0]:
+            // the party index is not stable (forest run 2026-11-17: party[0] is the hero).
+            if (resolve_buddy(true)) {
+                have_buddy = read_triple_quiet(g_buddy_ds, 0x10, buddy_before) &&
+                             world_position(buddy_before);
             }
             SIZE_T wrote = 0;
             const BOOL written = WriteProcessMemory(GetCurrentProcess(),
@@ -2981,12 +3026,9 @@ public:
             float buddy_after[3] = {0.0f, 0.0f, 0.0f};
             const bool have_hero_after = resolve_hero_position(hero_after, nullptr, nullptr);
             bool have_buddy_after = false;
-            if (g_party_count > 0) {
-                unsigned via = 0;
-                uintptr_t target = 0;
-                unsigned offset = 0;
-                have_buddy_after = position_of_object(g_party_hits[0], buddy_after, &via,
-                                                      &target, &offset);
+            if (g_buddy_ds != 0) {
+                have_buddy_after = read_triple_quiet(g_buddy_ds, 0x10, buddy_after) &&
+                                   world_position(buddy_after);
             }
             const double hero_moved =
                 have_hero && have_hero_after ? distance3(hero_before, hero_after) : -1.0;

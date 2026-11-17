@@ -503,6 +503,33 @@ build-from-zero puppet path. `PLAN.md` and `prompts/` split this into seven agen
 two PCs and two screens over the network as the product target and local two-player only as a
 development milestone.
 
+## 2026-11-17 (lead): announced mod.cpp edit — direct hero-object triple, buddy-safe wblock
+
+The step-2 adopt run (report `local/vm-out/step2-hook-report-25607.json`) found the hooks
+and rates but showed `hero=0,0,0` on every STATE line: `find_live_probe`'s nearest-to-cached-
+triple rule picked `component+0x6c -> 0x1c000b30+0xdc = (1541,0.17,0)` in this level (the
+cache `(0,7,45)` anchor is stale there), so no mover matched and `tpbody` refused. Announced
+before editing (shared-file rule), three changes in `mod/src/mod.cpp`, reads/writes unchanged
+in style (VirtualQuery+RPM everywhere, log-before-write):
+
+1. new helper `hero_object_triple()` - the chase proven in BOTH levels:
+   `DS_Component_Player +0x0c -> DS_Game_Object +0x10` (Fort `32.380,0.400,15.119`; this run
+   `3000.000,0.400,2.250`, equal to the hero mover's `+0x12c` in both). `resolve_hero_position`
+   tries it first and only falls back to the nearest-anchor probe.
+2. `resolve_buddy`: when `resolve_hero_position` fails, the hero position used to EXCLUDE the
+   hero's mover from the buddy's mover selection is now still taken via the direct chase -
+   a silent hero-mover-as-buddy-mover selection is exactly the class of bug that crashed the
+   `tpbody` run of 2026-11-15.
+3. `wblock`'s before/after movement measurement reads the buddy from `resolve_buddy(true)` +
+   `g_buddy_ds + 0x10` (name-verified) instead of `g_party_hits[0]` - the live run proved the
+   party index is not stable (`party[0]` is the hero in this level, `party[1]` is Butters).
+
+Also a harness bug found and fixed the same day in `tools/step2_hook.py::parse_stats`: key/
+value pairs started at token 1 instead of 0, so the ranked candidate list was always empty -
+the slots DO tick (Follow#5 = target RVA `0x4f2610`, 30.6/s, self = live Companion_Follow
+`0x0857e4b0`; Follow#8 122/s same self). The Fort hypothesis "slot 5 = Update" matches the
+RTTI index vtable exactly and awaits the freeze test.
+
 ## 2026-11-17 (lead): announced harness edit — adopt mode (attach to the user-started game)
 
 Continuing step 2. The only working launch path in the VM is the user clicking Play in

@@ -135,7 +135,7 @@ def parse_stats(text):
         if line.startswith('ID '):
             parts = line.split()
             item = {}
-            index = 1
+            index = 0                      # pairs start at the 'ID' token itself
             while index + 1 < len(parts):
                 item[parts[index]] = parts[index + 1]
                 index += 2
