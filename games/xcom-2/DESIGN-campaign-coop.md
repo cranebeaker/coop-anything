@@ -327,6 +327,15 @@ Decided (owner, 2026-11-16):
 - **Gear tier follows the game stage**, not points: early game conventional weapons and Kevlar armor, mid game
   magnetic weapons and Predator armor, late game beam (plasma) weapons and Warden armor. Special suits cost extra
   points on top: Spider Suit and EXO Suit (mid), Wraith Suit and W.A.R. Suit (late).
+- **The budget scales with the game stage.**
+- **Ranks:** each stage has a minimum rank; higher ranks can be bought with points.
+- **Utility items** (grenades, medkits, ammo, vests...) are bought with points.
+- **Objectives come in sets.** A mission is a sequence of sets; each set has 1-3 objectives running at the same
+  time, most with their own turn limit, and the next set starts when the current one ends. Late game has more
+  objectives than early game. Example (owner):
+  1. Kill the ADVENT officer (5 turns) + capture a zone (6 turns).
+  2. Regroup at the zone and defend it for 8 turns.
+  3. Set charges at the zone (no limit) + extract (5 turns).
 
 Item and class names in the game data (SDK source, read only): weapons by tier `AssaultRifle_CV`, `_MG`, `_BM`
 (the same suffixes for the other weapon families); armor `KevlarArmor`, `MediumPlatedArmor` (Predator),
@@ -354,15 +363,26 @@ Open questions (owner):
 - Prices: what one ability, one stat point (aim, HP, mobility, will, dodge...) and each special unit cost; are
   ranks bought (a rank brings its ability picks), or abilities one by one; caps per stat.
 - Utility items (grenades, medkits, ammo types, vests): included in the gear tier, or bought with points.
-- Objectives: how many, which kinds (hack, rescue, destroy, extract, defend), whether each has a deadline, whether
-  some are optional for a bonus; how the result is scored, if at all.
+- Prices and amounts: the budget per stage, what an ability, a stat point, a rank above the minimum, each special
+  unit, special suit and utility item cost; caps per stat.
+- Objective sets: how many sets and objectives per stage; whether sets are hand-made sequences (like the example)
+  or drawn from pools; which objective kinds exist (kill a target, capture, defend, hack, rescue, destroy,
+  set charges, extract...).
+- Failure: what happens when an objective's turn limit runs out (the mission fails, the set fails and the next one
+  starts with a penalty, or a bonus is lost); whether some objectives are optional.
+- Scoring, if any.
 - Saved operator pools and a record of scenarios played, or everything fresh each time.
 
 What has to be checked before building it (unknown so far):
 
-- Whether a mission can carry several primary objectives at once. In the game a mission type comes with its own
-  map parcels and objective scripting; combining two (for example hack a terminal and rescue a VIP on one map)
-  may need new mission definitions or objective scripts.
+- Running objective sets. In the game a mission type comes with its own map parcels and objective scripting
+  (Kismet), one objective chain per mission type. Sets of 1-3 objectives in sequence probably need the mod to run
+  its own objective manager (a turn counter and event listeners for kills, units in a zone, interactions) rather
+  than each map's scripts. Building blocks found in the SDK (map-script actions, not run): turn-limit display
+  `SeqAct_DisplayUISpecialMissionTimer`, objective list `UIObjectiveList` / `SeqAct_DisplayMissionObjective`,
+  `SeqAct_MakeObjective`, `SeqAct_SpawnAdditionalObjective` (an objective added mid-mission), evac zone
+  `SeqAct_SpawnEvacZone`; an officer to kill exists as `AdvCaptainM1`/`M2`. Unknown: whether a mod can call these
+  from script during a mission, and where zones and charge points go on a map that was not made for them.
 - Whether the Skirmish start state can be built on a co-op host and sent to guests like a campaign mission (our
   join and mission handoff assume a campaign behind the mission).
 - Whether the game stage maps cleanly to Skirmish's tech level and the enemy force level.

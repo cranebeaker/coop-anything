@@ -1592,3 +1592,8 @@ Owner decisions the same day: 12 operators per mission split evenly among the pl
 soldiers only; points buy gear, abilities, stats and special units (Reaper, Skirmisher, Templar, Psi Operative);
 the weapon and armor tier follows the game stage (conventional/Kevlar, magnetic/Predator, beam/Warden), with the
 special suits (Spider, EXO, Wraith, W.A.R.) costing extra points.
+Further owner decisions: the budget scales with the game stage; each stage has a minimum rank, higher ranks
+bought with points; utility items bought with points; objectives come in sets of 1-3 running at once, most with
+a turn limit, the next set starting when the current one ends, more objectives in late game (example: kill an
+ADVENT officer in 5 turns + capture a zone in 6; then regroup and defend the zone for 8 turns; then set charges
+with no limit + extract in 5).
