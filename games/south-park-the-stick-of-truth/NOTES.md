@@ -555,6 +555,35 @@ South Park process and its window instead of launching Steam, and `preflight()` 
 bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): step 3a RESULT - the buddy walks a network-driven path (puppet proven)
+
+Same session type as before (owner launched in the VM, new-game forest, Butters following;
+DLL 829de84f, pid via `version`). The report is `local/vm-out/puppet-test.json`; the guest
+`coop_debug.log` holds the [BUDDY]/[WRITE] evidence. 5/5 verdicts PASS:
+
+- received_grew: 715 PSC1 snapshots in ~45 s from `local/vm_fake_friend.py` running INSIDE
+  the guest and sending to `127.0.0.1:27991` (loopback is not filtered; the cross-machine
+  NAT/firewall path is still untested - that is the friend-PC task).
+- history_filled: RemoteBody held the full 16-snapshot ring the whole run.
+- on_the_circle: the buddy transform sat at the ring radius (6.0) for the sustained
+  samples; transient 2.3-4.2 readings are the chase while the remote lead moved.
+- walked_the_path / mostly_fresh: buddy moved > 3 m along the path; `stale=False` in all
+  seven samples.
+
+Observed, important for later steps:
+- Follow#5 ticks with `this` = live Follow at 25.7/s WHILE IDLE (so the detour runs every
+  frame even when nobody walks: puppet mode works from standstill, and anchor mode
+  (freeze) gets its frames whenever the engine calls it - during the step-2 freeze walk it
+  ticked and restored).
+- Rate 18.3/s while the puppet ran: the pin writes plus the buddy's own pathing cost some
+  frames at 30 FPS. Watch this before adding more per-frame work.
+- What the puppet writes: logic `ds+0x10` (pin to target) and mover `+0x12c` when off by
+  >5 cm, both world-position guarded; `restores` counts pinned frames. Motion is a stutter
+  -teleport chain, not an animated walk: visible in the frames but not pretty; step 4
+  (pathing/animation) is the polish, the control point is already proven.
+- Round-3/4 lessons kept: `send buddy` and the yaw publish were NOT exercised in this run
+  (friend sent, game only received); `hero direct` logging stopped flooding the log.
+
 ## 2026-11-17 (lead): announced mod.cpp edit round 4 - detour pins the MOVER, not just logic
 
 The first puppet wire test (report samples in NOTES below): transport received 794 PSC1
