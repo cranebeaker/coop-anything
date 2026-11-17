@@ -835,7 +835,7 @@ Observations (ran):
 Derived: for a friend who is in a joinable lobby, Steam delivers Join Game as GameLobbyJoinRequested (333), the same
 callback as an accepted invite; GameRichPresenceJoinRequested (337) would need a connect string without a lobby.
 
-## Later work, in brief (2026-10-26 to 2026-11-14)
+## Later work, in brief (2026-10-26 to 2026-11-17)
 
 From 2026-10-26 the work continued in the maintained repository
 (https://github.com/HitchLangley/far-cry-2-campaign-coop); its commit history and issues hold the details. Summary of
@@ -865,3 +865,16 @@ what was observed, all on Steam 1.03, mostly two copies on one PC:
 - **Performance (2026-11-13).** A 16 MB memory-scan step for NPCs and vehicles took 47-78 ms in paged-out ranges (2-5
   hitches per 10 s on both copies, PC with about 2.5 GB of free memory). NPCs now come from the AI world's agent list
   (same count as the scan: 18 on the host, 15 on the joiner); no frame over 50 ms in the check runs.
+- **Town alarm both ways (2026-11-17).** The joiner's own shot breaks the ceasefire on the joiner first; the host only
+  saw hits, and a first hit that kills puts no host NPC into combat. Both copies now send the alarm (and the zone id)
+  as soon as it rises, and the joiner writes the host NPCs' combat state and zone into its puppets. Measured on two
+  copies on one PC: about 0.06 s each way.
+- **Town NPCs target the joiner (2026-11-17).** A hardware write breakpoint on an NPC's target entry found the writer:
+  the threat scanner at Dunia+99A050 rebuilds each NPC's target list every frame. It takes a perceived agent standing
+  in a ceasefire zone only if the agent is flagged as the player (agent+0x94C, set by the engine only for the real
+  player's agent); outside towns it goes by army. The joiner's avatar was perceived (threat 1.00 over a 0.40
+  threshold) but never had the flag. The host now gives the avatar the flag, and points the global player agent at
+  it, only while an NPC nearer the avatar than the host's player runs that scan, and restores both right after.
+  Run in Pala (two copies on one PC, joiner 37 m from the host): first NPC hit on the joiner 1.9 s after the alarm,
+  50+ hits from 5 NPCs, all applied on the joiner. Still wrong on the joiner's side: some puppets loop their fire or
+  show recoil without shots, a doorman stayed kneeling, sharp turns, the avatar can spin when out of view.
