@@ -45,6 +45,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 import uuid
@@ -58,12 +59,19 @@ try:
 except ModuleNotFoundError as error:  # pragma: no cover - environment dependent
     raise SystemExit('frida is required (pinned wheel in <repo>/local/runtime-libs): ' + repr(error))
 
+from capture_game_window import find_game_window
+
 GAME = Path(os.environ.get('SP_GAME_DIR', r'D:\coop-work\game-test'))
 EXE = GAME / 'South Park - The Stick of Truth.exe'
 EXPECTED_EXE_SHA256 = '54a83d055f97cad8beeb5aa027c96c0c2aa4a6c36394634270297dd47856a0d6'
 ORIGINAL_PROFILE = Path.home() / 'Documents' / 'My Games' / 'South Park - The Stick of Truth'
 WINDOW_TITLE = 'South Park\u2122: The Stick of Truth\u2122'
 RUNS = Path(os.environ.get('SP_RUN_ROOT', ROOT.parents[2] / 'local' / 'game-runs'))
+STEAM_URI = 'steam://rungameid/213670'
+STEAM_CANDIDATES = [Path(r'C:\Program Files (x86)\Steam\steam.exe'),
+                    Path(r'D:\Steam\steam.exe'), Path(r'D:\SteamLibrary\steam.exe')]
+STILL_ACTIVE = 259
+_DEVICE = None
 
 # RVAs of image strings, from the retail image (file offset - 0x400). All plain ASCII
 # in .rdata; only the code that references them is encrypted at rest.
@@ -576,6 +584,38 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def local_device():
+    """One Frida local device, shared by preflight, discovery and the session."""
+    global _DEVICE
+    if _DEVICE is None:
+        _DEVICE = frida.get_local_device()
+    return _DEVICE
+
+
+def process_ids_named(name):
+    """PIDs whose executable name matches exactly (case-insensitive)."""
+    try:
+        return [process.pid for process in local_device().enumerate_processes()
+                if process.name.lower() == name.lower()]
+    except Exception:                                # noqa: BLE001 - discovery is best effort
+        return []
+
+
+def process_exit_code(pid):
+    """Exit code of ``pid``, 259 while it is alive, or None when it cannot be queried."""
+    kernel32 = ctypes.windll.kernel32
+    code = ctypes.c_ulong(0)
+    handle = kernel32.OpenProcess(0x1000, False, int(pid))   # QUERY_LIMITED_INFORMATION
+    if not handle:
+        return None
+    try:
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+            return None
+        return int(code.value)
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def snapshot(root):
     return {path.relative_to(root).as_posix(): sha256(path)
             for path in sorted(Path(root).rglob('*')) if path.is_file()}
@@ -614,14 +654,14 @@ def inventory(root):
             for path in sorted(Path(root).rglob('*')) if path.is_file()}
 
 
-def preflight():
+def preflight(allow_existing_window=False):
     if not EXE.is_file():
         raise SystemExit('game copy not found: ' + str(EXE))
     if sha256(EXE) != EXPECTED_EXE_SHA256:
         raise SystemExit('unexpected game executable; refusing launch')
     if not ORIGINAL_PROFILE.is_dir():
         raise SystemExit('expected original profile not found; refusing launch')
-    if ctypes.windll.user32.FindWindowW(WINDOW_TITLE, None):
+    if not allow_existing_window and ctypes.windll.user32.FindWindowW(WINDOW_TITLE, None):
         raise SystemExit('a South Park window already exists; refusing to interfere')
 
 
@@ -633,7 +673,7 @@ class Game:
     """
 
     def __init__(self, duration=60, extra_args=(), payload=SESSION_JS, config_extra=None,
-                 extra_scripts=None):
+                 extra_scripts=None, attach=False, park_window=True, adopt=False):
         self.duration = duration
         self.extra_args = list(extra_args)
         self.payload = payload
@@ -645,9 +685,12 @@ class Game:
         self.script = None
         self.pid = None
         self.armed = False
+        self.attach = attach
+        self.park_window = park_window
+        self.adopt = adopt and attach   # adopting only makes sense while attaching
 
     def __enter__(self):
-        preflight()
+        preflight(allow_existing_window=self.adopt)
         self.run_dir.mkdir(parents=True)
         # Remember the owner's window now, so the run gives focus back when it ends: a test
         # must not leave the game in front of whatever the owner was doing.
@@ -709,21 +752,47 @@ class Game:
         # Test-only switch: turn the mod's periodic memory scan off (see mod/src/mod.cpp).
         if os.environ.get('SP_COOP_SCAN'):
             environment['SP_COOP_SCAN'] = os.environ['SP_COOP_SCAN']
-        self.device = frida.get_local_device()
-        self.pid = self.device.spawn(argv, cwd=str(GAME), stdio='pipe',
-                                     env=environment)
-        try:
-            self.session = self.device.attach(self.pid)
-        except Exception as error:                   # noqa: BLE001 - a dead spawn is data
-            # "connection closed" / "timeout" hides the reason: report the process exit code,
-            # which names a loader failure (0xC0000142) or a normal early exit (0).
-            code = ctypes.c_ulong(0)
-            kernel32 = ctypes.windll.kernel32
-            handle = kernel32.OpenProcess(0x1000, False, self.pid)   # QUERY_LIMITED_INFORMATION
-            if handle:
-                kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
-                kernel32.CloseHandle(handle)
-            raise RuntimeError('attach failed (%r); exit code 0x%08x' % (error, code.value))
+        self.device = local_device()
+        self.launch = {'mode': 'adopt' if self.adopt else
+                       ('attach' if self.attach else 'spawn'),
+                       'guard_loaded_before_start': not self.attach}
+        if self.attach:
+            # The retail exe calls RestartAppIfNecessary and exits 0 unless Steam launched it,
+            # so spawn cannot be used here. Either adopt the process the user already started
+            # in Steam (adopt=True, the only path that works from VBox guestcontrol) or start
+            # it through Steam ourselves. The process is already running in both cases:
+            # there is nothing to resume, and the guard can only be best effort.
+            try:
+                if self.adopt:
+                    self.pid, window, waited = self._adopt_existing()
+                    self.launch.update({'pid': self.pid, 'window': window,
+                                        'waited_seconds': round(waited, 2)})
+                else:
+                    self.pid, window, waited = self._launch_via_steam()
+                    self.launch.update({'pid': self.pid, 'steam_uri': STEAM_URI,
+                                        'window': window,
+                                        'waited_seconds': round(waited, 2)})
+            except Exception:
+                self._shutdown()
+                raise
+            try:
+                self.session = self.device.attach(self.pid)
+            except Exception as error:              # noqa: BLE001 - a dead launch is data
+                code = process_exit_code(self.pid)
+                raise RuntimeError('attach failed after Steam launch (%r); exit code %s'
+                                   % (error, '0x%08x' % code if code is not None else 'unknown'))
+        else:
+            self.pid = self.device.spawn(argv, cwd=str(GAME), stdio='pipe',
+                                         env=environment)
+            try:
+                self.session = self.device.attach(self.pid)
+            except Exception as error:               # noqa: BLE001 - a dead spawn is data
+                # "connection closed" / "timeout" hides the reason: report the process exit code,
+                # which names a loader failure (0xC0000142) or a normal early exit (0).
+                code = process_exit_code(self.pid)
+                raise RuntimeError('attach failed (%r); exit code %s'
+                                   % (error, '0x%08x' % code if code is not None else 'unknown'))
+        self.result['launch'] = self.launch
         guard_source = (ROOT / 'save_guard.js').read_text(encoding='utf-8').replace(
             '__CONFIG__', json.dumps(self.config))
         guard = self.session.create_script(guard_source, name='south-park-save-guard')
@@ -734,7 +803,8 @@ class Game:
             time.sleep(0.05)
         if not ready or self.errors:
             self._shutdown()
-            raise RuntimeError('guard failed before resume: ' + repr(self.errors))
+            raise RuntimeError('guard failed before %s: %s'
+                               % ('attach' if self.attach else 'resume', repr(self.errors)))
         payload_config = {'textRva': TEXT_RVA, 'textSize': TEXT_SIZE,
                           'consolePrintRva': CONSOLE_PRINT_RVA,
                           'consoleLineRva': CONSOLE_LINE_RVA,
@@ -755,10 +825,81 @@ class Game:
             extra.on('message', on_message)
             extra.load()
             self.extra[extra_name] = extra
-        self.device.resume(self.pid)
+        if not self.attach:
+            self.device.resume(self.pid)
         self.started = time.time()
-        self._hand_focus_back()
+        if self.park_window:
+            self._hand_focus_back()
         return self
+
+    def _steam_executable(self):
+        override = os.environ.get('SP_STEAM_EXE')
+        candidates = ([Path(override)] if override else []) + STEAM_CANDIDATES
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate
+        return None
+
+    def _adopt_existing(self, timeout=180.0):
+        """Take over the game the user started in Steam; wait for its process and window.
+
+        This is the only launch path proven to work in the VM: VBox guestcontrol runs
+        ``steam://rungameid`` outside the interactive session and Steam then never starts
+        the game, so the owner clicks Play in the VM and the harness attaches afterwards.
+        Nothing is spawned and no other process is touched; more than one game process is
+        a refusal, not a choice.
+        """
+        started = time.time()
+        deadline = started + timeout
+        while time.time() < deadline:
+            pids = process_ids_named(EXE.name)
+            if len(pids) > 1:
+                raise SystemExit('more than one South Park process is running (%s); '
+                                 'refusing to choose' % pids)
+            if pids:
+                pid = pids[0]
+                window = find_game_window(pid)
+                if window is not None and window.get('visible'):
+                    return pid, window, time.time() - started
+                if window is not None:      # found but not visible yet: keep waiting
+                    pass
+            time.sleep(1.0)
+        raise RuntimeError('no running South Park process with a visible window within '
+                           '%.0f s; start the game in Steam inside the VM first' % timeout)
+
+    def _launch_via_steam(self, timeout=180.0):
+        """Start the game through Steam and wait for its process and visible window."""
+        existing = process_ids_named(EXE.name)
+        if existing:
+            raise SystemExit('a South Park process is already running (pid %s); refusing '
+                             'to interfere' % existing)
+        steam = self._steam_executable()
+        if steam is None:
+            raise SystemExit('Steam executable not found; set SP_STEAM_EXE')
+        started = time.time()
+        subprocess.Popen([str(steam), STEAM_URI], cwd=str(steam.parent),
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+        deadline = started + timeout
+        seen = None
+        while time.time() < deadline:
+            pids = process_ids_named(EXE.name)
+            if pids:
+                seen = pids[0]
+                for pid in pids:
+                    window = find_game_window(pid)
+                    if window is not None and window.get('visible'):
+                        return pid, window, time.time() - started
+            if seen is not None:
+                code = process_exit_code(seen)
+                if code not in (None, STILL_ACTIVE):
+                    raise RuntimeError('game exited before its window appeared; exit code '
+                                       '0x%08x' % code)
+            time.sleep(0.5)
+        if seen is not None:
+            raise RuntimeError('game process %d appeared but no window within %.0f s'
+                               % (seen, timeout))
+        raise RuntimeError('Steam did not start the game within %.0f s' % timeout)
 
     def _hand_focus_back(self):
         """Give the desktop back as soon as the game window appears, and keep doing it.
@@ -930,6 +1071,10 @@ class Game:
         self.result['guard_errors'] = self.errors
         self.result['events'] = self.events
         self.result['run_dir'] = str(self.run_dir)
+        self.result['guard_best_effort'] = bool(self.attach)
+        self.result['run_valid'] = bool(
+            self.result.get('original_profile_unchanged') is True and
+            self.result.get('original_exe_hash_still_matches') is True)
         game_after = inventory(GAME)
         self.result['new_game_files'] = {path: size for path, size in game_after.items()
                                          if path not in self.game_before}
@@ -967,7 +1112,8 @@ def write_script(name, commands):
     return written
 
 
-def run_commands(commands, duration=90, warmup=25, settle=2.5, script_name=None, echo=True):
+def run_commands(commands, duration=90, warmup=25, settle=2.5, script_name=None, echo=True,
+                 attach=False, adopt=False):
     """Execute console commands in the guarded test copy and read their output.
 
     ``commands`` is a list of console lines (``['status', 'find multiplayer']``).
@@ -988,7 +1134,7 @@ def run_commands(commands, duration=90, warmup=25, settle=2.5, script_name=None,
     script_lines = (['con_echo_command 1'] if echo else []) + commands
     script_paths = write_script(script_name, script_lines)
     output = []
-    with Game(duration=duration) as game:
+    with Game(duration=duration, attach=attach, adopt=adopt) as game:
         game.result['commands'] = commands
         game.result['script'] = {'name': script_name, 'paths': script_paths,
                                  'lines': script_lines}
@@ -1051,9 +1197,9 @@ def run_commands(commands, duration=90, warmup=25, settle=2.5, script_name=None,
     return {'ok': ok, 'output': output, 'evidence': evidence}
 
 
-def probe(duration=45):
+def probe(duration=45, attach=False, adopt=False):
     """Locate the console code in the live process; write a structural report."""
-    with Game(duration=duration, payload=RECON_JS) as game:
+    with Game(duration=duration, payload=RECON_JS, attach=attach, adopt=adopt) as game:
         game.wait(duration)
         report = game.script.exports_sync.telemetry()
         game.result['probe'] = report
@@ -1081,7 +1227,14 @@ if __name__ == '__main__':
     parser.add_argument('--duration', type=float, default=60)
     parser.add_argument('--warmup', type=float, default=25)
     parser.add_argument('--no-lock', action='store_true')
+    parser.add_argument('--attach', action='store_true',
+                        help='start the game through Steam and attach (for the Steam install)')
+    parser.add_argument('--adopt', action='store_true',
+                        help='with --attach: take over the game process the user already '
+                             'started in Steam instead of launching it (the VM path)')
     options = parser.parse_args()
+    if options.adopt:
+        options.attach = True
     owner = os.environ.get('SP_AGENT', 'step03')
     import launch_lock
     held = False
@@ -1091,10 +1244,11 @@ if __name__ == '__main__':
         held = True
     try:
         if options.mode == 'probe':
-            probe(duration=options.duration)
+            probe(duration=options.duration, attach=options.attach, adopt=options.adopt)
         else:
             result = run_commands(options.commands, duration=options.duration,
-                                  warmup=options.warmup)
+                                  warmup=options.warmup, attach=options.attach,
+                                  adopt=options.adopt)
             print(json.dumps(result, indent=2, ensure_ascii=True))
     finally:
         if held:

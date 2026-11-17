@@ -58,6 +58,12 @@ SAVE_ROW = (0.437, 0.503)
 LOAD_BUTTON = (0.738, 0.918)
 DIALOG_CONFIRM = (0.430, 0.572)
 
+# SP_STEP2_ADOPT=1: the game is already running in the VM because the user clicked Play in
+# Steam, and the level with the following buddy is already loaded (the VM profile has no
+# reachable saves for the click path). The harness then adopts the process, never clicks,
+# and only checks through the bridge that the world really is loaded before aiscan.
+ADOPT = os.environ.get('SP_STEP2_ADOPT') == '1'
+
 _waited_for_menu = False
 
 
@@ -183,22 +189,44 @@ def main():
                            pid=os.getpid()) != 0:
         raise SystemExit('launch lock is held by another process')
     try:
-        with ce.Game(duration=300) as game:
+        with ce.Game(duration=300, attach=True, park_window=False, adopt=ADOPT) as game:
             report['run'] = str(game.run_dir)
+            report['launch'] = game.result.get('launch')
             frames = game.run_dir / 'frames'
             frames.mkdir(parents=True, exist_ok=True)
-            game.wait_for_ready(minimum=28, quiet=2.0, timeout=70)
-            report['load_game'] = hover_click(game.pid, *LOAD_GAME)
-            report['row'] = hover_click(game.pid, *SAVE_ROW)
-            report['load'] = hover_click(game.pid, *LOAD_BUTTON)
-            report['confirm'] = hover_click(game.pid, *DIALOG_CONFIRM)
-            # About 45 s to load Clyde's Fort on the host; the VM can be slower.
-            time.sleep(50)
+            if ADOPT:
+                # The user already clicked Play and loaded the level where the buddy
+                # follows: no waits, no clicks, no Steam interaction from here.
+                report['adopt'] = True
+            else:
+                game.wait_for_ready(minimum=28, quiet=2.0, timeout=70)
+                report['load_game'] = hover_click(game.pid, *LOAD_GAME)
+                report['row'] = hover_click(game.pid, *SAVE_ROW)
+                report['load'] = hover_click(game.pid, *LOAD_BUTTON)
+                report['confirm'] = hover_click(game.pid, *DIALOG_CONFIRM)
+                # About 45 s to load Clyde's Fort on the host; the VM can be slower.
+                time.sleep(50)
             shot = capture_game_window(game.pid, frames / 'level.png')
             report['shot'] = {key: shot.get(key) for key in
                               ('captured', 'dhash', 'mean_luma')}
             with Bridge.connect('tcp://127.0.0.1:27990', wait_s=60) as bridge:
+                # `probe` runs the full scan even with SP_COOP_SCAN=off and fills the
+                # counts the eval expressions and aiscan depend on.
                 report['scan_mod'] = bridge.exec('probe', timeout_ms=90000)
+                pre = bridge.state()
+                report['pre_state'] = {'ticks': pre.get('ticks'),
+                                       'players': pre.get('players'),
+                                       'movers': pre.get('movers')}
+                if ADOPT:
+                    counts = {'player': bridge.eval('player_count'),
+                              'party': bridge.eval('party_count'),
+                              'buddy': bridge.eval('buddy_count')}
+                    report['pre_counts'] = counts
+                    if not counts['player']:
+                        report['error'] = ('the running game has no DS_Component_Player: it is '
+                                           'at the menu, not in a loaded level; load the save '
+                                           '(or play far enough) so the buddy follows, then rerun')
+                        return report
                 time.sleep(0.5)
                 report['scan_hooks'] = bridge.exec('aiscan', timeout_ms=180000)
                 if not report['scan_hooks'].get('ok'):
@@ -309,6 +337,10 @@ def main():
             report['validity'] = {key: game.result.get(key) for key in
                                   ('original_profile_unchanged', 'guard_integrity',
                                    'original_exe_hash_still_matches')}
+    except Exception as error:                       # noqa: BLE001 - a failed run is data
+        report['error'] = repr(error)
+        import traceback
+        report['traceback'] = traceback.format_exc()
     finally:
         launch_lock.release(OWNER)
         (HERE / 'step2-hook-report.json').write_text(

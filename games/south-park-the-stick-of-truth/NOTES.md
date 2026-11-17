@@ -503,7 +503,18 @@ build-from-zero puppet path. `PLAN.md` and `prompts/` split this into seven agen
 two PCs and two screens over the network as the product target and local two-player only as a
 development milestone.
 
-## 2026-11-16 (step 1): detailed debug log, safe pointers, RTTI-derived addresses
+## 2026-11-17 (lead): announced harness edit — adopt mode (attach to the user-started game)
+
+Continuing step 2. The only working launch path in the VM is the user clicking Play in
+Steam; `steam://rungameid` from guestcontrol does not start the game (recorded in the
+handoff). Announced before editing (shared-file rule): `tools/console_exec.py` gains
+`Game(attach=True, adopt=True)` / `_adopt_existing()` — take over the single running
+South Park process and its window instead of launching Steam, and `preflight()` skips the
+"window already exists" refusal in adopt mode. `tools/step2_hook.py` gains
+`SP_STEP2_ADOPT=1`: skip `wait_for_ready` and the four menu clicks, check through the
+bridge that the level is loaded (`players > 0`), and only then run `probe`/`aiscan`.
+No game process is started or killed by this path; nothing in `mod/` changes.
+
 
 Announced before editing `mod/src/mod.cpp` (two agents already collided on the file). The edit
 adds `coop_debug.log` next to the exe with tags `[OK]` / `[ADDR]` / `[ERR]` / `[UNKNOWN]`, a
