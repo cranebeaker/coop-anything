@@ -1580,3 +1580,11 @@ the guest; 2 and 3 in the run before). Every red-screen message in both logs is 
 actor sizes on a sewer plot, `LIST_TheLost_PrePlaced`, `Plot_Multiplayer_Test`, DLC narrative sounds loading
 synchronously); none names a mod class. Unknown: whether a plain Steam launch (without `-allowconsole -log`)
 shows them.
+
+#### Plan change: scenario mode instead of horde defense (2026-11-16)
+
+Owner decision: the third co-op mode is a scenario mode, not horde defense. Single co-op missions without a
+campaign; the host picks a game stage (early, mid, late); players build operators from a point budget (higher
+stats and better gear cost more); missions carry several objectives so the squad has to split up. Design,
+what the SDK already offers (WOTC Skirmish mode setup, the multiplayer squad builder's point costs) and open
+questions: DESIGN-campaign-coop.md, "Scenario mode".

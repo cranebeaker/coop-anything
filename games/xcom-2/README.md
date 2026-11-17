@@ -236,5 +236,7 @@ and test instructions are in the mod repo README.
 - Two PCs: direct IP, then Steam invites; auto-subscribe a guest to the host's mods.
 - Play a whole campaign.
 - Two more modes on the co-op menu, after the co-op campaign works on two PCs: a **balanced co-op
-  campaign** (4-6 soldiers per player, enemies scaled to the number of players) and **horde defense**.
-  Plan and open questions in [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md#game-modes-decided-2026-11-13-replaces-the-reach-goal-of-2026-11-12).
+  campaign** (4-6 soldiers per player, enemies scaled to the number of players) and a **scenario mode** (single
+  co-op missions without a campaign: pick a game stage, buy operators from a point budget, split up to cover
+  several objectives).
+  Plan and open questions in [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md#game-modes-decided-2026-11-13-scenario-mode-replaced-horde-defense-2026-11-16).

@@ -261,7 +261,7 @@ Already prototyped; see README.md. What matters for the other parts:
 | Joining | Steam invite and direct IP | Steam sockets (`steamsockets` URL option) are untested; direct IP works on one PC. |
 | Communication | Map pings and text chat | Pings: new (remote command with a tile). Chat: the game's MP chat panel (`UIMultiplayerChatManager`) may be reusable. |
 
-### Game modes (decided 2026-11-13, replaces the reach goal of 2026-11-12)
+### Game modes (decided 2026-11-13; scenario mode replaced horde defense 2026-11-16)
 
 The co-op menu offers three modes. The host picks one; guests join whatever the host runs.
 
@@ -269,7 +269,7 @@ The co-op menu offers three modes. The host picks one; guests join whatever the 
 |---|---|---|
 | **Co-op campaign** | The regular campaign, unchanged in balance, shared by up to 4 players: everything in the table above. The "Host co-op" button can also turn an existing single-player campaign into a co-op one (it adds the co-op data). | Built; tested on one PC (see results below). The mode picker in the menu is not built yet. |
 | **Co-op balanced campaign** | A campaign tuned for co-op: **4-6 soldiers per player**, and **enemies scaled to the number of players**. More changes to be decided later. | Planned. Starts after the co-op campaign works on two PCs. |
-| **Horde defense** | The players hold out against waves of enemies. | Planned (the earlier reach goal). Starts after the balanced campaign. |
+| **Scenario mode** | Single co-op missions without a campaign: pick a game stage, build operators from a point budget, play a mission with several objectives that pull the squad apart. See below. | Planned (replaced horde defense, 2026-11-16). Starts after the balanced campaign. |
 
 Order of work: finish the co-op campaign first (two PCs, Steam, content coverage), since both other modes
 reuse its join, turns, ownership and saves.
@@ -291,8 +291,6 @@ What has to be checked before building it (guesses, not checked in the game or t
 - Enemy scaling probably goes through the mission's encounter and pod settings (the mission schedules in
   the game's config), or through added reinforcements. Which one works without breaking story missions is
   unknown.
-- Horde defense probably needs a fixed map plus reinforcement waves on a timer or per turn; the game's
-  reinforcement spawner may be reusable. Unknown.
 
 Found in the SDK source (2026-11-14, read only, not run): the game's sitreps already carry the two knobs as
 effect templates, which a mod can add to every mission of the balanced campaign as a hidden sitrep.
@@ -306,6 +304,49 @@ effect templates, which a mod can add to every mission of the balanced campaign 
   the mission schedules; unchecked how much), `X2SitRepEffect_ModifyXComSpawn`.
 - The bot scenario `bigsquad` puts 12 soldiers (6 per player) into a mission by filling the HQ squad directly,
   past squad select; results under "Game content".
+
+#### Scenario mode (decided 2026-11-16, replaces horde defense)
+
+Goal (owner): play missions together without committing to a whole campaign, designed around co-op.
+
+- **Game stage:** the host picks early, mid or late game; it sets the enemies the players face and the gear
+  and ranks they can buy.
+- **Operators from a point budget:** each player builds a pool of operators; higher stats, ranks and better gear
+  cost more points.
+- **Several objectives per mission:** more objectives than one squad can cover together, so the players have to
+  decide how to split up.
+- Same co-op layer as the campaign: each player moves their own operators in turn, joins and reconnects the same
+  way.
+
+What the game already has (found in the SDK source 2026-11-16, read only, not run):
+
+- **Skirmish mode** (War of the Chosen, `UITLE_SkirmishModeMenu`, reached from `UITLEHub`) builds a one-off mission
+  outside a campaign: map, mission type, biome, difficulty, a tech level, squad and enemies, then a start state
+  with a mission site. Its setup is the closest match for "pick a game stage and a mission".
+- **Point costs** from the multiplayer squad builder (`UIMPShell_SquadEditor`): every unit preset has a cost
+  (`X2MPCharacterTemplate.Cost`, per character or soldier class and rank, with its abilities and loadout) and every
+  item has `MPCost`; `XComGameState_Unit.GetUnitPointValue` adds them up. The PvP budget screen
+  (`UIMPShell_SquadCostPanel`) shows the total. A point-bought operator pool can reuse these numbers, or replace
+  them with its own table.
+
+Open questions (owner):
+
+- Budget: one shared pool split between the players, or a budget per player; does it change with the game stage
+  or the number of players.
+- What points buy: rank, class and abilities, stats directly, weapons and armor tiers, utility items; are aliens
+  or resistance units buyable (the multiplayer builder allows ADVENT and alien units).
+- Objectives: how many, which kinds (hack, rescue, destroy, extract, defend), whether each has a deadline, whether
+  some are optional for a bonus; how the result is scored, if at all.
+- Saved operator pools and a record of scenarios played, or everything fresh each time.
+
+What has to be checked before building it (unknown so far):
+
+- Whether a mission can carry several primary objectives at once. In the game a mission type comes with its own
+  map parcels and objective scripting; combining two (for example hack a terminal and rescue a VIP on one map)
+  may need new mission definitions or objective scripts.
+- Whether the Skirmish start state can be built on a co-op host and sent to guests like a campaign mission (our
+  join and mission handoff assume a campaign behind the mission).
+- Whether the game stage maps cleanly to Skirmish's tech level and the enemy force level.
 
 ## Implementation status (2026-11-11, compiled, not run in the game)
 
