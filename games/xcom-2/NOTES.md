@@ -1588,3 +1588,7 @@ campaign; the host picks a game stage (early, mid, late); players build operator
 stats and better gear cost more); missions carry several objectives so the squad has to split up. Design,
 what the SDK already offers (WOTC Skirmish mode setup, the multiplayer squad builder's point costs) and open
 questions: DESIGN-campaign-coop.md, "Scenario mode".
+Owner decisions the same day: 12 operators per mission split evenly among the players (12/6/4/3 for 1-4); XCOM
+soldiers only; points buy gear, abilities, stats and special units (Reaper, Skirmisher, Templar, Psi Operative);
+the weapon and armor tier follows the game stage (conventional/Kevlar, magnetic/Predator, beam/Warden), with the
+special suits (Spider, EXO, Wraith, W.A.R.) costing extra points.

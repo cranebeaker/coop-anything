@@ -237,6 +237,6 @@ and test instructions are in the mod repo README.
 - Play a whole campaign.
 - Two more modes on the co-op menu, after the co-op campaign works on two PCs: a **balanced co-op
   campaign** (4-6 soldiers per player, enemies scaled to the number of players) and a **scenario mode** (single
-  co-op missions without a campaign: pick a game stage, buy operators from a point budget, split up to cover
-  several objectives).
+  co-op missions without a campaign: 12 operators split among 1-4 players, gear tier set by the game stage,
+  abilities, stats, special suits and hero classes bought with points, several objectives to split up for).
   Plan and open questions in [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md#game-modes-decided-2026-11-13-scenario-mode-replaced-horde-defense-2026-11-16).

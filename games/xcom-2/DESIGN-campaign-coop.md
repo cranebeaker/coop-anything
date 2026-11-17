@@ -318,6 +318,24 @@ Goal (owner): play missions together without committing to a whole campaign, des
 - Same co-op layer as the campaign: each player moves their own operators in turn, joins and reconnects the same
   way.
 
+Decided (owner, 2026-11-16):
+
+- **12 operators per mission, split evenly among the players:** 1 player 12, 2 players 6 each, 3 players 4 each,
+  4 players 3 each. The squad size is the mode's own, the same for any player count.
+- **XCOM soldiers only.** Points buy gear, abilities, stats, and special units: the three faction heroes
+  (Reaper, Skirmisher, Templar) and the Psi Operative cost more than a standard soldier.
+- **Gear tier follows the game stage**, not points: early game conventional weapons and Kevlar armor, mid game
+  magnetic weapons and Predator armor, late game beam (plasma) weapons and Warden armor. Special suits cost extra
+  points on top: Spider Suit and EXO Suit (mid), Wraith Suit and W.A.R. Suit (late).
+
+Item and class names in the game data (SDK source, read only): weapons by tier `AssaultRifle_CV`, `_MG`, `_BM`
+(the same suffixes for the other weapon families); armor `KevlarArmor`, `MediumPlatedArmor` (Predator),
+`MediumPoweredArmor` (Warden), and the special suits `LightPlatedArmor` (Spider), `HeavyPlatedArmor` (EXO),
+`LightPoweredArmor` (Wraith), `HeavyPoweredArmor` (W.A.R.); the faction heroes have their own armor per tier
+(`ReaperArmor`, `PlatedReaperArmor`, `PoweredReaperArmor`, the same for Skirmisher and Templar); classes
+`Reaper`, `Skirmisher`, `Templar`, `PsiOperative`. Derived: the multiplayer point costs price fixed presets
+(class, rank, abilities, loadout); a budget that buys single abilities and stat points needs its own price table.
+
 What the game already has (found in the SDK source 2026-11-16, read only, not run):
 
 - **Skirmish mode** (War of the Chosen, `UITLE_SkirmishModeMenu`, reached from `UITLEHub`) builds a one-off mission
@@ -331,10 +349,11 @@ What the game already has (found in the SDK source 2026-11-16, read only, not ru
 
 Open questions (owner):
 
-- Budget: one shared pool split between the players, or a budget per player; does it change with the game stage
-  or the number of players.
-- What points buy: rank, class and abilities, stats directly, weapons and armor tiers, utility items; are aliens
-  or resistance units buyable (the multiplayer builder allows ADVENT and alien units).
+- Budget: how many points; the same budget per operator, so each player's share is the same whatever the player
+  count, or one budget per player; does it grow with the game stage.
+- Prices: what one ability, one stat point (aim, HP, mobility, will, dodge...) and each special unit cost; are
+  ranks bought (a rank brings its ability picks), or abilities one by one; caps per stat.
+- Utility items (grenades, medkits, ammo types, vests): included in the gear tier, or bought with points.
 - Objectives: how many, which kinds (hack, rescue, destroy, extract, defend), whether each has a deadline, whether
   some are optional for a bonus; how the result is scored, if at all.
 - Saved operator pools and a record of scenarios played, or everything fresh each time.
@@ -347,6 +366,8 @@ What has to be checked before building it (unknown so far):
 - Whether the Skirmish start state can be built on a co-op host and sent to guests like a campaign mission (our
   join and mission handoff assume a campaign behind the mission).
 - Whether the game stage maps cleanly to Skirmish's tech level and the enemy force level.
+- A 12-operator mission: the `bigsquad` scenario already ran 12 soldiers split between two players (13/13); squad
+  select itself shows 6 slots at most, so the scenario mode needs its own operator screen anyway.
 
 ## Implementation status (2026-11-11, compiled, not run in the game)
 
