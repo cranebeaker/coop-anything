@@ -555,6 +555,46 @@ South Park process and its window instead of launching Steam, and `preflight()` 
 bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): step 2 RESULT - buddy AI slot found and proven (freeze + baseline + restore)
+
+One game session (pid 6828, new-game forest save, Butters in party, VM), no relaunches
+between measurements. All numbers are from the bridge reports
+`local/vm-out/step2-walk-experiment.json` and `local/vm-out/step2-follow-only.json`;
+the mod's `[HOOK]/[BUDDY]/[WRITE]` lines in the guest `coop_debug.log` are the record.
+
+Observed (all ran, all with the game alive before and after):
+
+- `aiscan` hooks 37 slots (4 companion state vtables). Live rates with
+  `this` == the real state object `0x085cde10` (`Companion_Follow`, found by the
+  fallback, not by the dead `+0x2b4` slot): **Follow#5 (id 20, target RVA `0x4f2610`)
+  27-31 calls/s = frame rate**, and Follow#8 (id 22) at 4x that. The Fort hypothesis
+  "vtable slot 5 is the Update" is now runtime-proven.
+- Freeze phase: `aihold 20`, owner walked: hero moved **6.158 m**, buddy moved
+  **0.000 m**, `hold=1`, `restores` grew during the phase (the engine moved the buddy
+  between frames, the detour wrote the anchor back). The hold also yields to Command
+  classes by design; with the slot fallback it is now actually reachable.
+- Baseline (identical sampling, hold OFF): hero **6.671 m**, buddy **5.668 m** - the
+  follow reaction is real and the anchor was off.
+- `aihold off` returns control: the baseline was measured after a previous `off`, and
+  the game was playable normally afterwards.
+- Memory-only triggers are NOT follow triggers: `wblock` of `mover+0x12c` AND of the
+  DS logic triple `+0x10` were both re-snapped by the engine every frame and the buddy
+  never reacted (this invalidated the earlier driver's nudge design - step 3 must move
+  bodies through the engine's own calls or accept owner-keyboard input in tests).
+- `command_mode` was never observed (`command=0` in every STATE line): nobody issued a
+  right-click command during the session. The "режим пальца" question stays open.
+
+Derived: Gate-4 half A is passed - the buddy's follow behaviour is interceptable at one
+function (`Follow` vtable slot 5, RVA 0x4f2610 in this exe) with a per-frame anchor
+rewrite that provably wins against the engine, and yields cleanly on `aihold off`.
+This is the control point for "the guest owns Butters": freeze the AI, then write the
+network-driven pose in the same detour.
+
+Unknowns kept honest: the slot id/addresses are per-run; whether the engine ever swaps
+the live Follow object while a Command state runs (fallback scan re-finds it by
+vtable+hero-link, throttled 5 s); frame-rate equality of Follow#5 was seen at 30 FPS -
+verify under a different FPS cap.
+
 ## 2026-11-17 (lead): buddy offsets verified live; MCP debugging tools; adopt mode
 
 Continuation of the step-2 handoff. QA: co-op still not implemented; what ran this session is
