@@ -1597,3 +1597,6 @@ bought with points; utility items bought with points; objectives come in sets of
 a turn limit, the next set starting when the current one ends, more objectives in late game (example: kill an
 ADVENT officer in 5 turns + capture a zone in 6; then regroup and defend the zone for 8 turns; then set charges
 with no limit + extract in 5).
+Further owner decisions: operators are saved between sessions, each with a count of missions completed; objective
+sets are random, with exclusion rules (extract and kill the officer never together); some objectives fail the
+mission when missed, others make it harder; no scoring.

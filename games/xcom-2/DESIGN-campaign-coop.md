@@ -336,6 +336,13 @@ Decided (owner, 2026-11-16):
   1. Kill the ADVENT officer (5 turns) + capture a zone (6 turns).
   2. Regroup at the zone and defend it for 8 turns.
   3. Set charges at the zone (no limit) + extract (5 turns).
+- **Objective sets are random**, with rules for which objectives may not appear together (for example extract and
+  kill the officer never in the same set).
+- **Failure depends on the objective:** some trigger an instant mission failure when missed, others make the rest
+  of the mission harder.
+- **No scoring.**
+- **Saved operators:** players keep their operators between sessions instead of rebuilding the squad each time,
+  and each operator counts the missions completed with it.
 
 Item and class names in the game data (SDK source, read only): weapons by tier `AssaultRifle_CV`, `_MG`, `_BM`
 (the same suffixes for the other weapon families); armor `KevlarArmor`, `MediumPlatedArmor` (Predator),
@@ -365,12 +372,14 @@ Open questions (owner):
 - Utility items (grenades, medkits, ammo types, vests): included in the gear tier, or bought with points.
 - Prices and amounts: the budget per stage, what an ability, a stat point, a rank above the minimum, each special
   unit, special suit and utility item cost; caps per stat.
-- Objective sets: how many sets and objectives per stage; whether sets are hand-made sequences (like the example)
-  or drawn from pools; which objective kinds exist (kill a target, capture, defend, hack, rescue, destroy,
-  set charges, extract...).
-- Failure: what happens when an objective's turn limit runs out (the mission fails, the set fails and the next one
-  starts with a penalty, or a bonus is lost); whether some objectives are optional.
-- Scoring, if any.
+- Objective sets: how many sets and objectives per stage; which objective kinds exist (kill a target, capture,
+  defend, hack, rescue, destroy, set charges, extract...); the full list of pairs that may not share a set; whether
+  a set's order follows any rule (extract last).
+- Failure: which objectives fail the mission when missed, and what "harder" means for the others (more enemies,
+  reinforcements, a lost advantage...).
+- Saved operators: where they live (on each player's PC, like the game's character pool, or with the host); what
+  happens to an operator who dies in a scenario (lost, or kept with the death counted); whether a saved operator
+  can be taken into a different game stage, and how its rank and bought items fit that stage's rules.
 - Saved operator pools and a record of scenarios played, or everything fresh each time.
 
 What has to be checked before building it (unknown so far):
@@ -386,6 +395,9 @@ What has to be checked before building it (unknown so far):
 - Whether the Skirmish start state can be built on a co-op host and sent to guests like a campaign mission (our
   join and mission handoff assume a campaign behind the mission).
 - Whether the game stage maps cleanly to Skirmish's tech level and the enemy force level.
+- Saving operators: the game's character pool (`CharacterPool` files, outside any campaign save) stores soldiers'
+  appearance outside any campaign; whether it can carry the extra data (bought abilities, stats, items, mission
+  count) or the mode needs its own file is unknown.
 - A 12-operator mission: the `bigsquad` scenario already ran 12 soldiers split between two players (13/13); squad
   select itself shows 6 slots at most, so the scenario mode needs its own operator screen anyway.
 
