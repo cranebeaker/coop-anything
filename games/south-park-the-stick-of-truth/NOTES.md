@@ -555,6 +555,23 @@ South Park process and its window instead of launching Steam, and `preflight()` 
 bridge that the level is really loaded (`players > 0`), and only then run `probe`/`aiscan`.
 No game process is started or killed by this path; nothing in `mod/` changes.
 
+## 2026-11-17 (lead): announced mod.cpp edit round 4 - detour pins the MOVER, not just logic
+
+The first puppet wire test (report samples in NOTES below): transport received 794 PSC1
+snapshots, RemoteBody history filled, state.remote posed correctly - but the buddy did not
+move at all, and the detour logged nothing. Root cause found in the logs: `aihold` DID arm
+(`hold ON id=20 anchor=... state=Companion_Follow`) yet nothing ran - with nobody walking,
+the Follow#5 function is not called by the engine at all in this session; and even when
+detours do run, writing only the logic transform is erased, because while the buddy stands
+the engine does not recompute anything - mover+0x12c is the only write proven to move a
+body (run 28c1ea9e). Announced (shared-file rule): `ai_hold_after` now (1) keeps the logic
+triple at the target (unchanged rule), (2) PINS the mover position: if
+`buddy_mover +0x12c` differs from the target by more than 5 cm, write the target there,
+guarded by the same read-back + world-position tests; `restores` counts pinned frames.
+No velocity field is written - `+0x11c` was a guess of mine, removed before compiling, and
+the rule stands: nothing unproven gets written to the mover. Also: `hero direct` is no
+longer logged from the 60 Hz publish path (log flood), only from command callers.
+
 ## 2026-11-17 (lead): announced mod.cpp edit round 3 - network puppet for the buddy (step 3a)
 
 Step 3 begins: bind the buddy to the network. Announced before editing (shared-file rule),

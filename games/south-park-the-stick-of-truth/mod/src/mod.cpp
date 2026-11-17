@@ -1182,10 +1182,8 @@ bool hero_object_triple(float out[3], uintptr_t* object_out)
         if (object_out != nullptr) {
             *object_out = object;
         }
-        dbg("[ADDR]", "hero direct: component 0x%08llx +0x0c -> object 0x%08llx '%s' "
-                      "+0x10 = %.3f %.3f %.3f",
-            static_cast<unsigned long long>(g_class_hits[0][index]),
-            static_cast<unsigned long long>(object), name, out[0], out[1], out[2]);
+        // Logged by the callers that act on it (resolve_hero_position, puppet on,
+        // aistats); fill_outgoing calls this 60 times a second, so not here.
         return true;
     }
     return false;
@@ -2541,6 +2539,16 @@ bool buddy_plan_state(bool force_log)
     return true;
 }
 
+// The detour body. The engine does not touch the buddy transform while it stands (the
+// Round-1 tests proved one-shot mover/logic writes are re-snapped and never trigger
+// follow), so pinning the LOGIC triple alone cannot move a body the engine believes is
+// idle. The proven physics write is mover+0x12c (motion-proof run 28c1ea9e: +3 m on X
+// held), so in both regimes the detour keeps the logic transform at the target AND pins
+// the mover position when it differs by more than 5 cm. No velocity field is written
+// anywhere: no velocity offset has been proven, and this project's only crash came from
+// an unproven mover-region write (NOTES 2026-11-15). A puppet that moves this way looks
+// like a stutter-teleport, not a walk: that is the expected shape of the first version,
+// and the fix is engine pathing later (step 4), not guessing physics fields.
 void ai_hold_after(int id, uintptr_t self)
 {
     if (!g_hold_active || id != g_hold_id || g_buddy_ds == 0) {
@@ -2560,13 +2568,6 @@ void ai_hold_after(int id, uintptr_t self)
         }
         return;
     }
-    float current[3] = {0.0f, 0.0f, 0.0f};
-    if (!read_triple_quiet(g_buddy_ds, 0x10, current)) {
-        return;
-    }
-    if (!world_position(current)) {
-        return;
-    }
     // The target is either the frozen anchor captured at `aihold` or, in puppet mode, the
     // interpolated pose from the peer. A pose that fails the world-position test, or that
     // has not arrived at all, leaves the buddy exactly where it is: no teleport, no guess.
@@ -2577,24 +2578,38 @@ void ai_hold_after(int id, uintptr_t self)
             return;
         }
     }
-    if (distance3(current, target) <= 0.001) {
+    float current[3] = {0.0f, 0.0f, 0.0f};
+    if (!read_triple_quiet(g_buddy_ds, 0x10, current) || !world_position(current)) {
+        return;
+    }
+    const bool logic_off = distance3(current, target) > 0.001;
+    bool physics_off = false;
+    float mover_now[3] = {0.0f, 0.0f, 0.0f};
+    if (g_buddy_mover != 0 && read_triple_quiet(g_buddy_mover, 0x12c, mover_now)) {
+        physics_off = distance3(mover_now, target) > 0.05;
+    }
+    if (!logic_off && !physics_off) {
         return;
     }
     if (now - g_hold_last_write_log >= 1000) {
-        dbg("[BUDDY]", "hold id=%d restore ds=0x%08llx current=%.3f %.3f %.3f target=%.3f "
-                       "%.3f %.3f state=%s%s%s",
-            id, static_cast<unsigned long long>(g_buddy_ds), current[0], current[1],
-            current[2], target[0], target[1], target[2], g_buddy_state_class,
-            g_buddy_mover != 0 ? " (also mover+0x12c)" : "",
-            g_puppet_active ? (stale ? " PUPPET stale-hold" : " PUPPET") : "");
+        dbg("[BUDDY]", "hold id=%d current=%.3f %.3f %.3f mover=%.3f %.3f %.3f target=%.3f "
+                       "%.3f %.3f%s%s state=%s",
+            id, current[0], current[1], current[2], mover_now[0], mover_now[1],
+            mover_now[2], target[0], target[1], target[2],
+            g_puppet_active ? (stale ? " PUPPET-stale" : " PUPPET") : "",
+            physics_off ? " pin-mover" : "", g_buddy_state_class);
         g_hold_last_write_log = now;
     }
-    SIZE_T wrote = 0;
-    WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_ds + 0x10),
-                       target, sizeof(target), &wrote);
-    if (g_buddy_mover != 0) {
-        WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_mover + 0x12c),
+    if (logic_off) {
+        SIZE_T wrote = 0;
+        WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(g_buddy_ds + 0x10),
                            target, sizeof(target), &wrote);
+    }
+    if (physics_off) {
+        SIZE_T wrote = 0;
+        WriteProcessMemory(GetCurrentProcess(),
+                           reinterpret_cast<void*>(g_buddy_mover + 0x12c), target,
+                           sizeof(target), &wrote);
     }
     ++g_hold_restores;
 }
