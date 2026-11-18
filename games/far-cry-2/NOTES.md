@@ -885,6 +885,10 @@ what was observed, all on Steam 1.03, mostly two copies on one PC:
   sees the real player again. Run: 18 s after the host's shot 64 m away, 4 NPCs hit the joiner 45 times; no crash.
   On the joiner the game recounts the town alarm from its own NPCs every frame, so the "Escape the cease-fire zone"
   message needed the alarm set right before the player's own update.
-- **Bump damage (2026-11-18).** Pushing into the other player's avatar cost 5-16 HP on both copies. A write breakpoint
-  on the player's health found the damage handler (Dunia+6A2880): collision stims (type 4) with an unrelated NPC as
-  source. They are dropped while the avatar is within 1.5 m.
+- **Bump damage (2026-11-18).** Pushing into the other player's avatar cost 5-16 HP on both copies, with a pain shout.
+  A write breakpoint on the player's health led to collision stims (type 4, built by Dunia+682F0, sent by Dunia+510850
+  to both bodies through the entity's event method). Every one named as "what we hit" the same town NPC 24-30 m away,
+  never the avatar (cause unknown), and the old bump filter took type 4 for a perception stim. A collision stim on
+  either player whose named source is over 5 m from it while the players are within 1.2 m is now dropped before
+  damage and reaction; hits by vehicles and NPCs come from close by and pass. Checked by bumping for about 5 minutes
+  on two copies on one PC: health unchanged, no flinching; a vehicle hit next to the avatar was not checked.
