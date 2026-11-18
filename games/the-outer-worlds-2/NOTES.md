@@ -642,6 +642,26 @@ Trading (runs 70-74):
   "Restricted", and the client stayed in its old world. It now tries again every 2 s for up to 2 minutes. In run 74,
   3 forced refusals were followed by a load 18 s later.
 
+Probes 77-80 and run 81 (2026-11-18, before publishing):
+
+- **Kill XP:** a death applied the way the mod applies one (`HealthComponent.Suicide`) gives the local player no XP, so
+  a kill is not counted twice (once by the game, once by the party XP).
+- **Saves:** `SaveGame` returns "Restricted" while another save is still running. Two calls back to back gave
+  `AsyncSaveTask_Begun`, then `Restricted`; the call 3 s later was accepted again.
+  - A new save folder appearing in the save directory does not block saves.
+  - The "refused" private save seen at every hand-over (runs 70-76) came from the mod itself: after the first save
+    finished, it started a second one, then retried for 6 s. Each hand-over waited 6 s, but the character was kept.
+  - Fixed: one save per hand-over. In run 81 the save was not refused, and the client was in the new map 22 s after
+    the host (25 s before).
+- **Container screens:** the quick-loot popup of an Order of the Ascendant bag offers only "Steal" and "Hold to steal
+  all".
+  - The inventory screen has no drop; only the cheat `OwCheatManager.DropAllItemsDebug` exists.
+  - `IndianaUI` has an `ItemTransferClass` (`ItemTransfer_BP`, two item lists), opened from native code; not reached.
+  - So players can't yet put an item where the other player can take it, and trading through containers is not usable
+    in play.
+  - Ship landing pads are travel destinations (`/Game/Maps/TravelDestinationData/<map>/SHIP_<map>_Landing_Pad`). An
+    early save in `0101_JP` had no ship storage.
+
 Memory: with a cold NVIDIA shader cache (5.8 GB cap, shared with the owner's game), a test copy's start reached
 13-17 GB and the memory guard stopped it (runs 67-69). The owner raised the cache size to unlimited on 2026-11-18.
 
