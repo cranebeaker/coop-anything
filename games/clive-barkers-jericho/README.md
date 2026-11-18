@@ -3,17 +3,17 @@
 | | |
 |---|---|
 | Engine | MercurySteam ScrapEngine (the Scrapland engine), Lua 5.1.1, D3D9, PhysX 2.7 |
-| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 to 0.3.3 on a Windows 10 test PC with a Russian game copy (0.3.2 also with Ultimate ASI Loader 10.0.2, 0.3.3 also on a copy with the SMOD Add-ons' German texts); 0.3.4 on two test PCs over a LAN with the same video settings, menus in Russian and English |
+| Versions tested | Retail DVD, `Jericho.exe` 1.0.0.1, SHA-256 `7fb5b759823283a83b685adc4848289a149f520ddbab6dbc7f9e6131b15d2a62`, Windows 10 and 11; also with SMOD 1.0.3, and (0.3.0) with SMOD Add-ons 1.1 on one PC against a plain host; 0.3.1 to 0.3.3 on a Windows 10 test PC with a Russian game copy (0.3.2 also with Ultimate ASI Loader 10.0.2, 0.3.3 also on a copy with the SMOD Add-ons' German texts); 0.3.4 and 0.3.5 on two test PCs over a LAN with the same video settings, menus in Russian and English |
 | Projects | [Jericho Co-op+](https://github.com/dolbaras/jericho-coop) (directory entry "Jericho Co-op+", called Jericho Co-op before 0.2.4); fork MAK-PIVO/jericho-coop (no longer public since 2026-10-22), merged back in 0.2.1 |
-| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 to 0.3.3: offline tests plus live checks on one test PC; 0.3.4: the whole campaign over a LAN between two PCs again, split screen with two gamepads, real skip votes and a real QTE scene); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1 to 0.3.4 |
-| Last updated | 2026-11-16 (0.3.4) |
+| QA level | automated (up to 0.3.0: whole campaign over a LAN between two PCs, menus driven like a player with virtual gamepads, every story split with a real host and client; 0.3.1 to 0.3.3: offline tests plus live checks on one test PC; 0.3.4: the whole campaign over a LAN between two PCs again, split screen with two gamepads, real skip votes and a real QTE scene; 0.3.5: the same campaign run again, a real client joining a level in progress, a boss's heart hit by a client); a first human session over Steam (missions 1-8). Lab-tested only: nobody outside the lab has played 0.3.1 to 0.3.5 |
+| Last updated | 2026-11-18 (0.3.5) |
 
 ## Where things stand
 
 Two to four players can play the whole campaign together, each controlling one squad member
 while the AI keeps the rest, over a local network, direct IP or Steam, and two of them can
 share one PC in split screen. Builds are released with an installer
-([releases](https://github.com/dolbaras/jericho-coop/releases), [0.3.4](https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.4) at the time of writing),
+([releases](https://github.com/dolbaras/jericho-coop/releases), [0.3.5](https://github.com/dolbaras/jericho-coop/releases/tag/v0.3.5) at the time of writing),
 in English, Russian, German, French, Spanish and Italian; from 0.2.3 the installer's shortcut
 installs a newer release from GitHub before each start. Every level, power, story part and
 cutscene runs in automated tests. A first session between two people over Steam (missions
@@ -59,10 +59,13 @@ others: in split screen each half sees the other player reload, strike and cast 
 character; every player votes to skip a cutscene (split screen player 2 too, and the vote line
 now shows over the scene); the level-start screen names the players still loading; Cole's
 grenades and mines fly, lie and blow up on every PC; a partner off the screen gets a marker at the
-side of the view; and a joining player's kills count towards the game's artwork unlocks. Honest
-status: 0.3.1 to 0.3.3 were checked by offline tests and by live checks on one test PC; 0.3.4 by
+side of the view; and a joining player's kills count towards the game's artwork unlocks. 0.3.5 (2026-11-18) lets a player join a
+level that is already running (the host tells the new player the session settings, its save variables of the level and which
+enemies are dead; a fifth player is refused) and makes the two bosses of the Ziggurat, Nanna and Utu, take a client's hits on their
+hearts (the heart's state was only the host's). Honest
+status: 0.3.1 to 0.3.3 were checked by offline tests and by live checks on one test PC; 0.3.4 and 0.3.5 by
 offline tests and live checks on two test PCs over a LAN, the whole campaign included (below).
-Nobody has played 0.3.1 to 0.3.4 by hand outside the lab. A whole campaign played through by
+Nobody has played 0.3.1 to 0.3.5 by hand outside the lab. A whole campaign played through by
 people is still to come.
 
 ## Existing work
@@ -382,6 +385,13 @@ restored on uninstall.
   the host credits a kill of that kind to the client's own counter, and the level pictures the
   host unlocks at a level's end unlock for every player. Players of 0.3.3 and 0.3.4 do not play
   together (the lobby's version check), so no older version has to read the new messages.
+- **Joining a level in progress (0.3.5):** a client that connects from the menu while the host is in a level used to send no hello and wait forever.
+  The host now sends `inlevel` to the new peer; a menu client checks the version, answers with the hello ("Joining the running game..." in six
+  languages) and, before the welcome, receives `lset` (skill, toughness, QTE, AI squadmates, cutscene mode, SMOD rules) and `sv` (the host's save
+  variables of the level); the catch-up kills the placed enemies the host already killed. A fifth seat is refused (`full`).
+- **Bosses' hearts for clients (0.3.5):** Nanna's and Utu's heart state was set on the host only, so a client's copy stayed invulnerable and its shots
+  never counted. A new `eheart` message carries the state and late joiners get it in the catch-up. Players of 0.3.4 and 0.3.5 do not play together
+  (the lobby's version check).
 - **Development:** a Lua console into the running test game (UDP on 127.0.0.1, test runs
   only), reached on the second PC over ssh.
 
@@ -408,6 +418,20 @@ Test runners in the mod repo's `tools/` (`run_pair.ps1`, `run_bot.ps1`, `run_men
 `level_smoke.ps1`, `storylines.ps1`, `puppet_jitter.py`) plus the workspace's LAN runners.
 Every check is a scripted run with log assertions; test windows are muted and on the second
 monitor, two game instances are never run on the same PC with D3D.
+
+Results for 0.3.5 (2026-11-18), the same two test PCs, live checks on the release build (the DLL is the 0.3.4 one; every change is Lua, the bot and docs):
+
+- Live, joining a level in progress: the host in a level had killed three enemies and opened a door; a client started from the menu, connected and loaded the level. At +30 s both
+  PCs listed the same living enemies and the same world digest (the killed ones gone, the door open); a kill after the join was followed on both.
+- Live, bosses: Nanna and Utu started by their own AI; the host logged the heart state and the client took it from the host; the client's damage on the heart took each boss from 100 to 0.
+  The hearts were exposed by the game's own heart function as a lab shortcut (the swarms that guard them were not killed by console damage); a hit by a pad's bullet on the heart bone was not seen.
+- Live, again on the release build: the skip vote with real input on both PCs, Church's spell cost counted once, split screen markers and strips, Cole's grenade, the Co-op menus in Russian and
+  English and split screen with two gamepads (no crash), and the whole campaign (33 levels, two runs) with the client following every level of the host: no crash, no script error.
+- Offline: the join mock test (39 checks) and the other Lua tests, the installer tests (56), the setup exe's test, every published version 0.1.0, 0.2.2, 0.2.9 and 0.3.4 updated and removed clean,
+  the texts test (1219), the ASI loader test (13) and the collector's test (114).
+- The update: after the publication the published 0.3.4 launcher updated a stand-in folder through the real GitHub feed: 10 of 10 checks, on a hidden desktop.
+- Did not reproduce on 0.3.5 or on the 0.3.4 tree (the code of both paths is unchanged): a real QTE held by a client (about 130 of 134 sequences failed in five runs, while one run of 0.3.4 had passed), and
+  a client's melee kill credited (the host's AI squad killed the target first).
 
 Results for 0.3.4 (2026-11-16), two test PCs on a local network (the host on one, a client on the
 other, the same video settings on both), live checks on the release build:
@@ -648,7 +672,7 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
 
 - One human session over Steam so far (missions 1-8, on 0.2.x); a tester's split screen report on
   0.3.0 led to 0.3.1. The full campaign has been run by scripts, not finished by people (last on
-  0.3.4, between two PCs), and 0.3.1 to 0.3.3 were only checked on one test PC. Story scripts that
+  0.3.5, between two PCs), and 0.3.1 to 0.3.3 were only checked on one test PC. Story scripts that
   assume one player are fixed per level as playtesting finds them. A report from that session (a
   cutscene taking a client's controls while the host walked) could not be reproduced.
 - In a split screen game without network players, player 2 joins after the level's opening
@@ -657,8 +681,10 @@ virtual LAN. PhysX legacy 9.12.x or 9.13.x is needed on modern Windows
   gesture of its own (the game has none; the closest is played); Delgado's dragon arm and Cole's
   squad re-arm (Reequip) are not mirrored; Delgado's fire barrier flames are not shown (the
   barrier itself works).
-- Joining a session that is already in a level is not available; lifts and moving set pieces
+- Joining a level in progress (0.3.5) is checked from the menu into a running level only: not a join during a scene, not a rejoin of the same player, not over Steam, not a late
+  joiner with a split screen player 2; a host that has no checkpoint yet makes the newcomer play the level's opening scene alone. Lifts and moving set pieces
   are each PC's own (not synced in time).
+- The Behemoth's end is a QTE scene, not a damage fight; the psychic commander (Vigil) stays idle when her group is activated (engine AI); a real client QTE and a client's melee credit did not reproduce on 0.3.5.
 - The 0.3.3 texts were seen in the running game in Russian (the 0.3.4 menus in Russian and English); German only on a copy that draws with
   the Russian edition's font, so German, French, Spanish and Italian letters on their own editions
   are proven by the text test, not by eye.
