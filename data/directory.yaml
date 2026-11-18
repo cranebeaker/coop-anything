@@ -10964,6 +10964,7 @@
   project: Resident Evil Revelations Co-op
   url: https://github.com/dolbaras/revelations-coop
   other_urls:
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0
@@ -10981,7 +10982,7 @@
   last_activity: 2026-11
   qa: automated
   notes: >-
-    Version 0.2.2 (GitHub Latest, published 2026-11-15, after 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12), PC/Steam
+    Version 0.2.3 (GitHub Latest, published 2026-11-18, after 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12), PC/Steam
     build 13298487, a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on one PC
     with two gamepads covers the whole campaign; network co-op (two PCs, Steam friends or direct IP on UDP 28410, ENet)
     follows the story section by section from Episode 1 to the end with the pair each part gives, with host-run
@@ -10992,7 +10993,9 @@
     the guest's start kit); 0.2.2 gives the split-screen second player his own action button for doors, items and
     objects, passes the key-item and object flags of every episode, shows the partner's door, pickup and lever
     motions, the lockers he opens and the levers he pulls on both PCs, and starts movies together and skips them only
-    when both players press skip (as in Resident Evil 6). QA: offline C suites, a headless bot, an installer suite
+    when both players press skip (as in Resident Evil 6); 0.2.3 fixes two split-screen reports: the second player's
+    shots now follow his own camera instead of the first player's, and a movie or cutscene that starts during play
+    fills the screen. QA: offline C suites, a headless bot, an installer suite
     (289 offline, 286 against the real release feed) and scripted sessions with real game clients on two PCs of one
     LAN and in split screen, partly driven by test commands; nobody outside the lab has played it, and Steam relay
     between two networks is untried. The game itself ships no campaign co-op: its only two-player mode is Raid, which
@@ -11000,13 +11003,14 @@
     withdrawn). MIT. Write-up in games/resident-evil-revelations.
   sources:
   - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
   - https://github.com/cranebeaker/coop-anything/issues/299
   - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
-  checked: '2026-11-16'
+  checked: '2026-11-18'
 - game: Resident Evil Revelations 2
   year: 2015
   engine: MT Framework (32-bit, Direct3D 9)
