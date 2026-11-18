@@ -763,3 +763,37 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
   within ~30 s in the last runs; stop live work and let the machine cool.
 - State: 0 warnings, 132/132 tests, save B34D9065...A4AD, guard 74 05, no games. PR #397 remains a
   draft with the earlier evidence; this round's text is added to the same branch.
+
+### Round 6 (2026-11-18): code-3 fixed, two-machine verified, story/save/proxy lanes
+
+- **Exit code 0x3 root cause fixed.** Frida + IL analysis: BepInEx `6.0.0-pre.2` never ran
+  `InjectorHelpers.Setup()`, so the GC finalizer patch was never installed while
+  `Il2CppObjectPool.DisableCaching` stayed `false`; pooled non-finalizable IL2CPP objects were
+  re-registered for finalization and the Boehm finalizer thread crashed with a null `MethodInfo`.
+  `Plugin.Load()` now disables pooling of those objects and hooks `RunFinalizer`. Regression,
+  chest, enemy-damage and all four chaos profiles (`lan`, `good_wifi`, `bad_wifi`, `hell` + a 4 s
+  partition) pass afterwards (`qa-20261118-114007`).
+- **Two-machine play verified** (Win11 host + Hyper-V Win10 LTSC `PopCoop-W10L`): movement,
+  fixed `MirrorAnimationV2` polarity, `AttackCombo01`, death/revive, `ToggleGPE` both ways and
+  enemy HP lower-wins/kill `4->3`, with screenshots on both machines.
+- **WorldPortal clean re-test passes after the fix**: the client triggers `CIT_LOW_02` ->
+  `CIT_LOW_11`, both peers arrive, stay connected and stay alive for 10 s
+  (`qa-20261118-153308`).
+- **animcheck lands in the walk band**: `group_mismatch_pct=1.01`, `pose_err_p95=17.0`,
+  facing error 0.0, no threshold breach (`qa-20261118-150037`).
+- **Story sync beyond one flag**: the host captures six ability flags and `QuestManager` quest and
+  element stages; the client applies them and its `QuestManager.m_canUpdate` is suppressed so its
+  quest scripts do not advance independently. Story epoch and sequence are host-authoritative; a
+  client-side rebase was resetting the sequence after the baseline and stalling replication, now
+  fixed. `story-combat` PASS: vision host->client, combat hits both ways, host=1 client=1
+  (`qa-20261118-154900`).
+- **Save authority**: read-only sidecar (live-slot hashes, host/peer baselines, pre-session
+  backups under `%LOCALAPPDATA%\PopCoop\save-authority`), `MsgSaveMeta` exchange and
+  `save status|backup|inspect`. No save-content transfer and no in-session write to the live save.
+- **Remote enemies render**: visual-only scene clone, procedural capsule fallback, pooled and
+  dropped on level change.
+- **Mutation twins caught live**: `mutant-clone-triggers` (clone instigator fires a WorldPortal)
+  and `mutant-interact-early` (client does not apply the chest completion) both fail the chest gate
+  as required (`qa-20261118-155411`, `qa-20261118-160730`).
+- State: 0 warnings, 159/159 unit tests, scorer self-test 15/15, owner save unchanged
+  (`69174FE0...FDBE`), guard patch reverted after every run.

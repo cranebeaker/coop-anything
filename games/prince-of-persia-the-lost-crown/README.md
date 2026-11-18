@@ -109,49 +109,39 @@ powershell -NoProfile -ExecutionPolicy Bypass -File qa\run-live-suite.ps1 `
 ```
 
 `qa/` is the tracked suite (scorer self-test first; regression, chest, reconnect, enemy-damage,
-enemy-pos, anim, player-death; `-Control`, `-Invariants`, `-Chaos`, `-Animcheck`, `-Only`,
-`-Mutant`). Last suite (2026-11-16): build 0 warnings, **132/132 unit tests**; the seven live gates
-PASS across runs (locomotion/facing, interaction both ways, chest state-only apply, reconnect after
-an 8 s host outage, enemy HP/death/position, remote animation, player death visibility). Control
-PASS (host alone: HP 1.00 -> 0.25 read back); invariants PASS (4/4 actors, alive, HP and positions
-within 0.20 m at t0/t+3/t+6 s).
+enemy-pos, anim, player-death, portal, story-combat; `-Control`, `-Invariants`, `-Chaos`,
+`-Animcheck`, `-Only`, `-Mutant`). Last suite (2026-11-18): build 0 warnings, **159/159 unit
+tests**; animcheck, chest, portal and story-combat PASS, and both new mutation twins are caught.
+Control PASS (host alone: HP 1.00 -> 0.25 read back); invariants PASS (4/4 actors, alive, HP and
+positions within 0.20 m at t0/t+3/t+6 s).
 
 Tools from this hub were used and their own suite passed with `python -I tools/test_all.py`
 (ALL OK, 15 tools; cmake on PATH, Python 3.13):
-- **chaos** (`lan` seed 1): movement, interaction, 4/4 actors, 0.30 m, 0 drops; `good_wifi` lost the
-  interaction with 3 drops (movement/positions/scene OK); `bad_wifi` and `hell` ended when both
-  games exited `0x3` before comparison. No convergence failure was measured; a 0.5 % loss profile
-  does show that one-shot interactions have no retry.
-- **animcheck**: the new `pose` command exposes root yaw and rig bones, so pose is compared
-  (`pose_err_p95=37.9`, no missing fields). 398 samples, `group_mismatch_pct=39.8`, one sliding
-  episode, no T-pose/jitter/rubber-band/stuck/death-pose findings.
+- **chaos**: all four profiles (`lan`, `good_wifi`, `bad_wifi`, `hell`) and a 4 s partition heal
+  PASS after the `0x3` fix: movement, interaction, actor positions and scene converge. One-shot
+  interactions still have no retry beyond the 3x resend.
+- **animcheck**: the `pose` command exposes root yaw and rig bones. The walk command was fixed to
+  stay inside the walk band: `group_mismatch_pct=1.01`, `pose_err_p95=17.0`, facing error 0.0, no
+  threshold breach (`qa-20261118-150037`).
 - **fuzz**: `qa/fuzz` wraps the lower-HP, 4 m position match, one-shot death, ownership epoch and
   deferred-activation rules in the hub target. 200 seeds on 2 players, 200 on 3 and a 2-minute
   4-player `bad_wifi` run held every oracle; five twins (`hp_overwrite`, `death_all`,
   `stale_accept`, `double_apply`, `no_position_match`) all failed with the named oracle and were
   shrunk (1-3 ops).
 - **mutants**: the scorer self-test rejects 15 bad fixtures; the lower-HP twin is unit-proven
-  (`HpMergeTests`). Live `no-actors`/`death-all` twins were interrupted by the host `0x3` exit at
-  the kill step and are reported as attempted, not passes.
+  (`HpMergeTests`). Live `mutant-clone-triggers` (clone instigator fires a WorldPortal) and
+  `mutant-interact-early` (client does not apply the chest completion) are caught: both break the
+  chest gate as required (`qa-20261118-155411`, `qa-20261118-160730`).
 - **loss retry**: player-action, chest, death-visibility and story packets are sent three times;
-  the receiver's 10 s key dedupe keeps them idempotent. The `good_wifi` delivery proof was
-  interrupted by the code-3 exit, so this is implemented but not yet proven under loss.
+  the receiver's 10 s key dedupe keeps them idempotent. The `good_wifi` profile now passes.
 - **flight / gameslot / inspect**: flight ran its own tests but no `.cofr` emitter is wired into the
   mod yet; gameslot serialised the live lane; inspect was not adapted (optional item).
 
-Known flake: on one machine, connected sessions can exit with code `0x3` after tens of seconds
-(host first), often around an enemy death. It reproduces on older builds, with the GPE poll,
-snapshot send and managed quits disabled, and with the actor apply or the `SetActive(false)` hide
-disabled, so the actor path is not the trigger; no WER/Application Error event is written. A lone
-client is stable. It looks like the emulator/two-copy environment, not the mod's tick work. Long
-local sessions are not a reliable test bed.
+Former flake, now fixed: connected sessions used to exit with code `0x3` after tens of seconds. The
+finalizer/pooling root cause is described in NOTES Round 6; regression, chest, enemy-damage, all
+four chaos profiles, portal and story-combat are stable after the fix.
 
 Evidence logs live in the owner's private QA folder, referenced in [NOTES.md](NOTES.md).
-
-Known flake: on one machine, connected sessions can exit with code `0x3` after tens of seconds
-(host first). It reproduces on older builds, with the GPE poll/snapshot disabled and with managed
-quits blocked; a lone client is stable. It looks like the emulator/two-copy environment, not the
-mod's tick work. Long local sessions are not a reliable test bed.
 
 ## How to play
 
@@ -167,25 +157,26 @@ version, IL2CPP metadata and Addressables catalog hashes. Saves are per machine;
 
 ## Known issues
 
-- Story, quests, dialogue, cutscenes and ability unlocks are not synchronised.
-- Saves are per machine; there is no live shared progression (manual copy only).
-- Connected WorldPortal transitions can exit the game with code `0x3` after both clients arrive.
-- Two-machine play has not been tested: no second PC is reachable on either interface and no
-  usable GPU VM exists; the LAN-address two-client run is the closest validation. Code-3 was not
-  isolated on a second OS/VM.
+- Story sync is opt-in (`POPCOOP_STORY_SYNC=1`) and covers six ability flags plus quest/element
+  stages; dialogue, cutscene playback and conversation choices are not synchronised.
+- Saves are per machine; a read-only save-authority sidecar (`save status|backup|inspect`) exists,
+  but there is no save-content transfer or live progression merge (manual copy only).
+- The `0x3` exit was root-caused and fixed; connected WorldPortal transitions now pass a clean
+  `CIT_LOW_02` -> `CIT_LOW_11` re-test with both peers alive for 10 s.
+- Two-machine play is verified between a Win11 host and a Hyper-V Win10 LTSC guest (movement,
+  mirror polarity, attack, death/revive, levers, enemy HP, screenshots on both machines).
 - The second player is a cloned body: no inventory, abilities or camera. Remote attacks animate but
   do not deal damage; damage authority is the HP-stream model.
 - Player health is per player; only death/respawn visibility is shared.
 
 ## Next steps
 
-1. **Story sync by effect capture** (see `playbook/effect-capture-story-sync.md`): host runs story
-   scripts, records primitive changes, clients apply them without re-running the script. Start with
-   one quest flag or ability unlock, not the whole story.
-2. **Hit events** instead of inferred HP: send actor position + damage + resulting HP, apply through
-   the matched actor; keep the stream as fallback.
-3. **Safe shared save**: staged import at plugin load (hash, backup), never live writes; then a
-   transfer path.
-4. **Two-machine or VM test**: settle the code-3 exit with a separate OS/profile and measure real
-   latency.
-5. Network-chaos and desync passes from the playbook once a second machine exists.
+1. **Story sync depth**: dialogue lines, cutscene playback and conversation choices still run
+   locally; only the resulting flags and stages are synchronised. A conversation/cutscene driver is
+   the next slice.
+2. **Shared save content**: the read-only authority sidecar (hash, baseline, backup, metadata) is in
+   place; a transfer/merge path is still needed.
+3. **A real second player**: no inventory, abilities or camera for the clone, and its attacks are
+   display-only. This is the largest remaining design item.
+4. **Loss hardening**: one-shot interactions and story batches have 3x resend and 10 s dedupe but
+   no acknowledgement/repair pass yet.
