@@ -15084,3 +15084,33 @@
   - https://github.com/oshoubber/parkasaurus-coop/releases/tag/v0.1.1
   checked: '2026-11-15'
   made_with_coop_anything: true
+- game: Nova Drift
+  year: 2024
+  engine: GameMaker (YYC)
+  project: Nova Drift online co-op
+  url: https://github.com/firefliesalco/nova-drift-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'yes'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: 2-4
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: >-
+    version.dll mod for Steam build 25890040 (1.2.38.4). Every player runs the game; deterministic lockstep shares
+    only input over Steam P2P. In-game Multiplayer lobby (host sets modifiers, upgrade pool, respawn time and an
+    enemy-health multiplier), per-player ships, builds and upgrades, shared XP, respawns. Automated 2- and 4-copy
+    lobby tests on one PC; not yet tested between two PCs over Steam. MIT source.
+  sources:
+  - https://store.steampowered.com/app/858210/
+  - https://github.com/firefliesalco/nova-drift-coop#readme
+  - https://github.com/cranebeaker/coop-anything/blob/main/games/nova-drift/README.md
+  checked: '2026-11-18'
+  made_with_coop_anything: true
