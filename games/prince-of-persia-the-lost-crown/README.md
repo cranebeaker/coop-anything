@@ -190,10 +190,11 @@ et8.0-windows\PopCoop.Launcher.exe
 
 ### Packaging
 
-`build-release.ps1` builds `release\PopCoop-<version>.zip` (~96 MB): bundled BepInEx 6.0.0-pre.2,
-the plugin, a self-contained launcher, `install.cmd`, a manifest with the tested game hash and a
-quickstart. The friend extracts it, runs `install.cmd`, points it at the game folder and launches
-PopCoop. No game files or artwork are redistributed.
+`build-release.ps1` builds a folder/zip (~96 MB) with `PopCoop.Launcher.exe`, `payloadepinex`
+(BepInEx 6.0.0-pre.2), `payload\plugin`, a manifest with the tested game hash and a quickstart.
+The launcher **is** the installer: first run asks for the game folder, installs BepInEx and the mod
+in-process (no terminal, no `install.cmd`, no extra downloads), then shows Host/Join and one
+**Play** button. No game files or artwork are redistributed.
 
 ## Known issues
 

@@ -875,3 +875,13 @@ animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, g
   LAN, public.
 - Tested: fresh dummy install (BepInEx extracted, plugin, config, launcher, shortcut), packaged
   single-file launcher opens, uninstall removes ours and leaves BepInEx.
+
+### Round 12 (2026-11-18): launcher-as-installer
+
+- The release is a folder with `PopCoop.Launcher.exe` + `payload` (BepInEx pre.2 + plugin). First
+  run asks for the folder containing `TheLostCrown.exe`, installs the bundled BepInEx and the mod
+  in-process (including `UnityLogListening=false` and a build-hash note), then shows Host/Join and
+  one **Play** button. No terminal, no `install.cmd`, no extra downloads.
+- `--setup <dir>` is the headless QA path for the same service.
+- Tested: fresh `--setup` (exit 0, BepInEx/plugin/config), first-run screen, Play screen and the
+  packaged single-file launcher; the zip is ~95.5 MB.
