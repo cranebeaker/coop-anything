@@ -110,9 +110,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File qa\run-live-suite.ps1 `
 
 `qa/` is the tracked suite (scorer self-test first; regression, chest, reconnect, enemy-damage,
 enemy-pos, anim, player-death, portal, story-combat, character, save-transfer; `-Control`,
-`-Invariants`, `-Chaos`, `-Animcheck`, `-Only`, `-Mutant`). Last suite (2026-11-18): build 0
-warnings, **174/174 unit tests**; animcheck, chest, portal, story-combat, character and
-save-transfer PASS, and all four new mutation twins are caught.
+`-Invariants`, `-Chaos`, `-Animcheck`, `-Only`, `-Mutant`). Last suite (2026-11-18,
+`qa-20261118-180618`): build 0 warnings, **174/174 unit tests**; **13/13 live gates PASS**
+(regression, chest, reconnect, enemy-damage, enemy-pos, anim, player-death, portal, story-combat,
+character, save-transfer, animcheck plus the scorer self-test), and all five mutation twins are
+caught.
 Control PASS (host alone: HP 1.00 -> 0.25 read back); invariants PASS (4/4 actors, alive, HP and
 positions within 0.20 m at t0/t+3/t+6 s).
 

@@ -851,3 +851,7 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
 - Live: host `decided=0 sent=1`, client `decided=0 applied=1`, both in conversation `id=8` at line
   `4450` (`qa-20261118-174929`). `mutant-no-choice` is caught (`qa-20261118-175416`).
 - State: 0 warnings, 174/174 unit tests, owner save unchanged, guard reverted.
+
+Full suite after Round 9 (`qa-20261118-180618`): **13/13 gates PASS** (regression, chest, reconnect,
+enemy-damage, enemy-pos, anim, player-death, portal, story-combat, character, save-transfer,
+animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, guard reverted.
