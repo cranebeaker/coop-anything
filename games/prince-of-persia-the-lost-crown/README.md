@@ -111,7 +111,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File qa\run-live-suite.ps1 `
 `qa/` is the tracked suite (scorer self-test first; regression, chest, reconnect, enemy-damage,
 enemy-pos, anim, player-death, portal, story-combat, character, save-transfer; `-Control`,
 `-Invariants`, `-Chaos`, `-Animcheck`, `-Only`, `-Mutant`). Last suite (2026-11-18): build 0
-warnings, **169/169 unit tests**; animcheck, chest, portal, story-combat, character and
+warnings, **174/174 unit tests**; animcheck, chest, portal, story-combat, character and
 save-transfer PASS, and all four new mutation twins are caught.
 Control PASS (host alone: HP 1.00 -> 0.25 read back); invariants PASS (4/4 actors, alive, HP and
 positions within 0.20 m at t0/t+3/t+6 s).
@@ -135,9 +135,10 @@ Tools from this hub were used and their own suite passed with `python -I tools/t
   `mutant-no-character` (abilities/inventory are not published) and `mutant-no-save-transfer`
   (the save server refuses) are caught: each breaks its gate as required
   (`qa-20261118-155411`, `qa-20261118-160730`, and the Round 7 evidence).
-- **character** (2026-11-18): `DoubleJump` unlocked on the host appears on the client, a
-  `HealingPotion` granted on the host reaches the client, and both peers sit in conversation
-  `id=8` at line `2645` (`qa-20261118-165129`).
+- **character** (2026-11-18): `DoubleJump` unlocked on the host appears on the client; an
+  inventory grant stays local by default (per-player character sheet) and mirrors only after both
+  peers enable shared inventory; both peers sit in conversation `id=8` at line `2645`
+  (`qa-20261118-171422`).
 - **save-transfer** (2026-11-18): the host serves the live slot, the client pulls 3,317,100 bytes,
   the SHA-256 matches the served slot and the file is staged for the next load; staging is cleaned
   (`qa-20261118-164616`).
@@ -167,13 +168,15 @@ hash-verified copy for the next start (or use `save-transfer.ps1` with the game 
 
 ## Known issues
 
-- Story sync is opt-in (`POPCOOP_STORY_SYNC=1`) and covers six ability flags, every unlockable
-  ability, inventory counts (merge-max) and quest/element stages. Dialogue and cutscene playback is
-  shared and line-synced; a conversation **choice** is local, so a divergent branch is not
-  force-restarted.
-- Saves are per machine; a read-only save-authority sidecar (`save status|backup|inspect`), a
-  hash-verified `save pull` content transfer and the manual copy tool exist. A pulled save applies
-  at the next start; there is no live in-session or semantic progression merge.
+- Story sync is opt-in (`POPCOOP_STORY_SYNC=1`). The host owns story progression: six ability
+  flags, every unlockable ability and quest/element stages. Each machine owns its character sheet:
+  inventory is per player by default (`POPCOOP_SHARED_INVENTORY=1` opts into a shared, merge-max
+  pool). Dialogue and cutscene playback is shared and line-synced; a conversation **choice** is
+  local, so a divergent branch is not force-restarted.
+- Saves are per machine by design: the host slot is the canonical story copy, and each machine's
+  slot also carries that player's character. A read-only sidecar (`save status|backup|inspect`), a
+  hash-verified `save pull` and the manual copy tool exist. A pull applies at the next start and
+  restores the local character sheet after load; there is no live in-session or semantic merge.
 - The `0x3` exit was root-caused and fixed; connected WorldPortal transitions now pass a clean
   `CIT_LOW_02` -> `CIT_LOW_11` re-test with both peers alive for 10 s.
 - Two-machine play is verified between a Win11 host and a Hyper-V Win10 LTSC guest (movement,
@@ -186,9 +189,9 @@ hash-verified copy for the next start (or use `save-transfer.ps1` with the game 
 
 1. **Conversation choices**: playback and lines are shared, but the selected option is local, so a
    divergent branch is not mirrored. Capture the choice and drive the peer to the same branch.
-2. **A real second player on one machine**: the clone is still a remote body; a second
-   controllable character needs input mapping and a camera the game does not expose. Shared
-   abilities and inventory are progression mirroring, not a second character sheet.
+2. **A real second player on one machine**: not recommended. The engine assumes one local player
+   (camera, UI, input, save); the clone is the remote body. Two machines or a streamed second
+   instance are the supported paths.
 3. **Loss hardening**: one-shot interactions and story batches have 3x resend and 10 s dedupe but
    no acknowledgement/repair pass yet.
 4. **In-session save merge**: `save pull` stages a whole slot for the next start; a semantic

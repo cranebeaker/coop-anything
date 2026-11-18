@@ -819,3 +819,22 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
 - State: 0 warnings, 169/169 unit tests, owner save unchanged, guard reverted after every run.
 - Limits: a conversation choice is local (a divergent branch is not force-restarted); shared
   inventory is a mirror; there is no second controllable character on one machine.
+
+### Round 8 (2026-11-18): split save authority - host story, per-machine character
+
+- **Inventory is per player by default.** The host owns story/world progression (flags, quests,
+  ability unlocks); each machine keeps its own character sheet. `POPCOOP_SHARED_INVENTORY=1` (or
+  `story sharedinv on`) opts into a shared, merge-max pool. Live: a HaomaFragment granted on the
+  host stayed at 0 on the client; after both peers enabled shared mode, a DamascusOre grant
+  mirrored (`character`, qa-20261118-171422).
+- **Character survives a host-save import.** `save pull` snapshots the local inventory
+  (`CharacterSnapshot`/`CharacterSnapshotStore`) before staging and restores it on the first
+  stable tick after the imported story save loads, so the host slot can own the story/world
+  without erasing the client's character.
+- **Why not host-only saves?** The game stores everything in one slot, so the split is by
+  authority, not by file. Suppressing client saves would need a risky save-manager patch and
+  would still lose the client's character unless overlaid. Normal play needs no import: the
+  client's own save converges because story effects are applied live before its next save.
+- Ability unlocks and quests remain host-authoritative; conversation playback and line sync are
+  unchanged.
+- State: 0 warnings, 174/174 unit tests, owner save unchanged, guard reverted.
