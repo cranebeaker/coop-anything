@@ -786,7 +786,7 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
   quest scripts do not advance independently. Story epoch and sequence are host-authoritative; a
   client-side rebase was resetting the sequence after the baseline and stalling replication, now
   fixed. `story-combat` PASS: vision host->client, combat hits both ways, host=1 client=1
-  (`qa-20261118-154900`).
+  (`qa-20261118-154901`).
 - **Save authority**: read-only sidecar (live-slot hashes, host/peer baselines, pre-session
   backups under `%LOCALAPPDATA%\PopCoop\save-authority`), `MsgSaveMeta` exchange and
   `save status|backup|inspect`. No save-content transfer and no in-session write to the live save.
