@@ -575,6 +575,76 @@ Runs 57-58, probe 59 and test 60 (beta.5, two copies on one PC):
 - **Steam send rate:** `GetConfigValueInfo` names ids 9, 10 and 11 `SendBufferSize`, `SendRateMin` and `SendRateMax`
   in this `steam_api64.dll`. The mod sets them to 8 MB, 1 MB/s and 1 MB/s.
 
+## Own characters, looks, trading and XP (2026-11-17 and 18, two copies on one PC)
+
+Goal from the owner: play the whole game together, each player with their own character; the friend joins with
+nothing, items are picked up separately and can be traded.
+
+Probe 61 (save files, read from copies of the test saves):
+
+- `SaveGame.dat` is one zlib stream. Inside is an "SGDF" container: a 23-byte header (u32 5, "SGDF", a version
+  block), then named entries `[u32 name length][name\0][u32 size][data]`: one per level, plus `Player.dat`,
+  `Quests.dat` and others.
+- `Player.dat` is the character: inventory with each item's own state (magazine, mods, durability), equipment, money
+  (the `Bit_Cartridge_C` item), level, perks and appearance. It starts with 01, version 5, "PSHF", the version block,
+  two section sizes, 01 05 01 00 00 00, then the player's position (3 doubles at offset 46) and rotation (3 doubles at
+  70), matched against the pawn's location.
+- `Metadata.dat` ("GMHF") holds the container's unpacked size (a u32 7 bytes after the end of the "Release\0"
+  string) and the character's name. The loader checks the size: a wrong one fails with
+  `CompressedGameStateUnpackFailure`.
+- Splice: one save's `Player.dat` put into another save (with the target save's position and rotation, and the size in
+  `Metadata.dat` updated) loads that world with this character. Level 17 came back after a splice into a level-20 save.
+
+What the mod does with it (runs 62, 65, 67):
+
+- Before loading a campaign the host hands over, the client's mod makes a private save of its own world ("CoopSelf"),
+  keeps its `Player.dat` per host, and splices it into the received campaign. First join: the character of the
+  friend's own newest save, emptied (no items, no money).
+- Result: the client joined with 0 bits and none of the host's items, gained 123 bits, 50 ammo and 2 levels, and after
+  the host reloaded and handed over again it still had them (the host kept its 25314 bits and level 17), standing next
+  to the host.
+- Looks: each player sends its `AppearanceComponent` fields as text (numbers, asset paths, head, body, gender tag), and
+  the stand-in applies them. When the client changed its hair, the host's stand-in followed in 2 s.
+
+Party XP (2026-11-18, from the disassembly of the build in "Game identity"; run in game in runs 70-74):
+
+- No reflected function reads XP: `PlayerInfoComponent` only has `GetLevel`, `SetLevel` and the exec command
+  `AddXPDebug(XP)`.
+- The native table entry of `AddXPDebug` leads to its exec thunk, which inlines the gain logic:
+  - XP is an int32 at `PlayerInfoComponent + 0x93C`, and the level is at `+0x330`;
+  - no gain at the maximum level;
+  - the amount is multiplied by an XP multiplier stat;
+  - the XP is capped at the next level's threshold, with a level-up loop through a virtual call;
+  - a native delegate at `+0x560` is broadcast with (XP, reason, a TArray, leveled up). It is not visible to
+    ProcessEvent.
+- The same code exists out of line as `bool AddXP(int32 XP, EXPGainReason Reason, TArray* Details)` at RVA 0x139E03C.
+  It has 9 direct callers, which pass reasons 3 (point of interest), 13 (bits to XP), 0 (enemy killed), 1 (quest
+  completed), 10 (interaction) and variable ones. Each caller passes a pointer to an empty TArray.
+- The mod hooks it (20-byte prologue) to share XP by reason:
+  - kills, lock picks, hacks, conversations, interactions, automechs and taming go both ways;
+  - quest XP goes from the host to the client, and the client's own quest XP is dropped (its quest graph follows the
+    host's);
+  - discoveries, collectibles, bits-to-XP and debug XP are not shared.
+- Runs 70-74 (`qa/test_xp.py`, gains made through the hooked function): every case behaved as above. A gain of 20 XP
+  became 23 in both copies (the multiplier stat). No listener filled the TArray.
+
+Trading (runs 70-74):
+
+- Run 70: the client's store worked, the host's did not. The host already had shotgun shells, and taking part of a
+  stack from the player fires `OnItemCountChangedInInventory` (on the `EquipmentComponent` and `InventoryAmmoPool`),
+  not `IndianaCharacter.ItemRemoved`.
+- Run 71: the client's store failed. The client's container already held the host's shells, and items added to a stack
+  the container already has fire no `Container.HandleItemAdded`.
+- The mod now notes, every 0.25 s, what the containers within 5 m of the player hold (`InventoryComponent.Items`,
+  `FItemStack` of 0x18 bytes). A container that gained items of a class the player lost in the last second got them
+  from the player. Runs 73-74: both ways passed, including the merge into an existing stack.
+- Run 73: the client was placed above the container by the test. At the next hand-over, `LoadGame` returned
+  "Restricted", and the client stayed in its old world. It now tries again every 2 s for up to 2 minutes. In run 74,
+  3 forced refusals were followed by a load 18 s later.
+
+Memory: with a cold NVIDIA shader cache (5.8 GB cap, shared with the owner's game), a test copy's start reached
+13-17 GB and the memory guard stopped it (runs 67-69). The owner raised the cache size to unlimited on 2026-11-18.
+
 ## Tools on the test PC (2026-11-15)
 
 Present: Python 3.13, git, gh, Java 21 (Temurin), .NET SDK. Missing: any C/C++ compiler (the Visual Studio
