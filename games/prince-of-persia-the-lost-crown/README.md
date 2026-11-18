@@ -172,6 +172,22 @@ version, IL2CPP metadata and Addressables catalog hashes. Saves are per machine;
 serves the live slot on port+1, and the peer can run `save pull <host> 27016` to stage a
 hash-verified copy for the next start (or use `save-transfer.ps1` with the game closed).
 
+## Launcher
+
+`src/PopCoop.Launcher` (in the PopCoop repo) is a WPF launcher that detects the install, starts the
+game, hosts or joins through the mod bridge, shows live status and can pull the host save. It
+offers LAN, Tailscale and public-IP helpers plus an across-town guide.
+
+The theme samples the game's key-art palette (deep teal-navy, cyan energy, gold, sand) and uses an
+original Persian girih/sun/dune composition. **Use artwork** loads the player's own key
+art/screenshot locally; the launcher ships and redistributes no game art.
+
+```powershell
+dotnet build src\PopCoop.Launcher -c Release
+.\src\PopCoop.Launcherin\Release
+et8.0-windows\PopCoop.Launcher.exe
+```
+
 ## Known issues
 
 - Story sync is opt-in (`POPCOOP_STORY_SYNC=1`). The host owns story progression: six ability

@@ -855,3 +855,12 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
 Full suite after Round 9 (`qa-20261118-180618`): **13/13 gates PASS** (regression, chest, reconnect,
 enemy-damage, enemy-pos, anim, player-death, portal, story-combat, character, save-transfer,
 animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, guard reverted.
+
+### Round 10 (2026-11-18): launcher and game-styled theme
+
+- WPF launcher in the PopCoop repo: install detection, launch/attach, host/join through the bridge,
+  live status, save backup/pull, LAN/Tailscale/public address helpers and an across-town guide.
+- Palette sampled from the key art (deep teal-navy, cyan energy, gold, sand) with an original
+  Persian girih/sun/dune hero. A player-chosen screenshot/key art can be loaded locally; no game
+  art is shipped or committed.
+- Build 0 warnings, 174/174 unit tests.
