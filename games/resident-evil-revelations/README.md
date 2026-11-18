@@ -4,14 +4,14 @@
 |---|---|
 | Engine | MT Framework (`KATARIBE`, project tree `bhr\biorevhd`), Direct3D 9, x86 |
 | Versions tested | PC/Steam appid **222480**, build 13298487; `rerev.exe` 14,260,576 bytes, SHA-256 `1573B79EB921B1E7F571E6DEB71C39961C7F1940FAD6D19283FC3AEA7FCA48AA`; image base 0x400000, no ASLR |
-| Projects | [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) (MIT, a `dinput8.dll` proxy); version [0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2), published 2026-11-15, GitHub "Latest", a fix release on top of [0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1) (2026-11-13, fixes of network play) and [0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0) (2026-11-12): split screen for the whole campaign, network co-op section by section through the whole story (0.1.0 of 2026-11-10 had network co-op for Episode 1 only). Claim issue: [#299](https://github.com/cranebeaker/coop-anything/issues/299). Earlier probe `re1coop`: superseded, see [Existing work](#existing-work) |
-| QA level | automated (offline suites, a headless bot, an installer suite and scripted sessions with real game clients on two PCs of one LAN, plus split screen on one PC); no human playthrough, 0.2.2 was not played by people before its release |
-| Last updated | 2026-11-16 (0.2.2) |
+| Projects | [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) (MIT, a `dinput8.dll` proxy); version [0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3), published 2026-11-18, GitHub "Latest", a fix release for split screen on top of [0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2) (2026-11-15), [0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1) (2026-11-13, fixes of network play) and [0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0) (2026-11-12): split screen for the whole campaign, network co-op section by section through the whole story (0.1.0 of 2026-11-10 had network co-op for Episode 1 only). Claim issue: [#299](https://github.com/cranebeaker/coop-anything/issues/299). Earlier probe `re1coop`: superseded, see [Existing work](#existing-work) |
+| QA level | automated (offline suites, a headless bot, an installer suite and scripted sessions with real game clients on two PCs of one LAN, plus split screen on one PC); no human playthrough, 0.2.3 was not played by people before its release |
+| Last updated | 2026-11-18 (0.2.3) |
 
 ## Where things stand
 
-**Two players can play the story campaign today, with a mod.** [Version 0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2)
-(published 2026-11-15, GitHub "Latest"; a fix release on top of 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12) takes over the campaign's AI partner (Parker,
+**Two players can play the story campaign today, with a mod.** [Version 0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3)
+(published 2026-11-18, GitHub "Latest"; a fix release on top of 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12) takes over the campaign's AI partner (Parker,
 Jessica, Chris and so on) with a second human:
 
 * **Split screen on one PC, whole campaign**, two gamepads, each player with an own camera, HUD, ammunition and pause/item menu; side by side or top/bottom.
@@ -32,6 +32,10 @@ Jessica, Chris and so on) with a second human:
   the game's objects in Episodes 2 to 12 reach the other PC (before, only Episode 1's did, so the partner's game could take the "no key" path); the partner's
   character plays his door and pickup motions, the lockers and weapon boxes he opens are shown opening, a lever he pulls moves on both PCs, and the
   pre-rendered **movies start together and are skipped only when both players press skip** (as in Resident Evil 6). See [What 0.2.2 fixes and adds](#what-022-fixes-and-adds).
+* **Fixed in 0.2.3** (split screen; network play is unchanged): after a player reported that the second player's shots miss and that cutscenes stay in two halves,
+  the **second player's shots and laser sight now follow his own camera** (they were built from the first player's camera, in every earlier version), and
+  **a movie or an in-engine cutscene that starts during play is shown in one full view** and the two halves come back right after it, also after a skip.
+  A loading screen of about 5 seconds before a movie that the story starts in the middle of play still shows in the first player's half. See [What 0.2.3 fixes](#what-023-fixes).
 * A **"Co-Op Play" row in the game's own main menu** (F6 or the pad's BACK button also open it), ready buttons in the room, the **partner on the minimap and
   map**, a **co-op save of its own** (a co-op game never writes the solo `DATA0.DAT`), an installer and a self-updating shortcut, 13 installer/lobby languages.
 * Raid mode and the game's own online play are never touched by the mod.
@@ -49,11 +53,11 @@ runs do not cover is one line at the end of [QA](#qa).
 
 | project | state |
 |---|---|
-| [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.2.2 (MIT) | Described in this page. Release notes and checksums: [v0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2). Before it: 0.2.1 ([v0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1), 2026-11-13, fixes of network play: the zone hand-over of an enemy, the partner's real guns, the guest's start kit), 0.2.0 ([v0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0), 2026-11-12, network co-op through the whole story, Give to partner, the Genesis and HUNK for the second player), the first full release 0.1.0 ([v0.1.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0), 2026-11-10, network co-op for Episode 1 only) and the pre-releases 0.0.1 and 0.0.2. |
+| [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.2.3 (MIT) | Described in this page. Release notes and checksums: [v0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3). Before it: 0.2.2 ([v0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2), 2026-11-15, the second player's action button in split screen, key-item flags, the partner's motions, movies started and skipped together), 0.2.1 ([v0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1), 2026-11-13, fixes of network play: the zone hand-over of an enemy, the partner's real guns, the guest's start kit), 0.2.0 ([v0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0), 2026-11-12, network co-op through the whole story, Give to partner, the Genesis and HUNK for the second player), the first full release 0.1.0 ([v0.1.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0), 2026-11-10, network co-op for Episode 1 only) and the pre-releases 0.0.1 and 0.0.2. |
 | `re1coop` (an earlier probe proxy, as described in PR #126; unpublished) | A diagnostic `dinput8.dll` that read the mode field and the network manager, walked the game's type registry and registered one payload type of its own. It sent no traffic and ran no session; it is not the mod above. Its measurements are kept below where they could be cross-checked. |
 | Hub PR #115 (another contributor's study of the same build) | Agrees that mode 1 is Raid. Its "route B" (running the campaign inside the Raid session) was not taken; its patterns and offsets were used as reading material and checked against the exe before use. |
 
-Searched on 2026-10-22: Steam community, GitHub, general web search turned up no other campaign co-op for the PC release. Nexus Mods and ModDB refused the fetcher
+Searched on 2026-10-22 and again on 2026-11-18 (hub issues and PRs, a web search): Steam community, GitHub, general web search turned up no other campaign co-op for the PC release. Nexus Mods and ModDB refused the fetcher
 with HTTP 403, the Steam community answered 429, and Reddit and YouTube were not checked; that search is partial.
 
 ## How the game works (for co-op)
@@ -268,6 +272,25 @@ comments are in the repository's `native/`). The new message kinds are additions
   says so; when both voted for the same movie, each PC skips it through the stock path. No seek of a playing movie was found, so a drift is not corrected;
   the barrier removes the start gap. In-engine cutscenes are not movies: each PC starts them by its own story, and both leave them together as before.
 
+### What 0.2.3 fixes
+
+A fix release for split screen on top of 0.2.2, after a player's report ("when they shoot at zombies, the shots miss and don't damage the enemy"; "the cutscenes do not appear in full screen but remain in split-screen"). The network code is unchanged;
+the hello's version string makes 0.2.2 and 0.2.3 refuse each other with a reason (`CP_PROTO_VERSION` stays 3). All of it **ours**, build 13298487.
+
+* **The second player's shots** (`native/aimray1.c`, glue in `native/split.c`; `tests/test_aimray1.c`). The game builds the line of a player's shot and laser sight from a camera
+  manager (`FUN_005EBC10` reads the camera object's view data and viewport 0's rectangle; `FUN_005EE350` and `FUN_005EFAC0` the rectangle), and every human's weapon asked
+  manager 0, the first player's camera. In split screen the second player's bullets started near the first player's camera and flew where the first player looked. Three
+  loads of the manager root (`mov eax,[0x11E00B8]`) now call a stub that hands the second human's weapons a stand-in root (manager 1, viewport 2's size); the bytes are
+  written once at the first gameplay pass of a split screen, and a game without a split screen keeps the stock bytes. The first player's shots are built as before.
+* **Cutscenes in split screen** (`native/split.c`, the scene rule; `tests/test_split1.c`). The split screen used to switch to one view only when the game put another camera
+  on screen or showed a menu; a movie started in the middle of play keeps the camera of play and was drawn into both halves. The rule now also asks the game whether the movie player
+  is in a running state (2 to 7) or a scene-manager slot runs a `demo\` resource together with manager 0's event camera; it holds the whole view for 400 ms after the scene and
+  counts one scene for at most 240 s. A loading screen of about 5 s before a movie that the story starts in play still appears in the first player's half: no clean signal for
+  it was found (the only candidate also changes during doors and grabs), so the rule was left alone and the limit is in the release notes.
+* **A guard** (`native/guards1_game.c`) against the game closing when the second player killed an enemy while the first had no knife (the kill record asks the first player for his knife)
+  is now on in split screen too; the network game has had it since 0.2.0.
+* **Lab only:** console words `split aim`, `split scene`, `split scenerule`.
+
 ## What we changed
 
 The mod, by what a player sees (code and design notes in the [repository](https://github.com/dolbaras/revelations-coop)):
@@ -296,7 +319,7 @@ The mod, by what a player sees (code and design notes in the [repository](https:
 * **Other mods:** an Ultimate ASI Loader the player had as `dinput8.dll` keeps running as `winmm.dll`; a foreign `dinput8.dll` is kept and restored.
 * **One-click log zip** (`coop\Collect logs.bat`) with names, paths, e-mail, MAC and public IP addresses removed.
 
-Bugs found on the way to 0.2.0, 0.2.1 and 0.2.2, with cause, fix and the check that shows it (the full history is in the repository's code comments and docs):
+Bugs found on the way to 0.2.0, 0.2.1, 0.2.2 and 0.2.3, with cause, fix and the check that shows it (the full history is in the repository's code comments and docs):
 
 | Problem | Cause | Fix and proof |
 |---|---|---|
@@ -350,13 +373,13 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   (`tests/test_aimgate1.c`); for 0.2.1 the zone hand-over (`tests/test_handover1.c`, a model of both PCs that the 0.2.0 rules fail), the fall-out guard
   (`tests/test_rguard1.c`), the start of the shared world (`tests/test_wgate1.c`) and the bags (`tests/test_bag1.c`: the partner's guns, the start kit, the
   guns of the host's save); for 0.2.2 the second player's interactions (`tests/test_interact1.c`), the key-item and object flags (`tests/test_sf1.c`), the levers
-  (`tests/test_objsync1.c`), the partner's motions (`tests/test_pmot1.c`), the lockers and weapon boxes (`tests/test_lid1.c`) and the movies (`tests/test_cut1.c`),
+  (`tests/test_objsync1.c`), the partner's motions (`tests/test_pmot1.c`), the lockers and weapon boxes (`tests/test_lid1.c`) and the movies (`tests/test_cut1.c`); for 0.2.3 the second player's shot ray (`tests/test_aimray1.c`) and the split-screen scene rule (`tests/test_split1.c`),
   model tests that fail on the rules of 0.2.1; suites that rely on the exe compare their facts with the bytes of the supported build when its image is at hand. A headless bot
-  (`tests/coop_bot.c`, with a network emulator and a Steam mock) speaks the protocol. All pass at the 0.2.2 release; the check counts are not quoted here (rerun with
+  (`tests/coop_bot.c`, with a network emulator and a Steam mock) speaks the protocol. All pass at the 0.2.3 release; the check counts are not quoted here (rerun with
   `tests/build.sh`).
 * **Installer** (`powershell -File tests\test_installer.ps1`): 289 of 289 offline with the published 0.2.1 zip as the old version; 286 of 286 after the publication
-  with `-Online` (the real GitHub feed, read only). After the publication the published 0.2.1 launcher updated a stand-in copy to 0.2.2 through the real feed (checksum
-  against GitHub's digest, installer exit 0, version file 0.2.2), a second start installed nothing, and the uninstall gave the copy back byte for byte. The same was
+  with `-Online` (the real GitHub feed, read only). After the publication of 0.2.3 the published 0.2.2 launcher updated a stand-in copy to 0.2.3 through the real feed (checksum
+  against GitHub's digest, installer exit 0, version file 0.2.3; 19 of 19 checks), a second start installed nothing, and the uninstall gave the copy back byte for byte. The same was
   done for 0.2.1 with the published 0.2.0 launcher (288 of 288 offline, 286 of 286 online).
 * **Live, two PCs on one LAN, for 0.2.0** (one copy of the game per PC, one PC as the host and the other as the guest, driven by a console and scripts, not by a person):
   - every section from 1-2 to 12-2 (25 sections), started directly or reached by the story's own transitions: arrival with the right characters, both players alive,
@@ -388,6 +411,15 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
     shots as HUNK hit the host's enemy;
   - the fall-out guard: a copy on the guest's PC that stood awake over floor its PC had not loaded (8.6 s in all) was held, not killed, and the host's enemy
     kept its health.
+* **Live for 0.2.3** (the two PCs and the split screen on the N100, driven by test commands and two virtual pads, on the exact build of the release DLL):
+  - split screen: with the old behaviour switched back on, the second player's ray lay 0.2 degrees from the first player's view and 19.9 from his own, and 6 shots at an enemy 300 units in front of
+    him left its health at 800; with the fix the ray lay 0.2 degrees from his own view and his shots took the enemy from 800 to 0 (the first player's ray unchanged); a movie started in play
+    filled the screen and the two halves came back right after its skip; a movie the story itself started in Episode 1 filled the screen with the fight staying split; the second
+    player's door and herb and the first player's door, and the pause menu's quit to the title, ran as in 0.2.2;
+  - network: every row of the 0.2.2 list passed again on the release DLL (Episode 1 from the lobby with the guest's real shots killing the host's enemy, Continue of saved
+    games, the guest's door and items in Episode 9, key-item and object flags, the save panel, the knife, HUNK in 2-2 with one proven hit of the guest's, movies together and the vote, the recorder in
+    Episode 12). Not seen to pass on 0.2.3: in the first run of Episode 9-2 the guest's character stayed held by the start dialogue on his PC for minutes (one of five starts, all by test
+    warp; the repeat passed, the cause is not found).
 * **Live for 0.2.2** (the same two PCs, driven the same way, on the build of the release unless named otherwise):
   - Episode 1 the game's own way from the lobby (the host's New Game): the guest's real shots killed the host's enemy, both PCs went on into the next parts of
     the episode by the story, the partner's guns and the guest's start kit were right, and every movie of the run started together on both PCs;
@@ -411,14 +443,14 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   him; he picked up a herb while the first player stood 250 units away; the first player's camera stayed steady while the second player's door opened (a
   screenshot of every frame); 8 quits to the title through the game's own pause menu from 8 sections, no crash. The door, the herb, the first player's door and a
   quit to the title were repeated on the final build.
-* **Not covered by the lab runs:** play by people, Steam relay, 12-3 and 2-2's own story played through, most sections' fights, the second player's real Genesis
+* **Not covered by the lab runs:** play by people, an in-engine story cutscene with its own camera in the middle of play (none found in Episodes 1-1, 2-1 and 3-1; offline tests only), Steam relay, 12-3 and 2-2's own story played through, most sections' fights, the second player's real Genesis
   scan and his crates, scanners, switches and ladders in split screen, and the partner's levers on two PCs; parts were driven by test commands, so the level is
   `automated`, not `verified-playthrough`.
 
 ## How to play
 
-Download `revelations-coop-setup-0.2.2.exe` (or the zip and `Install Co-op.bat`) from the [release](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2),
-on both PCs for network play; an installed 0.0.1, 0.0.2, 0.1.0, 0.2.0 or 0.2.1 updates itself to 0.2.2 at the next start from its shortcut (both PCs need 0.2.2 for a network
+Download `revelations-coop-setup-0.2.3.exe` (or the zip and `Install Co-op.bat`) from the [release](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3),
+on both PCs for network play; an installed 0.0.1, 0.0.2, 0.1.0, 0.2.0, 0.2.1 or 0.2.2 updates itself to 0.2.3 at the next start from its shortcut (both PCs need 0.2.3 for a network
 game: another version is refused and the lobby says so). The installer finds the Steam copy (only build 13298487 is accepted), adds the mod and a "Resident Evil Revelations
 Co-op" shortcut; play from the shortcut and choose **Co-Op Play** in the main menu. For network play the host picks "Host", the other player joins from the Steam friends
 list or types the host's IP address (UDP 28410), both mark themselves ready, and the host starts New Game or Continue; from then on the guest's game follows the host's
@@ -449,6 +481,7 @@ mod's repository with the zip from `coop\Collect logs.bat` (both PCs for a netwo
   its opening animation, which the game loads around the first player (ready when he stood about 200 units or nearer for a few seconds): a door the second player
   opens far from the first closes again after 6 s, so try again when the first player is nearer. An object is used by the nearest player, so the other cannot use
   it while he is not the nearer one.
+* Split screen: a loading screen of about 5 s before a movie that the story starts in the middle of play is drawn in the first player's half (the right half black); the movie itself fills the screen.
 * Split screen and network are not used together; joining a running network game is not possible (start a new co-op game, Continue picks up the checkpoint).
 
 ## Correction of the earlier thesis
