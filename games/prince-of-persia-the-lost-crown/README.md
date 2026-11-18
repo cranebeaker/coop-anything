@@ -176,7 +176,7 @@ hash-verified copy for the next start (or use `save-transfer.ps1` with the game 
 
 `src/PopCoop.Launcher` (in the PopCoop repo) is a WPF launcher that detects the install, starts the
 game, hosts or joins through the mod bridge, shows live status and can pull the host save. It
-offers LAN, Tailscale and public-IP helpers plus an across-town guide.
+offers LAN, Tailscale, ZeroTier and public-IP helpers plus an across-town guide.
 
 The theme samples the game's key-art palette (deep teal-navy, cyan energy, gold, sand) and uses an
 original Persian girih/sun/dune composition. **Use artwork** loads the player's own key
@@ -187,6 +187,13 @@ dotnet build src\PopCoop.Launcher -c Release
 .\src\PopCoop.Launcherin\Release
 et8.0-windows\PopCoop.Launcher.exe
 ```
+
+### Packaging
+
+`build-release.ps1` builds `release\PopCoop-<version>.zip` (~96 MB): bundled BepInEx 6.0.0-pre.2,
+the plugin, a self-contained launcher, `install.cmd`, a manifest with the tested game hash and a
+quickstart. The friend extracts it, runs `install.cmd`, points it at the game folder and launches
+PopCoop. No game files or artwork are redistributed.
 
 ## Known issues
 

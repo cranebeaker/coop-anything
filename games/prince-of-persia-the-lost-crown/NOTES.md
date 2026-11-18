@@ -864,3 +864,14 @@ animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, g
   Persian girih/sun/dune hero. A player-chosen screenshot/key art can be loaded locally; no game
   art is shipped or committed.
 - Build 0 warnings, 174/174 unit tests.
+
+### Round 11 (2026-11-18): release package and ZeroTier
+
+- `build-release.ps1` builds `release\PopCoop-<version>.zip` (~96 MB): bundled BepInEx 6.0.0-pre.2,
+  the plugin, a self-contained launcher, `install.cmd/ps1`, a manifest with the tested game hash
+  and a quickstart. `install.ps1` handles a missing BepInEx, the `UnityLogListening=false` fix, the
+  launcher shortcut, a game-build warning and uninstall.
+- The launcher detects ZeroTier as well as Tailscale; best address order is Tailscale, ZeroTier,
+  LAN, public.
+- Tested: fresh dummy install (BepInEx extracted, plugin, config, launcher, shortcut), packaged
+  single-file launcher opens, uninstall removes ours and leaves BepInEx.
