@@ -835,7 +835,7 @@ Observations (ran):
 Derived: for a friend who is in a joinable lobby, Steam delivers Join Game as GameLobbyJoinRequested (333), the same
 callback as an accepted invite; GameRichPresenceJoinRequested (337) would need a connect string without a lobby.
 
-## Later work, in brief (2026-10-26 to 2026-11-17)
+## Later work, in brief (2026-10-26 to 2026-11-18)
 
 From 2026-10-26 the work continued in the maintained repository
 (https://github.com/HitchLangley/far-cry-2-campaign-coop); its commit history and issues hold the details. Summary of
@@ -878,3 +878,13 @@ what was observed, all on Steam 1.03, mostly two copies on one PC:
   Run in Pala (two copies on one PC, joiner 37 m from the host): first NPC hit on the joiner 1.9 s after the alarm,
   50+ hits from 5 NPCs, all applied on the joiner. Still wrong on the joiner's side: some puppets loop their fire or
   show recoil without shots, a doorman stayed kneeling, sharp turns, the avatar can spin when out of view.
+- **Both players hunted (2026-11-18).** With the host breaking the ceasefire 106 m from the joiner, NPCs near the
+  joiner still went for the host: much of an NPC's per-frame update (Dunia+973490: search, movement, aim) reads the
+  global player agent directly. For NPCs nearer the joiner the host now points that global at the avatar for the whole
+  update. A rank comparison (Dunia+963510) then crashed reading a component only the real player has; that function
+  sees the real player again. Run: 18 s after the host's shot 64 m away, 4 NPCs hit the joiner 45 times; no crash.
+  On the joiner the game recounts the town alarm from its own NPCs every frame, so the "Escape the cease-fire zone"
+  message needed the alarm set right before the player's own update.
+- **Bump damage (2026-11-18).** Pushing into the other player's avatar cost 5-16 HP on both copies. A write breakpoint
+  on the player's health found the damage handler (Dunia+6A2880): collision stims (type 4) with an unrelated NPC as
+  source. They are dropped while the avatar is within 1.5 m.
