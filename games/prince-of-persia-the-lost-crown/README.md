@@ -142,6 +142,10 @@ Tools from this hub were used and their own suite passed with `python -I tools/t
 - **save-transfer** (2026-11-18): the host serves the live slot, the client pulls 3,317,100 bytes,
   the SHA-256 matches the served slot and the file is staged for the next load; staging is cleaned
   (`qa-20261118-164616`).
+- **choice** (2026-11-18): host-authoritative conversation choice. The `character` gate picks
+  option 0 with a synthetic selector: host `decided=0 sent=1`, client `decided=0 applied=1`, both
+  in conversation `id=8` at line `4450` (`qa-20261118-174929`); `mutant-no-choice` is caught
+  (`qa-20261118-175416`).
 - **loss retry**: player-action, chest, death-visibility and story packets are sent three times;
   the receiver's 10 s key dedupe keeps them idempotent. The `good_wifi` profile now passes.
 - **flight / gameslot / inspect**: flight ran its own tests but no `.cofr` emitter is wired into the
@@ -171,8 +175,8 @@ hash-verified copy for the next start (or use `save-transfer.ps1` with the game 
 - Story sync is opt-in (`POPCOOP_STORY_SYNC=1`). The host owns story progression: six ability
   flags, every unlockable ability and quest/element stages. Each machine owns its character sheet:
   inventory is per player by default (`POPCOOP_SHARED_INVENTORY=1` opts into a shared, merge-max
-  pool). Dialogue and cutscene playback is shared and line-synced; a conversation **choice** is
-  local, so a divergent branch is not force-restarted.
+  pool). Dialogue and cutscene playback is shared and line-synced; conversation **choices** are
+  host-authoritative (a client pick becomes a request), so the branch cannot diverge.
 - Saves are per machine by design: the host slot is the canonical story copy, and each machine's
   slot also carries that player's character. A read-only sidecar (`save status|backup|inspect`), a
   hash-verified `save pull` and the manual copy tool exist. A pull applies at the next start and
@@ -187,8 +191,9 @@ hash-verified copy for the next start (or use `save-transfer.ps1` with the game 
 
 ## Next steps
 
-1. **Conversation choices**: playback and lines are shared, but the selected option is local, so a
-   divergent branch is not mirrored. Capture the choice and drive the peer to the same branch.
+1. **Real scene choice coverage**: the choice sync is proven with a synthetic selector; exercise it
+   on an authored `ConversationChoice` element when one is reachable (none in the current QA
+   levels).
 2. **A real second player on one machine**: not recommended. The engine assumes one local player
    (camera, UI, input, save); the clone is the remote body. Two machines or a streamed second
    instance are the supported paths.
