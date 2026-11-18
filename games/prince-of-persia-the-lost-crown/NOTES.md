@@ -838,3 +838,16 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
 - Ability unlocks and quests remain host-authoritative; conversation playback and line sync are
   unchanged.
 - State: 0 warnings, 174/174 unit tests, owner save unchanged, guard reverted.
+
+### Round 9 (2026-11-18): host-authoritative conversation choices
+
+- `SelectableOption.Trigger` is captured with an optional Harmony prefix/postfix. A client pick is
+  blocked locally and sent as a request; the host applies it and broadcasts the authoritative
+  option index, which the client applies once (the 3x resend is idempotent). Once the host has
+  decided, a different client pick is ignored, so the branch cannot diverge.
+- Hooks: `conv choice`, `conv pick <n>`, `conv testchoice <id>`; the `character` gate builds a real
+  `OptionSelector` with the game's own `SelectableOption_Conversation` because no
+  `ConversationChoice` element is reachable in the tested levels.
+- Live: host `decided=0 sent=1`, client `decided=0 applied=1`, both in conversation `id=8` at line
+  `4450` (`qa-20261118-174929`). `mutant-no-choice` is caught (`qa-20261118-175416`).
+- State: 0 warnings, 174/174 unit tests, owner save unchanged, guard reverted.
