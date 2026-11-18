@@ -190,3 +190,134 @@ kept offline, on one PC.
 - Structures built or dismantled through the game's own menus, and upgrades: not run.
 - A real private-room entry while a partner is connected: not run.
 - Builds other than 13300582 (the mod refuses them), the Epic release, the original 2020 PC release.
+
+## 2026-11-13: a second PC, a native Windows build, one copy and the stand-in partner
+
+Source for this section: one session on a PC that is not the author's. Mod commit
+[`c05321f`](https://github.com/TommoDotCommo/death-stranding-coop/tree/c05321f), hub `488a8f3`. Same target: Steam
+Director's Cut, app 1850570, build 13300582, the same `ds.exe` SHA-256, Windows 11. The mod was built on that PC with
+MSYS2 (mingw-w64, GCC 16), not with the Linux cross-compiler its READMEs describe. One disposable copy (a full copy of
+the install plus `steam_appid.txt`) and the mod's stand-in partner (`coop-partner`) ran on the same PC, with Steam
+Cloud off for the game as the mod's README asks. A person played; nothing was driven by a script. No second PC and no second
+game copy took part.
+
+### Observed
+
+Build and game-free checks:
+
+- `make all` needed three things from outside the source tree: `MINGW=x86_64-w64-mingw32-g++` (two Makefiles default
+  to the Debian name with a `-posix` suffix), a `x86_64-w64-mingw32-windres` wrapper around MSYS2's plain `windres`,
+  and `-static` on every link. Without `-static`, `avrt.dll`, the probes and the launcher import
+  `libwinpthread-1.dll` and fail to start with `0xC000007B`.
+- `make test` reported 396 mutants killed and none surviving, then stopped with exit 2: the `core` host targets need
+  `sys/syscall.h`. The redirect, install, launcher and world suites did not run in that pass.
+- Run separately and passing: `make -C redirect portable-test` (needs ripgrep on `PATH`), `net-fixture.exe`,
+  `discover-win-test.exe`, and `test_passthrough_windows.py` (the release proxy passes, the missing-config mutant
+  exits 125).
+
+Starting the copy:
+
+- The launcher's documented one-copy command (`--dev-direct … --dev-peer 127.0.0.1`) wrote the expected `mod.json`
+  with `--prepare-only`. Without it `ds.exe` exited at once with `redirect: invalid network peer list`.
+- A direct start with the lab environment and a data folder separate from the game folder: exit 125,
+  `MODULE_REFUSE <test copy>\steam_api64.dll`.
+- Data folder inside the copy, module policy `allowlist`: the game ran a few seconds, then exit 125 with
+  `MODULE_REFUSE` for the DLL of a third-party input method installed under `C:\Program Files\`.
+- Data folder inside the copy, module policy `log-only`, network policy still `enforce`: the game stayed up. Proxy
+  log: `READY log-only`, `NET_DENY WinHttpConnect` for the game's configuration host, `MOD_STARTED guarded game-thread
+  dispatch`. All later runs used this setting.
+
+Isolation, checked after the first run that stayed up:
+
+- The game had never been started on this PC, so the real save folder (Local AppData `KojimaProductions`, and the
+  Roaming, Documents and Saved Games equivalents) did not exist before the run. It still did not exist afterwards.
+- The copy's `profile.dat`, shader cache and, later, its autosaves were inside the copy's `redirect-data`.
+- Names, sizes and modification times of the real install's 158 files were unchanged.
+- This check was not repeated after the long session below.
+
+In the game, new save, prologue area:
+
+- Mod log after starting a new game: `POSE available`, `HANDSHAKE … presence allowed`; the stand-in logged the
+  matching `HANDSHAKE` and one `CARGO received`.
+- **The proxy crashed the game about ten minutes in.** Windows event log: access violation in the proxy DLL. The
+  proxy's crash record: a read of an unmapped address in its import patcher (the DOS header of a module), on the main
+  thread, under a `LoadLibraryA` call from `dxgi.dll`, itself called through Steam's overlay renderer. That base was
+  not in the module list written at the crash.
+- With a local fix (below), the next run logged `MODULE_GONE …\windows.system.launcher.dll unloaded between snapshot
+  and patch` within 40 seconds and kept running. That session lasted about 52 minutes and ended by a normal exit: at least 11 `MODULE_GONE` records, an empty crash log, no Windows error event.
+- **With `partner: "own"` the partner had no body.** The stand-in was connected (`STATUS connected=1 distance=3.3
+  rtt=15`); its name label and two gear pieces were drawn and followed; no Sam was drawn (looked at in the second
+  session). Log, in both sessions: `BODY own body … made and parked`, `BODY art-parts swap refused: body already
+  wears the double's art parts`, `BODY model components could not be built`.
+- The live command `peer` (the resident double) fixed that in the running game: the double was acquired and placed,
+  the made body released, and the player then saw a full Sam that followed (stand-in status: connected, 4 to 7 m
+  away, 15 ms round trip).
+- A Bluetooth Xbox controller was connected. The proxy logged two `DENY` records for opens of its XInput (XUSB) device
+  interface, `\\?\hid#{00001812-…}&dev&vid_045e&pid_0b22…&ig_00#…#{ec87f1e3-c13b-4100-b5f7-8b84d54260cb}`, and
+  `xinput1_4.dll` was loaded four times in that run.
+- A scan of `ds.exe`'s imports and strings: `XInputGetState` and `XInputSetState` resolved by name from
+  `xinput1_4.dll`; SetupDi imports and `HidD_*` names (direct HID); `RoGetActivationFactory` by name
+  (Windows.Gaming.Input); Steam Input strings; DualSense and DualShock strings. Keyboard and mouse only through raw
+  input.
+
+### Derived (read from the mod's source at `c05321f`, not run)
+
+- The launcher always puts the peer into `COOP_NETWORK_PEERS`
+  ([launch_win.h:61](https://github.com/TommoDotCommo/death-stranding-coop/blob/c05321f/launcher/launch_win.h#L61)),
+  and the proxy's peer parser refuses any 127.x address
+  ([network_policy.cpp:92](https://github.com/TommoDotCommo/death-stranding-coop/blob/c05321f/redirect/network_policy.cpp#L92)).
+  Loopback is reachable without a list entry, so starting the copy without that variable works.
+- On the lab path the module allowlist admits the instance folder but not the executable's folder; that is added
+  only for a release ticket
+  ([module_policy.cpp](https://github.com/TommoDotCommo/death-stranding-coop/blob/c05321f/redirect/module_policy.cpp#L14-L23),
+  [redirect.cpp:1021](https://github.com/TommoDotCommo/death-stranding-coop/blob/c05321f/redirect/redirect.cpp#L1021)).
+  So a lab copy's data folder has to be the copy itself.
+- The allowlist is fixed in code and a refused module ends the process. Any software that loads a DLL into every
+  windowed process (here an input method) therefore ends an `allowlist` copy, and the launcher always asks for
+  `allowlist`.
+- The crash: the proxy re-patches import tables after every late module load by walking a toolhelp module snapshot
+  ([redirect.cpp:483](https://github.com/TommoDotCommo/death-stranding-coop/blob/c05321f/redirect/redirect.cpp#L483)).
+  The snapshot holds addresses, not references, so a module another thread unloads in between is read after it is
+  unmapped. The local fix takes a loader reference (`GetModuleHandleExW` by address) for the patch and skips a module
+  that is gone.
+- The missing body: the mod waits up to 600 ticks for the porter to be "dressed" (more than one art part), then makes
+  the body anyway; dressing it is refused because it already wears what the double wears; the undressed body is then
+  kept for the rest of the world
+  ([double.cpp:283-313](https://github.com/TommoDotCommo/death-stranding-coop/blob/c05321f/mod/double.cpp#L283-L313)).
+- The XUSB opens were denied because the proxy's path rules admitted one device interface only, the HID one
+  (`{4d1e55b2-…}`). A second local fix admits the XUSB interface behind `hid#` and `usb#`, with three mutants.
+
+### Contradiction with the write-up, and response
+
+- The write-up said the game "never polls XInput". On this PC, with an Xbox controller connected, `xinput1_4.dll` was
+  loaded and opened the controller's device interface, and the exe resolves `XInputGetState` by name. The mod's own
+  note is narrower: its wrapper for user 0 was never asked while Windows.Gaming.Input held the controller's slot. The
+  write-up now says only that.
+
+### Guesses
+
+- In the prologue the porter himself may still wear a one-part outfit, so he never counts as dressed and there is
+  nothing to copy. Not checked on a later save.
+- Other software that injects a DLL (overlays, screen readers, other antivirus products) would end an `allowlist` copy
+  the same way.
+
+### Unknown
+
+- Whether the controller works in the copy, with or without the XUSB fix: not looked at.
+- `partner: "own"` on a later save on this PC.
+- Whether a binary from MSYS2's GCC behaves like the author's Debian build in the game. Nothing was compared side by
+  side.
+- Sessions longer than about an hour, a second game copy, two PCs.
+
+### Checks actually run
+
+- Game-free, on this PC: listed under "Build and game-free checks" above. The whole-repository `make test` did not
+  finish.
+- Live: one copy and the stand-in partner, two sessions (about 10 minutes, ended by the proxy crash; about 52 minutes
+  with the fix, normal exit). A person played. No assertion was automated; the evidence is the proxy, mod, crash and
+  Windows event logs and what was on screen.
+- The two local fixes, proposed to the mod as
+  [#7](https://github.com/TommoDotCommo/death-stranding-coop/pull/7) and
+  [#8](https://github.com/TommoDotCommo/death-stranding-coop/pull/8) (not merged): the module reference in the patcher, with a native race test whose
+  mutant must fault (8 of 8 runs each way on this PC), and the XUSB device interface, with three mutants that the
+  path test kills. `make -C redirect portable-test` passes with each.
