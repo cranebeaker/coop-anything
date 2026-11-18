@@ -2590,18 +2590,22 @@
     story: unknown
     enemies: unknown
     world_state: partial
-    items: unknown
+    items: partial
   players: 2-8
   networking: dedicated-server
   open_source: true
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: community-reports
   notes: Launch coverage says the full campaign is playable with up to 8 players. Nexus changelog shows v1.8.2 fixing
-    NPC name and outfit desync, with support for Skyrim 1.6.1170 and 1.7.104.
+    NPC name and outfit desync, with support for Skyrim 1.6.1170 and 1.7.104. Latest release 1.8.4 (2026-10-22), dev
+    branch active (2026-11-13). Player-made potions and poisons do not sync (issue 435); a tested fix and setup notes
+    are in games/skyrim-special-edition. Dropped items only sync with the server option bEnableItemDrops.
   sources:
   - https://www.nexusmods.com/skyrimspecialedition/mods/69993
   - https://mp1st.com/news/skyrim-multiplayer-co-op-mod-together-reborn-finally-released
-  checked: 2026-10-16
+  - https://github.com/tiltedphoques/TiltedEvolution/releases
+  - https://github.com/tiltedphoques/TiltedEvolution/issues/435
+  checked: 2026-11-16
 - game: 'The Elder Scrolls V: Skyrim Special Edition'
   year: 2016
   engine: Creation Engine
