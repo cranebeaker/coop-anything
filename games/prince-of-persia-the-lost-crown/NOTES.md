@@ -797,3 +797,25 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
   as required (`qa-20261118-155411`, `qa-20261118-160730`).
 - State: 0 warnings, 159/159 unit tests, scorer self-test 15/15, owner save unchanged
   (`69174FE0...FDBE`), guard patch reverted after every run.
+
+### Round 7 (2026-11-18): shared character progression, dialogue sync and save content transfer
+
+- **Unlockable abilities**: the host publishes every `EPlayerUnlockableAbility` through the
+  public `IsAbilityUnlocked`/`UnlockAbility` API, so the client unlocks the same abilities. Live:
+  `DoubleJump` unlocked on the host appears on the client (`character`, qa-20261118-165129).
+- **Inventory mirror**: `InventoryStateInfo.m_inventory` counts travel as merge-max Stage effects;
+  the client reaches the host's amount and never loses an item. Live: a HealingPotion granted on
+  the host appears on the client.
+- **Dialogue and cutscene playback**: conversation/cutscene `TriggerLogic` is forwarded as a
+  network-only action and replayed on the peer with its own characters and camera;
+  `ConversationSync` mirrors the host's `LoggedLines` changes and the stop marker. Live: both
+  peers in conversation `id=8` at line `2645`.
+- **Save content transfer**: `net host` serves the live slot on port+1; `save pull <host> [port]`
+  downloads it over a TCP side channel, verifies SHA-256 and stages it for the next load through
+  the existing backup path. Live: 3,317,100 bytes transferred, hash matched, staging cleaned
+  (`save-transfer`, qa-20261118-164616).
+- **QA**: new `character` and `save-transfer` gates; `mutant-no-character` and
+  `mutant-no-save-transfer` are both caught (qa-20261118-165649, qa-20261118-170143).
+- State: 0 warnings, 169/169 unit tests, owner save unchanged, guard reverted after every run.
+- Limits: a conversation choice is local (a divergent branch is not force-restarted); shared
+  inventory is a mirror; there is no second controllable character on one machine.

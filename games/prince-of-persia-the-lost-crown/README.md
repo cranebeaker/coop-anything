@@ -109,9 +109,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File qa\run-live-suite.ps1 `
 ```
 
 `qa/` is the tracked suite (scorer self-test first; regression, chest, reconnect, enemy-damage,
-enemy-pos, anim, player-death, portal, story-combat; `-Control`, `-Invariants`, `-Chaos`,
-`-Animcheck`, `-Only`, `-Mutant`). Last suite (2026-11-18): build 0 warnings, **159/159 unit
-tests**; animcheck, chest, portal and story-combat PASS, and both new mutation twins are caught.
+enemy-pos, anim, player-death, portal, story-combat, character, save-transfer; `-Control`,
+`-Invariants`, `-Chaos`, `-Animcheck`, `-Only`, `-Mutant`). Last suite (2026-11-18): build 0
+warnings, **169/169 unit tests**; animcheck, chest, portal, story-combat, character and
+save-transfer PASS, and all four new mutation twins are caught.
 Control PASS (host alone: HP 1.00 -> 0.25 read back); invariants PASS (4/4 actors, alive, HP and
 positions within 0.20 m at t0/t+3/t+6 s).
 
@@ -129,9 +130,17 @@ Tools from this hub were used and their own suite passed with `python -I tools/t
   `stale_accept`, `double_apply`, `no_position_match`) all failed with the named oracle and were
   shrunk (1-3 ops).
 - **mutants**: the scorer self-test rejects 15 bad fixtures; the lower-HP twin is unit-proven
-  (`HpMergeTests`). Live `mutant-clone-triggers` (clone instigator fires a WorldPortal) and
-  `mutant-interact-early` (client does not apply the chest completion) are caught: both break the
-  chest gate as required (`qa-20261118-155411`, `qa-20261118-160730`).
+  (`HpMergeTests`). Live `mutant-clone-triggers` (clone instigator fires a WorldPortal),
+  `mutant-interact-early` (client does not apply the chest completion),
+  `mutant-no-character` (abilities/inventory are not published) and `mutant-no-save-transfer`
+  (the save server refuses) are caught: each breaks its gate as required
+  (`qa-20261118-155411`, `qa-20261118-160730`, and the Round 7 evidence).
+- **character** (2026-11-18): `DoubleJump` unlocked on the host appears on the client, a
+  `HealingPotion` granted on the host reaches the client, and both peers sit in conversation
+  `id=8` at line `2645` (`qa-20261118-165129`).
+- **save-transfer** (2026-11-18): the host serves the live slot, the client pulls 3,317,100 bytes,
+  the SHA-256 matches the served slot and the file is staged for the next load; staging is cleaned
+  (`qa-20261118-164616`).
 - **loss retry**: player-action, chest, death-visibility and story packets are sent three times;
   the receiver's 10 s key dedupe keeps them idempotent. The `good_wifi` profile now passes.
 - **flight / gameslot / inspect**: flight ran its own tests but no `.cofr` emitter is wired into the
@@ -152,15 +161,19 @@ Both players need the exact build. Copy the install, then:
 ```
 
 Host: `net host 27015`. Other player: `net join <host LAN IP> 27015`. The handshake compares game
-version, IL2CPP metadata and Addressables catalog hashes. Saves are per machine; use
-`save-transfer.ps1` with the game closed to copy progress.
+version, IL2CPP metadata and Addressables catalog hashes. Saves are per machine; `net host` also
+serves the live slot on port+1, and the peer can run `save pull <host> 27016` to stage a
+hash-verified copy for the next start (or use `save-transfer.ps1` with the game closed).
 
 ## Known issues
 
-- Story sync is opt-in (`POPCOOP_STORY_SYNC=1`) and covers six ability flags plus quest/element
-  stages; dialogue, cutscene playback and conversation choices are not synchronised.
-- Saves are per machine; a read-only save-authority sidecar (`save status|backup|inspect`) exists,
-  but there is no save-content transfer or live progression merge (manual copy only).
+- Story sync is opt-in (`POPCOOP_STORY_SYNC=1`) and covers six ability flags, every unlockable
+  ability, inventory counts (merge-max) and quest/element stages. Dialogue and cutscene playback is
+  shared and line-synced; a conversation **choice** is local, so a divergent branch is not
+  force-restarted.
+- Saves are per machine; a read-only save-authority sidecar (`save status|backup|inspect`), a
+  hash-verified `save pull` content transfer and the manual copy tool exist. A pulled save applies
+  at the next start; there is no live in-session or semantic progression merge.
 - The `0x3` exit was root-caused and fixed; connected WorldPortal transitions now pass a clean
   `CIT_LOW_02` -> `CIT_LOW_11` re-test with both peers alive for 10 s.
 - Two-machine play is verified between a Win11 host and a Hyper-V Win10 LTSC guest (movement,
@@ -171,12 +184,12 @@ version, IL2CPP metadata and Addressables catalog hashes. Saves are per machine;
 
 ## Next steps
 
-1. **Story sync depth**: dialogue lines, cutscene playback and conversation choices still run
-   locally; only the resulting flags and stages are synchronised. A conversation/cutscene driver is
-   the next slice.
-2. **Shared save content**: the read-only authority sidecar (hash, baseline, backup, metadata) is in
-   place; a transfer/merge path is still needed.
-3. **A real second player**: no inventory, abilities or camera for the clone, and its attacks are
-   display-only. This is the largest remaining design item.
-4. **Loss hardening**: one-shot interactions and story batches have 3x resend and 10 s dedupe but
+1. **Conversation choices**: playback and lines are shared, but the selected option is local, so a
+   divergent branch is not mirrored. Capture the choice and drive the peer to the same branch.
+2. **A real second player on one machine**: the clone is still a remote body; a second
+   controllable character needs input mapping and a camera the game does not expose. Shared
+   abilities and inventory are progression mirroring, not a second character sheet.
+3. **Loss hardening**: one-shot interactions and story batches have 3x resend and 10 s dedupe but
    no acknowledgement/repair pass yet.
+4. **In-session save merge**: `save pull` stages a whole slot for the next start; a semantic
+   progression merge while both games run is still open.
