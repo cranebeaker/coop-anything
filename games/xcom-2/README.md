@@ -108,8 +108,9 @@ per build and every decision: [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md)
 - **Saves.** Host only. The host saves mid-mission or with Ironman; after loading, it opens
   the server by itself and the guests rejoin.
 - **Join and talk.** "Host co-op" on the Avenger HUD, "Join co-op" with an address on the main
-  menu, a status line, an in-game mod list check that refuses mismatched guests, map pings
-  and text chat (forwarded to every guest).
+  menu, a status line, an in-game mod list check that refuses mismatched guests, tile pings
+  (Alt + left click in a mission; a "Ping: player N" marker on the tile for every player) and text chat
+  (forwarded to every guest).
 - **Crash fixed:** the game's PvP lost-connection handling is skipped in co-op missions (it
   crashed the guest in about one save test in three).
 - **Crash fixed:** a guest leaving the Avenger when the host closed the connection died silently in about
@@ -141,7 +142,19 @@ per build and every decision: [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md)
   for the campaign's, and the guest opened the Avenger with the mission's data and crashed. A new history now
   replaces any pending one (found by `chosenassault` in the full suite). In the same window a guest could also
   keep a dead connection; a guest that gets its player slot but no history within 150 s now reconnects
-  (not reproduced on purpose yet).
+  (tested with a host that holds back the campaign: `joinwatchdog`).
+- **A guest could control unowned soldiers.** A soldier or VIP joining mid-mission without an owner could be
+  selected by any player; it now belongs to the machine that runs its group (the host), and it joins the host's
+  turn instead of getting a separate one (`joinxcom`).
+- **Mod auto-download, in game.** When the host refuses a guest for different mods, it sends its mod list with
+  Workshop ids (written beforehand by its CoopSync); the guest's game saves it, and the guest's CoopSync plans
+  the downloads, subscribes with the player's consent, and switches the active mods. Tested end to end with a
+  stand-in for Steam: refused, mods fixed, rejoined and playing (`joinsyncapply`); a real Workshop download is untested.
+- **A guest never saw its own soldiers act.** On a guest, the game state moved its soldiers but their models
+  stayed where they started and none of its actions played (moves, pickups, story moments); the turn just ended.
+  A guest loads the mission "in replay" so it can watch, and the game turns visuals for new actions back on only
+  for a single-player replay, never for a multiplayer one. The mod now turns them on when a guest takes its turn
+  (found by `@pawns`, which compares each soldier's model with its game-state tile; `guestvis`).
 
 ## QA
 
@@ -150,10 +163,13 @@ per build and every decision: [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md)
   copies, asserts on every copy's log (expected lines, no crash, no desync, equal campaign
   fingerprints) and checks afterwards that the real install and saves are unchanged. The
   runner scripts are not published yet. The copies also take screenshots, checked by eye.
-- Last results (2026-11-13 to 2026-11-16). Each row is the latest run of that scenario; the
+- Last results (2026-11-13 to 2026-11-18). Each row is the latest run of that scenario; the
   scenarios after `avdefreinf` are new content tests. On 2026-11-16 every scenario but the 8-mission soak ran
   in one batch on the same build: 38 of 40 passed; both failures were fixed and passed when rerun
   (`chosenassault`, a mod bug; `guestaction3`, a test setup gap). The real install was unchanged in every run.
+  After the guest-visuals fix (2026-11-18) these passed again on the new build: `mission`, `guestaction`,
+  `overwatchguest`, `stunguest`, `dazeguest`, `corruptguest`, `mindcontrol`, `aiturnguest`, `missionend`, `joinxcom`,
+  `vialwalk`.
 
   | Scenario | Players | What it covers | Result |
   |---|---|---|---|
@@ -186,17 +202,28 @@ per build and every decision: [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md)
   | `guestaction` | 2 | a guest's soldier moves and shoots with the game's normal actions; every unit the same on both machines | 13/13 (three times) |
   | `guestaction3` | 3 | the same with three players: one guest's move and shot reach the host and the other guest | 11/11 (twice) |
   | `aiturnguest` | 2 | the enemy AI takes its turn against the squad; every unit the same on both machines afterwards | 8/8 (twice) |
+  | `corruptguest` | 2 | a Chosen Warlock's Corrupt kills a guest's soldier, which rises as an enemy zombie on both machines | 11/11 |
+  | `joinxcom` | 2 | a soldier joins XCOM mid-mission: the host controls it in its own turn, the guest cannot select it | 12/12 |
+  | `joinwatchdog` | 2 | a guest that gets no campaign after joining reconnects by itself | 9/9 |
+  | `joinsync` | 2 | the host's mod list reaches a refused guest; CoopSync on the guest plans the change | 9/9 |
+  | `joinsyncapply` | 2 | the whole auto-download path with a stand-in for Steam: refused, CoopSync fetches the host's mod and switches the guest's mods, the guest restarts and joins | 17/17 |
+  | `soakstory16` | 2 | sixteen missions with whole histories: the guest misses missions 14 and 15 (history size limit, see Known issues) | 34/38 |
   | `overwatchhost`, `overwatchguest` | 2 | an enemy on overwatch fires at a soldier walking into view: the host's, then a guest's | 8/8 (twice), 8/8 (twice, after the fix) |
   | `stunguest` | 2 | a Stun Lancer stuns a guest's soldier; it loses one action and the stun ends | 14/14 (twice) |
   | `dazeguest` | 2 | a Chosen Warlock's Mind Scorch dazes a guest's soldier: two turns lost, free on the third | 15/15 |
+  | `vialwalk` | 2 | Blacksite: a guest's soldier walks to the vial and takes it with the game's own action; both machines play the story moment; the objective is used on both machines; every soldier's model on its tile | 18/18 |
+  | `soakpartial` | 2 | four missions where every history after the first goes as a partial history (experiment, off by default) | 17/17 |
+  | `soakpartial16` | 2 | sixteen missions with partial histories: the guest plays all 16, histories up to 757 KB | 41/41 |
+  | `guestvis` | 2 | a guest's soldiers' models follow their moves on the guest; the ping key binding | 15/15 |
+  | `crashhunt` | 2 | enemy overwatch before each guest turn, to catch the rare guest crash | 6/6 (14 times, no crash) |
 
 - Two-PC test kit (not published): the runner can run the host alone and grade a guest log from another PC;
   a script on the guest PC makes its own test copy and runs the guest bot. Rehearsed on one PC over its network
   address: `join` 7/7, `mission` 54/54.
 - **Two PCs (2026-11-15):** `join` 7/7, `mission` 54/54 and `missionend` 11/11 over a home network, direct IP, one Steam account (guest PC in
   Steam offline mode).
-- Not covered: long sessions on two PCs, Steam sockets and invites, auto-subscribing a guest to Workshop mods
-  (the CoopSync tool has unit tests only), a full campaign played to the end, sessions longer than eight missions.
+- Not covered: long sessions on two PCs, Steam sockets and invites, a real Workshop download for a guest
+  (the rest of the path is tested with a stand-in for Steam), a full campaign played to the end, sessions longer than sixteen missions.
 
 ## How to play
 
@@ -208,6 +235,8 @@ and test instructions are in the mod repo README.
 - Two PCs tested over direct IP only (join, mission, mission end); untested over Steam (invites and Steam
   sockets).
 - A guest who drops mid-turn loses the actions of that turn; the host plays on from there.
+- The ping key (Alt + left click) is bound and checked in the test copies, but no real key press has been tested:
+  test scripts cannot press keys, so the tests send pings through the console command.
 - While the host has any edit screen open (the Geoscape included), a guest waits to edit
   its own soldiers.
 - Other mods that replace `UIUnitFlag` conflict with the owner tags, and mods that replace
@@ -217,15 +246,26 @@ and test instructions are in the mod repo README.
   message is from the base game (maps, DLC sounds), none from the mod. Whether a plain Steam launch shows them: unknown.
 - When a visualization on a guest times out while it waits for its turn, the mod finishes it so the turn
   can start; the root cause (an AI reveal timing out on the guest) is unknown.
-- Not tested: mind control by the Chosen, story cutscenes, a rescued soldier joining mid-mission.
+- **Long campaigns: with whole-history sends, a guest can no longer join after the history passes about 670 KB.**
+  Whole-history sends up to 661 KB arrive; from 685 KB they never do (16-mission test: around mission 14).
+  Compacting the history with the game's `ArchiveHistory` crashed the host. Workaround, tested but off by default:
+  `bPartialResend=true` sends a returning guest only the frames it lacks; in a 16-mission test the guest played
+  every mission with histories up to 757 KB (`soakpartial16`, 41/41). Untested with it: more than sixteen
+  missions, two PCs.
+- Story moments: one tested (a guest takes the Blacksite vial; both machines play the cinematic and agree).
+  Other story objectives and a whole campaign are untested.
+- A rare guest crash as its turn begins (`XCom2.exe+0xb158a7`, 2 of many runs; not reproduced in 14 runs of the
+  scenario built from its setup, nor in a 16-mission soak). From the crash dump and the disassembly: the game's
+  visibility update read a unit's cached visibility interface and found it empty. The mod now logs any object whose
+  cache is empty after each handoff; it found none in those runs. Root cause unknown.
+- A second guest crash, seen once (`XCom2.exe+0x4ce279`, before the guest-visuals fix): a lookup in a history
+  frame, the same function as an earlier crash while the history was written. Not seen since.
 - Timed effects lost their countdown after a handoff and never ended. They are now registered again
   (`CoopListenerRepair`): by the host for the player's turn (mind control), and by each machine for
   the groups it plays (stun, daze). Tested: mind control, stun, daze. Other group-turn effects use the same
   repair but are untested.
 - The host sends nothing while it plays a long movie (98 s after the first mission). Guests time out
   after 60 s and come back by themselves through the main menu (checked in `soak`).
-- A rare guest crash as its first turn begins (`XCom2.exe+0xb158a7`, 2 runs, 2026-11-14 and 2026-11-16), both
-  right after the host changed an alien (mind control, overwatch) before the guest's turn. Cause unknown.
 - The host crashed once in the game's sound engine (the same Wwise race the guest fix covers) when
   the test bot launched a mission straight from the Avenger; the bot now pauses for a second first.
   Whether a player's normal launch, after the Skyranger flight, can hit it is unknown.

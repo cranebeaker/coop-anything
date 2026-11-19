@@ -1604,3 +1604,515 @@ Further owner decisions: difficulty modifiers (a mix of more enemy HP, more enem
 appearing); operators saved on each player's own PC and sent to the host during mission setup; operators kept
 when they die; "harder" after a missed objective uses the same kinds of change; objective kinds and all numbers
 later.
+
+#### Untested parts, the rare guest crash, auto-download (2026-11-17)
+
+Chosen and mind control. Observed (SDK source, read only): no Chosen in the base game has a mind-control ability.
+The Warlock has `Corrupt` (`X2Effect_KillUnit` at the next player turn begin, then `X2Effect_SpawnPsiZombie`:
+the dead soldier rises as `PsiZombieHuman` on the alien team), `Possess` (strengthens a friendly ADVENT unit),
+`MindScorch`, Spectral Army and `TeleportAlly`; the earlier "mind control by the Chosen" gap was a wrong
+assumption. Mind control itself is covered by `mindcontrol`, `mcall` and `avatarmc`.
+- New scenario `corruptguest`: the Warlock corrupts a guest's soldier; at the alien turn it dies and a human zombie
+  appears on the alien side on both machines (`owned 1 xcom=1`, `unitcount PsiZombieHuman alien=1`). First run
+  10/11: the host's `@endturn` did nothing while the Corrupt was being shown (`PerformEndTurn` false), its next
+  `@waitmyturn` returned at once, its turn count ran ahead and it quit before the guest's second turn. Bot fix:
+  `@endturn` now waits until this machine's turn is really over and asks again every 3 s (60 s at most). Rerun 11/11.
+
+A soldier joining XCOM mid-mission (new `@dropunit ... xcom`, scenario `joinxcom`). Observed: the dropped soldier
+got a group of its own with the host's priority, run by the host; it has no owner. The guest could select it
+during the guest's own turn (`trysel newest:Soldier ... selected=true` on the guest): the selection gate only
+blocked other players' soldiers, and an unowned XCom unit passed for everyone (a rescued soldier, a VIP, an
+unclaimed Avenger-defense recruit). Fix (`CoopTacticalController`): an unowned XCom unit is controlled by the
+machine that runs its group (the host here; for an alien a player mind-controls, that player, since the game moves
+it into the controller's group). Rerun: `select blocked unit=... owner=-1 controller=0` on the guest; `mindcontrol`
+24/24 with the new gate. Also observed: the unit's own group gave the host a second turn step, and in the host's
+main step the unit had no action points (`move failed: ... no path`). Fix (`CoopTactical.MergeHostSideGroups`, at
+each XCom turn begin with the regrouping of owned soldiers): host-side units in an extra host-priority XCom group
+move into the host's main group, so all of the host's units act in one turn as in single player. Not run yet.
+
+The guest's no-history watchdog (`joinwatchdog`, with a test switch `TestHoldJoinSends` that makes the host skip
+the campaign send for the first join, and `JoinNoHistorySeconds=20`). Observed: the watchdog fired 20 s after the
+slot (`guest: no history 20 s after the host gave us a slot: reconnecting`) but nothing followed: it called
+`GuestLostHost`, which does nothing before a co-op campaign is active, and a guest on the main menu waiting for
+its first campaign has none. Fix: the watchdog starts the tear-down and the reconnect itself. Not run yet.
+
+The rare guest crash (`XCom2.exe+0xb158a7`). Both dumps (2026-11-14 avatarmc, 2026-11-15 overwatchguest) have the
+same call chain; one frame refers to the string "No StatChange found on effect state object %d for type '%d'",
+another to "XGPlayer". Derived (guess): the game's stat code walked a unit's effects as the guest's turn began and
+read a missing effect state. Diagnostic added (`CoopListenerRepair.CheckEffectRefs`, every machine, after a
+received history and when taking over a turn): logs each unit reference to an effect state this machine does not
+have. New scenario `crashhunt`: the host puts a pod's trooper on overwatch before each of three guest turns (the
+setup of the 2026-11-15 crash); repeated runs below.
+
+Mod auto-download (CoopSync). A mod cannot read Workshop ids in the game (no such call in the SDK), so the route
+is: the host's CoopSync writes the host's active mods with ids and version fingerprints into the user config file
+`XComCoopSync.ini` (`coopsync host-export`); the mod (`CoopSyncData`) sends that list to a guest it refuses for
+different mods (`CoopSyncBegin`/`Chunk`/`End`, 4 entries per command, before `CoopJoinRefused`); the guest's game
+saves it there; the guest's CoopSync (`coopsync sync`) plans, subscribes only with `--yes-use-my-steam-account`,
+waits for the downloads, and writes the host's ActiveMods (with a backup). The refusal dialog now points to
+CoopSync. Tool tests: 27 pass (17 before), including the format the game itself writes. Scenario `joinsync`
+(the refused-join setup plus `host-export` on the host copy and `sync --dry-run` on the guest copy, a made-up
+Workshop id since the test copies have local mods only). Observed in the first run: the host sent its list and the
+guest saved it (`saved the host's mod list: 1 of 1 mods`), and the guest's CoopSync planned exactly the change
+needed (`to switch off: ['CoopDummyMod']`, nothing to download). But the host loaded 0 entries from the file
+CoopSync wrote: CoopSync wrote `+HostMods=` lines, and with no default config to merge with the engine read none of
+them; the game writes arrays as plain repeated `Key=` lines and empty strings bare (`WorkshopId=,Version=`). Fix:
+CoopSync writes plain lines and reads bare values. Not covered: a real Workshop download (it changes the Steam
+account's subscriptions: needs the owner).
+
+Results so far on the build of 2026-11-17 22:36: `corruptguest` 11/11, `mindcontrol` 24/24, `mcall` 16/16, `avatarmc`
+17/17 (the gate change kept a mind-controlled alien selectable by the player who controls it), `crashhunt` 6/6 six
+times (no crash; `CheckEffectRefs` reported no missing effect reference in any run that day).
+
+#### Longer runs: a whole history stops arriving above ~670 KB (soakstory16, 2026-11-18)
+
+`soakstory16` (16 missions, objectives completed): 34/38. The guest played missions 1-13 and 16; it missed 14 and
+15, and the campaigns differed at the end. Real install unchanged; no crash dump.
+
+Observed (host log, the engine's own line "Wrote entire history to network queue: N kb (M states)", and the
+acknowledgement that follows a delivered history):
+- every whole-history send up to 660.77 KB (7,979 states) was acknowledged within about 3 s: campaign sends at
+  561, 607, 612, 620, 628 and 644 KB, mission sends up to 661 KB;
+- every send from 685.36 KB up never arrived, campaign or mission: 692.77 KB (8,571 states, mission 14), 693.62,
+  778.66, 787.39, 771-772, 717 and 724 KB;
+- mission 14: the guest got its slot, then no history; 150 s later its new watchdog reconnected it (`no history 150
+  s after the host gave us a slot: reconnecting`, the first time it fired in a real run); the host sent the
+  mission again (693.62 KB), it did not arrive either, and the bot won the mission 20 s later.
+
+Derived: a single whole-history send has a ceiling between 661 and 685 KB. Guess: the network layer's outgoing
+reliable buffer (UE3 keeps at most 256 unacknowledged reliable bunches per channel; at about 2.7 KB a bunch that
+is roughly 690 KB). The history grows with every mission (225 states at the start, 10,159 after 16 bot missions,
+about 600 per mission), and real players make more moves per mission than the bot, so a real campaign would reach
+the ceiling sooner, and from then on no guest can join a mission or rejoin on the Avenger.
+
+What the game offers (SDK, read only): `XComGameStateHistory.ArchiveHistory(Descriptor, SkipTacticalTransientTypes)`
+"archives the current state of the history ... appends two full game states containing the current and previous
+states for all state objects", and `ObliterateGameStatesFromHistory`. Experiment built: `CoopLink.
+bArchiveBeforeCampaignSend` (off by default) makes the host archive its history, without tactical transient
+types, just before each campaign send on the Avenger (every guest gets that full history next, so no machine keeps
+the old frame numbers); scenario `soakarchive` = `soakstory` with it on.
+
+Reruns on the build of 2026-11-18 01:35: `joinsync` 9/9 (the host read CoopSync's list with its Workshop id, sent
+it, the guest saved it, the guest's CoopSync planned the change); `joinwatchdog` 9/9 (the guest reconnected 20 s
+after its slot with no history and got the campaign; same fingerprint); `joinxcom` 11/12: the joined soldier merged
+into the host's group (`regroup unit=... into the host's group`), the host moved it on its next turn, both machines
+logged the same 12 unit-state lines; the one failure was a guest step logging "no such frame" before the move
+(step removed).
+
+`vialguest` (Blacksite; the guest's soldier takes the vial with `@interact Interact_TakeVial`, a forced activation
+as after the hacking screen, which the game's FinalizeHackAbility treats as a success without that screen):
+10/12. Observed: the interaction was submitted on the guest; `Recover` stayed incomplete on both machines, which is
+expected (DefaultMissionDefs: `bIsTacticalObjective=false, bIsStrategyObjective=true`, completed at mission end);
+no line showed the vial cutscene (`CIN_Blacksite_AcquireVial`) or the next phase on either machine. Open question
+(guess, unverified): mission scripting (Kismet) reacts to events where a frame is submitted; a frame that arrives
+over the network may not trigger it, so the host's mission script may not react when a guest completes an
+objective. Next: the same with the host taking the vial (control), then compare what the mission does next.
+
+`soakarchive` (the compaction experiment): 2/15. Observed: at the first campaign send the host archived
+(`history archived before the campaign send: frames 227 -> 228`) and crashed in the same frame
+(`XCom2.exe+0x4ce235`, access violation reading 0xe0; game crash report and minidump). Derived: calling
+`ArchiveHistory` on the live strategy history and then sending it is not safe; the switch stays off (default).
+Next direction (not built): stop resending whole histories. A guest already holds the campaign up to the frame it
+last received; after a reconnect it could ask for the frames since then (`SendPartialHistory`, as the turn
+handoffs do), so a send stays small however long the campaign gets. Unknown: whether the guest's history
+survives its trip through the main menu.
+
+Vial control (`vialhost`: the host takes the vial on its own turn) and `vialguest` again, with a new `@evacstate`
+(evac zones in the history, `bHasBeenHacked` of the objective object): on both, after the forced
+`Interact_TakeVial` the objective object stayed `hacked=false` on both machines, also when the host did it.
+Derived: the bot's forced activation does not do what the game's own pickup does (it needs a soldier next to the
+object and the game's activation path), so these runs say nothing about co-op. Story cutscenes stay untested; next
+step: walk a soldier next to the objective and activate the ability through the available actions, as
+`@shoot` does. `joinxcom` rerun: 12/12, the same 12 unit-state lines on both machines. Real install unchanged in
+all three.
+
+Does a guest keep its history on the main menu? Bot "ready" line now logs `historyFrames`. `mission` (54/54):
+the guest had 226 frames on the Avenger, still 233 on the main menu after the host closed the connection for the
+mission build, then received the whole history (417 frames) for the mission. Observed: yes, the history survives
+the trip through the main menu. So a guest that comes back could be sent only the frames after its last one.
+Unknown: whether the engine's `SendPartialHistory` can start from a guest's frame count on a new connection (the
+turn handoffs only use it on a connection that already got a whole history).
+In `vialhost` the forced `Interact_TakeVial` on the ObjectiveInfo's interactive object (id 2336) logged
+`Accessed None 'ObjectState'`, `'TheLootable'` and `'InteractiveObject'` while it was built: the game's pickup code
+did not get the object it expects. Guess: the objective's interactive object is not the vial's container, or the
+pickup needs the player-facing hack flow (`UIHackingScreen`, whose finalize step is this ability). Not pursued
+further yet.
+
+#### Partial resends instead of whole histories (2026-11-18)
+
+What the engine does (observed in logs, and in the redscreen text): a partial history is not "frames since N" but
+a binary delta against `XComGameStateNetworkManager.BaseHistoryData`, a byte array visible to script that each side
+keeps from the last history it sent or received. The receiver checks that its base has the size the sender
+expects ("Base size mismatch: A != B") and asks for a whole history if not (`OnSendError_RequestNewHistory`).
+
+Experiment built: `CoopLink.bPartialResend` (off by default). After the first whole send, every later whole send
+(campaign on the Avenger, mission at launch) becomes: the command `CoopNextIsWhole`, then `SendPartialHistory`;
+the guest, warned by that command, treats the partial history it gets as a whole one (`OnReceiveHistory`).
+Scenario `soakpartial` = `soakstory` (4 missions) with it on.
+
+`soakpartial`, first run: 16/17. Observed: one whole send (358.83 KB, 227 states), then every mission and campaign
+send went as a delta (frames 456 up to 2,476) and the guest took each one (`partial history received in place of a
+whole one`); the guest played all 4 missions; same campaign fingerprint on both machines at the end; real install
+unchanged. The one failure: once, after the guest's connection timed out on the Avenger and it rejoined, its base
+was empty (`Base size mismatch: 378172 != 0`); the engine fell back to a whole send (372.98 KB), which arrived.
+Derived: deltas work across missions and across the guest's trip through the main menu; a reconnect can empty the
+guest's base, and then the fallback is a whole send, which is what hits the size ceiling in a long campaign.
+
+Fix built (2026-11-18 04:00): both sides keep a copy of their base (`CoopTacticalNet.KeepBase`, every 5 s or when
+its size changes, only with `bPartialResend`); when a partial history is announced and the base is empty, the copy
+is put back first (`history base was empty; restored the kept copy (N bytes)`). New scenario `soakpartial16`
+= `soakstory16` with partial resends, to show that a guest still gets missions 14-16. Results below.
+
+`soakpartial` on the fix build (2026-11-18 04:05): 17/17. Observed: the guest's base was empty at every one of its
+8 returns (from the main menu for a mission, and on the Avenger after a mission), and each time the kept copy
+(375-522 KB) was put back and the delta that followed was accepted; no "Base size mismatch", no whole send after
+the first, same campaign fingerprint, real install unchanged. Derived (guess): the guest's base is emptied when its
+connection closes. Unknown: why the first run, without the kept copy, had no mismatch on 7 of its 8 returns. The restored copy is the guest's own last base, which equals the host's for that guest as long
+as nothing else was sent in between; a stale copy would show as a size mismatch and fall back to a whole send.
+
+Story objective, done the way a player does it (2026-11-18). New bot step `@goobj SPEC`: if a unit matching SPEC is
+offered an ability on the mission's unhacked objective object, use it through `ActivateAbility` (the HUD's call,
+normal validation); else the matching unit nearest the object walks toward it. Scenario `vialwalk`: Blacksite, the
+host runs `SkipAI`, the guest's soldiers go for the vial over 8 turns. First run: 6/11. Observed: from the first
+step the game offered `FinalizeHack` and `CancelHack` on the objective (object 2328) to a guest soldier far away,
+`AA_Success`; the bot used them every turn, nothing moved, the object stayed `hacked=false`. From the SDK:
+`FinalizeHack` has a placeholder trigger and `eAbilityIconBehavior_NeverShow`, and is fired by `UIHackingScreen`
+(`InitiateHack`), so it is not a player choice. Fix: `@goobj` skips abilities the HUD never shows. New step
+`@hackscreen`: on an open hacking screen, call `InitiateHack` (as Enter does), or, once started, `HackEnded`.
+
+`vialwalk` second run (hidden abilities skipped): 9/11. Observed: the guest's two soldiers dashed toward the vial
+(78 tiles away, about 15-20 tiles a dash); on guest turn 5 the game offered `Interact_TakeVial` to the soldier next
+to it and the bot used it (`goobj use Interact_TakeVial unit=430 owner=1 object=2331 submitted=true`); after that
+the ability was no longer offered. The guest logged the mission narrative template right then
+(`X2MissionNarrativeTemplate ... ConsoleObjectiveTextPools` out of bounds, a harmless warning). The host, when the
+guest's turn arrived as a partial history, built a visualization with `X2Action_CameraFade`, `X2Action_PlayNarrative`
+and a matinee (`SkeletalMeshCinematicActor_1`), which ran about 30 s before the host took the turn back; then
+turns went on to host turn 9, no crash, real install unchanged. The two failures were the `bHasBeenHacked` checks:
+from the SDK, an interaction does not set that flag; it raises `InteractionCount` (`XComGameState_InteractiveObject.
+Interacted`). Derived: a guest can pick up the vial the way a player does, and the host sees the story moment.
+Unknown: whether the guest itself showed the cutscene (its log has no line for a matinee either way); whether the
+mission's next phase started. `@evacstate` now logs `used=<InteractionCount>`; rerun below.
+
+`vialwalk` runs 3-5 (same day): the walk works but is slow (the vial is 74-78 tiles from the drop, 5-7 guest
+turns), and the host reaches its own last turn first because it gets "my turn" about twice per round (once for
+the XCom turn, once around the alien turn), so the host now runs 2 turns per guest turn. A tile on an upper floor
+(z=5) once looked "nearest"; height now counts as distance. Run 4: the guest took the vial on turn 7 and the host
+again showed the cinematic actor; `InteractionCount` of the ObjectiveInfo's object stayed 0 on both machines.
+Run 5 lists every interactive object with a nonzero count: both machines listed the same door
+(`2825:1:XGDOOR_Outside03`), the objective object showed `used=0/max=1`; the guest's soldier stood next to the vial
+(83,32) for 3 turns and was never offered the pickup, where in run 4 it was offered at 83,34. Derived: the pickup is
+offered only from some sides (interaction points). `@goobj` now steps to a random other adjacent tile when it is
+next to the object and not offered anything; the scenario has 10 guest turns.
+
+`vialwalk` run 6 (side switching, 10 guest turns): 10/12. Observed: the guest took the vial, the host showed the
+cinematic actor, and both machines listed the objective object as used once (`2356:1:XGWINDOW_Inside03`) and the
+same door; while the objective's own entry, read through `ObjectiveInfo.FindComponentObject`, still showed
+`used=0`. Derived: that lookup returns an older state of the object (the component reference is not the newest
+frame); the two failures were the expectation reading that entry (and a wrong regex). Fix: `@goobj` and
+`@evacstate` read the newest state by id, and `@goobj` treats an object at its maximum use count as done.
+
+`vialwalk` run 7 (newest state by id): 12/12. Observed: the guest's soldier walked to the vial and took it with
+the game's own pickup action; the host showed the cinematic actor; both machines listed the objective object as
+used once (`2351:1:XGBUTTON_02`); the host reached turn 21; no WARNING or crash on either machine; the real
+install was unchanged. Unknown: whether the guest itself showed the cinematic (its log shows no actor line).
+
+#### Sixteen missions with partial resends (2026-11-18)
+
+`soakpartial16` (the `soakstory16` campaign with `bPartialResend=true`, one PC, two instances): 41/41,
+about 94 minutes. Observed:
+- the guest came back from all sixteen missions (`mark guest back from mission 16`); with whole histories
+  (`soakstory16`) it missed missions 14 and 15;
+- every history after the first went as a partial history: 67 received on the guest, no `Base size mismatch`;
+- the kept base was restored 32 times on the host and 35 on the guest (the base is emptied at every
+  reconnect); the largest restored base was 757,216 bytes, past the ~670 KB whole-send ceiling;
+- the guest lost the host while each mission was built and reconnected each time, as in earlier runs;
+- same campaign fingerprint on both machines; no crash, no CoopHandoff WARNING (the guest log's only
+  warnings are base-game cover generation); the real install was unchanged.
+
+Derived: partial resends remove the long-campaign limit at least up to sixteen missions on one PC.
+Unknown: more than sixteen missions; partial resends between two PCs; whether to make it the default
+(it is still off by default).
+
+#### The rare guest crash, more tries (2026-11-18)
+
+`crashhunt` four more times on the build with the kept base: 6/6 each, no crash, no `effect check` line on either
+machine, real install unchanged. With the six runs of 2026-11-17: ten runs, no crash. `soakpartial16` (16 missions)
+also logged no missing effect reference and no crash. Unknown: what triggers `XCom2.exe+0xb158a7`; the two dumps
+remain the only evidence. Next (needs the owner): a disassembler (e.g. capstone) to read the code at that address.
+
+Disassembly of `XCom2.exe+0xb158a7` (2026-11-18, `llvm-objdump`, already installed, on the test copy's
+`XCom2-WarOfTheChosen/Binaries/Win64/XCom2.exe`; the code bytes in the dump match the file there. An earlier
+attempt read the base game's exe in `Binaries/Win64` by mistake: a different program.) Observed:
+- the fault is the 9th instruction of the function at `+0xb15870`: `mov rax, [rdx]`, with `rdx = 0`. The
+  function reads its 2nd and 3rd arguments' vtables and refers to the string `ObjectVisibilityChanged`;
+- its return address, at `rsp+0x128` in that frame, is `+0xad74c3` in both dumps. The caller loops over 28-byte
+  records whose first int is an object id. For each record it calls `+0xccf5b0` (a history lookup by object id and
+  history index) and then `+0xcbff80`, which returns the object's field at `+0x88` when `+0x80` is set, else null.
+  It then calls `+0xb15870` with that result. The crashing call is in the caller's second loop, where the
+  looked-up object is the 2nd argument;
+- the record's object id is in `r9` at the fault: 2936 (2026-11-14 dump) and 2933 (2026-11-15 dump). The runlogs
+  of those runs do not mention those ids.
+
+Derived: `+0xb15870` is the visibility manager's update for one viewer/target pair (it fires
+`ObjectVisibilityChanged`). `+0xcbff80` reads `XComGameState_BaseObject.VisibilityInterface` ("cached interface to
+speed up ai"; an interface field is an object/interface pointer pair). So the guest crashed while updating
+visibility with an object whose state exists in its history but has no cached visibility interface. This replaces
+the earlier guess about effect states. (The "No StatChange" string from the earlier stack scan came from stale
+stack slots; the call chain is `+0xad74c3` -> `+0xb15870`.)
+Guess: an object the host's history added in a way that leaves the cache empty on the guest (the field is filled
+in native code; scripts cannot set it). Unknown: which objects 2936 and 2933 were, and why the cache was empty.
+Next: log the class and `VisibilityInterface == none` of every object near the guest's turn start (a script can
+read the field), to catch the object before the crash.
+
+CoopSync without a Steam account (2026-11-18). The game's own `steam_api64.dll` (WOTC `Binaries/Win64`, test
+copy, read with `llvm-readobj --coff-exports`, 700 exports) has every function CoopSync binds to: `SteamAPI_Init`,
+`SteamAPI_RunCallbacks`, `SteamAPI_Shutdown`, `SteamUGC`, `SteamAPI_ISteamUGC_SubscribeItem`,
+`SteamAPI_ISteamUGC_GetItemState` (also `DownloadItem` and `GetItemInstallInfo`, unused). CoopSync's 27 tool tests
+pass (fake Steam). Still untested: a real subscribe and download, which changes the Steam account's
+subscriptions and needs the owner.
+
+Visibility-cache diagnostic (`CoopListenerRepair.CheckVisibilityCache`, every machine, with the effect check):
+logs every object whose cached `VisibilityInterface` does not match its class, and every object in a unit's
+visibility records whose cache is empty. `crashhunt` three more times on that build: 6/6 each, no crash, no
+`visibility check` line on either machine. Thirteen `crashhunt` runs in all without the crash. Build gotcha:
+the compiler failed with "Missing opening '(' in Implements list" when a new function had the word
+`implements` in a comment and in a variable name (`bImplements`); renaming it fixed the build.
+
+Does the guest show story moments? New probe `@actionwatch SECONDS` (`CoopActionWatch`): polls 5 times a
+second and logs each visualization action class (`X2Action` is an actor) and cinematic actor the first time it
+appears. `vialwalk` with it on both machines: 14/15. Observed:
+- host: 50 action classes, among them `X2Action_MoveBegin`, `X2Action_PlayNarrative`, `X2Action_PlayMatinee`,
+  `X2Action_CameraFade`, `X2Action_Interact`, `X2Action_Loot`;
+- guest: 10 classes (`MarkerTreeInsertBegin/End`, `UpdateUI`, `CameraLookAt`, `AlertUnit`,
+  `AbilityPerkStart/End/DurationEnd`), and no move, interaction, narrative or matinee action at all, although its
+  soldiers walked six times and took the vial (`goobj use Interact_TakeVial ... submitted=true`);
+- both machines have the map's `SkeletalMeshCinematicActor_0` from the moment the map loads, so the earlier
+  `A:SkeletalMeshCinematicActor` expectation does not prove the vial cinematic played.
+Derived (unconfirmed): the guest does not show its own soldiers' moves, the pickup or the story moment; a 0.2 s
+poll can miss very short actions, but a walk lasts seconds. Next: `@pawns` compares each XCOM soldier's model
+position with its game-state tile on each machine.
+
+`vialwalk` with `@pawns` (2026-11-18): 8/17. Observed:
+- host: `pawns checked=4 off=0` every turn; the watcher saw each guest walk (`X2Action_MoveBegin`) and a narrative;
+- guest: after its first two walks, `pawns checked=4 off=2 422:owner1:state=22,28,1:pawn=6,28,2
+  428:owner1:state=22,31,1:pawn=7,30,2`: the game state moved both soldiers 15-16 tiles, and their models stayed
+  where they started. The guest's watcher saw no move action.
+- the guest then crashed 5 s after its fourth move order: `XCom2.exe+0x4ce279`, access violation reading an
+  unmapped address. Disassembly: the same function as the October `FWriteHistoryObjects` crash (`+0x4ce235`), a
+  lookup by object id in a history frame's map (`frame+0x9c`); this time the map's entry index pointed outside its
+  entry array. Derived (guess): the same race, a map read while it is changed or freed.
+Derived: **the guest does not show its own soldiers' actions** (moves, the pickup); the host shows them. This
+matches the two-PC observation that the guest's turn ended with nothing visible on its screen. The engine
+builds visuals for new states only when `XComGameStateVisualizationMgr.CanEvaluateNewGameStates()` is true
+(`bEnabled && !BuildingLatentGameState && !InReplay()`). Next: `@pawns` also logs those values on each machine
+(scenario `guestvis`, two guest turns).
+
+`guestvis` (two guest turns, `@pawns` logs the gate): Observed on the guest, during its own turns:
+`canEvaluate=false inReplay=false latent=false visState=Idle rules=TurnPhase_UnitActions`; on the host
+`canEvaluate=true`. So the guest's visualization manager is disabled (`bEnabled=false`). Cause (SDK source): a guest
+loads the mission already "in replay" (`CoopTacticalRuleset` sets it so it watches from the start), and
+`X2TacticalGameRuleset.LoadTacticalGame` calls `VisualizationMgr.EnableBuildVisualization()` only when not in replay;
+on takeover `XComMPReplayMgr.StopReplay` ends the replay without enabling it (the single-player
+`XComReplayMgr.StopReplay` does enable it). Nothing else enables it in a mission. Fix:
+`CoopTacticalRuleset.PerformingReplay.EndReplay` (the takeover path) sets the current frame and enables it; while
+watching, the manager's own `InReplay()` check keeps it idle. Test: `guestvis` now expects `canEvaluate=true` and
+`off=0` on the guest; regression runs follow.
+
+Tile pings (2026-11-18). Pings already existed (`CoopPing`: a "Ping: player N" world message for
+5 s, forwarded by the host to other guests; tested in `mission`, `mission3`), but only as a console command with no
+key. Now: `Config/XComInput.ini` binds Alt + left click in tactical (`+Bindings=(Name="LeftMouseButton",
+Command="CoopPing",Alt=True)`; the engine searches bindings from the last one, so this wins only while Alt is held)
+and the ping snaps to the tile's centre. `@pingbind` logs the tactical input's ping binding and whether it comes after
+the plain left click. Untested: a real Alt + click (scripts cannot press keys; the console command path is tested).
+
+On the fix build: `guestvis` 15/15. Guest: `taking over: visualization of new states enabled` at each takeover,
+`pawns checked=4 off=0` and `canEvaluate=true` in its turns (its soldiers' models now follow their states);
+`@pingbind` on both machines: `coopPing: LeftMouseButton+Alt@102 plainLeftClick@2 altWins=true`. Regression on the
+same build: `mission` 54/54 (pings now land on tile centres, e.g. `-2833.00,1871.00,351.00`), `guestaction` 13/13,
+`overwatchguest` 8/8; real install unchanged after each.
+
+Wider regression on the fix build (2026-11-18), real install unchanged after each: `stunguest` 14/14, `dazeguest`
+15/15, `corruptguest` 11/11, `mindcontrol` 24/24, `aiturnguest` 8/8, `missionend` 11/11, `joinxcom` 12/12,
+`crashhunt` 6/6. `vialwalk` 16/17. Observed in `vialwalk`:
+- guest: `pawns checked=4 off=0` at every check (the earlier run had `off=2`); no crash;
+- the guest now shows the vial story moment itself: when its soldier takes the vial, its watcher logs new
+  `X2Action_Interact`, `X2Action_CameraFade`, `X2Action_PlayMatinee` and `X2Action_PlayNarrative` instances;
+- the one failure: after the pickup the guest could not end its turn (`endturn result=false` for 60 s each turn,
+  visualizer `ExecutingVisualization`), so the host never got the pickup (`used=0` on the host to the end).
+  Cause: the pickup opens the loot screen (`UIInventoryTactical` on top of the guest's screen stack), and
+  `X2Action_Loot` waits until its OK button is pressed (SDK `X2Action_Loot.uc`, `UIInventoryTactical.uc`). A player
+  presses OK; the bot did not. Before the fix the guest built no visuals, so the screen never opened there. This is
+  a bot gap, not a co-op bug: the item is in the game state when the ability runs, and the screen is only a display.
+  Bot fix: `@closescreen UIInventoryTactical` presses the screen's OK button (`AutoclickButton`), as a player would;
+  a bare `CloseScreen` leaves the action waiting. `vialwalk` now closes it after each `@goobj` and expects no
+  `wait EndTurn TIMEOUT` on the guest.
+
+Rerun of `vialwalk` with the bot fix: 18/18, real install unchanged. Guest: `goobj use Interact_TakeVial`, then
+its own `X2Action_Interact`, `CameraFade`, `PlayMatinee` and `PlayNarrative` (the vial cinematic), `closescreen
+UIInventoryTactical with its OK button` 4 s later, its turn ended normally; the objective is `used=1` on both
+machines; `pawns checked=4 off=0` at every check on both; no crash.
+
+Mod auto-download, the whole path except Steam (2026-11-18). New scenario `joinsyncapply`: the host has a mod the
+guest lacks (`CoopHostMod`, made-up Workshop id 999000222) and the guest has one the host lacks (`CoopDummyMod`).
+Between the guest's two runs the runner calls CoopSync's own `sync()` (not a dry run) through
+`fake_steam_sync.py`: a stand-in for Steam whose "subscribe" copies a prepared mod folder into the guest copy's
+`Mods` folder after two polls, as a download would. CoopSync writes the guest copy's user-config
+`XComModOptions.ini`, the file the game itself wrote in the first run (the player's file in a real install).
+Result 17/17, real install unchanged. Observed:
+- host: `join refused, partner's mods differ` with `+CoopDummyMod` and `-CoopHostMod`;
+- guest, first run: `saved the host's mod list: 2 of 2 mods, 2 with Workshop ids`, refusal shown;
+- CoopSync: `to subscribe: ['999000222'] ... to switch off: ['CoopDummyMod']`, `subscribe 999000222`, the stand-in
+  delivered `CoopHostMod`, `wrote the host's 2 ActiveMods` (backup kept), exit 0;
+- guest, second run: the game used the rewritten list (`compare received=N/N match=true`), the host sent the
+  campaign, the guest got slot 1, the history and the host's chat; same campaign fingerprint on both.
+Derived: the host lets a guest it refused join again in the same session (its join state resets on each new
+connection), and the game keeps an ActiveMods list written into its user config between runs.
+Not covered: the real Steam calls (`SubscribeItem`, `GetItemState`) and a real Workshop download, which change the
+Steam account's subscriptions (needs the owner); a real Workshop mod's folder, which Steam puts under
+`steamapps/workshop/content/268500/<id>`, not the game's `Mods` folder (CoopSync's index reads both, tested in its
+unit tests). Cosmetic: CoopSync leaves blank lines where it removed old `ActiveMods` lines.
+
+Two PCs, 2026-11-18 evening, first `guestvis` (a tester ran PC 2; new package with the guest-visuals fix and the ping key).
+Observed:
+- the guest connected about 5 minutes after the host began waiting; the host bot's `@waitconn` gives up after 180 s,
+  so the host launched the mission alone and the guest joined mid-mission. The guest bot then waited for the Avenger
+  (`@waitstrategy`) inside a mission and did nothing (a test setup gap). Fix: in two-PC runs (`-RemoteB`) the host's
+  `@waitconn` waits 900 s (new `@waitconn SECONDS`) and the run's time limit grows by as much.
+- the tester closed the game's debug red screen on PC 2 with Escape (harmless), moved a soldier by hand, and saw
+  nothing on PC 1 until they ended the guest's turn; then PC 1 played the move (host: `partial history received`,
+  `X2Action_MoveBegin`, `pawns checked=4 off=0`). Derived: by design a guest's actions reach the others only when its
+  turn ends (the handoff carries the history); nothing is streamed during the turn. A QoL candidate.
+- the tester saw the turn banner but it went away: `PLAYER 2'S TURN` showed for 3.5 s like `YOUR TURN`. Tester: it
+  should stay up. Change: another player's turn banner now stays while that player plays; it goes with the next
+  banner, or when an enemy turn begins on the host (`CoopTurnOf`(-1) hides it on every machine). `YOUR TURN` still
+  shows 3.5 s. Logs: `turn banner shown: ... stays=True|False`, `turn banner hidden`.
+- **bug, a guest that joins mid-mission can lose its first turn**: the host handed the turn over while the guest was
+  still loading the map (`switch turn received` at 93 s, map loaded at 96 s); at its first unit-actions check the guest
+  found no available action (`Check for Available Actions`, then at once `Going to the Next Player`) and handed back
+  after 9 s. Its next turn worked. Cause: unknown. One-PC tests never hit it (their guests join before the mission).
+  Next: a one-PC scenario with a guest that connects after the mission started and moves in its first turn.
+
+Two PCs, `guestvis` rerun (host waited with `@waitconn 900`; the guest connected after about 2 minutes): 16/17 graded
+with both logs (`-CheckOnly`). Observed: the guest's bot walked both its soldiers (`move unit=422 ... submitted=true`),
+the guest's own watcher logged `X2Action_MoveBegin`, `pawns checked=4 off=0` on both PCs every turn, the ping binding
+(`altWins=true`) on both, no crash. Tester: the soldiers walked on PC 2 and the host's banner stayed up. The one failure:
+`B: turn banner shown: ... stays=True` never appeared because PC 2 still ran the previous package (no `stays=` in
+its banner lines). That mix showed a gap: **the mod check compares mod names, not builds**, so two builds of the mod
+played together; the older guest drew the new "enemy turn" message (`CoopTurnOf`(-1)) as "PLAYER 0'S TURN". Next: send
+a build fingerprint in the mod check.
+
+Two PCs, `pingkey` (a tester pressed Alt + left click on both PCs; PC 2 again ran the previous package): the key works and
+every ping crossed the network both ways (both logs: `ping from player 1 at ...`, `ping from player 0 at ...`; host
+5/5 checks, guest log graded below). Tester: a ping showed only for the player whose turn it was; the watching PC showed
+nothing, and the active player saw only their first ping (later ones did not appear elsewhere). Also observed in the
+logs: every ping the watching host made landed on one tile (`-2929,-1201`) wherever they clicked; on their own turn
+they followed the mouse. Derived causes (SDK source): (1) the game's 3D cursor stops following the mouse while another
+player plays; (2) `QueueWorldMessage` goes through the presentation layer's message queue, which a watcher's replay
+holds back (guess, not verified); (3) one id per player (`CoopPing<slot>`): `UIWorldMessageMgr.Message` with an id
+already on screen only updates that message. Changes: the ping traces the HUD's mouse ray (`XComHUD.CachedMouseWorld*`,
+the cursor only as fallback; log `ping from the mouse (<actor>) at tile x,y,z`); each ping is its own message, drawn
+straight through `UIWorldMessageMgr.Message` for 6 s, the player's previous ping removed; log `shown= managerVisible=
+active=`. One PC: `mission` 54/54 with the mouse ray (`ping from the mouse (XComLevelActor)`). New scenario `pingshow`:
+each copy pings on its own turn and while watching, with screenshots (console `shot`).
+
+Ping display fix, one PC (build 2026-11-18 18:42): `pingshow` 11/11: every ping `shown=True managerVisible=True
+active=True` on both copies, on the pinging player's turn and while watching. Screenshots (console `shot`, kept
+locally) show the "Ping:" label on the watching copy's screen too; in the test copies it sits at the top-left edge
+because the OS mouse pointer is outside the window and the ping follows the pointer. Ping labels now use the banner's
+names ("Ping: Host", "Ping: Player 2"; before: "Ping: player 1" for the host).
+
+Build check: `build_mod.ps1` writes `CoopBuildInfo.BUILD_ID` (a time stamp) on each build, and `CoopModCheck` adds
+"WOTCCoopCampaign build <id>" to the list both ends compare. `join` 7/7 and `joinmismatch` 5/5 on one build; with the
+guest copy on the previous build, `join` was refused as intended: `diff= -WOTCCoopCampaign build 20261118-185202
++WOTCCoopCampaign build 20261118-184238` (4 of 7 join expectations failed, as they should). A guest on a package from
+before this change is refused too (its list lacks the entry).
+
+Two PCs, second `pingkey` (graded with both logs: 11/11). Tester: pings now show on both PCs; while PC 2 played, the
+host's pings were offset, sometimes at the highest floor. PC 1's log: the watching host's pings followed the mouse
+but at tile height 9 (`tile 2-4,37,9`). Derived: the plain first hit of the mouse ray lands on roofs and upper floors
+the game cuts away on screen. Change: `CoopPing` picks like the game's cursor (`XComTacticalHUD.GetMousePickActor`):
+skips actors that are not mouse-pickable, geometry marked to ignore the cursor, walls (normal.z < 0.2) and hits
+outside the level, and takes the first hit at or below the 3D cursor's requested floor. One PC (`pingshow` 11/11):
+`ping from the mouse (XComLevelActor, floor 0 of shown 0)`; with the pointer outside the window the fallback logs why
+(`mouse ray: 4 hits, ... walls 1, outside the level 2`).
+Also found: **PC 2 still ran the first package of the day** in every run since 17:30 (its log: old banner lines,
+no `shown=` in ping lines). Derived (guess): newer zips were unzipped into a `package` folder inside the old one. The
+build check did not catch it because the join gate (`bGateJoinOnMods`) is off unless a scenario turns it on. Changes:
+two-PC host runs (`-RemoteB`) add `@joingate 1`; `coop-guest.ps1` prints the package build (`BUILD.txt`) and stops if
+it finds a nested `package` folder.
+
+#### Co-op feedback UI (2026-11-18/19)
+
+Goal: no player left staring at a screen where nothing seems to happen. Four parts, each with a one-PC scenario
+(log checks plus screenshots, console `shot`, kept in `local/screenshots`, not published: they show Steam names).
+
+1. Mission loading for guests (`CoopMissionLoading`, `CoopLoadingScreen`). The host still closes the connection while
+   it builds a mission (single-player mission build, see `CoopLink`), so the guest still goes through the main menu:
+   it loses the host on the Avenger, leaves for the main menu, reconnects and loads the map from there (about 30 s on
+   one PC). Not changed: a guest that stayed on the Avenger and received the mission there would need the history
+   load on a strategy map, which crashed a guest before on the mission map (`GettingNameData`, missionend
+   2026-11-12); left for later. Instead the host's `CoopMissionBuilding` now carries the mission's name
+   (`GeneratedMission.BattleOpName` + `GetMissionDescription()`, e.g. "Operation Witch Fire - Sabotage Transmitter";
+   it arrived before the close in every run), and the guest covers the screen from that moment with "THE HOST IS
+   LAUNCHING A MISSION", the name, three steps (host builds / rejoining and receiving / loading the map), the time
+   waited. It is put on again on each new map (the main menu) and ends when the map load starts (the game's own
+   loading screen takes over). The same for the way back (`CoopMissionReturning` from `HostCloseForReturn`: "THE HOST
+   IS RETURNING TO THE AVENGER"). Observed problems on the way:
+   - pushed on the screen stack, the overlay never showed in the screenshots, and its push pushed a mouse guard
+     whose OnInit re-entered the listener (it looped, 1478 pushes);
+   - on a mission map a screen of ours on the stack kept the game's loading screen up for minutes (`uibusy=True
+     loadmovie=True`), so the overlay is never put up on a mission map;
+   - loaded into the 2D movie (`InitScreen` + `UIMovie.LoadScreen`, how the game loads its message managers) it
+     showed on the Avenger and on the main menu at start-up (`@loadtest`, scenario `overlaytest`), but never on the
+     main menu a guest returns to after leaving the Avenger (`XPACK_Shell_Intro?closed`): nothing of the mod's UI
+     showed there, only the game's debug red screens. Not the presentation layer's readiness (`IsPresentationLayerReady`
+     checked), not cinematic mode (`bShowDuringCinematic` set), not the map's loading movie (waits for
+     `IsLoadingMoviePlaying()` to end and 3 s); the 2D movie reported `bIsVisible=False` there (also on the Avenger, so
+     not conclusive). Loaded into the presentation layer's modal movie (`GetModalMovie()`, the game's system dialogs)
+     it shows there: `loadshow` screenshots, step 1 "The host is building the mission", step 2 with step 1 "DONE";
+   - its backdrop takes the mouse and a click hides it (no keyboard: it is not on the screen stack).
+2. Avenger activity (`CoopActivity`): every machine names its top screen every second ("In the Armory", "Choosing
+   research", "On the Geoscape", ~40 screen classes) and sends `CoopActivity`(slot, text) on change and every 10 s;
+   the host forwards guests'. `avengerfeed`: host's Armory, research and Geoscape reached the guest within a second
+   each (`co-op HUD rows: Host: In the Armory` ...). A guest opening a soldier it does not own is closed by the mod
+   (`soldier 409 is not yours`), so the test gives the guest a soldier first.
+3. Player panel and toasts (`CoopRoster`, `CoopHUDScreen`): names from `PlayerReplicationInfo.PlayerName` (`CoopName`),
+   the host works out states every second (connected / reconnecting while expected back after a mission build or the
+   return / left) and sends `CoopRoster`; every machine turns changes into toasts ("X joined as Player 2", "X is
+   reconnecting...", "X is back", "X left the game", "Connected to X's game", "Lost the host - reconnecting...").
+   The panel ("CO-OP PLAYERS": slot label in the player's colour, name, state, activity) replaces the status line on
+   the Avenger; it is a screen loaded into the movie, so it stays over the Geoscape and the Armory. Bugs found: a
+   reconnecting guest showed itself as the host (`CoopRole.IsGuest()` is false while the connection is down; now
+   `CoopRoster.MySlot/GuestSide` from `CoopLink.GuestHost/WantSlot`); other players' rows had no activity (cause:
+   the state constants, see below; first suspected the ternaries, rewritten as if/else anyway); UCC gotchas: `nameof`, `State`, `New` are keywords; `a == b ? x : y` needs brackets.
+4. Mission presence (`CoopPresence`): the machine playing an XCom turn sends `CoopPresence`(slot, selected unit,
+   cursor tile, looking / planning a move / aiming, target) 4 times a second on change and every 2 s, and a feed line
+   per ability its units use (`AbilityActivated`, registered by `CoopHUDScreen` on each mission map). Watchers see a
+   line under the turn banner ("X is planning a move with Sq. Y"), the feed ("X: Rk. Z - Move"), a "SELECTED BY
+   PLAYER 2" tag over the soldier and a marker in the player's colour on the cursor tile. `presenceshow` 11/11; the
+   screenshot shows the line, the feed and the tag on the watching host.
+
+More UCC/engine findings from the UI work (2026-11-19):
+- Inside `CoopRoster`, constants named `STATE_NONE/STATE_CONNECTED/...` did not mean the class's own values: rows of
+  connected players were stored as 4 while `CoopHUDScreen` compared with `class'CoopRoster'.const.STATE_CONNECTED` (1),
+  so the panel never showed another player's activity (a debug line printed `p=4 c=1`). Renamed `PS_*`. Derived (guess):
+  a native enum value of the same name wins over a class const inside the class.
+- `a == b ? x : y` without brackets, and identifiers `nameof`, `State`, `New`, `Name`, `Box`, did not compile or warned.
+- The roster now also has "loading": a guest sends `CoopLoading`(slot) right before it travels to a mission or the
+  Avenger and `CoopLoaded`(slot) once its co-op HUD is up on the new map; the host shows it as "loading" between.
+
+UI scenarios (one PC): `loadshow` (guest loading screen through a mission launch, screenshots per step),
+`overlaytest` (`@loadtest`/`@loadtestend`: the screen on the main menu and the Avenger), `avengerfeed` (activity both
+ways, roster, toasts), `presenceshow` (mission presence, feed). Screenshots in `local/screenshots/ui*.png` (local only:
+they show Steam names).
+
+UI results, final build 2026-11-19 01:29 (one PC; real install unchanged after every run): `loadshow` 16/16,
+`avengerfeed` 13/13, `presenceshow` 11/11, `overlaytest` 4/4; regressions `join` 7/7, `mission` 54/54,
+`missionend` 11/11, `guestaction` 13/13, `guestvis` 17/17, `pingshow` 11/11 (the build before the last fix; `join`,
+`avengerfeed`, `loadshow` again after it). Last fix: a guest sends its name as soon as it has a slot, also on the
+main menu before the campaign arrives (it is not "co-op active" there); the host's join toast waits up to 10 s for it
+("Player 2 joined as Player 2" before, now the name). Untested: everything on two PCs (two Steam names, real timing),
+clicking the loading screen away.
+All again on that final build (20261119-012946): `mission` 54/54, `missionend` 11/11, `guestaction` 13/13, `guestvis`
+17/17, `pingshow` 11/11, `presenceshow` 11/11, `overlaytest` 4/4; real install unchanged after each.
+
