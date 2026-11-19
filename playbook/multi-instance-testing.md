@@ -239,6 +239,17 @@ a generation number. A test checks that number so it never talks to a freshly re
   for the process. A game that crashes at exit, or shows its own error box, may never flush its log, so
   "no error in the log" proves nothing.
 - Pass log patterns through the environment, not into a command string, when you query the event log.
+- Not every crash leaves a record, and a dead copy can look like a hang. XCOM 2 guests "froze" in about 1 of 40
+  map changes: log cut mid-load, no crash folder, the stall check silent because the process had already
+  exited. Windows had kept minidumps: when the registry key
+  `HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps` exists, it writes one for every crashing
+  process to `%LOCALAPPDATA%\CrashDumps` and keeps the newest 10
+  ([Collecting User-Mode Dumps](https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps)).
+  Launchers and GPU tools often create that key; creating it yourself is a system setting, so ask the owner.
+  Fail any run that leaves a new dump for the game's exe. No debugger is needed for a first look: the exception
+  stream gives code and address, the module list turns it into `exe+offset`, and `llvm-objdump` plus the strings
+  the code near each stack address refers to name the subsystem (there it was the audio engine's event thread,
+  calling back after a map unload).
 
 `gamepool crashlog` does this from the `crash` block of the config.
 
