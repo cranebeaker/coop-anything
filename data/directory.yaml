@@ -14852,15 +14852,16 @@
     each player sees the other as a stand-in NPC with the player's look, armor and helmet. Fights are shared: an enemy
     that spots either player fights in both worlds, on the same target. NPC health and deaths, doors, containers and
     dead-enemy loot follow the host; quest progress and outcomes go both ways live; travel, fast travel and the host's
-    reloads happen together; XP is shared; the players give each other items. v0.2.0-beta.6 (test build) connects
-    Steam friends through the game's own Steam session and Valve's relay (no IP or port), or by direct IP (UDP 27960
-    and TCP 27961) with an optional shared key. beta.6 was tested with two copies on one PC (automated suite); one
-    session across two PCs ran beta.4 (2026-11-17: joined over Steam, played, followed map changes). Enemies the game
-    spawns during play are not shared. Write-up in games/the-outer-worlds-2.
+    reloads happen together; XP is shared; the players give each other items; the stand-in holds the other player's
+    weapon with its mods, uses it and crouches with them; enemies the game spawns during play are shared. v0.3.0 (test
+    build) connects Steam friends through the game's own Steam session and Valve's relay (no IP or port), hosted and
+    joined from the game's main menu, or by direct IP (UDP 27960 and TCP 27961) with an optional shared key. 0.3.0 was
+    tested with two copies on one PC (automated suite); one session across two PCs ran beta.4 (2026-11-17: joined over
+    Steam, played, followed map changes). Write-up in games/the-outer-worlds-2.
   sources:
   - https://github.com/nicoNaeg/tow2-coop
   - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
-  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.6
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.3.0
   - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
   checked: '2026-11-19'
   made_with_coop_anything: true

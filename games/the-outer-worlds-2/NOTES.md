@@ -922,6 +922,117 @@ Results:
 
 Unknown: fights against many armed humans; NPCs the game spawns during play (not level-placed: not shared yet).
 
+## The other player's weapon, spawned enemies, host and join from the menu (2026-11-19, two copies on one PC)
+
+Observed (probes 92-98, runs 112-118):
+- **A weapon on an NPC:** `EquipmentComponent.EquipWeaponBP(WeaponClass)` gives the stand-in a new weapon of that class;
+  the NPC then carries that weapon's NPC visuals (`NPC_Visuals_*`, `NPC_Weapon_Animations_*`, the 3P sound object).
+  `Weapon.BeginPrimaryTrigger` / `EndPrimaryTrigger` on it fire for real: ammo goes down, the NPC fire montage plays
+  (`AS_NPC_RepRifle_Fire_01_Montage`). Calling the visuals' `TriggerEventBP(Fire)` alone plays no montage.
+  `bIgnoresAmmoConsumption` keeps the magazine full. `AISequencerBehaviors` (the cinematic controls for NPCs) has
+  `HolsterWeapon`, `EquipWeaponByInstance`, `SetOrientation`, `PlayAnimMontage`, `FireWeaponStart/Stop`.
+- **Aim:** an NPC with a stopped brain fires along its body (pitch 0); `AIController.K2_SetFocalPoint` changes nothing.
+  `AISequencerBehaviors.SetOrientation(Character, TR_WeaponAim, {FaceLocation})` turns the weapon aim exactly there
+  (asked 125.7 / 16.7 degrees, got 125.2 / 16.7), but only within the upper body's reach: a point behind the stand-in
+  is not aimed at.
+- **The player's weapon events:** every visuals object of the player's weapon (4-7 of them: 1P, 3P, NPC, shared, sound)
+  gets `TriggerEventBP(EWeaponEvent)` through ProcessEvent, so a ProcessEvent hook sees each shot (Fire 7 and
+  FireHipfire 8 in the same frame), melee swing (23/24/26/28...), reload (19) and aim (42/43). The visuals' outer chain
+  leads to the weapon. A real shot by the player at a 10-round rifle: 58 TriggerPull, 7, 8; empty: 19 Reload.
+- **The damage function:** `IndianaGameplayStatics::execK2_ApplyDamage` builds its arguments and calls one function
+  (RVA 0x10AB944 in build 24225441; 17 direct callers, weapons and melee among them):
+  `bool(causer, info, FIndianaDamageEvent*, damage event, instigator, bool, ?)`; it takes `instigator ? instigator :
+  causer` as the source pawn. Returning false there drops the hit: the stand-in's shots at the other player in its
+  world did 9 health of damage without the hook (3 shots), none with it.
+- **NPC melee animations:** `/Game/Art/ANIM/Character/NPC/{MeleeLt,MeleeHvy,Unarmed}/AS_NPC_*_ATK_*_Montage`, played on
+  the stand-in with `Character.PlayAnimMontage`; the weapon kind comes from `IndianaAiCharacter.K2_GetCurrentWeaponAnimations`
+  (`ARK_MeleeLt_NPC_WeaponAnimations_C`...). `TriggerQuickMelee` and `K2_TriggerMeleeAction` did nothing on the stand-in.
+- **Crouch:** `K2_SetWantCrouch`, `Crouch()` and setting `bIsCrouched` don't crouch the stand-in: the animation's crouch
+  progress comes from the movement component, which the stand-in doesn't tick (it zeroes the velocity that drives the
+  walk animation, 8a). What does crouch it: probe 103, in the next section.
+- **Spawned enemies:** the 12 encounters near the test save start reference 41 level-placed characters (41 of 41 with
+  `_UAID_`): encounters animate placed, dormant NPCs (`AICharacterToSpawnerPair`). `CharacterSpawner` blueprints
+  exist (`Spawner_Mantiwasp_Outdoor_Hive`, `Spawner_HoverBot_Hatch*`, `Spawner_Human_Door_Reusable`); none was loaded
+  there. tow2-coop shares any hostile AI character without `_UAID_` by class and place (15 m, 1.5 s grace, else a copy).
+- **The main menu is a conversation** with the Moon Man (`ConversationalMainMenu`): its choices are
+  `ConversationResponse_BP_C` widgets in `ConversationWidget_BP_C.ResponsesContainer` (a VerticalBox; the class is in
+  `ResponseWidgetClass`, the live ones in `SelectableResponseWidgets`). A widget made with
+  `WidgetBlueprintLibrary.Create(ResponseWidgetClass)` and `AddChildToVerticalBox` shows as one more choice; its text
+  is `MessageTextBlock.SetText(FText)` (rich text) and `ResponseNumberTextBlock.SetText(FString)`. The game binds its own
+  responses' clicks natively, so a click on an added one does nothing in the game. Number keys reach the game as
+  input actions that ProcessEvent doesn't see, and the game picks a choice on the key's **release**: swallowing the
+  key-down only (probe 95) let the game run "Continue" on the release.
+- **Clicks and display scaling:** posted mouse messages don't reach UMG (it reads the real cursor); a window procedure
+  sees them. A script that is not DPI aware sees the 960 x 540 window as 640 x 360 at 150 % and its posted coordinates
+  are scaled up by Windows (485, 507 arrives as 727, 760). The UI's coordinates: `SlateBlueprintLibrary.LocalToViewport`
+  (PixelPosition), the same space as the game's client pixels at 1:1 (`WidgetLayoutLibrary.GetViewportSize` 960 x 540).
+- **FText from a script:** `KismetTextLibrary.Conv_StringToText` gives the FText bytes to pass as a TextProperty argument.
+- **Who hit an NPC:** `HealthComponent.GetLastHitInstigator` gives the last hitter (probe 101: the client's pawn after
+  its blade swings, `Marisol_C` after the companion's). A health-delta damage report (the client's world tells the host
+  what its NPCs lost) counted the client's companions' hits too: 106 reports in 20 s of a fight the client stayed out
+  of (run 118); with the last hitter checked, 0 (runs 119-121). `IndianaGameplayStatics.K2_ApplyDamage` with the
+  player as causer did no damage; with a companion it did.
+
+- **After a fight:** the stand-in's own AI may put its weapon away (its `GetCurrentWeapon` becomes None); the game's
+  flaw offer ("Hold Esc Reject") can pause the client's game as well as the host's (run 124), and a paused world fires
+  no shot and swings no blade.
+
+Results:
+- Run 117: the co-op menu (host by keys, client by clicks and keys, the client joined and both saw each other), the
+  stand-in's weapon (16/16: 3 rounds fired, 3 counted, 3 fired by the stand-in, its last shot 2.1 m from the host's at
+  40 m, its 3 shots at the client dropped, swings, holster, reload) and spawned enemies (15/15). Owner state unchanged.
+
+## Weapon mods, a gun's bash, crouch on the stand-in (2026-11-19, two copies on one PC)
+
+Observed (probes 102-103, runs 127-128):
+- **Weapon mods:** the game's own mod install (`weapon_equip_mod`, RVA 0x6D3ED8C, already used for given weapons) puts
+  a mod class on the stand-in's weapon. `WeaponMod_Barrel_Silencer_MR_Tactical_C` installed on the host's
+  `Weapon_MR_Tactical_Unique_DeathSentence_C` showed on its stand-in's rifle in the client's world (run 127).
+- **A gun's quick melee (bash):** the player's weapon visuals get `TriggerEventBP(QuickMelee)` (35). The NPC bashes are
+  `/Game/Art/ANIM/Character/NPC/LngGn/AS_NPC_LngGn_QuickMelee_Cross_Montage`, `Hndgn1h/AS_NPC_Hndgn1h_QuickMelee01_Montage`,
+  `Hndgn2h/AS_NPC_Hndgn2h_QuickMelee_GunButt01_Montage` and `HvyWpn/AS_NPC_HvyWpn_QuickMelee_Montage`; tow2-coop picks
+  one from the stand-in's weapon animation set (`NPC_Weapon_Animations_<code>`). The rifle's bash played
+  `AS_NPC_LngGn_QuickMelee_Cross_Montage` on the stand-in (run 127). The quick melee key is not in the InputSettings
+  action mappings, and posted V, F and C did not bash: the test sends the visuals event.
+- **Crouch:** an NPC crouches when its AI controller asks (`IndianaAiController.K2_SetWantCrouch(bCrouch)`) and its
+  movement component ticks on the ground (probe 103):
+  - In the mode the stand-in's placement leaves it in (MOVE_Falling; MOVE_Walking turned into Falling within 0.3 s of
+    ticking), neither `bWantsToCrouch`, `bForceCrouch` nor the controller's request crouched it.
+  - In MOVE_NavWalking with the controller's request: `bIsCrouched` true, the animation's `CrouchedProgressNormalized`
+    0.54 after 0.25 s and 0.78 after 0.5 s, then 1.0 with `bIsFullyCrouched` and the capsule at 55 (standing 96). With
+    the request off it stood within 0.3 s.
+  - While the controller asks, `bWantsToCrouch` false doesn't stand it up; without the request, `bWantsToCrouch` alone
+    doesn't crouch it.
+  - The animation instance's fields set directly are overwritten at its next update. `bIsCrouched` set by hand, then a
+    tick: the animation's `bIsCrouching` turns true, its progress stays 0 and the capsule full.
+  - A companion (`Azahelia_C`, NavWalking) crouched when its player did: capsule 92 to 52.8, progress 0.32 after 1.2 s
+    and 1.0 after 2.5 s.
+  - tow2-coop: on each change of the other player's crouch, the controller's request, NavWalking, the movement
+    component ticking 1 s, then Walking again.
+
+Results:
+- Run 127: mods and bash PASS; crouch FAIL (`bWantsToCrouch` with a tick in Falling).
+- Run 128: the stand-in's weapon and gestures 25/25 PASS: mods, bash, crouch (animation fully crouched, capsule 55)
+  and stand-up (capsule 96), its movement component off and in Walking after. Owner's files unchanged.
+- Run 129 (the quick suite through the menu): 15 of 16 steps. After the combat test the stand-in stayed crouched when
+  the host stood up (capsule 55; cause not found). Since then the controller's request is repeated every 0.25 s until
+  the stand-in matches (3 s at most), then every 5 s, and the stand-in's feet are placed on the player's: the center
+  of the player's capsule is sent, so a stand-in of the other height (mid-change, or not stood up) sank or floated
+  41 cm, and floating, its standing capsule would sit 41 cm above the player's.
+- Run 130 (combat, then gestures): PASS. Run 131 (the quick suite): the stand-in crouched and stood up with its feet on
+  the host's (+0.0 and -0.3 cm); 15 of 16 steps: in the spawned-enemies step the client's own bear was not alive within
+  25 m of its spawn point and the host's copy was 10.7 m from it (the same step passed in runs 129 and 133). The test
+  now spawns on the navigation mesh when it finds some (`NavigationSystemV1.K2_ProjectPointToNavigation` works from a
+  script, probe 104; 20 m ahead of the host past the ledge it finds none).
+- Run 132: the memory guard stopped both copies during the combat test (free RAM 1.9 GB; the copies at 10.3 and
+  10.7 GB private, about 1.5 GB more than in runs 129 and 131). Run 133 (combat, gestures, spawned): PASS except the
+  stand-in's last shot 4.29 m from the host's at 6.1 m. The test now aims the host's shots away from the other player
+  (guess, not checked: the client's own body stopped the stand-in's shot where the host's shot passed the client's
+  stand-in). Probe 104 (a held pair, combat then gestures then spawned): gestures PASS; combat and spawned enemies
+  were disturbed by soldiers of another faction fighting nearby (the host down, the spawned bear killed).
+- Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
+  last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
+
 ## Tools on the test PC (2026-11-15)
 
 Present: Python 3.13, git, gh, Java 21 (Temurin), .NET SDK. Missing: any C/C++ compiler (the Visual Studio
