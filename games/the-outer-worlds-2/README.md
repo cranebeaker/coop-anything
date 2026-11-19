@@ -4,21 +4,26 @@
 |---|---|
 | Engine | Unreal Engine 5.4.4 (Obsidian's `Arkansas` project, Microsoft GDK build) |
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
-| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.2.0-beta.5](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.5), Steam), directory entry "tow2-coop" |
-| QA level | automated (two copies on one PC) and one manual session across two PCs |
-| Last updated | 2026-11-17 |
+| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.2.0-beta.6](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.6), Steam or direct IP), directory entry "tow2-coop" |
+| QA level | automated (two copies on one PC) and one manual session across two PCs (beta.4) |
+| Last updated | 2026-11-19 |
 
 ## Where things stand
 
-Two players can share one campaign with tow2-coop: the friend joins from the main menu by receiving the host's save,
-both see each other, and NPC health and deaths, quest progress, map travel, doors and containers follow the host.
-v0.1.0 connects by IP; the v0.2.0-beta.5 test build connects Steam friends through the game's own Steam session (no IP
-or port), keeps the friend's own saves untouched (saving is off in the joined game) and shows armor and helmet
-changes. Everything was tested with two copies of the game on one PC (automated suite and a 30-minute soak). The
-third try across two PCs worked (2026-11-17, beta.4 on the host): the friend joined over Steam, both played for 15
-minutes and the friend followed four map changes. Before that, beta.2 looked for the game's Steam session too early,
-and beta.3's host never accepted the friend's connection. beta.5 fixes what the players reported: stand-ins without
-walk animation or hair, dead enemies' loot, and the wait after a map change.
+Two players share one campaign with tow2-coop, each with their own character. The friend joins from the main menu by
+receiving the host's save, and the friend's mod puts the friend's own character into it (items, money, level, skills,
+look). Each player sees the other as a stand-in NPC wearing the other's look, armor and helmet. Fights are shared: an
+enemy that spots either player starts the fight in both worlds and fights the same player (or companion) in both, so
+the enemies spread over the two players. NPC health and deaths, doors, containers and dead-enemy loot follow; quest
+progress and outcomes go both ways without a reload; map changes, fast travel and the host's reloads happen together;
+XP from kills, lock picks and conversations is shared; the players give each other items through the other's stand-in.
+
+v0.2.0-beta.6 (test build, 2026-11-19) connects Steam friends through the game's own Steam session (no IP or port), or
+two players by direct IP. All of it was tested with two copies of the game on one PC. The only session across two PCs
+so far (2026-11-17) ran beta.4: the friend joined over Steam, both played for 15 minutes and the friend followed four
+map changes. What the players reported then is fixed in beta.5 (stand-ins without walk animation or hair, dead enemies'
+loot, the wait after a map change) and beta.6 (the friend's character becoming a copy of the host's, enemies standing
+still in the other world).
 
 ## Existing work
 
@@ -32,12 +37,28 @@ Single-player UE 5.4 shipping build, no anti-cheat, `.text` readable despite Ste
 The game has no netcode to reuse, so each player runs their own world and a native mod syncs it:
 
 - **Saves:** `SaveGameManager.SaveGame/LoadGame`; `AActor.bShouldSaveGameState` (an engine addition) decides whether a
-  spawned actor goes into the save, and only counts before `FinishSpawning`.
+  spawned actor goes into the save, and only counts before `FinishSpawning`. Quickload (F9) goes through its own
+  native function, not `LoadGame`.
+- **Characters:** a save folder's `Player.dat` holds the player's character (items with their state, equipment, money,
+  XP, level, skills, perks); putting the friend's own `Player.dat` into the host's campaign gives the friend their own
+  character in the host's world.
 - **Quests:** every quest is in the `QuestBundleSet` asset; scripts are GUID-based (`QuestScripts`,
-  `GlobalVariableScripts`); `OwQuestManager.GetQuestState_BP` reads state. Completions can't be applied by script.
+  `GlobalVariableScripts`); `OwQuestManager.GetQuestState_BP` reads state. Completions can't be applied by script; the
+  quest's own state can be set through the game's native quest lookup.
+- **XP:** every gain goes through the native `UPlayerInfoComponent::AddXP(XP, reason, ...)` (found from the
+  `AddXPDebug` exec thunk, which inlines the same code); the reason tells kills, lock picks, hacks, conversations,
+  quests and discoveries apart.
 - **Travel:** `TravelManager.BeginTravelToBP(destination)`. **Doors:** `OCLComponent`. **Containers:**
-  `Container.HandleItemRemoved`, `InventoryComponent.RemoveItemFromActor`.
+  `Container.HandleItemRemoved`, `InventoryComponent.RemoveItemFromActor`. **Clock:** `GameCalendar.K2_AdvanceTime`.
+- **Giving items:** `UIndianaUI::OpenItemTransfer` opens the game's transfer screen on a container (on an NPC it
+  crashed, reading the NPC's clothes).
 - **Look:** `AppearanceComponent` (Customization struct, head, body) and `EquipmentComponent.SetArmorVisualOverride`.
+- **AI:** `AIDetectionComponent.ForceFullDetection` makes an NPC see an actor.
+  `AITargetInfoPriorityFunctionLibrary.ForceOverridePrimaryTarget` returns a priority node handle that only takes
+  effect once `PriorityNodeFunctionLibrary.Activate` is called on it, and holds a reference until `Deactivate`: keep
+  exactly one copy of it. The AI of an NPC far from the local player sleeps (no detection at 200 m). The game's
+  `Spell_MakeNpcUntargetable` (cast and removed with `IndianaCharacter.CastSpell` / `RemoveSpell`) hides an NPC from
+  the AI.
 
 Everything above is reached through UE reflection from a DLL loaded by a `dsound.dll` proxy; [NOTES.md](NOTES.md) has the
 sources, layouts and pitfalls.
@@ -49,9 +70,11 @@ sources, layouts and pitfalls.
 - **Two-world sync** over UDP: player transforms and animation, NPC health and deaths owned by the host, acknowledged
   damage from the client, story events on an ordered acknowledged channel, doors and containers.
 - **Join and resync:** the host saves and hands its campaign over TCP; the client loads it into its own
-  `CoopHost_<id>` slot. The same path carries quest completions and map changes (the client follows the host).
-- **Stand-in:** an NPC body with its AI stopped, god mode, no interaction or targeting, the player's look, kept out of
-  saves (a save made during co-op held an extra NPC until `bShouldSaveGameState` was cleared before spawning).
+  `CoopHost_<id>` slot. Since beta.6 the same path is only needed to join, after a map change the friend could not
+  follow, and for the host's reloads.
+- **Stand-in:** an NPC body with its AI stopped, god mode, the player's look, kept out of saves (a save
+  made during co-op held an extra NPC until `bShouldSaveGameState` was cleared before spawning). Out of a fight it is
+  untargetable; while the party fights it joins the player's team so enemies can pick it.
 - **Player install:** `install.ps1` finds the game through Steam, writes `tow2coop.ini` (role, host address, port,
   optional shared key) and uninstalls cleanly; strangers with another key are ignored and the campaign goes only to
   the joined player's address.
@@ -63,13 +86,30 @@ sources, layouts and pitfalls.
   load); a hand-over never sends an old campaign (a refused host save cancels it and the client asks again).
 - **Outfit (v0.2):** the armor set and helmet each player wears go to the other every 2 s and dress the stand-in; the
   stand-in body's own cap is hidden when the player wears no helmet.
+- **Own characters (beta.6):** the friend's game keeps its own character in a private save before each hand-over and
+  every 3 minutes, and puts its `Player.dat` into every campaign the host sends. First join: the character of the
+  friend's newest own save, with empty pockets.
+- **Party XP (beta.6):** a hook on `AddXP` shares XP by reason: kills, lock picks, hacks and conversations for both,
+  quest XP from the host's campaign, discoveries only for the finder.
+- **Giving items (beta.6):** E on the other player's stand-in opens the game's transfer screen on a hidden empty chest;
+  items put in it go to the other player (acknowledged, back after 20 s otherwise), weapons and armor with their mods.
+- **Together (beta.6):** either player's travel starts the same travel for the other at once (fast travel too); the
+  host's `LoadGame` and Quickload send that save to the friend before loading it; the friend's death fetches the
+  host's current game; quest outcomes go both ways live; one clock.
+- **Co-op combat (beta.6):** one world decides each enemy's fight: the host's, or the friend's for enemies near the
+  friend when the host is more than 50 m away (the AI sleeps far from a world's player). The other world forces its copy
+  onto the same target (`ForceFullDetection`, then `ForceOverridePrimaryTarget` and `Activate`), so a detection in
+  either world starts the fight in both and the game's own target choices spread the enemies over both players.
+  Drift between the two copies is eased back (snapped past 6 m). A dead player's stand-in leaves the other world until
+  that player lives again.
 
 ## QA
 
 - Two isolated, hard-linked test copies on one PC (the hub's `tools/gamepool`), a bridge into each copy, scripted
-  tests with real game clients: `qa/run_suite.ps1` (auto-join, NPC authority, melee with real input from both
-  players, story, doors and containers, quest-outcome and map-travel resync, co-op resume after restarting both
-  games), `qa/soak_run.ps1 -Minutes 30`, `qa/run_key.ps1`, `qa/test_install.ps1`.
+  tests with real game clients: `qa/run_suite.ps1` and the shorter `qa/run_quick.ps1` (auto-join, NPC authority, melee
+  with real input from both players, own characters, party XP, co-op combat, death and reload, world and clock, story,
+  doors and containers, quest-outcome and map-travel resync, co-op resume after restarting both games),
+  `qa/soak_run.ps1 -Minutes 30`, `qa/run_key.ps1`, `qa/test_install.ps1`.
 - Last results (2026-11-16): suite all PASS (run 33, melee re-run in runs 37 and 39 on a hostile NPC); 30-minute soak
   PASS (run 38: 60 checks, no problems, stand-in to player median 0.2 units, NPC health difference 0, no crash);
   shared key: same key joins in about 15 s, different keys are ignored; installer 8/8 on a fake game folder.
@@ -92,15 +132,23 @@ sources, layouts and pitfalls.
 - v0.2.0-beta.5 (2026-11-17, runs 57-58, two copies on one PC): join, the stand-in's look and hair, its walk
   (animation speed 400 while the client walks, 0 when it stops) and jump, doors, chests, dead-enemy loot, map travel
   (the host hands over 8 s after its map changed, before ~15 s), no caught faults, owner's files unchanged.
+- v0.2.0-beta.6 (2026-11-18/19, runs 62-111, two copies on one PC): the friend joined with 0 bits and none of the
+  host's items, gained money, ammo and two levels and kept them after the host reloaded; party XP by reason, both ways
+  (8 cases); giving items through the stand-in both ways; travel together (the friend arrived 0.0-1.1 s after the
+  host, no save sent); the host's reload reached the friend 2.7 s after it; quest outcomes both ways, live; one clock.
+  Co-op combat (`qa/test_combat.py`, run 109: 27/27 PASS): the friend's copies of the enemies fought whom the host's
+  game said in 73 of 73 samples, both players took hits in their own world, the two copies of an enemy were 1.4 m
+  apart (median), the friend's game took over the enemies near it within 0.6 s of the host walking 150 m away, and a
+  dead player's enemies turned to the other. Run 111: the quick suite 14/14 PASS, owner's files unchanged.
 
 ## How to play
 
 Each player needs their own copy of the game (a Steam Families copy can't be played by two people at once).
 
-- **Over Steam** ([v0.2.0-beta.5](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.5), test build, the players are Steam friends): the
+- **Over Steam** ([v0.2.0-beta.6](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.6), test build, the players are Steam friends): the
   host runs `install.ps1 -Role host`, the friend `install.ps1 -Role client [-Friend "<host's Steam name>"]`. No address
   or port.
-- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or beta.5 with `-Transport udp`): the host runs
+- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or beta.6 with `-Transport udp`): the host runs
   `install.ps1 -Role host` and gives the printed key to the friend, who runs
   `install.ps1 -Role client -Peer <host address> -Key <key>`. The host's PC must accept UDP 27960 and TCP 27961 (port
   forwarding or a VPN).
@@ -109,17 +157,21 @@ The host loads their campaign; the friend waits at the main menu and is pulled i
 
 ## Known issues
 
-- The joined player plays a copy of the host's character, renewed at every hand-over: ammo, items, money and XP
-  become the host's again after a map change or a quest resync.
-- An enemy attacked by one player only takes the damage in the other player's world; it doesn't move or fight there.
-- Keep the host's window un-minimized while the friend joins or follows a map change (a minimized copy can't finish a
+- beta.5's and beta.6's new parts were tested on one PC only; a session across two PCs with beta.6 is still to come.
+- Enemies the game spawns during play (not placed in the map) are not shared: each world has its own. Co-op combat
+  was tested against creatures and one soldier, not a large fight with armed humans.
+- The stand-in never crouches and doesn't show the other player's weapon or attacks.
+- While the host's game is paused in a fight (a menu, or the game's own flaw offer), the host's enemies wait.
+- The friend's character is kept by a private save every 3 minutes and before a hand-over: after the host's reload or
+  the friend's death, up to 3 minutes of the friend's gains are lost.
+- Keep the host's window un-minimized while the friend joins or a hand-over runs (a minimized copy can't finish a
   save).
-- Enemies don't attack the friend's stand-in; each player is attacked in their own world.
-- Two players only. Use beta.5 on both PCs (beta.2 doesn't link when the game is started by Steam; a beta.3 host never
-  accepts the friend; v0.1.0 / beta.1 don't connect).
-- Quest completions reach the friend through a short reload.
+- Giving items needs keyboard and mouse (a gamepad's interact button doesn't open the screen).
+- Two players only. Use beta.6 on both PCs (protocol 3: older versions don't connect).
 
 ## Next steps
 
-- A two-PC session over Steam (two accounts), which one PC can't test.
-- Enemies that target the remote player, dialogue sync, items beyond containers.
+- A two-PC session with beta.6 over Steam (two accounts), which one PC can't test.
+- Host and join from the game's main menu, with a list of joinable games, instead of an installer role.
+- Enemies the game spawns, the stand-in's weapon, attacks and crouch, conversations seen by both players, companions
+  out of a fight.

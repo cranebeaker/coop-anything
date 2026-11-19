@@ -14848,18 +14848,19 @@
   qa: automated
   notes: >-
     Native two-world co-op mod (dsound.dll loader + tow2coop.dll, MIT) for Steam build 24225441. The friend joins from
-    the main menu by receiving the host's campaign; the other player is a stand-in NPC with the player's look, armor
-    and helmet; the host owns NPC health and deaths, quest progress (completions arrive by a short reload), map travel,
-    doors, container and dead-enemy loot. v0.2.0-beta.5 (test build) connects Steam friends through the game's own
-    Steam session and Valve's relay (no IP or port) and keeps the joined player's own saves untouched; v0.1.0 and beta.5
-    also connect by direct IP (UDP 27960 and TCP 27961) with an optional shared key. Tested with two copies on one PC
-    (automated suite and a 30-minute soak) and in one session across two PCs (2026-11-17: joined over Steam, played,
-    followed map changes). The joined player still plays a copy of the host's character, renewed at every hand-over.
-    Write-up in games/the-outer-worlds-2.
+    the main menu by receiving the host's campaign, with their own character (items, money, level, look) put into it;
+    each player sees the other as a stand-in NPC with the player's look, armor and helmet. Fights are shared: an enemy
+    that spots either player fights in both worlds, on the same target. NPC health and deaths, doors, containers and
+    dead-enemy loot follow the host; quest progress and outcomes go both ways live; travel, fast travel and the host's
+    reloads happen together; XP is shared; the players give each other items. v0.2.0-beta.6 (test build) connects
+    Steam friends through the game's own Steam session and Valve's relay (no IP or port), or by direct IP (UDP 27960
+    and TCP 27961) with an optional shared key. beta.6 was tested with two copies on one PC (automated suite); one
+    session across two PCs ran beta.4 (2026-11-17: joined over Steam, played, followed map changes). Enemies the game
+    spawns during play are not shared. Write-up in games/the-outer-worlds-2.
   sources:
   - https://github.com/nicoNaeg/tow2-coop
   - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
-  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.5
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.2.0-beta.6
   - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
-  checked: '2026-11-17'
+  checked: '2026-11-19'
   made_with_coop_anything: true

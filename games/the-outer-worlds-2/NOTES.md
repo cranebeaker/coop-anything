@@ -665,6 +665,263 @@ Probes 77-80 and run 81 (2026-11-18, before publishing):
 Memory: with a cold NVIDIA shader cache (5.8 GB cap, shared with the owner's game), a test copy's start reached
 13-17 GB and the memory guard stopped it (runs 67-69). The owner raised the cache size to unlimited on 2026-11-18.
 
+## Map changes together, giving items through the stand-in (2026-11-18, two copies on one PC)
+
+The owner found the 22 s between the host's and the client's arrival in a new map (run 81) far too long, and chose
+giving items "from the other player's stand-in".
+
+Observed (probes 82-84, runs 85-86):
+
+- **Travel:** the game has one `TravelManager` (a transient object). Its `ActiveTravelDestination` (+0x60) is set when
+  a travel starts and stays set through the load until `IsTravelingBP()` turns false, about 7 s after the new world
+  object appears; then it is cleared (`LastTravelDestination` keeps it). A `LoadGame` sets nothing there.
+  - `BeginTravelToBP(destination, false, false, false)` returns at once; the game thread then blocks for the load
+    (about 9 s from 0601 into 0605 on this PC).
+  - Probe 82: a second copy starting the same travel 0.5 s after the first was in the new world 0.6 s after it.
+  - A travel started on the joined client with `bTriggerAutosave` true wrote no autosave (saves stay off across it).
+- **Transfer screen:** the two-list screen (`ItemTransfer_BP`, class in `IndianaUI.ItemTransferClass`, +0x540) is
+  opened by `UIndianaUI::OpenItemTransfer(AActor*)`, RVA `0x6BC7764` in CL-2994920.
+  - The function gets the actor's inventory through a virtual call, creates the widget (RVA `0x6BB0FDC`) and binds it
+    to that inventory (RVA `0x6C63734`).
+  - It has no direct caller (a virtual or a delegate target, so the standard calling convention).
+  - It was found from the `&UItemTransferWidget::OnInventoryItemAdded` name strings that `AddDynamic` leaves in the
+    binding function.
+  - Called on the stand-in NPC, the screen crashed the game while listing the NPC's own clothes (probe 83: a read of
+    `0xFFFFFFFFFFFFFFFF` at RVA `0x6C7DBF2`, an item stat function).
+  - Called on a freshly spawned, empty `BP_Container_Chest_Small` (hidden, no collision, `bLootManagerLootApplied`
+    true, `bShouldSaveGameState` false), it opened: "PLAYER" and "CONTAINER" lists and "ESC Exit". Escape destroys
+    the widget.
+  - Posted keys (arrows, E, Enter, Space) and `ButtonBase.StartSimulateHoldClick` on its item buttons moved nothing:
+    the screen follows the real mouse cursor.
+  - The quick-loot popup of an unowned world chest offers "Take", "Hold E Take All", "F Equip" and "C Compare"; it
+    has no store.
+- **Runs 85 and 86** (`qa/run_quick.ps1` with `qa/test_give.py` and `qa/test_resync.py B2C`): all steps PASS, owner
+  state unchanged.
+  - Giving: E in front of the other player's stand-in opened the screen; 3 shells moved into the chest reached the
+    other player both ways (sent, received, confirmed); with the receiver refusing gifts, they came back to the giver
+    after 20 s.
+  - Travel: the host travelled into 0605 and the client was in the new map 1.1 s after it, with no save sent (run 81:
+    22 s); they saw each other 8 s after arriving. With following off on the client, the hand-over brought it 20.5 s
+    after the host. When the client travelled first, the host followed and arrived at the same time.
+
+What the mod does with it (beta.6):
+
+- Each player's own travel start (the destination set) goes to the other player, who starts the same travel at once,
+  unless the host is in combat. The host waits up to 90 s for a following client instead of handing over its
+  campaign. The hand-over stays for loads that are no travel (a save loaded, a death) and for a refused travel.
+- After a travel, the sync starts 1 s after the game's own travel ends, instead of 10 s after the world change.
+- Giving: E (seen in the game window's messages, so posted keys work in tests) while looking at the stand-in from
+  3.5 m or less opens the transfer screen on a hidden, empty chest spawned at the stand-in. What lands in the chest is
+  removed and sent to the other player's inventory (`GiveItemToPlayer`, with the game's notification). It is resent
+  every 0.5 s until confirmed, and comes back to the giver after 20 s without an answer. A weapon or armor arrives as
+  a new copy with its level and rarity, without its mods.
+
+Unknown: ship travel and fast travel with following; a mouse transfer in the screen (expected to move the real item
+into the chest, not exercised by the bots); a gamepad's interact button.
+
+## Gifts with their mods, death and reload (2026-11-18, two copies on one PC)
+
+The owner asked for given items to keep their mods, and for faster deaths and reloads.
+
+Observed (probes 85-88, runs 87-89):
+
+- **Mods on an item:** a weapon keeps them in `WeaponModContainer.ModSlots` (+0x40 of the container at `Weapon`
+  +0x1EC8): a `TMap<EModSlot, FWeaponModSlot>` whose values hold `DefaultMod` (the slot's stock mod class) and
+  `CurrentMod` (the installed mod object). The mod reads the map's sparse array directly: elements of 0xD0 bytes
+  (the key byte padded to 8, the 0xC0 value, two hash ints), allocation bits inline at +0x10.
+  - An armor keeps them in `ArmorModSlots`, a fixed array of 7 `FArmorSetModSlot` (`CurrentModClass` at +0x8), plus
+    `BonusArmoringSlot`. A unique armor's resistance mod sits in its class defaults: the mod skips mods equal to the
+    defaults.
+  - This build reads properties with the 8-byte `FFieldVariant` layout: `ArrayDim` is at +0x30 of an `FProperty`,
+    not at the stock +0x38. Reading the stock offset gave 1 instead of 7.
+- **Installing a mod on an item in the bag** (not equipped):
+  - `UWeapon::EquipModByClass(const TSubclassOf<UWeaponMod>&, bool bIgnoreSlotModdability)`, RVA 0x6D3ED8C. It
+    reads the item's `WeaponModContainer` at +0x1EC8 and has 13 callers in the exe, among them the debug command
+    `EquipmentComponent.EquipWeaponModByClassDebug`.
+  - The armor install that `EquipArmorModByClassDebug` calls, RVA 0x179A0F0, with (armor, &class, false, true, true,
+    true).
+  - Both worked on items in the bag: a silencer on a pistol, defensive plates on an armor (read back from the item).
+- **Loading:** `SaveGameManager.LoadGame` and `Quickload` are virtual (slots 0x2F8 and 0x310). The `LoadGame`
+  implementation (RVA 0x6B30B90, no direct caller) takes (this, `FString*` name, bool) and returns `ELoadGameResult`.
+  - Two of the `OnQueryLatestSaveFinished` implementations (menus' Continue) call it through slot 0x2F8.
+- **Death screen** (a client with god mode off, `HealthComponent.Suicide`): Dying after 1 s, Dead after 4 s, then
+  "GAME OVER / YOU DIED" with "You don't have enough trauma kits to be revived", then Continue, Load Game, Main Menu
+  and Quit. Posted keys don't drive it (real mouse).
+  - Continue loads the newest save, which in a joined game is a local save (the friend's own campaign, or the mod's
+    private "CoopSelf"): a stale or foreign world under the host's game.
+  - `HealthComponent.Resurrect(false, 1.0)` brings a dead player back to Healthy.
+- **Results:**
+  - Gifts: a pistol with a silencer and an armor with defensive plates went into the giving chest; the client's
+    copies had the same mod.
+  - Death and reload (run 89): the mod sends the save before the host's `LoadGame` (which returns only once the new
+    world is up, probe 88: about 16 s, ticking the engine inside); the client was in its new world 2.7 s after the
+    host (before: about 20 s). The client died: the host's current game came, the client's own `LoadGame` of a local
+    save was refused (`LoadCanceledByUser`), and the host's game loaded 7.3 s later, the client alive next to the
+    host. A revive after the death dropped the fetched game.
+  - Run 87 failed two checks (the save went out after the host's load; the auto-join test expected the client at the
+    menu while the host's first load had already brought it in). Run 89, after both fixes: 11 steps PASS, owner
+    state unchanged.
+
+What the mod does with it (beta.6):
+
+- A gift carries `"<item class>|<mod class>|..."`; the receiver installs each mod on its new copy with the game's
+  install functions.
+- The host's `LoadGame` (hooked) hands that very save folder over at once, without a new save and without a second
+  hand-over once its world is up.
+- In a joined game, the friend's own loads of local saves are refused. When the friend dies, the host's current game
+  is fetched and held; the friend's Continue releases it, with the last kept character (a dead character is never
+  kept).
+
+Unknown: Continue clicked for real; Quickload (its implementation is expected to call `LoadGame`); the host's death
+screen with a real click.
+
+## Quests live both ways, one clock, menus (2026-11-18, two copies on one PC)
+
+The owner asked for everything testable to be fixed or built, so that the whole campaign plays well with two.
+
+Observed (probe 89, runs 90-93):
+
+- **Quest state:** `GetQuestState_BP` calls the quest manager's lookup by GUID (RVA 0x14BEE2C, 15 callers; the quests
+  are a set at +0x1C0 of the manager, elements of 0x1C0 bytes). The returned instance holds the `EQuestState` byte at
+  +0x1A4.
+  - Writing the host's outcome there gave the client the same end state live: the 5 s check passed and nothing
+    reloaded.
+- **Menus pause the game:** with the host's inventory open, `GameplayStatics.IsGamePaused` was true and the host's
+  calendar hour stood still. The client's NPCs, corrected towards the host's frozen ones, snapped 45 times in 15 s.
+- **Calendar:** one `GameCalendar` object. `K2_GetRawHour` gives the hour (float, 0-24); `K2_AdvanceTime(days, hours,
+  minutes, seconds)` moves it; `RequestPauseTime` and `RequestUnpauseTime` (a named request) stop and start it.
+  - Game time runs about 25 game seconds per real second.
+  - The host's 3-hour jump did not reach the client before the clock sync.
+- **Fast travel** (`BeginTravelToBP` with a `POI_Data/06_Cloister/*_FastTravel` point in the same map) sets the same
+  `ActiveTravelDestination`: the client followed and landed 0-49 units from the host.
+- **Container takes:** `Container.HandleItemRemoved` fires only when a whole stack leaves; part of a stack fires
+  nothing on the container.
+- **Test tool fix:** `qa/gamewin.py` sent F10 for "F9" (VK 0x79); VK_F9 is 0x78.
+
+What the mod does with it:
+
+- **Story both ways.** The client also polls quests, addendums and the objective globals and sends its own changes;
+  the host applies them to its campaign, checking each quest, addendum and global against the quest data.
+  - Each side sets its baseline to what it applies, so nothing echoes.
+  - After a reload the client drops its unsent changes; each packet carries the first sequence still valid.
+  - Outcomes go through the quest lookup above when the receiving quest graph has not got there by itself.
+- **One clock.** Every 2 s the host sends its calendar hour. A client more than 0.1 h behind advances to it; a client
+  ahead pauses its calendar until the host's catches up.
+- **Menus.** No NPC corrections while the host's game is paused.
+- **Container takes** come from the container watch (containers within 5 m, every 0.25 s), whole or part of a stack.
+  A take applied from the other player lowers the watch's snapshot first, so it is not sent back.
+
+Results:
+
+- Run 91: the client started a quest, drove it to Succeeded, and the host's campaign had the same outcome, without a
+  reload. The client's clock followed a 3-hour jump within 1 s. With the host's inventory open, 1 snap instead of 45.
+- Run 92: the quick suite, 13 steps, all PASS, owner state unchanged; part of a stack taken out of a chest was
+  mirrored both ways.
+
+- Run 93: F9 posted to the host went through the game's own `Quickload` (RVA 0x1B2478C, vtable slot 0x310), not
+  `LoadGame`: the client followed only after the host's world was up (23 s). Hooked too: the newest `Quicksave*`
+  folder goes to the client before the load.
+- Run 95: the client waited about 15 s for its own private save before loading the host's reload. Reloads now take
+  the client's last kept character (the world goes back in time too).
+- Run 96: a 30 s quiet window after one fetch made the client ignore the first notice of the next hand-over, which
+  then came only after the host's load (9 s late). Each notice now carries its hand-over's number.
+- Run 97 (the quick suite, 13 steps): all PASS, owner state unchanged.
+  - The host's reload: the client 0.8 s behind. F9: 0.1 s behind.
+  - The client back 6.4 s after Continue.
+  - The clock followed a 3-hour jump within 1 s; 0 NPC snaps during the host's menu (looked at before each update).
+
+Unknown: ship travel; quest XP for outcomes set directly (the game's completion logic doesn't run for them).
+
+## Co-op combat (2026-11-19, two copies on one PC)
+
+The owner asked for real co-op fights: the enemies split over both players, a detection of either starts the fight for
+both, and the enemies fight in both games.
+
+Observed (probes 90-91, runs 98-102), all in the 0601 Cloister overland, near three Ursopods (`Bear_T3_*`, melee
+creatures in one encounter, ~200 m from the test save's start):
+
+- **`AIDetectionComponent.ForceFullDetection(DetectedActor, ExternalStimulusLocation, bPermitArkansasAI)`** (the
+  component is `IndianaAiController.AIDetectionComponent`):
+  - the NPC goes Alerted (awareness ~96), its current target (`K2_GetCurrentTarget`) is that actor, and
+    `OwBaseCharacter.IsInCombat` is true;
+  - this worked on the local player and on the stand-in, with the local player 8 m away;
+  - with the local player 200 m away, or dead (a teleport over a cliff killed the host twice), nothing happened: far
+    from a game's player, the NPCs' AI sleeps in that game.
+- **`AITargetInfoPriorityFunctionLibrary.ForceOverridePrimaryTarget(Controller, Priority, ForcedTargetActor)`** returns
+  an opaque `PriorityNodeHandle` (0x18 bytes).
+  - It does nothing until `PriorityNodeFunctionLibrary.Activate(Handle&, Owner, FromWhere)`; `Deactivate(Handle&)`
+    removes it.
+  - The handle holds a reference: `Deactivate`'s native thunk (RVA 0x12afaf4) releases a reference controller at +8.
+    Exactly one copy may stay alive. In run 99 a stale copy was released twice and crashed the game (the mod's
+    incremental registry rebuild had copied it).
+- **Natural detection.** The client, in the open 7 m in front of an Ursopod, was seen in 1-3 s in its own game.
+  - The Ursopods switched targets between the player and both companions (Marisol, Azahelia); each game has its own
+    companions.
+  - With the host near, the host's game saw the client's stand-in on its own too: on the stand-in's default team
+    (`T_Generic_Friendly`), and also on `T_Generic_NeutralToAll` (run 100).
+- **Untargetable.** `IndianaCharacter.CastSpell(/Game/Blueprints/Spells/AI/Spell_MakeNpcUntargetable)` (target Self,
+  cooldown 0) adds `UntargetableByAIStatusEffect`; `RemoveSpell` takes it off. Cast after remove returned Success every
+  time (probe 91).
+  - `StatusEffectManagerComponent.BPAddEffect` with the effect class itself did not stick: the class default is
+    `UseDurationTime` with a duration of 0.
+  - An Ursopod already on an actor kept it after the effect, and after `K2_RequestNewTarget(Untargetable)`.
+- **Test helpers on `HealthComponent`:** `SetPseudoGod` (a player takes the hits, never dies), `bImmuneToFallDamage`
+  and `GetLastHitInstigator` (who hit last).
+- **Two mod bugs found on the way:**
+  - An NPC packet with more than 44 records (33 bytes each) was larger than the 1500-byte receive buffer, and
+    `recvfrom` then failed for that frame's packets.
+  - `ue::alive` read the header of an NPC whose memory had been released, after the host walked 200 m away and the
+    area streamed out (an access violation the frame guard caught).
+
+What the mod does with it:
+
+- **One game decides each NPC's fight.** That is the host's game, or the client's when the host is more than 50 m
+  away and the client is 20 m nearer (back to the host under 40 m).
+  - The deciding game says, 10 times a second, whom the NPC fights: the host, the client, nobody, or someone else
+    (another NPC by its registry id, or a companion by its class).
+  - The other game's copy is made to detect that player (or their stand-in, or the same companion) and pinned on them
+    with an activated `ForceOverridePrimaryTarget`; it is looked at again every second.
+- **Hints.** When the client's copy fights the client while the host's copy fights nobody, the client sends a hint
+  and the host's copy detects the client's stand-in: a detection by either starts the fight for both.
+- **The stand-ins.**
+  - Out of a fight, each carries `Spell_MakeNpcUntargetable` and the `T_Generic_NeutralToAll` team, so each player is
+    only seen in their own game.
+  - While the party fights (either player in combat, or an NPC on either), each is on the player's team and
+    targetable: the deciding game's AI may pick it, and the fight spreads over both players.
+  - A dead player's stand-in leaves the other game until they live again.
+- **Positions and pins.** In a fight, a copy that drifted more than 1.5 m is eased back (15 % of the gap per update)
+  and snapped only past 6 m. A pin moves with its NPC when the registry is rebuilt, and is never copied.
+- **Liveness.** `ue::alive` first checks the object's memory (`VirtualQuery`, a per-frame cache of committed
+  regions).
+- **Packets.** At most 32 NPC records per packet, in as many packets as needed; protocol version 3.
+
+Results:
+
+- Run 98 (first version): the host's game saw the client's stand-in before the client's own game saw the client (the
+  stand-in was on the player's team out of a fight); 49 snaps of 3 m and more in about 35 s.
+- Run 99: 2 snaps (eased instead), 99 % agreement. Then the client's game crashed when the host walked away
+  (`Deactivate` on a stale pin copy), and the host's core faulted (a streamed-out NPC's memory).
+- Runs 100-108: the stand-in neutral out of a fight was not enough (creatures went for it); the untargetable spell
+  fixed that. A cached spell class pointer led, a minute later, to a `StaticMeshActor`: the class had been unloaded
+  and its memory and object slot reused. A dead player's stand-in now leaves the other game. The host's game paused
+  2 s after the test killed the Ursopods; the host then sends no NPC updates, as designed for menus.
+- Run 110 (the quick suite): the screen was the game's flaw offer "Reckless Leadership" (companions had gone down
+  often in the test fights): "Hold E Accept / Hold Esc Reject", and the game stays paused until then. A tapped Escape
+  does not close it; the test now holds Escape 2 s whenever the host's game is paused.
+- Run 109 (`qa/test_combat.py`, 27 checks): all PASS.
+  - The client was seen in its own game after 3.6 s; the host's game joined 0.4 s later, through 3 hints.
+  - Over 20 s, the client's copies fought whom the host's game said in 73 of 73 samples. The words seen were the host,
+    the client and the companions; both players took hits from Ursopods in their own game.
+  - The copies were 1.4 m apart (median), with 2 snaps of fighting NPCs and 278 eased corrections.
+  - With the host 150 m away, the client's game decided within 0.6 s; it handed back 0.04 s after the host returned.
+  - The client "dead" (test switch): its stand-in left the host's game in 0.5 s and the enemies let go at once.
+  - After the kills, the stand-ins were out of the fight and untargetable again within 0.5 s.
+- Run 111 (the quick suite with the combat step, 14 steps): all PASS, owner state unchanged.
+  - Combat: 64 of 67 samples agreed; both players took hits; the copies were 1.3 m apart (median), with 2 snaps.
+  - After E, the host's game was paused by a flaw offer; the test held Escape and the fight went on.
+
+Unknown: fights against many armed humans; NPCs the game spawns during play (not level-placed: not shared yet).
+
 ## Tools on the test PC (2026-11-15)
 
 Present: Python 3.13, git, gh, Java 21 (Temurin), .NET SDK. Missing: any C/C++ compiler (the Visual Studio
