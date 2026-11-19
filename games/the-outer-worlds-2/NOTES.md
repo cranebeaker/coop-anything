@@ -1033,6 +1033,73 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## No pause in menus, shared conversations, one party, public games, installer (2026-11-19 night, one PC)
+
+Observed (probes 105-106, runs 135-140):
+- **The game's pause:** its menus (pause menu, inventory, map, quest log, a flaw offer) use the engine's pause: the
+  persistent level's `WorldSettings.PauserPlayerState` is the player's state while one is open (probe 105). The game
+  asks for it again natively every frame: cleared from the bridge thread it was back within 0.02 s, and no
+  `SetGamePaused` went through ProcessEvent. tow2-coop's frame runs at the start of `UGameEngine::Tick`, before the
+  world ticks: cleared there each frame, the world runs with the menu open (world time +2.05 s in 2 s; run 138, both
+  copies, pause menu and inventory), while `IsGamePaused` still says yes later in the frame. With the option off the
+  menu pauses as before.
+- **Conversations don't pause the game** in this build (`IsGamePaused` false during one; world time ran on). The game
+  also lifts, the next frame, a pause no menu asks for: `SetGamePaused(true)` from a mod only holds if asked each frame.
+  Asked each frame on the starter's side, the conversation stopped at its first line (no responses came; run 139):
+  tow2-coop pauses only the other player's game.
+- **Conversation API:** `ConversationBlueprintLibrary.StartConversationWithActor(Speaker, StartNode -1, Stage None)`
+  starts one (a companion: Marisol); `GetActivePlayerConversation` finds it; `ConversationWidget_BP_C.OnResponse1InputAction`
+  ... `OnResponse9InputAction` pick a response; `EndConversationInstance` ends it. The screen's texts:
+  `SpeakerTextBlock`, `ConversationMessage.MessageTextBlock` (the line), `SelectableResponseWidgets[i].MessageTextBlock`.
+  A `ConversationWidget_BP_C` made without a conversation shows nothing (every part visible, opacity 1); the response
+  widget `ConversationResponse_BP_C` alone in the viewport shows (`SetAutoWrapText(false)`, `SetPositionInViewport`).
+- **The idle camera** hides the whole UI after some seconds without input (screenshots of the test copies had no HUD);
+  a key press brings it back.
+- **Quest XP:** the client's own quest XP is dropped (the host's comes instead), so a quest the client completed first,
+  set on the host's quest by force, gave XP to nobody (story test: 16085 -> 16085 for both, runs 110-134). tow2-coop
+  now sends the dropped quest-completed XP to the host, which takes it for a forced completion within 30 s and shares it
+  back (run 137: both 16085 -> 21260).
+- **Doors and containers** went out three times without acknowledgement. Now acknowledged (resent 0.2 / 1 / 3 s apart,
+  120 s at most; a door's newer state replaces an unacknowledged older one). Run 137 with 60 % of these packets and
+  their acknowledgements dropped on both sides: 4 of 4 door changes followed, 12 resends, 0 left pending.
+- **The friend's character** (a private save, its Player.dat kept) was saved every 3 minutes. Now also about 5 s after
+  a change (a hash of `InventoryComponent.Items`, and the AddXP hook), at most one every 15 s (run 137 PASS: kept by
+  itself, kept through the host's reload).
+- **A minimized host** never finishes a save. tow2-coop shows the window again behind the other windows while one of
+  its saves runs (`SW_SHOWNOACTIVATE`, `HWND_BOTTOM`), then minimizes it again unless the player clicked or typed in
+  it meanwhile; the game activates its own window when it comes back, so "is it the foreground window" can't tell.
+  Run 139: the hand-over save finished, the window minimized again.
+- **Companions:** each world's companions follow their own player. Out of a fight the host now sends its companions'
+  places (5 a second) and the client's world drives them like the stand-in (AI paused, placed, walking from the
+  velocity); in a fight they get their AI back (run 138: 0.0 m apart in the two worlds).
+- **Steam (the game's `steam_api64.dll`, SDK 1.57)** exports `SteamAPI_SteamMatchmaking_v009`, the lobby calls,
+  `SteamAPI_ISteamUtils_IsAPICallCompleted` / `GetAPICallResult` (call results polled each frame) and
+  `SteamAPI_RegisterCallback`. Public games: an Invisible lobby (listed by a search, not shown to friends as joinable)
+  with key `tow2coop` = the version; the host accepts the sessions of its lobby's members. "Join game": rich presence
+  `connect` = `-tow2coop_join=<host SteamID>` (a dash: a first command-line token without one would be taken for a map
+  by the engine), read from the command line at start and from `GameRichPresenceJoinRequested_t` (337) through a
+  hand-made MSVC `CCallbackBase` (vtable: `Run(void*, bool, call)`, `Run(void*)`, `GetCallbackSizeBytes`; flags at 8,
+  id at 12). One account (run 139): a lobby made in 0.4 s, a search completed, the lobby left. A join between two
+  accounts is not tested.
+- **The installer** (`tow2coop-setup.exe`, Win32 dialog, the DLLs as resources, `windres` of llvm-mingw):
+  `qa/test_setup.ps1` 15/15 on a fake game folder.
+
+Results:
+- Run 136 (the quick suite, 19 steps): 15 PASS. The conversation test's PASS was false (its `check()` returned
+  nothing, so `if not check(...)` always skipped the rest; fixed in four tests). The client lost god mode with the
+  hand-over pawn and died to the spawned bears, which failed the reload part after it.
+- Run 137: own character, story both ways (quest XP), interact and loot (lossy part) PASS.
+- Run 138: menus never pause 18/18, companions PASS, the conversation mirror both ways (texts, a pick by the other
+  player, closed at the end) PASS, the pause checks not yet.
+- Run 139: minimized host saves PASS, public game on one account PASS, co-op combat, spawned enemies, death and
+  reload, world sync PASS; the memory guard stopped the copies before the map-travel step.
+- Run 140: the stand-in kept walking while the host crouched (anim speed at least 144 in the second after), map travel
+  PASS. Run 141: shared conversations 16/16 both ways (the other player's world time +0.00 s in 1.5 s; the starter's
+  +1.03 s in 1 s, as in the base game).
+- Final build, the quick suite in two halves (one long run makes the memory guard stop the copies late): run 142, 15 of
+  15 steps PASS (158 checks); run 143, 8 of 9: spawned enemies failed 3 checks, its test bears put past a ledge where
+  no navigation mesh was found around the host (it passed in run 139 on this version). Owner's files unchanged.
+
 ## Tools on the test PC (2026-11-15)
 
 Present: Python 3.13, git, gh, Java 21 (Temurin), .NET SDK. Missing: any C/C++ compiler (the Visual Studio

@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unreal Engine 5.4.4 (Obsidian's `Arkansas` project, Microsoft GDK build) |
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
-| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.3.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.3.0), Steam or direct IP), directory entry "tow2-coop" |
+| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.4.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.4.0), Steam or direct IP), directory entry "tow2-coop" |
 | QA level | automated (two copies on one PC) and one manual session across two PCs (beta.4) |
 | Last updated | 2026-11-19 |
 
@@ -18,10 +18,13 @@ the enemies spread over the two players. NPC health and deaths, doors, container
 progress and outcomes go both ways without a reload; map changes, fast travel and the host's reloads happen together;
 XP from kills, lock picks and conversations is shared; the players give each other items through the other's stand-in.
 The stand-in holds the other player's weapon with its mods and uses it (shots, swings, a gun's bash, reloads,
-holstering) and crouches with them; enemies the game spawns during play are shared.
+holstering) and crouches with them; enemies the game spawns during play are shared. The game's menus don't pause it in
+co-op; a conversation is shared (the other player sees its screen, can choose, and is paused meanwhile); out of a
+fight the host's companions are in the same places in both worlds.
 
-v0.3.0 (test build, 2026-11-19) connects Steam friends through the game's own Steam session (no IP or port), hosted and
-joined from the game's main menu, or two players by direct IP. All of it was tested with two copies of the game on one PC. The only session across two PCs
+v0.4.0 (test build, 2026-11-19, installed with `tow2coop-setup.exe`) connects Steam friends, or anyone in a public game,
+through the game's own Steam session (no IP or port), hosted and joined from the game's main menu or Steam's "Join game",
+or two players by direct IP. All of it was tested with two copies of the game on one PC. The only session across two PCs
 so far (2026-11-17) ran beta.4: the friend joined over Steam, both played for 15 minutes and the friend followed four
 map changes. What the players reported then is fixed in beta.5 (stand-ins without walk animation or hair, dead enemies'
 loot, the wait after a map change) and beta.6 (the friend's character becoming a copy of the host's, enemies standing
@@ -151,16 +154,24 @@ sources, layouts and pitfalls.
   got a copy in the other game, or were paired when both games spawned one, and died in both. The friend's
   companions' hits are no longer reported as the friend's (106 reports in 20 s before, 0 after). Run 134: the quick
   suite through the menu, 16/16 steps PASS, owner's files unchanged.
+- v0.4.0 (2026-11-19, runs 135-143, two copies on one PC; final build: runs 142-143, 22 of 23 steps): the game's menus left the world running in both copies
+  (world time +2.05 s in 2 s with the pause menu or the inventory open); a conversation's screen reached the other
+  player both ways, with the same responses, and a response the other player chose was taken; the host's companions were
+  0.0 m from their places in the host's world; a quest the client completed first gave its XP to both (16085 -> 21260);
+  with 60 % of the packets lost, 4 of 4 door changes arrived (12 resends); the friend's character was kept by itself
+  after a change; a minimized host finished its hand-over save; on one Steam account a public game's lobby was made and
+  left; the installer passed 15 checks on a fake game folder.
 
 ## How to play
 
 Each player needs their own copy of the game (a Steam Families copy can't be played by two people at once).
 
-- **Over Steam** ([v0.3.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.3.0), test build, the players are Steam
-  friends): both run `install.ps1` (no role). In the game's main menu the Moon Man's choices have one more, *Let's play
-  together (co-op)*: the host picks *I'll host*, the friend *I'll join a friend's game* and then the host in the list of
-  Steam friends who host. No address or port.
-- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or 0.3.0 with `-Transport udp`): the host runs
+- **Over Steam** ([v0.4.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.4.0), test build): both run
+  `tow2coop-setup.exe` (*Install*). In the game's main menu the Moon Man's choices have one more, *Let's play together
+  (co-op)*: the host picks *I'll host* (Steam friends) or *I'll host: anyone can join (public game)*, the other player
+  *I'll join a friend's game* and the host in the list (friends who host, public games), or *Join game* on the host in
+  the Steam friends list. No address or port.
+- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or 0.4.0 with *Direct IP* in the installer): the host runs
   `install.ps1 -Role host` and gives the printed key to the friend, who runs
   `install.ps1 -Role client -Peer <host address> -Key <key>`. The host's PC must accept UDP 27960 and TCP 27961 (port
   forwarding or a VPN).
@@ -170,25 +181,25 @@ main menu and is pulled in about a minute after the game started).
 
 ## Known issues
 
-- Everything since beta.5 was tested on one PC only; a session across two PCs with 0.3.0 is still to come, and the
-  menu's list of Steam friends who host needs two Steam accounts to test.
-- The co-op choice is in the main menu only, by mouse or number key (no gamepad yet); the list shows Steam friends
-  who host (no public games, no Steam "Join game").
+- Everything since beta.5 was tested on one PC only; a session across two PCs with 0.4.0 is still to come. Public
+  games, "Join game" and the list of friends who host need two Steam accounts to test (one account: a public game's
+  lobby made, searched for, left).
+- The co-op choice is in the main menu only, by mouse or number key (no gamepad yet).
+- The other player's view of a conversation is text only (no camera, no voice). The starter's game is not paused during
+  its conversation (the base game doesn't pause there; paused, the conversation stopped at its first line).
 - Spawned enemies were tested with Ursopods the test spawned the way a spawner does, not with the game's own hives,
   hatches or doors; two of the same kind spawned more than 15 m apart in the two games give one more enemy. Co-op
   combat was tested against creatures and one soldier, not a large fight with armed humans.
-- When the other player crouches or stands up, the stand-in can stop its walk animation for up to a second.
 - While the host's game is paused in a fight (a menu, or the game's own flaw offer), the host's enemies wait.
 - The friend's character is kept by a private save every 3 minutes and before a hand-over: after the host's reload or
   the friend's death, up to 3 minutes of the friend's gains are lost.
 - Keep the host's window un-minimized while the friend joins or a hand-over runs (a minimized copy can't finish a
   save).
 - Giving items needs keyboard and mouse (a gamepad's interact button doesn't open the screen).
-- Two players only. Use 0.3.0 on both PCs (protocol 4: older versions don't connect).
+- Two players only. Use 0.4.0 on both PCs (protocol 5: older versions don't connect).
 
 ## Next steps
 
-- A two-PC session with 0.3.0 over Steam (two accounts), which one PC can't test, with the menu's friends list.
-- A gamepad in the co-op menu; Steam's own "Join game".
-- The game's own spawners (hives, hatches, doors) in a test; conversations seen by both players; companions out of a
-  fight.
+- A two-PC session with 0.4.0 over Steam (two accounts): a public game, "Join game", the friends list.
+- A gamepad in the co-op menu; the conversation view with the camera and the voice.
+- The game's own spawners (hives, hatches, doors) in a test; a new game played together from its very start.
