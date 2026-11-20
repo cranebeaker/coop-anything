@@ -37,7 +37,8 @@ has played the story through together.
 | Story state: GPI + blackboard snapshot, host → peer | partial — snapshot only | `local/qa/story-chest-r3-20261120-223200.guest.log:60` — `story: snapshot apply seq=5 gpi=0 bb=2 changed=2`, final `state=` identical on both sides, `diff=0`, `misses=0`, `unsupported=0`; checker `local/qa/story-chest-r3-20261120-223200.strict.story.out` passes every state assertion |
 | Story: dialogue mirroring (presentation only) | proven once — one `show` effect | `local/qa/story-archivist-20261120-231310.strict.story.out` — `RESULT: PASS (24/24)`; host `story: dialog out seq=1 op=show data='f6fe0400…' char='THE_ARCHIVIST'`, guest `story: dialog in seq=1 peerBox=1073741824` with a box remap and no guest graph advance. `line`, `close` and `choice` were not in that dialog, so those assertions passed vacuously |
 | Story: chest loot grant, items | unproven | `tools/qa-story.py` fails those assertions on every run so far (no dialog and no loot has occurred); the one chest found (`98940bbb…`, `looted=false`) is behind a scene boundary this save cannot cross |
-| Map transitions, save transfer | unproven, not started | contract being written (`docs/slice-s5-transitions.md`) |
+| Map transitions | written, runtime unproven | `LevelTravel.cs` (msgs 52-55, host captures door/switch/load, peer applies, landing on `FinishLevelInitialization`); 35/35 unit tests, but the lab level has **no `LevelLoadingZone`** so no run has exercised it |
+| Save transfer | written, runtime unproven | `SaveTransfer.cs` (msgs 56-58, 28-byte header, 4 MiB bound); guest takes the host's blob at the title screen into a **memory-only** slot with saving disabled (`saveDisabled` is checked before any write, proved from the binary); 25/25 unit tests, no run |
 | Three players | out of scope | owner decision on 2026-11-20: two players only; `docs/roadmap-sync-everything.md` still describes the 3-player design |
 
 ## Existing work
@@ -192,9 +193,26 @@ timeline logic, not that a battle or a chest syncs.
 **The level is `none`.** The template's `automated` means the mod's claims are checked by a test
 that ran, and `verified-playthrough` means a human finished the game in co-op; neither is true here.
 What exists is narrower: automated two-client gates for the transport, the peer's co-op slot, peer
-input and movement in both directions, the friends-only lobby and the public-lobby control. Combat,
-the actors' kill path, story, items, transitions and saves have code and some harness, and no passing
-run.
+input and movement in both directions, the friends-only lobby and the public-lobby control, plus one
+real dialogue mirrored. Combat, the actors' kill path, chest loot and items, transitions and saves
+have code, unit suites and harnesses, and no passing runtime run.
+
+**One command for the whole verdict:** `tools/acceptance.ps1` runs the gates in order (Gate A clean,
+Gate A at 10% loss + 80 ms, Gate C2 real Steam friends-only, Gate D forced encounter, the story
+checker), writes `local/qa/acceptance-<stamp>/` with every artifact plus `SUMMARY.md`, and prints a
+table where each row carries its own `RESULT:` line and a one-line honesty note. A skipped gate prints
+`SKIPPED` and the summary says **SKIPPED is not a pass**; a missing prerequisite fails that gate by
+name instead of hiding. It never launches anything itself — each row calls the existing script, so the
+gate scripts stay the single source of truth.
+
+**One runner per machine:** `tools/game-lease.ps1` holds a lease (holder, pid, start time, commit) that
+every launch path takes before starting a copy and releases in `finally`. A second launcher exits
+immediately with `lease: held by <holder>` and never waits; a lease whose pid is dead is reclaimed and
+logged. That turns "nobody else launches" from a promise into something the machine enforces.
+
+**Unit suites (no game, no Unity):** `ScriptedInput` 42/42, `StorySync` 28/28, `LevelTravel` 35/35,
+`SaveTransfer` 25/25 — each compiles one production file with `SOSO_TESTS` and asserts the pure half.
+A unit suite proves formats and timelines, never that a fight or a chest syncs.
 
 ### How to run the tests
 
