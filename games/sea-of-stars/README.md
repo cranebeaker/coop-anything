@@ -35,7 +35,8 @@ has played the story through together.
 | Actor kill → despawn on the peer | unproven | `tools/qa-actor-kill.py` scored **3/16** on `C-guest-20261120-190636.{host,guest}.log` (`docs/actor-kill.md`) |
 | Combat: battle start, participants, turn order, damage | unproven | `C-host-20261120-191531.qa.out` — FAIL (1/5) |
 | Story state: GPI + blackboard snapshot, host → peer | partial — snapshot only | `local/qa/story-chest-r3-20261120-223200.guest.log:60` — `story: snapshot apply seq=5 gpi=0 bb=2 changed=2`, final `state=` identical on both sides, `diff=0`, `misses=0`, `unsupported=0`; checker `local/qa/story-chest-r3-20261120-223200.strict.story.out` passes every state assertion |
-| Story: dialogue mirroring, chest loot grant, items | unproven | `tools/qa-story.py` fails those assertions on every run so far (no dialog and no loot has occurred); the one chest found (`98940bbb…`, `looted=false`) is behind a scene boundary this save cannot cross |
+| Story: dialogue mirroring (presentation only) | proven once — one `show` effect | `local/qa/story-archivist-20261120-231310.strict.story.out` — `RESULT: PASS (24/24)`; host `story: dialog out seq=1 op=show data='f6fe0400…' char='THE_ARCHIVIST'`, guest `story: dialog in seq=1 peerBox=1073741824` with a box remap and no guest graph advance. `line`, `close` and `choice` were not in that dialog, so those assertions passed vacuously |
+| Story: chest loot grant, items | unproven | `tools/qa-story.py` fails those assertions on every run so far (no dialog and no loot has occurred); the one chest found (`98940bbb…`, `looted=false`) is behind a scene boundary this save cannot cross |
 | Map transitions, save transfer | unproven, not started | contract being written (`docs/slice-s5-transitions.md`) |
 | Three players | out of scope | owner decision on 2026-11-20: two players only; `docs/roadmap-sync-everything.md` still describes the 3-player design |
 
