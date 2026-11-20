@@ -33,7 +33,7 @@ has played the story through together.
 | Host's character moves on the guest (real Steam) | works | `C-host-20261120-190919.qa.out` — 13/13 |
 | One enemy actor streamed, position agrees on both sides | works, one actor only | `actorsync: role=…` status lines in `C2-guest-20261120-211415.host.log` / `.guest.log` |
 | Actor kill → despawn on the peer | unproven | `tools/qa-actor-kill.py` scored **3/16** on `C-guest-20261120-190636.{host,guest}.log` (`docs/actor-kill.md`) |
-| Combat: entry, participants, turn order, one damage event | works once, one authority gap open | `local/qa/battle-hit-20261121-005638.{host,guest}.log` — contact entry into `ENC_01 (TutoMana)`; identical `participants=[P:ZALE,P:VALERE,P:GARL,E:0:TERN]` and turn order on both machines; host `combat: hit actor='E:0:TERN' dmg=1 hp=4/5 seq=49`, guest `combat: hp seq=49` with the same damage; `qa-battle.py --require-probe` **18/19**. The one failure is real: the peer starts a contact encounter on its own trigger instead of waiting for the host, so `apply done` is never the observed path |
+| Combat: entry, participants, turn order, one mirrored hit, guest apply | **works** (one controlled fight) | `local/qa/battle-full-20261121-010232.qa.out` — `RESULT: PASS (19/19)`. Contact entry into `ENC_01 (TutoMana)`, identical `participants=[P:ZALE,P:VALERE,P:GARL,E:0:TERN]` and turn order, `epoch=1`, guest `apply done`, host `combat: hit seq=36 dmg=1 hp=4/5` mirrored as guest `combat: hp seq=36`, duplicate ignored; both probes `loaded=22 inScene=22 active=10`. Scope: one tutorial fight, one hit — a general combat claim still needs a longer fight and a second encounter |
 | Story state: GPI + blackboard snapshot, host → peer | partial — snapshot only | `local/qa/story-chest-r3-20261120-223200.guest.log:60` — `story: snapshot apply seq=5 gpi=0 bb=2 changed=2`, final `state=` identical on both sides, `diff=0`, `misses=0`, `unsupported=0`; checker `local/qa/story-chest-r3-20261120-223200.strict.story.out` passes every state assertion |
 | Story: dialogue mirroring (presentation only) | proven once — one `show` effect | `local/qa/story-archivist-20261120-231310.strict.story.out` — `RESULT: PASS (24/24)`; host `story: dialog out seq=1 op=show data='f6fe0400…' char='THE_ARCHIVIST'`, guest `story: dialog in seq=1 peerBox=1073741824` with a box remap and no guest graph advance. `line`, `close` and `choice` were not in that dialog, so those assertions passed vacuously |
 | Story: chest loot grant, items | unproven | `tools/qa-story.py` fails those assertions on every run so far (no dialog and no loot has occurred); the one chest found (`98940bbb…`, `looted=false`) is behind a scene boundary this save cannot cross |
@@ -191,7 +191,7 @@ every later patch — see lesson 99).
 
 ### Written, not proven
 
-`EncounterSync.cs` (battle start/participants/turn order/damage), `ActorSync.cs` (actor stream,
+`ActorSync.cs` (actor stream,
 ownership epochs, despawn path), `StorySync.cs` (GPI/chest state, blackboard flags, dialogue
 presentation, mirrored loot), `BattleEntry.cs` (walk-to-trigger driver) and `TriggerDump.cs` exist and
 are wired into the plugin's tick, and `tools/qa-actor-kill.py` / `tools/qa-battle.py` assert on them.
