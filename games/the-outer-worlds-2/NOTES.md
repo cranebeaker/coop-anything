@@ -1033,6 +1033,49 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## A real skill check, a door, a squad, ship travel, past the intro, crash hunt (v0.5.3, 2026-11-20, one PC)
+
+The owner asked for the seven things still doable on one PC: a door and a story wave, a real skill check in a shared
+conversation, a fight against many armed humans, ship travel, the two crashes, a new game past the intro, a "quest
+completed" line in the fallback notification.
+
+Observed (probes 121-127):
+- **A real skill check.** `PlayerInfoComponent.SetPlayerSkillDebug(Skill, Value)` works in shipping (host 20, client 0).
+  The NPCs of 0601 don't talk (StartConversationWithActor: OnFalse) and the companions' conversations have no skill
+  checks; in 0605_OAHQ the light worker (`0605_LightWorker_C`) has one: response 18 ("An electrical short ... I could
+  take a look") open on the host's screen, locked on the client's. 0.5.2's bypass failed there (a restart, a camera
+  cut): the screen's non-reflected node list at +0x5C0 holds **every shown response, locked ones too, in the
+  conversation's order** (18, 51, 25), while `SelectableResponseWidgets` (+0x440) holds the open ones and +0x450 the
+  locked ones. With a simulated lock (0.5.1) every response was really open, so both lists matched, which misled probe
+  113. Putting the locked widget first in +0x440 with its flag (+0x380) set, the node list untouched, took it (no
+  restart). The game does not check the requirement again at the pick: forcing the `Conditionals:Required*` calls true
+  during the pick (they go through ProcessEvent) changed nothing and was removed.
+- Conversation conditionals do go through ProcessEvent (`Conditionals:IsCompanionInActiveParty`,
+  `QuestConditionals:IsQuestActive` in a trace of the screen being built).
+- Following a conversation, the follower's game counts the leader's choices as its own: after several lies it offered
+  the follower the flaw Compulsive Liar. A flaw offer (Reckless Leadership after the squad fight) blocks that player's
+  conversations until it is answered.
+- **A door spawner:** `Encounter_UAID_047C165A3E33F29B01_1696185253` (0601, ~25 m from -41667, 10449), wave 1 pairs
+  `PR_T3_Flanker_StunBaton` with `Spawner_Human_Door_OnceEver`; started in the host's world, the client's started in
+  2 s and its enemy came out of the door. Waves whose own conditions start them (`BlueprintFunctionLibrary`
+  conditionals, e.g. the wave before killed) did not start in the test map when the wave before was killed.
+- **Armed humans** of 0601 are Neutral to the player (`GetTeamAttitudeTowards`) until attacked. A squad of up to 12
+  Protectorate soldiers near (-87000, 64800); 4 of them hidden (`bHidden`) wait for other encounters' waves: Suicide and
+  KillNPC do nothing to them and they can't be hit.
+- **Ship travel:** `TravelManager.CurrentShipLocation` (a `ShipDestinationData`, a PointOfInterestData). Boarding:
+  `BeginTravelToBP(0502_Playership_POIData)`; flying: `SetCurrentShipLocationBP(dest)` then `BeginTravelToBP(dest)`
+  (`SHIP_0301_Landing_Pad`, `SHIP_0601_CL_LP1`, `SHIP_0102_Landing_Pad`). The client followed both legs (6 s, 5 s) and
+  its ship location matched without the mod passing it on.
+- **Past the intro:** only `0101_PQ_Intro` is in progress in the intro; 40 `DebugAdvanceQuest` steps left both in
+  0501_PS_Intro (its end is scripted by the map). From the intro, the ship then `SHIP_0102_Landing_Pad` took both to
+  0101_JP, the client with its own new character (source "kept").
+- **"Quest Completed":** the UI string table is table id 1 (LocString name None): strings 53 "Quest Updated", 54
+  "Quest Completed", 55 "Quest Failed" (found by `GetLocStringText` over ids 0-12000, 255 s).
+- **The two crashes** (runs 161, 164) were not met again: 10 travels 0601 <-> 0605 with 25 s in each map, 5 pair
+  starts, no crash report and no first-chance access-violation note.
+
+Results: run 175 (0.5.3, the whole suite): 16 game steps passed (252 checks) until the memory guard stopped the copies (each above 9 GB after 25 min; the start-up bursts seen earlier that day came back, a copy at 15 GB in run 176); 'spawned enemies' failed its sword-swing check (a bear placed without navigable ground: the test now tries nearer points). Run 177 (the second half, warm start): spawned enemies, hive waves 12/12, big fight 9/9, death and reload, world sync, map travel passed; the real skill check reached the host's next line with no restart, but through another open response that leads to the same line (the leader's pick is told by the line it led to); the memory guard stopped the copies during ship travel, which passed in probes 125-126.
+
 ## Hives and hatches, a controller, test chaining, a scan fault (v0.5.2, 2026-11-20, one PC)
 
 The owner asked to finish the solo tests: the suite's chaining, the two crashes seen once, the game's own spawners, a
