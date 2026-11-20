@@ -1183,3 +1183,48 @@ While watching the first patched tests, the owner reported momentary stuttering 
 - **Dropped:** the animation heartbeat (`#counter` suffix) and the `HideUnposed` change: no evidence they help (clean guest 42 -> 32 fps in the one run, no lossy run, runs not comparable: 247 vs 146 moving frames), and they add string work for 32 slots per tick. `EnhancedAnimSync.uc` is back to the committed version.
 - **Kept:** the reliable `ClientCutView(bool)` for cutscene on/off (pose stays unreliable). Checked with 3 % loss + 50 ms lag + 30 ms jitter, held intro until the guest joined: `[CUTSYNC] mode=True` and later `mode=False` both arrived (run `cutrpc2`), host and guest alive, owner Documents unchanged. Benchmarks with this change only (one run each, prefix `ue2rpc`): clean guest 43 fps, lossy 49 fps (baseline 42 / 29), no regression.
 - Not verified: a long session, four players, a real internet session. The T-pose and stutter reports are still open.
+
+## Several heroes, openings on each machine, host waits, MPatcher fixes (2026-11-20; sandbox, up to four game copies on one PC)
+
+Mod commit `88ba1ed` in https://github.com/stxlvn/shrek2-enhanced (pushed 2026-11-20). Owner's decisions of the day:
+- each guest plays a level's opening in his own game, then joins;
+- the host waits, paused, for a guest who is still watching;
+- mid-level cutscenes are seen through the host's camera;
+- all four MPatcher fixes are taken.
+
+**Observations**
+- Stock reads of the one hero: all 2,192 classes of `KWGame`, `SHGame`, `AmbientCreatures`, `GamePlay` and `Engine` were
+  decompiled with UELib. `LevelInfo.PlayerHeroActor` is read 1,399 times in 235 classes: enemies choosing a target, traps, pits, pickups,
+  save fairies, bosses (`aBoss` lives on one hero), the HUD, potions, shops, cutscenes.
+- Values that maps set on the hero they place, read from the retail `.unr` files with UELib (export class names and the
+  actors' properties):
+  - `7_Prison_Donkey` Steed2 `fDoubleJumpHeight=128` (class default 96 from `KWPawn`);
+  - `4_FGM_PIB` PIB0 `DeathIfFallDistance=1000` (768 from `ShHeroPawn`);
+  - `6_Hamlet` Shrek0 `GroundWalkSpeed=200`;
+  - `10_Castle_Siege` `GroundRunSpeed` Steed 300, PIB 240, ShrekHuman 157.5;
+  - `1_Shreks_Swamp` Shrek0 `bCanUseJumpAttack=false`;
+  - Beanstalk: Steed `DeathIfFallDistance=768`, dawn `JumpAttackMoveAhead=0`.
+- No retail map places a `TelePit` (all 17 story maps and the 3 Beanstalk maps).
+- A network client that opens a local map crashed twice with a GPF in `ATerrainInfo::UpdateVertices` <- `UGameEngine::PaintProgress`
+  <- `LoadingScreen` <- `LoadMap`. A hop through `Book_FrontEnd` first did not prevent it. Skipping `PaintProgress` while the
+  process is a network client did: runs `lc8`, `lc10`, `hv1`, `sw1` had no crash.
+- Stock save and load (`SaveGame 9`, `open ?load=9`, run `sv1`):
+  - Shrek saved with health 37 came back with 100.
+  - The swamp's `Projector2` had `RenderInfo` `(Ptr=422239360)` before the save and `(Ptr=0)` after the load.
+- `PIB.PostBeginPlay` (not simulated) makes the sword only on the server. The sword notifies of a guest's Puss on his own
+  machine logged 794 `Accessed None` lines in one run.
+- In run `lc9` a test guest's own opening stopped in its 3rd second: no script log after it, frames still drawn, no
+  rejoin. The host waited its full 240 s. Not seen again in `lc10`, `hv1`, `sw1`.
+
+**Derived**
+- Answering `PlayerHeroActor` per reader in the VM is cheaper and safer than rewriting 235 classes. The enemy's check
+  (`ShEnemyController.HitSomebody`) and its damage (`KWPawn.GiveDamageToPlayer`) read the hero with the controller and the
+  pawn on one cache key in the same frame, so the damage goes to the hero that was checked.
+- Guests must be spawned with the level's values of the host's hero, not with the class defaults. Values that a client
+  predicts (jump heights) must also reach the guest's machine.
+- `lc9` is probably the stock pause of a minimised window (`ShrekController.ShowMininized`) in the never-restored test window.
+  Test guests now ignore pauses in their opening. Unproven: no such request was logged since.
+
+**Unknowns**
+- Whether a real player's alt-tab during his own opening can stall the host's wait (the 4-minute limit ends it).
+- The four-player sweep of all 20 maps has not been repeated with these changes.
