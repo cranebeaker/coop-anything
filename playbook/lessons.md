@@ -257,3 +257,14 @@ the game's save format, its modding scene and its save editors **before** you wr
 save-handling code, and again the moment a run shows something "refused" or "unsupported". Then test
 the smallest hypothesis: here, re-encode the length and the same edit loads. The cost of not
 searching was a day of work labelled blocked; the cost of searching was four minutes.
+
+99. **A Harmony prefix must speak the game's own types, and a patch set must fail loudly.** Sea of
+Stars (IL2CPP): a save-blocking prefix was declared `ref Task<bool>` from `System.Threading.Tasks`
+while the game's method returns `Il2CppSystem.Threading.Tasks.Task<bool>`. `PatchAll` threw, every
+patch after it was silently dropped — including the whole input layer — and the symptom was a player
+body that ignored the bot, which cost six runs and one wrong conclusion ("the game does not read input
+in this level"). Two habits prevent it: write prefixes against the interop types, and make the plugin
+log `harmony: applied N patches` after `PatchAll`, treat `PatchAll FAILED` as a hard failure in every
+gate script (non-zero exit before any verdict), and self-check that the specific methods you depend on
+are patched. Same family as 90 and 91: a correct-looking build proves nothing about what is actually
+hooked. Sea of Stars (`games/sea-of-stars`; the abort line names `SaveManager::SaveSlotFile`).
