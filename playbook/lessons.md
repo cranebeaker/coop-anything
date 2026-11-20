@@ -246,3 +246,14 @@ answers (`input: GetInteractDown(scripted) -> True`, 157 and 641 times in two ru
 the game. Whenever a bot's action has no observable effect, instrument the moment the game *reads* the
 input before concluding anything about the game: a missing local branch looks exactly like a game that
 ignores you.
+
+98. **A "limitation" is usually an unsearched format.** Sea of Stars: six runs concluded that the save
+could not be moved between levels because any edit was refused — the file was described as having a
+checksum and a length bound. It has neither. A `.sos` is a **ULEB128 length prefix plus UTF-8 JSON**;
+a one-byte edit was refused only because the prefix went stale. Two searches would have given the
+format on day one: a gist of the format ("the checksum is just the length of the data encoded using
+ULEB128") and a working open-source save editor that also publishes area/checkpoint guids. Search for
+the game's save format, its modding scene and its save editors **before** you write a single line of
+save-handling code, and again the moment a run shows something "refused" or "unsupported". Then test
+the smallest hypothesis: here, re-encode the length and the same edit loads. The cost of not
+searching was a day of work labelled blocked; the cost of searching was four minutes.
