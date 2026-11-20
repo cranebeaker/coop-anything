@@ -215,3 +215,25 @@ like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
 93. **Profile before optimizing, and look at the C runtime rows first.** Modern Warfare 2 Enhanced's native FSR 3 path ran at 93 fps; a sampling profiler (the render thread's instruction pointer every 2 ms) put half of the samples in one block of `ucrtbase.dll`: a debug `getenv("...")` called twice for every draw. Reading it once gave 155 fps. The same profile showed a Direct3D 12 texture upload that made a buffer and waited for the GPU for every mip level (20000 per level load, 18 s in total); batching them through a persistent upload buffer made the load as fast as Direct3D 11. Both were plain mistakes, found in minutes by measuring instead of reasoning about the GPU. Example: Modern Warfare 2 (`games/modern-warfare-2/README.md`, "The mod's own Direct3D 11 / 12 renderers").
 
 94. **A rendering "fix" can break a screen you did not look at: compare the same frame against the original renderer.** Alpha to coverage for foliage looked right in levels and passed eight campaign maps on bots; a screenshot of the main menu showed the soft smoke turned into hard patches (the game's default 2x anti-aliasing, and the change also hit alpha-tested draws that blend). Capturing the same menu frame on the old and the new renderer side by side, then skipping one draw at a time by texture size (`MW2COOP_SKIPTEX`), found the draw in two runs. Keep a way to capture one named frame and to switch single draws off before a renderer change is called done. Example: Modern Warfare 2.
+
+95. **One patch whose target does not exist silently disables every patch in the assembly.** Sea of
+Stars: two separate merges each added a Harmony patch class against a method signature the build does
+not have — `Player.GetAxisRaw(string)` (only the `int` overload exists) and `NewDialogBox.PlayDialog`
+(the 3-argument overload is on `NewDialogBoxInstance`; `NewDialogBox` has a 4-argument one taking
+`IDialogCharacter`). `PatchAll` logged one line and aborted, the plugin still loaded, the game ran
+fine, and the only symptom was the pair gate dropping from 19/19 to 18/19 with a failure that read like
+a sync bug: the bot walked and nothing moved. Run the pair gate after **every** merge that adds or
+retargets a patch class — it is one run and it is the only thing that sees this. When an assertion that
+used to pass goes red after a merge, read `harmony PatchAll` in the log before believing the gameplay
+explanation. Complements 90: counting patches catches the wrong overload of `PatchAll`, this catches a
+bad target inside a correct one. Sea of Stars (`games/sea-of-stars`, `A-20261120-205458`, `205655`,
+`210433`, `210616` failed 18/19; `205834`, `210753` passed 19/19 after the fixes).
+
+96. **Walking into a door is not using it — wire the buttons reference and press it.** Sea of Stars:
+every interior door is a `Teleporter` whose `Update` registers the player on trigger enter and then
+waits for `GetButtonDown` / `GetInteractDown` before it loads anything. A bot that only walks reaches
+the wall, logs a position change of zero and looks like a navigation bug — three routes and two runs
+were spent on a wall that was a door. Read the door's own code path before blaming pathing, and give
+the bot the press it wants; the same applies to chests, levers and interaction prompts. If the target
+needs a press and the bot has no button, that missing button is the real blocker and worth building
+first. Sea of Stars (`games/sea-of-stars`, `docs/lab-mooncradle-exit.md`, `docs/scripted-input.md`).
