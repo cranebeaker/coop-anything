@@ -30,7 +30,7 @@ has played the story through together.
 | Real Steam: two accounts, friends-only lobby, join by lobby id | works | `C2-guest-20261120-211415.qa.out` — 17/17; `C2-guest-20261120-211415.lobby.txt` |
 | Real Steam: public lobby (control arm) | works | `C-guest-20261120-211920.qa.out` — 17/17 |
 | Guest's character moves on the host (real Steam) | works | `C-guest-20261120-190636.qa.out` — 13/13; `C2-guest-20261120-211415.qa.out` |
-| Host's character moves on the guest (real Steam) | works | `C-host-20261120-190919.qa.out` — 13/13 |
+| Host's character moves on the guest (real Steam) | works — **public lobby arm**; friends-only not re-run | `C-host-20261120-190919.qa.out` — 13/13; the friends-only host-walks run is `C2-host-20261120-201843.qa.out`, `FAIL (16/17)` on the guest-persona assertion only |
 | One enemy actor streamed, position agrees on both sides | works, one actor only | `actorsync: role=…` status lines in `C2-guest-20261120-211415.host.log` / `.guest.log` |
 | Actor kill → despawn on the peer | unproven | `tools/qa-actor-kill.py` scored **3/16** on `C-guest-20261120-190636.{host,guest}.log` (`docs/actor-kill.md`) |
 | Combat: entry, participants, turn order, one mirrored hit, guest apply | **works** (one controlled fight) | `local/qa/battle-full-20261121-010232.qa.out` — `RESULT: PASS (19/19)`. Contact entry into `ENC_01 (TutoMana)`, identical `participants=[P:ZALE,P:VALERE,P:GARL,E:0:TERN]` and turn order, `epoch=1`, guest `apply done`, host `combat: hit seq=36 dmg=1 hp=4/5` mirrored as guest `combat: hp seq=36`, duplicate ignored; both probes `loaded=22 inScene=22 active=10`. Scope: one tutorial fight, one hit — a general combat claim still needs a longer fight and a second encounter |
