@@ -197,3 +197,21 @@ error when the count is 0, and give every patch at least one test that fails wit
 (`Plugin.cs` in superflight-coop, `games/superflight/NOTES.md`).
 
 89. **Battle bots need real player stats, and a person watching catches what asserts miss.** BLACK SOULS II: a bot that skipped the intro played the placeholder actor (about 27 times normal HP and attack), so every fight one-shot, enemy hits showed "not affected", and a battle suite "passed" without exercising multi-turn sync. A tester watching the visible test windows spotted it, and also noticed that auto-battling bots never open the command menu. Load the real starting characters at a realistic level (read the class curves and the damage formula from the data), keep bot runs visible when someone wants to watch, and add one scenario that uses the real input menus instead of auto-battle.
+
+91. **A failed SteamNetworkingMessages session blocks every channel to that peer until someone closes it.** A session is
+per remote account, shared by all channels. In Thronefall Multiplayer a "recent partners" ping sent at start-up timed
+out while the friend's game was not ready; the session stayed failed, and the later join handshake on another channel got
+`k_EResultConnectFailed` on every retry. Close the session when a send returns `k_EResultConnectFailed`, but do not close
+a working one before a handshake: the other side may still hold it and let the new connection time out. And while a join
+is in progress, a failed session must mean "retry", not "go offline", or the host ends up with a player whose game never
+listens. Example: Thronefall (`games/thronefall/README.md`, fixes 1 and 3).
+
+92. **Put a virtual gamepad at the input library, not at the mod's copy of the input.** Thronefall Multiplayer copies
+movement and the night call from Rewired into its own `SharedData`, but reads Interact from Rewired directly, so a bot
+that only wrote `SharedData` could walk but never build. Harmony prefixes on `Rewired.Player.GetButton`,
+`GetButtonDown`, `GetButtonUp` and `GetAxis(string)` for the named gameplay actions make the game and the mod see the bot
+like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
+
+93. **Profile before optimizing, and look at the C runtime rows first.** Modern Warfare 2 Enhanced's native FSR 3 path ran at 93 fps; a sampling profiler (the render thread's instruction pointer every 2 ms) put half of the samples in one block of `ucrtbase.dll`: a debug `getenv("...")` called twice for every draw. Reading it once gave 155 fps. The same profile showed a Direct3D 12 texture upload that made a buffer and waited for the GPU for every mip level (20000 per level load, 18 s in total); batching them through a persistent upload buffer made the load as fast as Direct3D 11. Both were plain mistakes, found in minutes by measuring instead of reasoning about the GPU. Example: Modern Warfare 2 (`games/modern-warfare-2/README.md`, "The mod's own Direct3D 11 / 12 renderers").
+
+94. **A rendering "fix" can break a screen you did not look at: compare the same frame against the original renderer.** Alpha to coverage for foliage looked right in levels and passed eight campaign maps on bots; a screenshot of the main menu showed the soft smoke turned into hard patches (the game's default 2x anti-aliasing, and the change also hit alpha-tested draws that blend). Capturing the same menu frame on the old and the new renderer side by side, then skipping one draw at a time by texture size (`MW2COOP_SKIPTEX`), found the draw in two runs. Keep a way to capture one named frame and to switch single draws off before a renderer change is called done. Example: Modern Warfare 2.

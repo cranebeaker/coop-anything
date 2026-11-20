@@ -1,7 +1,7 @@
 # Superflight: working notes
 
-Dated log. Observations, derived facts, guesses and unknowns are kept apart. Owner's
-private details (install path, hashes of the owner's copy) live in `local/`, not here.
+Dated log. Observations, derived facts, guesses and unknowns are kept apart. Private details
+(install path, hashes of the local copy) live in `local/`, not here.
 
 ## 2026-10-29: triage and research
 
@@ -164,8 +164,7 @@ and SuperflightRL already prove loads on this game. Networking: keep host-author
 state sync; replace direct-IP UNet with Steam lobbies plus P2P by SteamID through the
 Steamworks.NET the game already ships (every player owns the game, so the game's own app
 id can be used and nobody shows as "playing Spacewar"); keep direct IP as a fallback.
-Decision pending the owner's go-ahead (test copy of the install, BepInEx download,
-release repo).
+Needs a test copy of the install, the BepInEx download and a release repo.
 
 Playbook contradictions: none yet. The MCP server's test suite fails under
 `python -I` when PyYAML is only in the user site-packages (2 of 13 tests); the server
@@ -250,8 +249,8 @@ and client (`--coop-join 127.0.0.1:4444 ...`), bridges over loopback TCP, 20 s h
 Not yet tested: more than two players, lag and loss (`tools/chaos`), the host taking a portal
 mid-session, Steam transport (not written yet), two different PCs.
 
-Playbook note: the harness must warn the owner not to touch the game windows; the bot overrides
-steering, but Escape, Enter or the mod's own hotkeys reach the focused copy.
+Playbook note: the harness must warn whoever is at the PC not to touch the game windows during a
+run; the bot overrides steering, but Escape, Enter or the mod's own hotkeys reach the focused copy.
 
 ## 2026-10-29 (later): level changes, the choice screen, and a patching bug
 
@@ -267,7 +266,7 @@ steering, but Escape, Enter or the mod's own hotkeys reach the focused copy.
   scores zeroed, state Flying). `GetInput` only reacts to the reset and menu buttons while Flying.
   The scene's serialized UI references only `LoadFlight`, `Quit` and `OpenGallery`.
 
-### Owner's design for level changes
+### Design for level changes
 
 The host decides. A portal (or fall-out) opens a choice: proceed to the next level, or respawn in
 the current one, with a scoreboard. The host's proceed sends the new seed; a client keeps it
@@ -310,9 +309,9 @@ logged its first "upload skipped" only after this fix. Playbook lesson added.
 ## 2026-10-29 (evening): Steam friend invites
 
 ### Why Steam
-The owner asked which path needs no port forwarding. Direct IP needs the host to forward UDP
-4444 or a VPN; Steam's `ISteamNetworking` P2P is relayed by Steam when no direct path exists.
-Owner chose Steam.
+Direct IP needs the host to forward UDP 4444 or a VPN; Steam's `ISteamNetworking` P2P is relayed
+by Steam when no direct path exists, so friends need no port forwarding. Steam is the main path,
+direct IP the fallback.
 
 ### What the game ships (from the reflection dump, `local/dumps/Assembly-CSharp-firstpass.txt`)
 Steamworks.NET 10.0 (SDK 1.40): `SteamNetworking.SendP2PPacket/IsP2PPacketAvailable/
@@ -338,7 +337,7 @@ callbacks; nothing needs a second init.
   leaves again with a clear message. Rich presence `connect` = `+connect_lobby <id>`. Overlay
   invite dialog. `GameLobbyJoinRequested_t` (accept while running) and `+connect_lobby` (Steam
   starts the game) both queue a join that runs once `LocalGameManager` exists. `LobbyChatUpdate_t`
-  left/disconnected/kicked/banned drops that member from the session; if the owner goes, the
+  left/disconnected/kicked/banned drops that member from the session; if the lobby owner goes, the
   client leaves. Fallback for a disabled overlay: the lobby id is shown as a code to paste.
 - `Session` changes shared by both transports: connect timeout per transport (UDP 10 s, Steam
   30 s), Hello resent every 2 s until Welcome (the host already answered duplicates), `Ended`
@@ -351,67 +350,42 @@ callbacks; nothing needs a second init.
   `RESULT: PASS`, 19:24 local time; 9 patches live; 0 warnings or errors in both BepInEx logs;
   both logs show "steam: lobby callbacks registered", so `SteamManager.Initialized` is true in the
   test copies (Steam client running on this PC).
-- `tests/run_steam.py` (one copy: Steam ready, `steamhost`, lobby created, hosting over the Steam
-  transport, one member, screenshot, leave tears it down; `--join CODE` mode for a second PC and
-  account): written, NOT yet run. It creates a lobby on the owner's Steam account, so it waits for
-  the owner's go-ahead (AGENTS.md: ask before using their accounts).
-- A full two-player Steam run is impossible on one PC with one account (an account is in a lobby
-  once); it needs the owner and a friend, or a second PC with a second account: `unknown` until
-  then. Rich-presence "Join Game" in the friends list: `unknown`.
-- Run 9, `tests/run_steam.py` host mode with the owner's OK, 19:28 local time: `RESULT: PASS`, 15
-  checks. Steam API ready in the copy, `steamhost` created a friends-only lobby (id logged), the
-  session hosted over the Steam transport with one member and no error, the window showed
-  "Hosting for Steam friends", the invite button and the lobby code; `leave` tore the lobby down
-  and closed the session; the copy kept running. Screenshot `tests/shot-steam-host.png`. Still
-  `unknown`: an actual join and P2P traffic between two accounts.
+- Run 9, `tests/run_steam.py` host mode, 19:28 local time: `RESULT: PASS`, 15 checks. One copy:
+  Steam API ready, `steamhost` created a friends-only lobby (id logged), the session hosted over
+  the Steam transport with one member and no error, the window showed "Hosting for Steam friends",
+  the invite button and the lobby code; `leave` tore the lobby down and closed the session; the
+  copy kept running. Screenshot `tests/shot-steam-host.png`. The script creates a real lobby on
+  the signed-in Steam account, so it is not part of the default suites; its `--join CODE` mode is
+  for a second PC with a second account.
+- Not tested: a join and P2P traffic between two accounts. One PC with one account cannot do it
+  (an account is in a lobby once); it needs two PCs with two accounts. Rich-presence "Join Game"
+  in the friends list: not tested.
 
-### Release package (prepared, not published)
+### Release package
 `SuperflightCoop-0.2.0.zip` (DLL, README, LICENSE, INSTALL.txt) built from plugin tag v0.2.0
-(commit 795e01c) with `/pathmap` so neither the DLL nor the PDB carries a local folder path; the
-first package had the full PDB path inside the DLL's debug directory, caught by a byte scan of the
-zip for the username, `C:\Users` and `OneDrive` (now 0 hits; the PDB is not shipped). SHA-256 in
-the zip's `.sha256` file next to it. Publishing (GitHub repo, release, directory entry) is the
-owner's step: their GitHub account.
+with `/pathmap` so neither the DLL nor the PDB carries a local folder path; the first package had
+the full PDB path inside the DLL's debug directory, caught by a byte scan of the zip. The PDB is
+not shipped. Final package built from commit 014e00a; `tests/run_two.py` passed on that exact
+build (`RESULT: PASS`, build 014e00a, 19:36 local). SHA-256 of `SuperflightCoop-0.2.0.zip`:
+2e39331a727521211f2b128f864a92968bc40fff458f70aa1592d48fcfc40654, also in the `.sha256` file
+next to it.
 
-### Pre-publish history scrub
-Before the owner pushes, every revision was scanned for the username, `C:\Users`, `OneDrive` and
-the owner's e-mail: a tracked `tests/__pycache__/*.pyc` (compiled path inside) and the old
-`build.ps1` default game folder were in earlier commits. Both were rewritten out with
-`git filter-branch` (index filter for the cache, tree filter for the path line), tag v0.2.0 moved
-to the new head 014e00a, old objects pruned, scan now clean. The release zip was rebuilt from that
-head (embedded commit matches) and `tests/run_two.py` passed on it: `RESULT: PASS`, build 014e00a,
-19:36 local. Final SHA-256 of `SuperflightCoop-0.2.0.zip`:
-2e39331a727521211f2b128f864a92968bc40fff458f70aa1592d48fcfc40654. Commit author identity is the
-owner's own git config; flagged to them (GitHub's "block pushes that expose my email" setting would
-reject the push if it is on).
+## 2026-10-30: published
 
-## 2026-10-30: plugin repo published
-
-With the owner's OK and their empty repo URL, the plugin repo was pushed from the scrubbed
-history: `git remote add origin https://github.com/carlgoodtoseeyu/superflightmp.git`,
-`git push -u origin main --tags`. Verified after the push: `git ls-remote origin` shows `main` and
-`v0.2.0` at the same objects as local (head 014e00a, tag 2d59f1c), 26 tracked files (source,
-tests, build script, README, INSTALL, RELEASING, LICENSE; no DLL, PDB, logs or caches), the repo
-and the tag page answer HTTP 200 without sign-in, and `git grep` over every pushed revision finds
-no username, local path or e-mail. The GitHub release (tag v0.2.0, `SuperflightCoop-0.2.0.zip`,
-SHA-256 2e39331a...0654) is still the owner's step; the directory entry gets the release link once
-it exists.
+Plugin repo: https://github.com/carlgoodtoseeyu/superflightmp (MIT), `main` and tag `v0.2.0` at
+commit 014e00a. 26 tracked files: source, tests, build script, README, INSTALL, RELEASING,
+LICENSE; no DLL, PDB, logs or caches. Verified after the push with `git ls-remote` (same objects
+as local) and HTTP 200 on the repo and tag pages without sign-in.
 
 ### Release verified, directory updated
-The owner published GitHub release "SuperflightMP 0.2.0" from tag v0.2.0 with the zip as a release
-asset (not a notes attachment) and the checksum in the notes. Downloaded the asset through the API
-URL: 40063 bytes, SHA-256 2e39331a...0654, identical to the packaged file. Directory: new entry
+GitHub release "SuperflightMP 0.2.0" from tag v0.2.0 with the zip as a release asset (not a notes
+attachment) and the checksum in the notes. The asset downloaded through the API URL is 40063
+bytes, SHA-256 2e39331a...0654, identical to the packaged file. Directory: new entry
 Superflight / SuperflightMP (mod, alpha, direct-ip, qa automated, players 2-8 from the lobby cap,
 `made_with_coop_anything: true`); the SFMF Multiplayer entry now points at it. `build_directory.py`
-and `--check` pass (342 entries). The write-up's Projects row and release link updated. Next: the
-owner forks coop-anything, the branch goes to the fork, draft PR from the template, claim issue.
+and `--check` pass (342 entries). The write-up's Projects row and release link updated.
 
-### Fork, draft PR
-GitHub CLI 2.103.3 installed per-user through winget (official cli/cli release, hash verified by
-winget) with the owner's OK; signed in by the owner in their own terminal. Forked
-cranebeaker/coop-anything to the owner's personal account (rule from the owner: never publish under
-their organisation), pushed `game/superflight` (head 20c43b5), opened draft PR
-https://github.com/cranebeaker/coop-anything/pull/268 with the template filled; the owner-review
-checkbox is left for the owner. On the owner's instruction the claim issue was then posted
-(https://github.com/cranebeaker/coop-anything/issues/269), the review box ticked and the PR
-marked ready for review. Open: the two-account Steam play-test, when the owner has a friend.
+### Sent back
+PR https://github.com/cranebeaker/coop-anything/pull/268 (merged 2026-11-02) and claim issue
+https://github.com/cranebeaker/coop-anything/issues/269. Open: a Steam game between two accounts
+(not tested), chaos runs, three players, wingsuit animation on remote players.

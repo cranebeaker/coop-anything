@@ -348,6 +348,7 @@ unchanged, the dock disarms, and player 2 falls into an unrendered room.
 | 0x801e6bf8 (hook) | 0x480000f5 `bl FUN_801e6cec` | any player crossing switches the room |
 | 0x801e6a5c (hook) | 0x4bfff93d `bl 0x801e6398` | on door close, bring players still behind it |
 | 0x801db1f8 (hook) | 0x807f1514 `lwz r3,0x1514(r31)` | camera "stop" from a non-player sender checks every player's manager, then continues at 0x801db25c |
+| 0x80076320 (hook) | `bl 0x8010d528` (deathmatch rules update, every frame) | stranded-player rescue |
 
 - Crossing: the original FUN_801e6cec test per player, plus distance^2 from the door centre (mean of the
   dock's four plane points, +0x10 count, +0x14..+0x38) at most farthest corner^2 + 6^2, i.e. within 6 units of
@@ -373,6 +374,10 @@ unchanged, the dock disarms, and player 2 falls into an unrendered room.
   frame's facing; FUN_80160cc4 with the morph ball camera reset.
 - Camera stop: a save room's arrival camera is started with player 2 as sender and stopped by a timer, so only
   player 1's manager was cleared and player 2 kept cinematic uid 0x44f (frozen view, no control).
+- Stranded rescue: a player who is up and outside the bounds (slack 3) of every loaded area (world +0x24 count,
+  +0x2c areas, area +0xd0 == 0x10, AABB +0x3c/+0x48) for 60 frames is placed beside the first other player who is
+  up and inside one. Counters u32[4] at 0x937f0080. Reported cause: a player left behind in the skybox after a
+  door; the door-close test (plane + room bounds) can miss rooms that curve past the door plane.
 
 Verified: player 2 opens a Hive Access Tunnel door and walks through, player 1 waits 14 units back: room
 2 -> 0 once at 1.1 s; at 2.2 s (door closed) player 1 placed right +2.72, forward -0.47, up +1 of player 2.
@@ -384,7 +389,9 @@ new 6.73 < 10.83): room switch at once; door closed: player 1 placed 2.27 units 
 console then scanned in 1.5 s. Morph Ball tunnel between Hive Chamber B and C (about 1.7 wide and tall): before
 the ball fixes, rolling from C's part into B's put player 1 exactly on player 2 (no spot passed); after, player 1
 landed 1.6 to the side (balls resting 1.40 apart, touching) and, B to C, 2.25 to the side. Playtests confirmed
-the big door and the tunnel both ways.
+the big door and the tunnel both ways. Stranded rescue: players in the Landing Site and the Temple Sanctuary
+corridor and arena count as inside (no false positives); player 2 moved to x 300 was back beside player 1 after
+0.8 s.
 
 ### D. Cutscenes and full-screen message boxes
 
@@ -430,17 +437,26 @@ and code K removed the controller-0 test; not tried separately.
 | 0x8014a0e8 | 0x4182000c `beq +0xc` | `b 0x8014a0f4`: allow scanning under MP |
 | 0x80166a88 | 0x40820030 `bne` | nop: use the scan target search |
 | 0x80148578 | 0x40820008 `bne` | nop: scan aim update for every player |
-| 0x80166aac (hook) | 0x5460843e `rlwinm r0,r3,16,16,31` | search found nothing: nearest active actor with scan info (+0xbc -> +8) within 40 units and cos^2 >= 0.96 of the first-person camera aim (manager +0x14: eye = column 3, aim = column 1), players excluded; else the combat search at 0x80166ab8 |
+| 0x80166aac (hook) | 0x5460843e `rlwinm r0,r3,16,16,31` | search found nothing: nearest active actor with scan info (+0xbc -> +8) within 40 units and cos^2 >= 0.75 (30 degrees) of the first-person camera aim (manager +0x14: eye = column 3, aim = column 1), players excluded; else the combat search at 0x80166ab8 |
 | 0x80149ee8 (hook) | 0x48101615 `bl IsMultiplayer` | under MP: target (+0x39c) -> CastToActor -> vt+0x78 -> show its STRG with FUN_8024ac68; returns 1 |
 | 0x8024abb4 (hook) | 0x2c030000 `cmpwi r3,0` | allow pause states 0, 1, 3, 4, 5, 6 under MP |
 | 0x800ddc28 (inline) | 0x7c070000 `cmpw r7,r0` | in pause states 1 and 6 every controller goes to HUD 0; in state 4 only the controller that opened the Data Network |
 | 0x802429ec (hook) | 0x9421ffa0 `stwu r1,-0x60(r1)` | entry of the damage builder: run it, then zero +4/+8/+0x10 when the damagee is a player and the damager or radius sender is a player or a player's weapon |
+| 0x800bdc44 | 0x41820048 `beq` | `b 0x800bdc8c`: the Scan Visor highlight list takes the single-player path (scannable actors in view, coloured by scan state) |
+| 0x800d3e84, 0x8030817c (hooks) | `bl 0x80399038`, z-mode wrapper entry | flag 0x937f0018 around the scan HUD frame draw; the wrapper passes z compare off while it is set |
 
 The damage hook sets LR to its own post code, runs the displaced `stwu` and falls into the function, so one
 body covers both callers. Argument order: r5 damager, r6 radius sender, r7 damagee.
 
+The 30 degree cone: the camera tilts up only about 26 degrees, so ceiling objects (the Alpha Splinter arena's
+scannable "cocoon", 20 units above the floor) were outside the old 11.5 degree cone. Highlight colours: the
+list builder FUN_800bd9f0 branched on IsMultiplayer at 0x800bdc3c and listed only the other players, so every
+world scannable used the multiplayer yellow. Player 2's scan box (the visor's EFB copy and frame models,
+FUN_80170e0c) leaves depth that hid player 2's "Scanning..." text and bar; why only player 2's was not found.
+
 Verified: scan complete in 1.5 s; statue text pages and closes (player 2's A alone works), world paused for
-both meanwhile. Player 2 scanned the Temple Grounds room-6 gate mechanism (both locks active); player 1 the Map
+both meanwhile. Colours: unscanned objects blue, the gunship (critical) red, a statue player 2 scanned green in
+both views. Ceiling object scanned from 10 units away. Player 2's "Scanning..." and bar inside the box. Player 2 scanned the Temple Grounds room-6 gate mechanism (both locks active); player 1 the Map
 Station. ApplyDamage from a door 99 -> 89, from player 2 79 -> 79; player 2 firing at player 1 (1 HP) for 12 s:
 unharmed (without the code it killed). Blocked between all pairs with 4 players.
 
@@ -451,12 +467,26 @@ unharmed (without the code it killed). Blocked between all pairs with 4 players.
 | 0x80240be8 (hook) | 0x4bfffdad `bl 0x80240994` | for a CPatterned with 2+ players: swap the nearest player (squared distance of +0x50) into players[0] and states[0], update the stored target field, run Think, swap back |
 | 0x80240d50 (hook) | 0x4e800421 `bctrl` | same around PreThink (the vtable call is redone because the far jump uses CTR) |
 | 0x8024b3d0, 0x80244c70 (hooks) | 0x4e800421 `bctrl` | message delivery to a CPatterned: swap in the sender if a player, else the player who fired the sending weapon (+0x2c8), else the nearest player |
+| 0x80240918, 0x80240934 (hooks) | `bctrl` | entity touch pass (Touch both ways): a CPatterned touched by a player runs with that player in slot 0 |
+| 0x800a4a20, 0x800a4b90 (hooks) | `bctrl` | movement collision pass (CollidedWith vt+0x88 both ways): same for a player bumped by an enemy |
+| FUN_8024ba90 entry (hook) | | player index by uid: the slot whose player has that uid (correct under a swap) |
+| 0x80242f84 | `lwz r3,0x1514(r3)` | `lwz r3,0x12f0(r28)`: ApplyLocalDamage's cinematic check uses the damagee's own camera manager |
 
 Stored target fields (see Enemies and AI) are rewritten only while they hold a player uid. The own type id is read
 from the IsA function's `cmpwi` immediate and compared inline in Think only (9 CAST_ENTITY calls per enemy in
 Think and PreThink had cost up to 25 harness calls per second in 16-enemy rooms).
 
+Contact damage: enemy Touch and CollidedWith handlers damage `players[0]` outside the Think/message swaps, and
+send the knockback to the player actually bumped, so player 2 flinched and player 1 lost the health. A lethal
+bite under a swap ran the kill (FUN_802428e8, clears the alive bit in states[index by uid]) on player 1's state;
+hence the index-by-uid hook. The nearest-player pickers (Think/PreThink and messages) skip players who are down
+(state +4 & 0x80).
+
 Verified: Splinters next to player 2 with player 1 far: give-up timers 15.1 / 9.3 s without, 0.00 with.
+Small Splinters biting player 2 (15.3 per bite on Hypermode): player 2 took every bite, player 1 at the door
+(35 units) stayed at 99; player 2 killed by bites went down and respawned beside player 1 (pool 4 -> 2). With
+player 1 down, the Splinters turned and chased player 2. Alpha Splinter hits (23 each) landed on player 2 for
+40 s with player 1 untouched 60 units away.
 Boost Guardian damage in 60 s (player 1 / player 2): none 263 / 10, Think 713 / 90, Think + PreThink 345 / 110.
 Its +0x1098 stayed 0x400 (player 1) with player 2 alone in the arena; rewritten: player 1 alone 370/330/185 vs
 player 2 alone 257/370/160. Blogg field -> 0x401 with player 2 near; Space Pirate damage A/B player 2 near
@@ -475,6 +505,12 @@ standing on an armed pad reopens the prompt.
 r30 toucher index): repeat the same grant for every other player's state (set variants when +0x1c8 bit 0x10).
 Verified: Missile Expansion taken by player 1: both 33/40 -> 38/45, counter 0x2f 1/1 each; Energy Tank walked
 into by player 2: both 1/1. Collected pickups stay collected (world layer state, saved).
+
+Charge pull: the pickup Think (loop 0x801f88f4; range word 0x801f8900 `beq` -> `b 0x801f890c`, the single-player
+range) pulls only pickups with +0x1c8 bit 0x80. Drops from crates and enemies come from a pickup generator, which
+calls FUN_801f92f8: +0x1c8 |= 1, and |= 0x80 only when !IsMultiplayer (`bne` at 0x801f9318). 0x801f9318 -> nop.
+Verified: new drops have 0x83; player 1 charging 12 units from a 10-health drop pulled it in (distance 12 -> 3.6,
+collected); player 2 the same with a 30-health drop. Confirmed in a playtest (health drops from crates).
 
 ### I. Shared scan progress
 
@@ -511,7 +547,8 @@ bookkeeping) loops players itself. Verified with stand-in objects only: type 33 
 | 0x800e8cf4 (hook) | 0x4bff4e11 `bl 0x800ddb04` | HUD_SET_MODE(4) on HUD 0 only |
 
 The three depth hooks fix other players and near geometry drawing over paused HUD screens (text box, map):
-paused frames still draw the live world pass first.
+paused frames still draw the live world pass first. The map screen (pause state 1) also counts as message mode
+(code L helper), so it uses the single-view path and fills the screen.
 
 Verified: level map shows visited rooms, doors and Samus; A toggles World Map; B closes; player 2's button 1
 opens it and player 2's A/B drive it. Text box clean with player 2 in view. Data Network: player 2's pause
@@ -532,15 +569,21 @@ count (rules +0x38). Shown as item 0x40 amount/capacity on every player (the HUD
 | 0x8024ac68 (hook) | 0x9421ffd0 `stwu r1,-0x30(r1)` | show-message entry: refill the pool for the two "saved" messages only |
 | 0x80076414 (hook) | 0xc0170000 `lfs f0,0(r23)` | every frame for a dead player: DisableFilter(0.5 s) on pass 1 of every alive player's viewport (pass+4 != 0); with pool 0 also the downed player's |
 | 0x8024b844 (hook) | 0x57e0103a | pool 0, viewport's player down: set mgr+0x1da0/+0x1da4/+0x1da8 from the first player who is up (spectate) |
-| 0x800dd9cc (hook) | 0x57e01838 | same, draw that player's HUD in the viewport |
+| 0x800dd9cc (hook) | 0x57e01838 | same, draw that player's HUD in the viewport (not in pause states 1/4/6: map, Data Network and message boxes live in HUD 0) |
+| 0x80157d6c (hook) | `ble 0x80158128` | in those pause states skip the death cover block, drawn after the message window |
+| 0x8020c6b8 (hook) | spawn point teleport loop | skip downed players (no physics while down: a moved body hovered) |
 
 The black half of a downed player is the HUD object covering the viewport, not a camera filter.
+Lone survivor: pool 0, 2+ players, exactly one up makes the single-view test (0x800e88a4 / 0x8024b584) true and
+the HUD pass draws one HUD, so the survivor gets the whole screen.
 
 Verified: pool 4 with 2 players counts 4 -> 0; at 0 player 2 stays down and player 1's view stays lit; save
 station No: pool 0, nothing saved; Yes: saved, pool 4, player 2 revived (-> 3); everyone down -> results screen
 -> multiplayer menu; Sidehopper again resumes with pool 4. Kill Limit 15 -> 3 per player (pool 6); 0 -> three
 deaths all respawned. With player 2 down: doors and world changes carry the body along, cutscenes and saving
-work, and a resumed save has both players up.
+work, and a resumed save has both players up. With player 1 down in the Alpha Splinter fight: player 2 full
+screen; scan text, map and Data Network visible and usable from player 2's controller; after the defeat
+cutscene player 1's body stayed on the floor for 70 s (before: moved beside player 2 and rose slowly).
 
 ### Difficulty
 
@@ -552,6 +595,32 @@ enemies (FUN_80292110 from FUN_802429ec). Tweak object `**(r13-0x6420)`.
 Three codes, each writing `li r3,N` over 0x800bc6a0 (orig 0x38600001): Normal 0, Veteran 1, Hypermode 2.
 Verified with Hypermode: getter 2; player 1's 10 against an enemy became 5.0 (damage, radius, knockback); an
 enemy's 10 took player 1 from 99 to 83.7 (x1.53, applied in the full ApplyDamage path, not in FUN_802429ec).
+
+### Options (separate Gecko codes, off by default)
+
+Each option's gate keeps the 3 base words plus the 256 KB words on either side of its sites.
+
+- Single-player HUD: the HUD layout index FUN_8024ba68 (0 = 1 player, 1 = 2, 2 = 3-4) picks the combat and ball
+  frames, scan HUD, radar and (layout 0 only) the helmet frame. `li r3,0` over its calls at 0x800dd034,
+  0x800dd220, 0x80156db4, 0x80171010, the HUD rebuild after Morph Ball (0x8019de68, 0x8019dd7c), the radar tables
+  (0x80173494, 0x800d24e0) and the layout-0 blocks at 0x8019c7b8 and 0x801a1c9c. Ghidra's caller list of
+  FUN_8024ba68 missed eight calls; a raw scan finds 20. The corner minimap is drawn in play for such a HUD; its
+  pale panel (the model_automapper widget, 0x80157c7c) is skipped. The boss bar widget is built only when the HUD
+  frame has basewidget_bossenergy, which the multiplayer frame lacks; the Dark Alpha Splinter registers itself
+  as the boss (mgr +0x2bdc) in co-op too, so the option shows its bar in both halves.
+- Single-player scan screen: the logbook category pages exist only in single player's scan pause (pane in the
+  scan frame, world stopped). Words 0x800d32ec/0x800d382c (single player's scan frame), 0x801b3118 nop, 0x800d4184
+  `li r3,0` (the page builder's 'show categories'); the scan text then takes the single-player path, only the
+  scanner's state changes end the pause, the scanner gets the whole screen, and the frame depth is set to -50 in
+  the multiplayer range so the pane fits. Single player ends the pause when the lock button is let go. The visor's
+  target picture faded out for player 2 in the pane; during the pause the fade compare (0x80170844) acts as if
+  the scan were still running.
+- Only player 1 in cutscenes: CPlayer AddToRenderer (0x801483b4) skips players 2-4 while player 1's camera
+  manager +0x12 holds a cinematic.
+
+Verified (fresh boots): SP HUD in both halves, survives Morph Ball, Dark Alpha Splinter's bar shorter after a
+hit; scan screen with the categories (Creatures 1%, Dark Aether 2%, ...) and text for scans by either player,
+button 2 opening the Data Network at the entry; one Samus on screen in the Alpha Splinter's intro cutscene.
 
 ## Dead ends and pitfalls
 
@@ -609,8 +678,11 @@ enemy's 10 took player 1 from 99 to 83.7 (x1.53, applied in the full ApplyDamage
 - Bosses still pay player 2 somewhat less attention than player 1 in places (boss code outside Think).
 - The Scan Visor id buffer is not filled for players 2-4; they rely on the aim fallback.
 - Cutscenes and message boxes use player 1's view. Players 2-4 can fall during an elevator arrival cinematic
-  (invisible; the script then places both at the exit). Map opens in player 1's half, rooms slightly off centre.
+  (invisible; the script then places both at the exit).
 - Code J tested only with stand-in objects; a map station opening the map (type 5 with code K) not separately
   tested; special function 37 (pause state 2) stays blocked.
 - NTSC-U Trilogy only. PAL, Japanese and GameCube builds have other addresses; the gate keeps the codes inert
   there. Dolphin NetPlay untested.
+- One crash report while fighting the small Splinters with the SP HUD option on ("Invalid read", PC in heap
+  memory where RSO modules load); 90 s of the same fight and killing all five from both players' weapons did not
+  reproduce it.

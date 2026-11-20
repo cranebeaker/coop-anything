@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | Engine | Retro Studios in-house engine, Wii (PowerPC), run in Dolphin; Echoes enemies are RSO modules loaded at runtime |
-| Versions tested | Metroid Prime Trilogy NTSC-U `R3ME01` rev 0 (extracted disc); `rs5mp2_p.dol` SHA-256 `5b68271fd75ff1bd48986874d6f9112fc8299a1c93c6ce459fa1a83b8ebeb2b2` (SHA-1 `2375606f4e9429a699cfa02728b0bb1176421226`); Dolphin 2609a, Windows 10 |
+| Versions tested | Metroid Prime Trilogy NTSC-U `R3ME01` rev 0 (extracted disc); `rs5mp2_p.dol` SHA-256 `5b68271fd75ff1bd48986874d6f9112fc8299a1c93c6ce459fa1a83b8ebeb2b2` (SHA-1 `2375606f4e9429a699cfa02728b0bb1176421226`); Dolphin 2609a |
 | Projects | [Echoes co-op](https://github.com/FarrenB939/metroid-prime-2-echoes-coop) (Gecko + Dolphin patch codes, split screen, 2-4 players), directory entry "Echoes co-op" |
 | QA level | community-reports (playtests with two Xbox controllers, opening hours up to the item loss; scripted checks against the running game for each feature; no automated suite) |
-| Last updated | 2026-10-31 |
+| Last updated | 2026-11-02 |
 
 ## Where things stand
 
@@ -70,19 +70,31 @@ Codes, as named in the ini:
   else behind, else in front, else away from the door, then the same at 1.6 units. Each spot needs a clear
   collision ray, floor below it, and must not be back through the closed door. A Morph Ball leader gets an
   upright frame (the ball's own transform rolls with it) and ball-height checks, so two balls fit a tunnel.
+  A player who is up but outside every loaded room for a second (the skybox, a room that unloaded) is placed
+  beside a teammate.
 - **D, cutscenes:** play full screen from player 1's camera, every player held as in single
   player; message boxes and the Data Network take the whole screen too. Start (Wii 2) skips a cutscene
   the game marks skippable on a replay, on the first viewing too (the game refuses skips in multiplayer).
 - **E, Scan Visor and no friendly fire:** scanning works for every player (fallback target picker
-  for players 2-4), scan text shows and any player can page it; players can't hurt each other.
-- **F, enemies and bosses:** each enemy's think and messages see the nearest player as player 1;
-  bosses that store a target player id (9 classes) are pointed at the nearest player.
-- **G, save stations** under the multiplayer rules. **H, pickups** go to every player. **I, scan progress** shared. **J, script upgrades**
+  for players 2-4, nearest scannable within 30 degrees of the view centre), scan text shows and any player can
+  page it; objects are tinted as in single player (blue, red for critical, green once scanned); players can't
+  hurt each other.
+- **F, enemies and bosses:** each enemy's think and messages see the nearest player who is up as player 1;
+  bosses that store a target player id (9 classes) are pointed at the nearest player. Contact damage and bites
+  (enemy Touch and collision handlers, which damage `players[0]`) go to the player touched, and a kill is
+  credited to the right player.
+- **G, save stations** under the multiplayer rules. **H, pickups** go to every player, and the charge beam pulls in drops from crates and enemies. **I, scan progress** shared. **J, script upgrades**
   go to every player. **K, map screen** for any controller, and the pause button (Wii 2) opens the
   single-player Data Network (scan and item percentages, Inventory, Logbook) full screen for any
-  controller (the player who opened it controls it), instead of the per-player multiplayer "Quit Game?" menu. **L, shared lives:** a pool set by
-  the Deathmatch Kill Limit, refilled by saving; downed players spectate a teammate.
+  controller (the player who opened it controls it), instead of the per-player multiplayer "Quit Game?" menu.
+  The map opens full screen. **L, shared lives:** a pool set by
+  the Deathmatch Kill Limit, refilled by saving; downed players spectate a teammate, enemies ignore them, and
+  a lone survivor gets the whole screen. Message boxes, the map and the Data Network still work when player 1
+  is the one down, and a downed body stays where it fell when a cutscene moves the players.
 - **Difficulty:** three small codes (Normal / Veteran / Hypermode, Hypermode on by default).
+- **Options, off by default:** single-player HUD (helmet, corner minimap and boss health bar, squashed to half
+  height in split screen); single-player scan screen (the scanner's view goes full screen with single player's
+  scan pane: logbook category progress, then the text); only player 1 appears in cutscenes.
 - Story RSET is vanilla again (2026-10-24): an earlier "raise only" change blocked the item loss.
 
 ## QA
@@ -90,6 +102,21 @@ Codes, as named in the ini:
 - No automated suite. Each feature was checked against the running game with Python scripts that
   read and write Dolphin's memory, call game functions through a small hook, and press keys (the
   scripts aren't published; the project repo has the code generator); results are logged per session in [NOTES.md](NOTES.md).
+- 2026-10-31 to 2026-11-02, after a playtest of the Alpha Splinter fight (fresh boots of the test build):
+  - Small Splinters biting player 2 used to take player 1's health (their collision handler damages
+    `players[0]`) while player 2 only flinched. After the fix player 2 took every bite and player 1, 35 units
+    away at the door, stayed at 99; a player killed by bites went down and respawned normally.
+  - With player 1 down, the Splinters chased player 2; player 2 got the whole screen, and the scan text, map
+    and Data Network all worked from player 2's controller. After the defeat cutscene the downed body stayed on
+    the floor instead of hovering.
+  - A player moved outside every loaded room was back beside a teammate after 0.8 s.
+  - Scan Visor: unscanned objects blue, the gunship red, a scanned statue green for both players; the ceiling
+    objects in the Alpha Splinter's arena scan from 10 units away.
+  - Options: the single-player HUD survives Morph Ball and shows the Dark Alpha Splinter's health bar in both
+    halves; the scan screen shows the logbook categories and text for scans by either player; only player 1 in
+    cutscenes leaves one Samus on screen.
+  - Charge beam: drops from crates and enemies came without the pull flag in multiplayer; after the fix both
+    players pulled health drops in from 12 units, confirmed in a playtest.
 - 2026-10-30, after a playtest past the item loss (fresh boots of the test build):
   - Hive Chamber C's door to Hive Transport Area is 15 x 10; its old crossing "centre" sat 6.7 units above
     the floor, so walking through never switched the room and the room unloaded when the door closed. With
@@ -135,6 +162,9 @@ the Trilogy's third Echoes save file.
 - Menu opens the Data Network instead of the multiplayer "Quit Game?" menu; quit from the Data
   Network's Options.
 - Players have to jump off save stations to stop them asking to save again.
+- A crash was reported once while fighting the small Splinters (single-player HUD option on); it hasn't
+  happened again in testing.
+- The boss health bar needs the single-player HUD option (the multiplayer HUD frame has no bar widget).
 - On Xbox controllers Wii A (confirm, fire) is RT; the Xbox A button is Wii B.
 
 ## Next steps

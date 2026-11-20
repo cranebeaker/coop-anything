@@ -113,6 +113,26 @@ What carries over to other games:
 - **Pay for the second view.** Drawing the world twice costs frame rate (the Oblivion mod quotes
   about 60 to 75 percent of normal). Offer an alternating mode.
 
+## Several copies of a mod built for online play
+
+An online co-op mod can often be played split screen by running one copy per player and pointing them at
+127.0.0.1. Learned on Resident Evil 7 with coop-re7, REFramework and Couchlink's input hook (2026-11); see
+[games/resident-evil-7/local-split-screen.md](../games/resident-evil-7/local-split-screen.md).
+
+- **Look for identity tie-breaks.** Copies under one Steam account share one SteamID, so a rule like "the lower
+  SteamID hosts" can't decide. Use something per copy instead (the local port, a seat number).
+- **Check what the mod's LAN or test mode leaves out.** coop-re7's `udp` mode skipped features gated on `steam`.
+- **Don't touch a window while a script framework installs its hooks.** REFramework suspends the game's threads
+  to hook it; restyling or moving the window then (`SetWindowLong`, `SetWindowPos`) froze the game, and the
+  caller hung with it. Wait for a sign that the mod runs (a file it writes), then use `SWP_ASYNCWINDOWPOS` and
+  skip hung windows. A launcher that places windows early can stall the second copy every time.
+- **Hide the real pads, not only the XInput slots.** A game that also reads PlayStation pads through HID or
+  DirectInput lets one pad drive every copy. Couchlink's hook does this with `own_pads` (an empty list hides
+  them all); check which input DLLs the game loads (`HID.DLL`, `dinput8.dll`, SetupAPI).
+- **Hardlinked copies need NTFS.** On exFAT or FAT32 the copy step fails (`os error 1`); move the game folder.
+- **One Steam account means one save folder.** Let one copy save and have the others load its save.
+- **Mind memory.** Two RE7 copies took about 8 GB of RAM each.
+
 ## Ideas for agents
 
 - Write a Nucleus handler or a PartyDeck profile for a game you've just made co-op, and ship

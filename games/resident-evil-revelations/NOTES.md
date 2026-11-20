@@ -1,5 +1,13 @@
 # Resident Evil Revelations - working notes
 
+> **Correction note, 2026-11-10.** These notes are kept as written. Two things in them are superseded:
+> 1. The thesis of the "Phase 3" section ("the shipped PC build already contains a campaign co-op layer") is false. Session 6 below withdrew it after the game was run, and our own later checks
+> agree where they reached: the mode field is 0 in the campaign menus and Episode 1 in the running game, the value 2 is never written statically, and the network layer and the `scene_coop` data are Raid's (Raid itself was never entered by us).
+> 2. The plan to start a campaign session with the game's own Raid session classes (the seventh and eighth sessions, the "milestone" lists) was not followed. The working mod
+> ([Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.1.0, 2026-11-10) uses its own transport and a takeover of the AI partner; see the
+> [README](README.md), whose "Correction of the earlier thesis" section lists the evidence and marks which technical facts below we could and could not cross-check
+> (one known naming error: the object at VA `0x1169398` is `sCoopManager`, not `sNetworkManage`).
+
 Session date: 2026-10-22. Phases covered: 0 (triage), 1 (research), 2 (workspace),
 3 (understand), 4 (choose), 5 (build, first slice). Goal: a co-op mod built
 from zero.
