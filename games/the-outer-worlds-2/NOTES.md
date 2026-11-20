@@ -1033,6 +1033,44 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## Hives and hatches, a controller, test chaining, a scan fault (v0.5.2, 2026-11-20, one PC)
+
+The owner asked to finish the solo tests: the suite's chaining, the two crashes seen once, the game's own spawners, a
+controller in the co-op menu and for giving, a quest set without its banner.
+
+Observed:
+- **A hive's enemies are the level's own.** An `Encounter` (0601_CL_P has 28) lists waves (`EncounterWaves`,
+  `EncounterWaveInformation` 0x340 bytes, `State` at +0x30A: Inactive 0, Spawning 1, Static 2, Paused 3, Completed 4);
+  each wave pairs a level-placed character with its spawner (`Spawner_Mantiwasp_Outdoor_Hive_C`,
+  `Spawner_Mantisaur_Floor_C`, `Spawner_Human_Door_OnceEver_C`). The characters have the same names in both worlds and
+  wait hidden. A Proximity encounter starts by its own world's player (radius 180 m), so a wave the host's world had
+  started left the client's enemies hidden for about a minute while they fought in the host's world (probe 116).
+- `Encounter.ActivateWave(WaveIndex)` (native, callable) starts a wave the game's way: its enemies came out of their
+  hives in about 2 s. It does nothing for an encounter whose conditions are off. `CharacterSpawner.TEMP_ActivateActor`
+  moved a character to the exit point but left it hidden.
+- Mirroring the waves' state was wrong: a Proximity encounter its player left goes back to Inactive in that world
+  alone. Only a start (Inactive to started, seen within 1 s) is sent, for 5 s; the other world starts the same wave
+  and doesn't send that start back.
+- The game reads controllers through `XINPUT1_4.dll` (loaded at run time, not imported). Its bindings: X
+  (`Gamepad_FaceButton_Left`) is `PrimaryInteract`, A `ConfirmDialog`, B cancel, Y `CompanionContextualInteract`.
+- A quest's title: `OEITextLibrary.GetLocStringText` of LocString {table id -1, string id = the quest node's id (0),
+  the bundle's `StringTableName`} gave "A Cause Worth Killing For" for `0101_PQ_Intro`; table id 0 gave an empty text.
+  `NotificationHelpers.ShowGenericNotification` shows it on the HUD (screenshot checked).
+- Two crashes seen once (runs 161, 164): not met again in runs 171-174, with a first-chance access-violation note in
+  the test copies' log (module, offset, code addresses on the stack); no note was written.
+- A fault in the core's object scan: `is_a` read a garbage class pointer (run 172: non-canonical, 26 frames aborted;
+  run 173: 0x1060000003f, 3 frames). A slot of the object array whose object is being made or freed holds memory that
+  is no object: `object_at` now returns an object only when its `InternalIndex` is its slot's.
+- Test chaining: after the combat test or a test teleport, the test client was found 76 m under the host (walking on
+  a lower surface) and dead or vulnerable; the steps after it failed. `qa/god.py` between the risky steps fixes all
+  three. `test_spawned.py` D counted part B's living bears (< 25 m away) as the copy left over.
+
+Results: run 173 (0.5.2): all 21 game steps passed in one run (303 checks), the hive waves 10/10, the controller
+in the menu (Y, D-pad, B) and X for giving, the quest title notification; `no caught faults` failed (3 frames, fixed
+after). Run 174: the 21 game steps passed except one check, the client's sword swings at a spawned Ursopod that
+did not reach it (2 of 4 suite runs; alone it passed every time): the test now swings again, up to 3 rounds, and
+passed 3/3 at the first round in probe 120; `no caught faults` passed.
+
 ## A locked choice and payments in shared conversations (v0.5.1, 2026-11-20, one PC)
 
 - **OnResponseN picks from the screen's own list.** Besides `SelectableResponseWidgets` (+0x440), the conversation
