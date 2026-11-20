@@ -215,7 +215,10 @@ synthetic fixtures, FAIL on every real run that lacked dialog or loot), `qa-batt
 `--forced` mode that puts the caveat in the RESULT line itself), `qa-travel.py` (29 assertions, 33
 strict — PASS 29/29 on a synthetic three-transition run, and every deliberately broken arm goes red:
 a missing apply 28/29, a 3.5 m spawn shift 27/29, no door dump 27/29, a second landing 2 s later
-28/29, an idle pair 16/29), and `qa-actor-kill.py` (16 checks, 3/16 on today's real logs). Missing
+28/29, an idle pair 16/29), `qa-actor-kill.py` (16 checks, 3/16 on today's real logs), and `qa-save.py` (17 assertions on the
+save-transfer contract: PASS 17/17 on the good pair, FAIL 8/17 on a bad one, and it compares
+runner-captured md5 manifests so the guest save folder is proven byte-identical while the checker
+itself only reads). Missing
 lines are always FAIL, never skipped — the rule that caught the double-dispatch bug.
 
 **Unit suites (no game, no Unity):** `ScriptedInput` 42/42, `StorySync` 28/28, `LevelTravel` 35/35,
