@@ -1033,6 +1033,20 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## A locked choice and payments in shared conversations (v0.5.1, 2026-11-20, one PC)
+
+- **OnResponseN picks from the screen's own list.** Besides `SelectableResponseWidgets` (+0x440), the conversation
+  screen keeps a non-reflected `TArray` of the selectable responses' node pointers at +0x5C0 (probe 113). Putting a
+  widget first in the widget array only did not change the pick (run 165: the follower picked the original first
+  response and was restarted 3 s later); putting the locked response's node first in both arrays (its selectable
+  flag +0x380 set) for one `OnResponse1InputAction`, then restoring them, took it (run 166: the follower at the
+  leader's next line, no restart). The lock was simulated (`coop.set convLockTest`): a real skill check or flaw lock
+  was not reproduced (`Scripts.GiveFlawToPlayer` of Foot In Mouth Syndrome locked nothing at once).
+- **Payments:** the game's `Scripts.RemoveCurrency`, `RemoveItemFromPlayer`, `PayOffBounty` and `BuyItemWithCurrency`
+  go through ProcessEvent; dropped on the follower while it plays the leader's conversation (run 166: 2 -> 2).
+- Runs 167-170: the quick suite on 0.5.1 passed its steps; after the combat test the test client sometimes died (god
+  mode lost), which failed the steps after it; alone they passed.
+
 ## Conversations played in both games, a new game together, quests both ways (2026-11-20, one PC)
 
 The owner asked: the player who starts a conversation leads it, the other sees the same choices without choosing, the

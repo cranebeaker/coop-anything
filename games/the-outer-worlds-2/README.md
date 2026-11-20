@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unreal Engine 5.4.4 (Obsidian's `Arkansas` project, Microsoft GDK build) |
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
-| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.5.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.0), Steam or direct IP), directory entry "tow2-coop" |
+| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.5.1](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.1), Steam or direct IP), directory entry "tow2-coop" |
 | QA level | automated (two copies on one PC) and one manual session across two PCs (beta.4) |
 | Last updated | 2026-11-19 |
 
@@ -169,7 +169,7 @@ sources, layouts and pitfalls.
 
 Each player needs their own copy of the game (a Steam Families copy can't be played by two people at once).
 
-- **Over Steam** ([v0.5.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.0), test build): both run
+- **Over Steam** ([v0.5.1](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.1), test build): both run
   `tow2coop-setup.exe` (*Install*). In the game's main menu the Moon Man's choices have one more, *Let's play together
   (co-op)*: the host picks *I'll host* (Steam friends), *I'll host a new game* (both start from the very beginning: the
   friend makes their character in the game's character creator first) or *I'll host: anyone can join (public game)*, the other player
@@ -190,8 +190,9 @@ main menu and is pulled in about a minute after the game started).
   lobby made, searched for, left).
 - The co-op choice is in the main menu only, by mouse or number key (no gamepad yet).
 - In a conversation, a choice the other player's character can't take (a skill check, a flaw) shows as unavailable on
-  their side; when the leader picks it, their game starts the conversation again at that response (a short camera
-  cut). Both games run the conversation's effects (an item an NPC gives goes to both players).
+  their side and is taken all the same when the leader picks it (tested with a simulated lock, not yet a real skill
+  check). Both games run the conversation's effects (an item an NPC gives goes to both players); payments are the
+  leader's only.
 - Spawned enemies were tested with Ursopods the test spawned the way a spawner does, not with the game's own hives,
   hatches or doors; two of the same kind spawned more than 15 m apart in the two games give one more enemy. Co-op
   combat was tested against creatures and one soldier, not a large fight with armed humans.
@@ -201,7 +202,7 @@ main menu and is pulled in about a minute after the game started).
 - Keep the host's window un-minimized while the friend joins or a hand-over runs (a minimized copy can't finish a
   save).
 - Giving items needs keyboard and mouse (a gamepad's interact button doesn't open the screen).
-- Two players only. Use 0.5.0 on both PCs (protocol 6: older versions don't connect).
+- Two players only. Use 0.5.0 or 0.5.1 on both PCs (protocol 6: older versions don't connect).
 
 ## Next steps
 

@@ -14865,7 +14865,7 @@
   sources:
   - https://github.com/nicoNaeg/tow2-coop
   - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
-  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.0
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.1
   - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
   checked: '2026-11-19'
   made_with_coop_anything: true
