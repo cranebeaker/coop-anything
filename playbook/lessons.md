@@ -237,3 +237,12 @@ were spent on a wall that was a door. Read the door's own code path before blami
 the bot the press it wants; the same applies to chests, levers and interaction prompts. If the target
 needs a press and the bot has no button, that missing button is the real blocker and worth building
 first. Sea of Stars (`games/sea-of-stars`, `docs/lab-mooncradle-exit.md`, `docs/scripted-input.md`).
+
+97. **A press you sent is not a press the game received.** Sea of Stars: `PlayerInputs.GetInteract`,
+`GetInteractDown` and `GetHighFive` had only a remote branch, so every scripted `Interact` from the
+bot and from the route driver was consumed by nobody — six runs concluded "pressing does nothing" when
+nothing was ever pressed. Fixed by adding the local branch and proven by counting the getter's own
+answers (`input: GetInteractDown(scripted) -> True`, 157 and 641 times in two runs), not by watching
+the game. Whenever a bot's action has no observable effect, instrument the moment the game *reads* the
+input before concluding anything about the game: a missing local branch looks exactly like a game that
+ignores you.
