@@ -1088,7 +1088,16 @@ Results:
   the host's world, both see each other); the friend's game took the host's hand-over before its own character was
   kept (the host offers its game while the friend is in another map): offers are not taken while the character is
   made (not re-run yet: runs 153-157 were stopped by the memory guard at start).
-- Not run yet on the final build: the quest steps path (`qa/test_resync.py S`), the quick suite.
+- After a PC restart (the 15-19 GB starts were gone: 4.3 GB at the menu, also without tow2coop.dll they had burst)
+  and the NVIDIA cache cleared: the game's own "optimizing shaders" screen ran once per copy. `qa/test_newgame.py`
+  16/16 (the friend's new character kept, source "kept", in the host's intro). Run 159: the first half of the quick
+  suite PASS, the quest the client completed walked on the host in 2 steps (`advanced 1, written 0`), both 16085 ->
+  21260 XP. Runs 160-162: the second half PASS after a test fix (spawned enemies: each part's bears in its own
+  direction, > 15 m apart, as the mod pairs spawns by place); one host crash (null read, no stack) 20 s after arriving
+  in 0605_OAHQ in run 161, not in runs 160 and 162. Run 163 (final build): menus, conversations, companions PASS.
+- An incident: after the restart Steam was not running; a test copy exited with code 53 and Steam then launched the
+  real install with the test's environment (the owner's files unchanged). The test scripts now refuse to start without
+  Steam.
 
 ## No pause in menus, shared conversations, one party, public games, installer (2026-11-19 night, one PC)
 
