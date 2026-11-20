@@ -33,7 +33,7 @@ has played the story through together.
 | Host's character moves on the guest (real Steam) | works | `C-host-20261120-190919.qa.out` — 13/13 |
 | One enemy actor streamed, position agrees on both sides | works, one actor only | `actorsync: role=…` status lines in `C2-guest-20261120-211415.host.log` / `.guest.log` |
 | Actor kill → despawn on the peer | unproven | `tools/qa-actor-kill.py` scored **3/16** on `C-guest-20261120-190636.{host,guest}.log` (`docs/actor-kill.md`) |
-| Combat: battle start, participants, turn order, damage | unproven | `C-host-20261120-191531.qa.out` — FAIL (1/5) |
+| Combat: entry, participants, turn order (both machines) | partial — real entry, no damage yet | `local/qa/battle-real-20261121-003517.{host,guest}.log` — contact entry into `ENC_01 (TutoMana)` (not forced), identical `participants=[P:ZALE,P:VALERE,P:GARL,E:0:TERN]` and `turnOrder` on host and guest, `epoch=1`, `qa-battle.py --require-probe` **10/16**; guest apply throws `NullReferenceException` (party roster suspect) and no `combat: hit` has been produced |
 | Story state: GPI + blackboard snapshot, host → peer | partial — snapshot only | `local/qa/story-chest-r3-20261120-223200.guest.log:60` — `story: snapshot apply seq=5 gpi=0 bb=2 changed=2`, final `state=` identical on both sides, `diff=0`, `misses=0`, `unsupported=0`; checker `local/qa/story-chest-r3-20261120-223200.strict.story.out` passes every state assertion |
 | Story: dialogue mirroring (presentation only) | proven once — one `show` effect | `local/qa/story-archivist-20261120-231310.strict.story.out` — `RESULT: PASS (24/24)`; host `story: dialog out seq=1 op=show data='f6fe0400…' char='THE_ARCHIVIST'`, guest `story: dialog in seq=1 peerBox=1073741824` with a box remap and no guest graph advance. `line`, `close` and `choice` were not in that dialog, so those assertions passed vacuously |
 | Story: chest loot grant, items | unproven | `tools/qa-story.py` fails those assertions on every run so far (no dialog and no loot has occurred); the one chest found (`98940bbb…`, `looted=false`) is behind a scene boundary this save cannot cross |
@@ -173,6 +173,21 @@ Found by `tools/qa-story.py` before any player saw a doubled chest, fixed by kee
 only: the log then shows one `story: snapshot recv` per `seq` and one `apply`
 (`local/qa/story-chest-r3-20261120-223200.guest.log`). The pattern that pays for itself: one strict
 checker per subsystem, a synthetic dry run that must pass and a real run that must fail.
+
+### How a real battle was reached (and what it took)
+
+No gate could produce a fight on the game's own saves: the tutorial encounter starts but never builds a
+party, and the forced path makes the game's own `InitiateEncounter` throw. The fight came from two
+things instead. First, **a crafted lab save**: a `.sos` file is a ULEB128 length prefix plus UTF-8 JSON
+(the "checksum" is just that length), so `tools/lab-save.py` can point a copy at any known level and
+checkpoint, recomputing the prefix. Second, `savepointId = 0` — "no anchor" — makes the game honour the
+saved position, so the party spawns at the encounter trigger and contact fires during the load.
+
+With that, `ENC_01 (TutoMana)` in `ElderMistTrials` produced a real battle: `participants=[P:ZALE,
+P:VALERE,P:GARL,E:0:TERN]` and the same turn order on host and guest, `epoch=1`, no forcing anywhere.
+It also proved the input layer was genuinely dead until a Harmony prefix was fixed (a `Task<bool>`
+declared against `Il2CppSystem.Threading.Tasks.Task<bool>` aborted `PatchAll` and silently dropped
+every later patch — see lesson 99).
 
 ### Written, not proven
 
