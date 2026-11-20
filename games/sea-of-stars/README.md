@@ -210,6 +210,14 @@ every launch path takes before starting a copy and releases in `finally`. A seco
 immediately with `lease: held by <holder>` and never waits; a lease whose pid is dead is reclaimed and
 logged. That turns "nobody else launches" from a promise into something the machine enforces.
 
+**Strict per-subsystem checkers, each proven red before green:** `qa-story.py` (24 assertions; PASS on
+synthetic fixtures, FAIL on every real run that lacked dialog or loot), `qa-battle.py` (with a
+`--forced` mode that puts the caveat in the RESULT line itself), `qa-travel.py` (29 assertions, 33
+strict — PASS 29/29 on a synthetic three-transition run, and every deliberately broken arm goes red:
+a missing apply 28/29, a 3.5 m spawn shift 27/29, no door dump 27/29, a second landing 2 s later
+28/29, an idle pair 16/29), and `qa-actor-kill.py` (16 checks, 3/16 on today's real logs). Missing
+lines are always FAIL, never skipped — the rule that caught the double-dispatch bug.
+
 **Unit suites (no game, no Unity):** `ScriptedInput` 42/42, `StorySync` 28/28, `LevelTravel` 35/35,
 `SaveTransfer` 25/25 — each compiles one production file with `SOSO_TESTS` and asserts the pure half.
 A unit suite proves formats and timelines, never that a fight or a chest syncs.
