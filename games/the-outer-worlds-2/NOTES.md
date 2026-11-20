@@ -1033,6 +1033,63 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## Conversations played in both games, a new game together, quests both ways (2026-11-20, one PC)
+
+The owner asked: the player who starts a conversation leads it, the other sees the same choices without choosing, the
+leader's pick is made on both sides, cinematics in step; a quest validated for both; a new game together from the start.
+
+Observed (probes 107-110, runs 144-157):
+- **A conversation starts at any node.** `ConversationBlueprintLibrary.StartConversation(Conversation asset, Owner,
+  Stage, PresentationMode, StartNode, ...)` started the leader's asset at the leader's node in the other world (a talk
+  node or a player response: started at response 14, it went on to Marisol's reply 22 and ended as in the leader's
+  world). `EndConversationInstance` ends one in ~0.16 s. The instance's `NavigatorState` (+0xD0) holds
+  `Conversation.ConversationAsset` and `CurrentNodeID`.
+- **A response widget knows its node.** `ConversationResponseWidget` +0x378 points to its `FPlayerResponseNode` (node id
+  at +8, `EFlowChartNodeType` at +0x10 = 1), +0x388 to the line it answers. `ConversationBaseWidget.OnResponseNInputAction`
+  picks the Nth *selectable* response (unselectable ones, a skill check or a flaw, are listed apart); called while the
+  line still plays it is ignored.
+- **The game doesn't name the response picked.** `OwConversationInstance.BP_OnConversationNodeChanged` came once per
+  pick, for the next line only (run 145). The response is found from the graph (`ConversationBundle.DialogueLinks`:
+  FromNodeID +8, ToNodeID +0xC, 0x20 each).
+- **Random line banks.** Many lines are drawn from a bank (`BankNodes`, `EBankNodePlayType::CycleRandom`, `ChildNodeIDs`):
+  the companion's greeting (bank 3: 6, 5, 27, 7, 8, 26, 28, 319) and her reply to "I want to ask more about you" (bank
+  160: 162, 161, 154, 88, 322). Two games drew different lines (322 and 161, run 148). With the follower's copy of the
+  bank listing only the leader's line while the leader is on it (ids overwritten in place, put back after), both drew
+  the same (run 149).
+- **New Game from a script.** `Scripts.MainMenuNewGame()` alone does nothing; it sets where the Moon Man's conversation
+  leads, and ending that conversation (`EndConversationInstance`) starts the New Game: `CharacterCreation_Lite` (an
+  intro movie, then `ARCC_MasterWidget`), then `/Game/Maps/05_Space/0501_PS_Intro/0501_PS_Intro_P`. Posted keys
+  (E: Next) and posted clicks work in the character creator; its pages need a background, a trait and two
+  specialized skills; then a difficulty (E: Accept). The intro opens with a conversation, during which `SaveGame`
+  answers `Restricted`; once the player has control it saves.
+- **The quest steps work in shipping.** `QuestScripts.DebugAdvanceQuest(QuestID)` walks a quest to an end state (the
+  story tests use it); `OwQuestManager.QuestComplete/QuestFail` still do nothing.
+- **Memory.** After the probes compiled the character creator's and the intro's shaders, every copy start went to
+  15-19 GB private at the main menu (runs 153-157, warm-ups too; 4-7 GB in runs 144-152); the NVIDIA shader cache
+  (`%LOCALAPPDATA%\NVIDIA\DXCache`, 6 GB) rewrote its 2048 MB file at each start. Same pattern as on 2026-11-16 (the
+  cache full); not cleared yet (the owner's call).
+
+What tow2-coop 0.5.0 does with it (protocol 6):
+- **Conversations:** the leader sends its asset, node, picks and position 4 times a second; the other game starts the
+  same asset at that node next to the leader, picks the leader's response by its node (else starts again at it),
+  pins the leader's line in random banks, skips ahead when left behind, ends with the leader. Its own response and
+  skip inputs are dropped in ProcessEvent and the responses are not hit-testable. No pause (the base game's
+  conversations don't pause; a paused one stopped at its first line, run 139).
+- **New game together:** *I'll host a new game* starts the game's New Game on the host; a friend joining such a host
+  (or without a character) runs their own New Game, keeps the new character (a private save once allowed), then asks
+  for the host's game.
+- **Quests:** an outcome from the other world is walked with `DebugAdvanceQuest` (a step a second, 15 steps / 30 s at
+  most), the quest's state written only when that path ends the other way or gets stuck.
+
+Results:
+- Run 149: `qa/test_conversation.py` 18/18 both ways (the same node, the follower's input dropped, the same response
+  picked on its side, the same random line, both ended together, no pause).
+- Run 152: `qa/test_newgame.py` 15/16 (host and friend through the New Game and the character creator, the friend in
+  the host's world, both see each other); the friend's game took the host's hand-over before its own character was
+  kept (the host offers its game while the friend is in another map): offers are not taken while the character is
+  made (not re-run yet: runs 153-157 were stopped by the memory guard at start).
+- Not run yet on the final build: the quest steps path (`qa/test_resync.py S`), the quick suite.
+
 ## No pause in menus, shared conversations, one party, public games, installer (2026-11-19 night, one PC)
 
 Observed (probes 105-106, runs 135-140):
