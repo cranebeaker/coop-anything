@@ -10964,6 +10964,7 @@
   project: Resident Evil Revelations Co-op
   url: https://github.com/dolbaras/revelations-coop
   other_urls:
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1
@@ -10982,7 +10983,7 @@
   last_activity: 2026-11
   qa: automated
   notes: >-
-    Version 0.2.3 (GitHub Latest, published 2026-11-18, after 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12), PC/Steam
+    Version 0.2.4 (GitHub Latest, published 2026-11-21, after 0.2.3 of 2026-11-18, 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12), PC/Steam
     build 13298487, a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on one PC
     with two gamepads covers the whole campaign; network co-op (two PCs, Steam friends or direct IP on UDP 28410, ENet)
     follows the story section by section from Episode 1 to the end with the pair each part gives, with host-run
@@ -10995,7 +10996,12 @@
     motions, the lockers he opens and the levers he pulls on both PCs, and starts movies together and skips them only
     when both players press skip (as in Resident Evil 6); 0.2.3 fixes two split-screen reports: the second player's
     shots now follow his own camera instead of the first player's, and a movie or cutscene that starts during play
-    fills the screen. QA: offline C suites, a headless bot, an installer suite
+    fills the screen; 0.2.4 fixes network play with the keyboard and the mouse (a player without a gamepad now
+    sends real input: walking, aiming, shots, running, reloading, the knife, the change of weapon; the partner
+    sees them as motions instead of a character that stands and jumps; mouse look and the quick turn are not
+    shown) and the Backspace, Delete and Ctrl+V keys of the Direct IP field. Not verified: a split-screen report
+    (issue #2) was not reproduced and has no fix; the keyboard proof used injected input, not a person; nobody
+    played 0.2.4 before its release. QA: offline C suites, a headless bot, an installer suite
     (289 offline, 286 against the real release feed) and scripted sessions with real game clients on two PCs of one
     LAN and in split screen, partly driven by test commands; nobody outside the lab has played it, and Steam relay
     between two networks is untried. The game itself ships no campaign co-op: its only two-player mode is Raid, which
@@ -11003,6 +11009,7 @@
     withdrawn). MIT. Write-up in games/resident-evil-revelations.
   sources:
   - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1
@@ -11010,7 +11017,7 @@
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
   - https://github.com/cranebeaker/coop-anything/issues/299
   - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
-  checked: '2026-11-18'
+  checked: '2026-11-21'
 - game: Resident Evil Revelations 2
   year: 2015
   engine: MT Framework (32-bit, Direct3D 9)

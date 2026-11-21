@@ -4,14 +4,14 @@
 |---|---|
 | Engine | MT Framework (`KATARIBE`, project tree `bhr\biorevhd`), Direct3D 9, x86 |
 | Versions tested | PC/Steam appid **222480**, build 13298487; `rerev.exe` 14,260,576 bytes, SHA-256 `1573B79EB921B1E7F571E6DEB71C39961C7F1940FAD6D19283FC3AEA7FCA48AA`; image base 0x400000, no ASLR |
-| Projects | [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) (MIT, a `dinput8.dll` proxy); version [0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3), published 2026-11-18, GitHub "Latest", a fix release for split screen on top of [0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2) (2026-11-15), [0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1) (2026-11-13, fixes of network play) and [0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0) (2026-11-12): split screen for the whole campaign, network co-op section by section through the whole story (0.1.0 of 2026-11-10 had network co-op for Episode 1 only). Claim issue: [#299](https://github.com/cranebeaker/coop-anything/issues/299). Earlier probe `re1coop`: superseded, see [Existing work](#existing-work) |
-| QA level | automated (offline suites, a headless bot, an installer suite and scripted sessions with real game clients on two PCs of one LAN, plus split screen on one PC); no human playthrough, 0.2.3 was not played by people before its release |
-| Last updated | 2026-11-18 (0.2.3) |
+| Projects | [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) (MIT, a `dinput8.dll` proxy); version [0.2.4](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4), published 2026-11-21, GitHub "Latest", a fix release for network play with the keyboard and the mouse on top of [0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3) (2026-11-18, split screen), [0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2) (2026-11-15), [0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1) (2026-11-13, fixes of network play) and [0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0) (2026-11-12): split screen for the whole campaign, network co-op section by section through the whole story (0.1.0 of 2026-11-10 had network co-op for Episode 1 only). Claim issue: [#299](https://github.com/cranebeaker/coop-anything/issues/299). Earlier probe `re1coop`: superseded, see [Existing work](#existing-work) |
+| QA level | automated (offline suites, a headless bot, an installer suite and scripted sessions with real game clients on two PCs of one LAN, plus split screen on one PC); no human playthrough, 0.2.4 was not played by people before its release |
+| Last updated | 2026-11-21 (0.2.4) |
 
 ## Where things stand
 
-**Two players can play the story campaign today, with a mod.** [Version 0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3)
-(published 2026-11-18, GitHub "Latest"; a fix release on top of 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12) takes over the campaign's AI partner (Parker,
+**Two players can play the story campaign today, with a mod.** [Version 0.2.4](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4)
+(published 2026-11-21, GitHub "Latest"; a fix release on top of 0.2.3 of 2026-11-18, 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12) takes over the campaign's AI partner (Parker,
 Jessica, Chris and so on) with a second human:
 
 * **Split screen on one PC, whole campaign**, two gamepads, each player with an own camera, HUD, ammunition and pause/item menu; side by side or top/bottom.
@@ -36,6 +36,11 @@ Jessica, Chris and so on) with a second human:
   the **second player's shots and laser sight now follow his own camera** (they were built from the first player's camera, in every earlier version), and
   **a movie or an in-engine cutscene that starts during play is shown in one full view** and the two halves come back right after it, also after a skip.
   A loading screen of about 5 seconds before a movie that the story starts in the middle of play still shows in the first player's half. See [What 0.2.3 fixes](#what-023-fixes).
+* **Fixed in 0.2.4** (network play; split screen and gamepad players are unchanged): after a player reported that with the keyboard and the mouse the partner's character
+  stands and then jumps ("characters teleport") and shows no aiming or shots, a player without a gamepad now **sends what his character does over the network**: walking,
+  aiming, shots, running, reloading, the knife and the change of weapon, and the partner's screen shows the character walking, reloading and swinging the knife with him.
+  The "Direct IP" field of the lobby now takes **Backspace** (delete the last character), **Delete** (empty the field) and **Ctrl+V** (paste an address). Not done:
+  turning on the spot with the mouse while aiming and the quick turn are not shown as motions, and the proof used injected keys and mouse moves, not a person. See [What 0.2.4 fixes](#what-024-fixes).
 * A **"Co-Op Play" row in the game's own main menu** (F6 or the pad's BACK button also open it), ready buttons in the room, the **partner on the minimap and
   map**, a **co-op save of its own** (a co-op game never writes the solo `DATA0.DAT`), an installer and a self-updating shortcut, 13 installer/lobby languages.
 * Raid mode and the game's own online play are never touched by the mod.
@@ -53,7 +58,7 @@ runs do not cover is one line at the end of [QA](#qa).
 
 | project | state |
 |---|---|
-| [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.2.3 (MIT) | Described in this page. Release notes and checksums: [v0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3). Before it: 0.2.2 ([v0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2), 2026-11-15, the second player's action button in split screen, key-item flags, the partner's motions, movies started and skipped together), 0.2.1 ([v0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1), 2026-11-13, fixes of network play: the zone hand-over of an enemy, the partner's real guns, the guest's start kit), 0.2.0 ([v0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0), 2026-11-12, network co-op through the whole story, Give to partner, the Genesis and HUNK for the second player), the first full release 0.1.0 ([v0.1.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0), 2026-11-10, network co-op for Episode 1 only) and the pre-releases 0.0.1 and 0.0.2. |
+| [Resident Evil Revelations Co-op](https://github.com/dolbaras/revelations-coop) 0.2.4 (MIT) | Described in this page. Release notes and checksums: [v0.2.4](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4). Before it: 0.2.3 ([v0.2.3](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3), 2026-11-18, split screen: the second player's shots and cutscenes in play), 0.2.2 ([v0.2.2](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2), 2026-11-15, the second player's action button in split screen, key-item flags, the partner's motions, movies started and skipped together), 0.2.1 ([v0.2.1](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.1), 2026-11-13, fixes of network play: the zone hand-over of an enemy, the partner's real guns, the guest's start kit), 0.2.0 ([v0.2.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.0), 2026-11-12, network co-op through the whole story, Give to partner, the Genesis and HUNK for the second player), the first full release 0.1.0 ([v0.1.0](https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0), 2026-11-10, network co-op for Episode 1 only) and the pre-releases 0.0.1 and 0.0.2. |
 | `re1coop` (an earlier probe proxy, as described in PR #126; unpublished) | A diagnostic `dinput8.dll` that read the mode field and the network manager, walked the game's type registry and registered one payload type of its own. It sent no traffic and ran no session; it is not the mod above. Its measurements are kept below where they could be cross-checked. |
 | Hub PR #115 (another contributor's study of the same build) | Agrees that mode 1 is Raid. Its "route B" (running the campaign inside the Raid session) was not taken; its patterns and offsets were used as reading material and checked against the exe before use. |
 
@@ -291,6 +296,14 @@ the hello's version string makes 0.2.2 and 0.2.3 refuse each other with a reason
   is now on in split screen too; the network game has had it since 0.2.0.
 * **Lab only:** console words `split aim`, `split scene`, `split scenerule`.
 
+### What 0.2.4 fixes
+
+A fix release for network play on top of 0.2.3, after two player reports ("with the keyboard and the mouse the characters teleport", and the "Direct IP" field cannot be corrected). Split screen is unchanged; a gamepad player's network data is the same as in 0.2.3, byte for byte. The hello's version string makes 0.2.3 and 0.2.4 refuse each other with a reason. All of it **ours**, build 13298487.
+
+* **Keyboard and mouse players over the network.** The mod sent the partner only what a gamepad did (pad record plus position correction), so a player without a gamepad stood still on the partner's screen and jumped into place at the next correction, with no aim or shots. A player without a gamepad now sends the moves his character makes (where it walks, aiming, shots, running, reloading, the knife, the change of weapon), and the other PC turns them into the partner's character's own motions, so it walks, reloads and swings the knife with him. The grenade-type sub weapon is sent like the reload and was not tried.
+* **The "Direct IP" field.** Backspace deletes the last character, Delete empties the field, Ctrl+V pastes an address copied elsewhere.
+* **Not done:** turning on the spot with the mouse while aiming (mouse look) and the quick turn are not shown as motions; the partner's character turns only when it walks. A version that sent the direction of the aim broke a check of the guest's shots in the lab tests and was taken out. A second player report (split screen in Episode 1: the world seemed empty after a short scene at the east door of the galley, issue #2 of the mod's repository) was **not reproduced** in 8 further tries on the test PCs, also with the player's own co-op save, so there is no fix for it in this version.
+
 ## What we changed
 
 The mod, by what a player sees (code and design notes in the [repository](https://github.com/dolbaras/revelations-coop)):
@@ -319,7 +332,7 @@ The mod, by what a player sees (code and design notes in the [repository](https:
 * **Other mods:** an Ultimate ASI Loader the player had as `dinput8.dll` keeps running as `winmm.dll`; a foreign `dinput8.dll` is kept and restored.
 * **One-click log zip** (`coop\Collect logs.bat`) with names, paths, e-mail, MAC and public IP addresses removed.
 
-Bugs found on the way to 0.2.0, 0.2.1, 0.2.2 and 0.2.3, with cause, fix and the check that shows it (the full history is in the repository's code comments and docs):
+Bugs found on the way to 0.2.0, 0.2.1, 0.2.2, 0.2.3 and 0.2.4, with cause, fix and the check that shows it (the full history is in the repository's code comments and docs):
 
 | Problem | Cause | Fix and proof |
 |---|---|---|
@@ -375,7 +388,7 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   guns of the host's save); for 0.2.2 the second player's interactions (`tests/test_interact1.c`), the key-item and object flags (`tests/test_sf1.c`), the levers
   (`tests/test_objsync1.c`), the partner's motions (`tests/test_pmot1.c`), the lockers and weapon boxes (`tests/test_lid1.c`) and the movies (`tests/test_cut1.c`); for 0.2.3 the second player's shot ray (`tests/test_aimray1.c`) and the split-screen scene rule (`tests/test_split1.c`),
   model tests that fail on the rules of 0.2.1; suites that rely on the exe compare their facts with the bytes of the supported build when its image is at hand. A headless bot
-  (`tests/coop_bot.c`, with a network emulator and a Steam mock) speaks the protocol. All pass at the 0.2.3 release; the check counts are not quoted here (rerun with
+  (`tests/coop_bot.c`, with a network emulator and a Steam mock) speaks the protocol. All pass at the 0.2.4 release (new tests cover the keyboard player's moves, their turning into the partner's motions and the address field); the check counts are not quoted here (rerun with
   `tests/build.sh`).
 * **Installer** (`powershell -File tests\test_installer.ps1`): 289 of 289 offline with the published 0.2.1 zip as the old version; 286 of 286 after the publication
   with `-Online` (the real GitHub feed, read only). After the publication of 0.2.3 the published 0.2.2 launcher updated a stand-in copy to 0.2.3 through the real feed (checksum
@@ -411,6 +424,10 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
     shots as HUNK hit the host's enemy;
   - the fall-out guard: a copy on the guest's PC that stood awake over floor its PC had not loaded (8.6 s in all) was held, not killed, and the host's enemy
     kept its health.
+* **Live for 0.2.4** (two test PCs, a Windows 11 PC and a mini PC, a network game on the final build; the keyboard and the mouse were **injected inside the game by our test tool**, not a person at a physical keyboard and mouse; the mouse look could not be reproduced that way):
+  - Episode 9, the guest with the keyboard and the mouse only, the host with a gamepad: six walks of 2 s in four directions, the host's screen showed the guest's character walking with him every time, in the same direction (within 3 degrees) and distance, and it jumped into place once in six walks; with 0.2.3 the same walks did not move it there at all. Aiming with the right mouse button showed (the gun raised). Reload (R) 1 of 1, knife (left button, no aim) 3 of 3, change of weapon (Q) 2 of 2 started the same motion on the host's screen;
+  - the "Direct IP" field (Backspace, Delete, Ctrl+V) is covered by the mod's tests only; a gamepad player's network data equals 0.2.3's byte for byte;
+  - the 0.2.3 checks repeated on the final build: network Episode 1 (the guest's real shots, the end of 1-1 by the story, 1-2), HUNK in 2-2, doors and items, the Genesis aim, the guest's knife, section changes, cutscenes and the start of Episode 9, the title Continue of a co-op save; in split screen the second player's shots and kill, a cutscene in play, a door and an item. No crash or assert line on either PC.
 * **Live for 0.2.3** (the two PCs and the split screen on the N100, driven by test commands and two virtual pads, on the exact build of the release DLL):
   - split screen: with the old behaviour switched back on, the second player's ray lay 0.2 degrees from the first player's view and 19.9 from his own, and 6 shots at an enemy 300 units in front of
     him left its health at 800; with the fix the ray lay 0.2 degrees from his own view and his shots took the enemy from 800 to 0 (the first player's ray unchanged); a movie started in play
@@ -449,8 +466,8 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
 
 ## How to play
 
-Download `revelations-coop-setup-0.2.3.exe` (or the zip and `Install Co-op.bat`) from the [release](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3),
-on both PCs for network play; an installed 0.0.1, 0.0.2, 0.1.0, 0.2.0, 0.2.1 or 0.2.2 updates itself to 0.2.3 at the next start from its shortcut (both PCs need 0.2.3 for a network
+Download `revelations-coop-setup-0.2.4.exe` (or the zip and `Install Co-op.bat`) from the [release](https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4),
+on both PCs for network play; an installed 0.0.1, 0.0.2, 0.1.0, 0.2.0, 0.2.1, 0.2.2 or 0.2.3 updates itself to 0.2.4 at the next start from its shortcut (both PCs need 0.2.4 for a network
 game: another version is refused and the lobby says so). The installer finds the Steam copy (only build 13298487 is accepted), adds the mod and a "Resident Evil Revelations
 Co-op" shortcut; play from the shortcut and choose **Co-Op Play** in the main menu. For network play the host picks "Host", the other player joins from the Steam friends
 list or types the host's IP address (UDP 28410), both mark themselves ready, and the host starts New Game or Continue; from then on the guest's game follows the host's
@@ -482,6 +499,7 @@ mod's repository with the zip from `coop\Collect logs.bat` (both PCs for a netwo
   opens far from the first closes again after 6 s, so try again when the first player is nearer. An object is used by the nearest player, so the other cannot use
   it while he is not the nearer one.
 * Split screen: a loading screen of about 5 s before a movie that the story starts in the middle of play is drawn in the first player's half (the right half black); the movie itself fills the screen.
+* Network, keyboard and mouse (0.2.4): the partner sees walking, aiming, shots, the reload, the knife and the weapon change as motions; turning on the spot with the mouse while aiming and the quick turn are not shown (the partner's character turns only when it walks); the proof used injected input, not a person; the grenade-type sub weapon was not tried. Open and not reproduced: split screen in Episode 1, the world seeming empty after the scene at the east door of the galley (issue #2 of the mod's repository).
 * Split screen and network are not used together; joining a running network game is not possible (start a new co-op game, Continue picks up the checkpoint).
 
 ## Correction of the earlier thesis
