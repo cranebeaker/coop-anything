@@ -215,3 +215,56 @@ like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
 93. **Profile before optimizing, and look at the C runtime rows first.** Modern Warfare 2 Enhanced's native FSR 3 path ran at 93 fps; a sampling profiler (the render thread's instruction pointer every 2 ms) put half of the samples in one block of `ucrtbase.dll`: a debug `getenv("...")` called twice for every draw. Reading it once gave 155 fps. The same profile showed a Direct3D 12 texture upload that made a buffer and waited for the GPU for every mip level (20000 per level load, 18 s in total); batching them through a persistent upload buffer made the load as fast as Direct3D 11. Both were plain mistakes, found in minutes by measuring instead of reasoning about the GPU. Example: Modern Warfare 2 (`games/modern-warfare-2/README.md`, "The mod's own Direct3D 11 / 12 renderers").
 
 94. **A rendering "fix" can break a screen you did not look at: compare the same frame against the original renderer.** Alpha to coverage for foliage looked right in levels and passed eight campaign maps on bots; a screenshot of the main menu showed the soft smoke turned into hard patches (the game's default 2x anti-aliasing, and the change also hit alpha-tested draws that blend). Capturing the same menu frame on the old and the new renderer side by side, then skipping one draw at a time by texture size (`MW2COOP_SKIPTEX`), found the draw in two runs. Keep a way to capture one named frame and to switch single draws off before a renderer change is called done. Example: Modern Warfare 2.
+
+95. **One patch whose target does not exist silently disables every patch in the assembly.** Sea of
+Stars: two separate merges each added a Harmony patch class against a method signature the build does
+not have — `Player.GetAxisRaw(string)` (only the `int` overload exists) and `NewDialogBox.PlayDialog`
+(the 3-argument overload is on `NewDialogBoxInstance`; `NewDialogBox` has a 4-argument one taking
+`IDialogCharacter`). `PatchAll` logged one line and aborted, the plugin still loaded, the game ran
+fine, and the only symptom was the pair gate dropping from 19/19 to 18/19 with a failure that read like
+a sync bug: the bot walked and nothing moved. Run the pair gate after **every** merge that adds or
+retargets a patch class — it is one run and it is the only thing that sees this. When an assertion that
+used to pass goes red after a merge, read `harmony PatchAll` in the log before believing the gameplay
+explanation. Complements 90: counting patches catches the wrong overload of `PatchAll`, this catches a
+bad target inside a correct one. Sea of Stars (`games/sea-of-stars`, `A-20261120-205458`, `205655`,
+`210433`, `210616` failed 18/19; `205834`, `210753` passed 19/19 after the fixes).
+
+96. **Walking into a door is not using it — wire the buttons reference and press it.** Sea of Stars:
+every interior door is a `Teleporter` whose `Update` registers the player on trigger enter and then
+waits for `GetButtonDown` / `GetInteractDown` before it loads anything. A bot that only walks reaches
+the wall, logs a position change of zero and looks like a navigation bug — three routes and two runs
+were spent on a wall that was a door. Read the door's own code path before blaming pathing, and give
+the bot the press it wants; the same applies to chests, levers and interaction prompts. If the target
+needs a press and the bot has no button, that missing button is the real blocker and worth building
+first. Sea of Stars (`games/sea-of-stars`, `docs/lab-mooncradle-exit.md`, `docs/scripted-input.md`).
+
+97. **A press you sent is not a press the game received.** Sea of Stars: `PlayerInputs.GetInteract`,
+`GetInteractDown` and `GetHighFive` had only a remote branch, so every scripted `Interact` from the
+bot and from the route driver was consumed by nobody — six runs concluded "pressing does nothing" when
+nothing was ever pressed. Fixed by adding the local branch and proven by counting the getter's own
+answers (`input: GetInteractDown(scripted) -> True`, 157 and 641 times in two runs), not by watching
+the game. Whenever a bot's action has no observable effect, instrument the moment the game *reads* the
+input before concluding anything about the game: a missing local branch looks exactly like a game that
+ignores you.
+
+98. **A "limitation" is usually an unsearched format.** Sea of Stars: six runs concluded that the save
+could not be moved between levels because any edit was refused — the file was described as having a
+checksum and a length bound. It has neither. A `.sos` is a **ULEB128 length prefix plus UTF-8 JSON**;
+a one-byte edit was refused only because the prefix went stale. Two searches would have given the
+format on day one: a gist of the format ("the checksum is just the length of the data encoded using
+ULEB128") and a working open-source save editor that also publishes area/checkpoint guids. Search for
+the game's save format, its modding scene and its save editors **before** you write a single line of
+save-handling code, and again the moment a run shows something "refused" or "unsupported". Then test
+the smallest hypothesis: here, re-encode the length and the same edit loads. The cost of not
+searching was a day of work labelled blocked; the cost of searching was four minutes.
+
+99. **A Harmony prefix must speak the game's own types, and a patch set must fail loudly.** Sea of
+Stars (IL2CPP): a save-blocking prefix was declared `ref Task<bool>` from `System.Threading.Tasks`
+while the game's method returns `Il2CppSystem.Threading.Tasks.Task<bool>`. `PatchAll` threw, every
+patch after it was silently dropped — including the whole input layer — and the symptom was a player
+body that ignored the bot, which cost six runs and one wrong conclusion ("the game does not read input
+in this level"). Two habits prevent it: write prefixes against the interop types, and make the plugin
+log `harmony: applied N patches` after `PatchAll`, treat `PatchAll FAILED` as a hard failure in every
+gate script (non-zero exit before any verdict), and self-check that the specific methods you depend on
+are patched. Same family as 90 and 91: a correct-looking build proves nothing about what is actually
+hooked. Sea of Stars (`games/sea-of-stars`; the abort line names `SaveManager::SaveSlotFile`).
