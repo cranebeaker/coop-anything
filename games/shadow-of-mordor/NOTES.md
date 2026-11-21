@@ -2770,3 +2770,101 @@ slots restored, and **exit code 0** with the slot-1 controller switched off.
 
 - Find the code that updates the real Talion's animation component, for example from the call
   stack where these event messages are produced for him.
+
+## 2026-11-21: the second Talion animates, walks, and is driven over the link (launches 44–50)
+
+All runs: one PC, save and settings checked against hashed backups before and after: 0 changed.
+New guard switches (all off unless set): `dwatch` (logging only), `animtick`, `ctrlbind`,
+`animparams`, `animcal` (logging only), plus the freeze detector inside `animparams` and packet
+v2 in `netlink`. Offline suite after these changes: **50 passed, 0 failed; negative control 14 of
+14** (new cases `dwatch`, `anim_tick`, `ctrl_bind`, `loco_params`, `anim_cal`,
+`net_packet_v2`).
+
+### What updates a player's animation (launch 44)
+
+`dwatch` puts hardware write breakpoints (debug registers, set on all 66 game threads by a helper
+thread, never handling the write) on the real Talion's animation component at `+0x65C` and
+`+0x3B44`, and on the second Talion's `+0x65C`. In 20 s: 5,001 writes to the real component from
+11 distinct stacks, all on the main thread; **0 writes to the second one**. Every stack shares:
+
+```
+engine frame E06835 -> 40C516 -> 3f0380 (loop over the 4 controller slots)
+  -> 4009a0 (controller update) -> 428970(sub) -> 7a0940(component) -> writers
+```
+
+- `3f0380` runs `4009a0(controller)` for each controller in the slot table that passes
+  `3f2ab0` and `411100`.
+- `4009a0` calls `81b950(component+0x3968)`, then `428970(sub)` with `sub = *(controller+0x2D8)`:
+  `{ sub+0x5E0 = 0; 7a0940(*(sub+0x3B8)); sub+0x5E0 = 1 }`. `7a0940` is the animation component
+  update; `*(sub+0x3B8)` is the component.
+- The second Talion's controller was taken out of the slot table (launch 37), so nothing ran
+  these calls for him.
+
+### The pieces, one run at a time
+
+- **Launch 45, `animtick`** (`81b950` + `7a0940` on his component once per server frame, after
+  checking that the real controller's `+0x2D8 → +0x3B8` is the real `player+0xB60`; the first
+  exception stops it): 6,000+ ticks, no exception. His component now changed in 23 fields with
+  the real one (was 1), including its world transform, but the pose blocks (`+0x3970…`,
+  `+0x3A50…`) did not. Owner: **still A-pose.**
+- **Why:** `7a0940 → 786740(component, *(component+0x4218))` builds the pose only if
+  `component+0x8D8` (a pose output) is set: it updates each animation layer in the list at
+  `+0x890` and hands the result to that output. `+0x8D8` is set by `42ead0(sub)`, the controller
+  sub-component's bind (`sub+0x3B8 = component`, `component+0x8D8 = sub+0x28`, three listeners on
+  the component), which the game calls lazily from the sub-component's update inside `4009a0`.
+- **Launch 46, `ctrlslot` + `ctrlbind` + `animtick`** (bind called once, after the animation
+  set-up, as the game orders it): bind linked (`component+0x8D8 = sub+0x28`), ticks ran. Owner:
+  **he is now in an idle pose.**
+- **Launch 47, `animparams`.** The controller update `3f9410` sets the graph's locomotion inputs
+  by name: `785bc0(component, name)` → handle, `77b1c0(component, handle, value, 1)`; `77b250`
+  reads one back. It sets `RawMoveMag` (stick magnitude 0..1 from the slot's input, so always 0
+  for slot 1), `Game_SmoothedVelocity` and others. `animparams` sets them on his component before
+  and after each update, from his speed (position change per tick, smoothed). Owner: **he
+  walked** (screenshot: mid-stride next to the owner's Talion).
+- **Launch 48, `animcal`** (the real Talion's speed, yaw rate and graph inputs every frame,
+  average and maximum per second):
+  - The player graph has `RawMoveMag`, `Game_SmoothedVelocity`, `DeltaYaw`, `CameraDeltaYaw`,
+    `CameraYawMinusPlayerYaw` and `LastSpike`. It does not have `Game_Velocity`,
+    `Game_VelocityX/Y/Z` or `Game_FallingTime`.
+  - `Game_SmoothedVelocity` is the speed in units/s: run about 226 (measured 230), sprint about
+    607 (measured 622).
+  - `RawMoveMag` is 1.0 whenever a key is held (jog and sprint), 0 when still.
+  - `CameraDeltaYaw` comes in steps of π/4, so these angles are radians.
+  - So `RawMoveMag` = speed / 230, clamped.
+  - The owner jumped from a tower: the second Talion's engine position followed
+    (height 2712 → 1290 → 488, every packet placed), but he was then seen sliding in a frozen
+    pose (see Unknown).
+- **Launch 49:** the bot cycled walk 100 / jog 230 / sprint 650 units/s / stand. The inputs
+  followed the phases; the freeze detector saw his pose change throughout except about 2 s at
+  the start of each stand. Owner: **he cycles through the animations** (hard to judge while he
+  circles and turns).
+- **Launch 50, two copies on one PC with packet v2:**
+  - Packet v2 (48 bytes, `SOMD`) adds the sender's own `RawMoveMag`, `DeltaYaw` and
+    `Game_SmoothedVelocity`, read from its own graph; −1 in the first field means "not available
+    yet". The checks: `RawMoveMag` 0..1 or −1, `|DeltaYaw|` ≤ 7, speed 0..5000, all finite. v1
+    packets are still accepted.
+  - The receiver uses fresh values (under 0.5 s old) as they are and otherwise derives them
+    from position.
+  - Both copies: controller, bind, tick and inputs all worked. 777 and 984 packets accepted, 0
+    rejected. 51 of the parameter log lines say "from network"; the 14 "derived" ones come from
+    the first seconds.
+  - Owner, with the windows side by side: **the other copy's Talion moved like the one being
+    steered.**
+
+### Recipe
+
+For a second `CPlayerObj` created with the object API:
+1. run the animation set-up (`79f950`, `784dc0`);
+2. create a client controller in local-player slot 1 (`3f0080`, entry 1) and link it at
+   `proxy+0x118`;
+3. take the controller out of the slot table again;
+4. call `42ead0(*(controller+0x2D8))` once;
+5. then, every frame: `81b950(component+0x3968)`, `7a0940(component)`, and set `RawMoveMag`,
+   `DeltaYaw` and `Game_SmoothedVelocity` by name.
+
+### Unknown
+
+- Why he froze after the tower drop. A guess: a fall state in his graph that never gets a
+  "landed" signal, because the full controller update and its movement component do not run for
+  him.
+- Which object's reference count underflows at exit while the slot-1 controller exists.
