@@ -1033,7 +1033,7 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
-## Quest items, loose items, switches (v0.5.4, 2026-11-21, one PC)
+## Quest items, loose items, switches (v0.6.0, 2026-11-21, one PC)
 
 The owner asked for quest items given to both, loose items gone in the other world, a check of the world's skill
 panels in the game, then a faster transfer.
@@ -1057,7 +1057,7 @@ Observed (probes 132-141):
   mod replays the host's story log on the client (`0601_SQ_ConnectACTerritories` walked in 2 steps); given again
   later, they stayed. So the client's game drops them itself while catching up on the story; the host keeps them. The
   mod now logs quest items that leave a player's inventory (`questItemsDropped`), and the test allows those.
-- Run 189 (the whole suite with 0.5.4): all steps before the hives PASS but that one; the copies were stopped for low
+- Run 189 (the whole suite with 0.6.0, then numbered 0.5.4): all steps before the hives PASS but that one; the copies were stopped for low
   memory (9.1 and 9.4 GB, 1.9 GB free) during the hive test's door part, and the rest did not run.
 - **World skill checks:** `SkillRequirement` is an `InteractableRequirement`; skill checks in the world sit on OCL
   objects (doors and containers: lockpicking, hacking), whose states the mod already shares. No `RPGInteractable`
@@ -1073,7 +1073,7 @@ Observed (probes 132-141):
   host's travel, ~9 s the game refusing to save (`Restricted`) until its loading screen ended, ~1 s transfer (TCP on one
   PC), 7.5 s the client's load. Saves compress to 99 % (zlib): no gain. The Steam send rate is 1 MB/s since beta.5.
 
-Results (0.5.4): run 200 (the suite up to spawned enemies, 19 steps) PASS; runs 191-192 and 197-198 (hives, squad,
+Results (0.6.0): run 200 (the suite up to spawned enemies, 19 steps) PASS; runs 191-192 and 197-198 (hives, squad,
 death and reload, world sync, map travel, real skill check, switches, ship travel) PASS. Whole-suite runs stop on low
 memory on the test PC (runs 189-190: a copy at 9-11.5 GB, 1.5-1.9 GB free), so the suite now runs in parts.
 

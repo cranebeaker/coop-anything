@@ -14858,15 +14858,16 @@
     same lines, camera and voices, only the leader chooses); a new game together from its start; quests completed in
     both games the game's way; the host's companions are in the same places in both worlds; a hive's or a hatch's wave
     of enemies starts in both games; the co-op menu and giving work with a controller; a real skill check is taken in
-    the follower's game past its lock; ship travel is followed. v0.5.3 (test build, a Windows installer) connects Steam friends or anyone in a public game (Steam lobbies, "Join game")
+    the follower's game past its lock; ship travel is followed; quest items go to both players, loose items picked up
+    are gone in both worlds and switches are shared. v0.6.0 (test build, a Windows installer) connects Steam friends or anyone in a public game (Steam lobbies, "Join game")
     through the game's own Steam session and Valve's relay (no IP or port), hosted and joined from the game's main menu,
-    or by direct IP (UDP 27960 and TCP 27961) with an optional shared key. 0.5.3 was tested with two copies on one PC
+    or by direct IP (UDP 27960 and TCP 27961) with an optional shared key. 0.6.0 was tested with two copies on one PC
     (automated suite); one session across two PCs ran beta.4 (2026-11-17: joined over Steam, played, followed map
     changes). Write-up in games/the-outer-worlds-2.
   sources:
   - https://github.com/nicoNaeg/tow2-coop
   - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
-  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.3
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.6.0
   - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
   checked: '2026-11-21'
   made_with_coop_anything: true
