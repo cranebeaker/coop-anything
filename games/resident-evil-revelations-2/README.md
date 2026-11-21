@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | Engine | MT Framework (Capcom), 32-bit, Direct3D 9, XInput; the engine's own class registry ("DTI") and a story script machine (FSM) |
-| Versions tested | Steam app 287290, the only public branch, build **3658995** (2019-03-19); `rerev2.exe` 18,315,248 bytes, SHA-256 `55ac7d2bd80704c6a8a1fa7bd2371726adbaa01ae0fda056198fb042404367f9`; x86, image base 0x400000, no ASLR; Steam stub (`.text` is encrypted on disk and decrypted by the stub at start-up); Windows 10 and 11 |
-| Projects | [Resident Evil Revelations 2 Co-op](https://github.com/dolbaras/revelations2-coop) (MIT), directory entry "Resident Evil Revelations 2 Co-op"; version [0.3.2](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.2), published 2026-11-15, GitHub "Latest": cutscenes together on both PCs, the partner's motions and fixes on top of [0.3.1](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1) of 2026-11-13 (Continue for every episode) and [0.3.0](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0) of 2026-11-12, which opened Episodes 2-4 and the bonus episodes (0.2.1 of 2026-11-10 was Episode 1 only). Sibling game: [Resident Evil Revelations](../resident-evil-revelations/README.md) (the first game, its own write-up and mod, same engine family, different binary) |
+| Versions tested | Steam app 287290, the only public branch, build **3658995** (2019-03-19); `rerev2.exe` 18,315,248 bytes, SHA-256 `55ac7d2bd80704c6a8a1fa7bd2371726adbaa01ae0fda056198fb042404367f9`; x86, image base 0x400000, no ASLR; Steam stub (`.text` is encrypted on disk and decrypted by the stub at start-up); Windows 10 and 11. Since 0.3.3 also a copy with the Steam wrapper removed from `rerev2.exe` (a repack; its 14,930,907-byte code section is equal to the Steam build's decrypted code), and any other `rerev2.exe` after a confirmation in the installer (see [Other versions of the game (0.3.3)](#other-versions-of-the-game-033)) |
+| Projects | [Resident Evil Revelations 2 Co-op](https://github.com/dolbaras/revelations2-coop) (MIT), directory entry "Resident Evil Revelations 2 Co-op"; version [0.3.3](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.3), published 2026-11-21, GitHub "Latest": support for other versions of the game, on top of [0.3.2](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.2) of 2026-11-15 (cutscenes together on both PCs, the partner's motions and fixes), [0.3.1](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.1) of 2026-11-13 (Continue for every episode) and [0.3.0](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.0) of 2026-11-12, which opened Episodes 2-4 and the bonus episodes (0.2.1 of 2026-11-10 was Episode 1 only). Sibling game: [Resident Evil Revelations](../resident-evil-revelations/README.md) (the first game, its own write-up and mod, same engine family, different binary) |
 | QA level | automated (C test suites, an installer suite and scripted two-PC lab sessions with real game clients; Episode 1 from start to end, Episodes 2-4 and the bonus episodes stage by stage); no human playthrough, nobody outside the lab has played it |
-| Last updated | 2026-11-16 (0.3.2) |
+| Last updated | 2026-11-21 (0.3.3) |
 
 Claim issue: [#298](https://github.com/cranebeaker/coop-anything/issues/298).
 
@@ -27,7 +27,10 @@ big groups (see
 **0.3.2** (2026-11-15) starts cutscenes together on both PCs, skips them only when both players
 press skip (as in Resident Evil 6), shows the partner's motions where its character used to stand
 still, and fixes a duplicated pick-up, a lever crash and the scenes the guest did not see (see
-[Cutscenes together, the partner's motions and fixes (0.3.2)](#cutscenes-together-the-partners-motions-and-fixes-032)).
+[Cutscenes together, the partner's motions and fixes (0.3.2)](#cutscenes-together-the-partners-motions-and-fixes-032)),
+and **0.3.3** (2026-11-21) installs on a copy of the game with the Steam wrapper removed and on any
+other `rerev2.exe` after a confirmation (see [Other versions of the game (0.3.3)](#other-versions-of-the-game-033)). **A licensed copy is
+recommended; on other versions stable work is not guaranteed.**
 
 How far each part is checked differs a lot. **Episode 1** was checked in the lab from its start to
 its end. **Episodes 2-4 and the bonus episodes** were checked stage by stage, mostly after console
@@ -277,6 +280,35 @@ fails on the rule before it.
   her hand. A grant for the receiving PC's own human now waits while a scene plays there and 2 s
   after it; that PC's own story grants the item and the waiting copy is dropped.
 
+### Other versions of the game (0.3.3)
+
+The mod was made and tested on the Steam build 3658995. 0.3.3 adds support for other versions; it
+changes nothing in the co-op logic for the Steam build.
+
+- **A copy with the Steam wrapper removed from `rerev2.exe`** (an "unwrapped repack") is known. Its
+  game code was compared with the Steam build's decrypted code: all 14,930,907 bytes of the code
+  section are equal. The installer installs on it without a question and says that it is another
+  version. The session handshake counts such a copy as the Steam build, so a Steam host and a repack
+  client can play together (before, the host refused it as a different game build).
+- **Any other `rerev2.exe`:** the installer shows its SHA-256 and size and asks "Install anyway?".
+  With a yes the mod is installed and switches itself off wherever the game does not match the bytes
+  it expects. The yes is stored in `coop\anyexe.txt` for exactly that exe (a game update that
+  changes the exe asks again). Removing co-op puts every file back; `steam_api.dll` and every other
+  file of the game are never touched. The installer also finds copies without a Steam record in the
+  `Games` folders of the drives.
+- **Where Steam friends are not available** (a copy whose Steam API is not a real Steam), the lobby
+  says "Steam friends are not available here. Use the IP address." and the game does not crash.
+- The installer's page, texts and result are in the game's 12 languages.
+- **A licensed copy is recommended; on other versions stable work is not guaranteed.** Checked on
+  another version: on a repack copy (emulated Steam API), on the release build, the mod loads, every
+  hook and menu check passes, the lobby opens, a room is hosted by IP address, a test partner joins
+  and is ready, and Episode 1 starts (opening movie, then the first scene) with the world sync on;
+  with a Steam host and a repack client on two PCs: a room over IP (7 ms), a start from the lobby,
+  Episode 1 loaded and both PCs exchanged character states while the repack's character walked.
+  Not verified on another version: play beyond the first minutes of Episode 1, shooting, the
+  partner's figure on the other screen, cutscene votes and other stages; no other build than these
+  two was run; Steam friends and the Steam relay (they need a real Steam client).
+
 ### Installing, updating and other mods
 
 The installer finds the Steam copy, checks the exe against the pinned SHA-256, backs up a
@@ -431,15 +463,23 @@ Short ones that were new relative to the playbook; the evidence is in the reposi
   outside Episode 1 and The Struggle's start, and the guest's slide, ammo, weapons, boards and drill
   walls of 0.3.2; so the QA level is `automated`, not `verified-playthrough`.
 
+0.3.3 checks: on the release build, two test PCs, 0 errors each: (a) a Steam host and a repack
+client (room, ready, start from the lobby, Episode 1 play with states both ways); (b) the supported
+Steam build on both PCs (room, start, play; the gate says "Steam build 3658995" without the caveat);
+(c) the 0.3.2 final-regression slots with the release DLL on the Steam build (Episode 5 stage 600,
+Episode 1 motions, key and torture lever, a guest's lever, cutscene start and skip votes, the item
+hand-over). The installer suite passes 334 of 334, including the update from the released 0.3.2
+launcher. Not repeated: the game's own split screen.
+
 ## How to play
 
-Both players need the Steam game (app 287290, build 3658995) and the same mod version.
+Both players need the game (made and tested on the Steam build, app 287290, build 3658995; a licensed copy is recommended, other versions are not guaranteed, see [Other versions of the game (0.3.3)](#other-versions-of-the-game-033)) and the same mod version.
 
-1. Download `revelations2-coop-setup-0.3.2.exe` (or the zip: extract it and run
+1. Download `revelations2-coop-setup-0.3.3.exe` (or the zip `revelations2-coop-0.3.3.zip`: extract it and run
    `Install Co-op.bat`) from the
-   [release](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.2) on **both** PCs. The
+   [release](https://github.com/dolbaras/revelations2-coop/releases/tag/v0.3.3) on **both** PCs. The
    installer is not code-signed, so Windows SmartScreen may warn. An installed 0.1.1 or later
-   updates itself to 0.3.2 at the next start from its shortcut; both players need 0.3.2.
+   updates itself to 0.3.3 at the next start from its shortcut; both players need 0.3.3.
 2. Start the game from the **Resident Evil Revelations 2 Co-op** shortcut: Campaign, then
    **Co-Op Play**.
 3. One player picks **Find a Partner** (Steam friend or System Link; for a direct IP the host
@@ -486,6 +526,7 @@ zip of both PCs.
 - Japanese text in the co-op screens uses a Windows font, not the game's own.
 - A `dinput8.dll` of another mod that is not an Ultimate ASI Loader is switched off while co-op is
   installed; removing co-op puts it back.
+- On another version of the game only the first minutes of Episode 1 were run (see [Other versions of the game (0.3.3)](#other-versions-of-the-game-033)); Steam friends and the Steam relay are not available there.
 - The installer and the setup exe are not code-signed.
 
 ## Next steps
