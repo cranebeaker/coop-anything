@@ -19,9 +19,9 @@ tested on one PC:
   position packets from another game copy over loopback UDP.
 
 The second Talion slides and stays in his rest pose (A-pose): animation is not synced yet, and
-nothing goes over the internet yet. The cause is mapped: the real Talion's client and server
-halves exchange engine messages every frame, and the second Talion gets none (see
-[Next steps](#next-steps)). Raw notes with every run: [NOTES.md](NOTES.md).
+nothing goes over the internet yet. What is known: his animation component is never updated,
+and giving him a client controller does not change that (see [Next steps](#next-steps)). Raw
+notes with every run: [NOTES.md](NOTES.md).
 
 ## Existing work
 
@@ -79,12 +79,14 @@ and the reasoning are in [NOTES.md](NOTES.md).
   comes from elsewhere (probably the Nemesis appearance system).
 - **The game's own brand** (`npc->vtable[0x170]`, `bf2820`) makes a spawned NPC passive toward
   Talion.
-- **Player animation is message-driven.** The engine's in-process message queue (`e55000` →
+- **Animation events are messages.** The engine's in-process message queue (`e55000` →
   `e53fd0`) delivers each record to the server object (`object+0x38`) or the client proxy
-  (`object+0x40`) through `vt+0x68`. The real Talion's player object and proxy both receive
-  messages every frame; a second `CPlayerObj` created with the object API receives none, and its
-  animation component (`player+0xB60`) is never updated (0 of 0x4000 bytes changed in 30 s, against
-  96 fields on the real one).
+  (`object+0x40`) through `vt+0x68`. For the player these are the keys a playing animation fires
+  (`HeelStrike`, `ToeStrike`, `snd`, `ComplexAnim`, …), about 11 a second each way. They are the
+  animation's output, not what drives it.
+- **A second `CPlayerObj` does not animate.** Created with the object API, its animation component
+  (`player+0xB60`) is never updated: 0 of 0x4000 bytes changed in 30 s, against 96 fields on the
+  real one. What updates the real one is not found yet.
 - **Client controllers.** `3f0080` builds the 0xDA0-byte client player controller for a
   local-player slot (0–3) from one of 6 preallocated local-player entries; the proxy keeps it at
   `+0x118`. The client game mode reads a camera for every controller in the slot table
@@ -124,7 +126,7 @@ its switch is set.
   the renderer never see it. Some controller-driven calls then run for the second Talion, but he
   still does not animate.
 - **Diagnostics** (logging only): per-object call counting on vtables with the caller of each call
-  (`animprobe`), dumps of the local-player and controller state (`ctrlinfo`), a field diff of both
+  (`animprobe`), dumps of the local-player and controller state (`ctrlinfo`), a message logger (`msglog`), a field diff of both
   Talions' animation components (`compdiff`) and a crash logger with unwound stacks (`crashlog`).
 - Also prototyped and logged in the notes (not part of the current path):
   - an NPC puppet: spawn, brand, per-frame placement;
@@ -134,8 +136,8 @@ its switch is set.
 
 ## QA
 
-- Offline guard suite: 43 cases plus a negative control (the guard built with protection
-  compiled out must fail all 14 protection cases). Last run 2026-11-21: **43 passed, 0 failed;
+- Offline guard suite: 44 cases plus a negative control (the guard built with protection
+  compiled out must fail all 14 protection cases). Last run 2026-11-21: **44 passed, 0 failed;
   negative control 14 of 14.** It covers:
   - protected writes, including path variants;
   - cloud-save sandboxing and network limits;
@@ -154,8 +156,8 @@ its switch is set.
     age 15–63 ms;
   - **second Talion**: created (`players=2`, the real one first), moved by the bot, and reported
     visible as Talion in the A-pose;
-  - **diagnostic runs 33–41**: call counts, controller dumps, a slot-1 controller, component
-    diffs and message-handler counts, as listed in the notes. Every probe restored its vtable
+  - **diagnostic runs 33–43**: call counts, controller dumps, a slot-1 controller, component
+    diffs, message-handler counts and message contents, as listed in the notes. Every probe restored its vtable
     slots with 0 mismatches.
 - These are prototype checks, observed in logs and owner reports. There is no automated
   assertion suite for in-game state yet, so the QA level stays `none`.
@@ -170,16 +172,17 @@ Not playable yet.
 - Nothing goes over the internet yet: loopback on one PC only.
 - No enemies, combat, story or Nemesis state is shared.
 - With the slot-1 controller attached, the game crashes when it quits (a reference-count assert
-  in the exit-time destructors, `exe+D59E56`). Play itself is not affected.
+  in the exit-time destructors, `exe+D59E56`). Play itself is not affected, and without the
+  controller the game exits normally.
 
 ## Next steps
 
-- **Animation sync through engine messages:** log which message types, sizes and rates the real
-  Talion's two handlers (`CPlayerObj` and `CCharacterProxy` slot 13) receive. Then replay them
-  into the second Talion's objects. If the game animates him from them, the same messages sent
-  from the friend's game are the co-op link. Ruled out so far: the animation component set-up
-  alone (`79f950`, `784dc0`), a client controller alone, and `50aa00`'s two post-spawn engine
-  calls.
+- **Animation sync:** find the code that updates the real Talion's animation component each
+  frame (for example from the call stack where its animation event messages are produced), then
+  run it for the second Talion and feed it the friend's animation state. Ruled out so far: the
+  animation component set-up alone (`79f950`, `784dc0`), a client controller alone, `50aa00`'s
+  two post-spawn engine calls, and replaying the event messages (they are the animation's
+  output).
 - **Internet transport:** the guard currently allows only loopback. The Steam P2P/lobby code in
   `INetOnlineService` (vtable `exe+148F050`) is a candidate.
 - **Shared enemies and Nemesis:** host-authoritative spawning through `b03640`; the guest mirrors

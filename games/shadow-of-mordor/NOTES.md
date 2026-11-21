@@ -2733,3 +2733,40 @@ unlisting), `crash_log`, `comp_diff`, `post_spawn`.
 - Log the message types, sizes and rates the real Talion's two handlers receive (logging only).
 - Then try replaying the real Talion's messages into the second Talion's objects. If the game
   animates him from them, the same messages, sent from the friend's game, are the co-op link.
+
+## 2026-11-21: what the messages are (launches 42–43) — correction
+
+New guard switch `msglog` (logging only, not together with `animprobe`): wraps slot 13
+(`vt+0x68`) of the `CPlayerObj` vtable and the `CCharacterProxy` vtable, after checking the slots
+still hold `bf67c0` and `427940`. For the real Talion's two objects it counts messages by type and
+payload size and logs payload samples; it counts the second Talion's messages; after 60 s it
+restores both slots. Offline suite: **44 passed, 0 failed; negative control 14 of 14** (new case
+`msg_log`). Both runs: one copy plus the bot, owner playing, save and settings unchanged, both
+slots restored, and **exit code 0** with the slot-1 controller switched off.
+
+### Observed
+
+- Arguments as `e53fd0` passes them: `msg[0]` points to an iterator whose first two qwords are a
+  byte range `[begin, end)`; `*(u32*)(msg+8)` is 1 or 2.
+- Launch 43, about 100 s: **1,104 messages in each direction** to the real Talion, 0 to the
+  second. The payloads are **ASCII animation event keys**: `HeelStrike`, `ToeStrike`,
+  `HeelLift`, `ToeLift`, `snd`, `ComplexAnim`, `CLFACE`, `HIDE_PIECE_KEY`,
+  `RIGID_BODY_ANIMATE`, `UNSHEATH`, `MeleeF…`. Type 2 carried footstep and animation keys; type 1
+  mostly `CLFACE` and similar.
+- Without `ctrlslot` the game exits with code 0, so the exit crash of launches 37–41 came from
+  the slot-1 controller.
+
+### Corrected
+
+- The previous section derived that the second Talion does not animate **because** he gets no
+  messages, and proposed replaying the friend's messages to animate him. That reverses cause and
+  effect: these messages are the events a **playing** animation fires (footsteps, sounds, prop
+  keys). The second Talion gets none because his animation never plays. Replaying them could at
+  most add footstep sounds.
+- What stays true: his animation component is never updated (launch 38), the controller alone
+  does not change that, and the real Talion's slot-13 calls are message delivery.
+
+### Next
+
+- Find the code that updates the real Talion's animation component, for example from the call
+  stack where these event messages are produced for him.
