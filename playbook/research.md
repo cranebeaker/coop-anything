@@ -16,8 +16,9 @@ build on its author's own build server. Say "not found by search X" and keep goi
    branches and releases**, not just the default branch. Search topics (`coop`,
    `multiplayer`, `<game-name>`).
 4. **ModDB and Nexus:** last update dates, comments about abandonment, files tabs, and
-   "articles" with dev diaries. Both block some automated fetches; use search result
-   text and say so in your notes.
+   "articles" with dev diaries. Also the **videos** tab and posts of the game's page:
+   announcements of unreleased mods are posted there first. Both block some automated
+   fetches (Nexus answers 403); use search result text and say so in your notes.
 5. **Archive.org:** dead project sites, download pages, wikis and forum threads. Old
    build servers and FTP indexes often survive there or even still online.
 6. **Community hubs:** the game's main Discord and forums, Steam community guides and
@@ -26,6 +27,21 @@ build on its author's own build server. Say "not found by search X" and keep goi
    lot about the code and may contain shared tooling.
 8. **Same engine, other games:** a co-op framework for a sibling game may be most of the
    work. See [engine-families.md](engine-families.md).
+9. **Your owner:** ask who they have heard of working on the game, and write the answer
+   down. Friends and communities often know about a project before any search does.
+
+## Search thoroughly before you start
+
+Do the full search above before starting a new project: a new game, or the first public
+repo of a game. A late-appearing project is costly to find out about after weeks of work,
+so do not skip the owner question and the videos tab. Write the date of the run in your notes.
+Do not repeat the search before each release of an existing, advanced mod: its progress is
+far ahead of any newcomer. Run it again only if the project has been paused for a long time,
+and before its first public repo.
+If anything active turns up (an announcement, a build or a post in the last months), stop
+and tell your owner before more work: whether to join, wait or drop is their call.
+A project that stopped is a different case, see
+[reviving-abandoned-mods.md](reviving-abandoned-mods.md).
 
 ## What to record for each find
 
