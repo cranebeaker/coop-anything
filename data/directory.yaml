@@ -8051,6 +8051,33 @@
   - GitHub repository search "shadow of war" (first 30 results read), 2026-10-20
   - Nexus mod pages (automated fetch blocked, 403; search-result text only), Steam forum threads via search, 2026-10-20
   - Not searched yet; Reddit, ModDB, the game's modding Discord, non-English sources
+- game: 'Middle-earth: Shadow of Mordor'
+  year: 2014
+  engine: Firebird (LithTech derivative)
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: No co-op or multiplayer mod found; the game shipped single-player only (online Vendettas ended 2021). JustAddMP/ShadowOfMordor
+    is a placeholder repo (README only, 2026-10-17). Research for Steam build 7348332 in games/shadow-of-mordor (test-copy
+    guard, client/server and object-spawn map, a second-Talion puppet moved over loopback between two game copies on one
+    PC; prototype, not released); claim issue cranebeaker/coop-anything#418.
+  sources:
+  - https://github.com/JustAddMP/ShadowOfMordor
+  - https://github.com/cranebeaker/coop-anything/issues/418
+  - https://worthplaying.com/article/2021/1/16/news/123693
+  checked: '2026-11-21'
+  searched:
+  - Web search (co-op mod, multiplayer mod) and GitHub repository search "shadow of mordor" co-op/multiplayer (first ~18
+    of 28 results read), Steam forum threads via search results, 2026-11-19
+  - Not searched yet; Reddit, ModDB, Nexus, the game's modding Discord, non-English sources
 - game: Graveyard Keeper
   year: 2018
   engine: Unity 2020.3 (Mono)

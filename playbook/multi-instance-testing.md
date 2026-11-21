@@ -87,7 +87,7 @@ Many games refuse to start a second copy. Two mechanisms are common:
 
 | Check | How it works | Symptom |
 |---|---|---|
-| Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a second or two, with a non-zero exit code |
+| Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a second or two, usually with a non-zero exit code. Some games exit with code **0** and only bring the first copy's window to the front: Shadow of Mordor's engine main creates `Global\{43570706-DA86-477B-9C2D-2F3D4F95FDE4}` and returns 0, before it ever calls Steam. So a quick exit with code 0 is not a clean start; rename that one mutex per copy ([games/shadow-of-mordor](../games/shadow-of-mordor/README.md)) |
 | Window class or title | The game calls `FindWindow` for its own class or title and exits or activates the old window when it finds one | Same, or the first copy's window jumps to the front |
 | Unity player setting | `<Game>_Data/boot.config` has a `single-instance=` line, and the Unity player exits when a copy is already running. Remove the line in the test copies only; it is a text file, not the exe (Graveyard Keeper, Unity 2020.3) | The second copy closes at once |
 
