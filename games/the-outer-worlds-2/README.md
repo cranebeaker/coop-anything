@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unreal Engine 5.4.4 (Obsidian's `Arkansas` project, Microsoft GDK build) |
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
-| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.5.2](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.2), Steam or direct IP), directory entry "tow2-coop" |
+| Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.5.3](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.3), Steam or direct IP), directory entry "tow2-coop" |
 | QA level | automated (two copies on one PC) and one manual session across two PCs (beta.4) |
 | Last updated | 2026-11-19 |
 
@@ -156,6 +156,7 @@ sources, layouts and pitfalls.
   got a copy in the other game, or were paired when both games spawned one, and died in both. The friend's
   companions' hits are no longer reported as the friend's (106 reports in 20 s before, 0 after). Run 134: the quick
   suite through the menu, 16/16 steps PASS, owner's files unchanged.
+- v0.5.3 (2026-11-20, runs 175-177, probes 121-127, two copies on one PC): in a shared conversation a real skill check (the Order's light worker, the host's skills 20, the client's 0) was taken in the follower's game past its lock, with no restart and the same next line (0.5.2 restarted it); a door's wave of enemies started in both games and its enemy came out of the door in both (12/12 with the hives); a squad of armed Protectorate soldiers fought both players in both games, up to 8 at once, each soldier's two copies within 4 m, the client's hits counted, deaths shared (9/9); ship travel (boarding, flying to another planet's landing) was followed both legs, the ship at the same place in both; a new game together left the intro for the first planet, the client with its own character; a quest set without its banner showed "Quest Completed" and its title; 10 travels and 5 starts without a crash. A whole suite in one go was cut by low memory on the test PC; its halves passed.
 - v0.5.2 (2026-11-20, runs 171-174, probes 114-120, two copies on one PC): a hive or floor-hatch wave started in either game (the game's `Encounter.ActivateWave`) started in the other, its enemies came out of their spawners in both and a death in the host's game was one in the other (10/10 both ways; before, the other game's enemies stayed hidden for about a minute); the co-op menu worked with a controller (Y, the D-pad, A, B) and X opened the giving screen, with buttons the bots set through the mod; a quest set without its banner showed its title in the game's notification; all 21 game steps of the quick suite passed in one run (run 173), and in run 174 all but one sword-swing check, which passed 3/3 after a test fix; a fault in the mod's object scan (an object being made or freed) was fixed.
 - v0.5.0 (2026-11-20, runs 144-163, two copies on one PC; final build: runs 159-163 and the new game test): a conversation led by one player was played in the other game at the same node, with the same response picked there and the same randomly drawn line, the other's own choices dropped, both ended together (18/18 both ways); two copies went through the New Game and the character creator, the friend's new character was kept and joined the host's intro (16/16); a quest the client completed was completed on the host by the game's own quest steps (2 steps, its XP 16085 -> 21260 for both); the rest of the quick suite passed (one game crash once on arriving after a map travel, not in the rerun).
 - v0.4.0 (2026-11-19, runs 135-143, two copies on one PC; final build: runs 142-143, 22 of 23 steps): the game's menus left the world running in both copies
@@ -170,7 +171,7 @@ sources, layouts and pitfalls.
 
 Each player needs their own copy of the game (a Steam Families copy can't be played by two people at once).
 
-- **Over Steam** ([v0.5.2](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.2), test build): both run
+- **Over Steam** ([v0.5.3](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.5.3), test build): both run
   `tow2coop-setup.exe` (*Install*). In the game's main menu the Moon Man's choices have one more, *Let's play together
   (co-op)*: the host picks *I'll host* (Steam friends), *I'll host a new game* (both start from the very beginning: the
   friend makes their character in the game's character creator first) or *I'll host: anyone can join (public game)*, the other player
@@ -186,31 +187,32 @@ main menu and is pulled in about a minute after the game started).
 
 ## Known issues
 
-- Everything since beta.5 was tested on one PC only; a session across two PCs with 0.5.2 is still to come. Public
+- Everything since beta.5 was tested on one PC only; a session across two PCs with 0.5.3 is still to come. Public
   games, "Join game" and the list of friends who host need two Steam accounts to test (one account: a public game's
   lobby made, searched for, left).
 - The co-op choice is in the main menu only, by mouse, number key or controller (Y, the D-pad, A, B; tested with
   buttons the bots set through the mod, not a real controller).
 - In a conversation, a choice the other player's character can't take (a skill check, a flaw) shows as unavailable on
-  their side and is taken all the same when the leader picks it (tested with a simulated lock, not yet a real skill
-  check). Both games run the conversation's effects (an item an NPC gives goes to both players); payments are the
+  their side and is taken all the same when the leader picks it, without a restart (tested with a real skill check).
+  The follower's game counts the leader's choices as the follower's (it can offer a flaw for them, e.g. Compulsive
+  Liar). When two responses lead to the same line, the follower's game may take the other one. Both games run the conversation's effects (an item an NPC gives goes to both players); payments are the
   leader's only.
 - Spawned enemies were tested with Ursopods the test spawned the way a spawner does, and the game's own hives and
-  floor hatches with waves the test started the game's way; not a door or a wave the story starts. Two of the same kind spawned more than 15 m apart in the two games give one more enemy. Co-op
-  combat was tested against creatures and one soldier, not a large fight with armed humans.
+  floor hatches and a door with waves the test started the game's way; a wave the story starts was not met. Two of the same kind spawned more than 15 m apart in the two games give one more enemy. Co-op
+  combat was tested against creatures and a squad of up to 9 armed soldiers.
 - While the host's game is paused in a fight (a menu, or the game's own flaw offer), the host's enemies wait.
 - The friend's character is kept by a private save every 3 minutes and before a hand-over: after the host's reload or
   the friend's death, up to 3 minutes of the friend's gains are lost.
 - Keep the host's window un-minimized while the friend joins or a hand-over runs (a minimized copy can't finish a
   save).
 - Giving items: E or a controller's X in front of the other player opens the screen.
-- Two players only. Use 0.5.2 on both PCs (protocol 6: 0.5.0 and 0.5.1 connect but don't pass on a hive's wave;
+- Two players only. Use 0.5.3 on both PCs (protocol 6: 0.5.0 and 0.5.1 connect but don't pass on a hive's wave;
   older versions don't connect).
 
 ## Next steps
 
-- A two-PC session with 0.5.2 over Steam (two accounts): a public game, "Join game", the friends list, a new game
+- A two-PC session with 0.5.3 over Steam (two accounts): a public game, "Join game", the friends list, a new game
   together played past the intro.
-- A real controller in the co-op menu and in a shared conversation; a door spawner and a wave the story starts.
-- Two game crashes seen once each (runs 161 and 164, no stack in the dump): the test copies now log where an access
-  violation happens.
+- A real controller in the co-op menu and in a shared conversation; a wave the story starts.
+- Two game crashes seen once each (runs 161 and 164, no stack in the dump; not met again in 10 travels and 5 starts):
+  the test copies now log where an access violation happens.
