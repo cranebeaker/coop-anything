@@ -19,7 +19,9 @@ tested on one PC:
   position packets from another game copy over loopback UDP.
 
 The second Talion slides and stays in his rest pose (A-pose): animation is not synced yet, and
-nothing goes over the internet yet. Raw notes with every run: [NOTES.md](NOTES.md).
+nothing goes over the internet yet. The cause is mapped: the real Talion's client and server
+halves exchange engine messages every frame, and the second Talion gets none (see
+[Next steps](#next-steps)). Raw notes with every run: [NOTES.md](NOTES.md).
 
 ## Existing work
 
@@ -77,6 +79,16 @@ and the reasoning are in [NOTES.md](NOTES.md).
   comes from elsewhere (probably the Nemesis appearance system).
 - **The game's own brand** (`npc->vtable[0x170]`, `bf2820`) makes a spawned NPC passive toward
   Talion.
+- **Player animation is message-driven.** The engine's in-process message queue (`e55000` →
+  `e53fd0`) delivers each record to the server object (`object+0x38`) or the client proxy
+  (`object+0x40`) through `vt+0x68`. The real Talion's player object and proxy both receive
+  messages every frame; a second `CPlayerObj` created with the object API receives none, and its
+  animation component (`player+0xB60`) is never updated (0 of 0x4000 bytes changed in 30 s, against
+  96 fields on the real one).
+- **Client controllers.** `3f0080` builds the 0xDA0-byte client player controller for a
+  local-player slot (0–3) from one of 6 preallocated local-player entries; the proxy keeps it at
+  `+0x118`. The client game mode reads a camera for every controller in the slot table
+  (`50ce20`) and passes the table's count to the renderer as a view count.
 - **Single-instance lock.** Engine main (`e043e0`) creates
   `Global\{43570706-DA86-477B-9C2D-2F3D4F95FDE4}` and, if it exists, focuses the first window and
   exits with **code 0** (skipped only under a developer option, `RunningUnderToolControl`).
@@ -107,6 +119,13 @@ its switch is set.
   - A profile (`SOMGUARD_PROFILE=B`) gives the second copy its own sandbox and swapped ports.
   - The guard renames the single-instance mutex for that profile only.
   - Steam accepted the second copy launched this way.
+- **A client controller for the second Talion** (`ctrlslot`). Built in local-player slot 1 with
+  `3f0080`, linked at `proxy+0x118`, then taken back out of the slot table so the camera pass and
+  the renderer never see it. Some controller-driven calls then run for the second Talion, but he
+  still does not animate.
+- **Diagnostics** (logging only): per-object call counting on vtables with the caller of each call
+  (`animprobe`), dumps of the local-player and controller state (`ctrlinfo`), a field diff of both
+  Talions' animation components (`compdiff`) and a crash logger with unwound stacks (`crashlog`).
 - Also prototyped and logged in the notes (not part of the current path):
   - an NPC puppet: spawn, brand, per-frame placement;
   - NPC walking through `GotoNode` with a runtime `AINodeGoto` (no effect);
@@ -115,8 +134,8 @@ its switch is set.
 
 ## QA
 
-- Offline guard suite: 37 cases plus a negative control (the guard built with protection
-  compiled out must fail all 14 protection cases). Last run 2026-11-21: **37 passed, 0 failed;
+- Offline guard suite: 43 cases plus a negative control (the guard built with protection
+  compiled out must fail all 14 protection cases). Last run 2026-11-21: **43 passed, 0 failed;
   negative control 14 of 14.** It covers:
   - protected writes, including path variants;
   - cloud-save sandboxing and network limits;
@@ -124,7 +143,9 @@ its switch is set.
   - each hook installer (refuses a mismatched target, passes calls through);
   - packet validation;
   - record reading, cloning and in-place swaps;
-  - the profile sandbox and the mutex rename.
+  - the profile sandbox and the mutex rename;
+  - the call-counting stubs (int, float and stack arguments pass through; counts, callers and
+    restore are right), the slot controller's refusals, the crash logger and the field diff.
 - Game runs (Steam build 7348332, one PC, launched by a script that checks the real save and
   settings against hashed backups before and after every run; 0 changes in every run):
   - **one copy and a loopback bot** sending a circle: 1,809 packets received, 0 rejected, the
@@ -132,7 +153,10 @@ its switch is set.
   - **two copies**: each placed its puppet exactly at the other copy's Talion position, packet
     age 15–63 ms;
   - **second Talion**: created (`players=2`, the real one first), moved by the bot, and reported
-    visible as Talion in the A-pose.
+    visible as Talion in the A-pose;
+  - **diagnostic runs 33–41**: call counts, controller dumps, a slot-1 controller, component
+    diffs and message-handler counts, as listed in the notes. Every probe restored its vtable
+    slots with 0 mismatches.
 - These are prototype checks, observed in logs and owner reports. There is no automated
   assertion suite for in-game state yet, so the QA level stays `none`.
 
@@ -145,13 +169,17 @@ Not playable yet.
 - The remote Talion slides along and stands in the A-pose: no animation sync.
 - Nothing goes over the internet yet: loopback on one PC only.
 - No enemies, combat, story or Nemesis state is shared.
+- With the slot-1 controller attached, the game crashes when it quits (a reference-count assert
+  in the exit-time destructors, `exe+D59E56`). Play itself is not affected.
 
 ## Next steps
 
-- **Animation sync:** capture the local Talion's animation state and play it on the remote
-  Talion. Running the animation component set-up (`79f950`, `784dc0` on `*(player+0xB60)`) alone
-  did not animate it. The player's animation seems to be driven by the client-side controller
-  link that `418ad0` creates, which also binds input and camera.
+- **Animation sync through engine messages:** log which message types, sizes and rates the real
+  Talion's two handlers (`CPlayerObj` and `CCharacterProxy` slot 13) receive. Then replay them
+  into the second Talion's objects. If the game animates him from them, the same messages sent
+  from the friend's game are the co-op link. Ruled out so far: the animation component set-up
+  alone (`79f950`, `784dc0`), a client controller alone, and `50aa00`'s two post-spawn engine
+  calls.
 - **Internet transport:** the guard currently allows only loopback. The Steam P2P/lobby code in
   `INetOnlineService` (vtable `exe+148F050`) is a candidate.
 - **Shared enemies and Nemesis:** host-authoritative spawning through `b03640`; the guest mirrors

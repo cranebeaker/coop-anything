@@ -2571,3 +2571,165 @@ Guard `6fecdf42…f1c51c1f`, `secondtalion` + `secondtalion_anim`, `-Bot`.
   remote Talion's animation has to come from the **friend's game** anyway (animation sync). So the
   real next step is to capture the animation state on one side and replay it on the other, not to
   make the second Talion animate itself.
+
+## 2026-11-21: animation probe (launches 33 and 34)
+
+Question: which methods does the game call on the real Talion every frame that it never calls on
+the second Talion (who stays in the A-pose)?
+
+### Method
+
+New guard switch `animprobe=1` (logging only, needs `secondtalion=1`). For the `CPlayerObj` vtable
+(`exe+1460160`, 108 code slots), the animation component's vtable (`*(player+0xB60)`,
+`exe+13EDF28`, 3 slots) and the animator embedded at component `+0x518` (`exe+13EDF78`, 3 slots),
+every slot is replaced by a 64-byte stub:
+
+```
+mov rax,<slot record>; cmp rcx,[rax]; jne +16; lock inc qword [rax+16]
+push rdx; mov rdx,[rsp+8]; mov [rax+40],rdx; pop rdx     ; last caller of a real call
+cmp rcx,[rax+8]; jne +5; lock inc qword [rax+24]; jmp qword [rax+32]
+```
+
+It counts calls whose `this` is the real or the second object and jumps on to the original. Only
+`rax` and flags change, and `rsp` is back at its entry value at the jump. Offline test: int, float
+(xmm) and stack-argument methods return the same values through the stub, counts and callers are
+right, and restore puts the original pointers back. Suite 38/38, negative control 14/14. Every slot
+is restored after 120 s. Both runs: one copy plus the loopback bot moving the second Talion, owner
+playing; save and settings checked against hashed backups before and after: 0 changed; exit 0;
+all slots restored with 0 mismatches.
+
+### Observed (launch 34, 120 s; launch 33 matched)
+
+- Both `CPlayerObj`s report client id `0` (byte at `+0xB68`).
+- Animation component and animator: **0 virtual calls** on either Talion. Their work goes
+  through non-virtual code.
+- `CPlayerObj` slots called on the real Talion only (count, last caller):
+
+| Slot | Function | Calls | Called from |
+|---|---|---|---|
+| 29 | `be03c0` | 10,619 | `be2670` (component `vt+0xE8` → `7866e0`) |
+| 40 | `bef6e0` | 11,654 | `bdaa60` |
+| 93 | `be94d0` | 11,676 | `bde360` |
+| 89 | `be0320` | 63,630 | `b50730` |
+| 107 | `bddb30` | 53,903 | `b84b90` |
+| 13 | `bf67c0` | 3,581 | `e53fd0` |
+| 100 | `bd6450` | 325 | `bea5ff` |
+| 41, 53, 88, 91, 98, 99 | | 1–66 | |
+
+- Called on the second Talion only: slots 18 (`befc00`, 8 calls) and 87 (`be4c90`, 12).
+- Slot 94 (`be05d0`, the per-frame `CPlayerObj` update) runs for both.
+
+### Derived
+
+- `be19d0(player)` returns `*(proxy+0x118)`, where `proxy = *(*(player+8)+0x40)` is the
+  `CCharacterProxy`. That is the client player controller `418ad0` stores there.
+- The per-frame update `be05d0` calls `bdaa60`, which does nothing when `be19d0` returns 0. That
+  is where slot 40 (`bef6e0`) comes from. `bde360` calls slot 93 (`be94d0`, which reaches the
+  animation component and `77b1c0`) and then the controller's update `3f9410(controller)`.
+- So the second Talion skips the controller-driven part of the frame because his proxy has no
+  controller. This confirms the launch 32 guess: animation comes from the 0xDA0 client controller
+  (`3f0080`, one per local-player slot 0–3), not from the animation component on its own.
+
+### Next
+
+- Either give the second Talion a controller in an unused local-player slot (1–3) without input or
+  camera, or replay the friend's animation state into the second Talion's animation component
+  directly. The first needs the local-player entry layout (`dff0a0` list at client shell `+0x10`)
+  and what `3fd990` binds per slot.
+
+## 2026-11-21: a client controller for the second Talion (launches 35–41)
+
+All runs: one copy plus the loopback bot moving the second Talion, owner playing. The real save and
+settings were checked against hashed backups before and after every run: 0 changed. New guard
+switches, all off unless set:
+
+- `ctrlinfo` (logging only): dumps the local-player list, the controller slot table, both
+  Talions' proxy and controller fields and the head of each animation component.
+- `ctrlslot` (changes behaviour): gives the second Talion a client controller in local-player
+  slot 1 (details below).
+- `crashlog` (logging only): a vectored handler that logs the first 5 access violations in the
+  exe with registers and an unwound call stack, and never handles them.
+- `compdiff` (logging only): snapshots both animation components (0x4000 bytes) and both
+  `CPlayerObj`s (0xE00 bytes) every 5 s for 30 s, and logs the 4-byte fields that changed in at
+  least 3 intervals on one Talion only.
+- `postspawn` (changes behaviour): the two argument-less engine calls `50aa00` makes after the
+  animation set-up.
+- `animprobe` now also covers the `CCharacterProxy` vtable.
+
+Offline suite after these changes: **43 passed, 0 failed; negative control 14 of 14.** New
+cases: `ctrl_dump`, `ctrl_slot` (create, the four refusals, an exception in the create call,
+unlisting), `crash_log`, `comp_diff`, `post_spawn`.
+
+### Observed
+
+- **Local players (launch 35).** The list at client shell `+0x10` (`{u32 current; +0x08 begin;
+  +0x10 end}`) holds **6 entries**; byte 0 of each is its index. Entry 0 is the owner's (pointers
+  at `+0x58`/`+0x60`/`+0x68`); entries 1–5 are idle. The controller slot table at client shell
+  `+0x70` (`{byte count; +0x08 four pointers}`) holds one controller, in slot 0. Both Talions have
+  a `CCharacterProxy` (vtable `exe+13BDEA0`); only the real one's `+0x118` holds a controller.
+- **Controller in slot 1 (launch 36).** `3f0080(clientShell+0x70, entry 1, proxy, player)`
+  returned a controller (slot 1, device 1, client = the second proxy, character = the second
+  player), and `proxy+0x118` was set; `418ad0`'s camera call was skipped. About 4 s later the game
+  stopped with `0xC0000005` at `exe+50D034` (Windows error report). That is `50ce20`, the client
+  game mode's camera pass: it walks every controller in the slot table and reads
+  `*(controller+0x2D0)+0x338`; the new controller has no camera, and the engine's assert is a
+  write to address 0. The slot table's count is also passed to the renderer as a view count.
+- **Controller unlisted (launch 37).** Taking the controller back out of the table right after
+  the create (slot 1 → 0, count 2 → 1, proxy link kept) avoided that crash. With it, the number of
+  `CPlayerObj` methods called on the real Talion only dropped from 12–13 to 6; slot 40
+  (`bef6e0`) and slot 29 now also run for the second Talion. Owner report: **still circling and
+  rotating in the A-pose.**
+- **Exit crash (launches 37–41).** Every run with `ctrlslot` ended with `0xC0000005` at
+  `exe+D59E56`, a reference-count underflow assert in `d59db0`. `crashlog` stack (launch 38):
+  `D59E56 ← F0FE75 ← F100FD ← thread start`; `F0FE75` is the CRT's `doexit`. So it happens in the
+  destructors that run when the game quits, not during play.
+- **Animation components (launch 38).** Over 30 s, **96 fields of the real Talion's animation
+  component changed** (world transforms at `+0x65C`/`+0x678`, more transforms from `+0x3970`,
+  `+0x39B0`, `+0x3B44`, timers); **none of the second Talion's changed**, not even his transform,
+  although the bot moved him every frame. `CPlayerObj`: 18 fields real-only.
+- **Registration (launch 39).** `784dc0` registers the component with `902140`: list link at
+  `+0x08`, bucket key `*(u32*)(comp+0x18) & 0x3F`, engine handle at `+0x438`. Both components are
+  listed together with the **same key** `9B0D1BB9` and the **same handle**. `comp+0x28` holds the
+  behaviour file path as text (`…\player\player_self.bvr`), so the key is a hash of that path.
+- **Post-spawn calls (launch 40).** `engine->vt[0x18]()` (`e00420`) → object vtable
+  `exe+1482580`, `vt[0x50]` = `df3410`; `engine->vt[0xD0]()` (`e00650`) → object vtable
+  `exe+146FE30`, `vt[0xD8]` = `d39dd0`. Both returned. The second component still changed 0
+  fields.
+- **Proxies (launch 41, ~20 s of probing).** Of the proxy's 21 vtable slots, 4 run for both
+  proxies; only slot 13 (`vt+0x68`, `427940`) runs for the real proxy only, called from
+  `exe+E54062`, the same caller as the real-only `CPlayerObj` slot 13 (`bf67c0`).
+
+### Derived
+
+- `e55000` walks the engine's in-process message queue (variable-size records: size `u16` at
+  `+0x28`, payload at `+0x2A`). For each record, `e53fd0(record, dir)` calls `vt+0x68` on
+  `*(object+0x38)` (the server object) for direction 0, or on `*(object+0x40)` (the client proxy)
+  for direction 1. So slot 13 is each side's message handler.
+- The proxy's handler `427940` passes the message to its controller's `+0x2D8` sub-component
+  (`42f600`) and to `425060`.
+- So the real Talion's client and server halves exchange messages every frame, in both
+  directions, and the second Talion receives none. The `CPlayerObj` constructor subscribes a
+  listener (`+0xAB8`, vtable `exe+1460060`) to the player's own animation component
+  (`42e610(player+0xAB8, player, animComp+0x4D0)`); its update `bde360` is what reaches
+  `be94d0` and the controller update `3f9410`. With no messages, the component is never updated,
+  so that listener never fires.
+- A controller alone does not animate the second Talion.
+
+### Corrected
+
+- Launch 39 first read `comp+0x48..+0x78` as "state words" (real: markers and hashes, second:
+  zeros) and concluded the second graph was never started. Those bytes are the rest of the text
+  buffer after the behaviour path. In launch 40 the real one held zeros and the second one held
+  pointer-like bytes. They say nothing about the graph.
+
+### Unknown
+
+- Which message types carry animation, and whether the second Talion's objects accept messages
+  addressed to them.
+- Which object's reference count underflows at exit.
+
+### Next
+
+- Log the message types, sizes and rates the real Talion's two handlers receive (logging only).
+- Then try replaying the real Talion's messages into the second Talion's objects. If the game
+  animates him from them, the same messages, sent from the friend's game, are the co-op link.
