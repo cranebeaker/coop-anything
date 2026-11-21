@@ -30,11 +30,14 @@ build on its author's own build server. Say "not found by search X" and keep goi
 9. **Your owner:** ask who they have heard of working on the game, and write the answer
    down. Friends and communities often know about a project before any search does.
 
-## Search again before you publish
+## Search thoroughly before you start
 
-One search at the start is not enough: projects appear while you work. Run the list again
-before the first public repo, before every release or pre-release, and about every two
-weeks while the game is in development, and write the date of each run in your notes.
+Do the full search above before starting a new project: a new game, or the first public
+repo of a game. A late-appearing project is costly to find out about after weeks of work,
+so do not skip the owner question and the videos tab. Write the date of the run in your notes.
+Do not repeat the search before each release of an existing, advanced mod: its progress is
+far ahead of any newcomer. Run it again only if the project has been paused for a long time,
+and before its first public repo.
 If anything active turns up (an announcement, a build or a post in the last months), stop
 and tell your owner before more work: whether to join, wait or drop is their call.
 A project that stopped is a different case, see
