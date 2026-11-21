@@ -1033,6 +1033,44 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## After v0.5.3: a suite after a restart, a crash with a stack, a lost pick, load times (2026-11-21, one PC)
+
+Observed:
+- Run 178 (the whole quick suite, after a PC restart): no low-memory stop. All steps before the squad fight PASS
+  but spawned enemies (the client's swings missed its bear: its copy in the client's world kept its health too).
+- **A crash with a stack (the third seen):** copy 0 (host), `EXCEPTION_ACCESS_VIOLATION` reading 0x1e3100478 at
+  game+0x11fbcd1, 7 s after the squad test teleported both players ~250 m to the squad (1 soldier streamed in after
+  5 s) and back. The faulting thread's stack, read from the minidump (`qa/dump_stack.py`, no debugger): game+0x106a083
+  0x11fbbed 0x10fd561 0x10fd40c 0x10fd4bc ... One `tow2coop.dll+0x4f3e` lies deeper: the return address after the call
+  to `join::frame` in `hk_tick`, which then tail-calls the game's tick (`jmp o_tick`), so a stale value: the mod is
+  not in the live call chain. The dump was lost at the next start (the copy's sandbox is reset); `run_quick.ps1` now
+  copies crash folders into the evidence.
+- Runs 179-180, the squad: "the client's own hits" failed. Probe 128: the client's first swing hit (300 -> 251 in both
+  worlds), then the light revolver soldier stepped back 8-9 m and the next swings missed. The test now places the
+  client before each swing, tries up to 3 soldiers and prints both worlds' health. "Both players took hits": the AI
+  kept all 6 soldiers on the host who attacked; the check now asks for the client's hits only when a soldier was set
+  on the client. Run 181: PASS (the client's hit 268 -> 164 in both worlds).
+- Runs 179, 180, 183-185, the real skill check: the follower never took the response. The trace (`convShown` now
+  gives each response's line, `convPicksSent`, `convBlocked`): the host's own line never moved (15 -> 15) after 6
+  presses, so there was no pick to pass on; the mod dropped none of the host's input (`convBlocked` 1 -> 1). It
+  failed only after the conversation test in the same session (5 of 5) and passed in fresh pairs (run 182, probe 129
+  twice). After the conversation test the host has two `ConversationWidget_BP_C`: the one on show and an earlier one,
+  hidden (probe 131); the test pressed the first one flagged visible. It now presses the one in the viewport.
+  Runs 187-188 (conversations then the skill check, fresh pairs): PASS 2 of 2, taken past the lock (1 -> 2, 2 -> 3). (Two changes to the leader's pick detection made on a wrong guess were taken out.)
+- **Load times** (logs of 2026-11-20, two copies at 960x540 on one PC): the follower starts the same travel ~20 ms after
+  the request; both new worlds appear within ~10 ms of each other, 6-9 s after the travel started; the game's loading
+  screen then stays ~6 s ("arrived" 5.7 s after the world appeared; probe 82: `IsTravelingBP` false ~7 s after). A
+  host reload: the same save loaded by both at once (6 s). A travel the other player did not follow (the test turned
+  following off) took 25 s through the save hand-over; the first join over Steam moved 2.1 MB in 7 s (two-PC test).
+
+From the code, not yet tried in the game:
+- Loose world items (`/Script/Arkansas.Pickup`, 47 Blueprint subclasses in the type dump: crafting materials, cards,
+  audio logs) are not shared: the interactable scan covers `Door`, `Container` and `Corpse` only.
+- A quest item (`/Script/Arkansas.QuestItem`) one player takes from a container or the ground is in that player's
+  inventory only (one an NPC gives in a shared conversation goes to both).
+- World skill interactables (`RPGInteractable_EngineeringPanel`, `_ElectricalPanel`, `_ChemSet`) are shared only through
+  what they change (a door, a quest, a global variable).
+
 ## A real skill check, a door, a squad, ship travel, past the intro, crash hunt (v0.5.3, 2026-11-20, one PC)
 
 The owner asked for the seven things still doable on one PC: a door and a story wave, a real skill check in a shared
