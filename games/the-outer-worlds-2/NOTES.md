@@ -1033,6 +1033,50 @@ Results:
 - Run 134 (the quick suite through the menu, the final 0.3.0 build): 16 of 16 steps PASS (227 checks): the stand-in's
   last shot 0.26 m from the host's, crouched and standing feet +0.0 / -0.1 cm. Owner's files unchanged.
 
+## Quest items, loose items, switches (v0.5.4, 2026-11-21, one PC)
+
+The owner asked for quest items given to both, loose items gone in the other world, a check of the world's skill
+panels in the game, then a faster transfer.
+
+Observed (probes 132-141):
+- **Picking up a loose item** (E, real input; ProcessEvent trace): `InteractableComponent:StartInteract`,
+  `CompleteInteract`, the item added to the player's inventory, then `SaveGameManager:OnActorDestroyed(Actor)` (the
+  save notes the actor gone). Level-placed `Pickup` actors have the same path (`_UAID_`) in both worlds. The mod
+  watches `OnActorDestroyed` by name in its ProcessEvent hook and reads the actor there (it may be freed before the next
+  frame); the other world destroys its copy with `K2_DestroyActor`, which goes through the same `OnActorDestroyed`, so
+  the host's save keeps it gone: after a quicksave and a quickload neither item came back and the mod's list of taken
+  items removed nothing again. A first build read the parameter as `DestroyedActor` (the delegate's name): it is
+  `Actor` there.
+- **Quest items:** `/Script/Arkansas.QuestItem` (the test save's player holds 38-55: keys, passes, credentials).
+  `InventoryComponent.GiveItemToPlayer(ItemType, Count, bShowNotification, ...)` gives one. The friend joined with none of
+  them (a first join empties the friend's own save's inventory). Run 189: 36 of 38 after the join: the client asked for
+  the host's set before that emptying ran (it waits for gameplay, the request only for a settled world) and lost the
+  first two given; the request now waits for the emptying. Run 199 still showed the same two missing
+  (`03_QI_TramMuralPiece01`, `0803_QI_SecretRecipe`, the only ones the host holds several of: 3 and 2). Probe 144-145:
+  38 of 38 after the join, then both gone on the client (their class unloaded there too) about 75 s after it, when the
+  mod replays the host's story log on the client (`0601_SQ_ConnectACTerritories` walked in 2 steps); given again
+  later, they stayed. So the client's game drops them itself while catching up on the story; the host keeps them. The
+  mod now logs quest items that leave a player's inventory (`questItemsDropped`), and the test allows those.
+- Run 189 (the whole suite with 0.5.4): all steps before the hives PASS but that one; the copies were stopped for low
+  memory (9.1 and 9.4 GB, 1.9 GB free) during the hive test's door part, and the rest did not run.
+- **World skill checks:** `SkillRequirement` is an `InteractableRequirement`; skill checks in the world sit on OCL
+  objects (doors and containers: lockpicking, hacking), whose states the mod already shares. No `RPGInteractable`
+  (EngineeringPanel, ElectricalPanel, ChemSet) was loaded in 0601 or 0605. Other interactables in 0605_OAHQ:
+  `Switch_1_Blueprint` (9), radios (6), extendable ladders (5, only climbed: no state), display cases, a workbench.
+- **Switches:** `GetInteractions` gives `Generic`; `StartInteract` + `CompleteInteract` with that type toggled a
+  switch's interaction state (`GetInteractState` 0 -> 1) in that world only. `SetInteractionState(StateIn,
+  bForceExecute)`: without execute it sets the state; with it, it sets the state then runs the interaction, which moves
+  it on (Set(1, true) from 0 ended at 0). A first sync applied with execute and the two worlds swapped states about ten
+  times a second; it now sends the state before and after, replays the use when the other world is in the state before
+  (its handlers run), sets the state plainly otherwise, and checks the result at the next poll.
+- **Hand-over time** (run of 2026-11-20 22:09, one PC): 25 s for a travel the other player did not follow = 7 s the
+  host's travel, ~9 s the game refusing to save (`Restricted`) until its loading screen ended, ~1 s transfer (TCP on one
+  PC), 7.5 s the client's load. Saves compress to 99 % (zlib): no gain. The Steam send rate is 1 MB/s since beta.5.
+
+Results (0.5.4): run 200 (the suite up to spawned enemies, 19 steps) PASS; runs 191-192 and 197-198 (hives, squad,
+death and reload, world sync, map travel, real skill check, switches, ship travel) PASS. Whole-suite runs stop on low
+memory on the test PC (runs 189-190: a copy at 9-11.5 GB, 1.5-1.9 GB free), so the suite now runs in parts.
+
 ## After v0.5.3: a suite after a restart, a crash with a stack, a lost pick, load times (2026-11-21, one PC)
 
 Observed:
@@ -1057,6 +1101,13 @@ Observed:
   twice). After the conversation test the host has two `ConversationWidget_BP_C`: the one on show and an earlier one,
   hidden (probe 131); the test pressed the first one flagged visible. It now presses the one in the viewport.
   Runs 187-188 (conversations then the skill check, fresh pairs): PASS 2 of 2, taken past the lock (1 -> 2, 2 -> 3). (Two changes to the leader's pick detection made on a wrong guess were taken out.)
+  **Correction (runs 192-198):** it failed again after the map travel test alone. A screenshot at the failure showed the
+  response screen as usual, with "Foot-in-Mouth Syndrome" and a timer ring beside it; no flaw offer was pending
+  (`PendingOfferFlaw`, `QueuedOfferFlaw` None). Pressing for up to 20 s: the host's press took 4.4 s, then 9.6 and 9.7 s
+  (runs 197-198, PASS) after the conversation and travel tests; the test gave up after 6 s. The game takes a response
+  only some seconds into the line it answers (the tests skip lines to walk the conversation). Neither the hidden
+  earlier screen nor a flaw offer was the cause; the tests also turn flaw offers off (`DisableFlawOffers`, test copies
+  only), as the fight's Reckless Leadership offer stopped steps before.
 - **Load times** (logs of 2026-11-20, two copies at 960x540 on one PC): the follower starts the same travel ~20 ms after
   the request; both new worlds appear within ~10 ms of each other, 6-9 s after the travel started; the game's loading
   screen then stays ~6 s ("arrived" 5.7 s after the world appeared; probe 82: `IsTravelingBP` false ~7 s after). A
