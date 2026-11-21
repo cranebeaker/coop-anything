@@ -9666,8 +9666,9 @@
   year: 2017
   engine: Unreal Engine 3
   project: WOTC Co-op Campaign
-  url: https://github.com/EvilMask587/xcom2-wotc-coop-campaign
-  other_urls: []
+  url: https://github.com/Santonus-not-bot/xcom2-wotc-coop-campaign
+  other_urls:
+  - https://github.com/EvilMask587/xcom2-wotc-coop-campaign
   kind: mod
   status: prototype
   coop_scope:
@@ -9679,11 +9680,11 @@
   players: 2-4
   networking: direct-ip
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: Shared campaign for up to 4 players, for developers (no player build yet). The public repo has the strategy prototype (shared
-    Avenger, one editor at a time, merge game states with fingerprints). Extended in 2026-11 (not published yet, write-up in games/xcom-2)
-    to missions and 2-4 players - the host makes campaign decisions and gives soldiers to guests, who manage their own; in missions each
+  notes: Shared campaign for up to 4 players, for developers (no player build yet). Started as a strategy prototype (shared Avenger, one
+    editor at a time, merge game states with fingerprints; the original repo, in other_urls). The fork in url (2026-11, write-up in
+    games/xcom-2) extends it to missions and 2-4 players - the host makes campaign decisions and gives soldiers to guests, who manage their own; in missions each
     player moves their own soldiers in turn (host, guests in slot order, aliens) while the others watch; the host takes over a dropped
     guest's soldiers until it rejoins; host-only saves incl. mid-mission and Ironman; host/join buttons, mod list check, pings, chat,
     owner tags on unit flags, turn banner. 40 scripted scenarios pass with 2-4 game copies on one PC over direct IP (Steam buildid 8270065,
@@ -9691,9 +9692,10 @@
     over a home network (direct IP, one Steam account) join, a mission and its end passed. Not tested - Steam invites, Workshop
     auto-subscribe, a whole campaign.
   sources:
+  - https://github.com/Santonus-not-bot/xcom2-wotc-coop-campaign
   - https://github.com/EvilMask587/xcom2-wotc-coop-campaign
   - https://github.com/cranebeaker/coop-anything/blob/main/games/xcom-2/README.md
-  checked: '2026-11-16'
+  checked: '2026-11-21'
   made_with_coop_anything: true
 - game: Cult of the Lamb
   year: 2022

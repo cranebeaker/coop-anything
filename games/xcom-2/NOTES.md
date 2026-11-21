@@ -2116,3 +2116,45 @@ clicking the loading screen away.
 All again on that final build (20261119-012946): `mission` 54/54, `missionend` 11/11, `guestaction` 13/13, `guestvis`
 17/17, `pingshow` 11/11, `presenceshow` 11/11, `overlaytest` 4/4; real install unchanged after each.
 
+#### Hands-on two-PC play tests (2026-11-19)
+
+New scenario `playtest`: the bots only make a campaign, host it and bring the other PC in; then people play (bigger
+windows, the game's debug red screens hidden with `XComEngine.TemporarilyDisableRedscreens`, bot steps never quit).
+Findings, in order:
+1. Nobody held the baton (control on the Avenger): both PCs showed "Control: partner", asking answered "not mine".
+   The bot tests always gave the host the baton with `@baton`. Fix: the host takes it when its server opens; a
+   request that finds nobody holding it makes the host take and grant it.
+2. The barracks were locked without the baton. Fix: `ViewScreens` (exact classes) open freely: `UIPersonnel`,
+   `UIPersonnel_Armory`, `UIPersonnel_BarMemorial`, `UIArmory_MainMenu`; their edit sub-screens stay gated.
+3. Control rules decided by the tester afterwards: a guest asking gets the holder's Yes/No (`CoopBatonPrompt`); the
+   host takes it back by opening a screen (forced request); a guest editing its own soldier takes it without asking
+   (forced); with control a guest may do everything except launch missions (Squad Select stays the host's: the
+   launch flow is built around the host). Requests now carry the asker's slot and a force flag.
+4. The Geoscape is open to everyone; only the holder's clock runs (`CoopGeoWatch`: the holder sends its clock every
+   second, watchers keep `XGGeoscape.m_fTimeScale` at 0, so nothing advances and no game state is written, and copy
+   the clock). As an edit screen it held the baton back: a host on the Geoscape that answered "hand it over" never
+   did (`controltest`).
+5. Barracks rows show the owner (`CoopBarracksTags`: "HOST" / "P2 <name>" at the right end of the name column, other
+   players' rows tinted; unassigned soldiers get no tag). The "Host co-op" button hides once hosting.
+6. A game "closed" after 21 minutes: the runner's own time limit (a two-PC run adds 900 s before the manual rule
+   checked for the default). Fixed: manual runs get at least 6 hours.
+7. A guest stuck on "receiving the mission" after a launch: the host's mod check (on in two-PC runs) passed for the
+   rejoining guest and sent the campaign, which replaced the pending mission ack (`a pending mission ack is
+   dropped`); the guest's ack then matched nothing and `CoopLoadMission` never came. Fix: during a mission a passed
+   mod check sends nothing (CoopLink already sends the mission); and a guest that acknowledged the mission during a
+   launch loads it by itself if no load command follows within 20 s. New scenario `gatelaunch` (launch with the gate).
+8. Clicking the guest's loading screen hid it and left the main menu with no UI at all (that menu shows none after a
+   guest leaves the Avenger): it looked frozen. The screen no longer hides on a click.
+9. Guests could not watch the host pick the squad. `CoopSquadView`: the host in Squad Select sends the mission name
+   and the squad with owners every 2 s; guests see a panel. Scenario `squadshow`.
+10. `squadshow` first crashed the guest (`XCom2.exe+0x4ce235`, in `GettingNameData`): a roster merge reached the
+    guest after the campaign history but before its Avenger had loaded. Fix: the host holds merges while any
+    connected guest is loading the Avenger (`CoopRoster.HoldMerges`, marked before `CoopEnterAvenger`, cleared by
+    the guest's `CoopLoaded`, at most 60 s). Afterwards: `squadshow` 5/5 twice, `features` 22/22, `avengerfeed`
+    13/13, `missionend` 11/11, `controltest` 17/17, `gatelaunch` 7/7, `join` 7/7, `loadshow` 16/16, `mission`
+    54/54, `guestaction` 13/13, `guestvis` 17/17, `pingshow` 11/11; install
+    unchanged after each run. The squad panel shows on the guest's Avenger (checked by eye in a screenshot). Small
+    gap: while the host is in Squad Select, its activity line still reads "Reading an alert".
+Later (tester): make sure guests cannot edit soldiers that are not assigned to them (the edit screens already refuse
+another player's or an unassigned soldier; to be checked on two PCs).
+

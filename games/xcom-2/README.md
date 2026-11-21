@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Unreal Engine 3 (UnrealScript, official mod SDK) |
 | Versions tested | Steam, XCOM 2 buildid 8270065 (changelist 699444), War of the Chosen + all DLC, Windows x64 |
-| Projects | Team Dragonpunk "Tactical Co-Op" (2016-17, abandoned); WOTC Co-op Campaign (prototype, this write-up): https://github.com/EvilMask587/xcom2-wotc-coop-campaign, extended to missions and up to 4 players (2026-11, not published yet) |
+| Projects | Team Dragonpunk "Tactical Co-Op" (2016-17, abandoned); WOTC Co-op Campaign (this write-up): https://github.com/Santonus-not-bot/xcom2-wotc-coop-campaign, a fork of the strategy prototype https://github.com/EvilMask587/xcom2-wotc-coop-campaign, extended to missions and up to 4 players (2026-11) |
 | QA level | automated (two to four game copies on one PC, direct IP; see QA) |
 | Last updated | 2026-11-13 |
 
@@ -71,8 +71,9 @@ subscription are untested.
 
 ## What we changed
 
-Mod: https://github.com/EvilMask587/xcom2-wotc-coop-campaign (code only, no game files) has the
-strategy prototype. The campaign work below extends it and is not published yet. Design, results
+Mod: https://github.com/Santonus-not-bot/xcom2-wotc-coop-campaign (code only, no game files), a fork of
+the strategy prototype at https://github.com/EvilMask587/xcom2-wotc-coop-campaign. The campaign work below is in the
+fork (2026-11). Design, results
 per build and every decision: [DESIGN-campaign-coop.md](DESIGN-campaign-coop.md); every test run:
 [NOTES.md](NOTES.md).
 
