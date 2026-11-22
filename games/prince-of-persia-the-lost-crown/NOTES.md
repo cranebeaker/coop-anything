@@ -897,3 +897,12 @@ animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, g
 - The release package now ships `steam_api64.dll` and `steam_appid.txt` (480) next to the launcher;
   Steamworks.NET is MIT and the DLL is Valve's redistributable.
 - Save transfer is TCP and is not carried by the Steam relay; use a VPN/direct route for `save pull`.
+
+### Round 14 (2026-11-22): Steam invite handling
+
+- `GameLobbyJoinRequested` is registered at Steam init and callbacks are pumped by the launcher's
+  UI timer, so an invite accepted while the launcher is open switches it to Join + Steam, fills
+  the lobby id and starts the join flow. The friend must have PopCoop open before accepting;
+  otherwise Steam may launch Spacewar (480) instead.
+- The Invite dialog is best-effort (the Steam overlay does not always hook a WPF app); **Copy**
+  shares the lobby id as the reliable fallback.

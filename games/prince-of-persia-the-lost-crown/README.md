@@ -192,7 +192,10 @@ et8.0-windows\PopCoop.Launcher.exe
 
 Tick **Use Steam** in the launcher. The host presses **Play** to create a friends-only Spacewar
 lobby and invites the friend from Steam (or shares the lobby id); the joiner accepts the invite or
-pastes the id and presses **Play**. The mod's UDP rides Valve's relay, so there are no IPs, no port
+pastes the id and presses **Play**. Accepting while PopCoop is open switches the launcher to
+Join + Steam and starts joining automatically; if PopCoop is closed, Steam may try to launch
+Spacewar instead, so open PopCoop first. If the overlay invite dialog does not appear, use **Copy**
+and send the lobby id. The mod's UDP rides Valve's relay, so there are no IPs, no port
 forwarding and no VPN. Both players show as "playing Spacewar" (AppID 480), which is expected.
 Verified on real Steam: init, lobby creation and a self-addressed SteamNetworkingMessages delivery;
 the two-account P2P run still needs a second PC. Save transfer is TCP and is not relayed.
