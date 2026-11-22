@@ -176,7 +176,7 @@ hash-verified copy for the next start (or use `save-transfer.ps1` with the game 
 
 `src/PopCoop.Launcher` (in the PopCoop repo) is a WPF launcher that detects the install, starts the
 game, hosts or joins through the mod bridge, shows live status and can pull the host save. It
-offers LAN, Tailscale, ZeroTier and public-IP helpers plus an across-town guide.
+offers a built-in **Steam (Spacewar, AppID 480) relay**, plus LAN, Tailscale, ZeroTier and public-IP helpers and an across-town guide.
 
 The theme samples the game's key-art palette (deep teal-navy, cyan energy, gold, sand) and uses an
 original Persian girih/sun/dune composition. **Use artwork** loads the player's own key
@@ -187,6 +187,15 @@ dotnet build src\PopCoop.Launcher -c Release
 .\src\PopCoop.Launcherin\Release
 et8.0-windows\PopCoop.Launcher.exe
 ```
+
+### Steam relay
+
+Tick **Use Steam** in the launcher. The host presses **Play** to create a friends-only Spacewar
+lobby and invites the friend from Steam (or shares the lobby id); the joiner accepts the invite or
+pastes the id and presses **Play**. The mod's UDP rides Valve's relay, so there are no IPs, no port
+forwarding and no VPN. Both players show as "playing Spacewar" (AppID 480), which is expected.
+Verified on real Steam: init, lobby creation and a self-addressed SteamNetworkingMessages delivery;
+the two-account P2P run still needs a second PC. Save transfer is TCP and is not relayed.
 
 ### Packaging
 

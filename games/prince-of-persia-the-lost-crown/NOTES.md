@@ -885,3 +885,15 @@ animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, g
 - `--setup <dir>` is the headless QA path for the same service.
 - Tested: fresh `--setup` (exit 0, BepInEx/plugin/config), first-run screen, Play screen and the
   packaged single-file launcher; the zip is ~95.5 MB.
+
+### Round 13 (2026-11-22): Steam Spacewar relay
+
+- The launcher gained a **Use Steam** mode (AppID 480, Spacewar): friends-only lobby, Steam invite
+  dialog or lobby-id join, SteamNetworkingMessages, and a local UDP relay (host keeps 27015; the
+  client's game joins 127.0.0.1:27016). No IPs, no port forwarding, no VPN.
+- Verified on real Steam: `SteamAPI.Init`, lobby creation, and a self-addressed
+  SteamNetworkingMessages delivery (`send=k_EResultOK`). The UDP relay itself passes a loopback
+  selftest (`up=1 down=1`). A two-account P2P run still needs the friend's PC.
+- The release package now ships `steam_api64.dll` and `steam_appid.txt` (480) next to the launcher;
+  Steamworks.NET is MIT and the DLL is Valve's redistributable.
+- Save transfer is TCP and is not carried by the Steam relay; use a VPN/direct route for `save pull`.
