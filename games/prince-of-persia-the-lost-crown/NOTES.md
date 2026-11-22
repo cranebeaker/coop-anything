@@ -906,3 +906,14 @@ animcheck) with build 0 warnings and 174/174 unit tests; owner save unchanged, g
   otherwise Steam may launch Spacewar (480) instead.
 - The Invite dialog is best-effort (the Steam overlay does not always hook a WPF app); **Copy**
   shares the lobby id as the reliable fallback.
+
+### Round 15 (2026-11-22): launcher Player 2 spawn fix after a real Steam attempt
+
+- A real two-PC Steam attempt connected and streamed snapshots (host plugin log: `net status ->
+  connected` plus `rx#` frames), but `findplayer` stayed `count=1`: the launcher never sent
+  `auto on`, the command that spawns the clone body. Both the direct and Steam flows now send it
+  after `net host`/`net join`.
+- Hardened while debugging: explicit `SetLobbyJoinable`, host accepts the first session request
+  even when the lobby member list lags, a stale pasted lobby id falls back to searching, and the
+  relay follows the game's new UDP source after the mod reconnects. A Copy diagnostics button
+  captures both sides' state and the plugin log tail.
