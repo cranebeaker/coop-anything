@@ -10964,6 +10964,7 @@
   project: Resident Evil Revelations Co-op
   url: https://github.com/dolbaras/revelations-coop
   other_urls:
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.5
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2
@@ -10983,8 +10984,9 @@
   last_activity: 2026-11
   qa: automated
   notes: >-
-    Version 0.2.4 (GitHub Latest, published 2026-11-21, after 0.2.3 of 2026-11-18, 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12), PC/Steam
-    build 13298487, a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on one PC
+    Version 0.2.5 (GitHub Latest, after 0.2.4 of 2026-11-21, 0.2.3 of 2026-11-18, 0.2.2 of 2026-11-15, 0.2.1 of 2026-11-13 and 0.2.0 of 2026-11-12), PC/Steam
+    build 13298487 and, since 0.2.5, an older 2019 build found in some non-Steam copies (one package, the installer picks the
+    DLL by the hash of rerev.exe; an unknown exe asks first), a dinput8.dll proxy; the second human takes over the campaign's AI partner. Split screen on one PC
     with two gamepads covers the whole campaign; network co-op (two PCs, Steam friends or direct IP on UDP 28410, ENet)
     follows the story section by section from Episode 1 to the end with the pair each part gives, with host-run
     enemies, doors, key items and pickups in step, shared game over and Continue, downed/revive, the partner on the
@@ -10999,9 +11001,12 @@
     fills the screen; 0.2.4 fixes network play with the keyboard and the mouse (a player without a gamepad now
     sends real input: walking, aiming, shots, running, reloading, the knife, the change of weapon; the partner
     sees them as motions instead of a character that stands and jumps; mouse look and the quick turn are not
-    shown) and the Backspace, Delete and Ctrl+V keys of the Direct IP field. Not verified: a split-screen report
-    (issue #2) was not reproduced and has no fix; the keyboard proof used injected input, not a person; nobody
-    played 0.2.4 before its release. QA: offline C suites, a headless bot, an installer suite
+    shown) and the Backspace, Delete and Ctrl+V keys of the Direct IP field; 0.2.5 adds the support of the older
+    build next to the Steam build and an installer question before any game version it does not know. A licensed
+    copy is recommended; on other versions stable work is not guaranteed. Not verified: a split-screen report
+    (issue #2) was not reproduced and has no fix; the keyboard proof used injected input, not a person; on the older
+    build the first player's split-screen shots, the title Continue and the Hunk part, two PCs that both have the
+    older build and the Steam friends lobby on a Steam emulator were not tried; nobody played 0.2.5 before its release. QA: offline C suites, a headless bot, an installer suite
     (289 offline, 286 against the real release feed) and scripted sessions with real game clients on two PCs of one
     LAN and in split screen, partly driven by test commands; nobody outside the lab has played it, and Steam relay
     between two networks is untried. The game itself ships no campaign co-op: its only two-player mode is Raid, which
@@ -11009,6 +11014,7 @@
     withdrawn). MIT. Write-up in games/resident-evil-revelations.
   sources:
   - https://github.com/dolbaras/revelations-coop
+  - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.5
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.4
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.3
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.2.2
@@ -11017,7 +11023,7 @@
   - https://github.com/dolbaras/revelations-coop/releases/tag/v0.1.0
   - https://github.com/cranebeaker/coop-anything/issues/299
   - https://store.steampowered.com/app/222480/Resident_Evil_Revelations/
-  checked: '2026-11-21'
+  checked: '2026-11-22'
 - game: Resident Evil Revelations 2
   year: 2015
   engine: MT Framework (32-bit, Direct3D 9)
