@@ -4,28 +4,32 @@
 |---|---|
 | Engine | Firebird, Monolith's LithTech-derived engine (the exe's module name is `Firebird_C.exe`) |
 | Versions tested | Steam app 241930, build 7348332, `x64\ShadowOfMordor.exe` 1.0.1951.29, SHA-256 `f5d72578f7e5fcf05e6d15d8bd231f763078620c8545f8464bb186e842279455` |
-| Projects | none released; [JustAddMP/ShadowOfMordor](https://github.com/JustAddMP/ShadowOfMordor) is a placeholder; research here (claim: cranebeaker/coop-anything#418) |
-| QA level | none: no shared play yet; prototype checks ran with one and two game copies on one PC (two copies show each other's Talion animated), with an offline guard suite |
-| Last updated | 2026-11-21 |
+| Projects | [danudns/shadow-of-mordor-coop](https://github.com/danudns/shadow-of-mordor-coop) (MIT, [v0.1.0](https://github.com/danudns/shadow-of-mordor-coop/releases/tag/v0.1.0), built here; claim: cranebeaker/coop-anything#418); [JustAddMP/ShadowOfMordor](https://github.com/JustAddMP/ShadowOfMordor) is a placeholder |
+| QA level | none: lab runs (two game copies on one PC) and sessions between the author and one friend over the internet, plus a 70-case offline suite; no automated in-game suite, no reports from other players |
+| Last updated | 2026-11-23 |
 
 ## Where things stand
 
-Nobody can play Shadow of Mordor together today. This folder holds a from-scratch start, built and
-tested on one PC:
-- a safe way to run an instrumented test copy;
-- a map of how the engine splits client and server;
-- the engine's object-spawn API;
-- a prototype that shows the other player as a **second Talion** in your world, moved by
-  packets from another game copy over loopback UDP, and **animated by the game's own animation
-  system**: he idles, walks, runs and stops as the other player does.
+Two players can play together over the internet in an early, experimental mod:
+[shadow-of-mordor-coop v0.1.0](https://github.com/danudns/shadow-of-mordor-coop). Each player runs
+their own game; the friend joins through a Steam invite and plays in a copy of the host's save.
 
-Two copies on one PC each show the other's Talion moving like the one being steered (owner
-check, launch 50). Nothing goes over the internet yet, quitting crashes while the second
-Talion's controller exists, and no enemies, combat or story are shared. Raw notes with every run:
-[NOTES.md](NOTES.md).
+- **Shared:** each player sees the other as a **second Talion**, moving smoothly and animated by the
+  game's own animation system (idle, walk, run, turns, attacks, executions, sword draw and sheathe,
+  stealth). The host's roaming enemies are shown in the friend's world (the friend's game spawns
+  none of its own); when the host kills one, it disappears for the friend.
+- **Not shared yet:** hits that do not kill, orcs reacting to the friend, death falls, captains and
+  Nemesis, missions and progression. The friend's kills counting for the host and joining next to
+  the host are in v0.1.0 but not yet seen working in a session.
+
+Raw notes with every run: [NOTES.md](NOTES.md). The mod's
+[how-it-works](https://github.com/danudns/shadow-of-mordor-coop/blob/main/docs/how-it-works.md)
+lists its messages and the game functions it calls.
 
 ## Existing work
 
+- [danudns/shadow-of-mordor-coop](https://github.com/danudns/shadow-of-mordor-coop): the mod
+  built from this research (MIT, v0.1.0 on 2026-11-23, source, offline tests, installer).
 - [JustAddMP/ShadowOfMordor](https://github.com/JustAddMP/ShadowOfMordor): README only,
   "planned" (created 2026-10-17, no code as of 2026-11-19).
 - No co-op or multiplayer mod found (web search, GitHub repository search, Steam forum threads
@@ -100,14 +104,49 @@ and the reasoning are in [NOTES.md](NOTES.md).
   `RawMoveMag` (stick 0..1; keyboard gives 0 or 1), `Game_SmoothedVelocity` (units/s: run about
   226, sprint about 607), `DeltaYaw`, `CameraDeltaYaw`, `CameraYawMinusPlayerYaw` and
   `LastSpike` (radians for the angles). It has no `Game_Velocity`.
+- **Combat moves are named requests.** Attacks, counters, finishers and stealth kills go through
+  the combat model `457120` → `79f150(component, &request, 0)`; `77af10(&req, name)` builds a
+  request and `7a16b0(component)` ends the previous combat move. Clips such as the sheathe, sprint
+  and jumps go through `79f9b0` ("play by action"). Graph switches (`InCombat`, `Sheathed`,
+  `Stealth`, `Daggers`, …) are set through `785bb0` → `785a70`.
+- **Enemies.** `aae540` registers every NPC in a table at `exe+19835C0` (0x30-byte entries,
+  pooled objects, so ids need a generation). Roaming population spawns go through one call at
+  `exe+AE2B53`; skipping it is treated as a failed spawn. An NPC's animation component is
+  `*(npc+0xC38)`, same class as the player's; its locomotion is clip-driven.
+- **Steam.** The game's `steam_api64.dll` offers `SteamNetworking005` and `SteamMatchMaking009`,
+  which the exe itself does not use for networking; lobbies, invites and P2P work from a mod.
 - **Single-instance lock.** Engine main (`e043e0`) creates
   `Global\{43570706-DA86-477B-9C2D-2F3D4F95FDE4}` and, if it exists, focuses the first window and
   exits with **code 0** (skipped only under a developer option, `RunningUnderToolControl`).
 
 ## What we changed
 
-All of it is a test-copy guard (a `bink2w64.dll` proxy), not released. Each feature is off unless
-its switch is set.
+Everything is one `bink2w64.dll` proxy. It started as a test-copy guard (below); the same DLL in
+"mod mode" is the released mod. Each feature is off unless its switch in `somguard.ini` is set.
+
+**In the released mod (v0.1.0)**, on top of the second Talion and animation work below:
+
+- **Saves.** Alone or hosting: the real save is used as without the mod, with a dated backup at
+  every start (newest 10). Invited: only the cloud save is redirected, to a co-op slot that
+  receives the host's save over Steam (size and SHA-256 checked). Settings and language are never
+  touched.
+- **Steam link.** Friends-only lobby, invite through the overlay, peer-to-peer with relay;
+  positions at 30/s unreliable, everything else reliable. A restarted partner and failed lobby
+  enters are recovered.
+- **Combat moves and states.** The partner's named animation requests are replayed on their
+  Talion; paired moves end after 3.5 s or when the partner moves. Sword, graph switches and clips
+  (sheathe, sprint, jumps, ledges, climbing) are sent too; clips are replayed from a kept copy of
+  the action data, checked by asset name.
+- **Enemies, host-authoritative.** The friend's game skips its own population spawns and keeps
+  their arguments per template. The host streams the 40 nearest NPCs within 60 m of either player
+  (type, position, facing, movement inputs, dead flag) and their named animations; the friend's
+  game spawns puppets of the same template, senses off, and removes them when they die or leave.
+  A puppet the friend kills is reported to the host, which kills the real NPC with the game's own
+  damage record (untested in a session).
+- **Session check.** Every 5 s both games compare where they show both Talions and the enemies,
+  and log the differences in metres.
+
+**Test-copy guard** (lab only):
 
 - **Isolation.** Refuses to run outside the lab folder, on another exe build or without
   `steam_appid.txt`. It:
@@ -156,9 +195,13 @@ its switch is set.
 
 ## QA
 
-- Offline guard suite: 50 cases plus a negative control (the guard built with protection
-  compiled out must fail all 14 protection cases). Last run 2026-11-21: **50 passed, 0 failed;
-  negative control 14 of 14.** It covers:
+- Offline suite (in the mod repo: `build.bat`, then `build\tests\somguard_tests.exe` with the
+  guard, the negative control and the game's original video DLL): runs the mod against fakes of
+  the game's data. Last run for v0.1.0, 2026-11-23: **70 passed, 0 failed, 0 skipped; negative
+  control (protection compiled out) failed 14 of 14 protection cases, as required.** Besides the list below it covers the
+  Steam lobby and save transfer, message validation for every message kind, smoothing, ending
+  paired moves, the enemy snapshot, type and kill messages, and the read cache.
+- Earlier, at 50 cases (2026-11-21: 50 passed, 0 failed; negative control 14 of 14), it covered:
   - protected writes, including path variants;
   - cloud-save sandboxing and network limits;
   - DLL forwarders;
@@ -188,31 +231,46 @@ its switch is set.
   - **two copies, animated (launch 50)**: 777 and 984 packets accepted, 0 rejected; each copy's
     second Talion driven by the other copy's own graph inputs. Owner: the other Talion moved like
     the one being steered.
-- These are prototype checks, observed in logs and owner reports. There is no automated
-  assertion suite for in-game state yet, so the QA level stays `none`.
+  - **combat moves (launches 54–65)**: attacks replayed in order between two copies over loopback
+    (launch 56); sword, sheathe clip and stealth switches mirrored (launches 58–63, owner checks);
+    over the network both ways with 0 bad packets (launch 65).
+  - **enemies (launches 66–78)**: the friend-side copy spawned no NPCs of its own; 18–28 puppets
+    at the host's NPC positions with 0 rejected snapshots; deaths removed the puppet (launch 74,
+    owner: "fully gone"); orc idle animations replayed (launch 78).
+- Sessions over the internet (author and one friend, real installs, 2026-11-21 to 11-22, several
+  builds): invite, save transfer, seeing each other, attacks, executions and shared enemies worked
+  in the host's logs and the author's reports. Each session's problems are in the notes and were
+  fixed in later builds; the last two fixes (friend's kills, joining next to the host) have not been
+  seen in a session yet.
+- These checks come from logs and the author's reports. There is no automated assertion suite
+  for in-game state and no reports from other players, so the QA level stays `none`.
 
 ## How to play
 
-Not playable yet.
+Install and play instructions are in the mod's
+[README](https://github.com/danudns/shadow-of-mordor-coop#install). In short: both players
+extract the [release zip](https://github.com/danudns/shadow-of-mordor-coop/releases) and run
+`Install.cmd`; the host loads their save and invites through the Steam overlay; the friend closes
+the game and accepts the invite. Needs the current Steam build (the mod stays off on any other).
 
 ## Known issues
 
-- Nothing goes over the internet yet: loopback on one PC only.
-- After a long drop the remote Talion was seen sliding in a frozen pose (launch 48). Probably a
-  fall state that never ends, because his full controller update does not run.
-- Starts and stops may look abrupt: the stick and speed inputs are sent as they are, unsmoothed.
-- No enemies, combat, story or Nemesis state is shared.
-- With the slot-1 controller attached, the game crashes when it quits (a reference-count assert
-  in the exit-time destructors, `exe+D59E56`). Play itself is not affected, and without the
-  controller the game exits normally.
+- The friend's hits that do not kill are not sent; orcs in the host's world ignore the friend.
+- Orcs the host kills vanish for the friend instead of falling.
+- Enemy puppets on the friend's side move and idle but do not play every walk clip or attack.
+- Captains, Nemesis, missions, collectibles and progression are separate for each player.
+- If the host disconnects, the friend's world has no roaming enemies until a normal restart.
+- Quitting the game can crash it (a reference-count assert at exit, `exe+D59E56`, with the second
+  Talion's controller in place). The save is already written by then.
 
 ## Next steps
 
-- **Exit crash:** find the reference count that underflows at exit while the slot-1 controller
-  exists, and release the controller cleanly before the game quits.
-- **Falls and turning:** end the remote Talion's fall state (a landing signal) and check turning
-  (`DeltaYaw`) on its own.
-- **Internet transport:** the guard currently allows only loopback. The Steam P2P/lobby code in
-  `INetOnlineService` (vtable `exe+148F050`) is a candidate.
-- **Shared enemies and Nemesis:** host-authoritative spawning through `b03640`; the guest mirrors
-  the host's NPCs.
+From the mod's roadmap:
+- **Hits (phase 2):** send the friend's hits to the host and apply them with the game's own damage
+  code; send staggers, knockdowns and deaths back so orcs fall on both screens.
+- **Orcs react to the friend (phase 3):** in the host's world, orcs notice, target and attack the
+  friend's Talion.
+- **Full orc animations**, then **captains and Nemesis**, then **missions and progression**.
+- **Research, one shared world:** feed the friend's client from the host's server through the
+  engine's own client/server message queue instead of syncing two worlds.
+- **Exit crash:** release the second Talion's controller cleanly before the game quits.

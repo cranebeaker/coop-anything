@@ -8054,26 +8054,39 @@
 - game: 'Middle-earth: Shadow of Mordor'
   year: 2014
   engine: Firebird (LithTech derivative)
-  project: (none found)
-  url: ''
+  project: Shadow of Mordor Co-op
+  url: https://github.com/danudns/shadow-of-mordor-coop
   other_urls: []
-  kind: gap
-  status: none
-  coop_scope: {}
-  players: unknown
-  networking: unknown
-  open_source: unknown
-  last_activity: unknown
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: partial
+    world_state: 'no'
+    items: 'no'
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
   qa: none
-  notes: No co-op or multiplayer mod found; the game shipped single-player only (online Vendettas ended 2021). JustAddMP/ShadowOfMordor
-    is a placeholder repo (README only, 2026-10-17). Research for Steam build 7348332 in games/shadow-of-mordor (test-copy
-    guard, client/server and object-spawn map, a second-Talion puppet moved over loopback between two game copies on one
-    PC; prototype, not released); claim issue cranebeaker/coop-anything#418.
+  notes: Experimental 2-player online co-op for the current Steam build (7348332), MIT, release v0.1.0 (2026-11-23). A
+    proxy bink2w64.dll; Steam lobby invite and P2P; the friend plays a copy of the host's save (own saves untouched, dated
+    backups). Each player sees the other as a second Talion animated by the game's own animation system (movement,
+    attacks, executions, sword, stealth). Host-authoritative roaming enemies (the friend's game spawns none, shows the
+    host's; host kills remove them). Not shared yet; hits that do not kill, orcs reacting to the friend, captains and
+    Nemesis, missions and progression. Tested in lab runs with two copies and sessions between the author and one
+    friend, plus a 70-case offline suite; no automated in-game suite. Built with this playbook; write-up and raw notes
+    in games/shadow-of-mordor; claim issue cranebeaker/coop-anything#418. No other co-op mod found (JustAddMP/ShadowOfMordor
+    is a placeholder, README only, 2026-10-17); the game shipped single-player only (online Vendettas ended 2021).
   sources:
+  - https://github.com/danudns/shadow-of-mordor-coop
+  - https://github.com/danudns/shadow-of-mordor-coop/releases/tag/v0.1.0
   - https://github.com/JustAddMP/ShadowOfMordor
   - https://github.com/cranebeaker/coop-anything/issues/418
   - https://worthplaying.com/article/2021/1/16/news/123693
-  checked: '2026-11-21'
+  checked: '2026-11-23'
+  made_with_coop_anything: true
   searched:
   - Web search (co-op mod, multiplayer mod) and GitHub repository search "shadow of mordor" co-op/multiplayer (first ~18
     of 28 results read), Steam forum threads via search results, 2026-11-19

@@ -2868,3 +2868,113 @@ For a second `CPlayerObj` created with the object API:
   "landed" signal, because the full controller update and its movement component do not run for
   him.
 - Which object's reference count underflows at exit while the slot-1 controller exists.
+
+## 2026-11-21 to 2026-11-23: internet play, shared combat moves, shared enemies, v0.1.0 (launches 51–78, sessions with a friend)
+
+From here the work moved into the mod's own repo,
+[danudns/shadow-of-mordor-coop](https://github.com/danudns/shadow-of-mordor-coop) (MIT). Its
+[docs/how-it-works.md](https://github.com/danudns/shadow-of-mordor-coop/blob/main/docs/how-it-works.md)
+lists every message and game function in use. This section keeps the findings and corrections in run order.
+"Lab" = the test copy (two copies on one PC where stated); "session" = owner and a friend, each on their own
+PC and real install, over the internet.
+
+### Internet transport and the mod kit (launch 51, first session)
+
+- The game's `steam_api64.dll` exposes `SteamNetworking005`, `SteamMatchMaking009`, `SteamUser017` and
+  `SteamFriends014`; the exe itself never uses `SteamNetworking`. The mod uses `ISteamNetworking005`
+  peer-to-peer (relay allowed) and accepts only the partner's packets.
+- Lobby: the host creates a friends-only lobby (`CreateLobby` slot 13, data via `SetLobbyData` slot 20) and
+  invites through the Steam overlay. The friend's game is started by Steam with `+connect_lobby <id>`, joins
+  (slot 14), and reads the host's SteamID from the lobby data. Callbacks used: 504 `LobbyEnter_t`,
+  506 `LobbyChatUpdate_t`, 333 `GameLobbyJoinRequested_t`, registered with `SteamAPI_RegisterCallback`.
+- Save transfer: the friend asks for the host's save on reliable channel 8 and receives a header (size and
+  SHA-256) and 1024-byte chunks. The friend's game reads it from a separate co-op slot.
+- **Observed (launch 51, one copy in "mod mode"):** lobby created 16.7 s after start; the session copy of the
+  save was seeded from the real save (read only) and received 31 autosaves; real save unchanged.
+- **First session (2026-11-21):** friend joined at 333 s, 1 MiB save sent in under 1 s, friend's Talion created
+  on the first packet. Owner: "I can see my friend when he is walking."
+- **Correction after the first session:** the owner reported that saves "reset". Cause: in that build *every*
+  start (also alone) used the session copy and copied the settings into it. Changed: alone or hosting, the real
+  save is used as without the mod and a dated backup is kept (newest 10); only an invited player is redirected,
+  and Documents (settings, language) is never redirected.
+- Installer: a `.ps1` started with "Run with PowerShell" closes at once under the default execution policy,
+  before any of the script's own error handling runs. Ship `Install.cmd` / `Uninstall.cmd` launchers
+  (`powershell -NoProfile -ExecutionPolicy Bypass -File …`).
+
+### Attacks, sword, stealth (launches 52–65)
+
+- **Slot mirroring is the wrong level (launch 53).** The 7 active graph-node slots (`comp+0x34A0`) change only
+  with top-level modes. Activating the real Talion's node on the second one (`7933c0`) crashed in a graph node
+  that needs a combat context.
+- **Named animation requests (launches 54–56).** All attacks, counters, ground finishers and stealth kills go
+  through the combat model `457120` → `79f150(comp, &request, 0)` ("play by request"). Request built with
+  `77af10(&req, name)`; `7a16b0(comp)` ends the previous combat move. Replaying captured requests on the second
+  Talion worked (launch 55, owner: "he attacked"), and over loopback between two copies every attack was
+  replayed in order (launch 56).
+- **Sword and graph switches (launches 57–61).** The sword flag is per item (weapon component `player+0x910`),
+  set with `7bdc70`. The graph reads named bool switches set through `785bb0` (a 16-byte thunk into
+  `785a70`): `SwordEquipped`, `InCombat`, `Sheathed`, `InStealth`, `CanHide`, `InPresentation`. Mirroring them
+  is not enough for the sheathe: it is a clip request ("play by action", `79f9b0`) named `WeaponSheathe` /
+  `WeaponSheathe_Low`. The draw is part of the attack animations.
+- **Stealth (launches 62–63)** is switches only: `SwordEquipped` 0, `Daggers` 1, `Stealth` 1 in one frame.
+  Mirrored, owner confirmed.
+- **Feedback loop (launch 62):** with nothing positioning the second Talion, his own animation's root motion was
+  fed back as derived walking input and he walked off. Fixed with a dead zone (< 25 units/s).
+- **Corrections from the sessions:**
+  - Replaying a remembered action pointer from `79f9b0` crashed inside the game (caught, but the component was
+    left broken: the partner's Talion froze). Action pointers go stale. Now the mod keeps a 0x80-byte copy of the
+    action and checks its asset name (`+0x60`) before replaying.
+  - Paired moves (`…_Sync_…`, stealth kills) were never ended when no other attack followed: the partner stayed in
+    the pose. Now ended after 3.5 s or when the partner moves again.
+  - Position steps: sends were on a 50 ms timer over a 15.6 ms tick (~16/s). Now ~30/s on QPC, and the receiver
+    renders 100 ms behind with blending.
+  - "Only one of us sees the other": every message kind required a higher sequence number, so a restarted
+    partner (starting at 1) was ignored; failed lobby enters were not retried. Fixed: after 2 s without position
+    packets any number is accepted; lobby enters are retried.
+  - "Now we do not see each other at all": the spawn record for the second Talion had 3 of the 6 qwords that
+    `bee2b0` reads; the rest came from whatever followed in the DLL's data. Harmless in some builds, a crash in
+    others. Now a zeroed 8-qword record with an empty handle `{0, -1}` and the last field 1.
+- **Launch 65 (two copies, network):** movement smooth, attacks, sword and switches crossed both ways, 0 bad
+  packets.
+
+### Shared enemies (launches 66–78)
+
+- **NPC table:** `aae540` registers each NPC in `exe+19835C0` (0x30-byte entries, `+0x00` NPC, `npc+0xE88` = its
+  entry), capacity at `exe+1984C40`. 50–60 live NPCs from about 35 m to 243 m around the player. NPC objects are
+  pooled (the same pointer comes back), so the network id is slot + generation. A killed orc leaves the table
+  about 1 s later; dead bit `character+0x178 & 1`.
+- **Types:** record name at `+0x20` (`Infantry_Orc_FacA` …), but spawning needs the *template* name
+  (`Orc_Infantry`, `Orc_Archer`, `Warg_Brown`, `Resistance_Prisoner`).
+- **Hiding is not suppression (launch 68):** `be1cc0(char, 1)` hides the model, but the outline stays and the AI
+  keeps walking and attacking.
+- **No own population on the joining side (launches 69–70):** the population spawn call at `exe+AE2B53` (into
+  `b03640`) can be skipped; the spawner treats it as a failed spawn and retries slowly (25 skips at load, then
+  about 5 per 30 s). The skipped calls' arguments are recorded per template and used to spawn puppets of that
+  type on demand.
+- **Phase 1 (launches 71–74):** the host streams the 40 nearest NPCs within 60 m of either player at 10/s; the
+  joiner shows puppets (senses off) at the host's positions. Moving a dead puppet 1000 m down did not stick
+  (navmesh snaps it back); removing it with `4b65f0` (object API remove) did.
+- **Orc animations (launches 75, 78):** an NPC's animation component is `*(npc+0xC38)`, same class as the
+  player's. Locomotion is clip-driven (`Idle`, `WalkForward`, `Run`, transitions); ambient loops are named
+  requests. The host sends each NPC's `RawMoveMag` / `DeltaYaw` and its named animations; the joiner replays
+  them on the puppets.
+- **Stutter (launch 76):** the mod, not the game: every memory read was checked with `VirtualQuery`, strings byte
+  by byte (up to 313 ms per frame with orcs near). A small cache of readable regions brought it to under 3 ms.
+
+### Kills from the friend and joining next to the host (v0.1.0, untested in a session)
+
+- The console's `Player.FragSelf` builds a damage record (type `Explode`) and delivers it through
+  `4b7790(target, 0, &record)` → target `vt+0xB8`. The friend's kill of a puppet is sent to the host, which
+  applies that record to the real NPC. In the first session try the kill failed (the first version looked for a
+  player-style handle at `+0x420` that NPCs do not have); fixed, not yet seen in a session.
+- The console teleport ends in `3f1050(player, float xf[7])`. The friend's Talion is moved 1.5 m beside the host
+  when the first host position arrives more than 10 m away.
+- A session check every 5 s compares, on both sides, where each Talion and the nearest enemies are shown, and logs
+  the differences in metres.
+
+### Released
+
+- 2026-11-23: v0.1.0 published (source, offline tests, installer, Ghidra scripts; MIT). 70 offline tests pass.
+  The README lists each feature with its test state.
+- QA stays `none`: the checks are lab runs and two-player sessions reported by the author, not an automated
+  in-game suite or reports from other players.
