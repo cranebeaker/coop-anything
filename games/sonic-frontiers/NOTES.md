@@ -353,6 +353,25 @@ Full record:
 - Still offline-only. No game, save, mod, live scan, protocol bump, PC B,
   two-PC correlation, or in-game verification. QA remains `none`.
 
+## Review checklist for draft PR #429 (2026-11-24)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-review-checklist-20261124.txt`.
+
+- Issue #428 remains OPEN; PR #429 remains OPEN and `isDraft=true`. PR body says
+  `QA level: none` and the owner-review checkbox is intentionally unchecked.
+- Fork validation rerun offline: `py -3 tools/build_directory.py --check` gave
+  `OK: 568 entries`; `py -3 -m unittest tools.mcp.test_coop_mcp` ran 13 tests OK.
+- Evidence-to-claim review confirms: directory/write-up present; no working
+  co-op claimed; offline item/story tests pass; stock build3 incompatibility is
+  documented; lossy convergence is supported with the snapshot-supersession
+  caveat; real game mapping and two-PC/in-game verification remain BLOCKED.
+- Review nit documented in the wire spec: `SerializeMsg2` does not explicitly
+  write header padding bytes 52-55, but current call sites zero-initialize
+  buffers and CRC covers those bytes. No production code was changed.
+- Still not ready to mark PR ready/merge. Real progress needs fresh approval for
+  protocol bump, item/flag mapping, writes/hooks, PC B traces, and in-game QA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
