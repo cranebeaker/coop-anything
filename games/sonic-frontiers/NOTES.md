@@ -287,10 +287,12 @@ happened in this pass.
 - Deterministic fuzz follow-up added codec fuzz (512 valid messages plus 512
   arbitrary buffers) and replication fuzz (24 rounds of shuffled item/story
   events and cursor moves with duplicate replay rejection). Both pass.
-- Latest build `mpdev2-cli.exe`: 535,040 bytes, SHA-256
-  `A74A85153A7F8BB81DD02F88802CF4C0EF22F129DB700079A72A1B4F09D32377`
-  (supersedes `FD05CB28...C8078`).
-- `.\build\mpdev2-cli.exe itemstory-selftest`: `checks=6 failures=0 result=PASS`.
+- Compatibility-boundary group added: build/tag/type ids, `CheckCompat2`,
+  stock-type ordering, and reliable-event helper behavior remain pinned.
+- Latest build `mpdev2-cli.exe`: 540,160 bytes, SHA-256
+  `B85646953EEABB6DFBF581C0AA58651CEBC5357CB3DD03CAF49C42065F82C66E`
+  (supersedes `A74A8515...D32377`).
+- `.\build\mpdev2-cli.exe itemstory-selftest`: `checks=7 failures=0 result=PASS`.
 - `powershell -ExecutionPolicy Bypass -File .\tools\run-tests.ps1`: PASS,
   `failures=0`, `SOURCE_FILES count=19`.
 - `powershell -ExecutionPolicy Bypass -File .\tools\run-coop-test.ps1`: PASS,
@@ -298,8 +300,9 @@ happened in this pass.
   `storyFlag=1` with zero item/story authority, epoch, and source rejects.
 - Full records:
   `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`,
-  `RESULTS/mpdev-item-story-offline-fuzz-results-20261124.txt`, and the wire
-  contract `RESULTS/mpdev-item-story-protocol-spec-20261124.txt`.
+  `RESULTS/mpdev-item-story-offline-fuzz-results-20261124.txt`,
+  `RESULTS/mpdev-item-story-protocol-spec-20261124.txt`, and
+  `RESULTS/mpdev-item-story-compat-lossy-results-20261124.txt`.
 - Fuzz harness bugs were found and fixed (Msg2Type index mapping, shared cursor
   advancement for the other layer's events, nonzero random item amounts); the
   production protocol/replication code was unchanged in the fuzz pass.
@@ -323,6 +326,32 @@ Full spec:
   duplicates, and wrong source/epoch are rejected.
 - This is a review artifact only. No real item/flag mapping, write path,
   resolver, two-PC test, or in-game QA exists. Gates and QA are unchanged.
+
+## Compatibility and lossy-loopback verification (2026-11-24)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-compat-lossy-results-20261124.txt`.
+
+- Added a 7th `itemstory-selftest` group for the compatibility boundary:
+  build/tag/extension marker, Msg2Type 22-25 ids and text, `CheckCompat2`
+  accept/reject behavior, stock type ordering, and reliable-event helpers.
+- Full suite rerun with the 7th group: `RESULT: PASS failures=0`,
+  `SOURCE_FILES count=19`, all seven item/story groups PASS.
+- Added `tools\run-itemstory-lossy-test.ps1`, a tolerant two-process loopback
+  wrapper that checks convergence rather than strict event application.
+- Normal loss (`-Seconds 12 -PacketGapEvery 7 -LinkDownAfter 4000
+  -LinkDownFor 1500 -Scenario itemstory-lossy`): wrapper PASS, strict runner
+  also PASS, both roles converged to `itemQty=5` and `storyFlag=1`.
+- Aggressive loss (`-Seconds 14 -PacketGapEvery 5 -LinkDownAfter 3000
+  -LinkDownFor 2000 -Scenario itemstory-lossy2`): wrapper PASS, strict runner
+  FAIL with 3 failures. Client showed `itemEv=0`, `evtBuf=3`, but still
+  `itemQty=5`, `storyFlag=1`, and zero item/story authority, epoch, source,
+  and reliable-event faults.
+- Explanation: under loss, a later host snapshot with a higher `lastEventSeq`
+  may legitimately supersede a delayed reliable item event. The invariant is
+  convergence, not strict application of every event datagram.
+- Still offline-only. No game, save, mod, live scan, protocol bump, PC B,
+  two-PC correlation, or in-game verification. QA remains `none`.
 
 ## Unknowns / not yet checked
 
