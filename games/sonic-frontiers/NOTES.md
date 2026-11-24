@@ -281,19 +281,27 @@ happened in this pass.
 - Added `src/coop/mpdev_itemstory_selftest.h/.cpp` and a new CLI mode
   `mpdev2-cli itemstory-selftest`, wired into `tools/build-coop.ps1` and
   `tools/run-tests.ps1`.
-- Four new groups pass: late join with snapshot cursor and replay rejection;
+- Initial four groups: late join with snapshot cursor and replay rejection;
   malformed snapshot guards; malformed event/cursor guards; and wire codec
   round-trip with bad length/CRC/count rejection.
-- Built `mpdev2-cli.exe`: 518,144 bytes, SHA-256
-  `FD05CB283EC5AD23E3A40465F3519E276C7B6F53795954B442D4A16659CF8078`.
-- `.\build\mpdev2-cli.exe itemstory-selftest`: `checks=4 failures=0 result=PASS`.
+- Deterministic fuzz follow-up added codec fuzz (512 valid messages plus 512
+  arbitrary buffers) and replication fuzz (24 rounds of shuffled item/story
+  events and cursor moves with duplicate replay rejection). Both pass.
+- Latest build `mpdev2-cli.exe`: 535,040 bytes, SHA-256
+  `A74A85153A7F8BB81DD02F88802CF4C0EF22F129DB700079A72A1B4F09D32377`
+  (supersedes `FD05CB28...C8078`).
+- `.\build\mpdev2-cli.exe itemstory-selftest`: `checks=6 failures=0 result=PASS`.
 - `powershell -ExecutionPolicy Bypass -File .\tools\run-tests.ps1`: PASS,
   `failures=0`, `SOURCE_FILES count=19`.
 - `powershell -ExecutionPolicy Bypass -File .\tools\run-coop-test.ps1`: PASS,
   `failures=0`; loopback host/client converged to `itemQty=5` and
   `storyFlag=1` with zero item/story authority, epoch, and source rejects.
-- Full record:
-  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`.
+- Full records:
+  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`
+  and `RESULTS/mpdev-item-story-offline-fuzz-results-20261124.txt`.
+- Fuzz harness bugs were found and fixed (Msg2Type index mapping, shared cursor
+  advancement for the other layer's events, nonzero random item amounts); the
+  production protocol/replication code was unchanged in the fuzz pass.
 - `kProtocol2Build` remains 3, QA remains `none`, and no gate opened. This is
   still offline-only and not shippable/interoperable with stock build3 peers.
 
