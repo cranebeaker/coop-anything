@@ -6391,6 +6391,59 @@
   sources:
   - https://github.com/Sewer56/Riders.Tweakbox
   checked: 2026-10-16
+- game: Sonic Frontiers
+  year: 2022
+  engine: Hedgehog Engine 2
+  project: HE2MP
+  url: https://github.com/angryzor/hmm-update-server/tree/main/sonic-frontiers/he2mp
+  other_urls:
+  - https://gamebanana.com/wips/86943
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: true
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: unknown
+  last_activity: 2026-04
+  qa: none
+  notes: 'Binary-only playtest mod v0.0.35 (2026-04-01). Changelog confirms remote Sonics,
+    animations, effects, sounds, nametags, text chat, experimental PvP and several game modes.
+    No public source or client/server protocol was found. No verified enemy, item or story sync.
+    Ships GPL-3.0 license text; feedback is in the author''s playtest Discord.'
+  sources:
+  - https://github.com/angryzor/hmm-update-server/tree/main/sonic-frontiers/he2mp
+  - https://gamebanana.com/wips/86943
+  checked: '2026-11-24'
+- game: Sonic Frontiers
+  year: 2022
+  engine: Hedgehog Engine 2
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: 'No shared-enemy, shared-item or story co-op mod found. HE2MP covers visible players
+    and chat only; angryzor/sonic-frontiers-multiplayer is a local split-screen SDK example with
+    no transport. Full Seamless Co-op style play is unimplemented.'
+  sources:
+  - https://github.com/angryzor/hmm-update-server/tree/main/sonic-frontiers/he2mp
+  - https://github.com/angryzor/sonic-frontiers-multiplayer
+  checked: '2026-11-24'
+  searched:
+  - 'GitHub repos, code, issues and PRs; GameBanana; Nexus Mods; Steam guides and discussions;
+    web search in English, Japanese and Russian; 2026-11-24.'
+  - 'Reddit blocked to the fetcher; HE2MP playtest Discord not read (owner not contacted).'
 - game: Sonic Adventure DX
   year: 2003
   engine: PC version with SADX Mod Loader
