@@ -3,6 +3,16 @@
 Started 2026-11-24. Owner goal: **Seamless-Co-op-style co-op** — shared enemies,
 items and story — with friends on Steam PC, not just visible player puppets.
 
+## Upstream contribution (2026-11-24)
+
+- Claim issue: https://github.com/cranebeaker/coop-anything/issues/428
+- Draft PR: https://github.com/cranebeaker/coop-anything/pull/429 (commit `f864a81`,
+  `isDraft=true`, owner-review checkbox left unchecked).
+- Local fork: `https://github.com/leonpano3500/coop-anything`, branch
+  `game/sonic-frontiers`, tracking `origin/game/sonic-frontiers`.
+- The PR adds the Sonic Frontiers directory entries (HE2MP plus a full-coop gap)
+  and regenerates `DIRECTORY.md`. Builder check: `OK: 568 entries`.
+
 ## Identity (observed — source: local read-only inspection, 2026-11-24)
 
 - Title: Sonic Frontiers (PC/Steam).
@@ -167,12 +177,21 @@ MP-040 says `FEASIBLE_WITH_CURRENT_EVIDENCE=NO` and
 - `mpdev-live-read.dll` (reads ON, everything else OFF) and
   `mpdev-pos-sync.dll` (controlled position-write experiment, hooks OFF) are
   isolated engineering builds, not installed and not real co-op.
-- No `Item`/`Inventory`/`Pickup` messages exist. Story support is only generic
-  `WorldState2.progressFlags` / `WorldEvent2.eventId`. Item and story sync need
-  new typed messages, schemas, adapters, authority rules and tests.
+- As of 2026-11-24 there are offline-only typed item/story messages
+  (`Msg2Type` 22-25) and host-authoritative `mpdev_item_replication.*` /
+  `mpdev_story_replication.*` layers, with snapshots carrying a reliable-event
+  cursor. Standalone selftests and two-process loopback pass offline, but this
+  is **not shippable, not game-verified** and uses synthetic item/flag ids.
+  `kProtocol2Build` is still 3 (MP-032 guard), so stock build3 peers reject
+  these types; a formal protocol build bump is required before interop.
+  Details: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-results.txt`.
+- Real-game item tables, inventory/pickup mapping, story flag/trigger mapping,
+  adapters and authority rules remain unmapped. Story support in the stock
+  protocol is still only generic `WorldState2.progressFlags` /
+  `WorldEvent2.eventId`.
 - Future work surfaces: `src/coop/mpdev_protocol2.h/.cpp`,
   `mpdev_entity_replication.*`, `mpdev_world_replication.*`,
-  `mpdev_game_adapter.*`, `mpdev_enemy_integration.*`, plus new
+  `mpdev_game_adapter.*`, `mpdev_enemy_integration.*`, plus the new
   `mpdev_item_replication.*` / `mpdev_story_replication.*`; tests in
   `tools/run-tests.ps1` and `tools/run-coop-test.ps1`.
 
