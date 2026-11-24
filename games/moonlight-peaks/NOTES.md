@@ -57,3 +57,10 @@ Not implemented: guest action forwarding (harvest/plant/chests), cutscene stagin
 
 User-facing package: C:\Users\kopik\projects\moonlight-peaks-coop (install.ps1, uninstall.ps1, dist with pinned BepInEx zip and plugin).
 
+
+## Continued work 2026-11-24 (owner away)
+
+Added bidirectional Director node mirroring (GoToNextNode prefix/postfix; guest local graphs are forwarded, host echoes), bidirectional RoomState, and a persisted world push (full GamePersistence over TCP) with a semantic room signature (grid/growable/harvest/water/pickup counts and fields) and a 6 s apply cooldown. Verified: guest startday mirrored 12+ director nodes and advanced both clients to day 3; guest and host warps loaded on the other client; world applied once per change; idle 25 s stayed stable with one apply.
+
+Remaining: held item/equipment visuals, coins shared through GameMeta, cutscene subject should map to the acting player's unique entity, world reload rubber-banding, Steam transport.
+

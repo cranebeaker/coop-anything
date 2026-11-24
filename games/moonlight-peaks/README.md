@@ -1,4 +1,4 @@
-# Moonlight Peaks (2025)
+﻿# Moonlight Peaks (2025)
 
 | | |
 |---|---|
@@ -12,8 +12,8 @@
 
 A host/guest co-op mod runs: player 2 connects by IP, downloads the host save, gets a
 separate player record and NPC relationship list, is visible and animated, loads the
-host's rooms and shares the day clock. Farming, shops, story cutscenes and the sleep
-transition are not properly networked yet, so this is an alpha, not a full playthrough.
+host's rooms, follows Director cutscenes and shares the day clock. World changes are copied
+between clients but still reload the room, so this is an alpha, not a full playthrough.
 
 ## Existing work
 
@@ -74,6 +74,8 @@ Checked on 2026-11-24:
 - host room change to `Room_Exterior_Plot` loaded on the guest and both local players were
   re-spawned there;
 - host `IncrementDay` changed the guest clock from day 2 to day 3 within one second;
+- host and guest Director graph nodes mirrored (12+ nodes on the guest in 6 s) and both clients entered the day-start cutscene;
+- guest and host room changes both loaded on the other client; world persistence was pushed and applied once, with a 6 s cooldown;
 - guest loaded the host save over TCP and had 0 NPC relationships while the host had 62.
 
 ## How to play
@@ -84,13 +86,13 @@ The guest stays on the main menu and joins with the host's IP.
 
 ## Known issues
 
-- Guest farming/shop results are local only; harvest/plant and container changes do not
-  reach the host.
-- Host cutscenes do not stage on the guest. Cutscenes already running when the guest loads
-  still play locally.
-- Sleeping moves the clock but the guest does not get the sleep transition.
+- World persistence is copied and the receiver reloads the room, so it fades and
+  repositions; rapid farming can rubber-band.
+- Cutscene actors can differ: host-triggered scenes act on the host, guest-triggered ones
+  use the host as subject, so NPC staging can look wrong.
+- Guest tools/equipment and held items are not visible to the host; coins are charged on
+  the acting client only.
 - No lobby/NAT punch-through; direct IP only.
-- Guest tools/equipment visuals and NPC name labels are not synced.
 - Only build 25725760 was checked.
 
 ## Next steps
@@ -101,3 +103,5 @@ The guest stays on the main menu and joins with the host's IP.
 3. Send the sleep transition and day-start state to the guest.
 4. Replace the direct-IP transport with the game's Steamworks session for relay/NAT.
 5. Turn the control-port smoke test into a repeatable harness with assertions.
+
+

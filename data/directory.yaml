@@ -1,4 +1,4 @@
-- game: Deus Ex
+﻿- game: Deus Ex
   year: 2000
   engine: Unreal Engine 1
   project: HX
@@ -9434,7 +9434,7 @@
   made_with_coop_anything: true
 - game: Balatro
   year: 2024
-  engine: LÖVE 11 (Lua, LuaJIT)
+  engine: LÃ–VE 11 (Lua, LuaJIT)
   project: Balatro Duo
   url: https://github.com/dobrodeetel/balatro-duo
   other_urls:
@@ -9460,7 +9460,7 @@
   made_with_coop_anything: true
 - game: Balatro
   year: 2024
-  engine: LÖVE 11 (Lua, LuaJIT)
+  engine: LÃ–VE 11 (Lua, LuaJIT)
   project: BalatroCoop
   url: https://thunderstore.io/c/balatro/p/GUANZHUTAFEI/BalatroCoop/
   other_urls: []
@@ -15109,3 +15109,4 @@
   - https://store.steampowered.com/app/2209900/Moonlight_Peaks/
   checked: '2026-11-24'
   made_with_coop_anything: true
+
