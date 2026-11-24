@@ -188,7 +188,8 @@ MP-040 says `FEASIBLE_WITH_CURRENT_EVIDENCE=NO` and
   is **not shippable, not game-verified** and uses synthetic item/flag ids.
   `kProtocol2Build` is still 3 (MP-032 guard), so stock build3 peers reject
   these types; a formal protocol build bump is required before interop.
-  Details: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-results.txt`.
+  Details: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-results.txt`
+  and `RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`.
 - Real-game item tables, inventory/pickup mapping, story flag/trigger mapping,
   adapters and authority rules remain unmapped. Story support in the stock
   protocol is still only generic `WorldState2.progressFlags` /
@@ -270,6 +271,31 @@ events. No tracked field moved +1 on both pickups: `BlackboardItem +0x028`
 unrelated. No gate opened, QA=none. Read-only before/after scanning has
 diminishing returns: MP-040 already records that read-only scans alone cannot
 reach online sync; mapping + sync would require authorized writes/hooks.
+
+## Offline item/story hardening (2026-11-24)
+
+Owner chose to stop live scanning and strengthen offline tests only. No game,
+process, save, mod, friend, PC B package, protocol bump, or live network work
+happened in this pass.
+
+- Added `src/coop/mpdev_itemstory_selftest.h/.cpp` and a new CLI mode
+  `mpdev2-cli itemstory-selftest`, wired into `tools/build-coop.ps1` and
+  `tools/run-tests.ps1`.
+- Four new groups pass: late join with snapshot cursor and replay rejection;
+  malformed snapshot guards; malformed event/cursor guards; and wire codec
+  round-trip with bad length/CRC/count rejection.
+- Built `mpdev2-cli.exe`: 518,144 bytes, SHA-256
+  `FD05CB283EC5AD23E3A40465F3519E276C7B6F53795954B442D4A16659CF8078`.
+- `.\build\mpdev2-cli.exe itemstory-selftest`: `checks=4 failures=0 result=PASS`.
+- `powershell -ExecutionPolicy Bypass -File .\tools\run-tests.ps1`: PASS,
+  `failures=0`, `SOURCE_FILES count=19`.
+- `powershell -ExecutionPolicy Bypass -File .\tools\run-coop-test.ps1`: PASS,
+  `failures=0`; loopback host/client converged to `itemQty=5` and
+  `storyFlag=1` with zero item/story authority, epoch, and source rejects.
+- Full record:
+  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`.
+- `kProtocol2Build` remains 3, QA remains `none`, and no gate opened. This is
+  still offline-only and not shippable/interoperable with stock build3 peers.
 
 ## Unknowns / not yet checked
 
