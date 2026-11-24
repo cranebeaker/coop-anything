@@ -297,13 +297,32 @@ happened in this pass.
   `failures=0`; loopback host/client converged to `itemQty=5` and
   `storyFlag=1` with zero item/story authority, epoch, and source rejects.
 - Full records:
-  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`
-  and `RESULTS/mpdev-item-story-offline-fuzz-results-20261124.txt`.
+  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`,
+  `RESULTS/mpdev-item-story-offline-fuzz-results-20261124.txt`, and the wire
+  contract `RESULTS/mpdev-item-story-protocol-spec-20261124.txt`.
 - Fuzz harness bugs were found and fixed (Msg2Type index mapping, shared cursor
   advancement for the other layer's events, nonzero random item amounts); the
   production protocol/replication code was unchanged in the fuzz pass.
 - `kProtocol2Build` remains 3, QA remains `none`, and no gate opened. This is
   still offline-only and not shippable/interoperable with stock build3 peers.
+
+## Item/story wire contract for review (2026-11-24)
+
+Full spec:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-protocol-spec-20261124.txt`.
+
+- Msg2Type 22-25 are ItemState, ItemEvent, StoryState, StoryEvent. Wire build
+  stays 3 with `kProtocol2ItemStoryExtension = 1`; stock build3 peers reject
+  the new types, so a formal protocol bump and rollout plan are required first.
+- Payloads: ItemState 20+12N, ItemEvent 44, StoryState 24+8N, StoryEvent 44.
+  Snapshots carry `lastEventSeq`; events use the global reliable eventSeq space.
+- Host is authoritative. Clients require host GUID/epoch/session match, use
+  strictly increasing snapshot sequences, and reject stale/invalid snapshots.
+- Both item and story layers must advance their cursor for the other layer's
+  events because eventSeq is shared. Out-of-order events are buffered; gaps,
+  duplicates, and wrong source/epoch are rejected.
+- This is a review artifact only. No real item/flag mapping, write path,
+  resolver, two-PC test, or in-game QA exists. Gates and QA are unchanged.
 
 ## Unknowns / not yet checked
 
