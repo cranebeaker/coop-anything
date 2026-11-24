@@ -372,6 +372,27 @@ Full record:
 - Still not ready to mark PR ready/merge. Real progress needs fresh approval for
   protocol bump, item/flag mapping, writes/hooks, PC B traces, and in-game QA.
 
+## Protocol-bump impact analysis (2026-11-24)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-protocol-bump-impact-analysis-20261124.txt`.
+
+- Decision remains NO BUMP. `kProtocol2Build=3`, `kBuildTag2="2.0/build3"`, and
+  `kProtocol2ItemStoryExtension=1` are unchanged.
+- Stock build3 peers reject Msg2Type 22-25 at payload decode (`Malformed`);
+  `CheckCompat2` itself only checks major/minor/build.
+- Source pin inventory covers the codec, replication host-header guards,
+  transport switch, reliable-event whitelist, CLI help, seven-group selftest,
+  MP-030 validator, MP-031/MP-032 regex guards, protected baselines, and docs.
+- A bump would require re-approving and re-baselining MP-030/031/032 artifacts,
+  updating all docs/records/notes, and rerunning the full offline suite plus
+  both lossy scenarios.
+- Strategy options listed but not selected: hard bump, separate channel/magic,
+  or capability negotiation. Capability negotiation is undesigned because the
+  Hello payload is fixed-length and stock peers reject extra bytes.
+- No production source, build script, protocol constant, or test expectation was
+  changed. This is planning only; no gate opened.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
