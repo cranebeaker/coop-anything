@@ -261,6 +261,16 @@ Four read-only scans, same PID, candidate-only. Full summary:
   candidate-only, no flag bit identified.
 - No item id, flag, authority, resolver or write authorization. Gates unchanged.
 
+## Koco experiment — final conclusion (2026-11-24)
+
+Owner confirmed both pickups were exactly one Koco with HUD +1 and no other
+events. No tracked field moved +1 on both pickups: `BlackboardItem +0x028`
+(+6 then +1), `UIItemQuotaContext +0x1a8` (+1 then 0), `RelayedFlagsParameter`
+(-1 then +1). No Koco count field identified; +6 delta unexplained and likely
+unrelated. No gate opened, QA=none. Read-only before/after scanning has
+diminishing returns: MP-040 already records that read-only scans alone cannot
+reach online sync; mapping + sync would require authorized writes/hooks.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
