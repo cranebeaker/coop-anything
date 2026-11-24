@@ -247,6 +247,20 @@ same area, no menus). Result:
   resolver, or write authorization established. Koco HUD counter before/after
   was not captured. Gates unchanged; QA=none.
 
+## Two-test Koco comparison (2026-11-24)
+
+Four read-only scans, same PID, candidate-only. Full summary:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-itemstory-readonly/koco-two-test-summary-20261124.txt`.
+
+- `UIItemQuotaContext +0x1a8` went 1->2->1->1: REJECTED as a Koco counter
+  (reset before pickup 2, did not move on pickup 2).
+- `BlackboardItem +0x028` went 117->123->123->124: moved +1 on pickup 2 but
+  +6 on pickup 1 (owner reported HUD +1). A lead only, NOT a mapping.
+- `RelayedFlagsParameter` fields oscillated; treated as noise.
+- One new `SaveDataAccessor<UWorldFlagContainerData>` appeared after pickup 2;
+  candidate-only, no flag bit identified.
+- No item id, flag, authority, resolver or write authorization. Gates unchanged.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
