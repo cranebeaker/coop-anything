@@ -21,10 +21,14 @@ items and story — with friends on Steam PC, not just visible player puppets.
 - SHA-256: `7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`.
 - `steam_appid.txt` in the game root contains `1237320`. This is **not** assumed to
   be the game's Steam app id; reason unknown.
-- Store build/version id: **unknown** (no appmanifest found in the inspected Steam
-  library).
-- Engine: Hedgehog Engine 2 (from the HE2MP project name and prior local notes;
-  needs an independent source before being treated as confirmed).
+- Store build/version id: **16857613**, from
+  `D:\Steam\steamapps\appmanifest_1237320.acf` (`buildid` and `TargetBuildID`
+  agree; `appid=1237320`, name "Sonic Frontiers"). Read-only check, 2026-11-24.
+  All players still need their own build id checked before interop.
+- Engine: Hedgehog Engine 2 is **not independently confirmed**. A read-only MCP
+  `detect_engine` scan of the install (1017 files) found no engine signature;
+  only `steam_api64.dll` and `steam_appid.txt` signals. The name comes from the
+  HE2MP project and prior local notes only.
 - OS: Windows.
 
 ## Triage (observed)
@@ -195,10 +199,23 @@ MP-040 says `FEASIBLE_WITH_CURRENT_EVIDENCE=NO` and
   `mpdev_item_replication.*` / `mpdev_story_replication.*`; tests in
   `tools/run-tests.ps1` and `tools/run-coop-test.ps1`.
 
+## Read-only install scan (2026-11-24)
+
+Owner approved a read-only scan of the owner's own install; no friend contact,
+PC B package, protocol bump, game/save/mod change, process attachment or live
+memory scan. Full result: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-readonly-install-scan-20261124.txt`.
+
+- Confirmed exe hash/size/x64 PE32+ and `steam_appid.txt` app id 1237320.
+- Resolved the app id question: the appmanifest confirms app id 1237320 and
+  Steam build id 16857613.
+- `detect_engine` found no engine signature; Hedgehog Engine 2 stays unconfirmed.
+- No gates opened, no identity/resolver promotions, no item/story mapping,
+  QA still `none`.
+
 ## Unknowns / not yet checked
 
-- Exact Steam build id and whether all players have the same one.
-- Whether Hedgehog Engine 2 is confirmed from the exe/install.
+- Whether other players have the same Steam build id (16857613).
+- An independent source confirming Hedgehog Engine 2 from the exe/install.
 - Full feature list, current build and bug reports for HE2MP.
 - Other projects in Japanese/Russian communities, GameBanana, Nexus, Discord,
   archive.org (research in progress).
