@@ -231,6 +231,22 @@ exit 0. Result: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-items
 - No item id, flag id, trigger, authority, resolver or write authorization.
   No gate opened, no QA, no two-PC correlation.
 
+## Koco before/after read-only experiment (2026-11-24)
+
+Owner collected exactly one Koco between two pinned read-only scans (same PID,
+same area, no menus). Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-itemstory-readonly/koco-beforeafter-results-20261124.txt`.
+
+- 13 candidate objects before, 16 after. The only class-count change was
+  `ObjSequenceItem`: 0 -> 3 (all vptr `0x1414914d0`). These may be transient
+  collect/animation objects, not the Koco itself.
+- Field diffs by class/index: `BlackboardItem +0x028` 117->123 (+6),
+  `UIItemQuotaContext +0x1a8` 1->2, and several `RelayedFlagsParameter` values
+  that look like transient/pointer state.
+- None cleanly matches "one Koco collected"; no item id, flag bit, authority,
+  resolver, or write authorization established. Koco HUD counter before/after
+  was not captured. Gates unchanged; QA=none.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
