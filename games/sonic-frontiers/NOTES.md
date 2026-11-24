@@ -212,6 +212,25 @@ memory scan. Full result: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/m
 - No gates opened, no identity/resolver promotions, no item/story mapping,
   QA still `none`.
 
+## Read-only live item/story discovery scan (2026-11-24)
+
+Owner authorized a read-only live in-game scan for item/story hooks and launched
+the game themselves. Assistant ran a new read-only RTTI scanner
+(`VM_READ | QUERY_INFORMATION`, no writes/injection/network); 6707.9 MB scanned,
+exit 0. Result: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-itemstory-readonly-results-20261124.txt`.
+
+- 155 RTTI classes matched `Item`/`Inventory`/`Story`/`Flag`/`Quest`; 20 live
+  candidate objects found. All CANDIDATE-ONLY.
+- Interesting class families: `save@app@@` flag containers/accessors
+  (`WorldFlagAc`, `FlagContainerAc`, `WorldFlagContainerAc`,
+  `SaveDataAccessor<T>` over `UWorldFlagContainerData`/`UFlagContainerData`/
+  `UExtraFlagData`), item/dropped-item objects (`ObjDroppedItem`,
+  `ObjDroppedItemInfo`, `ObjQuestItem`, `UIItemQuotaContext`), and quest/message
+  classes (`QuestManager`, `MsgStartQuest`, `MsgSetClearFlag`,
+  `MsgTakeQuestItem`).
+- No item id, flag id, trigger, authority, resolver or write authorization.
+  No gate opened, no QA, no two-PC correlation.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
