@@ -447,6 +447,44 @@ Full analysis:
   one known small gameplay action) or stop Stage 1 with these candidates as the
   handoff. Stage 2 writes/hooks and Stage 3 two-PC work still need fresh approval.
 
+## Stage 1 Koco before/after/control (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-stage1-koco-beforeafter-20261125.txt`.
+
+Owner chose a read-only before/after correlation instead of opening Stage 2/3.
+The assistant did not launch the game. Same responding `SonicFrontiers.exe`
+(PID 10844) was present for all three pinned scans; the owner collected exactly
+one Koco between the before and after scans, then no action before the control.
+
+- Traces: before
+  `mpdev-itemstory-raw-trace-20261125-051124.txt` (16 objects, SHA-256
+  `669302D63B740A32BC6B9BA45D0FF147E6E2F469B8BC93E383D4989B2DDA2F37`),
+  after `mpdev-itemstory-raw-trace-20261125-051225.txt` (22 objects, SHA-256
+  `9D6B6485DD24443899D4DEAA07D907CA7C01667DD4B04B92805F0EF533301188`),
+  control `mpdev-itemstory-raw-trace-20261125-051331.txt` (20 objects, SHA-256
+  `07847A80D47D96C4FBDF7BE346E50AE9D564C8F93D8224AD31E3413F3D49A11C`).
+  All exited 0 with pinned scanner/exe hashes.
+- Before→after: 8 after-only hits (seven `SaveDataAccessor<T>` plus one
+  `ObjSequenceItem`); six changed fields in common objects; no `+1` change.
+  `BlackboardItem +0x028` went 125→134 and `RelayedFlagsParameter` fields
+  oscillated; none is an identified count or flag.
+- After→control: zero changed fields; only two objects disappeared. Those two
+  `SaveDataAccessor<T>` hits had suspect vptrs `0x0` and `0x1bc7bca20`, so they
+  are treated as transient/false-positive hits.
+- Five `SaveDataAccessor<UWorldFlagContainerData>` hits persisted into the
+  control with vptr `0x141572588`, but persistence without a post-action delta
+  means they are stable-but-unattributed, not a Koco mapping. An inspected
+  valid-vptr hit referenced AI/Trigger/Reaction objects, so class attribution is
+  not reliable.
+- Conclusion: `RESULT=CANDIDATE_ONLY_NO_MAPPING`,
+  `STAGE1_KOCO_CORRELATION=UNSUCCESSFUL`. No item id, Koco count, inventory
+  field, story flag bit, trigger, resolver, write address, hook point, or
+  authority model was found. This supersedes the previous "recommended next
+  step" in the Stage 1 scan section: that read-only route is now exhausted.
+- Stage 2 writes/hooks and Stage 3 friend/PC B/two-PC/in-game work remain
+  unauthorized. Gates stay closed, QA remains `none`, and PR #429 remains draft.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
