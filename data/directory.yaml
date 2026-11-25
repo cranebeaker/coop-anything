@@ -5261,7 +5261,7 @@
   checked: 2026-10-16
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
-- game: Assassin's Creed Origins, Odyssey and Valhalla
+- game: Assassin's Creed Origins and Valhalla
   year: 2017
   engine: AnvilNext
   project: (none found)
@@ -5279,16 +5279,49 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: No campaign co-op mod found for any recent entry; Unity has official side-mission co-op with a chat-fix
-    mod, and Brotherhood and Revelations only have multiplayer NPC overhauls. Reddit could not be searched with
-    my tool.
+  notes: No campaign co-op mod found. Sibling Odyssey (same engine) has a VMProtect + Denuvo exe, so static
+    RE is out of scope, but read-only runtime memory work succeeded there (see the Odyssey entry,
+    odyssey-ghost-coop). The same approach probably applies here but is unchecked. Unity has official
+    side-mission co-op with a chat-fix mod; Brotherhood and Revelations only have multiplayer NPC overhauls.
   sources:
   - https://www.nexusmods.com/assassinscreedunity/mods/448
   - https://steamcommunity.com/app/289650/discussions/0/811335793676585721/
   - https://www.gamerevolution.com/?p=666369
-  checked: 2026-10-16
+  checked: 2026-11-09
   searched:
   - search GitHub, Nexus, ModDB and Steam via web search, 2026-10-16
+- game: Assassin's Creed Odyssey
+  year: 2018
+  engine: AnvilNext
+  project: odyssey-ghost-coop
+  url: https://github.com/xXCroissantXx/odyssey-ghost-coop
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    story: false
+    enemies: false
+    world_state: false
+    items: false
+    players_visible: partial
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: '2026-11-09'
+  qa: automated
+  notes: 'Abandoned 2026-11-09: the goal was friends shown as real player heroes, which needs code injection into the VMProtect + Denuvo exe (out of scope). What exists and works is ghost co-op only: each player runs their own single-player game, and positions are shared onto an
+    always-on-top minimap and drawn as see-through animated original figures in the game view (camera read from memory; no occlusion). Nobody sees other players in the 3D world, and story, enemies and items do not
+    sync. Read-only runtime approach for Steam build 17083392: the exe is VMProtect + Denuvo, so there is no
+    static RE, no injection and no writes. The player position (x east, y north, z up) is found by a float
+    scan, and pointer paths from the exe''s static data survive restarts. UDP host relay at 20 Hz. Automated
+    bot tests cover the scanners and 3-player sync. In-game tracking was verified by the owner; there has
+    been no session with a second real player yet.'
+  sources:
+  - https://github.com/xXCroissantXx/odyssey-ghost-coop
+  checked: 2026-11-09
+  searched:
+  - read-only scan of a Steam install of Odyssey (build 17083392) with detect_engine and game_identity, 2026-11-09
+  - runtime memory scan and pointer scan of Odyssey build 17083392, verified across a restart, 2026-11-09
 - game: Dead Space (2023 remake)
   year: 2023
   engine: Frostbite
