@@ -15614,3 +15614,47 @@
   - https://store.steampowered.com/app/3495730/Lucid_Blocks/
   checked: '2026-11-15'
   made_with_coop_anything: true
+- game: The Outer Worlds 2
+  year: 2025
+  engine: Unreal Engine 5
+  project: tow2-coop
+  url: https://github.com/nicoNaeg/tow2-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: partial
+    world_state: partial
+    items: partial
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: >-
+    Native two-world co-op mod (dsound.dll loader + tow2coop.dll, MIT) for Steam build 24225441. The friend joins from
+    the main menu by receiving the host's campaign, with their own character (items, money, level, look) put into it;
+    each player sees the other as a stand-in NPC with the player's look, armor and helmet. Fights are shared: an enemy
+    that spots either player fights in both worlds, on the same target. NPC health and deaths, doors, containers and
+    dead-enemy loot follow the host; quest progress and outcomes go both ways live; travel, fast travel and the host's
+    reloads happen together; XP is shared; the players give each other items; the stand-in holds the other player's
+    weapon with its mods, uses it and crouches with them; enemies the game spawns during play are shared; menus don't
+    pause in co-op; the player who starts a conversation leads it and the other player's game plays the same one (the
+    same lines, camera and voices, only the leader chooses); a new game together from its start; quests completed in
+    both games the game's way; the host's companions are in the same places in both worlds; a hive's or a hatch's wave
+    of enemies starts in both games; the co-op menu and giving work with a controller; a real skill check is taken in
+    the follower's game past its lock; ship travel is followed; quest items go to both players, loose items picked up
+    are gone in both worlds and switches are shared. v0.6.0 (test build, a Windows installer) connects Steam friends or anyone in a public game (Steam lobbies, "Join game")
+    through the game's own Steam session and Valve's relay (no IP or port), hosted and joined from the game's main menu,
+    or by direct IP (UDP 27960 and TCP 27961) with an optional shared key. 0.6.0 was tested with two copies on one PC
+    (automated suite); one session across two PCs ran beta.4 (2026-11-17: joined over Steam, played, followed map
+    changes). Write-up in games/the-outer-worlds-2.
+  sources:
+  - https://github.com/nicoNaeg/tow2-coop
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0
+  - https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.6.0
+  - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
+  checked: '2026-11-21'
+  made_with_coop_anything: true
