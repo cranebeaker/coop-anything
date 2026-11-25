@@ -4,7 +4,7 @@
 |---|---|
 | Engine | Subset Games' own C++ engine (SDL, OpenGL); Linux builds ship with DWARF debug info |
 | Versions tested | Steam, Linux native, 1.6.13 (`FTL.amd64` SHA-256 `23897b7e…57d80`, Steam build id 4710954) |
-| Projects | [FTL Co-op](https://github.com/SCM69/FTL-Hyperspace/tree/coop) (Hyperspace fork, branch `coop`); no earlier co-op mod exists |
+| Projects | [FTL Co-op](https://github.com/SCM69/FTL-Hyperspace/tree/coop) (Hyperspace fork, branch `coop`); see Existing work for the other Hyperspace co-op fork |
 | QA level | automated (bots in 2 to 8 real game copies on one PC; see QA) |
 | Last updated | 2026-11-06 |
 
@@ -18,6 +18,7 @@ accounts or on real Windows.
 
 ## Existing work
 
+- [AeroX2/ftl-coop](https://github.com/AeroX2/ftl-coop): another co-op fork of Hyperspace (shared run, votes on decisions); own directory entry "ftl-coop".
 - [tomahawk812/FTL---Faster-than-light-Multiplayer](https://github.com/tomahawk812/FTL---Faster-than-light-Multiplayer):
   README-only stub, last push 2013-09-06.
 - [Tachyon / TachyonsCE](https://github.com/Dav-Edward/TachyonsCE): a separate multiplayer game in FTL's style, not a mod.
