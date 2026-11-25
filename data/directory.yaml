@@ -15469,3 +15469,33 @@
   - https://github.com/tomahawk812/FTL---Faster-than-light-Multiplayer
   checked: '2026-11-06'
   made_with_coop_anything: true
+- game: Queen's Domain
+  year: 2026
+  engine: Unreal Engine 4
+  project: Knights' Domain
+  url: https://github.com/Lotisphere/KnightsDomain
+  other_urls:
+  - https://www.nexusmods.com/queensdomain/mods/46
+  - https://www.mangolotis.com/knightsdomain/
+  - https://github.com/cranebeaker/queens-domain-coop-lab
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'no'
+    items: per-player
+  players: 2-4
+  networking: steam-relay
+  open_source: partial
+  last_activity: 2026-11
+  qa: automated
+  notes: "By Mangolotis. xinput1_3.dll proxy loader plus mod DLL, Steam lobbies and ISteamNetworkingMessages, in-game updater. Source public on the source branch (1.0.6), all rights reserved: read and build for own use, no modified builds or reuse without the author's permission. Automated two-copy tests by Co-op Anything, not by the mod's author, on 1.0.3 and 1.0.6 dev builds (UDP loopback, Steam build 26663759, Ruins level): players and movement, enemy HP, death and respawn, host leaving and 50 to 150 ms lag all work. Not shared in either direction: pickups, chests, doors, levers and gates, lifts, breakables, checkpoints, story counters; a rejoining player gets a fresh world; each player progresses in their own save. Enemy projectiles and boss area attacks exist only for the targeted player (the mod's issue 2). Loot is rolled per machine. After the host dies and continues, player sync can stop for the session (1 of 8 runs on 1.0.6). Not tested: Steam sessions between two accounts, 3 to 4 players, later levels. Details and test rig in games/queens-domain."
+  sources:
+  - https://github.com/Lotisphere/KnightsDomain
+  - https://github.com/Lotisphere/KnightsDomain/releases/tag/v1.0.6
+  - https://github.com/Lotisphere/KnightsDomain/issues/2
+  - https://github.com/cranebeaker/queens-domain-coop-lab
+  checked: '2026-11-18'
+  made_with_coop_anything: false
