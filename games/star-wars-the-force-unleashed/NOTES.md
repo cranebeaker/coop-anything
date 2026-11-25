@@ -1138,6 +1138,27 @@ Each test from a fresh `tools/fast-start.sh` (ready in 33-35 s every time). No L
 - `AWL.net.dll` + `SlimDX.dll` are .NET, probably the Aspyr launcher / wrapper layer. Not checked.
 - No multiplayer mode on PC known to me, so no replication to reuse. Unverified.
 
+## Working from the wrapped exe (2026-11-25)
+
+Review of PR #312 pointed out that the playbook says not to unpack DRM-wrapped exes. Observed:
+
+- Own PE parse of both files: same import directory (RVA 0xcc85a4, same dll list), `.text` entropy 8.0
+  wrapped against 6.33 unpacked, entry point in `.bind` (0x364a2ed) against 0x4ed1d5.
+- Wrapped exe in a test copy outside the Steam library, started directly with `SteamAppId`/`SteamGameId`
+  set and `steam_appid.txt`: "Steam Error: Application load error 5:0000065434". The dll had loaded and
+  hooked; the game's code never ran. Steam did not start the real install (watched for stray processes).
+- Wrapped exe in the real Steam install, started directly: the same error.
+- `steam://rungameid/32430` starts `SWTFU Launcher.exe`, which loads `dinput8.dll` from the game folder. A
+  first version of the delayed patching read 0x004D1990 there and crashed it (access violation).
+- Through Steam, with Play clicked in the launcher: `out.log` showed `detour installed at 0x004D1990`,
+  `engine runs Lua on thread ...` and the message pump hook, for 50 s until closed. `tfu_redirect.log` had no
+  game-process lines: the launcher still held the log open without write sharing (now opened shared).
+- The owner's install was put back after each run and checked by SHA-256 (exe, dll, coop.ini, co-op user
+  data, normal save and settings).
+
+Unknown: whether every patch applied on the wrapped exe (only the Lua detour was seen), and a full session
+on wrapped exes.
+
 ## Unknowns
 
 - Engine name and scripting system (if any).

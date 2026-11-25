@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | LucasArts Ronin: Lua 5.1 scripting (32-bit float numbers), Havok/DMM/Euphoria physics, Aspyr PC port (AWL) |
-| Versions tested | Steam app 32430, build 6522; `SWTFU.exe` SHA-256 `1C156705548FCE9E33FA3423E75B5CBE36248319B96F4B4850BF2E8125692032`, unpacked with Steamless v3.1.0.5 to `2D872CA97BA05C6E9777506549B514AC2DA7E74D5A0AA08DDD4F8299A95D7B8A` |
+| Versions tested | Steam app 32430, build 6522; `SWTFU.exe` SHA-256 `1C156705548FCE9E33FA3423E75B5CBE36248319B96F4B4850BF2E8125692032` as Steam installs it. Most tests ran on a test copy whose exe had been unpacked (SHA-256 `2D872CA97BA05C6E9777506549B514AC2DA7E74D5A0AA08DDD4F8299A95D7B8A`); see "The Steam wrapper" below |
 | Projects | tfu-coop (code repository not yet published); directory entry "tfu-coop" |
 | QA level | automated |
 | Last updated | 2026-11-02 |
@@ -25,7 +25,7 @@ between two PCs has not happened yet.
   The Wii (Krome) had a local two-player Duel mode and the PSP had 2–4 player modes, but these are
   different codebases from the PC version.
 - TFU-Modloader (Reloaded-II, C#, no license), https://github.com/LongTermMess/TFU-Modloader: its
-  `LuaRegister` 0x4d2120 and other addresses match the Steam build 6522 exe after Steamless.
+  `LuaRegister` 0x4d2120 and other addresses match the Steam build 6522 exe (the same bytes the wrapper leaves in memory at start-up).
 - TFU-Import-3dsMax (GPL-3.0, `.lp` packs, GTO models), pc-trainers (CE scripts), and Nexus mods 30 (NPC
   spawner) and 35 (frame-rate notes).
 
@@ -131,10 +131,32 @@ All code is in a `dinput8.dll` proxy plus Lua modules:
   m81 and m82 first failed because the tests used the wrong volume names; fixed, then passed. m83 failed as it
   should with its fix taken out (client paired 0 of 2 copies).
 
+## The Steam wrapper
+
+`SWTFU.exe` carries SteamStub (a `.bind` section; `.text` encrypted on disk). The mod does not unpack it:
+
+- The wrapped and the unpacked exe have the same import table, so the `dinput8.dll` proxy loads before the
+  wrapper runs. At that point `.text` is still encrypted.
+- The dll hooks three imports the C runtime start-up calls first (`GetSystemTimeAsFileTime`,
+  `GetStartupInfoA`, `GetCommandLineA`). On the first call that finds the expected bytes at a known function,
+  it applies its code patches. The wrapper and the file are never changed.
+- Tested once in a real Steam install (2026-11-25): started through Steam and the launcher's Play button,
+  the Lua detour installed and the engine ran Lua. The per-patch log lines of that run were not captured.
+- The wrapped exe refuses a direct start and any copy outside the Steam library ("Application load error
+  5:0000065434"), so multi-instance tests cannot use it.
+- Steam starts `SWTFU Launcher.exe` first, and it loads `dinput8.dll` too: a proxy must check which process
+  it is in before it reads game addresses (ours crashed the launcher once).
+
+Correction: until 2026-11-25 this project unpacked the test copy's exe with Steamless and told players to do
+the same, against [reverse-engineering.md](../../playbook/reverse-engineering.md) ("don't unpack it"). The
+static analysis and the automated tests were done on that unpacked test copy. Players are no longer asked to
+unpack anything, and the installer puts the original exe back where an earlier version replaced it.
+
 ## How to play
 
 See `PLAYING.md` in the tfu-coop package:
-- every player unpacks their own exe with Steamless and copies in `dinput8.dll` and the `coop` folder;
+- every player runs the one-file installer `TFU-Coop-Setup.bat` (or copies in `dinput8.dll` and the `coop` folder); `SWTFU.exe` is not changed;
+- start the game from Steam and click Play in the launcher (the wrapped exe refuses a direct start);
 - set role, player id, host address and a shared session key in `coop.ini`;
 - the host forwards UDP 37000 or everyone joins a VPN such as Tailscale;
 - start New Game; co-op switches on in the first level and clients follow the host's level.
