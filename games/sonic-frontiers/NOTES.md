@@ -996,6 +996,31 @@ Full record:
   full test closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim,
   and no ETA to online.
 
+## Single-field write experiment draft (2026-11-25) — NOT AUTHORIZED
+
+Full draft:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev068-single-field-write-experiment-draft.txt`
+(SHA-256
+`A6C2C5793DFD37E006F8F3CE1C650698E40E771F3881035198A9D9CA43F0E4E9`).
+
+- Proposed the smallest reversible test of the already-qualified save mirror:
+  temporarily write `numRings + 1` at `CharacterData+0x0`, read it back, ask
+  the owner whether any HUD/count visibly changed, and restore the original
+  word within five seconds. The draft requires fresh pointer re-resolution,
+  owner agreement not to save during the window, stop conditions, and rollback
+  on every exit path.
+- This is a draft only. `PROCESS_VM_WRITE_NOT_AUTHORIZED=1`; no write, hook,
+  detour, breakpoint, DLL load, install, inject, network action, friend
+  contact, build-id check, or PC B step has been performed or authorized by
+  this draft.
+- It would only test whether a direct write to this save mirror is physically
+  possible and reversible. It would not establish authority, item/story
+  semantics, a runtime counter, hook point, resolver, protocol mapping, or
+  co-op readiness.
+- `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`; Stage 2 remains `BUILD_ONLY`,
+  Stage 3 remains `PREP_ONLY`, full test closed, `READY_FOR_INSTALL=NO`, QA
+  `none`, no working co-op claim, and no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
