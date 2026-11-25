@@ -98,12 +98,12 @@ and run `Lancer Crash Coop.cmd`. Paste the friend's SteamID64 and start the game
 
 - Characters slide a little while running.
 - A friend who plays another hero than you appears as your hero, moved by their buttons only.
-- Dying or going back to a checkpoint is not synced.
+- Deaths are not synced. Checkpoint crates are synced since v19, but checked in Crash 1 only.
 - Only the Steam build above works (fixed addresses).
 
 ## Next steps
 
-- Sync deaths and checkpoint reloads (and the crates they restore).
+- Sync deaths.
 - Reduce sliding (velocity or root motion on the puppet).
 - Extend the suite: checkpoints in Crash 2 and 3, more levels per game, a two-PC run over Steam.
 - Load a second hero without breaking the next level load (see the notes: removing the loader cache entry was not enough).
