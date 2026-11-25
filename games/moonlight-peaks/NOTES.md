@@ -64,3 +64,7 @@ Added bidirectional Director node mirroring (GoToNextNode prefix/postfix; guest 
 
 Remaining: held item/equipment visuals, coins shared through GameMeta, cutscene subject should map to the acting player's unique entity, world reload rubber-banding, Steam transport.
 
+
+## 0.1.2
+
+Guest actors now get a cloned player entity on the host (unique GUID, EntityAsset.IsPlayer patch, registered under its own key) and Director actor ids choose host/guest player vs NPC. Held item GUID is sent and the puppet equipment instantiates it, unverified with real tools. World reload stores and restores local position to reduce rubber-banding. Coins are inventory items and stay per-player. Tested: host and guest startday both advanced to day 4, cutscene graphs ran on both, 16 s stable.
