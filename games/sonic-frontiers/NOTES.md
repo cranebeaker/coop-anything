@@ -1636,6 +1636,66 @@ No attach, write, hook, install, network, friend contact, input simulation, or
 live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
 Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## Static `MsgLossRing` continuation pass, mpdev143-151 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime ring
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev143-msglossring-vtables-20261125.txt` (SHA-256
+  `F19601A9F1A0B3A37C6063387D4839A90F9453545483DC53DD5DB21A3C1AEFE0`) reads
+  `MsgLossRing` vtable `0x141431638` and async-handler vtable `0x141431658`.
+  Slot `+0x00` is `CreateAsyncHandler@MsgLossRing` (`0x1401cc710`), `+0x10` is
+  the shared `0x14008d680` thunk, and the async handler's `+0x00` points to
+  `0x140099100`. Nothing here identifies consumer-side counter logic.
+- `mpdev144-msglossring-vtable-lea-refs-20261125.txt` (SHA-256
+  `332DFD6821A033D410252263666A155A031C5CF2F78FAD63E08121A3176C1D4C`) found five
+  RIP-relative LEA references to `MsgLossRing` vtable `0x141431638`: the
+  create-handler tail (`0x1401cc790`) plus four construction/send sites in
+  `MiniBossTrackerContext`/`MiniBossTrackerRingHole`
+  (`0x140719f12`, `0x140719fca`, `0x140722986`, `0x1407232ff`). The async vtable
+  has one reference inside `CreateAsyncHandler@MsgLossRing` (`0x1401cc75d`).
+- `mpdev145-msg2200-cmp-refs-20261125.txt` (SHA-256
+  `4F97A079FD87F63AEFA874A2A602D6DB52131D0EEC8DE5FF194464BF9B395191`) searched
+  three plausible `cmp`/`test` encodings for immediate `0x2200`; all returned
+  `COUNT=0`.
+- `mpdev146-msg2200-immediate-all-20261125.txt` (SHA-256
+  `89C6567522EA68989F197A67A1902CBE624C045C760F3CF7CEA41CB22F6CA854`) found the
+  raw immediate at the four `MsgLossRing` construction sites above plus many
+  non-code hits. No handler-side compare was established.
+- `mpdev147-msglossring-async-handler-methods-20261125.txt` (SHA-256
+  `6865BE9E6F6D0CE6C1B99517D872421D573EA62B705FA65D6164140F763A329A`) aligns
+  `0x140099100`-`0x140099280`. `0x140099100` is destructor/cleanup-shaped and the
+  following aligned method is an unrelated larger destructor; neither updates a
+  ring counter.
+- `mpdev148-msglossring-create-handler-aligned-20261125.txt` (SHA-256
+  `877185E205E71A35743676353BE7851F09130F4913D4DFC337BD2721D288D362`) aligns
+  `0x1401cc710`-`0x1401cc7cb`. It allocates a `0x60`-byte async handler, copies
+  message fields, installs both vtables, and returns; no numeric ring read or
+  write occurs.
+- `mpdev149-msglossring-send-140719f0d-20261125.txt` (SHA-256
+  `7E809337099FFB9039F02B2D4DE65A35D45215AA7F0650BC63E8CBFAD720F00A`) aligns
+  `0x140719ec0`-`0x140719fbb`. It constructs `MsgLossRing` at `0x140719f04` and
+  `0x140719fbc`, sets several byte/dword fields, reads a dword from world data,
+  and dispatches through `0x140ec97f0`. Those payload fields are not established
+  as ring currency.
+- `mpdev150-msglossring-send-140722981-20261125.txt` (SHA-256
+  `EE01F7EA5868D71B791B2C404530ED3B305281A0573D7747F976E8666735A8EF`) aligns
+  `0x140722940`-`0x1407229c9`. It constructs the message at `0x140722977`, sets
+  a dword from `[rsp + 0x108]` plus two byte fields, and dispatches through
+  `0x140ec97f0`; no counter logic is present.
+- `mpdev151-msglossring-send-1407232fa-20261125.txt` (SHA-256
+  `46D3DF4CB886F3A7D22FDED22B998F3D553C3EDE9BA050428D883874C4F7E487`) samples
+  `0x1407232b0`-`0x140723330`. The first two bytes are a misaligned fragment; the
+  aligned construction at `0x1407232f0` sets one dword and two bytes before
+  dispatch (`0x140ec97f0`/`0x140d32e40`). It is a send site, not a consumer.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
