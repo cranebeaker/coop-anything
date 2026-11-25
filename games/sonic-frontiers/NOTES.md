@@ -841,6 +841,69 @@ Full record:
   No install, attach, game launch, write, hook, network action, friend contact,
   PC B setup, or in-game verification occurred.
 
+## Collectible count write-chain cross-check (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev063-collectible-count-write-chain-20261125.txt`
+(SHA-256
+`7190315E1A08751132A007BD508B752BC0F74B632A8137BFE1FCD8C68602B07C`).
+
+- Added offline-only `tools\mpdev-setter-scan.py`, improved the one-pass
+  `tools\mpdev-static-call-find.py`, and added `tools\mpdev-static-call-context.py`.
+  No process, game, hook, network, friend or PC B was touched.
+- Static accessor chain: `GetCharacterAccessor@GameObject` `0x140B0EC00` reads
+  GameManager from `[GameObject+0x48]` and calls `0x140B0DE10`; the normal
+  branch uses `GameDataAc::GetCharacterAccessor` `0x140AFBAB0`, whose body is
+  `CharacterData = [GameDataAc+8] + 0x80`. `CharacterAc+8` points at that
+  `CharacterData`. The `r8b != 0` branch selects the ExtraCharacter path.
+- RFL `CharacterData` member offsets from `mpdev050` match the getter and setter
+  displacements byte-for-byte for seven scalar fields: `numRings` `+0x0`,
+  `numPowerSeeds` `+0x30`, `numGuardSeeds` `+0x34`, `numFishCoins` `+0x38`,
+  `numFishTokens` `+0x3a`, `numGoldCards` `+0x3c`, and `numSlotStars` `+0x3e`.
+  Widths are word except the two seed counts, which are dword.
+- Setter callers were mapped to 34 unique sites with function bracketing and
+  disassembly context. Static system hints are fishing rewards/trade UI,
+  Kodama Hermit seed spending, ring pickup/portal/trade/save paths, and bonus
+  slot UI. `ObjKodamaHermit` subtracts values from both seed counts before
+  writing; `UIFishTrade` reads `GetNumRings` and writes an adjusted value.
+- The CSV has duplicate-address collisions (for example `0x140AFB550` maps to
+  both `GetMusicVolume` and `GetRingLevel`), so all nearest/EXACT symbol names
+  remain hints; brackets by adjacent symbols and direct disassembly were used
+  instead of trusting a single name.
+- This is `CANDIDATE_ONLY_STATIC_CROSS_VALIDATED`, not live verification.
+  `WRITE_TARGET=CANDIDATE_FOUND_STATIC_CROSS_VALIDATED`, but `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, and `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`.
+  No item id, story flag, resolver, final write address, or co-op claim was
+  established. Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY`,
+  `READY_FOR_INSTALL=NO`, QA remains `none`, and there is no ETA to online.
+
+## Setter flow / hook-boundary static pass (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev064-setter-hook-boundary-20261125.txt`
+(SHA-256
+`5DE4C369A37037464D894602A8C68566762E7688F3F21164BE894680D44A36F1`).
+
+- Added offline-only `tools\mpdev-static-setter-flow.py`. Across the 34 setter
+  call sites, linear disassembly classified 20 as read-modify-write candidates,
+  4 as absolute-immediate candidates, and 10 as absolute-or-external-value
+  candidates. One slot-star site has a getter distance of `0x1e7` and is a weak
+  classification. Branches and earlier blocks were not followed.
+- All seven setter thunks have zero 64-bit data-pointer references in the image;
+  every observed reference is a direct `call rel32`. Each complete setter body
+  occurs exactly once, so the seven thunks are a plausible central static hook
+  boundary. PE section `.idata` is `CODE|EXECUTE|READ` (`0x60000020`), so a
+  detour would need an explicit protection change.
+- This remains `HOOK_BOUNDARY_CANDIDATE=SEVEN_TINY_SETTER_THUNKS` with
+  `HOOK_POINT=NOT_FOUND`. No live base, page protection, detour layout,
+  calling-convention preservation, re-entrancy guard, pre-write delta method,
+  rollback path, authority decision, protocol message, item id, story flag,
+  resolver, save-image mapping, install, attach, launch, game write, network
+  action, friend contact, PC B action, or in-game verification occurred.
+- Stage 2 remains `BUILD_ONLY`; Stage 3 remains `PREP_ONLY` / full test closed.
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, `READY_FOR_INSTALL=NO`, QA remains
+  `none`, no working co-op is claimed, and there is no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
