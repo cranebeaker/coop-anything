@@ -230,3 +230,26 @@ like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
 97. **A copy you spawn misses the values the level set on the original.** Shrek 2 maps set values on the hero they place: double jump 128 for the Steed of one level, fall distance 1000 for Puss in his factory, other run speeds in Castle Siege. Guest heroes spawned from the class got the defaults, so a guest could fail a jump the host made, or die from a fall the host survived. Read the retail maps' placed actors (UELib reads `.unr` exports and their properties) to list such overrides. Copy them from the original at spawn, and send the values the client predicts with (jump heights) to the guest's machine too. Example: Shrek 2 (`EnhancedGame.CopyHeroValues`).
 
 98. **In UE2, a network client that opens a local map can crash while painting the old level's loading screen.** In Shrek 2 a guest sent from the host's level to play the same level's opening alone crashed in `ATerrainInfo::UpdateVertices`, called from `UGameEngine::PaintProgress` <- `LoadingScreen` <- `LoadMap`. A stop in a menu map on the way did not help. Skipping `PaintProgress` (an export of `Engine.dll`, hooked through its jump thunk) while the process is still a network client did. Example: Shrek 2 (`hook_PaintProgress` in shrek2-enhanced).
+
+99. **In lockstep, cosmetic code can draw from the simulation's random generator, and how often it draws can depend on
+rendering.** FTL's sprite animations (random flicker frames, random frame sounds), particle emitters and background
+nebula clouds all call the game's one generator (`random32`). Two copies agreed until one fell behind and caught up by
+running several frames without a render in between; then it drew a different number of values and the copies split,
+with no visible state different at first. A forced hitch (a guest skips a few loops every 97, so it must catch up) made
+it reproducible, and a per-caller count of generator calls between hash checks, diffed between copies, named the three
+functions at once. Saving the generator state before each of them and restoring it after fixed it. Count calls per
+caller, cheaply (a small fixed table, not a map: the slower trace hid the bug), and hash the generator state on its
+own so a stream split shows before the game state splits (games/faster-than-light).
+
+100. **A "pause while a window is open" rule breaks lockstep.** FTL pauses its simulation while any window (store, ship
+screen, map, menu) is open, so a player browsing the store froze only their own copy. Make the pause come only from
+shared things (the explicit pause command, event dialogs every copy opens on the same frame) and let private windows
+leave the simulation running (games/faster-than-light).
+
+101. **Resync by reloading a save works only from a quiet moment, and the host must reload too.** FTL co-op repairs a
+desync and admits late joiners by sending the host's save to everyone and having every copy, the host included, reload
+it and restart lockstep. A save taken one frame into a jump loaded at different beacons on host and guest, so a resync
+now waits until no jump is armed or running and no event dialog is open. Reloading also exposed a use-after-free in a
+mod's screen code (a stale pointer to the previous game's ship) that the normal quit-to-menu path never hits; clear
+such pointers before loading. Version restarts with an epoch number so messages from the old run are dropped, and test
+that the drop is needed: without it, hashes from before the restart were compared with the new run (games/faster-than-light).

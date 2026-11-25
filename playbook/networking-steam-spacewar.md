@@ -239,6 +239,31 @@ GameRichPresenceJoinRequested_t { uint64 friend; char connect[256]; }
 - **Lobby id:** show the id on screen and copy it to the clipboard as a manual
   fallback (`-steamjoin <id>`).
 
+## Using the game's own app id and an old steam_api (no InitFlat, no manual dispatch)
+
+When everyone owns the game on Steam, you can skip Spacewar and use the game's own app id and its own
+`steam_api`: players then show as playing the game, and lobbies are only visible to its players. FTL's copy
+(Steamworks SDK of 2019, Linux and Windows) has the flat API but no `SteamAPI_InitFlat`, no ManualDispatch and no
+ISteamNetworkingMessages. It still has ISteamMatchmaking and the older ISteamNetworking P2P calls, which are enough:
+
+- **Interfaces:** `SteamInternal_FindOrCreateUserInterface(SteamAPI_GetHSteamUser(), "SteamMatchMaking009")` and so on,
+  with the versions of that SDK; check the vtable slot each flat function jumps through against those versions
+  (`objdump -d` on the Linux `.so`: `mov 0x68(%rax),%rax` in `..._CreateLobby` is slot 13).
+- **No callbacks:** poll instead. Async results: `ISteamUtils::IsAPICallCompleted` then `GetAPICallResult` with the
+  exact struct size (LobbyCreated is 12 bytes on Linux, 16 on Windows: callback structs are packed 4 on Linux and 8 on
+  Windows). Membership: `GetNumLobbyMembers`/`GetLobbyMemberByIndex`. Packets: `IsP2PPacketAvailable`/`ReadP2PPacket`.
+  Session requests: the host calls `AcceptP2PSessionWithUser` for every lobby member instead of waiting for the
+  P2PSessionRequest callback; a guest's first send to the host accepts the host.
+- **CSteamID** parameters pass like a `uint64`; the old flat functions return CSteamID values as `uint64`.
+- **Check that the exe really starts Steam.** A version-rolled-back exe can be a build without Steam code: FTL's
+  1.6.9 Windows exe (made by Hyperspace's rollback patch) imports no steam DLL, so the first real-Steam run found every
+  symbol missing. The mod then loads `steam_api.dll` from the game folder, sets `SteamAppId` if unset, calls
+  `SteamAPI_Init` and pumps `SteamAPI_RunCallbacks` itself. Evidence:
+  [games/faster-than-light/NOTES.md](../games/faster-than-light/NOTES.md) (Steam lobbies).
+
+For tests, a fake behind the same small interface (in-process for transport tests, plus a loopback hub that game
+copies share) covers the rules below without a second account.
+
 ## Testing without two Steam accounts: the mock DLL
 
 One PC can only run one Steam account, so you can't test two players locally with
