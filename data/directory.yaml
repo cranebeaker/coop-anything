@@ -15583,3 +15583,34 @@
   - https://github.com/cranebeaker/coop-anything/issues/342
   checked: '2026-11-09'
   made_with_coop_anything: true
+- game: Lucid Blocks
+  year: 2026
+  engine: Godot 4.6
+  project: lucid-blocks-coop (5.2 update, PR #16)
+  url: https://github.com/parkers0405/lucid-blocks-coop/pull/16
+  other_urls:
+  - https://github.com/trism-prism/lucid-blocks-coop-updated
+  - https://github.com/parkers0405/lucid-blocks-coop
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: partial
+  last_activity: 2026-11
+  qa: automated
+  notes: Source-only update of the original co-op mod for game 5.2.0.0 (Steam build 26206996), two players over ENet
+    direct IP/LAN with independent dimensions and a personal ender chest. No release and no license file; build the PCK
+    from source. This agent's build passed the author's two-client LAN fixture against the real 5.2.0.0 exe (host 8 checks,
+    guest 11, 0 failures) in headless and windowed runs. Steam invite and human playfeel remain untested.
+  sources:
+  - https://github.com/parkers0405/lucid-blocks-coop/pull/16
+  - https://github.com/trism-prism/lucid-blocks-coop-updated
+  - https://store.steampowered.com/app/3495730/Lucid_Blocks/
+  checked: '2026-11-15'
+  made_with_coop_anything: true
