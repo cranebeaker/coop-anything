@@ -26,7 +26,10 @@ from typing import Callable, Dict, List, Optional
 
 from .config import Config
 
-_PS = ("Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000;StartTime=(Get-Date).AddMinutes(-$env:GP_MINUTES)} "
+# PowerShell writes to a pipe in the console's OEM code page unless told otherwise, and the event messages are in the
+# system's language: the output is switched to UTF-8 and decoded as UTF-8, so a Russian crash record is not lost.
+_PS = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
+       "Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000;StartTime=(Get-Date).AddMinutes(-$env:GP_MINUTES)} "
        "-ErrorAction SilentlyContinue | ? { $_.Message -match $env:GP_MATCH } | select -First 3 | "
        "% { $_.TimeCreated.ToString('s') + ' ' + ($_.Message -replace \"`r?`n\", ' | ') }")
 
@@ -34,8 +37,8 @@ _PS = ("Get-WinEvent -FilterHashtable @{LogName='Application';Id=1000;StartTime=
 def _wer_events(minutes: int, match: str) -> List[str]:
     env = dict(os.environ, GP_MINUTES=str(int(minutes)), GP_MATCH=match)
     try:
-        r = subprocess.run(["powershell", "-NoProfile", "-Command", _PS], capture_output=True, text=True, timeout=60, env=env)
-        return [l for l in r.stdout.splitlines() if l.strip()]
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", _PS], capture_output=True, timeout=60, env=env)
+        return [l for l in r.stdout.decode("utf-8", errors="replace").splitlines() if l.strip()]
     except Exception as e:  # noqa: BLE001
         return [f"(could not query the event log: {e})"]
 

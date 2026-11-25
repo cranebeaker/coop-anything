@@ -143,8 +143,10 @@ def pids_named(name):
     """Pids of running processes with this image name (used only by `status`)."""
     if not name or os.name != "nt":
         return []
+    # tasklist writes in the console's OEM code page and in the system's language: decoded as UTF-8 (Python's UTF-8
+    # mode) a Russian Windows's output failed and stdout came back None
     out = subprocess.run(["tasklist", "/FI", f"IMAGENAME eq {name}", "/FO", "CSV", "/NH"],
-                         capture_output=True, text=True).stdout
+                         capture_output=True, text=True, encoding="oem", errors="replace").stdout or ""
     pids = []
     for ln in out.splitlines():
         parts = [p.strip('"') for p in ln.split('","')]
