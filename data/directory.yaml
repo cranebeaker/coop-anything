@@ -13313,7 +13313,7 @@
     items: partial
   players: '2'
   networking: direct-ip
-  open_source: 'yes'
+  open_source: partial
   last_activity: 2026-10
   qa: automated
   notes: 'Source for a Firewatch co-op mod (no license stated). Upstream 0.5.0 cannot sync
