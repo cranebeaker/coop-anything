@@ -1021,6 +1021,37 @@ Full draft:
   Stage 3 remains `PREP_ONLY`, full test closed, `READY_FOR_INSTALL=NO`, QA
   `none`, no working co-op claim, and no ETA to online.
 
+## Single-field write experiment result (2026-11-25) — PASS, save-mirror only
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev068-single-field-write-experiment-results-20261125.txt`
+(SHA-256
+`98618E46BB7ADB1544E930A2A7A0CFFDC50F4CD21475495AA8E47E1AE47C2EA5`).
+Tool:
+`tools/mpdev068-single-field-write-experiment.py`
+(SHA-256
+`E024290FCBF609F6212549A341C2547F4BAEFB73053DF11F6C8442A71751D0B9`).
+
+- Owner explicitly authorized the exact reversible experiment and watched the
+  HUD. The tool verified the pinned EXE hash, one responding PID, module base,
+  and every recorded chain pointer before writing.
+- It changed only `numRings` at `CharacterData+0x0` from `138` to `139`, read
+  back `139`, held it for 3.063 seconds, restored `138`, read back `138`, and
+  closed the handle. No save, hook, detour, breakpoint, DLL load, inject,
+  install, network, friend contact, build-id check, PC B, or input simulation
+  occurred.
+- Owner reported the visible ring count **did not change** during the window.
+  Together with the mpdev067 post-save correlation, this confirms the address
+  is a save-state mirror, not the immediate ring HUD counter.
+- `DIRECT_WRITE_PHYSICALLY_POSSIBLE=1`, `DIRECT_WRITE_REVERSIBLE=1`,
+  `IMMEDIATE_HUD_READS_THIS_FIELD=0`, `SAVE_MIRROR_ONLY_CONFIRMED=1`.
+  The real runtime ring counter remains `NOT_FOUND`. This does not establish
+  authority, hook point, detour layout, item/story semantics, resolver,
+  protocol mapping, or co-op readiness.
+- Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY` with full test
+  closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim, and no ETA
+  to online. Further writes require a new explicit authorization.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
