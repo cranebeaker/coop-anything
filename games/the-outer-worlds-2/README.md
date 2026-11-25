@@ -6,7 +6,7 @@
 | Versions tested | Steam, app 1449110, build 24225441 (game version 1.2.0.1) |
 | Projects | [tow2-coop](https://github.com/nicoNaeg/tow2-coop) ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), direct IP; test build [v0.6.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.6.0), Steam or direct IP), directory entry "tow2-coop" |
 | QA level | automated (two copies on one PC) and one manual session across two PCs (beta.4) |
-| Last updated | 2026-11-19 |
+| Last updated | 2026-11-21 |
 
 ## Where things stand
 
@@ -24,7 +24,7 @@ same lines, camera and voices, the same choices shown; only the leader chooses, 
 two players can start a new game together from its very beginning; a quest one completes is completed in the other
 game the game's own way; out of a fight the host's companions are in the same places in both worlds.
 
-v0.5.0 (test build, 2026-11-20, installed with `tow2coop-setup.exe`) connects Steam friends, or anyone in a public game,
+v0.6.0 (test build, 2026-11-21, installed with `tow2coop-setup.exe`) connects Steam friends, or anyone in a public game,
 through the game's own Steam session (no IP or port), hosted and joined from the game's main menu or Steam's "Join game",
 or two players by direct IP. All of it was tested with two copies of the game on one PC. The only session across two PCs
 so far (2026-11-17) ran beta.4: the friend joined over Steam, both played for 15 minutes and the friend followed four
@@ -178,7 +178,7 @@ Each player needs their own copy of the game (a Steam Families copy can't be pla
   friend makes their character in the game's character creator first) or *I'll host: anyone can join (public game)*, the other player
   *I'll join a friend's game* and the host in the list (friends who host, public games), or *Join game* on the host in
   the Steam friends list. No address or port.
-- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or 0.5.0 with *Direct IP* in the installer): the host runs
+- **By IP** ([v0.1.0](https://github.com/nicoNaeg/tow2-coop/releases/tag/v0.1.0), or 0.6.0 with *Direct IP* in the installer): the host runs
   `install.ps1 -Role host` and gives the printed key to the friend, who runs
   `install.ps1 -Role client -Peer <host address> -Key <key>`. The host's PC must accept UDP 27960 and TCP 27961 (port
   forwarding or a VPN).
