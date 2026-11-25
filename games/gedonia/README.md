@@ -6,7 +6,7 @@
 | Versions tested | Steam, app 1114220, build 16727998 (Gedonia.exe SHA-256 B375205374C5355991FE1C91577CEB729AD9FBC2FC6534FE4EF897288A5DF91B), Windows 11 x64 |
 | Projects | [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) (directory entry "Gedonia / Gedonia Co-op"), claim [#214](https://github.com/cranebeaker/coop-anything/issues/214) |
 | QA level | automated |
-| Last updated | 2026-10-30 |
+| Last updated | 2026-11-04 |
 
 This is the original Gedonia, not Gedonia 2 (which has official co-op).
 
@@ -16,8 +16,8 @@ Two or more players can play the open world and the story together over Steam (f
 relay) or in the home network. Players, enemies, story, conversations, loot spots, world events,
 expeditions with their generated dungeons, time and weather are shared. Every feature has an automated
 two-client scenario; real sessions with friends over Steam went fine, and the points they
-found (0.6.x) are fixed in 0.7.x. 0.8 adds groups, enemy scaling and trading, so far tested only by the
-automated scenarios. Status: alpha (0.8.1).
+found (0.6.x and 0.9.x) are fixed. Groups, enemy scaling, trading, chat, mounts, doors and the
+game-styled windows are so far tested only by the automated scenarios. Status: alpha (0.9.5).
 
 ## Existing work
 
@@ -124,6 +124,25 @@ All in the [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) plugin; each
   (respawn, respawnnorth: the game only has a reload on death, which would turn back the world; in
   co-op the fallen player gets up at a crystal bound with F; crystals stand at measured spots, because
   searching a dry spot on each PC put one into a pond whose water streamed in late on a slower PC).
+- **Death screen and loading** (deathscreen): while other players are connected the death screen's
+  buttons (load, return to menu) are hidden and a copy of its title label shows the respawn countdown; the
+  pause menu's load button is hidden and `InterfaceManager.OnLoad` is blocked in the world, because a load
+  turns back the world (for the host, everyone's). Alone the game's menus are unchanged.
+- **Chat** (chat): reliable messages, cleaned of rich text and control characters; while the field is open
+  the game sees no keys (prefixes on `vp_Input`, a transpiler swaps `Input.GetKey*` in the player, demon,
+  werewolf, building and cutscene scripts). Tested with real IMGUI key events and 20 % packet loss.
+- **Mounts, enemy shots, doors** (mountride, spells, doors, doorsjoin): the summoner sends the mount's pose
+  and the rider layer weights (set by script, not by a parameter, so the puppet had floated); copies of
+  mounts and transformation bodies need the Animator's StateMachineBehaviours silenced. Projectiles of
+  enemies and followers simulated on a PC are sent like the player's. Door state is watched rather than
+  patched (F, lockpicking, NPCs and companions all open doors), versioned, ties go to the higher id.
+- **Quest repair loop** (questloop): the quest digest repair called only the "objective done" show
+  (`QuestsData.ObjectiveCompleted`), not the state, so a player behind on a quest heard the sound every
+  5 s; the repair now sets `completed[]` and the shown objective and runs at most once a minute.
+- **Windows in the game's look** (uiskin): the plugin's IMGUI windows (co-op menu, group, trade, chat,
+  join, invites) and the group member frames are drawn with sprites cut at runtime from the game's NGUI
+  atlas and its font with an outline. Copying the atlas has to happen outside OnGUI (inside it the image
+  came out much darker) and in one full read (sub-rect reads hit wrong areas).
 
 ## QA
 
@@ -131,7 +150,12 @@ All in the [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) plugin; each
   (the second is hard links; each has its own Unity product name, so saves and settings are separate)
   with a fixed test save, runs timed test steps and bots in both, and logs what each side observed
   (positions, animation, look signatures, ownership, story events, votes) plus screenshots.
-- 38 scenarios. Runs on the 0.8.x code (2026-10-27 to 2026-10-30): party (XP not shared before the group,
+- 54 scenarios. Runs on 0.9.x (2026-10-30 to 2026-11-04): chat (9 lines identical on both sides with
+  20 % loss, the friend stands still while typing, Esc/Enter never reach the game), mountride (all 8 mounts,
+  rider on the copy), spells, doors, woodevent, questloop (repair once instead of every 5 s), uiskin,
+  deathscreen (buttons hidden in co-op, countdown, back when alone, load blocked); 0 errors. Each fix of the
+  friends' bug list also has a control run with the fix switched off (`-NoFix`) that shows the bug.
+- Runs on the 0.8.x code (2026-10-27 to 2026-10-30): party (XP not shared before the group,
   shared in it, not after leaving; invite, remove, decline), scaling (same max health on both PCs, Bandit
   100 -> 150; hits 35 -> 42; an attacking unhurt enemy keeps its numbers after the group ends), trade (a
   normal exchange, an offered item used up, no answer to the commit, a missed outcome; the sum of both
@@ -148,7 +172,8 @@ All in the [Gedonia Co-op](https://github.com/Zerbith/gedonia-coop) plugin; each
 - Real mouse clicks in the test windows were not automated (desktop control was not used). The tester
   and friends used the menus and shared conversations by hand in real sessions up to 0.6.x; the 0.7
   additions (hold-to-confirm ring, transformations) and the 0.8 windows (group, trade) are only tested by
-  the automated scenarios so far; those call the same functions as the buttons.
+  the automated scenarios so far; those call the same functions as the buttons. The same holds for the 0.9
+  chat, mounts, doors and the game-styled windows.
 
 ## How to play
 
@@ -172,5 +197,5 @@ Everyone needs the same mod version.
 ## Next steps
 
 - Real-network sessions with more than two players.
-- In-game chat (the co-op menu has a placeholder).
-- A real-network test of groups, scaling and trading.
+- A real-network test of groups, scaling, trading, chat, mounts and doors between two Steam accounts.
+- A quest runner that plays quest steps on two clients and compares quest and world state (planned).
