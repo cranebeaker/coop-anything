@@ -927,6 +927,42 @@ Draft:
   `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, QA `none`, no working co-op claim,
   no ETA to online.
 
+## Stage 2 collectible READ-ONLY probe (2026-11-25) — chain resolved, no correlation
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev066-collectible-readonly-probe-results-20261125.txt`
+(SHA-256
+`8F91A8E94B4C6E18130BE0DF1968C8F251D96C9B5D5B86F374F1215AC5C2CE7B`).
+
+- Owner authorized a read-only probe of the already-running game. Access was
+  `OpenProcess(PROCESS_VM_READ|PROCESS_QUERY_INFORMATION)` plus
+  `ReadProcessMemory` only. Exactly one responding PID `2036` was present; the
+  pinned EXE hash matched. No launch, restart, write, hook, detour, inject,
+  DLL load, install, network action, friend contact, build-id check, PC B step,
+  or input simulation occurred.
+- The live chain was resolved from `GameManager` global `0x143DCB728` through
+  its service hash table (slot 30) to `SaveManager 0x1C1123430` and
+  `SaveInterface 0x1C1123660`, then through the one-entry GameData vector to
+  `GameDataAc+8 = 0x1C4F7B1A0` and `CharacterAc+8 / CharacterData =
+  0x1C4F7B220`. The SaveManager/SaveInterface pair independently matched the
+  read-only RTTI trace. All pointers and all seven scalar fields were stable
+  across three reads.
+- Values were `numRings=134`, `numPowerSeeds=11`, `numGuardSeeds=11`, and
+  `numFishCoins/numFishTokens/numGoldCards/numSlotStars=0`.
+- The owner reported collecting one ring, but `numRings` did not change
+  immediately or on a delayed confirm read. Static evidence already shows a
+  `PlayerHsmContext::OnSave` setter path, so this address may be a save mirror
+  that lags gameplay; that hypothesis was not tested. No authoritative live
+  gameplay counter, item id, story flag, resolver, hook point, or authority
+  model was established.
+- `WRITE_TARGET=CANDIDATE_LIVE_SAVE_MIRROR_NOT_QUALIFIED`,
+  `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, and
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`. Do not proceed to a write or hook
+  experiment without a separate explicit authorization with rollback and stop
+  conditions. Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY` with
+  full test closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim,
+  and no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
