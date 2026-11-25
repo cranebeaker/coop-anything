@@ -7384,7 +7384,7 @@
     shots, hit sync, doors, grenades, map and vehicle seats. The host runs all NPCs; the joiner shows them as
     puppets (movement, idle actions, smart terrain, mounted guns). An off-by-default experiment gives the host's
     avatar an AI component so that host NPCs shoot the joiner; on two copies on one PC their hits took the
-    joiner's health; puppets' shots are shown on the joiner. Open: NPCs rarely attack the joiner in towns after the ceasefire breaks, missions and most world state not synced,
+    joiner's health; puppets' shots are shown on the joiner. In towns the ceasefire alarm is shared: whoever breaks it, NPCs nearer the joiner fight the joiner. Open: puppets' fire and turning on the joiner are rough, missions and most world state not synced,
     the latest work not yet tested on two PCs. QA: tests/two_copy_walk.ps1 drives two copies and checks
     position and heading only; the rest was checked by hand on two copies.
   sources:
@@ -7394,7 +7394,7 @@
   - https://github.com/halvors/FC2MPPatcher
   - https://www.nexusmods.com/farcry2/mods/368
   - https://steamcommunity.com/app/19900/discussions/0/864973123475897875
-  checked: '2026-11-14'
+  checked: '2026-11-18'
 - game: 'Tainted Grail: The Fall of Avalon'
   year: 2025
   engine: Unity
