@@ -775,6 +775,40 @@ Full record:
   `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
   there is no ETA to online.
 
+## Stage 3 prep-only opened (2026-11-25)
+
+Owner message: `Open Stage 3 prep only.` This authorizes workspace preparation
+only; full two-PC/in-game Stage 3 remains closed.
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev061-stage3-prep-only-20261125.txt`
+(SHA-256
+`886B27BFE0AFB894C8A7037ED6D002BCC6F3E485180AA300ECE76B5B3257499F`).
+
+- Created `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/handoff/stage3-prep-only-20261125/`
+  with an exact copy of the third-party HE2MP v0.0.35 play-now folder,
+  `README-STAGE3-PREP.md`, `TEST-PLAN.txt`, and `MANIFEST.txt`.
+- The manifest verified all 14 packaged files; no mpdev or pos-sync file is in
+  the package. `MANIFEST.txt` SHA-256:
+  `FC13C37C7086AD2ADDC5B946641E7777C439E61A2C1B17342998F7FC22C74293`.
+- The write-capable `build\mpdev-pos-sync.dll` remains workspace-only
+  (SHA-256 `1B5FC2E7422CC81A383F0FBECC9617BC2B1F8357E01C938959844D678313C18F`)
+  and was not copied. Stale mpdev packages were also excluded.
+- Read-only baseline was unchanged: local `ModsDB.ini` SHA-256
+  `7B1EBB6CC88128B809450F9FB7A0FF8C37015CD8557D63F1C9A509B8A302254F`,
+  installed `he2mp.dll` SHA-256
+  `FF457469855393B97D762684A2F1DF98177AB3F325D5B4621B22B5D263AA5C9F`, and no
+  mpdev mod folder. No game file was modified.
+- The `16857613` build-id check and HE2MP v0.0.35 version check are documented
+  in the test plan but were not performed. No friend details or friend contact.
+- The test plan labels enemy, item, quest, and story state as
+  `EXPECTED_LOCAL_NOT_SYNCED` for HE2MP v0.0.35, not as full co-op coverage.
+- Not performed: friend contact, PC B setup, game launch/restart, mod install,
+  attach, memory write, hook, network test, or in-game verification.
+  `STAGE3_SCOPE=PREP_ONLY`, `STAGE3_FULL_TEST=CLOSED`,
+  `READY_FOR_INSTALL=NO`, `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, QA remains
+  `none`, no working co-op is claimed, and there is no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
