@@ -393,6 +393,36 @@ Full record:
 - No production source, build script, protocol constant, or test expectation was
   changed. This is planning only; no gate opened.
 
+## Stage 1: active wire bumped to build 4 (2026-11-24) — SUPERSEDES earlier NO-BUMP notes
+
+Owner explicitly authorized Stage 1: protocol bump/re-baselining plus fresh
+read-only live mapping, with in-game co-op as the goal. Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-protocol-bump-results-20261124.txt`.
+
+- Active wire is now `kProtocol2Build = 4`, `kBuildTag2 = "2.0/build4"`.
+  The earlier "Decision remains NO BUMP" and "build stays 3" notes above are
+  historical pre-authorization evidence and are superseded for the active wire.
+- `mpdev2-cli.exe` rebuilt: 540,160 bytes, SHA-256
+  `C38726FF0FC8D8F25E3D40AC1AE1DB64CBE60DBD158F28A8D17108FD1268D40D`.
+- Updated: codec/selftest expectations, CLI help, active-layer comments,
+  compatibility-boundary group, protocol spec, impact-analysis supersession
+  banner, and the MP-031/MP-032 source protocol-guard regexes (3 -> 4).
+- Protected MP-029/030/031/032 binaries and the read-only scanner remain
+  byte-for-byte unchanged (hashes verified). Their frozen build-3 records,
+  validators, and baselines are explicitly historical, not re-baselined here.
+- Offline verification at build 4: `itemstory-selftest` 7/7 PASS; full suite
+  `RESULT: PASS failures=0` (`SOURCE_FILES count=19`); loopback
+  `RESULT: PASS failures=0`; lossy wrapper PASS in both scenarios. Aggressive
+  loss still shows the documented snapshot-supersession behavior
+  (`itemEv=0`, convergence intact) in the strict runner, not a regression.
+- Read-only live scan is prepared but NOT run. Owner must launch Sonic Frontiers
+  themselves first. Any hits are CANDIDATE-ONLY.
+- No writes/hooks, no game/save/mod change, no friend contact, no PC B package,
+  no two-PC test, no in-game verification. QA remains `none`; all gates closed;
+  PR #429 remains draft with owner-review unchecked.
+- Stage 2 (writes/hooks) and Stage 3 (two-PC/friend contact) still require fresh
+  explicit authorization.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
