@@ -27,7 +27,7 @@ Dead; not an option today.
 **RavenM official** ([iliadsh/RavenM](https://github.com/iliadsh/RavenM), MIT). The original
 BepInEx plugin. Last release 0.7 on 2024-05-15, built for EA29. It refuses to run on newer
 builds: issue #65/#66/#68 report unsupported-version failures from EA30 onward, and the author
-has not released since 2024-10. This is the "abandoned mod" of this game.
+has not released since 0.7 (last commit 2024-10-13). This is the "abandoned mod" of this game.
 
 **RavenM community edition** ([RavenfieldCommunity/RavenM](https://github.com/RavenfieldCommunity/RavenM),
 MIT). A maintained fork with builds named per game version: EA35 through EA39, latest asset
