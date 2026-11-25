@@ -706,6 +706,41 @@ Full record:
   `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
   there is no ETA to online while Stage 3 stays closed.
 
+## Quest/item/story message static pass (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev058-quest-item-story-message-static-20261125.txt`
+(SHA-256
+`DD37739E444CC302559FD3E8F2AF347ED9CC1DB202ABBE23F08A5A9C1A6DE628`).
+
+- Added offline-only `tools\mpdev-static-message-map.py` (SHA-256
+  `67568ADD0D4F2BC48FCB42AD5546184D5F073C0C23770A82E3968B56A2D50DCC`). It
+  produced `RESULTS\mpdev058-message-id-vtable-map-20261125.txt` (SHA-256
+  `533A4812F14750DE2A52BD1B64EB64DA5C00B4D8DAB5C761B5BC2AA60A867174`) with
+  2,760 candidate `message-id → vtable` pairs. Sites where the vtable pointer
+  was preloaded into a register were decoded manually instead.
+- QuestManager paths map statically as: `0x22EA`/`MsgSetClearFlag`,
+  `0x22F3`/`MsgSetMenuEnabled`, `0x21DA`/`MsgHoldOn`, `0x2333`/`MsgStartQuest`,
+  `0x2334`/`MsgStartQuestParameter`, `0x230F`/`MsgShowMistakeCounter`, and
+  `0x2360`/`MsgTakeQuestItem`. `0x21D4` was corrected to `MsgHideKodama`; the
+  earlier tentative `MsgStartQuest` async-handler reading used a wrong RIP base
+  and is withdrawn.
+- `MsgSetClearFlag` send path at `0x1407D23C0` targets an object resolved from
+  an ObjectId-like value and writes no explicit item/story payload.
+  `QuestManager+0xF0` is only a candidate local state dword.
+  `MsgStartQuestParameter` copies a `LevelInfo::GetPlayerInformation +0x3C4`
+  dword, not an identified story flag. The `QuestManager+0xD0` 0x18-byte record
+  vector is candidate quest tracking only.
+- `MsgTakeQuestItem` send site `0x1407DB750` uses an unnamed `+0x90` dword as
+  an ObjectId-like key; the actual candidate item payload is copied by wrapper
+  `0x1407DB490` from `ObjQuestItemInfo` offsets `+0x08`, `+0x0C`, `+0x10`
+  (dwords), `+0x14` (byte), and `+0x18` (dword). Field names remain unknown.
+- No item id, Koco count, inventory field, story flag bit, trigger, ExtraFlag
+  category/id, authoritative save field, resolver, write address, hook point,
+  or authority model was established. Stage 2 remains build only;
+  `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
+  there is no ETA to online while Stage 3 stays closed.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
