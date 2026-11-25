@@ -674,6 +674,38 @@ reactive dispatch with `edx=7` and `r8d=bit index`. This confirms bit mechanics
 only; no category/id is mapped to Koco, item, quest, or story semantics, and no
 save/resolver/hook target is promoted.
 
+## ExtraFlag arg-flow semantics (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev056-extraflag-argflow-semantics-20261125.txt`
+(SHA-256 `E25C8028E9E6F6E4E7D9174C40908FBD21F18AF17A8021E68221FA15EAB9AD64`).
+
+- Added offline-only `tools\mpdev-static-argflow.py`; it found 130
+  `IsWorldExtraFlagSet` call sites, 75 `SetWorldExtraFlag` call sites, and 8
+  setter-thunk call sites. Branching and memory-derived values are not modeled;
+  all hits remain candidate-only.
+- Disassembly confirmed the ABI: `IsWorldExtraFlagSet(category=r8d, id=edx)` and
+  `SetWorldExtraFlag(category=r8d, id=edx, value=r9b)`. The setter thunk at
+  `0x140aff060` maps `raw_bit = REMAP_TABLE[category] + id` before the bit
+  update at `0x140aff350`; bounds are checked against `0x141572C70`.
+- Categories are small bounded flag groups, not item/story ids: `0x03/0x04`
+  allow 4 ids, `0x08/0x09` and `0x0D/0x0E` allow 2 ids, and `0x23` allows
+  `0x80` ids.
+- Targeted helpers near `ObjAmyKodamaElderInfo`,
+  `ObjAmyKodamaHermitInfo` and `RequestOverlayCaptionSelectBox` select the
+  category from a mode argument and pass `edx` through unchanged. No direct
+  callers were found; each helper address occurs once as a data pointer.
+  Adjacent strings (`ef_ko_vanish_flash01`, `voice_nk_ko9900_10x`,
+  `ko9000_190`, `ko9000_197`, `w5t02`-`w5t05`) are caption/audio resource hints
+  only. The direct `SetWorldExtraFlag` call at `0x14079f296` uses category
+  `0x23` with an unnamed runtime dword as the id.
+- No item id, Koco count, inventory field, story flag, trigger, authoritative
+  save field, resolver, write address, hook point, or authority model was
+  established. Stage 2 remains build only; no install, attach, write, hook,
+  network, friend contact, PC B package, or game restart occurred.
+  `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
+  there is no ETA to online while Stage 3 stays closed.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
