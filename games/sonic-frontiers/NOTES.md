@@ -1052,6 +1052,42 @@ Tool:
   closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim, and no ETA
   to online. Further writes require a new explicit authorization.
 
+## Runtime ring counter candidate and read-only probe draft (2026-11-25) — CANDIDATE ONLY / DRAFT ONLY
+
+Static consolidation:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev086-runtime-ring-counter-candidate-20261125.txt`
+(SHA-256
+`07AE4677A1354C52A6BE71549FC1835B944572BA2B70BD576ABC207574F43CEE`).
+
+Read-only probe draft:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087-runtime-ring-readonly-probe-spec-draft.txt`
+(SHA-256
+`F9D57E94BBD2788705F43AB33201B2126C58EAE5B8DCF70D475B1F44CAFBB94C`).
+
+- Offline-only consolidation of `mpdev069` through `mpdev085` (plus two small
+  `mpdev085a/b` GOCPlayerHsm static follow-ups). No process attach, read, write,
+  hook, detour, DLL load, install, network, friend contact, build-id check, PC B,
+  or input simulation was performed for this consolidation.
+- Strongest static candidate is
+  `word [[PlayerHsmContext+0x30]+0x28]`: `OnSave@PlayerHsmContext` at
+  `0x14ae8ef60` reads that word at `0x14ae8f0f5` and passes it to the numRings
+  setter `0x140afff30` at `0x14ae8f0fe`. `Setup@PlayerHsmContext` stores plugin
+  hash `0x1425c61a` at `PlayerHsmContext+0x30`; the same hash is used by
+  `PlayerInformationUpdater`, which reads `dword [plugin+0x28]`.
+- The same slot is also read as a dword in OnSave, so width and semantics are
+  unresolved. This is a static save-source candidate only. It is not a live
+  HUD/runtime counter, hook point, authority model, item id, story flag,
+  resolver, protocol mapping, or co-op readiness.
+- mpdev087 is only a draft spec for a read-only live-correlation probe: fresh
+  pointer re-resolution, bounded read-only vtable/layout scan, exactly one
+  PlayerHsmContext candidate, 20 Hz sampling, and an owner-performed single
+  ring pickup with no assistant input. It requires fresh explicit owner
+  authorization before any tool is implemented, hashed, or run.
+- `PROCESS_VM_WRITE_AUTHORIZATION=CLOSED_AFTER_MPDEV068`; any future write still
+  needs new explicit authorization. Stage 2 remains `BUILD_ONLY`, Stage 3
+  remains `PREP_ONLY` with full test closed, `READY_FOR_INSTALL=NO`, QA `none`,
+  no working co-op claim, and no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
