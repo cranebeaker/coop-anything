@@ -63,7 +63,7 @@ cheap to hard. **(judgment)**, except where a link is given.
 | Combat and damage | Attacker's client reports a hit, owner of the target applies it | Avoid double application: key each hit with an id |
 | World objects | Doors, containers, pickups: host decides, broadcast result | Use stable ids (form ids, level+index), never memory addresses |
 | Quest and story flags | Host owns them; mirror every flag/variable write to clients | Hook the engine's single "set variable/flag" function if one exists; this is the highest-value hook. Unsynced quests are the main failure of existing mods |
-| Dialog and cutscenes | One player drives, the others get a "watch" state; gate on all players being present | Hardest area; decide per game whether cutscenes pause for everyone or run for the triggerer only |
+| Dialog and cutscenes | One player drives, the others get a "watch" state; gate on all players being present | Hardest area; decide per game whether cutscenes pause for everyone or run for the triggerer only. Check what the engine's "cutscene ended" message really is before forwarding it: in the Aurora-based Witcher 1 it is a world-pause toggle shared by all players, and forwarding one client's "ON" while losing its "OFF" froze the server for everyone, while running the world during the host's own cutscene crashed the host's client afterwards ([games/witcher-1/NOTES.md](../games/witcher-1/NOTES.md)) |
 | Inventory, gold, XP | Per player by default; shared pool only if the design asks | Shared state needs host arbitration |
 | Time, weather, RNG | Host broadcasts; clients adopt | |
 
@@ -77,6 +77,7 @@ i.e. a flag-sync mode is a switch, not a rewrite.
 All **(judgment)** unless linked.
 
 - **Late join:** the host sends a full snapshot (world flags, quest state, entity list), then switches to deltas. Anchor requests the team state right after load when a save is loaded ([source excerpt](https://code.moparisthebest.com/mirror/Shipwright/commit/060878fb2e75c5c2dbbea325169671cf3f9f122f)).
+- **Late join by replay:** for an input-lockstep game that can reconstruct a mission from a known start, a bounded input journal can bring the guest to the host's current tick. Gate control transfer on sampled state and native loading readiness. See the [implementation and test sequence](how-coop-mods-work.md#late-join-with-an-input-journal).
 - **Level / map transitions:** one player changing level must not tear down state for the others. Either keep everyone in the same level (a "follow the leader" rule) or track a level id per entity and only apply updates for the loaded level.
 - **Loading a save mid-session:** find the one place the game requests a load (Obscure: the load menu reads the slot, then sets the state machine to "load"; that write exists once in the exe). The host watches for it and sends "load" naming the save transfer it belongs to; the guest waits until that file is on disk, then runs the same two steps. Joining guests can use the same path, so nobody picks a save by hand (games/obscure).
 - **Saves:** treat the host's save as the source of truth; joiners receive its state at connect. Saving on a client is a no-op or a separate local slot. Test save, quit, load while connected.

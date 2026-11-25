@@ -1,0 +1,331 @@
+diff --git a/StoryCoop_src/CoopRunner.cs b/StoryCoop_src/CoopRunner.cs
+index 85ef698..7e07baa 100644
+--- a/StoryCoop_src/CoopRunner.cs
++++ b/StoryCoop_src/CoopRunner.cs
+@@ -29,11 +29,15 @@ namespace StoryCoop
+         bool synced;              // client has adopted the host's story
+         bool loadFromSnapshot;    // the current load was started by us
+         bool waitingSnapshot;
++        bool needSpawnOffset;     // snapshot put us on top of the host; step aside once
+         readonly List<KeyValuePair<string, float>> bufferedFacts = new List<KeyValuePair<string, float>>();
+         float factSettleTimer;
+ 
+         // facts
+         readonly Dictionary<string, float> known = new Dictionary<string, float>();
++        static readonly System.Reflection.FieldInfo fCurrentDayValue = typeof(vgEventManager).GetField("currentDayValue", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
++        static readonly System.Reflection.FieldInfo fCurrentDayFact = typeof(vgEventManager).GetField("currentDayFact", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
++        float pendingDay = -1f;
+         vgBlackboard primedGlobal, primedDay;
+         HashSet<string> excluded = new HashSet<string>();
+         float factTimer;
+@@ -143,6 +147,7 @@ namespace StoryCoop
+             FactTick();
+             PlayerTick();
+             UpdateAvatar();
++            ApplySpawnOffset();
+ 
+             pingTimer -= Time.unscaledDeltaTime;
+             if (pingTimer <= 0f) { pingTimer = 3f; net.Send(Msg.Ping, null); }
+@@ -234,6 +239,11 @@ namespace StoryCoop
+                     ReceiveFacts(body);
+                     break;
+ 
++                case Msg.Day:
++                    using (BinaryReader r = Pack.Reader(body)) pendingDay = r.ReadSingle();
++                    if (IsClient && synced && !GameApi.Loading) ApplyDay();
++                    break;
++
+                 case Msg.Snapshot:
+                     if (IsClient) ReceiveSnapshot(body);
+                     break;
+@@ -327,6 +337,8 @@ namespace StoryCoop
+                 // prime facts so the client doesn't receive a duplicate burst right after
+                 PrimeFacts();
+                 net.Send(Msg.Snapshot, snap);
++                if (vgEventManager.Instance != null)
++                    net.Send(Msg.Day, Pack.Build(w => w.Write(vgEventManager.Instance.GetCurrentDayValue())));
+                 Plugin.Log("Snapshot sent (" + snapshotReason + "): " + info);
+                 Notice("Sent story state to " + partnerName);
+             }
+@@ -406,8 +418,10 @@ namespace StoryCoop
+                     loadFromSnapshot = false;
+                     synced = true;
+                     waitingSnapshot = false;
++                    needSpawnOffset = true;
+                     GameApi.EnsureClientSlot();
+                     Notice("Synced with host");
++                    ApplyDay();
+                 }
+                 else if (!dayTransition && Plugin.CfgClientAutoResync.Value && synced)
+                 {
+@@ -473,6 +487,9 @@ namespace StoryCoop
+         {
+             if (factSettleTimer > 0f) factSettleTimer -= Time.unscaledDeltaTime;
+             if (!FactsActive) return;
++            // Host-authoritative facts: only the host broadcasts. Otherwise both games fight
++            // over values that change every frame (e.g. TimeSinceLastSpeech).
++            if (IsClient && !Plugin.CfgClientSendsFacts.Value) return;
+             factTimer -= Time.unscaledDeltaTime;
+             if (factTimer > 0f) return;
+             factTimer = 0.2f;
+@@ -500,6 +517,7 @@ namespace StoryCoop
+ 
+         void ReceiveFacts(byte[] body)
+         {
++            if (IsHost && !Plugin.CfgClientSendsFacts.Value) return;
+             var list = new List<KeyValuePair<string, float>>();
+             using (BinaryReader r = Pack.Reader(body))
+             {
+@@ -642,6 +660,42 @@ namespace StoryCoop
+             avatarScene = "";
+         }
+ 
++        /// <summary>Snapshot restores the world, not the story day. Copy the host's value across.</summary>
++        void ApplyDay()
++        {
++            if (!IsClient || pendingDay < 0f || vgEventManager.Instance == null) return;
++            try
++            {
++                if (fCurrentDayValue != null) fCurrentDayValue.SetValue(vgEventManager.Instance, pendingDay);
++                if (fCurrentDayFact != null)
++                {
++                    vgBlackboardFact fact = fCurrentDayFact.GetValue(vgEventManager.Instance) as vgBlackboardFact;
++                    if (fact != null) fact.value = pendingDay;
++                }
++                Plugin.Log("Day applied from host: " + pendingDay);
++            }
++            catch (Exception e) { Plugin.Log("ApplyDay failed: " + e.Message); }
++        }
++
++        /// <summary>The snapshot restores the host's save, which includes the host's position.
++        /// Step the client aside so the two Henrys don't occupy the same point.</summary>
++        void ApplySpawnOffset()
++        {
++            if (!needSpawnOffset || !IsClient) return;
++            if (!GameApi.WorldStable || !havePartnerState) return;
++            if (partnerState.scene != GameApi.SceneName) return;
++            vgPlayerController pc = GameApi.LocalPlayer;
++            if (pc == null) return;
++            float d = Vector3.Distance(pc.transform.position, partnerState.rootPos);
++            if (d > 0.75f) { needSpawnOffset = false; return; }
++            Vector3 back = Quaternion.Euler(0f, partnerState.yaw, 0f) * Vector3.back * 1.6f;
++            Vector3 side = Quaternion.Euler(0f, partnerState.yaw, 0f) * Vector3.right * 0.6f;
++            GameApi.Teleport(partnerState.rootPos + back + side, partnerState.yaw);
++            needSpawnOffset = false;
++            Plugin.Log("Spawn offset applied (" + d.ToString("F2") + "m)");
++            Notice("Spawned next to " + partnerName);
++        }
++
+         public void BringPartner()
+         {
+             vgPlayerController pc = GameApi.LocalPlayer;
+diff --git a/StoryCoop_src/DevMenu.cs b/StoryCoop_src/DevMenu.cs
+index e43ed11..363fb43 100644
+--- a/StoryCoop_src/DevMenu.cs
++++ b/StoryCoop_src/DevMenu.cs
+@@ -31,13 +31,13 @@ namespace StoryCoop
+         public float timeScale = 1f;
+         public bool fovOverride;
+         public float fov = 70f;
+-        public bool devHud = true;
++        public bool devHud = false;
+         vgPlayerNavigationController speedNav;
+         float[] baseSpeeds;
+         bool noclipApplied;
+ 
+         // ------------------------------------------------------------ ESP
+-        public bool espPartner = true, espPickups, espInteract, espTeleports, espArrow = true, espSkeleton = true;
++        public bool espPartner, espPickups, espInteract, espTeleports, espArrow, espSkeleton;
+         public Color colPartner, colSkeleton, colPickups, colInteract, colTeleports;
+         BepInEx.Configuration.ConfigEntry<string> cfgColPartner, cfgColSkeleton, cfgColPickups, cfgColInteract, cfgColTeleports;
+         string colorEditing = "";
+diff --git a/StoryCoop_src/Net.cs b/StoryCoop_src/Net.cs
+index 6137c6e..27f5b1c 100644
+--- a/StoryCoop_src/Net.cs
++++ b/StoryCoop_src/Net.cs
+@@ -24,6 +24,7 @@ namespace StoryCoop
+         public const byte TeleportTo = 11;    // both: "come to me" (pos, yaw, scene)
+         public const byte Notice = 12;        // both: text shown in overlay
+         public const byte Visuals = 13;       // both: which prop renderers on the model are visible
++        public const byte Day = 20;          // host->client: current story day
+         public const int Proto = 4;
+     }
+ 
+diff --git a/StoryCoop_src/Plugin.cs b/StoryCoop_src/Plugin.cs
+index 0042b55..44b43eb 100644
+--- a/StoryCoop_src/Plugin.cs
++++ b/StoryCoop_src/Plugin.cs
+@@ -19,7 +19,7 @@ namespace StoryCoop
+         internal static ConfigEntry<string> CfgIp, CfgName, CfgExcludedFacts;
+         internal static ConfigEntry<int> CfgPort;
+         internal static ConfigEntry<float> CfgSendRate;
+-        internal static ConfigEntry<bool> CfgShareScripted, CfgShareAllTriggers, CfgSyncWorldObjects, CfgNoPause, CfgHeadSphere, CfgShowNameTag, CfgSyncFacts, CfgSyncDialog, CfgDialogFallback, CfgFollowNewGame, CfgClientAutoResync, CfgShowUI;
++        internal static ConfigEntry<bool> CfgShareScripted, CfgShareAllTriggers, CfgSyncWorldObjects, CfgNoPause, CfgHeadSphere, CfgShowNameTag, CfgSyncFacts, CfgSyncDialog, CfgDialogFallback, CfgFollowNewGame, CfgClientAutoResync, CfgShowUI, CfgClientSendsFacts;
+         internal static ConfigEntry<KeyCode> KeyUI, KeyBring, KeyGoto, KeyResync;
+ 
+         static StreamWriter logFile;
+@@ -33,11 +33,12 @@ namespace StoryCoop
+             CfgName = Config.Bind("Network", "PlayerName", "Henry", "Name shown above your head for the partner.");
+             CfgSendRate = Config.Bind("Sync", "PlayerSendRate", 20f, "Position updates per second.");
+             CfgSyncFacts = Config.Bind("Sync", "SyncStoryFacts", true, "Mirror story facts (global + day blackboards) both ways.");
++            CfgClientSendsFacts = Config.Bind("Sync", "ClientSendsFacts", false, "Host-authoritative facts: the client only receives story facts. Turn on only if you need client-side facts to propagate (can cause values to fight).");
+             CfgSyncDialog = Config.Bind("Sync", "SyncDialogChoices", true, "Mirror radio/dialog choices both ways.");
+             CfgDialogFallback = Config.Bind("Sync", "DialogFallbackTrigger", true, "If the partner picks a reply you don't have open, fire that reply's event anyway.");
+             CfgFollowNewGame = Config.Bind("Sync", "ClientFollowsNewGame", true, "Client starts a new story when the host does.");
+             CfgClientAutoResync = Config.Bind("Sync", "ClientAutoResync", true, "If the client loads a save on its own, pull the host's state again.");
+-            CfgExcludedFacts = Config.Bind("Sync", "ExcludedFacts", "CurrentDay,CurrentTime,LoadProgress,SpeechPlaying", "Comma list of facts never synced (day is synced by snapshot).");
++            CfgExcludedFacts = Config.Bind("Sync", "ExcludedFacts", "CurrentTime,LoadProgress,SpeechPlaying,TimeSinceLastSpeech", "Comma list of facts never synced (volatile values that would fight between the two games).");
+             CfgShowUI = Config.Bind("UI", "ShowOverlay", false, "Open the Co-op/Dev window on start.");
+             CfgShareScripted = Config.Bind("Sync", "ShareScriptedMoments", true, "When one player walks into a story trigger (Delilah calls, scripted events), it happens for both.");
+             CfgShareAllTriggers = Config.Bind("Sync", "ShareAllTriggerZones", false, "Experimental: also share repeatable trigger zones, not just one-shot story triggers.");
+diff --git a/StoryCoop_src/RemoteAvatar.cs b/StoryCoop_src/RemoteAvatar.cs
+index 6961630..8135961 100644
+--- a/StoryCoop_src/RemoteAvatar.cs
++++ b/StoryCoop_src/RemoteAvatar.cs
+@@ -1,4 +1,4 @@
+-using System;
++﻿using System;
+ using System.Collections.Generic;
+ using System.IO;
+ using UnityEngine;
+@@ -166,6 +166,8 @@ namespace StoryCoop
+             if (pc == null) return null;
+             Transform model = GameApi.FindModel(pc.gameObject);
+             if (model == null) { Plugin.Log("RemoteAvatar: player model not found"); return null; }
++            Animator sourceAnimator = model.GetComponent<Animator>();
++            if (sourceAnimator == null) sourceAnimator = model.GetComponentInChildren<Animator>(true);
+ 
+             // what the local model shows right now = sensible default until the partner tells us
+             var initial = new HashSet<string>(ModelParts.VisibleProps(model));
+@@ -197,6 +199,10 @@ namespace StoryCoop
+             if (av.animator == null) av.animator = go.GetComponentInChildren<Animator>();
+             if (av.animator != null)
+             {
++                // the controller is assigned at runtime by the game, so a clone starts with none
++                // (that is why the puppet was stuck in its bind pose)
++                if (av.animator.runtimeAnimatorController == null && sourceAnimator != null)
++                    av.animator.runtimeAnimatorController = sourceAnimator.runtimeAnimatorController;
+                 av.animator.applyRootMotion = false;
+                 av.animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+             }
+@@ -242,20 +248,46 @@ namespace StoryCoop
+                 string n = t.name.ToLowerInvariant();
+                 if (n == "head" || n.EndsWith(":head") || n.EndsWith("_head") || n == "henryhead") head = t;
+             }
++            Plugin.Log("Head: mesh=" + hasHeadMesh + " bone=" + (head != null));
+             if (!hasHeadMesh && Plugin.CfgHeadSphere.Value)
+             {
+                 GameObject ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                 DestroyImmediate(ball.GetComponent<Collider>());
+                 ball.name = "StoryCoop_Head";
+                 ball.transform.SetParent(head != null ? head : transform, false);
+-                ball.transform.localScale = Vector3.one * 0.24f;
++                ball.transform.localScale = Vector3.one * 0.22f;
+                 ball.transform.localPosition = head != null ? Vector3.zero : new Vector3(0f, 1.7f, 0f);
+-                ball.GetComponent<Renderer>().material.color = new Color(0.86f, 0.68f, 0.55f);
++                Color skin = new Color(0.86f, 0.68f, 0.55f);
++                Renderer hr = ball.GetComponent<Renderer>();
++                if (hr != null)
++                {
++                    // Reuse a shader that is definitely in the build (Henry's own material),
++                    // otherwise the primitive's default material renders black indoors.
++                    Material src = null;
++                    foreach (SkinnedMeshRenderer smr in GetComponentsInChildren<SkinnedMeshRenderer>(true))
++                        if (smr != null && smr.sharedMaterial != null) { src = smr.sharedMaterial; break; }
++                    if (src != null)
++                    {
++                        var m = new Material(src);
++                        m.mainTexture = null;
++                        m.color = skin;
++                        hr.material = m;
++                        Plugin.Log("Head sphere material: " + src.shader.name);
++                    }
++                    else
++                    {
++                        Shader unlit = Shader.Find("Unlit/Color");
++                        if (unlit != null) { var m = new Material(unlit); m.color = skin; hr.material = m; }
++                        else hr.material.color = skin;
++                        Plugin.Log("Head sphere material: fallback");
++                    }
++                }
+             }
+ 
+             var lg = new GameObject("StoryCoop_Label");
+             lg.transform.SetParent(transform, false);
+-            lg.transform.localPosition = new Vector3(0f, 2.05f, 0f);
++            lg.transform.localPosition = new Vector3(0f, 1.92f, 0f);
++            lg.transform.localScale = Vector3.one * 0.08f;
+             label = lg.AddComponent<TextMesh>();
+             label.text = name;
+             label.characterSize = 0.05f;
+@@ -314,3 +346,4 @@ namespace StoryCoop
+         }
+     }
+ }
++
+diff --git a/StoryCoop_src/WorldSync.cs b/StoryCoop_src/WorldSync.cs
+index 286c70d..e4429fa 100644
+--- a/StoryCoop_src/WorldSync.cs
++++ b/StoryCoop_src/WorldSync.cs
+@@ -10,9 +10,23 @@ using UnityEngine.SceneManagement;
+ 
+ namespace StoryCoop
+ {
+-    /// <summary>Stable, cross-instance id for scene objects: "scene:Root/Child#1/Leaf".</summary>
++    /// <summary>Stable, cross-instance id for scene objects: "scene:Root/Child#1/Leaf".
++    /// Names may contain '/', ':' and '#' (Firewatch's SECTR scene roots are asset paths),
++    /// so every component is percent-escaped before joining.</summary>
+     public static class ObjectId
+     {
++        static string Esc(string s)
++        {
++            if (string.IsNullOrEmpty(s)) return s;
++            return s.Replace("%", "%25").Replace("/", "%2F").Replace(":", "%3A").Replace("#", "%23");
++        }
++
++        static string Unesc(string s)
++        {
++            if (string.IsNullOrEmpty(s)) return s;
++            return s.Replace("%2F", "/").Replace("%3A", ":").Replace("%23", "#").Replace("%25", "%");
++        }
++
+         public static string Of(GameObject go)
+         {
+             if (go == null) return null;
+@@ -40,11 +54,12 @@ namespace StoryCoop
+                         if (roots[i].name == t.name) dup++;
+                     }
+                 }
+-                parts.Add(dup > 0 ? t.name + "#" + dup : t.name);
++                string n = Esc(t.name);
++                parts.Add(dup > 0 ? n + "#" + dup : n);
+                 t = p;
+             }
+             parts.Reverse();
+-            return go.scene.name + ":" + string.Join("/", parts.ToArray());
++            return Esc(go.scene.name) + ":" + string.Join("/", parts.ToArray());
+         }
+ 
+         public static GameObject Find(string id)
+@@ -52,11 +67,12 @@ namespace StoryCoop
+             if (string.IsNullOrEmpty(id)) return null;
+             int colon = id.IndexOf(':');
+             if (colon < 0) return null;
+-            Scene scene = SceneManager.GetSceneByName(id.Substring(0, colon));
++            Scene scene = SceneManager.GetSceneByName(Unesc(id.Substring(0, colon)));
+             if (!scene.IsValid() || !scene.isLoaded) return null;
+             string[] parts = id.Substring(colon + 1).Split('/');
+             string rootName; int rootIdx;
+             Split(parts[0], out rootName, out rootIdx);
++            rootName = Unesc(rootName);
+             Transform cur = null;
+             int seen = 0;
+             foreach (GameObject r in scene.GetRootGameObjects())
+@@ -65,6 +81,7 @@ namespace StoryCoop
+             {
+                 string n; int idx;
+                 Split(parts[k], out n, out idx);
++                n = Unesc(n);
+                 Transform next = null; seen = 0;
+                 for (int i = 0; i < cur.childCount; i++)
+                 {

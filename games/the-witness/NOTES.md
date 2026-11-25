@@ -376,3 +376,531 @@ Implementation: witness-coop commit `bfe1b7e`.
 ### Second panel for the T2 bot (resolved)
 
 An early attempt to script the second tutorial panel (`0x182`) stalled: with the panel's facing and the start circle unknown, four teleported views showed no puzzle screen. Reading the panel graph (positions, flags and connections at `+0x3B4..+0x3D8`, as the randomizer does) and a back-buffer screenshot of the head-on view fixed this; the second-puzzle section above (Follow-up: second tutorial puzzle) records the working bot and the door-zero bug it exposed.
+
+
+### Follow-up: looking for a second cable maze (2026-10-24)
+
+#### Observations
+
+- A panel's target is at `+0x2B4` as an engine id: table index = value - `table_base_id` (1 in this build). Reading it for all panels and keeping those whose target is a `Power_Cable`, with exactly one start flag (`0x2` without `0x1`) and one end flag, gives plain-maze candidates; none of the low 16 flag bits are decoration for the best ones. Nearest to spawn: `0x293` (cable `0x349`, the one already covered), `0xc335` (253 nodes), `0x295` and `0x3505` (50 nodes), `0x2c2` (122 nodes). Powered and plain farther away: `0x290` (17 nodes), `0x28a69`, `0x17c31`.
+- `0x9b8` (two starts, two ends) and `0x143` (sixteen end nodes) are not plain mazes; `wbot_maze.py` refuses them.
+- A `tp` to the standing point of `0x3505` (about 10 m from `0x293`, z from 7.7 up to 16) and of `0x290` leaves the player at the spawn point `(-131.8, -164.2, 7.42)` every time, although the yaw is applied; `0x293`'s standing point works. A bot that only teleports cannot reach these panels.
+
+#### Derived
+
+- Cable sync is verified on one panel only. A second cable-driving panel needs a walking bot (or a teleport that survives the area check); the detection and apply code does not depend on the panel.
+
+#### Unknowns
+
+- Why the teleport is rejected there (collision resolution, a region check, or unloaded geometry). Whether the other candidates solve and light their cables as `0x293` does.
+
+### Follow-up: second cable maze, source back-link, other target types, cable power-off, faster QA (2026-10-24)
+
+#### Observations
+
+- No walking bot was needed. Solving maze `0x293` lights its cable `0x349`, and that powers maze `0x295` (4 m away, black until then; no panel targets it); solving `0x295` lights cable `0x45c` and powers the 122-node maze `0x2c2`. The existing maze bot solves `0x295` unchanged. New T2 scenario `cable chain` (both cables, both solves, powered panels and a fresh B match; mutant `no_cable_sync` leaves both cables dark on B). The earlier "teleport rejected" cases (`0x3505`, `0x290`) stay unexplained: the player returns to the spawn point `(-131.8, -164.2, 7.42)`.
+- A panel's solve also writes the source engine id to the target's `+0x2C8` (the dispatcher does `[target+0x2C8] = [source+0x10]`). After the tutorial power chain, A has `0x18b0` there (panel `0x18af` + base id 1) and B had 0. The applier now finds the source (the panel whose `+0x2B4` names the target, a solved one first) and writes it. T2 `panel power chain` compares it; the mutant `no_power_link` leaves B without it.
+- Panel target types (all 594 panels): panel 224, cable 167, door 84, none 89, laser 10, pressure plate 9, gauge 6, and one each of pylon, double ramp, force bridge, record player, light. The dispatcher `exe+0xC24F0(engine id, source entity)` handles each. For panel `0x32f5` (target laser `0x32f9`) a native-style solve on A and B's call of the dispatcher change the same words of the laser: `+0x12C` 0 -> -1.0, `+0xD4` 7 -> 1 (this one keeps advancing, 1 -> 6, so it is not compared) and a flag at `+0xAC`. A remote solve now also calls the dispatcher for targets that are not panel, cable or door. A test command `solve <id>` (fields plus dispatcher) is used because those panels are not reachable. T2 `bot-free effects` checks the laser; the mutant `no_target_dispatch` leaves it off on B. Only the laser was checked; the other types are `unknown`.
+- Cable power-off: `exe+0x175E50(cable)` sets `+0xC8` to 0 (the visible `+0xC4` fades). The game calls it, with the power-on `0x175EE0`, from the update of `Double_Ramp` entities (named cable pairs switched by a direction flag). Natural tracing of `0x293` without finishing produced no cable or panel power-off. Protocol v4 adds event kind 5 (cable dark), a snapshot of default-lit cables that were switched off, a rule that a peer's snapshot never relights a cable this player switched off, and a tie-break (lower player id wins) when both switch the same cable at once. T0 `cable_off.cpp` has 4 positive cases and 5 twins; T2 `bot-free effects` switches default-lit cable `0x18458` off with a test command (`cableoff`) and has mutants for no power-off sync and no snapshot. Two snapshot twins were needed because the reassert path also repairs a missing snapshot.
+- Some doors cycle by themselves (ids `0x2fe2d`, `0x2fe94`, `0x2fe95`, `0x307d7`, `0x391a5` rose to 0.998 and fell to 0.0005 every 15.6 s near spawn). They do not reach exactly 1.0 in the samples taken, so the open-door test (`== 1.0`) ignores them; whether any reaches 1.0 at some point was not sampled long enough: `unknown`. A door that opened late (animation, a laser panel's consequence) made one state diff run before it reached B; the suite now retries a clean diff for up to 20 s.
+- QA time: the 28-scenario serial `tools/qa.sh` took 48 min 15 s. `tools/qa_par.sh` (3 shards, each with its own two game copies) with polling instead of fixed sleeps, `cable maze` folded into `cable chain`, and the laser and cable-off scenarios merged into `bot-free effects` ran 23 scenarios in 13 min 33 s (the last of five runs; the others took 13.5 to 18.5 min and showed load flakes: the first-save hygiene check, a game not in the world when the bot started, a missed click, a state dump of a loading game). The suite now waits for the save, retries a scenario once when its bot never reached its precondition, and retries the state dump.
+
+#### Derived
+
+- Cable-lights-panel is a second power path (cable to panel, no panel target). Both ends are synced (cable event and panel power event), so a chain of mazes converges whichever event arrives first.
+
+#### Unknowns
+
+- Power-off for panels (nothing seen), the other target types, a real lever or ramp driving the off call, and loading a different save slot.
+
+### Player model (2026-10-24, witness-coop branch `player-model`, commit 23baee7)
+
+Replaced the flat puppet with a skinned glTF character drawn in the `Present` hook, hidden by walls through the game's own depth buffer.
+
+#### Observations
+
+- Patching the immediate-context vtable of a dummy device (`OMSetRenderTargets`, slot 33) sees the game's own calls, the same way the swap-chain vtable patch sees `Present`. Over one frame it showed 53 calls: a 1920x1080 `R24G8_TYPELESS` depth texture with 4 samples and bind flags depth-stencil + shader-resource (the scene), a 960x540 one, two shadow-sized 16-bit ones (4096x1024, 3072x1024).
+- That scene depth texture still holds the frame's depth at `Present` time. A shader view (`R24_UNORM_X8_TYPELESS`, `Texture2DMS<float>`) can be read from the overlay's pixel shader, no copy needed (a staging copy of a multisampled depth texture fails with `E_INVALIDARG`).
+- Depth is reversed and has no far plane: stored value = `0.0597 / distance`. Measured with the player looking at panel `0x64` from three distances (the proxy `probe` command reads the depth at the screen centre): 0.03960842 at 1.508 m, 0.02382934 at 2.505 m, 0.01784265 at 3.343 m, i.e. value x distance = 0.05972, 0.05968, 0.05965 (distance = camera to panel position). Three more distances in the same run were bad samples (the teleport had not landed); they were not used.
+- `SV_Position.w` in the pixel shader was 1.0 or more at a point 6.3 m away, so it was not `1 / view depth` there. Passing the clip-space `w` from the vertex shader as a separate interpolant gave the right distance; with it the occlusion test works.
+- A player cannot be teleported behind the closed first door: the pose B sent put the figure at the door, not behind it (the game resolves the collision). The proxy therefore has a test hook (`fakepose`) that draws the peer at a chosen place.
+- Results (real games, `tools/qa.sh model`, 5 scenarios, all PASS, real saves byte-identical after each): figure 5 m ahead 27571 px (GPU occlusion query, samples passing), standing speed 0.0, walking at about 3.6 m/s measured from the received poses with the clip time advancing, idle and still again after stopping, 138589 px at 2 m in front of the closed door and 0 px with the figure 3 m behind it. Mutants: depth test off -> 16193 px behind the door (only that check fails); gait off -> clip time stays 0 (only that check fails); model off -> the six checks that need a drawn model fail.
+- T0 (`make -C proxy/model test`, also run by `make -C proxy/core test`): 229 checks on the three bundled models (skinning against the bind pose, loop, quaternion slerp, camera matrix vs the puppet's projection, placement and facing, walk state, clip choice by name) and 6 mutants killed; the sync-core fuzzer and its 10 bug twins still pass.
+
+#### Derived
+
+- Walking speed in the game is about 3 m/s (9.1 m in 3 s, measured earlier); the figure's walk cycle is played at `speed / model_speed` of its clip rate.
+- The visible-pixel count measures the depth test (4 MSAA samples averaged for the edge alpha); it does not measure colours. Lighting, textures and facing were checked by eye on screenshots only.
+
+#### Unknowns
+
+- The depth near value was measured on one camera setup (field of view 60 degrees, 16:9, 1920x1080); other resolutions or fields of view: `unknown`. Behaviour while the game is in a different render path (menus, puzzle view): `unknown`.
+- Models with several materials or textures: only the first base-colour texture is used. Crouch/prone: the game has none, so not handled.
+- A player's own model choice is local (what you see for the other player), not sent on the wire; announcing it needs a pose packet change (protocol bump) and is not done.
+- The Cesium Man model carries the Cesium logo (a trademark, CC BY 4.0 for the model itself); whether to ship it as the default in a public release: `unknown`, the tester decides. A different default can be set in `proxy/config.h`.
+
+### Puzzle sweep: teleport to every puzzle and solve it with the mouse (2026-10-25, witness-coop branch `panel-sweep`)
+
+Goal: a way to test every puzzle automatically (a bot teleports with the dev menu, draws the solution through the in-process mouse, and the game's own solved flag is the verdict) and a way for a tester to do the same for one puzzle. No panel is marked solved by a dev action in this sweep.
+
+#### Observations
+
+- The world has 594 placed panels (a fresh game, build 11370412). 23 have no graph at all (nodes 0: dummy or hidden panels, mostly below ground), 96 plain-looking grids and mazes carry a stored solution line, 165 are plain mazes/lines, 309 carry cell decorations; 56 have a mirror map (symmetry).
+- **Stored solutions.** 97 panels have a node list at panel `+0x454` (length) and `+0x458` (nodes) from the first frame of a new game (the 96 undecorated ones are the grids and mazes whose rule is not in the cell decorations). A shortest path to the end is rejected on them (state `+0x280` goes 0 to 2); drawing the stored line is accepted (state 1, solved flags set). Panels `0x139` and `0x198b5` were checked both ways. A drawn line, accepted or not, did not change the stored sequence on any panel compared (0 of 594).
+- **Panel state `+0x280`:** 0 idle, 3 line drawn and not finished, 1 solved, 2 finished and rejected. The finishing click on a line that is not at the end also ends at 2.
+- **Teleport.** The dev menu's old teleport (player dropped 8 m above the panel, 12 frames of position writes) put the player back at the spawn point for the far panels. Cause (measured): the game snaps the player to the ground under it once per frame, to one fixed low level where no collision is loaded, so a released player ended below the island. A new `hover` writes the player's position in a spin loop for 2 s after the menu teleport; after that the player stood still at ground + 1.69 m (`0x139`: camera 20.88, panel 20.885) for the whole 4 s watched. A once-per-millisecond write left a visible share of frames underground (camera height jittered by up to 0.5 m); a write per frame was worse.
+- **Pixel size.** How big a panel unit looks is not a function of anything read from the panel: pixels per unit x distance was 585 on `0x64`, `0x182` and `0x139`, 666 assumed for `0x293`/`0x295` (worked), 745 about right on `0x2c4`. The start circle is found by trying sizes in 3.5 % steps (the cursor starts at the screen centre; a click that misses the circle does nothing). The panel centre is also shifted on the screen by (height of the eye below the panel, sideways offset) x 1033 / distance pixels.
+- **Mouse gain.** With a steady camera one edge costs the same number of counts on both axes: 96 counts for a 0.172-unit edge on `0x139` (557 counts per unit), about 806 per unit on `0x293`/`0x295`: so not the free cursor's 2 counts per pixel, and it differs per panel. The traced-node count at `+0x228` steps up exactly when the line arrives at a node (1 at the start node, i + 1 at path[i]); the end stub does not add to it.
+- **Camera jitter was the reason earlier drawings ran away** (one vertical count moved the line a whole edge): with the camera height bobbing the cursor's position on the panel moved by tens of pixels.
+- A cursor pushed past the panel's edge while the line is at the end stub made the finish fail; the stub near the top of the panel leaves 11 px.
+- Results of the drawing bot (real game, panel by panel, as of this note): tutorial `0x64`, `0x182`, mazes `0x293`, `0x295`, `0x86`, stored-solution grids `0x139`, `0x143`, `0x198b5`, and others; see `sweep_results` in the run folder for the full list of the current run. A stored line for `0x2c4` (a pill-shaped circuit with short chamfered edges) was not reproduced on the first tries: the line took a different branch at a node (the traced count cannot see that).
+
+#### Derived
+
+- `tools/win/wdraw.py` solves panels whose line is made of long axis-aligned edges and whose rule the solver knows; the path the game accepted is always one the solver (or the stored data) gave.
+- psolve (`tools/psolve`, C++, T0 tests) models dots (black, blue, yellow), gaps (missing edges), squares, stars, triangles, polyominoes (rotations, negatives), erasers and symmetry (mirror line from `+0x438`) on grids. It finds a line for 283 of the 329 decorated panels and 45 of 47 mirror panels in its own model; whether the model is right is decided by the game, panel by panel.
+
+#### Unknowns
+
+- Whether the stored line is the only accepted line on those panels: the rule behind them is `unknown` (nothing in the decoration, region or style fields explains why a shortest path fails).
+- The layout of cell decorations (row 0 at the bottom, value = shape << 16 | type | colour) is inferred from the values and checked only through accepted lines.
+- Panels with a 90-degree turn between short edges (`0x2c4`): `unknown` how to steer reliably.
+- The 23 panels without a graph: `unknown` what they are.
+
+#### Update (same day, later): what the sweep found about the panels it could not draw on
+
+Observations:
+- **Power.** A panel whose `+0x2a4` is 0 cannot be started (no click anywhere on its face starts a line); solving something upstream sets it. 297 of the 594 panels start with it 0. Whether a start works is judged by the traced count (`+0x228` >= 1) or panel state 3 (`+0x280`); state 2 is the game's "wrong".
+- **Floor puzzles.** Four panels (`0x1be9`, `0x1cd3`, `0x1d3f`, `0x33ea`, in the Keep) are not drawn with the mouse: each has one pressure plate per node and one per edge of its graph (66 plates for 25 nodes and 41 edges on `0x1cd3`). A plate has its panel's engine id at `+0xe4`, `1` (edge) or `0` (node) at `+0xe8`, and the node, or the two nodes of the edge, at `+0xf0` / `+0xf4`. Holding the player over the 34 plates of a rules-solver path, in order, was accepted by the game on `0x1cd3` (`tools/win/wwalk.py`). A click on the face of such a panel did nothing anywhere on it (10 px raster over `0x1be9`).
+- **Panel groups.** `+0x2d8` / `+0x2dc` of a panel is the same for the panels of one area (137 groups); on some areas almost no panel could be tried because their power does not come from a panel or cable the sweep can reach: plates, `Multipanel`, `Gauge`, lasers and `Group` entities point at them.
+- **Rule solver accuracy.** Of the lines drawn from `tools/psolve` the game accepted all but 2 (state 2) at the time of writing.
+- **Start circle.** Where the start circle is on the screen needed a search over the panel's size in metres (0.5 to 1.2), a vertical shift, an aspect factor (1.4 on some panels) and mirrored axes (`0x1cd3`-like panels were shown turned 180 degrees); panels of one kind (scale, grid size, symmetry) are found at the same place, which the bot remembers.
+- A game died on teleports to places with nothing to stand on (about 6 times in 4 hours); `sweep.py` notices and restarts it, and it gets the solved panels back from its partner.
+
+Unknowns:
+- How the panels in the dark rooms and the 0x20 / 0x21 group are meant to be powered in play (they were solved only after the dev menu powered them, for diagnosis, not counted).
+- What `Multipanel`, `Gauge`, lasers and `Group` entities need from the player.
+- Whether the Keep's plates also have a time limit.
+
+#### Update (later the same day): more sweep facts
+
+Observations:
+- **Mouse gain per direction.** On the swamp panels (`0x17dc8` and neighbours) the line needs about 2.3 to 3 counts per pixel horizontally and 8 to 12 vertically (the projection's width and height scale did not match); learning the gain per direction made `0x17dc8` solve where one number overshot. On the other panels both directions agree.
+- **Floor puzzles.** All four (`0x1cd3`, `0x1d3f`, `0x1be9`, `0x33ea`) were solved by walking. The traced count (+0x228) goes up on the EDGE plate (one per node of the path, the end stub's edge plate last); stepping on a node plate alone does not count. An edge without a plate (on `0x1be9`, edge 9-14) cannot be walked, whatever the graph says: the rule solver is run on the edges that have a plate (and marker nodes on an edge are skipped).
+- **Power chains.** 55 panels got power during the sweep: 28 from a panel, 25 from a cable (the panel's `+0x2c8` names the source, as an engine id). 65 panels that are unpowered at the start have no panel or cable that powers them.
+- **Negative result.** Teleporting the player through every `Touch_Collision` volume (489), `Collision_Path`, `Audio_Recording` and `Obelisk_Report` (0.25 s each, held over it) did not change the number of powered panels (237 before and after).
+- Pair 1 of the sweep finished everything it could power (63 panels waiting for power that nothing it can solve provides); 188 of 594 panels were solved at this point.
+
+Unknowns:
+- What powers the 65 root panels (the dark-room panels `0x6`..`0xa`, `0x7`, `0x65`, `0x84`, `0x8d`, ...): multipanels, lasers and `Group` entities reference them; how a player triggers that is `unknown`.
+
+## 2026-10-25 panel power links: `+0x2cc` is the static predecessor
+
+Observations (live scan of all 594 panels, one game, nothing solved by forcing):
+- `+0x2cc` holds an engine id on 231 panels. On a powered panel `+0x2c8` equals `+0x2cc`; on an unpowered one `+0x2c8` is 0 and `+0x2cc` still names a panel (e.g. `0x4` -> `0x2`, `0x5` -> `0x4`, `0x6d` -> `0x65`, `0x26e` -> `0x26d`).
+- 221 of the 357 panels that start unpowered have a `+0x2cc`, 102 have a cable aimed at them.
+- After counting both, 40 unpowered panels have neither (earlier count: 65 using `+0x2c8` only): `0x7 0x65 0x7c 0x84 0x8d 0x26d 0x390 0x3b2 0x88e 0x999 0xc92 0x32f7 0x3317 0x3545 0x3549 0x354e 0x354f 0x3552 0x3553 0x356b 0x360e 0x383f 0x3859 0x9e56 0x9e5a 0x9f01 0x9f8e 0x9fda 0xa036 0xa049 0x19797 0x28ad9 0x335ac 0x3369d 0x33961 0x339bb 0x34c7f 0x3d9a8-0x3d9aa` (a few of these are named as a cable's target, so the list over-counts; see derived).
+- A scan of the first 0x600 bytes of every entity for the ids of these panels finds `Marker` entities pointing at `0x3545..0x3553`, `0x3b2`, `0x3317`, `0x360e`, `Occluder` entities at `0x390`, a `Landing_Signal` at `0x9eff`; nothing points at `0x7`, `0x65`, `0x7c`, `0x84`, `0x8d`, `0x26d` except small-integer collisions.
+
+Derived:
+- A panel becomes powered when the panel in its `+0x2cc` is solved (the chain `0x1b..0x21`, `0x5d..0x61`).
+
+Unknown:
+- What powers the 40 roots, and whether any of them is powered by something other than a link (the first of each chain may simply be powered from the start in the real game and need a frame near the player).
+
+## 2026-10-25 power gating explained: multipanels, and why the sweep stalls
+
+Observations:
+- Every `Multipanel` entity owns a group of panels (the panel's `+0x2bc` is the multipanel's engine id; 41 groups). In 31 of 41 groups exactly one panel (the head of the `+0x2cc` chain) is powered in a new game; in 10 groups none is.
+- 9 of those 10 multipanels have a cable aimed at them (cable `+0xcc` = multipanel id), and following the cables upstream ends at a panel (e.g. multipanel `0x6e` is fed from panel `0x79`, `0x26c` from `0x17cab`, `0x98c` from `0x56f`).
+- With edges "panel solved -> the panel its cable chain ends at", "-> every panel of the multipanel it ends at" and "-> panels whose `+0x2cc` names it", 533 of 594 panels are reachable from the 237 that start powered; 61 are not (the dark-room loop `0x7..0xa`, the `0x35xx` group, the `0x1972x` group, and a few more).
+- The 285 panels without a result in the sweep are mostly gated by a failed or unsolved upstream panel, not by an unknown power source. Ranked by how many untried panels sit behind them: `0x24` (14, a glass strip), `0x7c`, `0x17d88`, `0x21b6`, `0x290` (7), `0x5c`, `0x17e3c`, `0x17d9b`.
+- Glass strips: the depth probe at the screen centre reads what is behind the glass, so the "is the panel in view" check failed for `0x22..0x24`; with the check waived the three are solved by drawing.
+- `0x290` (4x4, stored solution) is drawn as a diamond: its grid is turned 45 degrees in the panel's plane while the quaternion is yaw-only and no rotation field was found in the first 0x700 bytes. Solved with a 45 degree roll and a panel size of 1.88 m (the search now tries it).
+
+Derived:
+- The sweep order does not need unknown triggers for most of the world; it needs the failing panels fixed in blocker order.
+
+Unknown:
+- The source of the 61 unreachable panels, and which field holds the roll of a turned grid.
+
+## 2026-10-25 sound dots, swamp end stubs, unsupported classes
+
+Observations:
+- Eight jungle panels carry node flags `0x2000` / `0x4000` / `0x8000` (sound dots of pitch 1 / 2 / 3) plus the dot flag `0x20`. Seven of them hold the panel's own sequence at `+0x460` (count) / `+0x468` (pitches). A line that meets the sound dots in that order is accepted: `0xafb` (7x7, symmetry, sequence 2,3,2,1) and `0x34e3` (no sequence stored: all four dots visited, any order) are solved by drawing.
+- `psolve` models the order (`dseq`); T0 test `test_sound_dots` plus mutant `pitch` (the order check off must fail a test).
+- Swamp-style panels with a mouse gain that differs per axis finished with state 0 because the end stub was pushed with the gain of the last edge. With the stub's own axis gain `0x17d9b`, `0x17d88`, `0x17e3c` are solved.
+- 23 panels have no graph at all (0 nodes), e.g. `0x51f`: a black screen in a cave. `unknown` what fills them.
+- `0x383a` (6x4 node grid, 145 nodes, cell array 6 x 3) teleports to a dark cave with a pillar and an orange slider rather than a drawable grid; not solved, `unknown` how it is operated.
+
+## 2026-10-25 swamp rows: how the "root" panels get their power (tester walked it)
+
+Observations (one game, a person playing with the real mouse, the bot drawing where asked):
+- The first dark row (`0x7`..`0xa`, multipanel `0x94`) has no panel or cable in the extracted links. Solving the row `0x982 -> 0x97f -> 0x98f -> 0x990` lit cable `0xbfc` (to multipanel `0x9aa`), opened door `0x184b7` and powered `0x999`. Solving `0x999 -> 0x99d -> 0x9a0 -> 0x9a1` lit cable `0xbc9` (to door `0x18507`), opened that door and two more cables whose target field reads -1 (`0x18458`, `0x33863`), and powered `0x7` (the head of the dark row). `0x8`..`0xa` stay unpowered until `0x7` is solved.
+- A platform control panel (6x6, polyominoes, `0x181f5`) turns the platform it stands on when the yellow shape lies in the same region as the two coloured marks for the directions to turn between (tester's finding). Solving it changed no panel, door or cable flag.
+- A row whose first panel is "unpowered, no source" is therefore not a root: its power comes from a lit cable whose target is not in the extracted `+0xcc` links, after an earlier row is solved.
+
+Derived:
+- The sweep's root list (40 panels) is a list of rows whose feeding cable has target -1 in the extract; the cables that light when the upstream row is solved name them. Next step: for every cable with target -1, record when it lights during the sweep.
+
+Unknown:
+- The field that ties cables `0x18458` and `0x33863` to multipanel `0x94`.
+- Teleporting to a panel can land on a level that cannot be left (stair pit, lower walkway); the player has to be placed from the panel's own platform.
+
+## 2026-10-25 hand play: the panel cursor and the real mouse
+
+- With `force_active=1` (bot mode) the game's panel cursor moves about 1/3 to 1/2 pixel per mouse count while the real pointer moves 1 pixel, so the circle lags and the pointer leaves the window. `WITNESS_HUMAN=1` (no `force_active`) makes the mouse follow normally. A proxy-side fix exists too: F3 multiplies real mouse motion by `panel_mouse_gain` (default 3), bot events are not touched.
+
+## 2026-10-25 entry area: the pillar, the floor panel and the environmental puzzle (tester played, web notes agree)
+
+Observations:
+- `0xc335` is a stone pillar (6 columns round, 6 rows, triangle clues of count 1 in columns 1 and 4 of every row). Its cell array is 6 x 6 and the graph closes on itself, so the solver now treats a cell array of `gx x (gy-1)` as a cylinder (T0 mutant still to do). A line found by the solver was accepted in the game.
+- Solving the pillar lit cable `0x34d5a`, which feeds `0xc373` (floor panel, 6x6 nodes, two black dots, `+0x2c8` = that cable). `0xc373` has no outgoing link in the extracted data (target -1).
+- Solving `0xc373` normally (hitting both dots) turns its line blue and changes no flag the state dump tracks. Drawing it so the first dot is missed turns the line yellow; the yellow line is part of an environmental puzzle among the flowers around the panel, which the tester solved. That activated a section of a black obelisk (6 `Obelisk`, 135 `Obelisk_Report` entities exist; their fields are not decoded).
+
+Derived:
+- A panel can be accepted ("solved") and still need a deliberate fail to do its job; a sweep that only asks "is it solved" cannot see the environmental or obelisk effect.
+
+Unknown:
+- Which fields change when an obelisk section activates.
+
+## 2026-10-25 entry area: bars, two exits, two starts, effects the flags do not show
+
+Observations (tester played, state dumped before and after):
+- `0x3629` (the gate control with three blocking bars) is unblocked by solving `0x293`, `0xa3b2` and `0xa3b5`. After those, `0x295` and `0x2c2` became powered and were solved, three doors opened (`0x288e8`, `0x288f3`, `0x28942`) and cables `0x349`, `0x3c`, `0x3f`, `0x45c`, `0x51` lit. The links from those panels to the bars are not in the extracted cable data.
+- `0xa3b5` has two end nodes (103 and 104); the tester says the second one runs to a place that cannot be seen from the panel. `0xa3b2` has two start nodes (0 and 6).
+- `0x3505` (triangle counts 1, 2, 3 in the first column, node flags unlike normal panels) is a panel whose drawn path turns into an environmental puzzle on a building; its own solved flag stays off after the tester completed the environmental puzzle. `0xc373`'s solved flag goes off after the deliberate fail.
+
+Derived:
+- "Solved" in the panel flags is not the goal for panels with several exits, several starts, or an environmental result: a sweep has to try every start and every exit and have the result checked some other way.
+
+Unknown:
+- Where the second exit of `0xa3b5` leads.
+
+## 2026-10-25 panels with no graph are not always panels to draw on
+
+Observations (tester played):
+- `0x1c343` / `0x1c344` (powered, no graph) are rotating reflectors with a floor controller; the tester rotated one. No laser reaches it in this state.
+- `0x33d4` (8x8, extra start circles in the middle, black and white squares, odd dot flags `0x240020` / `0x440020`) was solved by hand, opened door `0x33d0`; `0x3481` (a 2-node straight line) then opened door `0x3506` and a box with a paper of connected hexagons.
+- Per fan sources (not verified in game): 11 lasers, one per region, aimed at the mountain; the Desert laser must be reflected up to the mountain from the Town; environmental puzzles belong to obelisks; Discarded Panels are triangle collectibles.
+
+Derived:
+- A sweep needs a type for "not a line puzzle" (reflector, screen, pillar, control with bars); `no graph` should be reported as that type, not as a failure.
+
+Unknown:
+- What the 23 blank-screen panels (e.g. `0x51f`) are.
+
+## 2026-10-25 theater doors, hole cells, and what the "rule" flag was
+
+Observations (tester played the left door; web notes place these as the exit doors of the underground A/V room):
+- `0xa168` (left, eraser cells at the bottom, black and white squares) opened door `0xa16d` when solved; the tester walked through a tunnel to the outside. `0x33ab2` (right, four orange corner polyominoes, four black squares) is the other door.
+- Both have two cells of decoration type `0xa` (`0xa02`) in the bottom row either side of the start: they are not there (no region, no area). The panel summary's word "rule" is that type. With them counted as ordinary cells the solver found no line for `0x33ab2`; with them removed it finds one (`U1 L1 U1 R2 D1 R1 U4 L1 D1 L2 U1 R1 U1`, from the start node; not yet tried in the game).
+- The two small icons at the bottom of `0xa168` are erasers (cells 1 and 2 of the bottom row).
+
+Derived:
+- T0 test `test_hole_cells` and mutant `hole` pin the rule down.
+
+## 2026-10-25 faster tests: what was cut and the one cut that broke drawing
+
+Observations (commits ea1b29b, 3df5030, c5e9f6d of the mod repo):
+- T0 (`make -C proxy/core test`) runs in 6 s. The T2 scenarios (sweep, pov, lines, tags, ui) run in three parallel shards on six game copies, each shard with its own game copies: `tools/qa_fast.sh`, 535 s for all five, down from about 22 min before the draw fix and about 15 min for one scenario alone at the start.
+- The first parallel run failed `sweep` and `lines`: the bot's line never started ("did not start with any panel size or offset tried"). Not the frame rate (same failure at 30 fps). With the previous `wdraw.py` `lines` passed (5 min 20 s); with the faster `wdraw.py` plus the old fixed 3.2 s wait after the menu teleport it passed (4 min 25 s).
+- One run of `tags` read no tag rows at all on the clean build and on the first mutant, and passed in two runs after the wait for B's row went from 20 s to 60 s. The log of the failing launch was overwritten, so whether B had not connected or `tagstat` did not answer is `unknown`.
+
+Derived:
+- Polling for "the player stands in front of the panel" ends while the game still holds the player for 2 s after a teleport; drawing started in that window did not take. A poll must wait for the condition that matters (the hold is over), not for a position that is already right.
+- A mutant that is "caught" while the clean build also fails proves nothing: check the clean result first.
+
+Unknown:
+- Whether the `tags` flake is gone (two passes since).
+
+## 2026-10-25 a character model with its own skeleton: eye height, gait clips, cross-fades
+
+Observations (a 151-joint, 38k-triangle Sketchfab character, CC BY, used locally and not added to the mod repo):
+- The file's one clip is a 20.8 s reading loop that moves only the arms, a book and the eyes: no leg, hip or spine joint is animated. Our loader chose clips by name, switched between them abruptly and had no idea where the eyes were.
+- The nodes above its skeleton carry a 0.01 scale (two matrix nodes with opposite 90 degree turns), while the inverse bind matrices are in the unscaled space. Vertices are 1744 units tall, the loader's bind-pose bounds 20.7. A joint's origin from its inverse bind matrix (46.2 for the eyes) is therefore not in the space `bmin`/`bmax` are in (-14.4): the first version of the eye-height code mixed them, and the unit test (a synthetic model with no such scale) did not see it.
+- Cesium, Fox and the Rigged Figure still load and play (T0, 247 checks; T2 model suite: see the commit message of the branch).
+- In game (two games, the viewer's cfg names the model): the eye line check finds the frog's two red eyes on the middle row of the screen (rows 530.5 at 3 m and 534.4 at 6 m, screen middle 540, tolerance 21), the clip is idle at rest, walk at 1.6 m/s and run at 5 m/s with a running phase, and every change of state is cross-faded (blend 0.08 .. 1.0 seen; 0.08, 0.55, 0.94 on the way from run to walk).
+
+Derived:
+- The walk and run loops were generated (`tools/frog_gait.py`) on top of the idle clip's first frame, so the arms keep holding the book. Stride gains were calibrated against the planted foot's speed measured by the loader: 1.61 m/s for a 1.60 m/s walk and 4.70 m/s for a 4.5 m/s run, lowest foot point 3 mm below the sole in the walk.
+- Teleport commands streamed at 30 Hz do not make an avatar walk (its measured speed stayed 0.00); `fakepose` does, and it makes the speed exact.
+- The avatar's smoothed speed approaches a constant speed from below, so a stream at exactly the run threshold never starts the run clip.
+- A red-pixel centroid is not an eye detector: the red gem on the book pulled it 120 px down. The check now looks for a pair of red blobs on one row.
+
+- The facing that looked inconsistent in the first runs was the test tool: `tp x y z yaw pitch` holds the player for 12 frames and the game's own camera heading comes back within 0.3 s (read from the game: asked 1.885, back to -1.257 after 0.3 s). The puppet follows the other game's real heading: a real mouse turn of 0.51 rad moved the puppet's yaw from -1.257 to -1.767 against the other game's camera heading of -1.769. A heading under test needs `fakepose` (explicit yaw) or real mouse input.
+- A negative number is a height: the eye height is measured in the space the bounds are in, where a raised eye can be below zero (-0.14 for the walk pose of this model, 1.634 m above the feet). A first version used "negative" for "no eye joints" and reported -1 in the middle of every cross-fade; T0 test with negative coordinates and mutant EYE_NEG.
+- A check that passes on "nothing found" proves nothing: the face-away check also requires the frog's green pixels on screen.
+- Eye height while moving (posed eye joints, metres above the feet, 1.71 is the camera): standing 1.710, walking 1.634 .. 1.710, running 1.634 .. 1.775.
+
+Unknown:
+- Foot placement on slopes and stairs (the avatar is only given a pose, no ground contact: no foot IK).
+- Whether the generated walk and run look right to a person: the evidence is contact sheets and measured foot speeds.
+
+## 2026-10-26 the pause menu, many players with their own models, a showcase of eight real games
+
+Observations:
+- The pause menu: the first dword that flipped when Esc was pressed (module + 0x62DAC4) also flips with F6 / F7 and with entering a puzzle (read 0 -> 1 -> 0 -> 1 around F7, F7, F6; 1 in a puzzle; 0 in the pause menu on one reading). A fix keyed on it hid every puppet on alternate model switches; the model-selector scenario found it, the first pause test (Esc only) had passed. Fourteen dwords followed Esc and ignored F6 / F7; five of them are floats that read 0.0 in every state tried (walking, dev menu open and closed, in front of a panel, entering and leaving a puzzle, the model panel, after F7) and 1.0 in the pause menu: +0x630070 and +0x62FF3C are used (both above 0.01).
+- Memory: a Witness game costs about 1.3 GB of free memory here (5 games took free RAM from 15.6 to 9.3 GB; each working set shows 2 GB because the hard-linked game files are shared), not the 1.8 GB the preflight assumed; eight games ran with 14.8 GB free.
+- The `shot <name>` command keeps 15 characters of the name: a longer name is saved under the cut name and a script that waits for the long one waits for ever.
+- `tp` holds the heading for 12 frames only; the game's own heading comes back within 0.3 s. Headings under test: `fakepose` (explicit yaw, one remote) or real mouse input (0.0025 rad per count, about 14 events taken per command batch).
+- A model file may have several skins on one skeleton (RobotExpressive: 2 skins, 14 meshes), many flat-colour materials (Brainstem: 59) and no texture. Taking only the first skin left parts of the robot unbound; the base colour factor of each material now travels in the vertices. The Magic Frog's skeleton sits under a 0.01 scale in the nodes above it while the inverse bind matrices are in the unscaled space (vertices 1744 units tall, bind-pose bounds 20.7).
+- With `model_by_player=1` and eight games (player i drawn with the i-th model of the list, the same in every game) every game shows seven different characters; two pictures from two viewers show all eight. Two straight rows hide players behind each other whatever the spacing; seven players on an arc, alternating two distances, are all visible.
+- Streaming `tp` commands does not make an avatar walk (speed stays 0.00); holding W in the other game does, and so does `fakepose` at a set speed. A smoothed speed approaches a constant from below, so a stream at exactly the run threshold never starts the run clip.
+- A parallel run once took four times as long as usual (POV scenario 881 s against 220 s, one mutant run unable to read the first game's stats); it did not repeat in a standalone run or in the next full run: `unknown` cause, load is the guess.
+
+Derived:
+- A state flag needs a state table, not an on/off pair: read the candidates in every state the feature will meet, and write the test so that each of those states must leave the feature alone (the pause test now presses the model keys and enters a puzzle first; a mutant uses the wrong flag and must fail there).
+- A check that passes when nothing is found proves nothing (a frog missing from the picture passed "no face"): require evidence the subject is there.
+
+Unknown:
+- Mixamo's terms for redistribution of the characters in the three.js examples (Xbot, Michelle, Soldier): not checked, kept out of the repository.
+
+## 2026-10-26 social features, voice, launcher, saves, new game with progress, map picture
+
+Observations (The Witness, two to eight real games on one PC, T0 and T2 as named in `features.md` of the mod repo):
+- Chat, typing dots, pings, emotes, a character list and free drawing run on one reliable ordered message layer (`WTX4`, ack `WTK4`, resend every 250 ms) and a presence packet (`WTS4`: emote, typing, speaking, character). The core test (loss, jitter, restart, corruption, 4-player group) passes clean and fails for 8 bug twins.
+- The game keeps its player's pitch within about 53 degrees of level whatever is written (read back: -0.932 rad when -1.55 was asked). A top-down picture is therefore made of oblique frames rectified onto the ground plane; 103 frames at 70 m make a 1029 x 809 picture of the island. At 130 m a cloud layer covered tiles; at 70 m it did not.
+- Flying the player to a place with no known ground nearby makes the game reset it ("emergency reset player to reset_marker"): 2262 resets in one stalled run, then the game stopped answering. Keeping the player within 90 m of known ground, skipping a tile the player was moved from and stopping after six in a row gave 5 of 5 finished runs (before: about one in three stalled).
+- Pressing Esc to close our own list or chat box opened the game's pause menu: the game acts on the release of Esc (and on the raw key), so the mod now takes the release of every key it took and hides the matching raw press. Found by looking at the showcase pictures (the game was sitting in its pause menu); the T2 check and its mutant came after.
+- The game's video options are a text file in the save folder (`Launcher.variables`: render_profile, fullscreen, vsync, highdpi, resolution 0-4, multisampling, custom size, five quality values); its log prints "Applying user settings" with what it took (1280 x 720 prints as "720p", not as a custom size). Its gameplay options are named values inside each save file (name, NUL, 4-byte value, 4-byte number); yes / no are the integer 1 (not 1.0), mouse speed 8.0, field of view 54.0, brightness 1.0.
+- Windows remembers a program's volume in the mixer: a later run with the volume setting skipped still read the old value (0.35), so the "not set" mutant slipped through until the mutant run asked for a different value.
+- `tp` to a place 28 m or more away put the player back at the start; `hover x y z yaw pitch` held it there. Every distance in the voice test uses hover, with the real positions read from both games.
+
+Derived:
+- Panel ids and their prerequisites come from the Archipelago randomizer's logic file (MIT), solved as a graph (regions as nodes, both ways unless marked one way, settled cheapest first). Symmetry Island needs 52 panels (its own 32, the Glass Factory's 12, the tutorial's 8); Desert, Keep and Town together need 103 (94 of their own areas' and 8 of the tutorial's, plus one from the jungle that comes in through a boat panel). The mountain needs the seven cheapest lasers.
+- A tutorial door (0x3ba2, opened by panel 0xa3b5) is opened by the game's script: the panel's target field is empty, so solving the panel did not open it; the open doors read from memory showed it, and doors whose panels are done are now opened by hand.
+- The mixer's walkie-talkie is measured, not heard: with a three-tone voice (120 Hz, 1 kHz, 5.5 kHz) at 80 m the outer tones are 12 dB or more below the middle one; at 5 m all three are there. Voice WAV files for listening are written by `proxy/voice/voice_demo.cpp`; nobody has listened to them yet.
+
+Unknown:
+- How the voice sounds with a real microphone and real speech (only a synthetic voice and a test tone were used), and whether 25 m and a radio gain of 0.85 feel right.
+- Why one map run in three stalled before the fix: the game log showed the repeated resets, but not what stopped the game. The five clean runs after the fix do not prove it cannot happen.
+- Whether the map picture lines up with the panel dots to within a few metres: only the agreement between neighbouring tiles was measured (0.33 correlation, against 0.23 for a wrong field of view or a mirrored picture), and the picture looks right next to the dots.
+
+## 2026-10-26 a lobby, a race, see-through players and voice channels
+
+Observations (The Witness; two real games and two real launchers on one PC; game-free tests as named in `features.md` of the mod repo):
+- Voice, measured from outside the game with a separate program (per-process audio sessions with a peak meter): with two windows and no forced focus, the unfocused game's voice is still played (session peak 0.68 whether or not its window has the focus), while the game's own sound goes to 0.0000 when its window loses the focus. Reading the same session from the game's render thread hung the game.
+- Voice channels (proximity, radio, open line, one on one): read from the listener's mixer at 80 m and at 5 m, each channel has the expected gains, pan and tones (the radio keeps 1 kHz and loses 120 Hz and 5.5 kHz by 12 dB or more; the open line keeps all three at any distance); one on one with a player that is not there reaches nobody. The first real-game run heard nothing: the network thread still routed only the old packet magic, which the game-free test could not see.
+- See-through players: the alpha a game draws another player with (read from the game) goes to 0.22 when the player stands between the camera and a panel ahead, 1.0 two metres out of the line, 0.22 again when back in, and faded when right behind the camera; the table of panel positions (594) comes from the dev menu's entity scan whether or not the dev menu is on.
+- Race: with `game_mode=race` a panel A solved was not solved in B's memory, B saw A's progress and finish time (the same number in both), both started within 100 ms of each other after a countdown, and a panel solved in the countdown did not count. A first design in which every player adopts the latest GO any peer reports never started: each round trip added the one-way delay (found in the game-free simulation).
+- Lobby: with two launchers and two games the host and a guest chat, hear each other (a test voice: all three tones present, not the radio), the host's choices reach the guest, the start waits for ready, each launcher writes its game's cfg from one roster, the games find each other and race, and after the games end both launchers are back in the lobby with the result. A lock-order deadlock between the voice mixer and the lobby session froze the receiving launcher in the first run.
+
+Derived:
+- A race needs one player to set the moment of GO; a start every player extends to the latest anyone reports ratchets for ever.
+- The game's own sound stops when its window is not active but the mod's voice, which plays through its own wave-out stream, does not: a voice test with two windows on one PC is possible, as long as the voice mode is not `off` (both cfgs of the earlier manual test had `voice_mode=off`, and push to talk only reads the focused window).
+- Players that join a lobby after the game started must not be in the race roster: the race waits for every member of the cfg.
+
+Unknown:
+- How the voice sounds with a real microphone and real speech, and whether the one on one and open line channels feel right to people.
+- How the launcher lobby behaves across the internet (only one PC, addresses on the local network, was used): the host's port has to be reachable and nothing here punches through a NAT.
+- Whether the see-through fade and its speed (0.22, 5 per second) look right to a person: only the alpha was read.
+- The race goal `panel:9F7F` (the mountain's last box, "Box_Short" in the randomizer's logic) as "the end of the game": not played to.
+
+## 2026-10-26 what the first manual test of the lobby found
+
+Observations (two real games started from two launchers by a person, one PC, then reproduced with the bots):
+- Line sharing. The game keeps a drawn line as world positions written while the line is drawn and never updated; a trace record is a segment: two node numbers, its start and its end in the world, and the progress as a fraction (two words that were equal in the runs read, 0.049 rising to 1.0) - the end is the whole edge from the moment the segment exists. Sending the end made the other player see the whole horizontal edge of the first panel's line at once (read from the record while the bot drew it; seen in the game's own picture).
+- The first panels are part of a door: after the solve the panel entity swung about 70 degrees (quaternion z/w from (-0.811, -0.587) to (-0.950, 0.316) in about 3 s) and moved about 1 m while the line's world positions stayed where they were written; lines sent as offsets from the panel's position at each scan, and added to the other game's panel position, then sat where the panel had been (the picture showed a red ribbon floating in the open doorway). Sent in the panel's own frame (position and rotation as of the moment the trace last changed) and turned back with the other game's current panel pose, the half-drawn tip was 0.28 m of a 0.41 m edge, the solved line 0.41 m, and the line was identical in the frame after the door had moved 1.0 m.
+- Frame rate. A game window that is not active is throttled by the game's own loop to 9.6 frames a second (measured, real focus on the other window); with only the "active" byte set (+0x21 of the object at exe+0x469A5B0) it ran at 60. With two windows on one PC the player's second window, where they watched the other player's figure, was the choppy one.
+- POV. `V` needed the cross-hair within a few percent of the other player's body and did nothing otherwise, with no message; with the numbered roster the lobby writes (instead of the single legacy peer) POV works the same (checked with the bots).
+- Launcher. The tab row flickered under the pointer: repainted from scratch on every mouse move, and the tab control's own handler repainted again when the move was passed on (72 repaints for 70 moves; 3 after). Synthetic WM_MOUSEMOVE does not show it: Windows sends "mouse left" at once when the real pointer is elsewhere; the check moves the real pointer under the lab's input lock. Dropdowns 220 wide ran under hints that start 110 px earlier.
+
+Derived:
+- A shared line must be in the frame of the thing it is drawn on, as of when it was valid; world offsets from "where the panel is now" are wrong for any panel that moves (doors, platforms).
+- A bot's synthetic mouse messages do not exercise hover code; use the real pointer under the input lock for that.
+- WSL passes an environment variable to a Windows program only if WSLENV names it: a test hook that "never happened" cost a 200 s timeout once.
+
+Unknown:
+- Whether other moving panels (elevators, boats, platforms) behave like the first door: only the first panel was measured.
+- Whether `run_unfocused` should be the default for people with one window (it costs CPU while alt-tabbed); it is off.
+
+
+## 2026-10-25 groups of up to sixteen players (mod branch `coop16`)
+
+
+Observations:
+- The original sync core and UDP transport each retained one remote peer. Shared state includes panels, doors, panel power and reversible cable power.
+- An eight-world addressed transport test passes loss, reversed delivery, duplicates, independent acknowledgements, all-player progression, pose enumeration and fresh-client recovery. A broadcast-ACK mutant is caught.
+- A concurrent cable-toggle test failed with the original two-player arbiter. Group-only v5 events now retain Lamport clock/player-id versions, including snapshots; the same test passes.
+- Existing two-player T0 suite passed 500 clean sessions and all 10 bug twins after the initial group changes. Later edits still need the full repeat.
+
+Derived facts:
+- Group reliability needs per-recipient acknowledgement and per-sender receive epochs/sequence counters; a single peer's ACK cannot retire an event for everyone.
+- Reversible state requires a shared event ordering beyond the original player-one tie break.
+
+Unknown:
+- Real-client group validation and multi-avatar rendering remain unverified.
+- Work is isolated on the mod's `coop16` branch; no changes have been merged or published.
+
+### Implemented phase: mod commit 652020b (`coop16`)
+
+Observations:
+- Configured full mesh now accepts 15 remote peers (16 players total), with a roster generator and validation. Legacy two-player configs retain v4; configured groups use v5, including versioned cable events.
+- Every remote pose is exposed to the renderer and map. Avatars retain separate gait state and share one depth buffer per frame. A test bridge reports current peer IDs/ages, queue depths and submitted avatar count.
+- The final DLL builds. Full `make -C proxy/core test` passed: eight-player group stress plus four caught group mutants, existing retry/power/reload/cable tests, model tests and their six mutants, 500 clean legacy fuzz sessions and all ten original bug twins. Config generator tests and script syntax checks passed.
+- `make -C proxy/core transport-test` passed on the final source: eight small Windows processes using production `coop.cpp` with fake worlds and real UDP, 25% outgoing loss, all-player progression, all seven remote poses, cable on/off, drained queues and one restarted client. This is game-free evidence, not eight real games.
+- `tools/qa_group.sh 2` passed with real games on one PC: a normal input-driven first-panel solve and door cascade, command-driven progression originating on both clients, fresh remote poses, one submitted avatar each, 25% packet loss, restart catch-up and drained queues. Real saves were byte-identical.
+- New stress exposed silent event loss after an absent peer filled the 4,096-event backlog. Groups now reset the stream and replace that backlog with a current snapshot; its capacity always fits a complete world snapshot. The eight-player test holds one receiver out through 4,200 cable mutations, restores the link and verifies state/queue convergence; the old-drop mutant is caught.
+
+Derived facts:
+- Per-recipient resend budgets are as necessary as per-recipient ACKs: a single unreachable member otherwise pins the first resend window and blocks connected members.
+- A fixed outbox limit must have an explicit recovery path. Updating a detector's known state after silently dropping an event loses that change permanently.
+
+Unknown / remaining:
+- Eight simultaneous real-game clients and multi-avatar GPU rendering with seven actual remote clients remain unverified.
+- Remote-PC networking and sixteen live game clients were not tested.
+
+### Seven-avatar GPU and eight-client hybrid validation
+
+Observations:
+- A hybrid test connected one real game to seven lightweight Windows clients running production UDP code over fake worlds, with panel IDs selected from the real game's entity table.
+- `tools/qa_group_render.sh` passed its shared-avatar-state mutant first (the script caught a stationary player inheriting another player's gait), then the healthy build.
+- In the healthy run the real D3D renderer submitted all seven remote IDs at their distinct positions. Across 24 independently sampled frames, the moving peer reached 1.074 m/s and the six stationary peers remained at zero gait speed. Assertions read the animation state actually used for the draw calls through a render-thread JSON bridge, not screenshots or log messages.
+- An ordinary input-driven solve in the real game reached all seven protocol clients, and unique panel solves from all seven clients reached the real game's memory. All receive/apply queues and reliable streams drained under 25% packet loss. Real saves remained byte-identical. The one real game and all protocol clients were closed.
+- The original eight-client production UDP transport suite also passed again after the fixture gained its optional real-entity mapping mode.
+
+Derived facts:
+- Counting seven draw calls alone cannot prove independent avatars: a singleton gait state can submit all seven meshes while mixing their positions and motion. A moving peer beside stationary peers makes a useful mutant-sensitive check.
+
+Unknown:
+- Eight simultaneous real game processes have not been run. Hybrid evidence is explicitly one real game plus seven protocol clients, not eight real games.
+
+Evidence commits: `3e13e60` adds the seven-avatar render/progression test and caught shared-state mutant.
+
+### Rapid cable reversals during echo suppression
+
+Observations:
+- Review found that a genuine local cable command within five seconds of a remote command could be folded into the echo baseline and never transmitted. A new eight-world test failed on that reversal; another failed when a requested ON was still fading visually.
+- Group detection now compares requested cable power against the last applied/requested state, so a new command bypasses echo suppression while the remote command's own fading glow produces no echo. Group snapshots read requested state and run after detection, preventing a pending restart resync from absorbing a new local command with an old version.
+- Three game-free cases pass: immediate local reversal, reversal while the glow is still fading, and a reversal during a peer-restart snapshot. The old bookkeeping mutant fails all three as required. Existing group stress and four earlier group mutants still pass.
+- The full T0 suite passed, including 500 clean legacy fuzz sessions and all ten original twins. The DLL builds.
+- The eight-client production Windows UDP test now explicitly has client 2 reverse client 1's cable after one second. All eight clients observed the OFF before the five-second guard elapsed; later all-world progression, poses, queue drainage and restart recovery passed as well.
+
+Derived facts:
+- A time-only echo guard is insufficient for reversible state. Track the requested level that the remote call actually set; a different requested level is fresh intent, while brightness interpolation is not.
+- Snapshot baselining must follow local detection, or it can consume the transition that should receive a new logical version.
+
+Additional observations:
+- The one-game/seven-client real-renderer suite passed again with the new detector and snapshot order. Both clean and mutant runs now assert that the real tutorial panel and door are incomplete before the bot runs; the healthy bot then solves the panel and opens the real door. All seven protocol clients and the real game's queues converged, seven independent GPU avatars were submitted, and saves were unchanged.
+- The eight-client UDP reversal test prevents client 1's later timer from turning its own cable off: only client 2's remote reversal can make all eight worlds dark. It passed, followed by the existing all-player/restart checks.
+
+Evidence commit for rapid cable intent and its tests: `f611b21`.
+
+
+## 2026-10-27 character quality passes
+
+
+### Observations
+
+- Baseline previews show a clean traveller with a coat, scarf, hat and camping gear. The face reads as doll-like, the sleeves and coat are tubular, and the clothing lacks tailored construction detail.
+- Baseline asset: 35,959 vertices, 55,096 triangles, 20 joints, one embedded base-colour texture, idle/walk/run clips.
+- Baseline `tools/check_model.py`, `tools/test_idle_seam.py`, and `tools/test_run_pose.py` passed.
+- First visual-quality pass reshaped the adult face and recessed the eyes; added stubble, folded lapels, shoulder seams, topstitching, layered bracers, fingerless gloves, boot lacing, a feather vane, and more muted weathered materials.
+- Final pass asset: 59,368 vertices, 85,996 triangles, 20 joints, one 2048-square embedded JPEG, 4.56 MB GLB. It remains below the renderer's 60,000-vertex limit after UV splitting.
+- `models/build.sh adventurer`, 11 `test_check_model.py` checks, idle seam, run pose, strap fit with mutant, gait contact with mismatched-stride mutant, and material bake with flat-material mutant passed.
+- The real two-client adventurer scenario passed all 11 checks: visibility, idle/walk/run clips, advancing animation, render-thread statistics, wall occlusion, and untouched real saves.
+- The two-client `hero` showcase captured idle and walking images in the actual game and reported stable world, every peer drawn, correct monitor placement, and byte-identical real saves.
+
+### Derived
+
+- The largest first-pass gains should come from natural facial proportions, layered/tailored clothing silhouettes, construction details, and less saturated weathered colours.
+- The renderer currently supports one base-colour texture, so normal/roughness-map parity with a modern AAA character is not available through the existing material path.
+
+### Unknown
+
+- The tester's preferred final character art direction beyond the Enshrouded quality reference.
+
+### Second pass - pose, drape and scalp
+
+#### Observations
+
+- The tester selected the refined-traveller direction: keep the hat, coat, scarf and camping gear.
+- Changed to a relaxed asymmetric arm bind pose, added coat drape, and replaced the ellipsoid hair with a surface-following scalp. A solid beard and raised hair locks were rendered but rejected: they looked applied to the face and created artifacts. The delivered model keeps textured stubble instead.
+- Rebuilt asset: 58,020 vertices, 83,492 triangles, 20 joints; 4,477,964-byte GLB with one 2048-square JPEG. It remains below the renderer's 60,000-vertex limit.
+- Offline build, 11 `test_check_model.py` checks, idle seam, run pose, material bake with flat mutant, strap fit with unprojected mutant, and gait contact with mismatched-stride mutant all passed. `git diff --check` passed.
+- The real two-client model scenario passed all 11 checks. The two-client hero showcase passed its stable-world, peer-visibility and monitor checks and captured idle and walking pictures. Real saves were byte-identical.
+- Visual review: stance and scalp improved, but the rounded protruding eyelids still read as toys, the lips are poorly defined, and the coat and sleeves remain too tubular. Further work is needed; Enshrouded-equivalent quality has not been achieved.
+
+#### Derived
+
+- Eye whites, lids and lips should follow the facial surface rather than sit on it as ellipsoids.
+- Cloth folds should describe waist compression, hanging weight and elbow compression rather than uniform corrugation.
+
+#### Unknown
+
+- How close the single-base-colour material path can get to the tester's visual reference without normal and roughness textures.
+
+## 2026-10-27 to 2026-11-10: from prototype to public beta (v0.1.0-alpha, v0.2.0-beta.1, v0.3.0-beta.1)
+
+Source for this section: the mod's own developer notes at the release tag
+([docs/DEVELOPMENT.md](https://github.com/TommoDotCommo/witness-coop/blob/v0.3.0-beta.1/docs/DEVELOPMENT.md),
+[docs/STEAM.md](https://github.com/TommoDotCommo/witness-coop/blob/v0.3.0-beta.1/docs/STEAM.md)), which name the test
+for each claim. Addresses are for Steam build 11370412.
+
+### Observations
+
+- **Loading the mod without touching a game file.** The exe imports `DSOUND.dll` (`DirectSoundEnumerateA` and
+  `DirectSoundCreate8`, by ordinal) and the game folder does not ship one, so Windows loads a `dsound.dll` placed there.
+  The proxy exports the system DLL's twelve names and ordinals and forwards each to the system copy, loaded by full path
+  (the bare name would be the proxy itself). Until v0.1.0-alpha the proxy replaced the game's own `AnselSDK64.dll`: Steam
+  restores that file on every update and a mod manager cannot install it. `winmm.dll` was the other candidate and was
+  ruled out because the mod's voice capture uses `waveIn` from it.
+- **Under Wine and Proton the built-in `dsound` wins** over one in the game folder. The Linux install script writes
+  `"dsound"="native,builtin"` for the game's exe into the game's own prefix (`user.reg`), or the player sets
+  `WINEDLLOVERRIDES="dsound=n,b" %command%`. Tested on fixture folders and fixture prefixes only.
+- **A solve does more than set the solved fields.** After them the game's solve handler runs `exe+0xB7F80`: about 70
+  behaviours chosen by the panel's name (`+0x58`), among them the Swamp's sliding and rotating bridges and floodgate, the
+  Quarry ramps, the windmill, the Town's lights, the Desert's water levels and elevators. Several read the line that was
+  drawn (`+0x228` count, `+0x230` records of 13 dwords), for example which exit a bridge control was left by. A remote
+  solve therefore writes the solver's final line into the panel's trace buffer (grown with the game's allocator,
+  `exe+0x2E7FA0`), marks the panel, runs the reactions, dispatches the target only when they ask for it, and then takes
+  the line out again. Left out on a remote solve: the ending and final elevator, the theatre videos, the boat, the timed
+  challenge and the sound-room birds.
+- **Treehouse bridges** grow because the solve handler tells the panel's `Bridge` (`+0x2C0`) that the panel is solved
+  (`exe+0x84910`). Before the remote solve did the same, the other game had the panel solved and the next one powered but
+  no bridge to reach it.
+- **Report a door when it is told to move (`+0x1D4`), not when it arrives (`+0x1D0`).** Detecting arrival made a sliding
+  bridge reach the other game 40 s late and the Caves elevator 12 s late.
+- **The game builds a panel's line picture when the panel comes into view** (render object `+0x4A8`) and does not rebuild
+  it for a line written from outside. A player who watched a remote solve saw the panel solved with no line. Another
+  player's finished line is now drawn by the overlay, in that player's colour, while the panel is solved.
+- **Holding a teleported player against the game's emergency reset crashed it.** A player held inside geometry is reset
+  by the game to the nearest marker; a hold that wrote the position about every millisecond made the game reset every
+  frame, and twice it crashed rebuilding the ground at the marker (`exe+0x2D03EC`). The hold now lets go when the game
+  moves the player more than 1.5 m sideways.
+- **Steam transport.** The launcher starts the Steam API as the game's app through the `SteamAppId` environment variable,
+  which the game inherits, and the mod uses the game's own Steam connection: friends-only lobbies for up to 16, relayed
+  by Steam, no port forwarding. Game-free tests run three production sync cores over a fake Steam link that loses 20%,
+  duplicates 10% and reorders; an impostor claiming a member's id and a stranger are never heard.
+- **Nothing is written into the game folder while playing.** Settings, the log and the update schedule live in
+  `%LOCALAPPDATA%\witness-coop`. Every file Setup writes has a receipt beside it, so uninstall removes exactly those.
+- **Playing the game through with N bots.** The order comes from Archipelago's vanilla logic for The Witness (MIT): its
+  584 panel ids are the game's own entity ids. A planner hands each free bot a different available panel, the bot draws
+  the solution with in-process input and takes the game's own solved flag as the verdict; every solve must turn solved
+  in every other world. The route to the credits is 238 panels. Panels the bot cannot draw are recorded from a person
+  and replayed.
+- **A receiver that mistook a timer panel for a save load re-gated itself.** Early four-bot runs showed a 95th percentile
+  propagation time of 12 to 13 s (maximum 36 s): every slow arrival was a receiver that took a timer panel or timed door
+  for a save load and waited for a stable world again. Deciding "this was a load" from the world's generation instead
+  brought the 95th percentile to 0.25 s in the core's lossy-link test.
+- **Randomizers and the puzzle editor run inside the mod.** In a lobby the host's choice and seed (and the host's own
+  puzzle set) are sent to everyone before the game starts, so every world has the same puzzles; a continued save keeps
+  the puzzles it was started with.
+
+### Derived
+
+- When a game's solve handler branches on what the player drew, a remote "mark as solved" is not enough: replay the
+  input the handler reads (here the traced line), run the handler's reactions, and guard what they change from being
+  sent back.
+- A proxy for a system DLL the game imports but does not ship survives store updates and file verification, and is a
+  plain file copy for mod managers; replacing a file the game ships is neither.
+
+### Unknowns
+
+- A session between two PCs with two Steam accounts: the test steps are written in the mod's docs/STEAM.md; no result is
+  recorded in the mod repository. One PC with one account cannot show two members in one Steam lobby.
+- Steam Deck and Linux under Proton on real hardware; a person speaking into a real microphone; sixteen real game
+  clients at once (eight were run for the showcase).
+- Whether the bots can finish the 238-panel credits route unaided: no completed run is recorded in the mod repository.
+- Stores other than Steam (GOG, Epic): the mod refuses any exe but build 11370412.

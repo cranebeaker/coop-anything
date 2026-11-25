@@ -3,19 +3,20 @@
 | | |
 |---|---|
 | Engine | BioWare in-house (MDK2), OpenGL 3.0 renderer, Lua 3.1 scripting with tolua bindings |
-| Versions tested | Steam app 213350, build id 3902, `mdk2hd.exe` SHA-256 `bf5faa81b18837b4c07f35941b107e5c23caa8b105536ccd9c8e5a8e37357f43` |
+| Versions tested | Steam app 213350, build id 3902, `mdk2hd.exe` SHA-256 `bf5faa81b18837b4c07f35941b107e5c23caa8b105536ccd9c8e5a8e37357f43`; the Overhaul Games (Beamdog client) build, `mdk2hd.exe` SHA-256 `2e4ae928...39f9` (the mod's `docs/DEVELOPMENT.md` gives it in this short form) |
 | Projects | [mdk2-coop](https://github.com/TommoDotCommo/mdk2-coop) (directory entry "MDK2 HD") |
 | QA level | automated |
-| Last updated | 2026-10-23 |
+| Last updated | 2026-11-11 |
 
 ## Where things stand
 
 MDK2 HD has no multiplayer. mdk2-coop adds drop-in co-op: two or more players move through the campaign
 together, with the host's world (enemies, shots, pickups, doors, checkpoints, level loads, cutscenes) mirrored on
-every client. The public alpha [v0.2.0-alpha](https://github.com/TommoDotCommo/mdk2-coop/releases/tag/v0.2.0-alpha)
-(2026-10-23, a pre-release with an installer and a launcher) passed the full automated ladder first: 31 gates,
-including all 96 checkpoints with host and client. Nobody has finished the whole campaign in co-op yet, and the
-automated tests do not solve puzzles or beat bosses.
+every client. The first public beta, [v0.4.0-beta.1](https://github.com/TommoDotCommo/mdk2-coop/releases/tag/v0.4.0-beta.1)
+(2026-11-11, a pre-release with a one-file Setup and a launcher), supports the Steam build and the Overhaul Games
+build. Its automated ladder has 109 gates, including all 96 checkpoints with host and client; one complete run
+passed 105 of them (details under QA). Nobody has finished the whole campaign in co-op yet, and the automated
+tests do not solve puzzles or beat bosses.
 
 ## Existing work
 
@@ -82,31 +83,83 @@ Each fix below came from a failing automated or manual check and was re-tested; 
 - A save browser and a level and checkpoint picker in the launcher.
 - Removed: an AI texture upscaler (it made the game darker and flatter than the original).
 
+Since the alpha (v0.3.x and v0.4.0-beta.1; the mod's release notes in `docs/` have the full list):
+
+- A second game build. The Overhaul Games build has the same code at other addresses; every address sits in one
+  table per build, chosen at start by a signature test shared with the installer (`bridge/build_sigs.h`). An
+  unknown build keeps co-op off and says so in a message box. A crash guard written against one build's address
+  was silently off on the other until a gate ran on both.
+- What one player does happens for everyone: a room's scripts run for all players when anyone enters, a boss
+  starts when anyone gets near, and a player left behind a closing door is brought along. Pickups give their
+  item, ammo or healing to every connected player.
+- Item uses reach every player. A room's `OnItemUsed` script ran only in the user's game and the script state it
+  changes is never synced, so the level 3 leak puzzle diverged for good. The game that handles the use now sends
+  a reliable message (kept by the host for late joiners) and the others run the room's handler with the user's
+  puppet as the player.
+- Enemy hp that the game changes without a hit (a downed grunt standing up again, a script topping up a turret)
+  is sent as an hp-only message; before, a client could see an enemy the host was still fighting as a corpse.
+- Flying enemies attached to a bone of an animated scenery model (the level 2 mantas) are taken off the bone on
+  clients and placed by the host's snapshots; the engine otherwise moved them back onto the bone every scene
+  update, up to 230 units from the host's.
+- Doc's leaf blower from a client pushes the host's real enemies through the game's own push volume. Puppets get
+  the things a character's own code builds: Max's jetpack and its flame, Doc's blower, Kurt's open parachute.
+- Client fixes at the level 3 boss (a blast script with no target, a Lua error at every blast) and at the start
+  of level 8 (a client loading later than the host called into a creature the host had already removed).
+- Joining without typing an address: a list of hosts found on the local networks, on Tailscale and among recent
+  hosts, one paste box for an invite code, link, Steam lobby number or address, and an invite that carries every
+  route that works. The lobby says how friends can reach the host and asks the router to open the port (UPnP,
+  else NAT-PMP).
+- The launcher drawn in the game's own look from the player's `mdk2.tar` (nothing from the game is shipped),
+  usable with a pad. In game: a player list (hold Tab), shared co-op keys, a co-op layer on the pad's View button,
+  an on-screen keyboard for chat, and a quick guide (hold F1) written from the current bindings.
+- One-file `MDK2-Coop-Setup.exe` (unsigned), an in-launcher update check, a drop-in zip for manual installs, a
+  Vortex game extension, a Mod Organizer 2 game plugin and `install-linux.sh` for Proton (untested).
+
 ## QA
 
 - Background test mode: the games run unfocused, muted, driven by scripted input inside the game, with
   back-buffer screenshots, so the PC stays usable while tests run.
-- `tools/qa_all.py full` runs the whole ladder: offline tests (build, oracles, projectile, controller, revive and
-  network cores), every feature suite with real games, lossy-network variants, and the campaign (every checkpoint,
-  96, with host and client: walk, fire, a client hit, the client follows, both alive, enemies bound, hp equal, no
-  Lua errors, state diff). `--lanes 3` runs feature suites side by side on separate game copies;
-  `--campaign-shards 4` splits the campaign over four host/client pairs.
-- Before v0.2.0-alpha (2026-10-23): 30 of 31 gates passed, the campaign in 4 minutes. The failure was the stuck
-  hero above, a real bug that showed up only when the PC was busy; after the fix the character-wheel gate passed
-  12/12, and both the old code and a mutant without unsticking fail it.
+- `tools/qa_all.py full` runs the whole ladder: offline tests, every feature suite with real games,
+  lossy-network variants, and the campaign (every checkpoint, 96, with host and client: walk, fire, a client hit,
+  the client follows, both alive, enemies bound, hp equal, no Lua errors, state diff).
 - Suites check deliberately broken variants (`MUTANT=...`) where practical, so a gate that cannot fail is caught.
-- Not covered: a full campaign played through in co-op, boss fights and puzzles beyond the checkpoint starts,
-  long sessions over the internet, Steam invites between two separate accounts, and real gamepads, microphones and
-  3-4 couch players (tested with simulated input).
+
+Result for v0.4.0-beta.1 (release commit `ecb208f`, 2026-11-10, one Windows 11 PC with both supported builds;
+from the release notes' "Verified and not verified" section):
+
+- 109 gates: 41 offline, 68 with running games. One complete run passed 105. Of the other four, the campaign
+  sweep, `two-player` and `updater-live` passed when run again alone, and `first-enemy` is intermittent (below).
+- Checkpoint sweep: two players at all 96 checkpoints, 96 of 96 followed and matching, with levels 1 to 3 (to
+  checkpoint 3-6) on the Steam build and the rest on the Overhaul build.
+- Of the 68 gates with games, 49 ran on Overhaul copies only, 15 on Steam copies only and 4 on both. Two commits
+  before the release commit every gate with games ran on Steam copies in one pass.
+- Intermittent: `first-enemy` failed 3 of 5 runs on the release commit, always the same check (the level 1 dog's
+  first bite on the host took longer than the test's 20 seconds). Not diagnosed. On the Steam build
+  `remote-events` and `projectiles` each failed one run in three two commits earlier and passed in the final
+  run. Not diagnosed.
+- With 15 or more games running at once, tests with timing limits fail in scattered places; the numbers above
+  are from an otherwise idle PC.
+
+Not covered:
+
+- A full campaign played through in co-op, and boss fights and puzzles beyond the checkpoint starts.
+- A clean install on a PC that never had the mod, and play between two homes on this build.
+- Steam invites between two separate accounts and long internet sessions.
+- Steam Deck, Proton and Linux (the install script is tested against fixture folders only); Mod Organizer 2
+  under its virtual file system.
+- The campaign sweep with more than two players.
+- Real gamepads, microphones and 3-4 couch players (tested with simulated input).
 
 ## How to play
 
-Download the zip from the mod's [Releases](https://github.com/TommoDotCommo/mdk2-coop/releases), unzip it and run
-`Install.cmd`. It finds the Steam install, refuses any build other than Steam 3902, and asks Steam or UDP and host
-or join; `Uninstall.cmd` removes it. Host over Steam from Options > Co-op > Session (invite friends or share the
-lobby ID); over UDP the host forwards port 27900. A launcher opens before the game for hosting,
-joining, playing solo and every setting; `Couch.cmd` starts couch co-op. To build from source, see the mod's
-`docs/DEVELOPMENT.md` (`bridge/` with mingw i686, `tools/install.sh`, `tools/release.sh`).
+Download `MDK2-Coop-Setup.exe` from the mod's [Releases](https://github.com/TommoDotCommo/mdk2-coop/releases) and
+double-click it. It finds the game (Steam libraries or the Overhaul Games folder), says which build it found, and
+installs or repairs; an unknown build installs only after a warning that co-op will stay off. Setup is not
+code-signed, so Windows SmartScreen warns before the first run. A launcher opens before the game for hosting,
+joining, playing solo and every setting. Host over Steam from Options > Co-op > Session (invite friends or share
+the lobby ID), or over UDP from the launcher's lobby, which reports how friends can reach the host and gives one
+invite to copy. Everyone needs the same version. The zip on the release page is for a manual install (two files
+into the game folder) and for mod managers. To build from source, see the mod's `docs/DEVELOPMENT.md`.
 
 ## Known issues
 
@@ -116,10 +169,14 @@ joining, playing solo and every setting; `Couch.cmd` starts couch co-op. To buil
 - Some cutscenes started by events inside a level have no countdown until they have been watched once.
 - Voice has no echo cancellation and no voice in couch games (one room, one microphone).
 - Items made by item spawners run independently on each machine and are matched by name.
+- The level 3 airlock's item handler stays local to the player who uses the item.
+- Steam Deck and Linux (Proton) are untested.
+- Setup is not code-signed.
 
 ## Next steps
 
 - A full co-op playthrough by real players, with the problems found turned into automated checks.
-- Test Steam invites between two real accounts and a long session over the internet.
-- Record routes for the replay bot (the machinery exists; no campaign routes are bundled) to cover what the
-  checkpoint sweep cannot: puzzles and boss fights.
+- Test Steam invites between two real accounts, a clean install on another PC and a long session over the internet.
+- Run down the intermittent `first-enemy` gate.
+- Search the other level scripts for the level 8 shape (a client script touching an object the host already
+  removed).

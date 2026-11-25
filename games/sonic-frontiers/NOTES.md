@@ -1,0 +1,1864 @@
+# Sonic Frontiers — co-op agent notes
+
+Started 2026-11-24. Owner goal: **Seamless-Co-op-style co-op** — shared enemies,
+items and story — with friends on Steam PC, not just visible player puppets.
+
+## Upstream contribution (2026-11-24)
+
+- Claim issue: https://github.com/cranebeaker/coop-anything/issues/428
+- Draft PR: https://github.com/cranebeaker/coop-anything/pull/429 (commit `f864a81`,
+  `isDraft=true`, owner-review checkbox left unchecked).
+- Local fork: `https://github.com/leonpano3500/coop-anything`, branch
+  `game/sonic-frontiers`, tracking `origin/game/sonic-frontiers`.
+- The PR adds the Sonic Frontiers directory entries (HE2MP plus a full-coop gap)
+  and regenerates `DIRECTORY.md`. Builder check: `OK: 568 entries`.
+
+## Identity (observed — source: local read-only inspection, 2026-11-24)
+
+- Title: Sonic Frontiers (PC/Steam).
+- Install: `<game dir>` (Steam library; path withheld from shared notes).
+- Main exe: `SonicFrontiers.exe`, 365,848,592 bytes.
+- SHA-256: `7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`.
+- `steam_appid.txt` in the game root contains `1237320`. This is **not** assumed to
+  be the game's Steam app id; reason unknown.
+- Store build/version id: **16857613**, from
+  `D:\Steam\steamapps\appmanifest_1237320.acf` (`buildid` and `TargetBuildID`
+  agree; `appid=1237320`, name "Sonic Frontiers"). Read-only check, 2026-11-24.
+  All players still need their own build id checked before interop.
+- Engine: Hedgehog Engine 2 is **not independently confirmed**. A read-only MCP
+  `detect_engine` scan of the install (1017 files) found no engine signature;
+  only `steam_api64.dll` and `steam_appid.txt` signals. The name comes from the
+  HE2MP project and prior local notes only.
+- OS: Windows.
+
+## Triage (observed)
+
+- `DIRECTORY.md` / `games/`: no Sonic Frontiers entry. Sonic Adventure 2, Sonic
+  Adventure DX, Sonic Riders and Sonic Robo Blast 2 are listed.
+- GitHub issues/PRs in `cranebeaker/coop-anything`, searched via the web UI for
+  "sonic frontiers": 0 results for both (checked 2026-11-24). `git`/`gh` were not
+  installed at session start; checks were unauthenticated web reads.
+- Upstream project: `https://github.com/angryzor/sonic-frontiers-multiplayer`
+  (GPL-3.0, C++, pushed 2026-03-21, 1 star, 0 forks). Its README is still a
+  `rangers-sdk` starter-project README and does not document features.
+- `he2mp` v0.0.35 ("Hedgehog Engine 2 Multiplayer", author angryzor) is installed
+  in `<game dir>/mods/he2mp` and is the only mod active in `ModsDB.ini`.
+  Its changelog mentions players visible, name tags, effects, sound, text chat,
+  experimental PvP and support for several game modes; it does **not** claim
+  enemy, item or story sync.
+- A prepared copy for a friend exists at
+  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/handoff/he2mp-PLAY-NOW/`. Its own
+  README says: two-PC operation was never tested, distribution is through the
+  author's Discord playtest, and both players need version 0.0.35 and the same
+  realm. `he2mp.dll` SHA-256 in that handoff:
+  `FF457469855393B97D762684A2F1DF98177AB3F325D5B4621B22B5D263AA5C9F`.
+
+## Prior local project (observed, not independently verified)
+
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV` is a large staged reverse-engineering
+project aimed at full co-op. Its newest safety record (`mpdev047-safety-status.txt`,
+2026-11-24) states, among other things:
+
+- `real_stable_game_identity=NOT_CONFIRMED`
+- `real_enemy_resolver=NOT_APPROVED`
+- `real_in_game_enemy_sync=NOT_ATTEMPTED`
+- `MP-022=STOP`, `MP-025=OUTCOME_B`
+- `GATE_B=CLOSED`, `GATE_C=CLOSED`, `GATE_C_OPENED=0`
+- `IN_PRINCIPLE_MODIFICATION_ACCEPTED=1`, `ACTUAL_MODIFICATION_AUTHORIZED=0`
+- candidate identity field `GOCEnemy+0x0fc` is a candidate only; no promotions.
+
+This means the existing custom DLLs are **not** a playable full co-op mod and no
+in-game write/hook capability has been authorized. Do not claim otherwise.
+
+## Plan / decisions from owner (2026-11-24)
+
+- Route: full co-op with enemy, item and story sync (Elden Ring Seamless Co-op style).
+- Notes location approved: this local playbook fork.
+- Git + GitHub CLI installation and use of the owner's GitHub account approved;
+  claim-a-game issue and later draft PR are in scope.
+- Friends: Steam PC, same build.
+
+## Searched (so far, 2026-11-24)
+
+- This repo's `DIRECTORY.md`, `games/`, issues and PRs.
+- Web search: "Sonic Frontiers co-op multiplayer mod PC 2026",
+  "Sonic Frontiers multiplayer mod github coop online".
+- GitHub repository search: "sonic frontiers multiplayer" (1 result: angryzor).
+- Local Steam library, installed mods, `ModsDB.ini`, prior work folders.
+
+## Gate status, deep read (observed 2026-11-24)
+
+From `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev047-c-file-hashes.txt`
+(the newest authoritative artifact; the root README is stale):
+
+- `MP047_C_STATUS=PACKAGE_COMPLETE_NO_RUNTIME`
+- `READONLY_TWO_PC_TEST_AUTHORIZED=1`, `H_EXT2_RUNTIME_TEST_EXECUTED=0`
+- `MP036_REQ6_STATUS=UNMET`
+- `CANDIDATE_FIELD=GOCEnemy+0x0fc`, `CANDIDATE_KEY_FIELD_ONLY=1`
+- `IDENTITY_PROMOTIONS=0`, `RESOLVER_APPROVALS=0`, `GATE_C_CHANGES=0`
+- `real_stable_game_identity=NOT_CONFIRMED`, `real_enemy_resolver=NOT_APPROVED`,
+  `real_in_game_enemy_sync=NOT_ATTEMPTED`
+- `MP-022=STOP (narrow read-only override per scan)`, `MP-025=OUTCOME_B`
+- `GATE_B=CLOSED`, `GATE_C=CLOSED`, `GATE_C_OPENED=0`
+- `IN_PRINCIPLE_MODIFICATION_ACCEPTED=1`, `ACTUAL_MODIFICATION_AUTHORIZED=0`
+
+`mpdev047-c-safety-status.txt`: `PROCESS_COUNT=0`, `READY_PC_A_RECEIVED=0`,
+`READY_PC_B_RECEIVED=0`, `PC_B_TRACE_RECEIVED=0`, no runtime scan by the assistant.
+
+The next planned, already-authorized step is a **strictly read-only two-PC
+correlation** of `GOCEnemy+0x0fc`:
+
+1. Friend runs `mpdev047-c-RUN_ON_PC_B.bat` from
+   `RESULTS/mpdev047-c-pcB-one-click-package.zip` (sha256
+   `02055AE54FA362B92CDB26E9DF5D54BF76DD7FCB479E0F2A3EC2D4FB5AA0F81D`)
+   with Sonic Frontiers open in a comparable enemy area, and sends back the
+   raw trace plus console text.
+2. With fresh `READY_PC_A` and `READY_PC_B` tokens, run the pinned PC A scanner
+   (`tools/mpdev047-a-pcB-readonly-scan.ps1` pattern) to
+   `RESULTS/mpdev047-a-pcA-raw-trace.txt`.
+3. Compare offline using `RESULTS/mpdev047-comparison-schema.txt` and
+   `mpdev047-two-pc-correlation-plan.txt`. Even `CROSS_PEER_SUPPORT_WEAK`
+   would promote nothing and open no gate.
+
+Why this matters for the owner's goal: read-only enemy discovery found real
+`GOCEnemy`/`GOCHealth` fields (position `GOCEnemy+0x090`, HP `GOCHealth+0x080`),
+but there is no stable cross-peer enemy identity, no fail-closed resolver, no
+authorized write path, no item-ID/inventory work, and no story-flag/trigger work.
+MP-044 records `QUALIFIED_WRITE_TARGET_EXISTS=NO` and
+`GATE_C_CURRENT_STATUS = CLOSED / UNJUSTIFIED`. Item and story sync have no
+dedicated investigation in this corpus; treat them as unmapped, not as failures.
+MP-040 says `FEASIBLE_WITH_CURRENT_EVIDENCE=NO` and
+`MORE_READ_ONLY_SCANS_CAN_REACH_ONLINE_SYNC=NO`.
+
+## Existing projects, web research (observed 2026-11-24)
+
+- **HE2MP (angryzor)**, newest public build **v0.0.35, 2026-04-01**, for both
+  Sonic Frontiers and Shadow/SXSG. Distribution:
+  `https://github.com/angryzor/hmm-update-server/tree/main/sonic-frontiers/he2mp`.
+  Ships GPL-3.0 text but no public client/server source was found. Uses
+  GameNetworkingSockets + protobuf, central server run by the author with
+  "realms"; exact protocol is unknown.
+  - Confirmed: remote player transforms/rotations/animations, effects (disabled
+    in v0.0.30 to reduce crashes), sounds, nametags, join/leave messages, text
+    chat (T), experimental PvP (F10), several game modes (Battle Rush, Boss
+    Rush, CyberStage Challenge, Fishing, Hacking, Master Trial).
+  - Not found: enemy combat sync, shared item pickups, story/progression sync.
+    An indexed video transcript says enemies are different for each player and
+    fighting them is not visible to others (medium confidence). Boss sync is
+    listed as a future goal in the Shadow WIP, not confirmed complete.
+  - Bugs from its changelog: T-posing remote Sonics, tutorial-room crash,
+    Boss Rush/Master King crash, nametags lost after death/retry, effects not
+    removed on destruction, Steam Deck crash with older MSVC redist, VFX
+    overloading the server. Feedback lives in the author's playtest Discord,
+    not a public issue tracker.
+- **`https://github.com/angryzor/sonic-frontiers-multiplayer`** is NOT the online
+  mod: it is a GPL-3.0 `rangers-sdk` example with local second player/split
+  viewports, `maxPlayers = 2`, no sockets, no transport, no server. HEAD
+  `a0bea36` "Fixes for 1.42" (2026-03-21).
+- **GameBanana WIP 86943** (2024-08-06, modified 2025-03-21, no files) is the
+  planning page: local multiplayer first, networked/co-op/Titan fights later.
+  **WIP 92852** is the Shadow equivalent and lists boss sync as future.
+- **`HE2-SDK` GitHub org** (`rangers-sdk`, `rangers-api`, `he2-devtools`,
+  `miller-sdk`): engine types/addresses for Frontiers and Shadow, pushed
+  2026-11-08. No networking/co-op logic found. Several repos have no detected
+  license; do not assume reuse rights. `he2-devtools` is GPL-3.0.
+- Negative searches: GitHub repo search `he2mp` (0 results), Nexus (~35 mods,
+  no multiplayer), archive.org, Japanese and Russian queries, Reddit (403 to
+  fetcher), GameBanana; all circled back to HE2MP. `sonicfrontiersguide.com`
+  is a low-quality SEO page repeating the GitHub template.
+- No separate JP/RU co-op project found. No public HE2MP source/server found;
+  server software said to be released only at public release.
+
+## Code inventory (observed 2026-11-24)
+
+- MPD2 protocol `2.0/build3` has player, entity (spawn/state/health/death),
+  boss, world state/events and lobby messages, plus reliable acks. Two-process
+  loopback tests pass offline; no game is involved.
+- Game adapter hard-codes the pinned EXE hash and read-only offsets: player
+  `+0x080`, enemy `+0x090`, current HP `+0x080`; max HP `+0x084` is candidate
+  only. Reads go through `IMemoryReader`; shipped `mpdev-coop.dll` has live
+  reads, transport, hooks, writes, remote spawn and position sync compiled OFF.
+- `mpdev-live-read.dll` (reads ON, everything else OFF) and
+  `mpdev-pos-sync.dll` (controlled position-write experiment, hooks OFF) are
+  isolated engineering builds, not installed and not real co-op.
+- As of 2026-11-24 there are offline-only typed item/story messages
+  (`Msg2Type` 22-25) and host-authoritative `mpdev_item_replication.*` /
+  `mpdev_story_replication.*` layers, with snapshots carrying a reliable-event
+  cursor. Standalone selftests and two-process loopback pass offline, but this
+  is **not shippable, not game-verified** and uses synthetic item/flag ids.
+  `kProtocol2Build` is still 3 (MP-032 guard), so stock build3 peers reject
+  these types; a formal protocol build bump is required before interop.
+  Details: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-results.txt`
+  and `RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`.
+- Real-game item tables, inventory/pickup mapping, story flag/trigger mapping,
+  adapters and authority rules remain unmapped. Story support in the stock
+  protocol is still only generic `WorldState2.progressFlags` /
+  `WorldEvent2.eventId`.
+- Future work surfaces: `src/coop/mpdev_protocol2.h/.cpp`,
+  `mpdev_entity_replication.*`, `mpdev_world_replication.*`,
+  `mpdev_game_adapter.*`, `mpdev_enemy_integration.*`, plus the new
+  `mpdev_item_replication.*` / `mpdev_story_replication.*`; tests in
+  `tools/run-tests.ps1` and `tools/run-coop-test.ps1`.
+
+## Read-only install scan (2026-11-24)
+
+Owner approved a read-only scan of the owner's own install; no friend contact,
+PC B package, protocol bump, game/save/mod change, process attachment or live
+memory scan. Full result: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-readonly-install-scan-20261124.txt`.
+
+- Confirmed exe hash/size/x64 PE32+ and `steam_appid.txt` app id 1237320.
+- Resolved the app id question: the appmanifest confirms app id 1237320 and
+  Steam build id 16857613.
+- `detect_engine` found no engine signature; Hedgehog Engine 2 stays unconfirmed.
+- No gates opened, no identity/resolver promotions, no item/story mapping,
+  QA still `none`.
+
+## Read-only live item/story discovery scan (2026-11-24)
+
+Owner authorized a read-only live in-game scan for item/story hooks and launched
+the game themselves. Assistant ran a new read-only RTTI scanner
+(`VM_READ | QUERY_INFORMATION`, no writes/injection/network); 6707.9 MB scanned,
+exit 0. Result: `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-itemstory-readonly-results-20261124.txt`.
+
+- 155 RTTI classes matched `Item`/`Inventory`/`Story`/`Flag`/`Quest`; 20 live
+  candidate objects found. All CANDIDATE-ONLY.
+- Interesting class families: `save@app@@` flag containers/accessors
+  (`WorldFlagAc`, `FlagContainerAc`, `WorldFlagContainerAc`,
+  `SaveDataAccessor<T>` over `UWorldFlagContainerData`/`UFlagContainerData`/
+  `UExtraFlagData`), item/dropped-item objects (`ObjDroppedItem`,
+  `ObjDroppedItemInfo`, `ObjQuestItem`, `UIItemQuotaContext`), and quest/message
+  classes (`QuestManager`, `MsgStartQuest`, `MsgSetClearFlag`,
+  `MsgTakeQuestItem`).
+- No item id, flag id, trigger, authority, resolver or write authorization.
+  No gate opened, no QA, no two-PC correlation.
+
+## Koco before/after read-only experiment (2026-11-24)
+
+Owner collected exactly one Koco between two pinned read-only scans (same PID,
+same area, no menus). Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-itemstory-readonly/koco-beforeafter-results-20261124.txt`.
+
+- 13 candidate objects before, 16 after. The only class-count change was
+  `ObjSequenceItem`: 0 -> 3 (all vptr `0x1414914d0`). These may be transient
+  collect/animation objects, not the Koco itself.
+- Field diffs by class/index: `BlackboardItem +0x028` 117->123 (+6),
+  `UIItemQuotaContext +0x1a8` 1->2, and several `RelayedFlagsParameter` values
+  that look like transient/pointer state.
+- None cleanly matches "one Koco collected"; no item id, flag bit, authority,
+  resolver, or write authorization established. Koco HUD counter before/after
+  was not captured. Gates unchanged; QA=none.
+
+## Two-test Koco comparison (2026-11-24)
+
+Four read-only scans, same PID, candidate-only. Full summary:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-itemstory-readonly/koco-two-test-summary-20261124.txt`.
+
+- `UIItemQuotaContext +0x1a8` went 1->2->1->1: REJECTED as a Koco counter
+  (reset before pickup 2, did not move on pickup 2).
+- `BlackboardItem +0x028` went 117->123->123->124: moved +1 on pickup 2 but
+  +6 on pickup 1 (owner reported HUD +1). A lead only, NOT a mapping.
+- `RelayedFlagsParameter` fields oscillated; treated as noise.
+- One new `SaveDataAccessor<UWorldFlagContainerData>` appeared after pickup 2;
+  candidate-only, no flag bit identified.
+- No item id, flag, authority, resolver or write authorization. Gates unchanged.
+
+## Koco experiment — final conclusion (2026-11-24)
+
+Owner confirmed both pickups were exactly one Koco with HUD +1 and no other
+events. No tracked field moved +1 on both pickups: `BlackboardItem +0x028`
+(+6 then +1), `UIItemQuotaContext +0x1a8` (+1 then 0), `RelayedFlagsParameter`
+(-1 then +1). No Koco count field identified; +6 delta unexplained and likely
+unrelated. No gate opened, QA=none. Read-only before/after scanning has
+diminishing returns: MP-040 already records that read-only scans alone cannot
+reach online sync; mapping + sync would require authorized writes/hooks.
+
+## Offline item/story hardening (2026-11-24)
+
+Owner chose to stop live scanning and strengthen offline tests only. No game,
+process, save, mod, friend, PC B package, protocol bump, or live network work
+happened in this pass.
+
+- Added `src/coop/mpdev_itemstory_selftest.h/.cpp` and a new CLI mode
+  `mpdev2-cli itemstory-selftest`, wired into `tools/build-coop.ps1` and
+  `tools/run-tests.ps1`.
+- Initial four groups: late join with snapshot cursor and replay rejection;
+  malformed snapshot guards; malformed event/cursor guards; and wire codec
+  round-trip with bad length/CRC/count rejection.
+- Deterministic fuzz follow-up added codec fuzz (512 valid messages plus 512
+  arbitrary buffers) and replication fuzz (24 rounds of shuffled item/story
+  events and cursor moves with duplicate replay rejection). Both pass.
+- Compatibility-boundary group added: build/tag/type ids, `CheckCompat2`,
+  stock-type ordering, and reliable-event helper behavior remain pinned.
+- Latest build `mpdev2-cli.exe`: 540,160 bytes, SHA-256
+  `B85646953EEABB6DFBF581C0AA58651CEBC5357CB3DD03CAF49C42065F82C66E`
+  (supersedes `A74A8515...D32377`).
+- `.\build\mpdev2-cli.exe itemstory-selftest`: `checks=7 failures=0 result=PASS`.
+- `powershell -ExecutionPolicy Bypass -File .\tools\run-tests.ps1`: PASS,
+  `failures=0`, `SOURCE_FILES count=19`.
+- `powershell -ExecutionPolicy Bypass -File .\tools\run-coop-test.ps1`: PASS,
+  `failures=0`; loopback host/client converged to `itemQty=5` and
+  `storyFlag=1` with zero item/story authority, epoch, and source rejects.
+- Full records:
+  `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-offline-hardening-results-20261124.txt`,
+  `RESULTS/mpdev-item-story-offline-fuzz-results-20261124.txt`,
+  `RESULTS/mpdev-item-story-protocol-spec-20261124.txt`, and
+  `RESULTS/mpdev-item-story-compat-lossy-results-20261124.txt`.
+- Fuzz harness bugs were found and fixed (Msg2Type index mapping, shared cursor
+  advancement for the other layer's events, nonzero random item amounts); the
+  production protocol/replication code was unchanged in the fuzz pass.
+- `kProtocol2Build` remains 3, QA remains `none`, and no gate opened. This is
+  still offline-only and not shippable/interoperable with stock build3 peers.
+
+## Item/story wire contract for review (2026-11-24)
+
+Full spec:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-protocol-spec-20261124.txt`.
+
+- Msg2Type 22-25 are ItemState, ItemEvent, StoryState, StoryEvent. Wire build
+  stays 3 with `kProtocol2ItemStoryExtension = 1`; stock build3 peers reject
+  the new types, so a formal protocol bump and rollout plan are required first.
+- Payloads: ItemState 20+12N, ItemEvent 44, StoryState 24+8N, StoryEvent 44.
+  Snapshots carry `lastEventSeq`; events use the global reliable eventSeq space.
+- Host is authoritative. Clients require host GUID/epoch/session match, use
+  strictly increasing snapshot sequences, and reject stale/invalid snapshots.
+- Both item and story layers must advance their cursor for the other layer's
+  events because eventSeq is shared. Out-of-order events are buffered; gaps,
+  duplicates, and wrong source/epoch are rejected.
+- This is a review artifact only. No real item/flag mapping, write path,
+  resolver, two-PC test, or in-game QA exists. Gates and QA are unchanged.
+
+## Compatibility and lossy-loopback verification (2026-11-24)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-compat-lossy-results-20261124.txt`.
+
+- Added a 7th `itemstory-selftest` group for the compatibility boundary:
+  build/tag/extension marker, Msg2Type 22-25 ids and text, `CheckCompat2`
+  accept/reject behavior, stock type ordering, and reliable-event helpers.
+- Full suite rerun with the 7th group: `RESULT: PASS failures=0`,
+  `SOURCE_FILES count=19`, all seven item/story groups PASS.
+- Added `tools\run-itemstory-lossy-test.ps1`, a tolerant two-process loopback
+  wrapper that checks convergence rather than strict event application.
+- Normal loss (`-Seconds 12 -PacketGapEvery 7 -LinkDownAfter 4000
+  -LinkDownFor 1500 -Scenario itemstory-lossy`): wrapper PASS, strict runner
+  also PASS, both roles converged to `itemQty=5` and `storyFlag=1`.
+- Aggressive loss (`-Seconds 14 -PacketGapEvery 5 -LinkDownAfter 3000
+  -LinkDownFor 2000 -Scenario itemstory-lossy2`): wrapper PASS, strict runner
+  FAIL with 3 failures. Client showed `itemEv=0`, `evtBuf=3`, but still
+  `itemQty=5`, `storyFlag=1`, and zero item/story authority, epoch, source,
+  and reliable-event faults.
+- Explanation: under loss, a later host snapshot with a higher `lastEventSeq`
+  may legitimately supersede a delayed reliable item event. The invariant is
+  convergence, not strict application of every event datagram.
+- Still offline-only. No game, save, mod, live scan, protocol bump, PC B,
+  two-PC correlation, or in-game verification. QA remains `none`.
+
+## Review checklist for draft PR #429 (2026-11-24)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-item-story-review-checklist-20261124.txt`.
+
+- Issue #428 remains OPEN; PR #429 remains OPEN and `isDraft=true`. PR body says
+  `QA level: none` and the owner-review checkbox is intentionally unchecked.
+- Fork validation rerun offline: `py -3 tools/build_directory.py --check` gave
+  `OK: 568 entries`; `py -3 -m unittest tools.mcp.test_coop_mcp` ran 13 tests OK.
+- Evidence-to-claim review confirms: directory/write-up present; no working
+  co-op claimed; offline item/story tests pass; stock build3 incompatibility is
+  documented; lossy convergence is supported with the snapshot-supersession
+  caveat; real game mapping and two-PC/in-game verification remain BLOCKED.
+- Review nit documented in the wire spec: `SerializeMsg2` does not explicitly
+  write header padding bytes 52-55, but current call sites zero-initialize
+  buffers and CRC covers those bytes. No production code was changed.
+- Still not ready to mark PR ready/merge. Real progress needs fresh approval for
+  protocol bump, item/flag mapping, writes/hooks, PC B traces, and in-game QA.
+
+## Protocol-bump impact analysis (2026-11-24)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev-protocol-bump-impact-analysis-20261124.txt`.
+
+- Decision remains NO BUMP. `kProtocol2Build=3`, `kBuildTag2="2.0/build3"`, and
+  `kProtocol2ItemStoryExtension=1` are unchanged.
+- Stock build3 peers reject Msg2Type 22-25 at payload decode (`Malformed`);
+  `CheckCompat2` itself only checks major/minor/build.
+- Source pin inventory covers the codec, replication host-header guards,
+  transport switch, reliable-event whitelist, CLI help, seven-group selftest,
+  MP-030 validator, MP-031/MP-032 regex guards, protected baselines, and docs.
+- A bump would require re-approving and re-baselining MP-030/031/032 artifacts,
+  updating all docs/records/notes, and rerunning the full offline suite plus
+  both lossy scenarios.
+- Strategy options listed but not selected: hard bump, separate channel/magic,
+  or capability negotiation. Capability negotiation is undesigned because the
+  Hello payload is fixed-length and stock peers reject extra bytes.
+- No production source, build script, protocol constant, or test expectation was
+  changed. This is planning only; no gate opened.
+
+## Stage 1: active wire bumped to build 4 (2026-11-24) — SUPERSEDES earlier NO-BUMP notes
+
+Owner explicitly authorized Stage 1: protocol bump/re-baselining plus fresh
+read-only live mapping, with in-game co-op as the goal. Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-protocol-bump-results-20261124.txt`.
+
+- Active wire is now `kProtocol2Build = 4`, `kBuildTag2 = "2.0/build4"`.
+  The earlier "Decision remains NO BUMP" and "build stays 3" notes above are
+  historical pre-authorization evidence and are superseded for the active wire.
+- `mpdev2-cli.exe` rebuilt: 540,160 bytes, SHA-256
+  `C38726FF0FC8D8F25E3D40AC1AE1DB64CBE60DBD158F28A8D17108FD1268D40D`.
+- Updated: codec/selftest expectations, CLI help, active-layer comments,
+  compatibility-boundary group, protocol spec, impact-analysis supersession
+  banner, and the MP-031/MP-032 source protocol-guard regexes (3 -> 4).
+- Protected MP-029/030/031/032 binaries and the read-only scanner remain
+  byte-for-byte unchanged (hashes verified). Their frozen build-3 records,
+  validators, and baselines are explicitly historical, not re-baselined here.
+- Offline verification at build 4: `itemstory-selftest` 7/7 PASS; full suite
+  `RESULT: PASS failures=0` (`SOURCE_FILES count=19`); loopback
+  `RESULT: PASS failures=0`; lossy wrapper PASS in both scenarios. Aggressive
+  loss still shows the documented snapshot-supersession behavior
+  (`itemEv=0`, convergence intact) in the strict runner, not a regression.
+- Read-only live scan is prepared but NOT run. Owner must launch Sonic Frontiers
+  themselves first. Any hits are CANDIDATE-ONLY.
+- No writes/hooks, no game/save/mod change, no friend contact, no PC B package,
+  no two-PC test, no in-game verification. QA remains `none`; all gates closed;
+  PR #429 remains draft with owner-review unchecked.
+- Stage 2 (writes/hooks) and Stage 3 (two-PC/friend contact) still require fresh
+  explicit authorization.
+
+## Stage 1 read-only live scan (2026-11-25) — CANDIDATE-ONLY
+
+Full analysis:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-stage1-readonly-scan-analysis-20261124.txt`.
+
+- Owner launched the game; pinned scanner and game-exe hashes matched. Read-only
+  `VM_READ | QUERY_INFORMATION` scan completed with exit 0. Trace:
+  `RESULTS/mpdev-itemstory-readonly/mpdev-itemstory-raw-trace-20261125-045713.txt`
+  (SHA-256 `09F827EE3667167422535A0DF8500912D88D55354E0C80B9EEADC1B554D375A0`).
+- 6,383 RTTI classes; 155 classes matched the Item/Inventory/Story/Flag/Quest
+  filters; 16 live objects matched the filtered vtables.
+- Candidate class names include `SaveDataAccessor<FlagContainerData>`,
+  `FlagContainerAc`/`WorldFlagAc`/`ExtraFlagAc`, `QuestManager`,
+  `UIItemQuotaContext`, `UISequenceItemCounterContext`, `ObjDroppedItemInfo`,
+  `ObjKodamaQuestInfo`, `BlackboardItem`, and `RelayedFlagsParameter`.
+- No live `SaveDataAccessor` or flag-container object was captured. No field is
+  identified as an item/Koco count, story flag, id, trigger, resolver, write
+  address, or authority model. Earlier Koco before/after rejections stand.
+- These are RTTI name/vtable leads only. UI display contexts are not necessarily
+  authoritative save state. All gates remain closed; QA remains `none`.
+- Recommended next step is a read-only before/after correlation (owner performs
+  one known small gameplay action) or stop Stage 1 with these candidates as the
+  handoff. Stage 2 writes/hooks and Stage 3 two-PC work still need fresh approval.
+
+## Stage 1 Koco before/after/control (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-stage1-koco-beforeafter-20261125.txt`.
+
+Owner chose a read-only before/after correlation instead of opening Stage 2/3.
+The assistant did not launch the game. Same responding `SonicFrontiers.exe`
+(PID 10844) was present for all three pinned scans; the owner collected exactly
+one Koco between the before and after scans, then no action before the control.
+
+- Traces: before
+  `mpdev-itemstory-raw-trace-20261125-051124.txt` (16 objects, SHA-256
+  `669302D63B740A32BC6B9BA45D0FF147E6E2F469B8BC93E383D4989B2DDA2F37`),
+  after `mpdev-itemstory-raw-trace-20261125-051225.txt` (22 objects, SHA-256
+  `9D6B6485DD24443899D4DEAA07D907CA7C01667DD4B04B92805F0EF533301188`),
+  control `mpdev-itemstory-raw-trace-20261125-051331.txt` (20 objects, SHA-256
+  `07847A80D47D96C4FBDF7BE346E50AE9D564C8F93D8224AD31E3413F3D49A11C`).
+  All exited 0 with pinned scanner/exe hashes.
+- Before→after: 8 after-only hits (seven `SaveDataAccessor<T>` plus one
+  `ObjSequenceItem`); six changed fields in common objects; no `+1` change.
+  `BlackboardItem +0x028` went 125→134 and `RelayedFlagsParameter` fields
+  oscillated; none is an identified count or flag.
+- After→control: zero changed fields; only two objects disappeared. Those two
+  `SaveDataAccessor<T>` hits had suspect vptrs `0x0` and `0x1bc7bca20`, so they
+  are treated as transient/false-positive hits.
+- Five `SaveDataAccessor<UWorldFlagContainerData>` hits persisted into the
+  control with vptr `0x141572588`, but persistence without a post-action delta
+  means they are stable-but-unattributed, not a Koco mapping. An inspected
+  valid-vptr hit referenced AI/Trigger/Reaction objects, so class attribution is
+  not reliable.
+- Conclusion: `RESULT=CANDIDATE_ONLY_NO_MAPPING`,
+  `STAGE1_KOCO_CORRELATION=UNSUCCESSFUL`. No item id, Koco count, inventory
+  field, story flag bit, trigger, resolver, write address, hook point, or
+  authority model was found. This supersedes the previous "recommended next
+  step" in the Stage 1 scan section: that read-only route is now exhausted.
+- Stage 2 writes/hooks and Stage 3 friend/PC B/two-PC/in-game work remain
+  unauthorized. Gates stay closed, QA remains `none`, and PR #429 remains draft.
+
+## Targeted Kodama/Koco read-only lead (2026-11-25)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-targeted-kodama-mapping-20261125.txt`.
+
+The previous scanner filters (`Item`, `Inventory`, `Story`, `Flag`, `Quest`)
+missed the engine's own Kodama/Koco counter names. A local SDK-style address map
+(`sdk/rangers/addresses.csv`, SHA-256
+`DD645287ECE8149D9B4BFDA97DB5CBB27C63A444AEC84F5565148D7F80C50DF5`) contains
+named candidates including `KodamaManager` (vtable `0x1414f3478`),
+`UIKodamaCounterContext` (vtable `0x1415618e8`),
+`MsgNotifyNumCollectedKodamas` (vtable `0x1414fa490`), `QuestKodamaCollection01/02`,
+`ObjKodamaQuest`, and `MsgSetClearFlag`. These are CANDIDATE-ONLY leads; the
+address CSV's build match is not independently proven and must be checked against
+the pinned exe hash before interpretation.
+
+- Added `tools\mpdev-kodama-readonly-scan.ps1`, which uses the same pinned
+  read-only scanner binary (unchanged SHA-256 `5979B12B...5E`) with added
+  `Kodama`, `Koco`, `Collected`, `Counter`, and `SaveDataAccessor` filters.
+  No writes/injection/network; no gate opened.
+- The first targeted scan attempt stopped before scanning because no
+  `SonicFrontiers.exe` was running (`PROCESS_COUNT=0` at ~05:35Z). The assistant
+  did not launch the game; no trace was produced.
+- Next safe step: owner launches the game themselves, then the targeted read-only
+  scan runs. Only if a live valid-vptr counter/manager hit appears should the
+  owner be asked before any further gameplay action. Promotion requires a
+  repeatable +1 field delta matching HUD +1, a stable no-action control, and a
+  source-vs-UI-copy distinction.
+- Gates remain closed, QA remains `none`, and no friend/PC B/two-PC/in-game work
+  is authorized.
+
+Targeted scan result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-kodama-targeted-correlation-20261125.txt`.
+
+- With the owner's game running (PID 10336), the targeted read-only scan found a
+  live `KodamaManager` at `0x19a3042b0`; its vptr `0x1414f3478` exactly matched
+  the SDK-style symbol lead. `UIKodamaCounterContext` and
+  `MsgNotifyNumCollectedKodamas` appeared as RTTI classes but no live objects
+  were captured.
+- Across two owner-confirmed one-Koco pickups with no-action controls, no field
+  moved `+1` on both trials. `UIItemQuotaContext +0x1b0` went `1 -> 2` on trial 1
+  but did not move on trial 2: REJECTED. `KodamaManager +0x088` went `10 -> 6` on
+  trial 2 but did not move on trial 1: REJECTED as a Koco count.
+- Class identity is confirmed for this session only; no count field, item id,
+  source-vs-UI-copy distinction, trigger, resolver, write address, hook point,
+  or authority model was established. `RESULT=CANDIDATE_ONLY_NO_MAPPING`.
+- A third owner-initiated HUD+1 Koco pickup was also scanned. `KodamaManager +0x088`
+  went `10 -> 10`, `10 -> 6`, and `6 -> 12` across the three trials, never `+1`.
+  `UIItemQuotaContext +0x1b0` moved on trial 1, stayed flat on trial 2/3, and
+  reverted `2 -> 1` during a no-action control: REJECTED.
+- Stage 1 targeted read-only mapping is exhausted. Stage 2 writes/hooks and
+  Stage 3 friend/PC B/two-PC/in-game work remain unauthorized; gates stay closed.
+
+## Static Kodama message-ID map (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-static-kodama-message-id-map-20261125.txt`.
+
+Offline read-only disassembly against the pinned exe hash and local SDK-style
+symbol CSV mapped message IDs to exact vtables: `0x21D4`=`MsgHideKodama`,
+`0x230E`=`MsgShowKodama`, `0x224D`=`MsgNotifyNumCollectedKodamas`,
+`0x2249`=`MsgNotifyKodamaCollection`, `0x2333`=`MsgStartQuest`,
+`0x2146`=`MsgEndQuestParameter`, `0x21D5`=`MsgHideMistakeCounter`, and
+`0x2138`=`MsgEndKodamaSticked`. No process, game, save, mod, network, friend or
+PC B was touched for this pass.
+
+- `KodamaManager` vtable slot `+0x10` points to `0x140789050`. That handler
+  increments `KodamaManager +0x290` on `MsgHideKodama` and decrements it on
+  `MsgShowKodama`; the constructor zeroes `+0x290`. This is a hidden-Kodama
+  counter, **not** a collected-Koco count. REJECTED as a co-op sync target.
+- `MsgNotifyNumCollectedKodamas` (`0x224D`) send sites were found in
+  `QuestKodamaCollection01/02` and a Kodama-escort quest loop;
+  `MsgNotifyKodamaCollection` (`0x2249`) in `ObjKodamaQuestInfo`. These are
+  message-construction leads only; no authoritative save field, item id,
+  trigger, resolver, hook point, or authority model was established.
+- Raw byte hits at `0x140BBA75E` and `0x140E9DCBF` are `jmp/call` rel32
+  displacement bytes containing `4D 22 00 00`, not message `0x224D`; PE section
+  labels are obfuscated and are not evidence.
+- `RESULT=CANDIDATE_ONLY_NO_MAPPING`, `KOCO_COUNT_FIELD=NOT_FOUND`. Gates B/C
+  remain closed, QA remains `none`, and PR #429 remains draft.
+- Follow-up static pass: `MsgUpdateKodamaGroupFlag` (`0x1414FA5E8`) is used by
+  `QuestKodamaCollection01/02Context`, but its numeric id is assigned through a
+  virtual call and was not recovered. `UIKodamaCounterContext` vtable-adjacent
+  strings are `info_kodama_num` / `sysf_num_kodama` (UI layer names); its only
+  constructor caller receives an allocator, not a Koco count. The `[rcx+0x78]`
+  helper is a generic quest-loop bound used by several quest types. All remain
+  CANDIDATE-ONLY.
+
+## Save RFL / ExtraFlag static pass (2026-11-25) — CANDIDATE-ONLY
+
+Full consolidated record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev051-extraflag-kodama-static-20261125.txt`
+(SHA-256 `13F729BACFD8C40B66A9FBD32BEB04F5DEEAF82E3D299AFC53D1D3D93A00BD71`).
+
+This pass used only the pinned exe, the local SDK-style symbol CSV, and offline
+disassembly. No process was attached, no game was launched, and no save, hook,
+network, friend or PC B was touched.
+
+- The offline RFL decoder (`tools\mpdev-rfl-member-read.py`) now handles
+  non-zero `META@8`, packed markers, and save-class layout. It decoded 48 save
+  arrays in `RESULTS\mpdev050-save-rfl-members-20261125.txt`. No Kodama/Koco
+  numeric count was found. Notable fields are only `numRings`,
+  `numPowerSeeds`, `numGuardSeeds`, `numFishCoins`, `numFishTokens`,
+  `numGoldCards`, `numSlotStars`, plus generic `bitFlags` / `byteFlags` /
+  `intDatas` containers. Static `GameData` offsets `flags=0xa20`,
+  `worldFlags=0xb40`, and `extraFlags=0xb340` remain hypotheses, not confirmed
+  authoritative save fields.
+- RFL decode of `KodamaParam`, `KodamaCommonParam`,
+  `ObjKodamaQuestParameter`, `ObjKodamaQuestGrassIslandParameter`,
+  `ObjKodamaQuestDesertIslandParameter`, `ObjKodamaEscortParameter`, and
+  `QuestKodamaCollectionBaseParameter` found no id/group-flag field.
+  `clearKodamaNum` is quest config metadata, not a collected-Koco save count.
+- `ExtraFlagAc` read accessor `0x140B00580` was decoded: it maps a small index
+  through the dword table at `0x141572BB0`, adds an unknown runtime dword read
+  from `[object]` (where `object = [levelInfo + 0x90]`), then bit-tests the
+  dword array at `[accessor + 8]`. It is a read (`bt`/`setb`), with no
+  `bts`/store-back or save write. Five `KodamaManager` call sites use indices
+  `0x08 -> 0x198`, `0x0D -> 0x1B8`, `0x23 -> 0x63E`, `0x15 -> 0x1E2`, and
+  `0x03 -> 0x180`. The runtime dword is unnamed, so all bit indices are
+  CANDIDATE-ONLY and are not item ids or story flags.
+- Correction to the earlier mpdev050 vtable reading: MSVC vtables here are
+  tightly packed, with RTTI at `vtable_start - 8`. Apparent `+0x10` slots in
+  `mpdev050-msg-handler-vtables-20261125.txt` were overreads into the next
+  vtable. Corrected reads in
+  `RESULTS\mpdev051-vtable-kodama-messages-corrected-20261125.txt`:
+  `MsgNotifyNumCollectedKodamas` vtable `0x1414FA490` has `+0x00 -> 0x1407C95D0`
+  and `+0x10 -> 0x14008D680` (`xor eax,eax; ret`); its async-handler vtable
+  `0x1414FA4B0` has `+0x00 -> 0x14008CC30`. `0x1407C9520` belongs to
+  `MsgGetKodamaPosition`, not `MsgNotifyNumCollectedKodamas`.
+- `MsgUpdateKodamaGroupFlag` vtable `0x1414FA5E8` has `+0x00 -> 0x1407CA720`,
+  a payload copy only; its async vtable `0x1414FA608` has
+  `+0x00 -> 0x14008CC30`. Its numeric message ID is still NOT RECOVERED.
+  `mov edx,0x21E9` at `0x1407CA8F8` pairs with vtable `0x1414FA618`, so `0x21E9`
+  is statically inferred as `MsgKillKodamaBomb`, not `MsgUpdateKodamaGroupFlag`.
+  `0x1407CA680` likewise belongs to `MsgKillKodamaBomb`, not the group-flag
+  message.
+- For `MsgNotifyNumCollectedKodamas` (`0x224D`), the opcode scan found only
+  four `BA 4D 22 00 00` send sites. No `3D 4D 22 00 00` or
+  `81 F8 4D 22 00 00` receiver compare was found; the constructor at
+  `0x1407C95D0` copies payload fields but shows no save write.
+- Result remains `CANDIDATE_ONLY_NO_MAPPING`, `KOCO_COUNT_FIELD=NOT_FOUND`,
+  `AUTHORITATIVE_SAVE_FIELD=NOT_FOUND`, `WRITE_TARGET=NOT_FOUND`,
+  `HOOK_POINT=NOT_FOUND`, and `AUTHORITY_MODEL=NOT_FOUND`. Gates B/C stay
+  closed, QA remains `none`, PR #429 remains draft, and no working co-op is
+  claimed.
+
+## Owner Stage 2 authorization (2026-11-25) — no qualified write target yet
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev053-stage2-authorization-and-extraflag-setter-20261125.txt`.
+
+The owner explicitly opened **Stage 2 only**: writes/hooks on PC A are permitted,
+but friend contact, PC B preparation, two-PC/online testing, and assistant game
+launch remain closed. This supersedes older notes that listed Stage 2 as closed.
+The game was already running by owner action (PID 2036); EXE hash remained
+`7E58F45C...344B6`. A targeted read-only Kodama scan completed with the pinned
+scanner and again returned `CANDIDATE_ONLY_NO_GATE_OPENED`. Baseline verification
+passed every mod/install check; its single FAIL was the legacy prerequisite that
+no game be running, not a tamper signal. No mpdev mod is installed.
+
+Stage 2 permission does not create a safe target. Current status is
+`WRITE_TARGET=NOT_FOUND`, `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`,
+`QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`. No game-memory write, game-code hook,
+mod install, `ModsDB.ini` change, network action, or friend contact was performed.
+QA remains `none`; no working co-op is claimed.
+
+When asked what Stage 2 should change, the owner chose **build only, no
+install**. The isolated write-capable DLL was rebuilt in the workspace only:
+`build\mpdev-pos-sync.dll` SHA-256
+`1B5FC2E7422CC81A383F0FBECC9617BC2B1F8357E01C938959844D678313C18F`, 540,672
+bytes, with all four loader exports. `run-pos-sync-tests.ps1`,
+`verify-mpdev013-abi.ps1`, and `run-tests.ps1` all passed; the hash changed from
+the preserved historical DLL because the current source carries protocol build 4.
+Post-build baseline stayed he2mp-only with no mpdev mod installed. Full record:
+`RESULTS/mpdev054-stage2-build-only-20261125.txt` (SHA-256
+`2EFF62355CD59241388F4C9AD93EF90C5B9974AA115E16F4278CB48C44CC9544`).
+The DLL was not installed, loaded, attached, hooked, networked, or game-tested;
+`READY_FOR_INSTALL=NO` and `WORKING_CO_OP_CLAIM=NO`.
+
+Offline Stage 1 continuation decoded the `ExtraFlagAc` setter body at
+`0x140AFF350` (`RESULTS/mpdev053-disasm-extraflagac-set-body-20261125.txt`,
+SHA-256 `326009A518A0D1D517C25054189ADA2E97B8FB36BE47442463650E311972E060`).
+The setter bit-tests and then ORs/AND-NOTs the dword at `bit>>5` in the array at
+`[accessor+8]`; on change it resolves `GameApplication::GetInstance` →
+`ReactiveService::GetClass` → `GameManager::GetService` and calls a symbol-less
+reactive dispatch with `edx=7` and `r8d=bit index`. This confirms bit mechanics
+only; no category/id is mapped to Koco, item, quest, or story semantics, and no
+save/resolver/hook target is promoted.
+
+## ExtraFlag arg-flow semantics (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev056-extraflag-argflow-semantics-20261125.txt`
+(SHA-256 `E25C8028E9E6F6E4E7D9174C40908FBD21F18AF17A8021E68221FA15EAB9AD64`).
+
+- Added offline-only `tools\mpdev-static-argflow.py`; it found 130
+  `IsWorldExtraFlagSet` call sites, 75 `SetWorldExtraFlag` call sites, and 8
+  setter-thunk call sites. Branching and memory-derived values are not modeled;
+  all hits remain candidate-only.
+- Disassembly confirmed the ABI: `IsWorldExtraFlagSet(category=r8d, id=edx)` and
+  `SetWorldExtraFlag(category=r8d, id=edx, value=r9b)`. The setter thunk at
+  `0x140aff060` maps `raw_bit = REMAP_TABLE[category] + id` before the bit
+  update at `0x140aff350`; bounds are checked against `0x141572C70`.
+- Categories are small bounded flag groups, not item/story ids: `0x03/0x04`
+  allow 4 ids, `0x08/0x09` and `0x0D/0x0E` allow 2 ids, and `0x23` allows
+  `0x80` ids.
+- Targeted helpers near `ObjAmyKodamaElderInfo`,
+  `ObjAmyKodamaHermitInfo` and `RequestOverlayCaptionSelectBox` select the
+  category from a mode argument and pass `edx` through unchanged. No direct
+  callers were found; each helper address occurs once as a data pointer.
+  Adjacent strings (`ef_ko_vanish_flash01`, `voice_nk_ko9900_10x`,
+  `ko9000_190`, `ko9000_197`, `w5t02`-`w5t05`) are caption/audio resource hints
+  only. The direct `SetWorldExtraFlag` call at `0x14079f296` uses category
+  `0x23` with an unnamed runtime dword as the id.
+- No item id, Koco count, inventory field, story flag, trigger, authoritative
+  save field, resolver, write address, hook point, or authority model was
+  established. Stage 2 remains build only; no install, attach, write, hook,
+  network, friend contact, PC B package, or game restart occurred.
+  `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
+  there is no ETA to online while Stage 3 stays closed.
+
+## Quest/item/story message static pass (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev058-quest-item-story-message-static-20261125.txt`
+(SHA-256
+`DD37739E444CC302559FD3E8F2AF347ED9CC1DB202ABBE23F08A5A9C1A6DE628`).
+
+- Added offline-only `tools\mpdev-static-message-map.py` (SHA-256
+  `67568ADD0D4F2BC48FCB42AD5546184D5F073C0C23770A82E3968B56A2D50DCC`). It
+  produced `RESULTS\mpdev058-message-id-vtable-map-20261125.txt` (SHA-256
+  `533A4812F14750DE2A52BD1B64EB64DA5C00B4D8DAB5C761B5BC2AA60A867174`) with
+  2,760 candidate `message-id → vtable` pairs. Sites where the vtable pointer
+  was preloaded into a register were decoded manually instead.
+- QuestManager paths map statically as: `0x22EA`/`MsgSetClearFlag`,
+  `0x22F3`/`MsgSetMenuEnabled`, `0x21DA`/`MsgHoldOn`, `0x2333`/`MsgStartQuest`,
+  `0x2334`/`MsgStartQuestParameter`, `0x230F`/`MsgShowMistakeCounter`, and
+  `0x2360`/`MsgTakeQuestItem`. `0x21D4` was corrected to `MsgHideKodama`; the
+  earlier tentative `MsgStartQuest` async-handler reading used a wrong RIP base
+  and is withdrawn.
+- `MsgSetClearFlag` send path at `0x1407D23C0` targets an object resolved from
+  an ObjectId-like value and writes no explicit item/story payload.
+  `QuestManager+0xF0` is only a candidate local state dword.
+  `MsgStartQuestParameter` copies a `LevelInfo::GetPlayerInformation +0x3C4`
+  dword, not an identified story flag. The `QuestManager+0xD0` 0x18-byte record
+  vector is candidate quest tracking only.
+- `MsgTakeQuestItem` send site `0x1407DB750` uses an unnamed `+0x90` dword as
+  an ObjectId-like key; the actual candidate item payload is copied by wrapper
+  `0x1407DB490` from `ObjQuestItemInfo` offsets `+0x08`, `+0x0C`, `+0x10`
+  (dwords), `+0x14` (byte), and `+0x18` (dword). Field names remain unknown.
+- No item id, Koco count, inventory field, story flag bit, trigger, ExtraFlag
+  category/id, authoritative save field, resolver, write address, hook point,
+  or authority model was established. Stage 2 remains build only;
+  `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
+  there is no ETA to online while Stage 3 stays closed.
+
+## ExtraFlagData save-layout cross-check (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev060-extraflagdata-layout-crosscheck-20261125.txt`
+(SHA-256
+`68945FF5BF98B0FB25527903E1D3EA6ED20F168C844B14A6D56F68318E43E5F8`).
+
+- Re-read `UExtraFlagData` RFL members: `bitFlags` at offset hypothesis `0x0`,
+  `byteFlags` at `0x800`, and `intDatas` at `0xa00`. Derived sizes are `0x800`,
+  `0x200`, and `0x400` bytes respectively, for a total of `0xe00`. That total
+  matches the `ExtraFlagData::Construct` thunk at `0x1400f0a50`, which passes
+  `r8d=0xe00`.
+- The `ExtraFlagAc` read/set paths use `[accessor+8]` as a dword bit array with
+  `raw_bit = REMAP[category] + id`. This is structurally compatible with
+  `bitFlags`, so `[accessor+8]` may point at `UExtraFlagData.bitFlags`. No
+  pointer assignment, live pointer, or save-image correlation was decoded;
+  pointer identity remains unproven.
+- The remap table at `0x141572BB0` is exactly the cumulative sum of the bounds
+  table at `0x141572C70` for all 45 categories (indices `0x00`..`0x2c`), with
+  zero mismatches. The next free bit is `0x768` (1,896 decimal), needing `0x3c`
+  dwords out of the `0x200` dword / `0x4000` bit capacity implied by `bitFlags`.
+  This supports one linear category bit space, not per-category storage.
+- Category `0x19` has bounds `0x400`, which explains the remap jump from `0x1ea`
+  to `0x5ea`. No Koco, item, quest, or story semantics were established for it
+  or any other category.
+- `byteFlags` and `intDatas` have no observed `ExtraFlagAc` access in the
+  decoded paths. No semantic category/bit map, resolver, write address, hook
+  point, trigger, authority model, or two-PC protocol change was established.
+- Stage 3 remains closed by owner choice. Stage 2 remains BUILD ONLY. No DLL
+  install, attach, game launch/restart, game-memory write, game-code hook,
+  network action, friend contact, PC B package, or in-game test occurred.
+  `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
+  there is no ETA to online.
+
+## Stage 3 prep-only opened (2026-11-25)
+
+Owner message: `Open Stage 3 prep only.` This authorizes workspace preparation
+only; full two-PC/in-game Stage 3 remains closed.
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev061-stage3-prep-only-20261125.txt`
+(SHA-256
+`886B27BFE0AFB894C8A7037ED6D002BCC6F3E485180AA300ECE76B5B3257499F`).
+
+- Created `%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/handoff/stage3-prep-only-20261125/`
+  with an exact copy of the third-party HE2MP v0.0.35 play-now folder,
+  `README-STAGE3-PREP.md`, `TEST-PLAN.txt`, and `MANIFEST.txt`.
+- The manifest verified all 14 packaged files; no mpdev or pos-sync file is in
+  the package. `MANIFEST.txt` SHA-256:
+  `FC13C37C7086AD2ADDC5B946641E7777C439E61A2C1B17342998F7FC22C74293`.
+- The write-capable `build\mpdev-pos-sync.dll` remains workspace-only
+  (SHA-256 `1B5FC2E7422CC81A383F0FBECC9617BC2B1F8357E01C938959844D678313C18F`)
+  and was not copied. Stale mpdev packages were also excluded.
+- Read-only baseline was unchanged: local `ModsDB.ini` SHA-256
+  `7B1EBB6CC88128B809450F9FB7A0FF8C37015CD8557D63F1C9A509B8A302254F`,
+  installed `he2mp.dll` SHA-256
+  `FF457469855393B97D762684A2F1DF98177AB3F325D5B4621B22B5D263AA5C9F`, and no
+  mpdev mod folder. No game file was modified.
+- The `16857613` build-id check and HE2MP v0.0.35 version check are documented
+  in the test plan but were not performed. No friend details or friend contact.
+- The test plan labels enemy, item, quest, and story state as
+  `EXPECTED_LOCAL_NOT_SYNCED` for HE2MP v0.0.35, not as full co-op coverage.
+- Not performed: friend contact, PC B setup, game launch/restart, mod install,
+  attach, memory write, hook, network test, or in-game verification.
+  `STAGE3_SCOPE=PREP_ONLY`, `STAGE3_FULL_TEST=CLOSED`,
+  `READY_FOR_INSTALL=NO`, `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, QA remains
+  `none`, no working co-op is claimed, and there is no ETA to online.
+
+## MsgTakeQuestItem payload final static pass (2026-11-25)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev062-takequestitem-final-20261125.txt`
+(SHA-256
+`1727BFD4BE6846410DF0B79BE067FBD98ECA81B588976A3A8E44A860A26BAE29`).
+
+- Corrected the vtable reader output: `MsgTakeQuestItem` has 3 real slots
+  (+0x00 copy/clone, +0x08, +0x10). The apparent +0x18 slot is the RTTI header
+  for the next vtable, and +0x20 onward is adjacent string data, not virtuals.
+  `MessageAsyncHandlerInplace<MsgTakeQuestItem>` has 1 real slot.
+- The copy/clone virtual at `0x1407DB490` allocates a 0x48-byte handler and
+  copies five fields verbatim from an existing source object into a nested
+  `MsgTakeQuestItem`: dword `+0x08`, dword `+0x0C`, dword `+0x10`, byte `+0x14`,
+  dword `+0x18`. It writes no constant game-state value.
+- The only code reference to message id `0x2360` builds that message at
+  `0x1407DB797`, sets vtable `0x1414FD4F8`, and sends it through `0x140EC97F0`.
+  No payload writes occur on that send path, and no direct callers or explicit
+  constructor for the five fields were found.
+- Nearby RFL tables do not resolve the fields. There is no
+  `rflClassMembers@MsgTakeQuestItem`; `DropQuestItemParam` has two fields,
+  `QuestCollectItemParameterElement` has pointer offsets, `ObjQuestBoxParameter`
+  has ten numeric fields, and `ObjQuestItemInfo` never writes `+0x08..+0x18`.
+- Result stays `CANDIDATE_ONLY_NO_MAPPING`. No item id, Koco count, inventory
+  field, story flag bit, trigger, save offset, resolver, write address, hook
+  point, or authority model was established. No ExtraFlag category/id was tied
+  to this message path.
+- Stage 2 remains `BUILD_ONLY`; `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`,
+  `READY_FOR_INSTALL=NO`, QA remains `none`, and no working co-op is claimed.
+  No install, attach, game launch, write, hook, network action, friend contact,
+  PC B setup, or in-game verification occurred.
+
+## Collectible count write-chain cross-check (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev063-collectible-count-write-chain-20261125.txt`
+(SHA-256
+`7190315E1A08751132A007BD508B752BC0F74B632A8137BFE1FCD8C68602B07C`).
+
+- Added offline-only `tools\mpdev-setter-scan.py`, improved the one-pass
+  `tools\mpdev-static-call-find.py`, and added `tools\mpdev-static-call-context.py`.
+  No process, game, hook, network, friend or PC B was touched.
+- Static accessor chain: `GetCharacterAccessor@GameObject` `0x140B0EC00` reads
+  GameManager from `[GameObject+0x48]` and calls `0x140B0DE10`; the normal
+  branch uses `GameDataAc::GetCharacterAccessor` `0x140AFBAB0`, whose body is
+  `CharacterData = [GameDataAc+8] + 0x80`. `CharacterAc+8` points at that
+  `CharacterData`. The `r8b != 0` branch selects the ExtraCharacter path.
+- RFL `CharacterData` member offsets from `mpdev050` match the getter and setter
+  displacements byte-for-byte for seven scalar fields: `numRings` `+0x0`,
+  `numPowerSeeds` `+0x30`, `numGuardSeeds` `+0x34`, `numFishCoins` `+0x38`,
+  `numFishTokens` `+0x3a`, `numGoldCards` `+0x3c`, and `numSlotStars` `+0x3e`.
+  Widths are word except the two seed counts, which are dword.
+- Setter callers were mapped to 34 unique sites with function bracketing and
+  disassembly context. Static system hints are fishing rewards/trade UI,
+  Kodama Hermit seed spending, ring pickup/portal/trade/save paths, and bonus
+  slot UI. `ObjKodamaHermit` subtracts values from both seed counts before
+  writing; `UIFishTrade` reads `GetNumRings` and writes an adjusted value.
+- The CSV has duplicate-address collisions (for example `0x140AFB550` maps to
+  both `GetMusicVolume` and `GetRingLevel`), so all nearest/EXACT symbol names
+  remain hints; brackets by adjacent symbols and direct disassembly were used
+  instead of trusting a single name.
+- This is `CANDIDATE_ONLY_STATIC_CROSS_VALIDATED`, not live verification.
+  `WRITE_TARGET=CANDIDATE_FOUND_STATIC_CROSS_VALIDATED`, but `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, and `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`.
+  No item id, story flag, resolver, final write address, or co-op claim was
+  established. Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY`,
+  `READY_FOR_INSTALL=NO`, QA remains `none`, and there is no ETA to online.
+
+## Setter flow / hook-boundary static pass (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev064-setter-hook-boundary-20261125.txt`
+(SHA-256
+`5DE4C369A37037464D894602A8C68566762E7688F3F21164BE894680D44A36F1`).
+
+- Added offline-only `tools\mpdev-static-setter-flow.py`. Across the 34 setter
+  call sites, linear disassembly classified 20 as read-modify-write candidates,
+  4 as absolute-immediate candidates, and 10 as absolute-or-external-value
+  candidates. One slot-star site has a getter distance of `0x1e7` and is a weak
+  classification. Branches and earlier blocks were not followed.
+- All seven setter thunks have zero 64-bit data-pointer references in the image;
+  every observed reference is a direct `call rel32`. Each complete setter body
+  occurs exactly once, so the seven thunks are a plausible central static hook
+  boundary. PE section `.idata` is `CODE|EXECUTE|READ` (`0x60000020`), so a
+  detour would need an explicit protection change.
+- This remains `HOOK_BOUNDARY_CANDIDATE=SEVEN_TINY_SETTER_THUNKS` with
+  `HOOK_POINT=NOT_FOUND`. No live base, page protection, detour layout,
+  calling-convention preservation, re-entrancy guard, pre-write delta method,
+  rollback path, authority decision, protocol message, item id, story flag,
+  resolver, save-image mapping, install, attach, launch, game write, network
+  action, friend contact, PC B action, or in-game verification occurred.
+- Stage 2 remains `BUILD_ONLY`; Stage 3 remains `PREP_ONLY` / full test closed.
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, `READY_FOR_INSTALL=NO`, QA remains
+  `none`, no working co-op is claimed, and there is no ETA to online.
+
+## Stage 2 collectible read-only probe spec draft (2026-11-25) — NOT AUTHORIZED
+
+Draft:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev065-stage2-collectible-readonly-probe-spec-draft.txt`
+(SHA-256
+`819FC05EA215EDC7AF1C43F1CEF9EEE7DBB88256E92C143D9F48C4841552B0BC`).
+
+- Defines a future READ-ONLY live probe to verify the mpdev063 accessor chain:
+  pinned EXE hash, module base, `CharacterAc+8 == GameData+0x80`, and the seven
+  scalar `CharacterData` fields, using owner-initiated benign actions for
+  before/after correlation. No input simulation.
+- Explicitly prohibits writes, hooks/detours/breakpoints, VirtualProtect,
+  injection, install, assistant launch/restart, network, friend contact, build-id
+  checks, and PC B setup. It is `DRAFT_ONLY_NOT_AUTHORIZED`; it does not grant
+  permission for any live step.
+- Success would only correlate static fields with live values. A separate,
+  explicitly authorized, reversible single-field write experiment would still
+  be required before any co-op state write or protocol change.
+- Current gates unchanged: `STAGE2_SCOPE=BUILD_ONLY`, `STAGE3_SCOPE=PREP_ONLY`,
+  `STAGE3_FULL_TEST=CLOSED`, `GATE_C=CLOSED`, `READY_FOR_INSTALL=NO`,
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, QA `none`, no working co-op claim,
+  no ETA to online.
+
+## Stage 2 collectible READ-ONLY probe (2026-11-25) — chain resolved, no correlation
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev066-collectible-readonly-probe-results-20261125.txt`
+(SHA-256
+`8F91A8E94B4C6E18130BE0DF1968C8F251D96C9B5D5B86F374F1215AC5C2CE7B`).
+
+- Owner authorized a read-only probe of the already-running game. Access was
+  `OpenProcess(PROCESS_VM_READ|PROCESS_QUERY_INFORMATION)` plus
+  `ReadProcessMemory` only. Exactly one responding PID `2036` was present; the
+  pinned EXE hash matched. No launch, restart, write, hook, detour, inject,
+  DLL load, install, network action, friend contact, build-id check, PC B step,
+  or input simulation occurred.
+- The live chain was resolved from `GameManager` global `0x143DCB728` through
+  its service hash table (slot 30) to `SaveManager 0x1C1123430` and
+  `SaveInterface 0x1C1123660`, then through the one-entry GameData vector to
+  `GameDataAc+8 = 0x1C4F7B1A0` and `CharacterAc+8 / CharacterData =
+  0x1C4F7B220`. The SaveManager/SaveInterface pair independently matched the
+  read-only RTTI trace. All pointers and all seven scalar fields were stable
+  across three reads.
+- Values were `numRings=134`, `numPowerSeeds=11`, `numGuardSeeds=11`, and
+  `numFishCoins/numFishTokens/numGoldCards/numSlotStars=0`.
+- The owner reported collecting one ring, but `numRings` did not change
+  immediately or on a delayed confirm read. Static evidence already shows a
+  `PlayerHsmContext::OnSave` setter path, so this address may be a save mirror
+  that lags gameplay; that hypothesis was not tested. No authoritative live
+  gameplay counter, item id, story flag, resolver, hook point, or authority
+  model was established.
+- `WRITE_TARGET=CANDIDATE_LIVE_SAVE_MIRROR_NOT_QUALIFIED`,
+  `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, and
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`. Do not proceed to a write or hook
+  experiment without a separate explicit authorization with rollback and stop
+  conditions. Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY` with
+  full test closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim,
+  and no ETA to online.
+
+## Save-mirror correlation (2026-11-25) — POSITIVE after owner save
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev067-save-mirror-correlation-results-20261125.txt`
+(SHA-256
+`2A3706998033AB8D3375968A8EA36DAE6D9F5C7012654AEC8D276B0DFD989010`).
+
+- Owner explicitly authorized a save-mirror check and performed a normal
+  in-game save. Assistant access remained `VM_READ | QUERY_INFORMATION` plus
+  read-only `Get-FileHash` on save files. No assistant write, hook, detour,
+  inject, DLL load, install, network, friend contact, PC B, or input simulation
+  occurred.
+- Same live chain and pointers as mpdev066, stable across four reads:
+  `CharacterData = 0x1C4F7B220`.
+- `numRings` went `134 -> 138` only after the save. `numPowerSeeds=11`,
+  `numGuardSeeds=11`, and all four fishing/slot fields remained `0`.
+- A new `savedata\manual2\gamedata.sav` appeared with SHA-256
+  `7A50B941A9DC29F4FF6FE99C0A928F3485271C15CC35C3CEC89F07D16B05A9D9`;
+  all six pre-existing `gamedata.sav` hashes were unchanged. This confirms the
+  owner save actually occurred.
+- The `+4` delta is not a controlled one-ring value because gameplay between
+  snapshots was untracked. It establishes `CharacterData+0x0` as a live
+  save-state mirror updated on save, matching the static `OnSave` writer path.
+  It does not establish an immediate gameplay counter, item id, story flag,
+  resolver, authority model, hook point, detour layout, or protocol mapping.
+- `WRITE_TARGET=CANDIDATE_LIVE_SAVE_MIRROR_CORRELATED_AFTER_SAVE`;
+  `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, and
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`. A separate reversible single-field
+  write experiment must be explicitly authorized before any write/hook/install/
+  network step. Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY` with
+  full test closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim,
+  and no ETA to online.
+
+## Single-field write experiment draft (2026-11-25) — NOT AUTHORIZED
+
+Full draft:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev068-single-field-write-experiment-draft.txt`
+(SHA-256
+`A6C2C5793DFD37E006F8F3CE1C650698E40E771F3881035198A9D9CA43F0E4E9`).
+
+- Proposed the smallest reversible test of the already-qualified save mirror:
+  temporarily write `numRings + 1` at `CharacterData+0x0`, read it back, ask
+  the owner whether any HUD/count visibly changed, and restore the original
+  word within five seconds. The draft requires fresh pointer re-resolution,
+  owner agreement not to save during the window, stop conditions, and rollback
+  on every exit path.
+- This is a draft only. `PROCESS_VM_WRITE_NOT_AUTHORIZED=1`; no write, hook,
+  detour, breakpoint, DLL load, install, inject, network action, friend
+  contact, build-id check, or PC B step has been performed or authorized by
+  this draft.
+- It would only test whether a direct write to this save mirror is physically
+  possible and reversible. It would not establish authority, item/story
+  semantics, a runtime counter, hook point, resolver, protocol mapping, or
+  co-op readiness.
+- `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`; Stage 2 remains `BUILD_ONLY`,
+  Stage 3 remains `PREP_ONLY`, full test closed, `READY_FOR_INSTALL=NO`, QA
+  `none`, no working co-op claim, and no ETA to online.
+
+## Single-field write experiment result (2026-11-25) — PASS, save-mirror only
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev068-single-field-write-experiment-results-20261125.txt`
+(SHA-256
+`98618E46BB7ADB1544E930A2A7A0CFFDC50F4CD21475495AA8E47E1AE47C2EA5`).
+Tool:
+`tools/mpdev068-single-field-write-experiment.py`
+(SHA-256
+`E024290FCBF609F6212549A341C2547F4BAEFB73053DF11F6C8442A71751D0B9`).
+
+- Owner explicitly authorized the exact reversible experiment and watched the
+  HUD. The tool verified the pinned EXE hash, one responding PID, module base,
+  and every recorded chain pointer before writing.
+- It changed only `numRings` at `CharacterData+0x0` from `138` to `139`, read
+  back `139`, held it for 3.063 seconds, restored `138`, read back `138`, and
+  closed the handle. No save, hook, detour, breakpoint, DLL load, inject,
+  install, network, friend contact, build-id check, PC B, or input simulation
+  occurred.
+- Owner reported the visible ring count **did not change** during the window.
+  Together with the mpdev067 post-save correlation, this confirms the address
+  is a save-state mirror, not the immediate ring HUD counter.
+- `DIRECT_WRITE_PHYSICALLY_POSSIBLE=1`, `DIRECT_WRITE_REVERSIBLE=1`,
+  `IMMEDIATE_HUD_READS_THIS_FIELD=0`, `SAVE_MIRROR_ONLY_CONFIRMED=1`.
+  The real runtime ring counter remains `NOT_FOUND`. This does not establish
+  authority, hook point, detour layout, item/story semantics, resolver,
+  protocol mapping, or co-op readiness.
+- Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY` with full test
+  closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim, and no ETA
+  to online. Further writes require a new explicit authorization.
+
+## Runtime ring counter candidate and read-only probe draft (2026-11-25) — CANDIDATE ONLY / DRAFT ONLY
+
+Static consolidation:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev086-runtime-ring-counter-candidate-20261125.txt`
+(SHA-256
+`07AE4677A1354C52A6BE71549FC1835B944572BA2B70BD576ABC207574F43CEE`).
+
+Read-only probe draft:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087-runtime-ring-readonly-probe-spec-draft.txt`
+(SHA-256
+`F9D57E94BBD2788705F43AB33201B2126C58EAE5B8DCF70D475B1F44CAFBB94C`).
+
+- Offline-only consolidation of `mpdev069` through `mpdev085` (plus two small
+  `mpdev085a/b` GOCPlayerHsm static follow-ups). No process attach, read, write,
+  hook, detour, DLL load, install, network, friend contact, build-id check, PC B,
+  or input simulation was performed for this consolidation.
+- Strongest static candidate is
+  `word [[PlayerHsmContext+0x30]+0x28]`: `OnSave@PlayerHsmContext` at
+  `0x14ae8ef60` reads that word at `0x14ae8f0f5` and passes it to the numRings
+  setter `0x140afff30` at `0x14ae8f0fe`. `Setup@PlayerHsmContext` stores plugin
+  hash `0x1425c61a` at `PlayerHsmContext+0x30`; the same hash is used by
+  `PlayerInformationUpdater`, which reads `dword [plugin+0x28]`.
+- The same slot is also read as a dword in OnSave, so width and semantics are
+  unresolved. This is a static save-source candidate only. It is not a live
+  HUD/runtime counter, hook point, authority model, item id, story flag,
+  resolver, protocol mapping, or co-op readiness.
+- mpdev087 is only a draft spec for a read-only live-correlation probe: fresh
+  pointer re-resolution, bounded read-only vtable/layout scan, exactly one
+  PlayerHsmContext candidate, 20 Hz sampling, and an owner-performed single
+  ring pickup with no assistant input. It requires fresh explicit owner
+  authorization before any tool is implemented, hashed, or run.
+- `PROCESS_VM_WRITE_AUTHORIZATION=CLOSED_AFTER_MPDEV068`; any future write still
+  needs new explicit authorization. Stage 2 remains `BUILD_ONLY`, Stage 3
+  remains `PREP_ONLY` with full test closed, `READY_FOR_INSTALL=NO`, QA `none`,
+  no working co-op claim, and no ETA to online.
+
+## mpdev087 read-only run — tool bug, no candidate result (2026-11-25)
+
+Original result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`B29C46467C34FDFF8F130B234E257B607FC5AEFC44A6120B2D40114B789DFCC1`).
+Diagnostic:
+`RESULTS/mpdev087a-scan-region-bug-diagnostic-20261125.txt`
+(SHA-256
+`9933EEDE2BBAB774CD9504A131444276D51B3CA4B29F395B718491FF147AE7F2`).
+
+- Owner authorized the exact read-only probe. The tool rechecked the pinned
+  EXE, found one responding PID, confirmed module base `0x140000000`, and
+  re-resolved the full save-mirror chain (`CHARACTER_DATA=0x1C4F7B220`,
+  mirror `138`). It then stopped before pickup with
+  `VALIDATED_CANDIDATE_COUNT=0`.
+- Offline review found a tool bug: memory-region enumeration started at address
+  `0`; `VirtualQueryEx(NULL)` returned `BaseAddress=0`, and the stale-progress
+  guard broke immediately. Consequently `SCAN_REGIONS=0`, `SCAN_BYTES=0`, and
+  no memory was ever scanned.
+- The zero-candidate result is therefore `INVALID_FOR_CANDIDATE_ENUMERATION`,
+  not evidence that the runtime candidate is absent. No write, hook, detour,
+  inject, DLL load, install, network, save, input simulation, or owner pickup
+  occurred.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087b-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `93DA258E8BE2E5F0EDEBB1EA16E9A8686C2AFF201A7226508B5F82095E1DD895`).
+  It starts region enumeration at `0x10000` and uses separate
+  `mpdev087b-stop.txt` / `mpdev087b-pickup-go.txt` files.
+- The corrected tool needs fresh explicit owner authorization before any new
+  attach or pickup. All stage gates are unchanged: `LIVE_QUALIFIED=0`,
+  `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`,
+  Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## mpdev087b corrected run — incomplete scan coverage (2026-11-25)
+
+Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087b-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`68309F5DE03D9DD78A85893294E69FDE03B4EAC177E51CF0B5231081E219462E`).
+Diagnostic:
+`RESULTS/mpdev087b-scan-cap-diagnostic-20261125.txt`
+(SHA-256
+`C843BFFABA5B068E51507E51A93939405C88C49E794FAE912801C842F359137C`).
+
+- The corrected tool scanned 5,530 committed regions and read exactly 1 GB,
+  its hard cap, before recording `SCAN_RAW_HITS=0` and stopping with
+  `VALIDATED_CANDIDATE_COUNT=0`. It stopped before pickup.
+- Offline review classified this as `INCOMPLETE_SCAN_COVERAGE`, not candidate
+  absence. The scan mixed MEM_PRIVATE and MEM_IMAGE regions; the
+  PlayerHsmContext object is a heap object, so private regions should be
+  prioritized.
+- A second corrected tool exists but has not been run:
+  `tools/mpdev087c-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `F4B2DF216AB74FFF8EB02F5865CFD313A6325B69E456133D007A589099F14C5B`).
+  It scans MEM_PRIVATE regions only, raises the byte cap to 4 GB, and records
+  the scan filter. Scope remains read-only with separate
+  `mpdev087c-stop.txt` / `mpdev087c-pickup-go.txt` files.
+- It needs fresh explicit owner authorization before any attach or pickup.
+  All stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`,
+  full test closed, QA `none`, no co-op claim, no ETA.
+
+## mpdev087c run and derived-vtable diagnosis (2026-11-25)
+
+Private-heap result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087c-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`6182D0D1E9AFCB3EF449B4835B3288FE0E7C0C0568F2D0BA69600479A1A40F4A`).
+Diagnostic:
+`RESULTS/mpdev087f-derived-context-vtable-diagnostic-20261125.txt`
+(SHA-256
+`6E0584C18CA7AFF473591A9EA4C3B22E2C19AB05BEAF58844EF12836C157CCC1`).
+
+- Owner authorized the exact `mpdev087c` read-only probe. It rechecked the
+  pinned EXE, found one responding PID, confirmed module base `0x140000000`,
+  re-resolved the save chain (`CHARACTER_DATA=0x1C4F7B220`, mirror `138`), then
+  scanned 2,203 private regions / 3,983,732,736 bytes with only five skipped
+  regions or chunks. It found zero raw root-vtable hits and stopped before any
+  pickup. No write, hook, detour, injection, DLL load, install, network, save,
+  input simulation, or owner pickup occurred.
+- Offline static review found the discovery-pattern mismatch: the base
+  `PlayerHsmContext` vtable `0x1415214B8` is overwritten by derived context
+  constructors. SonicContext writes `0x14151CAB8` at `+0x0` and `0x14151CAC8`
+  at `+0x18`; AmyContext writes `0x14151A908` at `+0x0` and `0x14151A918` at
+  `+0x18`. Knuckles/Tails secondary vtables are inferred as primary+`0x10` and
+  remain CANDIDATE-ONLY.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087f-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `7D9996E6C2A9A4373EC9A09555CAF49F1068D39C4CBEB3499D5BA5189A4C251E`).
+  It scans MEM_PRIVATE for all four derived primary vtables, requires
+  `[root+0x18] == primary+0x10`, requires `[root+0x38]` to point to an object
+  with GOCPlayerHsm vtable `0x141521368`, and requires exactly one validated
+  candidate before sampling. It records the context and primary vtable for each
+  candidate.
+- The live runtime ring counter remains unqualified and the zero raw hits from
+  `mpdev087c` are not evidence against the static candidate. `mpdev087f` needs
+  fresh explicit owner authorization before any new attach or pickup. Stage
+  gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
+  test closed, QA `none`, no co-op claim, no ETA.
+
+## mpdev087f run and large-region skip diagnosis (2026-11-25)
+
+Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087f-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`AF9D725F0F23052774C1FA917E3664CEF2642A9F3FDC8BFBCD0E7F8976FB6E90`).
+Diagnostic:
+`RESULTS/mpdev087g-large-region-skip-diagnostic-20261125.txt`
+(SHA-256
+`6CB36E44CBBB3075C37A9814F3C23A3D1E0D38F90282FACE6D45AB13A4693FAA`).
+
+- Owner authorized the exact `mpdev087f` read-only probe. It verified the pinned
+  EXE, one responding PID, module base `0x140000000`, and re-resolved the save
+  chain. It scanned 2,220 private regions / 3,993,239,552 bytes, found zero raw
+  hits for all four derived context vtables, and stopped before any pickup.
+- The save mirror read `139` in this run, versus `138` in prior runs. No pickup
+  signal was sent by the assistant. This is recorded as an observed state
+  change only, not as pickup or counter correlation.
+- Offline review found `MAX_REGION_BYTES = 256 MB` in the Python probe: five
+  large committed private regions were skipped before reading. The earlier C++
+  RTTI scanner had no per-region cap and found many live `SonicContext` objects
+  with vptr `0x14151cab8`. The zero-hit result is therefore
+  `INCOMPLETE_SCAN_COVERAGE`, not absence of the derived contexts.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087g-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `7E454DAA0DC14199441376E6256AA75BD42F0BB7841AA0E7867CA6DB1BEB4E60`).
+  It raises the per-region cap to the 4 GB global cap, records skip details and
+  cap status, and keeps MEM_PRIVATE-only filtering, derived-vtable validation,
+  the unique-candidate requirement, and read-only access.
+- It needs fresh explicit owner authorization before any new attach or pickup.
+  Stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
+  test closed, QA `none`, no co-op claim, no ETA.
+
+## mpdev087g run and global-cap diagnosis (2026-11-25)
+
+Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087g-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`A3977D4238905756D5B6D7060EA753098E985D50F866F4799A4F2799BBD63D41`).
+Diagnostic:
+`RESULTS/mpdev087h-global-cap-diagnostic-20261125.txt`
+(SHA-256
+`D46A4611C45E7D8596AE980296A9F3506E72E169C35F46DF804C053A522BAB2E`).
+
+- Owner authorized the exact `mpdev087g` read-only probe. It verified the pinned
+  EXE, one responding PID, module base `0x140000000`, and re-resolved the save
+  chain. It exhausted the 4 GB global scan cap, skipped 300 later private
+  regions starting at `0x266210000`, found zero derived-vtable hits, and stopped
+  before any pickup.
+- The save mirror read `141` in this run (prior runs: 138, 139). No pickup
+  signal was sent by the assistant. This is recorded as an observed state
+  change only, not as pickup or counter correlation.
+- Offline review classified this as `INCOMPLETE_SCAN_COVERAGE` again: earlier
+  live scans found `SonicContext` objects at addresses such as `0x2804b7b30`
+  and `0x2aed9a4f0`, above the cap boundary and inside the skipped tail.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087h-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `4A2BCB20E228C68E8E9E5FB90269C483378A04B2DC41BB816A6EE443FB21460B`).
+  It raises both per-region and global caps to 12 GB and logs total private
+  region count/bytes before scanning. Scope remains read-only with derived-vtable
+  validation and a unique-candidate requirement.
+- It needs fresh explicit owner authorization before any new attach or pickup.
+  Stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
+  test closed, QA `none`, no co-op claim, no ETA.
+
+## mpdev087h successful read-only run — candidate rejected (2026-11-25)
+
+Final result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087h-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`4D45521AD5A1C6064771CC794B8BF8670B837336A709C0B96C06C5A639B18627`).
+
+- Owner authorized the exact read-only probe. It verified the pinned EXE, one
+  responding PID, module base `0x140000000`, and re-resolved the save chain.
+  Total private memory was 2,224 regions / 7,049,756,672 bytes; the 12 GB cap
+  was not reached.
+- The derived-vtable scan found exactly one validated candidate:
+  `SonicContext`, primary vtable `0x14151CAB8`, root `0x19DAC6258`,
+  GOC `0x19DAC64C8`, plugin `0x19DAB2FD0`. Baseline sampled values were
+  `candidate_u16=141`, `same_slot_u32=141`, `adjacent_u32=999`, and
+  `save_mirror_u16=141`.
+- After the assistant gave the exact instruction **“Pick up one ring now.”**,
+  the owner picked up one ring and reported the HUD increased by `+1` during
+  the ~10-second sampling window. All sampled fields remained unchanged for the
+  entire window: `candidate_u16 delta=0`, `same_slot_u32 delta=0`,
+  `adjacent_u32 delta=0`, `save_mirror_u16 delta=0`.
+- Conclusion: `word [[PlayerHsmContext+0x30]+0x28]` is
+  `REJECTED_AS_IMMEDIATE_PICKUP_COUNTER`. It may still be a save-side/source
+  field, but its live counter role is not qualified and no alternate counter
+  was established by this run.
+- No write, hook, detour, breakpoint, injection, DLL load, install, save,
+  network, friend contact, build-id check, PC B, or input simulation occurred.
+  Stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`,
+  Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full test closed, QA `none`, no
+  co-op claim, no ETA.
+
+## Static ring accessor/caller pass after mpdev087h (2026-11-25) — CANDIDATE-ONLY
+
+All files below are offline outputs from the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and the
+local symbol CSV. They are `CANDIDATE-ONLY`; they do not qualify a live counter,
+hook point, authority model, resolver, protocol mapping, or write target.
+
+- `mpdev089-getnumrings-callers-20261125.txt` (SHA-256
+  `520E6F64109D6C93832AD8E3F38FD1585AB6A64A22C04D48DD31CB714A267AFF`) lists
+  direct callers of `GetNumRings@CharacterAc` `0x140afc740`, including two
+  sites inside `Player::AddCallback` `0x140880810`.
+- `mpdev089a-getnumrings-call-context-20261125.txt` (SHA-256
+  `D034EE09371642F5A5852714C1889B64A23E5469D9FE827479204BD7DC8AD465`) and
+  `mpdev089b-player-addcallback-ring-getters-20261125.txt` (SHA-256
+  `6C697E143093984961C87BEEECD3808BE343867B2367E7D327E6382290FF4A29`) show
+  those sites reading boss-rush rings and normal rings into a local save-side
+  structure; no immediate HUD source is established.
+- `mpdev090-setnumrings-callers-20261125.txt` (SHA-256
+  `52DF3503F87D29986EBE09DDE6E68D2DF21E9250E75FDDAF2449282C9A2FB114`) and
+  `mpdev090a-setnumrings-call-context-20261125.txt` (SHA-256
+  `1FFE109E777038E684C643AE67D87FE469337DDA5CA2C1C08064439976B56342`) list
+  seven direct callers of the `numRings` setter `0x140afff30`. Two sites at
+  `0x140918941` and `0x14091d661` are inside the `PlayerStateParameter` region.
+- `mpdev090d-playerstate-rings-path1-aligned-20261125.txt` (SHA-256
+  `53A3F011841771ABE969DCFC089738C0B4592402C05579D8AB298EB50CA28186`) and
+  `mpdev090e-playerstate-rings-path2-aligned-20261125.txt` (SHA-256
+  `760F121101D925C3EBD1D8967008B17775FCA2AF508508505DA07249AAF74281`) are the
+  aligned disassembly replacements. They show a path through
+  `GetContent@Blackboard` `0x140884470`, `GetPlayerObject@PlayerHsmContext`
+  `0x1402484e0`, `GetCharacterAccessor@save` `0x140b0dec0`,
+  `0x1408ac170`, and then `0x140afff30`. This supports a save-mirror write
+  path, not an immediate pickup counter. The earlier unaligned dumps
+  `mpdev090b` (SHA-256
+  `31853DE95A007A1F60D5395380F22996880B7A18D54E869186435E23B16E763E`) and
+  `mpdev090c` (SHA-256
+  `94C7E2BAD7A40F6AA4CB92F6084BF6438967A0D4FB723FF7EC1B36E900A018DD`) are
+  superseded. Hash-search context is in
+  `mpdev090f-playerstate-rings-hash-20261125.txt` (SHA-256
+  `7F32110654EBF8ADF80D4522C0B2A7D6EF204318410B84E5D02BCC346EC21CAB`) and
+  `mpdev090g-playerstate-rings-hash-search-20261125.txt` (SHA-256
+  `9F08DEB39B7B86A088A1097F5825DD64D6330C5EDF15AF97E3122F9B1B393274`).
+- `mpdev091-playerhsm-unknown-getter-20261125.txt` (SHA-256
+  `9CB2E1A1F941052C9165B685588B76874FFBE94A166ACA7D3B3BC0CEDFD04892`)
+  confirms `0x1408ac170` is only:
+  `mov rax,[rcx+0x30]; mov eax,[rax+0x28]; ret`. Combined with the owner's
+  `+1` HUD observation during the `mpdev087h` sampling window and zero delta
+  in that word, this remains `REJECTED_AS_IMMEDIATE_PICKUP_COUNTER`; a
+  save-side/source role remains unqualified.
+
+No new attach, write, hook, install, network, friend contact, input simulation,
+or live pickup occurred for this pass. Stage gates unchanged: Stage 2
+`BUILD_ONLY`, Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim,
+no ETA.
+
+## Static UI counter / number-ring message pass (2026-11-25) — CANDIDATE-ONLY
+
+All files below are offline outputs from the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and the
+local symbol CSV. They remain `CANDIDATE-ONLY`: no immediate HUD/runtime counter,
+hook point, authority model, resolver, protocol mapping, or write target is
+qualified by them.
+
+- `mpdev092-uiring-counter-method-callers-20261125.txt` (SHA-256
+  `4DE656F87ACFEA62458D98AECCB9B6666547E7FFE4B1164C0500A1555E4DAFA2`) finds no
+  direct callers for `UINumberRingCounterContext` methods `0x140a5ad40`,
+  `0x140a5ad50`, or `0x140a5ad80`, and only construction/display-parameter calls
+  from `UIGameCockpit::AddCallback`.
+- `mpdev093-msg2299-handler-callers-20261125.txt` (SHA-256
+  `AF5101EF055E369695FD904EC8270924FCD2C9F030B303CBF46869F9AEC80480`) finds no
+  direct callers for the `MsgRaiseRings` handler addresses `0x14008cbc0` and
+  `0x14008cc30`; calls to `0x14008d680` are generic `UnkFunc1` plumbing shared by
+  many messages.
+- `mpdev094-uigamecockpit-ring-counter-setup-20261125.txt` (SHA-256
+  `CA6123F44A9D9455FC5047F3D5C011EA72FA978612F262DE83396570FC9B48C1`) shows the
+  `UINumberRingCounterContext` construction and digit-parameter calls at
+  `0x140a346c5`/`0x140a3477d` inside `UIGameCockpit::AddCallback`.
+- `mpdev095-uiring-counter-message-handler-20261125.txt` (SHA-256
+  `E4A14CD6F78E1215ED75653A8250B5AF9F924DF3F06E7461562C83DACAB9E168`) shows the
+  handler at `0x140a5ad80` reacting to bit-flag/visibility messages and message ID
+  `0x2419`; it sets a bit at context byte `+0x50` and calls `SetVisible`-style
+  plumbing. It is not an established numeric counter source.
+- `mpdev096-uiring-vtable-address-refs-20261125.txt` (SHA-256
+  `7EC18CB38E29E169CB5418C5ADC1C553DFD2F3CD30E1FA1D9B4D16E216A999CB`) found no
+  raw in-EXE references to the probed UI counter vtable/method address bytes.
+- `mpdev097-uiring-digit-format-20261125.txt` (SHA-256
+  `508DBA513EA3BD14F40C0ECD518C167795028C9B5CD72BCF245833BF11787159`) and
+  `mpdev098-uiring-reset-helper-20261125.txt` (SHA-256
+  `29D847E990C120007682FB763C99B1139E3186ACEFB7AE969B562DE602115184`) confirm
+  `0x140b96600` is `SetParameter@LayerController` display formatting and
+  `0x140b96800` is `SetVisible@LayerController`; neither exposes a gameplay ring
+  value. Some slice starts are unaligned and are not evidence on their own.
+- `mpdev099-msg2299-vtable-ctor-20261125.txt` (SHA-256
+  `BEE2E00B0222BF7ACF08569EA1077CEFD9CCBC39811A017B611EC552611EE161`) shows the
+  `MsgRaiseRings` async-handler construction copying only generic payload fields;
+  no counter write is established.
+- `mpdev100-number-ring-message-vtables-20261125.txt` (SHA-256
+  `5B076549419E9E7BBFF38B6FA6233E2571FA8C6877821FD59681D3E05703E776`) confirms
+  exact classes `MsgTakeNumberRing`, `MsgIsTakeNumberRing`, and
+  `MsgUITakeNumberRing`, plus `ObjNumberRingInfo`/`ObjNumberRing` vtables. Their
+  handlers are `0x14050ffa0`, `0x14050fee0`, `0x1401d1530`, and `0x1401d17f0`.
+- `mpdev101-takenumberring-handlers-20261125.txt` (SHA-256
+  `B82D04C452A15C8BF05D55C84ECC35E6FA2F62B7D3A486954938DD2CDF3736DE`) shows the
+  `MsgTakeNumberRing`/`MsgIsTakeNumberRing` handlers only copying payload fields
+  into an async handler. The slice start is unaligned; aligned continuation is
+  required before drawing field-semantics conclusions.
+- `mpdev102-numberringinfo-methods-20261125.txt` (SHA-256
+  `8CE706B2E76FEF25ED040BD6BE4C0A61B88A0EA6C40283DC671D1BB2C7AD4248`) covers
+  `ObjNumberRingInfo` methods. `0x140510300` is a message handler that dispatches
+  ID `0x304` specially and passes IDs `0x200`, `0x20d6`, and `0x222c` through;
+  this is still generic message plumbing, not a qualified ring counter or hook.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Static number-ring continuation pass, mpdev103-122 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and the
+local symbol CSV. Every file is `CANDIDATE_ONLY_NO_MAPPING`: none qualifies an
+immediate HUD/runtime counter, hook point, authority model, resolver, protocol
+mapping, or write target.
+
+- `mpdev103-takenumberring-aligned-prefix-20261125.txt` (SHA-256
+  `CE4AA312639D4FBF3F46227A0F6AF8D7BD01CFE63F4381E8FC809701E23ABDB0`) gives an
+  aligned prefix of the `MsgTakeNumberRing` handler setup; it shows async-message
+  construction and payload copies, not a numeric counter write.
+- `mpdev104-numberringinfo-msghandler-aligned-20261125.txt` (SHA-256
+  `2434F3A6E41CD9633EAC7AF0DC495F4E96C0A3D2EE0AC38C31E3F0F35FC9C1B3`) aligns
+  `0x140510300`: IDs `0x200`, `0x20d6`, and `0x222c` pass through, ID `0x304` is
+  special. This remains generic `ObjNumberRingInfo` message plumbing.
+- `mpdev105-uitakenumberring-methods-20261125.txt` (SHA-256
+  `F44348A0F4FF62590E79B8706305ABA1D509A4BFB1609FB9055B60E2405F21FA`) covers
+  `GameModeNumberRingExtension` construction and the `MsgUITakeNumberRing`
+  (`0x2419`) send site at `0x1401d169b`. No numeric ring value is established.
+- `mpdev106-numberring-handler-callers-20261125.txt` (SHA-256
+  `6CC01B181020BC4AD2F99659EE63EB8C17F7BEB2947F965C25F20CACB4D0B6F0`) finds no
+  direct call/jmp references to handlers `0x1401d1530`, `0x1401d17f0`,
+  `0x14050fee0`, `0x14050ffa0`, or `0x140510300`; registration is consistent with
+  vtables/message plumbing, not a direct hook lead.
+- `mpdev107-numberringinfo-msgis-callsite-20261125.txt` (SHA-256
+  `B35BE1A737CC98BF273B824772569B95BAB0E928402864E4C526440B2838AD4C`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev111` for field semantics.
+- `mpdev108-numberringinfo-msgtake-callsites-20261125.txt` (SHA-256
+  `227F3175F96C246BE97F2DB321E18C4AA3616B632DD68A7A78689F208119CBF1`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev112` for the take path.
+- `mpdev109-uitakenumberring-late-methods-20261125.txt` (SHA-256
+  `C7178764D87968B34251C5BEE47CB59DD861730E44AA76912DB66D74431F95FB`) covers a
+  late `GameModeNumberRingExtension` tail with an unaligned start; it supplies no
+  counter mapping.
+- `mpdev110-message-ctor-argflow-20261125.txt` (SHA-256
+  `91198EF3CB7718D7A5C97F7CBCE1C540005AE5E32925D439F4E30376C5B75D05`) confirms
+  message-ID immediates in `edx`: `0x14050f969` and `0x140510a7e` send `0x21e3`,
+  `0x140510af4` sends `0x235f`, `0x140510b4c` sends `0x235e`, and
+  `0x140a5b0ca` sends `0x21e3`. These are message sends, not counter writes.
+- `mpdev111-numberringinfo-ctor-aligned-20261125.txt` (SHA-256
+  `FA894702B31934CFF6357EDFE7D2099A5CC51A194B04F60C7B7FD5056FA32C4A`) gives the
+  aligned `ObjNumberRingInfo` constructor and early setup (`vtable 0x1414a2888`);
+  no live ring-counter value is established.
+- `mpdev112-numberringinfo-take-flow-aligned-20261125.txt` (SHA-256
+  `0E220BD22C5541AAE00E3911E3DB8B455E69E875AC6344459CE9BFBD14EFA2DC`) is the
+  aligned take path at `0x140510a50`-`0x140510bd7`. It reads signed
+  `dword [ObjNumberRingInfo+0x290]`, gates at `< 4`, sends `MsgIsTakeNumberRing`
+  with `ebx + 1`, sends `MsgTakeObject` with `[+0x290]` in the payload, then sends
+  `MsgTakeNumberRing` with `ebx` in the payload and uses `[+0x290]` as a table
+  index. Byte `[+0x294]` gates another handler branch. This qualifies `+0x290`/
+  `+0x294` only as message payload/RFL-source candidates; it does not qualify
+  them as the immediate HUD counter.
+- `mpdev113-uitakenumberring-tail-20261125.txt` (SHA-256
+  `35A93D75866B36BCEEB0E92CB749E759CF05016FFF68668EE598A0066F9A1E1E`) sampled an
+  unrelated/misaligned tail and is not evidence for ring-counter semantics.
+- `mpdev114-msgtake-235e-id-refs-20261125.txt` (SHA-256
+  `A05F42EAE74CC60D76C634353448C11B8EF9E77F4938C805C408F0ED029409EA`) finds the
+  only code hit for immediate `0x235e` near the `0x140510b4c` send site; no
+  consumer or numeric-count mapping follows from the bytes alone.
+- `mpdev115-numberring-vtable-lea-refs-20261125.txt` (SHA-256
+  `744CAA73A480B96ADF9E81453E618E07CC8B394A95E5A5972385154C8DBC26D0`) locates
+  construction refs for the number-ring message/object vtables, including
+  `MsgUITakeNumberRing` use at `0x1401d1593` and `0x1401d16a4`, plus
+  `ObjNumberRingInfo`/`ObjNumberRing` construction refs. No direct handler call or
+  counter source is added.
+- `mpdev116-gamemode-numberring-extension-vtable-20261125.txt` (SHA-256
+  `A1FB9258FA8370C205428FC8DBB05378B93A7D46B39260BDC6D4CF127682CD8C`) reads
+  `GameModeNumberRingExtension` vtable `0x1414320f0`; slots include local code
+  near `0x1401d1620` and generic allocator/cleanup plumbing. It does not expose a
+  gameplay ring integer.
+- `mpdev117-uiring-counter-full-20261125.txt` (SHA-256
+  `BF80E5995193C11419AE652CC1B52D3F2F6C4E0FC3E84C39CBB7DEDAA99AF1DF`) covers the
+  full `UINumberRingCounterContext` receive path. It handles `0x2406`, `0x2265`,
+  `0x2411`, and on `MsgIsTakeNumberRing` (`0x21e3`) loops bits 4..0 to update byte
+  `[context+0x50]`. This establishes bit/visibility plumbing only; `0x140afc1a0`
+  and `0x140afee00` are called, but are not established numeric ring getters.
+- `mpdev118-uiring-accessor-140afc1a0-20261125.txt` (SHA-256
+  `FC3EE52F8AD2E20AB3CF383C1AA1D442A253D81854D22FE45595D6C11FC027B4`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev120`.
+- `mpdev119-uiring-accessor-140afee00-20261125.txt` (SHA-256
+  `32DF1ADFEACC2ED423E5165F555202933831D093722BF74EE8D40980E0CAD280`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev121`.
+- `mpdev120-uiring-accessor-aligned-20261125.txt` (SHA-256
+  `8CBE9D12A36EEA6BCFD31EC33D3C880F6F3EBF8481A75131F46734D0E94D57E1`) aligns
+  `0x140afc1a0` as a thunk to `0x14cdc7630`; it is not itself a ring-value read.
+- `mpdev121-uiring-config-thunk-target-20261125.txt` (SHA-256
+  `FD669BD98F9A9EB92B4B420F8D14772DCF3BBD0FAE7CBF66ACC909C0B31CF87F`) aligns
+  `0x14ce495f0` as a config-bit getter (`test byte [rax+9], 1 << dl`); it returns
+  a boolean bit, not a ring count.
+- `mpdev122-uiring-ring-getter-thunk-target-20261125.txt` (SHA-256
+  `671C230D0B269F237205A222E6B9337BDC7E814F65F80E22B64EF659C94830AB`) aligns
+  `0x14cdc7630`: it builds a wrapper object pointing at `[OptionGamePlayAc+0x374]`
+  and an external pointer, then returns the wrapper. No numeric ring value is
+  loaded into the return path.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Static message-ID and RFL continuation pass, mpdev123-135 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. Every file remains `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev123-msgtake-235e-cmp-refs-20261125.txt` (SHA-256
+  `16650EF7F5278CBFE1A5DF6EE28F3BF38A4A647796632B5F8064648FE9D4404C`) searched
+  for `cmp [reg+8],0x235e` and `cmp eax,0x235e` encodings; both had `COUNT=0`.
+  No handler-side immediate comparison for `MsgTakeNumberRing` was found.
+- `mpdev124-msgis-21e3-cmp-refs-20261125.txt` (SHA-256
+  `FA27180FC66DD7D5EBED9AE865B93E2C0B6B95C919C1E8EC15DFB0CD1E14894C`) searched
+  the same comparison encodings for `MsgIsTakeNumberRing` (`0x21e3`); both had
+  `COUNT=0`.
+- `mpdev125-msguitake-2419-cmp-refs-20261125.txt` (SHA-256
+  `DC2BF4DA817716F08D098BA324D648027E712996E54BFBEC62AB6062C03DD1C6`) found two
+  `[reg+8]` comparisons for `MsgUITakeNumberRing` (`0x2419`) at `0x140a5ada7` and
+  `0x140a5ae57`, plus one `cmp eax,0x2419` at `0x140a5b3c9`, all in
+  `UINumberRingCounterContext`. This is UI bit/visibility plumbing only.
+- `mpdev126-uitake2419-cmp-aligned-20261125.txt` (SHA-256
+  `62FE73341D2823C37E846D660839AA6A85CDB9B7D5B5AECAABFA8625C840A8CB`) aligns
+  `0x140a5b390`-`0x140a5b430`: a loop tests bits of byte `[context+0x50]` and calls
+  `PlayAnimation@LayerController` `0x140b95a50`. No numeric ring value is read or
+  written.
+- `mpdev127-uitake2419-second-handler-aligned-20261125.txt` (SHA-256
+  `30E8E0494C215F554530F92792C6E599F2BDC28CECCDCD8A7B0C67EEC7393FDB`) sampled an
+  empty/unaligned slice at `0x140a5ae00`-`0x140a5aeb0` and is
+  `SUPERSEDED_BY=mpdev128`.
+- `mpdev128-uitake2419-second-handler-aligned-20261125.txt` (SHA-256
+  `0F08DC5480E28E04B965A74E097A98330DB2B91B2D3C29355A0A19EAF454EB37`) aligns the
+  second handler at `0x140a5ae30`-`0x140a5aeb0`. It gates message categories
+  `-4`, `-3`, `4`, and `7`, matches `0x2419`, and uses payload dword `[msg+0x20]`
+  with `bts` on `[context+0x50]`. It confirms bit/visibility state, not a count.
+- `mpdev129-uitake2419-handler-prefix-aligned-20261125.txt` (SHA-256
+  `39DBDF6AF5974D8D3570B482FA4A550EAD39DB63074359EE014C44C268653CA3`) aligns
+  `0x140a5b280`-`0x140a5b460`. The handler at `0x140a5b300` handles `0x2411` by
+  copying payload byte `[msg+0x20]` into `[context+0x50]`, and handles `0x2419` by
+  computing layer index `4 - payload`, calling `PlayReservedAnimations`
+  (`0x140af3990`), and setting another `[context+0x50]` bit. No numeric ring count
+  is established.
+- `mpdev130-uiring-counter-vtable-20261125.txt` (SHA-256
+  `9127348CA4D4FC9F7B4EE7A5316645ED3F27BF28DBF781E6BBF54E1046FBF18A`) reads
+  `UINumberRingCounterContext` vtable `0x141561e58`. After the destructor slot the
+  read contains mixed/non-code data and local handler slots near `0x140a5ad40`/
+  `0x140a5ad50`; no numeric getter is identified.
+- `mpdev131-numberringinfo-handler-setup-aligned-20261125.txt` (SHA-256
+  `FAF952814892EAC73795A395010AC107980F67BEABC13DAE4A49E881AEF01BE0`) aligns
+  `0x14050f910`-`0x14050fdf0`. It calls `GetClass@ObjNumberRingSpawner`
+  (`0x1400c9950`) and `GetWorldDataByClass@GameObject` (`0x140d35f10`), then reads
+  signed byte `[worldData]` into `[ObjNumberRingInfo+0x290]` and unsigned byte
+  `[worldData+1]` into `[+0x294]`. It sends `MsgIsTakeNumberRing` (`0x21e3`) with
+  `[+0x290]` in the dword payload; the bytes are an RFL-source/payload candidate
+  only.
+- `mpdev132-uigamecockpit-digit-loop-prefix-aligned-20261125.txt` (SHA-256
+  `E38E88EAC20BD8EC70C16B1558878F782875F35E3567F24E7872AF58C96DD4C7`) samples
+  `0x140a344c0`-`0x140a34680`. It initializes `r14b` to zero and uses it as a
+  digit/context index while creating counter contexts by stage attribute. It does
+  not expose an immediate ring integer.
+- `mpdev133-uigamecockpit-digit-loop-tail-aligned-20261125.txt` (SHA-256
+  `71623F15741829A3A55DB7D17795AE072C0E9A6E69FFA70F2E6BFBB87318A1FD`) samples
+  `0x140a34820`-`0x140a34880`. The aligned tail increments `r14b` and `r15` per
+  loop iteration, confirming digit-index iteration only.
+- `mpdev134-numberringspawner-rfl-members-20261125.txt` (SHA-256
+  `7F3EDB67F18D8AB9A0EC9B3631B1E9C37F06EC7C0F52928E20C8F758066B1B1F`) read the
+  `ObjNumberRingSpawner` RFL member symbol at `0x143c89d60` and returned `COUNT=0`;
+  no field names were decoded.
+- `mpdev135-numberringspawner-rfl-members-deref-20261125.txt` (SHA-256
+  `8AD11426048A7763BC2D522158D5EAEDBD61D6BCAB547CA0C69D25EA2BD80D55`) read the
+  dereferenced array at `0x1413b3a24` and also returned `COUNT=0`; no field names
+  were decoded.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Static ring-message continuation pass, mpdev136-142 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime ring
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev136-numberringspawner-rfl-raw-20261125.txt` (SHA-256
+  `02592EA8CFB1C651718E87ABB57427E310337D5CEE7DECD059DB7E65166385B6`) directly
+  decoded the raw `ObjNumberRingSpawner` member array at `0x143c89d60`. Recovered
+  names are `noType`, `EventType`, `lifetime`, `volume`, `guideType`, `type`,
+  `isHorming`, `usedPillar`, `sideBarNum`, `pillarNum`, `distanceOffset`,
+  `colloffset`, `collisionSize`, `successShotVelocity`, `failShotVelocity`, and
+  `outOfControlTime`; `noType`/`EventType` are entries 0/1. This only explains why
+  the strict RFL reader returned `COUNT=0` (type codes such as `0x214`/`0x614`
+  exceed its marker filter). No field is established as a ring count.
+- `mpdev137-msg2299-handler-thunk-target-20261125.txt` (SHA-256
+  `044CAF99E43E67C750F48C7FCE596C525419C3BB0563EBC9C4D00F3534E6400D`) aligns the
+  target behind the `0x14008cbc0` thunk (`0x1462eec80`). It sets a vtable and has a
+  destructor/cleanup-shaped conditional call; it contains no numeric ring read or
+  update.
+- `mpdev138-msg2299-async-handler-process-20261125.txt` (SHA-256
+  `E283B498B81284694F62C7762F2E2A7701FAE8ACC0C05ACE87E682CF45FF1E3C`) aligns
+  `0x14028cd60`. It allocates and copies message fields into an async handler;
+  no handler-side message-ID comparison or ring counter update is present.
+- `mpdev139-msg2299-cmp-refs-20261125.txt` (SHA-256
+  `E9EDA8C609654EB195F432E5FC45CEA6204CD602F71617CFC3FCBF6A153DF1F3`) searched
+  three plausible `cmp` encodings for immediate `0x2299`; each returned `COUNT=0`.
+- `mpdev140-msg2299-immediate-all-20261125.txt` (SHA-256
+  `A35BDC6DA9D90776F4CD8C8472A61B70CA208FBDA1D9A018A1A83691115A4020`) found 12
+  raw `99 22 00 00` hits. Code hits at `0x14028e8a5`, `0x1402a8fa2`,
+  `0x1402f215d`, `0x14030bdb5`, and `0x140337989` are send/construction-adjacent;
+  the rest are non-code data. No handler-side immediate compare was found.
+- `mpdev141-msg2299-vtable-lea-refs-20261125.txt` (SHA-256
+  `D66F131A9CA2D863A46515E84397E3687D610BF6733F4E2F5F5477E9FEE94B36`) found six
+  RIP-relative LEA references to `MsgRaiseRings` vtable `0x14144a880` and one to
+  its async-handler vtable `0x14144a8a0`. All are construction/send-adjacent, not
+  consumer-side counter logic.
+- `mpdev142-numrings-setter-callers-20261125.txt` (SHA-256
+  `52DF3503F87D29986EBE09DDE6E68D2DF21E9250E75FDDAF2449282C9A2FB114`) found seven
+  direct callers of `0x140afff30`, including `ObjFishingPortal`, `ObjPortal`,
+  `ObjSaveDataTest`, two `StateStand` parameter paths, `GUIFishTrade`, and
+  `PlayerHsmContext::OnSave` (`0x14ae8f0fe`). This supports the save-mirror role
+  for `CharacterData+0x0` and does not establish the immediate HUD/runtime counter.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Static `MsgLossRing` continuation pass, mpdev143-151 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime ring
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev143-msglossring-vtables-20261125.txt` (SHA-256
+  `F19601A9F1A0B3A37C6063387D4839A90F9453545483DC53DD5DB21A3C1AEFE0`) reads
+  `MsgLossRing` vtable `0x141431638` and async-handler vtable `0x141431658`.
+  Slot `+0x00` is `CreateAsyncHandler@MsgLossRing` (`0x1401cc710`), `+0x10` is
+  the shared `0x14008d680` thunk, and the async handler's `+0x00` points to
+  `0x140099100`. Nothing here identifies consumer-side counter logic.
+- `mpdev144-msglossring-vtable-lea-refs-20261125.txt` (SHA-256
+  `332DFD6821A033D410252263666A155A031C5CF2F78FAD63E08121A3176C1D4C`) found five
+  RIP-relative LEA references to `MsgLossRing` vtable `0x141431638`: the
+  create-handler tail (`0x1401cc790`) plus four construction/send sites in
+  `MiniBossTrackerContext`/`MiniBossTrackerRingHole`
+  (`0x140719f12`, `0x140719fca`, `0x140722986`, `0x1407232ff`). The async vtable
+  has one reference inside `CreateAsyncHandler@MsgLossRing` (`0x1401cc75d`).
+- `mpdev145-msg2200-cmp-refs-20261125.txt` (SHA-256
+  `4F97A079FD87F63AEFA874A2A602D6DB52131D0EEC8DE5FF194464BF9B395191`) searched
+  three plausible `cmp`/`test` encodings for immediate `0x2200`; all returned
+  `COUNT=0`.
+- `mpdev146-msg2200-immediate-all-20261125.txt` (SHA-256
+  `89C6567522EA68989F197A67A1902CBE624C045C760F3CF7CEA41CB22F6CA854`) found the
+  raw immediate at the four `MsgLossRing` construction sites above plus many
+  non-code hits. No handler-side compare was established.
+- `mpdev147-msglossring-async-handler-methods-20261125.txt` (SHA-256
+  `6865BE9E6F6D0CE6C1B99517D872421D573EA62B705FA65D6164140F763A329A`) aligns
+  `0x140099100`-`0x140099280`. `0x140099100` is destructor/cleanup-shaped and the
+  following aligned method is an unrelated larger destructor; neither updates a
+  ring counter.
+- `mpdev148-msglossring-create-handler-aligned-20261125.txt` (SHA-256
+  `877185E205E71A35743676353BE7851F09130F4913D4DFC337BD2721D288D362`) aligns
+  `0x1401cc710`-`0x1401cc7cb`. It allocates a `0x60`-byte async handler, copies
+  message fields, installs both vtables, and returns; no numeric ring read or
+  write occurs.
+- `mpdev149-msglossring-send-140719f0d-20261125.txt` (SHA-256
+  `7E809337099FFB9039F02B2D4DE65A35D45215AA7F0650BC63E8CBFAD720F00A`) aligns
+  `0x140719ec0`-`0x140719fbb`. It constructs `MsgLossRing` at `0x140719f04` and
+  `0x140719fbc`, sets several byte/dword fields, reads a dword from world data,
+  and dispatches through `0x140ec97f0`. Those payload fields are not established
+  as ring currency.
+- `mpdev150-msglossring-send-140722981-20261125.txt` (SHA-256
+  `EE01F7EA5868D71B791B2C404530ED3B305281A0573D7747F976E8666735A8EF`) aligns
+  `0x140722940`-`0x1407229c9`. It constructs the message at `0x140722977`, sets
+  a dword from `[rsp + 0x108]` plus two byte fields, and dispatches through
+  `0x140ec97f0`; no counter logic is present.
+- `mpdev151-msglossring-send-1407232fa-20261125.txt` (SHA-256
+  `46D3DF4CB886F3A7D22FDED22B998F3D553C3EDE9BA050428D883874C4F7E487`) samples
+  `0x1407232b0`-`0x140723330`. The first two bytes are a misaligned fragment; the
+  aligned construction at `0x1407232f0` sets one dword and two bytes before
+  dispatch (`0x140ec97f0`/`0x140d32e40`). It is a send site, not a consumer.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Static enum and message-consumer continuation, mpdev152-156 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime ring
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev152-numberringspawner-enums-ascii-20261125.txt` (SHA-256
+  `5F9D85474463F1F7446F00B9724CD7B04D90404C05FE993AAA91B426ADC671FA`) uses a new
+  ASCII-safe offline reader (`tools/mpdev-static-enum-dump.py`) with a corrected
+  `0x18`-byte enum-entry stride. `ObjNumberRingSpawner` has two RFL enum arrays:
+  `NoType` at `0x14129a8e8` with six values (`No1`-`No5`, `Num_No`) and `Event`
+  at `0x14129a900` with three values (`EVENT_NONE`, `EVENT_VISIBLE`,
+  `EVENT_INVISIBLE`). Combined with `mpdev131`, this identifies the bytes copied
+  into `ObjNumberRingInfo+0x290`/`+0x294` as the spawner's `noType` and
+  `EventType` fields. They are spawn-configuration enums, not ring counters.
+- `mpdev153-msgraise-async-dtor-aligned-20261125.txt` (SHA-256
+  `4501E1DB258522342D1647CD12E8308E56FF10950BE70762AB8B937E15DB1B75`) aligns
+  `0x14008cc30`-`0x14008cc90`, the first slot behind the `MsgRaiseRings`
+  async-handler vtable. It constructs an embedded object at `+0x28` through
+  `0x140edb2e0`, stores a static pointer at `[this]`, and optionally calls a
+  virtual method. It is constructor/setup-shaped and contains no ring read or
+  update.
+- `mpdev154-msglossring-base-vtable-20261125.txt` (SHA-256
+  `92BBAB1E3DCB642F992409DABE7B9D24E0FEB41CD29EA142FAB92EF419654B83`) reads
+  `0x141431558`, the static pointer target stored by the analogous
+  `0x140099100` path. The bytes are ASCII data strings, not a code vtable; no
+  base-class `Process` slot is qualified from this.
+- `mpdev155-numberring-msg-cmp-refs-20261125.txt` (SHA-256
+  `3E1791B71B7E9135CDCBFE39740E53150162865DFC881F091FB5BF28905EACD6`) found no
+  handler-side `cmp` immediate for `0x235E` or `0x21E3`. Three `0x2419` hits are
+  all inside the `UINumberRingCounterContext` constructor/handler region
+  (`0x140a5ada7`, `0x140a5ae57`, `0x140a5b3c9`), consistent with the already
+  qualified collectible-bit/visibility path, not ring currency.
+- `mpdev156-numberring-msg-vtable-lea-refs-20261125.txt` (SHA-256
+  `D156EE3A9D6CC16B5E4A6998C8FE9CE9639536D777D6BED3AC75A4CA2F2B61A8`) found two
+  RIP-relative LEA references to `MsgUITakeNumberRing` vtable `0x141432128`
+  (both in `GameModeNumberRingExtension` construction), two to
+  `MsgTakeNumberRing` vtable `0x1414a2940` (in `ObjNumberRingInfo` construction/
+  teardown), and four to `MsgIsTakeNumberRing` vtable `0x1414a2970` (three in
+  `ObjNumberRingInfo`, one in `UINumberRingCounterContext`). All are
+  construction/send-adjacent; none qualifies as consumer-side ring logic.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Static dispatch/send-path continuation, mpdev158-186 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline, read-only reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols only. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime
+ring counter, hook point, authority model, resolver, protocol mapping, or write
+target is qualified. A new tool, `tools/mpdev-static-immediate-context.py`,
+scans raw aligned imm32 values and confirms no consumer-side `cmp`/`sub` against
+`0x235E`, `0x21E3`, `0x2299`, or `0x2200`; the only real consumer compares are
+three `0x2419` hits inside `UINumberRingCounterContext`, already qualified as the
+number-ring collectible-bit/visibility path, not ring currency.
+
+- `mpdev158-player-blackboard-processmessage-20261125.txt` (SHA-256
+  `6F76871BF69810E5DDDB79255DC77B136F6398505204C75DBC1171554B8EBC51`) and
+  `mpdev159-player-blackboard-processmessage-target-20261125.txt` (SHA-256
+  `4B8C7007177CC4B7EEA2D113DA73BFEC0D0B46853686502D9B95FD7DB12739F2`):
+  `PlayerBlackboardService` dispatch reads; no ring-message branch.
+- `mpdev160-processmessage-id-cmp-refs-20261125.txt` (SHA-256
+  `64A093A1DDE55D2087AC8CAFD5C438AE3CE832D7C98648C8915D043EEACFA32D`): no
+  `cmp [reg+8],<id>` hits for the ring message IDs.
+- `mpdev161-unkfunc1-callers-20261125.txt` (SHA-256
+  `80629109A8F9E07B7A9F83E91D292979859F2C53E2C619B0C23427A5D476FEC6`) and
+  `mpdev163-unkfunc1-body-20261125.txt` (SHA-256
+  `068EFB1E42F580E563880DB640B239EF8D70CEEBFD788C49246AD6C2523B174F`):
+  `0x14008d680` is an identical-code-folded `xor eax,eax; ret` stub shared by
+  many unrelated symbols; it carries no ring semantics.
+- `mpdev162-sendmessage-to-uiobjects-20261125.txt` (SHA-256
+  `9BE6C8A1E42729B5CE4BA1516F4FEE992E7C8ADEF48DE7FD95B8A3AC65CDFA12`):
+  `SendMessageToUIObjects` (`0x1401547b0`) iterates UI object IDs and uses a
+  generic send routine; no ring-specific logic.
+- `mpdev164-message-registration-target-20261125.txt` (SHA-256
+  `440F115A5EDE133BA0794FA2B7FE731C4CB635BCD9E4498D3161EEDE299CE232`),
+  `mpdev169-register-handler-610-20261125.txt` (SHA-256
+  `245E3214C395BC9D78704D3AA911C1C5CE055BC04F33C5D1E47AE0D9384B325E`), and
+  `mpdev170-register-handler-7f0-20261125.txt` (SHA-256
+  `3339ACFE6183B1BBBACECB17BA136782B6B913948DA4DA5DB2ADA6A80ED7A15D`):
+  registration/allocator helpers only; no ring handler qualified.
+- `mpdev165-messenger-send-9760-20261125.txt` (SHA-256
+  `A96EBAD7C9D69ACF02880EB33C33A680FA5BB8944EF7448A7B7F7B47E3625CBC`),
+  `mpdev166-messenger-default-9740-20261125.txt` (SHA-256
+  `24CFE7E1221804E3860F822CAC79DA4BD7A8616C6E57B1D92CB7E2857EB9731A`),
+  `mpdev167-messenger-send-target-20261125.txt` (SHA-256
+  `030C7417B59B1151F5B8B11AA3C692C27C4CEE97F1F78748EDD72C67ADD88341`), and
+  `mpdev168-messenger-default-target-20261125.txt` (SHA-256
+  `882B4B3735C4511AE9A4DDDDB0C636A47C0277D9C9FF42822E7C051BEDE345B3`):
+  `0x140ec9760`/`0x140ec9740` are thunks into `.xtls`; the send path copies a
+  message and calls `MessageManager::AddMessage`, no ring update.
+- `mpdev171-ring-msg-immediate-aligned-20261125.txt` (SHA-256
+  `3C8D182F6C8CD26ED1BD3D2825106FF781ED13B107946545321416AC3E4DD7D0`):
+  371 aligned imm32 hits total, but no consumer compare for `0x235E`,
+  `0x21E3`, `0x2299`, or `0x2200`; only `0x2419` has compares (all
+  `UINumberRingCounterContext`).
+- `mpdev172-objnumberringinfo-vtable-20261125.txt` (SHA-256
+  `B175F6F95F72A93B1BAC8A96CF0E0E6388D284E6FB128C43F7585B0E09DDCB56`),
+  `mpdev176-numberringinfo-vtable-methods-20261125.txt` (SHA-256
+  `41848C24CB8A555BDE50DA2411961AF55185AD248E6F2AD13092DE7B6C57F48F`), and
+  `mpdev177-gameobject-receivemessage-full-20261125.txt` (SHA-256
+  `8ACE15C85F9F0316FBEBAE7A557F1CBB86F19AE222778C97B668D040AC1FEAC9`):
+  `ObjNumberRingInfo::ProcessMessage` compares only `0x200`, `0x304`, `0x20d6`,
+  `0x222c`; the number-ring message IDs are not handled there. Vtable reads
+  over-ran the true table length (later slots are adjacent data).
+- `mpdev173-gameobject-receivemessage-20261125.txt` (SHA-256
+  `0FA551C675BB65FCD39287B71AF77E855911A40286CF5F6F95616CAA5BEBEB75`) and
+  `mpdev179-messenger-receivemessage-20261125.txt` (SHA-256
+  `AA752BFE460DFA5B5D8966BC64B3F3C478F052CB38C9CDC0E8DDBE474D606751`):
+  `GameObject`/`Messenger::ReceiveMessage` dispatch via vtable and a `+0x18`
+  mask; no ring-specific branch.
+- `mpdev174-numberring-createhandler-51e0-20261125.txt` (SHA-256
+  `9EB58B64747E7249614FD8D151BF93140ACC13F6F17ECFA4182220BCAD8EB561`) and
+  `mpdev175-numberring-createhandler-51ff-20261125.txt` (SHA-256
+  `0F51C6A519467E3A9B257253A294124BC74D6742B73954008308F8883A8EE1E1`):
+  number-ring async-handler constructors; allocation/setup only, no currency
+  write.
+- `mpdev178-numrings-setter-callers-20261125.txt` (SHA-256
+  `52DF3503F87D29986EBE09DDE6E68D2DF21E9250E75FDDAF2449282C9A2FB114`):
+  the `numRings` setter (`0x140afff30`) has only seven static callers, all
+  save/UI/portal contexts; no pickup path qualified.
+- `mpdev180-dispatchcallback-20261125.txt` (SHA-256
+  `ED3A03E859D43752A1FF75F0EA226501FDA086A9A5C84F9AB963073C0E431479`),
+  `mpdev181-addmessage-20261125.txt` (SHA-256
+  `C5037A12F2CD9E703A33B582A1482BDB49A6FF3A80DC6CCF422318DD3F92DDBB`), and
+  `mpdev182-msgraise-createhandler-full-20261125.txt` (SHA-256
+  `4ECE4599F3889C332F95E38F41B445164392B716AB03CAC86DE34D483D64E21C`):
+  `MessageManager::DispatchCallback` (`0x1527d9cb0`) re-sends deferred messages
+  through `Messenger::SendMessageImm` (`0x140b7c180`); async handlers are
+  send/defer helpers, not ring-count update sites.
+- `mpdev183-msgraise-vtable-lea-refs-20261125.txt` (SHA-256
+  `FB495D134CB2A240579A853B9C327813B2205AE90DC2F63F096E4FD0BE72F3E2`) and
+  `mpdev184-sendmessageimm-callers-20261125.txt` (SHA-256
+  `9E41F3E2DC1DB65A801F7F14C8403695F23B64F65A72F2DABA4C53844710C289`):
+  all `MsgRaiseRings` vtable LEA refs are construction/send-adjacent; no
+  consumer qualified.
+- `mpdev185-gamemodenumberringextension-vtable-20261125.txt` (SHA-256
+  `A1FB9258FA8370C205428FC8DBB05378B93A7D46B39260BDC6D4CF127682CD8C`) and
+  `mpdev186-gamemodenumberringextension-ctor-20261125.txt` (SHA-256
+  `332EB6305BD58041B38843163D2E7AB29B521B67548CFFB47CC01B44171D7BA7`):
+  `GameModeNumberRingExtension` maintains a 5-bit collectible mask at `+0x1a`;
+  its take method (`0x1401d1630`) `bts`-sets the bit for `noType`, sends
+  `MsgUITakeNumberRing=0x2419` through `SendMessageImmToUIObjects`, and
+  hides/completes the group when all five bits are set. No ring currency write.
+- `mpdev112-numberringinfo-take-flow-aligned-20261125.txt` (tail read this
+  pass): the `0x235F`/`0x235E` path is a `MsgIsTakeNumberRing=0x21E3` query with
+  `noType+1`, a `0x235F` request/send helper, a `MsgTakeNumberRing=0x235E`
+  notification with `noType` payload, then a visual-effect table lookup indexed
+  by `noType`; no ring currency write.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
+## Unknowns / not yet checked
+
+- Whether other players have the same Steam build id (16857613).
+- An independent source confirming Hedgehog Engine 2 from the exe/install.
+- Full feature list, current build and bug reports for HE2MP.
+- Other projects in Japanese/Russian communities, GameBanana, Nexus, Discord,
+  archive.org (research in progress).
+- Which parts of prior MP-DEV evidence are sound and which are obsolete.

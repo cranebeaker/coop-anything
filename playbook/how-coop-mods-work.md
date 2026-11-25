@@ -206,8 +206,36 @@ A joining client must be brought to the current state. Seen approaches:
 - Skyrim Together Reborn: joiner follows the leader's world
   ([Wabbanode](https://wabbanode.com/help/skyrim-together/understanding-parties-in-skyrim-together-reborn)).
 
-Build "snapshot on join" (full state dump, then deltas) early. It also doubles as your
-reconnect path and your test oracle.
+For a state-replication design, build "snapshot on join" (full state dump, then deltas)
+early. It also doubles as your reconnect path and your test oracle.
+
+#### Late join with an input journal
+
+If a game already runs in input lockstep and both clients can reproduce the same
+mission start, replay can bring a guest up to the host's current tick. First prove
+that a recorded mission segment can cross an area boundary on a second client.
+Include semantic state such as area, player roles and campaign flags in the comparison.
+Exclude process-specific addresses and uninitialized padding from checksums.
+[Friend or Foe's lockstep and state checks](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/ARCHITECTURE.md#input-lockstep).
+
+1. Retain a bounded, tick-indexed journal of the inputs and simulation decisions
+   needed to replay from the agreed mission start. Set a retention limit and a
+   catch-up deadline so the host has a predictable wait.
+2. Start the incoming client from the same mission state. During catch-up, check
+   sampled state and record when the native game loads an area or releases
+   controls. Friend or Foe found that matching RNG could still coincide with
+   early guest controls after a streamed transition.
+3. Hand over the companion only after both clients agree on the replay tick and
+   sampled state and reach ordinary gameplay. If history is missing, the guest
+   cancels, or replay disagrees, refuse admission and let the host resume play.
+   [Friend or Foe's admission results and failed attempts](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/STATUS.md#v110-beta-mid-mission-joining).
+
+Start the regression suite with two actual game instances. Exercise first arrival
+with simulated delay and stalls, reconnect after a seat swap, and admission after
+a native area transition or cutscene. Count matching frames after control passes to
+the guest. Separately cancel a join and try one with exhausted history, then assert
+that the host can keep playing. Report local and two-PC transport checks separately.
+[Friend or Foe's test procedures](https://github.com/IlkinQafarov/spider-man-friend-or-foe-online/blob/49ef73e6799c45a1028237573d7033af0e7bf126/docs/TESTING.md).
 
 ---
 
@@ -516,6 +544,31 @@ rule and a kill switch (like `EnemySyncMirroring`) early.
 Exit test: both clients damage the same enemy; both see the same health and death; drops
 appear once. Difficulty: hard. AI is the long tail (TES3MP still lists AI as its main
 open problem; OOT True Co-op lists aggro, sounds and particles as gaps).
+
+Damage traps seen when the remote player has more than one stand-in on the host (in Shadow of War
+an invisible allied soldier stands where the remote player's picture stands, because enemies do not
+attack the picture itself; [notes](../games/shadow-of-war/NOTES.md), session cm):
+
+- **One swing, two victims, two damage messages.** A swing that reaches both stand-ins is reported
+  once per victim, and the remote player takes it twice (12 of 31 swings in one test). Drop a second
+  report of the same attacker and attack on the other stand-in within a few hundred milliseconds.
+  Remember the last report of each attacker, not one report overall: two enemies landing the same
+  attack in the same frames interleave their reports (one, two, one, two), and a single remembered
+  report let both duplicates through.
+- **Send the amount, not a stand-in attack.** Damage the remote side's enemy pictures take outside
+  the hit function (arrows, gear effects) was first replayed on the host as a few stock sword
+  strikes, so a 60.5 loss landed as 96. A message with the exact amount, applied as a health
+  change (and as the game's own death when it reaches zero), keeps both sides equal.
+- **Do not double count a kill animation.** A counter-kill reports its strike at once, but the
+  health drops frames later; a "health lost outside hits" check then reported it again. Skip that
+  check for a short time after a reported strike on the same enemy.
+- **Credit only what the remote player did.** The remote side's gear (an aura, recoil) also hurts
+  pictures of the host's allies, and falls cost health too; forward only losses of hostile enemies,
+  and not right after a fall.
+- **Only enemies hurt the remote player.** The host's own allies brush its stand-ins too: a tamed
+  wolf's running lunge passed through one and was forwarded as damage, twice in 125 ms. Check the
+  attacker's side before forwarding a hit on a stand-in (the follower flag did not cover tamed
+  beasts there; the spawn type did).
 
 ### Stage 4: world and quest state
 

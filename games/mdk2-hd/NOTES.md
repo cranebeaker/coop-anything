@@ -1060,15 +1060,15 @@ Game-free and motion coverage expansion:
   stationary controls, missing jump rise, NaN/Inf and malformed numbers. Total
   Python tests: 26, including resource/diagnostic checks for sharded runner gates.
 
-## 2026-10-22 mdk-save: lab trial
-- Slots 2,3,4 via `lab acquire --slots 3` (no wait), `eval "$(lab env mdk2)"`, ports 27932+.
+## 2026-10-22: revive and save suites next to other agents' games
+- Three leased game copies, ports 27932 and up.
 - tools/qa_revive.sh: 33 passed, 0 failed. tools/qa_save.sh: 38 passed, 0 failed.
-- Both scripts already lab-aware (MDK2_DIR*, MDK2_PORT, MDK2_PIDS from env); no changes.
+- Both scripts already read their game folders, port and pid files from the environment (MDK2_DIR*, MDK2_PORT, MDK2_PIDS); no changes.
 - No collisions seen; the other agents' Witness games ran concurrently, mdk_kill is path-scoped.
 
-## 2026-10-22 mdk-sweep: lab trial, tools/qa.sh
-- Observed: `lab acquire --slots 2` from the worktree gave slots 0,1 (owner mdk-sweep); an acquire run from another cwd takes that folder's name as owner (released it). Port 27900, dirs C:\coop\lab\mdk2\s0/s1, pids under run\mdk-sweep.
-- Observed: `tools/qa.sh` with lease env: 34 passed, 0 failed (about 4 min), while mdk-save held slots 2-4. No collision seen.
+## 2026-10-22: tools/qa.sh next to other agents' games
+- Observed: two game copies leased for this run on port 27900; a lease taken from another folder is registered under that folder's name (released it).
+- Observed: `tools/qa.sh` with leased copies: 34 passed, 0 failed (about 4 min), while another agent's suites ran on three other copies. No collision seen.
 - Observed: check "client hurt only via host" passed vacuously (0 HURT, 0 host hits).
 - Not run: qa_n.sh, sweep.sh. No code changed.
 
@@ -1403,3 +1403,85 @@ Derived facts:
 Evidence:
 - Fixed code: character-wheel gate 12/12, Kurt -39.09 124.64 -> -29.42 126.11. `MUTANT=nounstick`: caught. The
   previous code with the new test: the wall check fails. Mod commit 75998a7, released as v0.2.0-alpha.
+
+## 2026-10-27: F1 Mod Quick Guide and launcher Quick Guide
+
+Observed:
+- `COM_SHOWBARS` (host `coop_spawn` Poopsy spawn / client 10x2 gun damage on `coop_dog1` or nearest enemy) was previously bound to `F1` (scan code `59`) in `coop.devkeys`. Moved to `NUM 1` (scan code `79`) in `lua/coop_dev.lua`, `tools/qa.sh`, `tools/qa_n.sh` and `tools/sweep.sh`.
+- Holding `F1` (`input_down(59, VK_F1)` while `!chat_blocks_keys()`, or `coop_guide_show(1)`) in game now draws a full-screen 3-column Mod Quick Guide overlay (`guide_on` / `guide_draw` in `bridge/ctrlview.c`, hooked in `hud_frame` in `bridge/hud.c`). `coop.ApplyControls()` feeds the active preset and custom bindings to the bridge via `coop_guide_keys`. `F1` is also shown as `Guide` on the `Options > Co-op > Controls` Co-op keyboard diagram.
+- The launcher (`bridge/launcher.c`) also opens a full-window 3-column Quick Guide overlay while `F1` (`VK_F1`) is held (or toggled via `key 112` in headless test mode), keeping the title artwork on the left when `F1` is not held.
+- `tests/input_test.c` needed `struct build_addrs ADDR;` after `bridge.h` switched Lua/engine pointers to `ADDR`.
+- Validation: `python3 tools/qa_all.py offline` passed (7/7 gates), and `python3 tools/qa_all.py features --gate two-player --gate controls --gate launcher --gate lobby` passed (`two-player`, `controls` 40/40, `launcher` 33/33, `lobby`).
+
+Derived:
+- Drawing the launcher's `F1` full-window overlay at the end of `render()` after normal immediate-mode widgets run keeps `ids`, `nhits` and `focus` unchanged while `F1` is held or released.
+
+## 2026-10-27 to 2026-11-11: from the alpha to the public beta (v0.4.0-beta.1)
+
+Source for this section: the mod's `docs/RELEASE-NOTES-v0.4.0-beta.1.md` at commit `ecb208f`
+(https://github.com/TommoDotCommo/mdk2-coop/blob/v0.4.0-beta.1/docs/RELEASE-NOTES-v0.4.0-beta.1.md). The session
+notes behind it were not kept in this file; what follows is what the release notes state and the gates they name.
+
+Observed (each has a gate with a mutant that must fail, named in brackets):
+- A room's `OnItemUsed` script runs only in the game of the player who used the item, and the script state it
+  changes is not synced. Level 3: one player's duct tape plugged the leak and made the cord item in that game
+  only. Fix: a reliable "item used" message, kept by the host for late joiners; the others run the room's handler
+  with the user's puppet as the player. Covers `l3_w_hub00` and `l3_bay`; `l3_air00` dresses the user's own body
+  and stays local. (`tools/qa_itemused.sh`, `MUTANT=noitemused`)
+- The game changes enemy hp without a hit (a downed grunt stands up again at 60; a script tops up a turret). The
+  host sent hp only at spawn and with each hit, so a client kept the old value; a mirror at 0 hp counts as a
+  corpse to the game's own checks. Fix: the host compares each enemy's hp with what clients were told on every
+  enemy update and sends an hp-only message. (`tools/qa_hpsync.sh`, `MUTANT=nosync`: 97 stays 97; with the fix 33
+  then 61 within 3 s)
+- A game object attached to a bone is moved back onto that bone in every scene update, over a position set from
+  outside. The level 2 mantas sit on a bone of an animated flock model; a client's copies flew the flock's
+  circuit while the host's attacked. Fix: the client detaches mirrored enemies from the bone.
+  (`tools/qa_flyers.sh`: at most 97.0 units of drift with `MUTANT=attached`, at most 3.3 with the fix; 91.8 and
+  9.0 at twice the game speed)
+- A client's Doc blowing enemies moved only the client's copies. Fix: the host gives the client's Doc the game's
+  own push volume while that player blows. A client's blower no longer pushes its own copies (that gave them
+  local physics; a copy stayed against a doorway while the real enemy walked away). (`tools/qa_blower_live.sh`)
+- Max's jetpack (a model attached to his torso on pickup), Doc's blower and its air puffs are built by the
+  character's own code, which a puppet never runs; they are now built on the puppet with the game's calls. The
+  jetpack flame is two model parts shown and hidden by Max's thrust code; which parts are shown is carried from
+  the owner (within about 100 ms). Kurt's parachute copy carried the game's hidden bit (also used for things in
+  a room nobody is awake in) when the two players were in different rooms; the shown bit is carried from the
+  owner and written every frame after the room pass and before the draw.
+- Items the game gives Doc at a level 3 Doc checkpoint were drawn mid-screen for the whole level when given in
+  the level's first frames, before the inventory display was ready; given a second later they stack normally.
+  (`tools/qa_doc_items.sh`)
+- Level 3 boss: it picks where its psionic blast lands in its AI, which only the host runs. A client's blast
+  script had no target: a Lua error at every blast and, in one run after several of them and two checkpoint
+  restarts, "too many nested blocks" for every Lua call through levels 4 and 5. Fix: the client reads the target
+  off the boss's position. Found by leaving the sweep at the boss for two minutes instead of seven seconds.
+  (`tools/qa_boss3.sh`)
+- Level 8 opening: the level scares the cone creatures and each removes itself about two seconds later. When the
+  host's removals arrived before the client's copy of that script ran, the client crashed at `mdk2hd.exe+0xd055`
+  reading 0x84 (in `mdkSetLuaEvent`). Fix: the client skips a creature that is gone. Seen once, on a busy
+  machine. (`tools/qa_cones.sh`, mutant crashes at the same address)
+- Crash guards: a position set on a missing object (`mdk2hd.exe+0xdda8`) and a stale object handle in the
+  per-frame scene pass (`mdk2hd.exe+0x570bd` on the Overhaul build, `+0x570dd` on the Steam build). The scene
+  guard was written against the Overhaul address and was silently off on Steam until a Steam-only pass.
+  Both verify the game's code bytes first. (`tools/qa_setpos_guard.sh`, `tools/qa_scene_guard.sh`)
+- Invite-only lobbies: when a guest's game was up before the host's, the host's first packet from it could be a
+  player packet instead of the invite key, and the host refused it once. The key now goes ahead of every player
+  packet until the host answers. (`tools/qa_host.sh`, `MUTANT=latekey`)
+- The updater test failed whenever it ran on a game copy holding a stray file from an earlier run; its
+  after-restart check now ignores files the copy held before the update.
+
+Derived:
+- State that lives in level script variables is not covered by syncing objects: every script entry point that
+  one player's action triggers (item use, room entry, boss proximity) has to be run on every machine or its
+  result sent.
+- A mirrored object must be detached from anything the engine re-applies each frame (bone attachment, physics
+  volumes), or the snapshot position loses.
+- A short stop at each checkpoint misses bugs that need the fight to run: the boss bug needed two minutes.
+- A guard keyed to one build's address needs a gate on every supported build.
+
+Unknown:
+- Why `first-enemy` is intermittent (3 of 5 runs failed on the release commit: the level 1 dog's first bite on
+  the host took over 20 s). The release notes guess at the test's placement; not run down.
+- Why `remote-events` and `projectiles` each failed one run in three on the Steam build two commits earlier.
+- Whether the level 3 boss and level 8 bugs were present in v0.3.5-alpha.
+- Whether other level scripts have the level 8 shape.
+- Whether the mod works under Proton, under Mod Organizer 2's virtual file system, or on a clean PC.

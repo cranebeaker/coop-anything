@@ -834,3 +834,61 @@ Observations (ran):
 
 Derived: for a friend who is in a joinable lobby, Steam delivers Join Game as GameLobbyJoinRequested (333), the same
 callback as an accepted invite; GameRichPresenceJoinRequested (337) would need a connect string without a lobby.
+
+## Later work, in brief (2026-10-26 to 2026-11-18)
+
+From 2026-10-26 the work continued in the maintained repository
+(https://github.com/HitchLangley/far-cry-2-campaign-coop); its commit history and issues hold the details. Summary of
+what was observed, all on Steam 1.03, mostly two copies on one PC:
+
+- **Avatar animation.** Writing the body position gave a sliding idle pose. Driving the avatar through the game's
+  ThirdParty memento and NetPlayer code (as in the stock multiplayer) gave walking, running, aim and stance; a speed
+  fix uses the multiplayer flag window on the third-person beautifier. Weapons travel by archetype name and switch
+  with the game's holster and draw. Two PCs: avatar animation, shots, hits and map arrows.
+- **Menu and Steam.** The lobby moved to Far Cry 2's AppID 19900; the menu got Story Mode > Cooperative with host and
+  join rows; the joiner loads the host's save, restarts with it on a host reload, and goes back to the menu when the
+  host leaves. Two PCs.
+- **NPCs.** The host's AI runs every NPC within 80 m of either player; on the joiner each NPC's agent is paused and
+  driven like the avatar, plus move states, movement resources and blackboard values so that smart terrain and
+  mounted guns match. Visible puppet shots use the fire event only (the weapon fire request crashed the joiner at
+  Dunia+61F293 four times out of four).
+- **Enemies and the joiner.** NPC target selection reads component FE4090 of the target; the network avatar lacks it.
+  An archetype `coop.PawnPlayerAI` (network avatar plus the player's or a buddy's CFCXAIComponent, `bIsAI = 1`) is seen
+  and shot by host NPCs; with `bIsAI = 0` the game crashed at Dunia+9635EF.
+- **Town ceasefire (2026-11-13).** In Pala, the joiner's shots raised the host's town alarm (its hits count as the
+  host player's); 13 s later every town NPC was in combat and killed the host's player in 2.5 s while the joiner's
+  avatar, still inside the ceasefire zone for the AI, was not attacked; without a target the NPCs turned in place at
+  ~200 degrees per second. Clearing the avatar's zone flag while the alarm is up gave only 3 hits on it in 100 s.
+- **Joiner NPC twins (fixed 2026-11-13).** "Missing for 8 s" was stamped `now | 1` and compared unsigned, so it fired
+  in the first frame; the joiner spawned copies of save NPCs that were still streaming in and removed the originals on
+  arrival (an R6025 pure virtual call and an access violation at Dunia+331F9B followed such removals).
+- **Performance (2026-11-13).** A 16 MB memory-scan step for NPCs and vehicles took 47-78 ms in paged-out ranges (2-5
+  hitches per 10 s on both copies, PC with about 2.5 GB of free memory). NPCs now come from the AI world's agent list
+  (same count as the scan: 18 on the host, 15 on the joiner); no frame over 50 ms in the check runs.
+- **Town alarm both ways (2026-11-17).** The joiner's own shot breaks the ceasefire on the joiner first; the host only
+  saw hits, and a first hit that kills puts no host NPC into combat. Both copies now send the alarm (and the zone id)
+  as soon as it rises, and the joiner writes the host NPCs' combat state and zone into its puppets. Measured on two
+  copies on one PC: about 0.06 s each way.
+- **Town NPCs target the joiner (2026-11-17).** A hardware write breakpoint on an NPC's target entry found the writer:
+  the threat scanner at Dunia+99A050 rebuilds each NPC's target list every frame. It takes a perceived agent standing
+  in a ceasefire zone only if the agent is flagged as the player (agent+0x94C, set by the engine only for the real
+  player's agent); outside towns it goes by army. The joiner's avatar was perceived (threat 1.00 over a 0.40
+  threshold) but never had the flag. The host now gives the avatar the flag, and points the global player agent at
+  it, only while an NPC nearer the avatar than the host's player runs that scan, and restores both right after.
+  Run in Pala (two copies on one PC, joiner 37 m from the host): first NPC hit on the joiner 1.9 s after the alarm,
+  50+ hits from 5 NPCs, all applied on the joiner. Still wrong on the joiner's side: some puppets loop their fire or
+  show recoil without shots, a doorman stayed kneeling, sharp turns, the avatar can spin when out of view.
+- **Both players hunted (2026-11-18).** With the host breaking the ceasefire 106 m from the joiner, NPCs near the
+  joiner still went for the host: much of an NPC's per-frame update (Dunia+973490: search, movement, aim) reads the
+  global player agent directly. For NPCs nearer the joiner the host now points that global at the avatar for the whole
+  update. A rank comparison (Dunia+963510) then crashed reading a component only the real player has; that function
+  sees the real player again. Run: 18 s after the host's shot 64 m away, 4 NPCs hit the joiner 45 times; no crash.
+  On the joiner the game recounts the town alarm from its own NPCs every frame, so the "Escape the cease-fire zone"
+  message needed the alarm set right before the player's own update.
+- **Bump damage (2026-11-18).** Pushing into the other player's avatar cost 5-16 HP on both copies, with a pain shout.
+  A write breakpoint on the player's health led to collision stims (type 4, built by Dunia+682F0, sent by Dunia+510850
+  to both bodies through the entity's event method). Every one named as "what we hit" the same town NPC 24-30 m away,
+  never the avatar (cause unknown), and the old bump filter took type 4 for a perception stim. A collision stim on
+  either player whose named source is over 5 m from it while the players are within 1.2 m is now dropped before
+  damage and reaction; hits by vehicles and NPCs come from close by and pass. Checked by bumping for about 5 minutes
+  on two copies on one PC: health unchanged, no flinching; a vehicle hit next to the avatar was not checked.

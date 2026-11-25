@@ -582,6 +582,19 @@ def check_crash_is_visible_in_crashlog(mut):
         check(got == [], f"a hostile pattern must not run as code: {got}")
 
 
+def check_process_list_in_any_language(mut):
+    """The pid list and the Windows crash records must work on a non-English Windows in Python's UTF-8 mode (test_all.py
+    runs every suite with -X utf8=1). tasklist's Russian output in the OEM code page once made list_pids crash there."""
+    hook(mut)
+    mine = winproc.list_pids(PROC)
+    check(os.getpid() in mine, f"this Python ({PROC}, pid {os.getpid()}) is in the list: {mine}")
+    check(winproc.list_pids(PROC.upper()) == mine, "the image name is matched without regard to case")
+    check(winproc.list_pids("no-such-image-" + RUN_TAG + ".exe") == [], "a name nobody runs gives an empty list")
+    got = crashlog._wer_events(60 * 24 * 30, ".")
+    check(isinstance(got, list) and all(isinstance(l, str) for l in got), f"the event query gives text lines: {got!r}")
+    check(not any(l.startswith("(could not query the event log") for l in got), f"the event log was read: {got!r}")
+
+
 def check_jobs(mut):
     cfg, tmp = make_world()
     with slot_env(tmp):
@@ -1660,7 +1673,7 @@ REAL = [
     check_provision_is_idempotent_and_destroy_is_safe, check_copy_mode, check_disk_check_refuses, check_pins_detect_changes,
     check_guard_write, check_lowcost, check_readiness_probes, check_adapter_wait_ready_and_custom_adapter,
     check_launch_and_pid_scoped_kill, check_loader_child_found_by_process_tree, check_single_instance_games,
-    check_crash_is_visible_in_crashlog, check_jobs, check_jobqueue_locks,
+    check_crash_is_visible_in_crashlog, check_process_list_in_any_language, check_jobs, check_jobqueue_locks,
     check_pool_exclusive, check_pool_pair_lease_order, check_pool_size_and_slots, check_pool_recycle_after_k,
     check_pool_dirty_recycles, check_pool_expiry, check_pool_renew, check_pool_kills_only_own,
     check_pool_reap_previous_only_recorded, check_pool_crash_restart, check_pool_dead_instance_never_leased,
@@ -1735,7 +1748,7 @@ def kill_tagged():
     ps = ("Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'python*' -and $_.CommandLine -like '*--tag " + RUN_TAG
           + "*' } | ForEach-Object { $_.ProcessId }")
     try:
-        out = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=60).stdout
+        out = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=60).stdout.decode("oem", errors="replace")
     except Exception:  # noqa: BLE001
         return
     for ln in out.split():

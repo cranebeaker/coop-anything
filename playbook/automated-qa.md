@@ -56,6 +56,11 @@ animation checker.
 
 - **Check that the test can fail (mutation twins).** Turn the fix off and run the test:
   it must fail. Several "passing" tests were testing nothing until this check.
+- **Prove the start state before blaming the mod.** A prepared save that lost a mod threw during world load in Tale of Immortal. A per-frame UI timer then threw inside the game's
+  timer loop, so every later save and load stalled, and that looked like a mod merge bug. A control with the mod's session off (time a plain save) and the game's own exception log
+  found it after two wrong theories. Check that a save loads with no exception before building a test on it.
+- **A mod's success flag can be hollow too.** Tale of Immortal Multiplayer logged SHARED WORLD ACTIVE with no merge, because its flag only compares save folder names. A separate check
+  that the two players are different characters caught it.
 - **Hollow passes.** A test that ends early, or a mode that silently fell back to single
   player, still prints PASS. Assert the mode you think you're in at the start (number of
   players, flags, map), and assert that the step you care about actually happened.
@@ -105,6 +110,19 @@ animation checker.
 - **Validate the checksum itself.** Exclude padding and inactive history only with native control-flow evidence; retain mutation checks for active fields ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Respect fixture boundaries.** Inject controls before the measured binding stage and end special assertions on schedule; keep general invariants running ([Friend or Foe](../games/spider-man-friend-or-foe/NOTES.md)).
 - **Let a bot play the story and compare quests.** Per-feature tours only cover what you thought of. A story autopilot on the host (answer choices, press whatever the story has armed, walk into and look at story triggers) with one check, "every client holds the host's active quests, every 30 s", found a desync in a chapter that every feature tour had passed. Report how far the bot got in each chapter: a chapter where it took 0 to 2 actions proves little ([MiSide](../games/miside/README.md)).
+- **A game screen waiting for a press silently spoils a run, on either copy.** A captain's introduction or a death screen
+  stops that copy's world until someone presses a button; the bot never did. One 45-minute run lost its last 30 minutes and
+  read as "fights thin out over time"; another showed "0 client strikes" under a bad network that had nothing to do with it.
+  Before every check, make sure each player can walk (push the stick, see the position change), press through if not, and in
+  long runs press through whenever the host's world stops sending state for a whole window ([Shadow of War](../games/shadow-of-war/NOTES.md)).
+- **Compare builds on fresh copies, in ABBA order.** Fight intensity in bot runs varied 3-16 hits a minute between runs of the
+  same build, more than any change tested. To ask "is the new build weaker", run old, new, new, old on freshly started copies
+  with the same seeds, and believe only a gap larger than the spread inside each build ([Shadow of War](../games/shadow-of-war/NOTES.md)).
+- **Make each check read only its own evidence.** In one regression run two checks failed partly for the tools' own reasons:
+  a duplicate-damage check read the host's whole 128-entry log and counted pairs from the fight check before it, and a "can
+  the player walk" check pushed the stick forward only while the player stood facing a door. Count only entries from the
+  check's own time window, and try several directions before calling a player stuck. (The old pairs were still a real bug,
+  found by reading them: [Shadow of War](../games/shadow-of-war/NOTES.md).)
 - **Measure leaks with memory held after a full collection.** .NET's `GCMemoryInfo.HeapSizeBytes` includes garbage not yet collected, so it rises with the allocation rate and flagged long two-player runs as leaking. `GC.GetTotalMemory(true)` once a minute showed a flat 11 MB ([MiSide](../games/miside/README.md)).
 
 ## Testing online features on one PC
@@ -138,3 +156,21 @@ animation checker.
 - **Say SKIP, not PASS, when the case never happened.** If a test needs an event that may not occur in a run (the other player dying first), print `SKIP` with the reason and do not fail the run; a silent pass would hide the gap (Outlast, OpenOL).
 - **The mod's own debug overlay can be the control channel.** A Dear ImGui overlay with a checkpoint list, spawn panel and relay start button let a script drive the game with a few keypresses and clicks at fixed window offsets instead of walking and menus; keep the overlay layout assumptions in one place and re-check them after a mod update (Outlast, OpenOL).
 - **Test what a late joiner receives, without the game, and look for dead code.** A relay can have a complete snapshot feature (store, queue, replay) whose last step is never called from the loop the shipped binary runs. Outlast's standalone relay sent late joiners nothing for pickups and other players' matinee and hero state because the CLI main loop skipped the drain call; the game hid it by asking for doors and enemies itself. A fake peer that sends state, a second peer that joins afterwards and lists what it receives found it in minutes; a debug build with two log lines in the queue and drain functions showed which step was missing. Add a blind-mirror twin so the check is known to fail.
+
+## Menu presentation must preserve automatic startup
+
+When hiding host-owned campaign choices on the guest, keep the native row IDs
+and the meaning of input already queued by the game. Instrument the renderer
+that actually draws the target menu. A hook on a base implementation can miss
+a derived screen, and bypassing a native draw call can also skip object cleanup.
+
+Run one real-client test from the waiting menu through host-selected startup.
+Assert that only the guest hides the intended rows, the host can select New Game,
+the guest enters gameplay automatically, and both clients shut down cleanly.
+Start the test with the usual menu flow so it exercises the code used by players.
+
+In Friend or Foe, moving the guest cursor turned a latched Accept into an Options
+selection and stalled startup. Removing the cursor move and filtering the actual
+renderer passed 601 matching frames with clean exits. The run covered automatic
+startup. Guest Options and Quit still needed their own click checks.
+[Friend or Foe regression notes](../games/spider-man-friend-or-foe/NOTES.md#2026-11-01-beta-campaign-in-place-joining-and-launcher-update).
