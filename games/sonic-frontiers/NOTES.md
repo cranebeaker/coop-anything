@@ -1228,6 +1228,40 @@ Diagnostic:
   `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
   test closed, QA `none`, no co-op claim, no ETA.
 
+## mpdev087g run and global-cap diagnosis (2026-11-25)
+
+Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087g-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`A3977D4238905756D5B6D7060EA753098E985D50F866F4799A4F2799BBD63D41`).
+Diagnostic:
+`RESULTS/mpdev087h-global-cap-diagnostic-20261125.txt`
+(SHA-256
+`D46A4611C45E7D8596AE980296A9F3506E72E169C35F46DF804C053A522BAB2E`).
+
+- Owner authorized the exact `mpdev087g` read-only probe. It verified the pinned
+  EXE, one responding PID, module base `0x140000000`, and re-resolved the save
+  chain. It exhausted the 4 GB global scan cap, skipped 300 later private
+  regions starting at `0x266210000`, found zero derived-vtable hits, and stopped
+  before any pickup.
+- The save mirror read `141` in this run (prior runs: 138, 139). No pickup
+  signal was sent by the assistant. This is recorded as an observed state
+  change only, not as pickup or counter correlation.
+- Offline review classified this as `INCOMPLETE_SCAN_COVERAGE` again: earlier
+  live scans found `SonicContext` objects at addresses such as `0x2804b7b30`
+  and `0x2aed9a4f0`, above the cap boundary and inside the skipped tail.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087h-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `4A2BCB20E228C68E8E9E5FB90269C483378A04B2DC41BB816A6EE443FB21460B`).
+  It raises both per-region and global caps to 12 GB and logs total private
+  region count/bytes before scanning. Scope remains read-only with derived-vtable
+  validation and a unique-candidate requirement.
+- It needs fresh explicit owner authorization before any new attach or pickup.
+  Stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
+  test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
