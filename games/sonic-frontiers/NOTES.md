@@ -1409,6 +1409,106 @@ No attach, write, hook, install, network, friend contact, input simulation, or
 live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
 Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## Static number-ring continuation pass, mpdev103-122 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and the
+local symbol CSV. Every file is `CANDIDATE_ONLY_NO_MAPPING`: none qualifies an
+immediate HUD/runtime counter, hook point, authority model, resolver, protocol
+mapping, or write target.
+
+- `mpdev103-takenumberring-aligned-prefix-20261125.txt` (SHA-256
+  `CE4AA312639D4FBF3F46227A0F6AF8D7BD01CFE63F4381E8FC809701E23ABDB0`) gives an
+  aligned prefix of the `MsgTakeNumberRing` handler setup; it shows async-message
+  construction and payload copies, not a numeric counter write.
+- `mpdev104-numberringinfo-msghandler-aligned-20261125.txt` (SHA-256
+  `2434F3A6E41CD9633EAC7AF0DC495F4E96C0A3D2EE0AC38C31E3F0F35FC9C1B3`) aligns
+  `0x140510300`: IDs `0x200`, `0x20d6`, and `0x222c` pass through, ID `0x304` is
+  special. This remains generic `ObjNumberRingInfo` message plumbing.
+- `mpdev105-uitakenumberring-methods-20261125.txt` (SHA-256
+  `F44348A0F4FF62590E79B8706305ABA1D509A4BFB1609FB9055B60E2405F21FA`) covers
+  `GameModeNumberRingExtension` construction and the `MsgUITakeNumberRing`
+  (`0x2419`) send site at `0x1401d169b`. No numeric ring value is established.
+- `mpdev106-numberring-handler-callers-20261125.txt` (SHA-256
+  `6CC01B181020BC4AD2F99659EE63EB8C17F7BEB2947F965C25F20CACB4D0B6F0`) finds no
+  direct call/jmp references to handlers `0x1401d1530`, `0x1401d17f0`,
+  `0x14050fee0`, `0x14050ffa0`, or `0x140510300`; registration is consistent with
+  vtables/message plumbing, not a direct hook lead.
+- `mpdev107-numberringinfo-msgis-callsite-20261125.txt` (SHA-256
+  `B35BE1A737CC98BF273B824772569B95BAB0E928402864E4C526440B2838AD4C`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev111` for field semantics.
+- `mpdev108-numberringinfo-msgtake-callsites-20261125.txt` (SHA-256
+  `227F3175F96C246BE97F2DB321E18C4AA3616B632DD68A7A78689F208119CBF1`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev112` for the take path.
+- `mpdev109-uitakenumberring-late-methods-20261125.txt` (SHA-256
+  `C7178764D87968B34251C5BEE47CB59DD861730E44AA76912DB66D74431F95FB`) covers a
+  late `GameModeNumberRingExtension` tail with an unaligned start; it supplies no
+  counter mapping.
+- `mpdev110-message-ctor-argflow-20261125.txt` (SHA-256
+  `91198EF3CB7718D7A5C97F7CBCE1C540005AE5E32925D439F4E30376C5B75D05`) confirms
+  message-ID immediates in `edx`: `0x14050f969` and `0x140510a7e` send `0x21e3`,
+  `0x140510af4` sends `0x235f`, `0x140510b4c` sends `0x235e`, and
+  `0x140a5b0ca` sends `0x21e3`. These are message sends, not counter writes.
+- `mpdev111-numberringinfo-ctor-aligned-20261125.txt` (SHA-256
+  `FA894702B31934CFF6357EDFE7D2099A5CC51A194B04F60C7B7FD5056FA32C4A`) gives the
+  aligned `ObjNumberRingInfo` constructor and early setup (`vtable 0x1414a2888`);
+  no live ring-counter value is established.
+- `mpdev112-numberringinfo-take-flow-aligned-20261125.txt` (SHA-256
+  `0E220BD22C5541AAE00E3911E3DB8B455E69E875AC6344459CE9BFBD14EFA2DC`) is the
+  aligned take path at `0x140510a50`-`0x140510bd7`. It reads signed
+  `dword [ObjNumberRingInfo+0x290]`, gates at `< 4`, sends `MsgIsTakeNumberRing`
+  with `ebx + 1`, sends `MsgTakeObject` with `[+0x290]` in the payload, then sends
+  `MsgTakeNumberRing` with `ebx` in the payload and uses `[+0x290]` as a table
+  index. Byte `[+0x294]` gates another handler branch. This qualifies `+0x290`/
+  `+0x294` only as message payload/RFL-source candidates; it does not qualify
+  them as the immediate HUD counter.
+- `mpdev113-uitakenumberring-tail-20261125.txt` (SHA-256
+  `35A93D75866B36BCEEB0E92CB749E759CF05016FFF68668EE598A0066F9A1E1E`) sampled an
+  unrelated/misaligned tail and is not evidence for ring-counter semantics.
+- `mpdev114-msgtake-235e-id-refs-20261125.txt` (SHA-256
+  `A05F42EAE74CC60D76C634353448C11B8EF9E77F4938C805C408F0ED029409EA`) finds the
+  only code hit for immediate `0x235e` near the `0x140510b4c` send site; no
+  consumer or numeric-count mapping follows from the bytes alone.
+- `mpdev115-numberring-vtable-lea-refs-20261125.txt` (SHA-256
+  `744CAA73A480B96ADF9E81453E618E07CC8B394A95E5A5972385154C8DBC26D0`) locates
+  construction refs for the number-ring message/object vtables, including
+  `MsgUITakeNumberRing` use at `0x1401d1593` and `0x1401d16a4`, plus
+  `ObjNumberRingInfo`/`ObjNumberRing` construction refs. No direct handler call or
+  counter source is added.
+- `mpdev116-gamemode-numberring-extension-vtable-20261125.txt` (SHA-256
+  `A1FB9258FA8370C205428FC8DBB05378B93A7D46B39260BDC6D4CF127682CD8C`) reads
+  `GameModeNumberRingExtension` vtable `0x1414320f0`; slots include local code
+  near `0x1401d1620` and generic allocator/cleanup plumbing. It does not expose a
+  gameplay ring integer.
+- `mpdev117-uiring-counter-full-20261125.txt` (SHA-256
+  `BF80E5995193C11419AE652CC1B52D3F2F6C4E0FC3E84C39CBB7DEDAA99AF1DF`) covers the
+  full `UINumberRingCounterContext` receive path. It handles `0x2406`, `0x2265`,
+  `0x2411`, and on `MsgIsTakeNumberRing` (`0x21e3`) loops bits 4..0 to update byte
+  `[context+0x50]`. This establishes bit/visibility plumbing only; `0x140afc1a0`
+  and `0x140afee00` are called, but are not established numeric ring getters.
+- `mpdev118-uiring-accessor-140afc1a0-20261125.txt` (SHA-256
+  `FC3EE52F8AD2E20AB3CF383C1AA1D442A253D81854D22FE45595D6C11FC027B4`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev120`.
+- `mpdev119-uiring-accessor-140afee00-20261125.txt` (SHA-256
+  `32DF1ADFEACC2ED423E5165F555202933831D093722BF74EE8D40980E0CAD280`) used an
+  unaligned slice start and is `SUPERSEDED_BY=mpdev121`.
+- `mpdev120-uiring-accessor-aligned-20261125.txt` (SHA-256
+  `8CBE9D12A36EEA6BCFD31EC33D3C880F6F3EBF8481A75131F46734D0E94D57E1`) aligns
+  `0x140afc1a0` as a thunk to `0x14cdc7630`; it is not itself a ring-value read.
+- `mpdev121-uiring-config-thunk-target-20261125.txt` (SHA-256
+  `FD669BD98F9A9EB92B4B420F8D14772DCF3BBD0FAE7CBF66ACC909C0B31CF87F`) aligns
+  `0x14ce495f0` as a config-bit getter (`test byte [rax+9], 1 << dl`); it returns
+  a boolean bit, not a ring count.
+- `mpdev122-uiring-ring-getter-thunk-target-20261125.txt` (SHA-256
+  `671C230D0B269F237205A222E6B9337BDC7E814F65F80E22B64EF659C94830AB`) aligns
+  `0x14cdc7630`: it builds a wrapper object pointing at `[OptionGamePlayAc+0x374]`
+  and an external pointer, then returns the wrapper. No numeric ring value is
+  loaded into the return path.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
