@@ -1586,6 +1586,56 @@ No attach, write, hook, install, network, friend contact, input simulation, or
 live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
 Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## Static ring-message continuation pass, mpdev136-142 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime ring
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev136-numberringspawner-rfl-raw-20261125.txt` (SHA-256
+  `02592EA8CFB1C651718E87ABB57427E310337D5CEE7DECD059DB7E65166385B6`) directly
+  decoded the raw `ObjNumberRingSpawner` member array at `0x143c89d60`. Recovered
+  names are `noType`, `EventType`, `lifetime`, `volume`, `guideType`, `type`,
+  `isHorming`, `usedPillar`, `sideBarNum`, `pillarNum`, `distanceOffset`,
+  `colloffset`, `collisionSize`, `successShotVelocity`, `failShotVelocity`, and
+  `outOfControlTime`; `noType`/`EventType` are entries 0/1. This only explains why
+  the strict RFL reader returned `COUNT=0` (type codes such as `0x214`/`0x614`
+  exceed its marker filter). No field is established as a ring count.
+- `mpdev137-msg2299-handler-thunk-target-20261125.txt` (SHA-256
+  `044CAF99E43E67C750F48C7FCE596C525419C3BB0563EBC9C4D00F3534E6400D`) aligns the
+  target behind the `0x14008cbc0` thunk (`0x1462eec80`). It sets a vtable and has a
+  destructor/cleanup-shaped conditional call; it contains no numeric ring read or
+  update.
+- `mpdev138-msg2299-async-handler-process-20261125.txt` (SHA-256
+  `E283B498B81284694F62C7762F2E2A7701FAE8ACC0C05ACE87E682CF45FF1E3C`) aligns
+  `0x14028cd60`. It allocates and copies message fields into an async handler;
+  no handler-side message-ID comparison or ring counter update is present.
+- `mpdev139-msg2299-cmp-refs-20261125.txt` (SHA-256
+  `E9EDA8C609654EB195F432E5FC45CEA6204CD602F71617CFC3FCBF6A153DF1F3`) searched
+  three plausible `cmp` encodings for immediate `0x2299`; each returned `COUNT=0`.
+- `mpdev140-msg2299-immediate-all-20261125.txt` (SHA-256
+  `A35BDC6DA9D90776F4CD8C8472A61B70CA208FBDA1D9A018A1A83691115A4020`) found 12
+  raw `99 22 00 00` hits. Code hits at `0x14028e8a5`, `0x1402a8fa2`,
+  `0x1402f215d`, `0x14030bdb5`, and `0x140337989` are send/construction-adjacent;
+  the rest are non-code data. No handler-side immediate compare was found.
+- `mpdev141-msg2299-vtable-lea-refs-20261125.txt` (SHA-256
+  `D66F131A9CA2D863A46515E84397E3687D610BF6733F4E2F5F5477E9FEE94B36`) found six
+  RIP-relative LEA references to `MsgRaiseRings` vtable `0x14144a880` and one to
+  its async-handler vtable `0x14144a8a0`. All are construction/send-adjacent, not
+  consumer-side counter logic.
+- `mpdev142-numrings-setter-callers-20261125.txt` (SHA-256
+  `52DF3503F87D29986EBE09DDE6E68D2DF21E9250E75FDDAF2449282C9A2FB114`) found seven
+  direct callers of `0x140afff30`, including `ObjFishingPortal`, `ObjPortal`,
+  `ObjSaveDataTest`, two `StateStand` parameter paths, `GUIFishTrade`, and
+  `PlayerHsmContext::OnSave` (`0x14ae8f0fe`). This supports the save-mirror role
+  for `CharacterData+0x0` and does not establish the immediate HUD/runtime counter.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
