@@ -1153,6 +1153,46 @@ Diagnostic:
   `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`,
   full test closed, QA `none`, no co-op claim, no ETA.
 
+## mpdev087c run and derived-vtable diagnosis (2026-11-25)
+
+Private-heap result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087c-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`6182D0D1E9AFCB3EF449B4835B3288FE0E7C0C0568F2D0BA69600479A1A40F4A`).
+Diagnostic:
+`RESULTS/mpdev087f-derived-context-vtable-diagnostic-20261125.txt`
+(SHA-256
+`6E0584C18CA7AFF473591A9EA4C3B22E2C19AB05BEAF58844EF12836C157CCC1`).
+
+- Owner authorized the exact `mpdev087c` read-only probe. It rechecked the
+  pinned EXE, found one responding PID, confirmed module base `0x140000000`,
+  re-resolved the save chain (`CHARACTER_DATA=0x1C4F7B220`, mirror `138`), then
+  scanned 2,203 private regions / 3,983,732,736 bytes with only five skipped
+  regions or chunks. It found zero raw root-vtable hits and stopped before any
+  pickup. No write, hook, detour, injection, DLL load, install, network, save,
+  input simulation, or owner pickup occurred.
+- Offline static review found the discovery-pattern mismatch: the base
+  `PlayerHsmContext` vtable `0x1415214B8` is overwritten by derived context
+  constructors. SonicContext writes `0x14151CAB8` at `+0x0` and `0x14151CAC8`
+  at `+0x18`; AmyContext writes `0x14151A908` at `+0x0` and `0x14151A918` at
+  `+0x18`. Knuckles/Tails secondary vtables are inferred as primary+`0x10` and
+  remain CANDIDATE-ONLY.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087f-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `7D9996E6C2A9A4373EC9A09555CAF49F1068D39C4CBEB3499D5BA5189A4C251E`).
+  It scans MEM_PRIVATE for all four derived primary vtables, requires
+  `[root+0x18] == primary+0x10`, requires `[root+0x38]` to point to an object
+  with GOCPlayerHsm vtable `0x141521368`, and requires exactly one validated
+  candidate before sampling. It records the context and primary vtable for each
+  candidate.
+- The live runtime ring counter remains unqualified and the zero raw hits from
+  `mpdev087c` are not evidence against the static candidate. `mpdev087f` needs
+  fresh explicit owner authorization before any new attach or pickup. Stage
+  gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
+  test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
