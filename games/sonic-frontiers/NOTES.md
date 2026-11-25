@@ -516,6 +516,24 @@ the pinned exe hash before interpretation.
 - Gates remain closed, QA remains `none`, and no friend/PC B/two-PC/in-game work
   is authorized.
 
+Targeted scan result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-kodama-targeted-correlation-20261125.txt`.
+
+- With the owner's game running (PID 10336), the targeted read-only scan found a
+  live `KodamaManager` at `0x19a3042b0`; its vptr `0x1414f3478` exactly matched
+  the SDK-style symbol lead. `UIKodamaCounterContext` and
+  `MsgNotifyNumCollectedKodamas` appeared as RTTI classes but no live objects
+  were captured.
+- Across two owner-confirmed one-Koco pickups with no-action controls, no field
+  moved `+1` on both trials. `UIItemQuotaContext +0x1b0` went `1 -> 2` on trial 1
+  but did not move on trial 2: REJECTED. `KodamaManager +0x088` went `10 -> 6` on
+  trial 2 but did not move on trial 1: REJECTED as a Koco count.
+- Class identity is confirmed for this session only; no count field, item id,
+  source-vs-UI-copy distinction, trigger, resolver, write address, hook point,
+  or authority model was established. `RESULT=CANDIDATE_ONLY_NO_MAPPING`.
+- Stage 1 targeted read-only mapping is exhausted. Stage 2 writes/hooks and
+  Stage 3 friend/PC B/two-PC/in-game work remain unauthorized; gates stay closed.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
