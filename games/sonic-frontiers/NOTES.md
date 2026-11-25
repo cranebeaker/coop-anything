@@ -809,6 +809,38 @@ Full record:
   `READY_FOR_INSTALL=NO`, `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, QA remains
   `none`, no working co-op is claimed, and there is no ETA to online.
 
+## MsgTakeQuestItem payload final static pass (2026-11-25)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev062-takequestitem-final-20261125.txt`
+(SHA-256
+`1727BFD4BE6846410DF0B79BE067FBD98ECA81B588976A3A8E44A860A26BAE29`).
+
+- Corrected the vtable reader output: `MsgTakeQuestItem` has 3 real slots
+  (+0x00 copy/clone, +0x08, +0x10). The apparent +0x18 slot is the RTTI header
+  for the next vtable, and +0x20 onward is adjacent string data, not virtuals.
+  `MessageAsyncHandlerInplace<MsgTakeQuestItem>` has 1 real slot.
+- The copy/clone virtual at `0x1407DB490` allocates a 0x48-byte handler and
+  copies five fields verbatim from an existing source object into a nested
+  `MsgTakeQuestItem`: dword `+0x08`, dword `+0x0C`, dword `+0x10`, byte `+0x14`,
+  dword `+0x18`. It writes no constant game-state value.
+- The only code reference to message id `0x2360` builds that message at
+  `0x1407DB797`, sets vtable `0x1414FD4F8`, and sends it through `0x140EC97F0`.
+  No payload writes occur on that send path, and no direct callers or explicit
+  constructor for the five fields were found.
+- Nearby RFL tables do not resolve the fields. There is no
+  `rflClassMembers@MsgTakeQuestItem`; `DropQuestItemParam` has two fields,
+  `QuestCollectItemParameterElement` has pointer offsets, `ObjQuestBoxParameter`
+  has ten numeric fields, and `ObjQuestItemInfo` never writes `+0x08..+0x18`.
+- Result stays `CANDIDATE_ONLY_NO_MAPPING`. No item id, Koco count, inventory
+  field, story flag bit, trigger, save offset, resolver, write address, hook
+  point, or authority model was established. No ExtraFlag category/id was tied
+  to this message path.
+- Stage 2 remains `BUILD_ONLY`; `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`,
+  `READY_FOR_INSTALL=NO`, QA remains `none`, and no working co-op is claimed.
+  No install, attach, game launch, write, hook, network action, friend contact,
+  PC B setup, or in-game verification occurred.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
