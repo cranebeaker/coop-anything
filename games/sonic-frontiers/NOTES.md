@@ -423,6 +423,30 @@ read-only live mapping, with in-game co-op as the goal. Full record:
 - Stage 2 (writes/hooks) and Stage 3 (two-PC/friend contact) still require fresh
   explicit authorization.
 
+## Stage 1 read-only live scan (2026-11-25) — CANDIDATE-ONLY
+
+Full analysis:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-stage1-readonly-scan-analysis-20261124.txt`.
+
+- Owner launched the game; pinned scanner and game-exe hashes matched. Read-only
+  `VM_READ | QUERY_INFORMATION` scan completed with exit 0. Trace:
+  `RESULTS/mpdev-itemstory-readonly/mpdev-itemstory-raw-trace-20261125-045713.txt`
+  (SHA-256 `09F827EE3667167422535A0DF8500912D88D55354E0C80B9EEADC1B554D375A0`).
+- 6,383 RTTI classes; 155 classes matched the Item/Inventory/Story/Flag/Quest
+  filters; 16 live objects matched the filtered vtables.
+- Candidate class names include `SaveDataAccessor<FlagContainerData>`,
+  `FlagContainerAc`/`WorldFlagAc`/`ExtraFlagAc`, `QuestManager`,
+  `UIItemQuotaContext`, `UISequenceItemCounterContext`, `ObjDroppedItemInfo`,
+  `ObjKodamaQuestInfo`, `BlackboardItem`, and `RelayedFlagsParameter`.
+- No live `SaveDataAccessor` or flag-container object was captured. No field is
+  identified as an item/Koco count, story flag, id, trigger, resolver, write
+  address, or authority model. Earlier Koco before/after rejections stand.
+- These are RTTI name/vtable leads only. UI display contexts are not necessarily
+  authoritative save state. All gates remain closed; QA remains `none`.
+- Recommended next step is a read-only before/after correlation (owner performs
+  one known small gameplay action) or stop Stage 1 with these candidates as the
+  handoff. Stage 2 writes/hooks and Stage 3 two-PC work still need fresh approval.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
