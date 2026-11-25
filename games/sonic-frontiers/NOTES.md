@@ -1509,6 +1509,83 @@ No attach, write, hook, install, network, friend contact, input simulation, or
 live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
 Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## Static message-ID and RFL continuation pass, mpdev123-135 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. Every file remains `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev123-msgtake-235e-cmp-refs-20261125.txt` (SHA-256
+  `16650EF7F5278CBFE1A5DF6EE28F3BF38A4A647796632B5F8064648FE9D4404C`) searched
+  for `cmp [reg+8],0x235e` and `cmp eax,0x235e` encodings; both had `COUNT=0`.
+  No handler-side immediate comparison for `MsgTakeNumberRing` was found.
+- `mpdev124-msgis-21e3-cmp-refs-20261125.txt` (SHA-256
+  `FA27180FC66DD7D5EBED9AE865B93E2C0B6B95C919C1E8EC15DFB0CD1E14894C`) searched
+  the same comparison encodings for `MsgIsTakeNumberRing` (`0x21e3`); both had
+  `COUNT=0`.
+- `mpdev125-msguitake-2419-cmp-refs-20261125.txt` (SHA-256
+  `DC2BF4DA817716F08D098BA324D648027E712996E54BFBEC62AB6062C03DD1C6`) found two
+  `[reg+8]` comparisons for `MsgUITakeNumberRing` (`0x2419`) at `0x140a5ada7` and
+  `0x140a5ae57`, plus one `cmp eax,0x2419` at `0x140a5b3c9`, all in
+  `UINumberRingCounterContext`. This is UI bit/visibility plumbing only.
+- `mpdev126-uitake2419-cmp-aligned-20261125.txt` (SHA-256
+  `62FE73341D2823C37E846D660839AA6A85CDB9B7D5B5AECAABFA8625C840A8CB`) aligns
+  `0x140a5b390`-`0x140a5b430`: a loop tests bits of byte `[context+0x50]` and calls
+  `PlayAnimation@LayerController` `0x140b95a50`. No numeric ring value is read or
+  written.
+- `mpdev127-uitake2419-second-handler-aligned-20261125.txt` (SHA-256
+  `30E8E0494C215F554530F92792C6E599F2BDC28CECCDCD8A7B0C67EEC7393FDB`) sampled an
+  empty/unaligned slice at `0x140a5ae00`-`0x140a5aeb0` and is
+  `SUPERSEDED_BY=mpdev128`.
+- `mpdev128-uitake2419-second-handler-aligned-20261125.txt` (SHA-256
+  `0F08DC5480E28E04B965A74E097A98330DB2B91B2D3C29355A0A19EAF454EB37`) aligns the
+  second handler at `0x140a5ae30`-`0x140a5aeb0`. It gates message categories
+  `-4`, `-3`, `4`, and `7`, matches `0x2419`, and uses payload dword `[msg+0x20]`
+  with `bts` on `[context+0x50]`. It confirms bit/visibility state, not a count.
+- `mpdev129-uitake2419-handler-prefix-aligned-20261125.txt` (SHA-256
+  `39DBDF6AF5974D8D3570B482FA4A550EAD39DB63074359EE014C44C268653CA3`) aligns
+  `0x140a5b280`-`0x140a5b460`. The handler at `0x140a5b300` handles `0x2411` by
+  copying payload byte `[msg+0x20]` into `[context+0x50]`, and handles `0x2419` by
+  computing layer index `4 - payload`, calling `PlayReservedAnimations`
+  (`0x140af3990`), and setting another `[context+0x50]` bit. No numeric ring count
+  is established.
+- `mpdev130-uiring-counter-vtable-20261125.txt` (SHA-256
+  `9127348CA4D4FC9F7B4EE7A5316645ED3F27BF28DBF781E6BBF54E1046FBF18A`) reads
+  `UINumberRingCounterContext` vtable `0x141561e58`. After the destructor slot the
+  read contains mixed/non-code data and local handler slots near `0x140a5ad40`/
+  `0x140a5ad50`; no numeric getter is identified.
+- `mpdev131-numberringinfo-handler-setup-aligned-20261125.txt` (SHA-256
+  `FAF952814892EAC73795A395010AC107980F67BEABC13DAE4A49E881AEF01BE0`) aligns
+  `0x14050f910`-`0x14050fdf0`. It calls `GetClass@ObjNumberRingSpawner`
+  (`0x1400c9950`) and `GetWorldDataByClass@GameObject` (`0x140d35f10`), then reads
+  signed byte `[worldData]` into `[ObjNumberRingInfo+0x290]` and unsigned byte
+  `[worldData+1]` into `[+0x294]`. It sends `MsgIsTakeNumberRing` (`0x21e3`) with
+  `[+0x290]` in the dword payload; the bytes are an RFL-source/payload candidate
+  only.
+- `mpdev132-uigamecockpit-digit-loop-prefix-aligned-20261125.txt` (SHA-256
+  `E38E88EAC20BD8EC70C16B1558878F782875F35E3567F24E7872AF58C96DD4C7`) samples
+  `0x140a344c0`-`0x140a34680`. It initializes `r14b` to zero and uses it as a
+  digit/context index while creating counter contexts by stage attribute. It does
+  not expose an immediate ring integer.
+- `mpdev133-uigamecockpit-digit-loop-tail-aligned-20261125.txt` (SHA-256
+  `71623F15741829A3A55DB7D17795AE072C0E9A6E69FFA70F2E6BFBB87318A1FD`) samples
+  `0x140a34820`-`0x140a34880`. The aligned tail increments `r14b` and `r15` per
+  loop iteration, confirming digit-index iteration only.
+- `mpdev134-numberringspawner-rfl-members-20261125.txt` (SHA-256
+  `7F3EDB67F18D8AB9A0EC9B3631B1E9C37F06EC7C0F52928E20C8F758066B1B1F`) read the
+  `ObjNumberRingSpawner` RFL member symbol at `0x143c89d60` and returned `COUNT=0`;
+  no field names were decoded.
+- `mpdev135-numberringspawner-rfl-members-deref-20261125.txt` (SHA-256
+  `8AD11426048A7763BC2D522158D5EAEDBD61D6BCAB547CA0C69D25EA2BD80D55`) read the
+  dereferenced array at `0x1413b3a24` and also returned `COUNT=0`; no field names
+  were decoded.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
