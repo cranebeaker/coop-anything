@@ -15347,3 +15347,33 @@
   - https://steamcommunity.com/sharedfiles/filedetails/?id=2958503186
   checked: '2026-11-02'
   made_with_coop_anything: false
+- game: Crash Bandicoot N. Sane Trilogy
+  year: 2017
+  engine: Alchemy (Vicarious Visions)
+  project: Crash N. Sane Coop
+  url: https://github.com/MaegIins/CrashNSaneCoop
+  other_urls:
+  - https://github.com/MaegIins/CrashNSaneCoop/releases
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: yes
+    story: partial
+    enemies: no
+    world_state: partial
+    items: partial
+  players: "2"
+  networking: steam-relay
+  open_source: yes
+  last_activity: 2026-11
+  qa: automated
+  notes: Each player runs their own game; an injected DLL shows the friend as a puppet of the hero they play, with
+    replayed Havok behavior events, and syncs crates (checkpoints included) and the wumpa counter over Steam P2P. Steam build 2964270
+    only. Automated two-client suite (two game copies on one PC over UDP; presence, crate replay, fruit, falls, level
+    change, crash and dialog invariants), 15/15 PASS in one level of each of Crash 1, 2 and 3; presence and animations also
+    played over Steam.
+    MIT license. Write-up in games/crash-bandicoot-n-sane-trilogy.
+  sources:
+  - https://github.com/MaegIins/CrashNSaneCoop
+  checked: '2026-11-02'
+  made_with_coop_anything: true
