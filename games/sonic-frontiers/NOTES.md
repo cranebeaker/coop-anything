@@ -631,6 +631,36 @@ network, friend or PC B was touched.
   closed, QA remains `none`, PR #429 remains draft, and no working co-op is
   claimed.
 
+## Owner Stage 2 authorization (2026-11-25) — no qualified write target yet
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev053-stage2-authorization-and-extraflag-setter-20261125.txt`.
+
+The owner explicitly opened **Stage 2 only**: writes/hooks on PC A are permitted,
+but friend contact, PC B preparation, two-PC/online testing, and assistant game
+launch remain closed. This supersedes older notes that listed Stage 2 as closed.
+The game was already running by owner action (PID 2036); EXE hash remained
+`7E58F45C...344B6`. A targeted read-only Kodama scan completed with the pinned
+scanner and again returned `CANDIDATE_ONLY_NO_GATE_OPENED`. Baseline verification
+passed every mod/install check; its single FAIL was the legacy prerequisite that
+no game be running, not a tamper signal. No mpdev mod is installed.
+
+Stage 2 permission does not create a safe target. Current status is
+`WRITE_TARGET=NOT_FOUND`, `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`,
+`QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`. No game-memory write, game-code hook,
+mod install, `ModsDB.ini` change, network action, or friend contact was performed.
+QA remains `none`; no working co-op is claimed.
+
+Offline Stage 1 continuation decoded the `ExtraFlagAc` setter body at
+`0x140AFF350` (`RESULTS/mpdev053-disasm-extraflagac-set-body-20261125.txt`,
+SHA-256 `326009A518A0D1D517C25054189ADA2E97B8FB36BE47442463650E311972E060`).
+The setter bit-tests and then ORs/AND-NOTs the dword at `bit>>5` in the array at
+`[accessor+8]`; on change it resolves `GameApplication::GetInstance` →
+`ReactiveService::GetClass` → `GameManager::GetService` and calls a symbol-less
+reactive dispatch with `edx=7` and `r8d=bit index`. This confirms bit mechanics
+only; no category/id is mapped to Koco, item, quest, or story semantics, and no
+save/resolver/hook target is promoted.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
