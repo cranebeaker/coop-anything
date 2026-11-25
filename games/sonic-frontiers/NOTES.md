@@ -573,6 +573,64 @@ PC B was touched for this pass.
   helper is a generic quest-loop bound used by several quest types. All remain
   CANDIDATE-ONLY.
 
+## Save RFL / ExtraFlag static pass (2026-11-25) — CANDIDATE-ONLY
+
+Full consolidated record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev051-extraflag-kodama-static-20261125.txt`
+(SHA-256 `13F729BACFD8C40B66A9FBD32BEB04F5DEEAF82E3D299AFC53D1D3D93A00BD71`).
+
+This pass used only the pinned exe, the local SDK-style symbol CSV, and offline
+disassembly. No process was attached, no game was launched, and no save, hook,
+network, friend or PC B was touched.
+
+- The offline RFL decoder (`tools\mpdev-rfl-member-read.py`) now handles
+  non-zero `META@8`, packed markers, and save-class layout. It decoded 48 save
+  arrays in `RESULTS\mpdev050-save-rfl-members-20261125.txt`. No Kodama/Koco
+  numeric count was found. Notable fields are only `numRings`,
+  `numPowerSeeds`, `numGuardSeeds`, `numFishCoins`, `numFishTokens`,
+  `numGoldCards`, `numSlotStars`, plus generic `bitFlags` / `byteFlags` /
+  `intDatas` containers. Static `GameData` offsets `flags=0xa20`,
+  `worldFlags=0xb40`, and `extraFlags=0xb340` remain hypotheses, not confirmed
+  authoritative save fields.
+- RFL decode of `KodamaParam`, `KodamaCommonParam`,
+  `ObjKodamaQuestParameter`, `ObjKodamaQuestGrassIslandParameter`,
+  `ObjKodamaQuestDesertIslandParameter`, `ObjKodamaEscortParameter`, and
+  `QuestKodamaCollectionBaseParameter` found no id/group-flag field.
+  `clearKodamaNum` is quest config metadata, not a collected-Koco save count.
+- `ExtraFlagAc` read accessor `0x140B00580` was decoded: it maps a small index
+  through the dword table at `0x141572BB0`, adds an unknown runtime dword read
+  from `[object]` (where `object = [levelInfo + 0x90]`), then bit-tests the
+  dword array at `[accessor + 8]`. It is a read (`bt`/`setb`), with no
+  `bts`/store-back or save write. Five `KodamaManager` call sites use indices
+  `0x08 -> 0x198`, `0x0D -> 0x1B8`, `0x23 -> 0x63E`, `0x15 -> 0x1E2`, and
+  `0x03 -> 0x180`. The runtime dword is unnamed, so all bit indices are
+  CANDIDATE-ONLY and are not item ids or story flags.
+- Correction to the earlier mpdev050 vtable reading: MSVC vtables here are
+  tightly packed, with RTTI at `vtable_start - 8`. Apparent `+0x10` slots in
+  `mpdev050-msg-handler-vtables-20261125.txt` were overreads into the next
+  vtable. Corrected reads in
+  `RESULTS\mpdev051-vtable-kodama-messages-corrected-20261125.txt`:
+  `MsgNotifyNumCollectedKodamas` vtable `0x1414FA490` has `+0x00 -> 0x1407C95D0`
+  and `+0x10 -> 0x14008D680` (`xor eax,eax; ret`); its async-handler vtable
+  `0x1414FA4B0` has `+0x00 -> 0x14008CC30`. `0x1407C9520` belongs to
+  `MsgGetKodamaPosition`, not `MsgNotifyNumCollectedKodamas`.
+- `MsgUpdateKodamaGroupFlag` vtable `0x1414FA5E8` has `+0x00 -> 0x1407CA720`,
+  a payload copy only; its async vtable `0x1414FA608` has
+  `+0x00 -> 0x14008CC30`. Its numeric message ID is still NOT RECOVERED.
+  `mov edx,0x21E9` at `0x1407CA8F8` pairs with vtable `0x1414FA618`, so `0x21E9`
+  is statically inferred as `MsgKillKodamaBomb`, not `MsgUpdateKodamaGroupFlag`.
+  `0x1407CA680` likewise belongs to `MsgKillKodamaBomb`, not the group-flag
+  message.
+- For `MsgNotifyNumCollectedKodamas` (`0x224D`), the opcode scan found only
+  four `BA 4D 22 00 00` send sites. No `3D 4D 22 00 00` or
+  `81 F8 4D 22 00 00` receiver compare was found; the constructor at
+  `0x1407C95D0` copies payload fields but shows no save write.
+- Result remains `CANDIDATE_ONLY_NO_MAPPING`, `KOCO_COUNT_FIELD=NOT_FOUND`,
+  `AUTHORITATIVE_SAVE_FIELD=NOT_FOUND`, `WRITE_TARGET=NOT_FOUND`,
+  `HOOK_POINT=NOT_FOUND`, and `AUTHORITY_MODEL=NOT_FOUND`. Gates B/C stay
+  closed, QA remains `none`, PR #429 remains draft, and no working co-op is
+  claimed.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
