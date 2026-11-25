@@ -1696,6 +1696,52 @@ No attach, write, hook, install, network, friend contact, input simulation, or
 live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
 Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## Static enum and message-consumer continuation, mpdev152-156 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime ring
+counter, hook point, authority model, resolver, protocol mapping, or write target
+is qualified.
+
+- `mpdev152-numberringspawner-enums-ascii-20261125.txt` (SHA-256
+  `5F9D85474463F1F7446F00B9724CD7B04D90404C05FE993AAA91B426ADC671FA`) uses a new
+  ASCII-safe offline reader (`tools/mpdev-static-enum-dump.py`) with a corrected
+  `0x18`-byte enum-entry stride. `ObjNumberRingSpawner` has two RFL enum arrays:
+  `NoType` at `0x14129a8e8` with six values (`No1`-`No5`, `Num_No`) and `Event`
+  at `0x14129a900` with three values (`EVENT_NONE`, `EVENT_VISIBLE`,
+  `EVENT_INVISIBLE`). These are spawn-configuration enums, not ring counters.
+- `mpdev153-msgraise-async-dtor-aligned-20261125.txt` (SHA-256
+  `4501E1DB258522342D1647CD12E8308E56FF10950BE70762AB8B937E15DB1B75`) aligns
+  `0x14008cc30`-`0x14008cc90`, the first slot behind the `MsgRaiseRings`
+  async-handler vtable. It constructs an embedded object at `+0x28` through
+  `0x140edb2e0`, stores a static pointer at `[this]`, and optionally calls a
+  virtual method. It is constructor/setup-shaped and contains no ring read or
+  update.
+- `mpdev154-msglossring-base-vtable-20261125.txt` (SHA-256
+  `92BBAB1E3DCB642F992409DABE7B9D24E0FEB41CD29EA142FAB92EF419654B83`) reads
+  `0x141431558`, the static pointer target stored by the analogous
+  `0x140099100` path. The bytes are ASCII data strings, not a code vtable; no
+  base-class `Process` slot is qualified from this.
+- `mpdev155-numberring-msg-cmp-refs-20261125.txt` (SHA-256
+  `3E1791B71B7E9135CDCBFE39740E53150162865DFC881F091FB5BF28905EACD6`) found no
+  handler-side `cmp` immediate for `0x235E` or `0x21E3`. Three `0x2419` hits are
+  all inside the `UINumberRingCounterContext` constructor/handler region
+  (`0x140a5ada7`, `0x140a5ae57`, `0x140a5b3c9`), consistent with the already
+  qualified collectible-bit/visibility path, not ring currency.
+- `mpdev156-numberring-msg-vtable-lea-refs-20261125.txt` (SHA-256
+  `D156EE3A9D6CC16B5E4A6998C8FE9CE9639536D777D6BED3AC75A4CA2F2B61A8`) found two
+  RIP-relative LEA references to `MsgUITakeNumberRing` vtable `0x141432128`
+  (both in `GameModeNumberRingExtension` construction), two to
+  `MsgTakeNumberRing` vtable `0x1414a2940` (in `ObjNumberRingInfo` construction/
+  teardown), and four to `MsgIsTakeNumberRing` vtable `0x1414a2970` (three in
+  `ObjNumberRingInfo`, one in `UINumberRingCounterContext`). All are
+  construction/send-adjacent; none qualifies as consumer-side ring logic.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
