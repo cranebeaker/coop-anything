@@ -1193,6 +1193,41 @@ Diagnostic:
   `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
   test closed, QA `none`, no co-op claim, no ETA.
 
+## mpdev087f run and large-region skip diagnosis (2026-11-25)
+
+Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087f-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`AF9D725F0F23052774C1FA917E3664CEF2642A9F3FDC8BFBCD0E7F8976FB6E90`).
+Diagnostic:
+`RESULTS/mpdev087g-large-region-skip-diagnostic-20261125.txt`
+(SHA-256
+`6CB36E44CBBB3075C37A9814F3C23A3D1E0D38F90282FACE6D45AB13A4693FAA`).
+
+- Owner authorized the exact `mpdev087f` read-only probe. It verified the pinned
+  EXE, one responding PID, module base `0x140000000`, and re-resolved the save
+  chain. It scanned 2,220 private regions / 3,993,239,552 bytes, found zero raw
+  hits for all four derived context vtables, and stopped before any pickup.
+- The save mirror read `139` in this run, versus `138` in prior runs. No pickup
+  signal was sent by the assistant. This is recorded as an observed state
+  change only, not as pickup or counter correlation.
+- Offline review found `MAX_REGION_BYTES = 256 MB` in the Python probe: five
+  large committed private regions were skipped before reading. The earlier C++
+  RTTI scanner had no per-region cap and found many live `SonicContext` objects
+  with vptr `0x14151cab8`. The zero-hit result is therefore
+  `INCOMPLETE_SCAN_COVERAGE`, not absence of the derived contexts.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087g-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `7E454DAA0DC14199441376E6256AA75BD42F0BB7841AA0E7867CA6DB1BEB4E60`).
+  It raises the per-region cap to the 4 GB global cap, records skip details and
+  cap status, and keeps MEM_PRIVATE-only filtering, derived-vtable validation,
+  the unique-candidate requirement, and read-only access.
+- It needs fresh explicit owner authorization before any new attach or pickup.
+  Stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
+  test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
