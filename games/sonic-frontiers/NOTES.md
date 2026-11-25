@@ -741,6 +741,40 @@ Full record:
   `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
   there is no ETA to online while Stage 3 stays closed.
 
+## ExtraFlagData save-layout cross-check (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev060-extraflagdata-layout-crosscheck-20261125.txt`
+(SHA-256
+`68945FF5BF98B0FB25527903E1D3EA6ED20F168C844B14A6D56F68318E43E5F8`).
+
+- Re-read `UExtraFlagData` RFL members: `bitFlags` at offset hypothesis `0x0`,
+  `byteFlags` at `0x800`, and `intDatas` at `0xa00`. Derived sizes are `0x800`,
+  `0x200`, and `0x400` bytes respectively, for a total of `0xe00`. That total
+  matches the `ExtraFlagData::Construct` thunk at `0x1400f0a50`, which passes
+  `r8d=0xe00`.
+- The `ExtraFlagAc` read/set paths use `[accessor+8]` as a dword bit array with
+  `raw_bit = REMAP[category] + id`. This is structurally compatible with
+  `bitFlags`, so `[accessor+8]` may point at `UExtraFlagData.bitFlags`. No
+  pointer assignment, live pointer, or save-image correlation was decoded;
+  pointer identity remains unproven.
+- The remap table at `0x141572BB0` is exactly the cumulative sum of the bounds
+  table at `0x141572C70` for all 45 categories (indices `0x00`..`0x2c`), with
+  zero mismatches. The next free bit is `0x768` (1,896 decimal), needing `0x3c`
+  dwords out of the `0x200` dword / `0x4000` bit capacity implied by `bitFlags`.
+  This supports one linear category bit space, not per-category storage.
+- Category `0x19` has bounds `0x400`, which explains the remap jump from `0x1ea`
+  to `0x5ea`. No Koco, item, quest, or story semantics were established for it
+  or any other category.
+- `byteFlags` and `intDatas` have no observed `ExtraFlagAc` access in the
+  decoded paths. No semantic category/bit map, resolver, write address, hook
+  point, trigger, authority model, or two-PC protocol change was established.
+- Stage 3 remains closed by owner choice. Stage 2 remains BUILD ONLY. No DLL
+  install, attach, game launch/restart, game-memory write, game-code hook,
+  network action, friend contact, PC B package, or in-game test occurred.
+  `READY_FOR_INSTALL=NO`, QA remains `none`, no working co-op is claimed, and
+  there is no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
