@@ -1123,6 +1123,36 @@ Diagnostic:
   `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`,
   Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## mpdev087b corrected run — incomplete scan coverage (2026-11-25)
+
+Result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087b-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`68309F5DE03D9DD78A85893294E69FDE03B4EAC177E51CF0B5231081E219462E`).
+Diagnostic:
+`RESULTS/mpdev087b-scan-cap-diagnostic-20261125.txt`
+(SHA-256
+`C843BFFABA5B068E51507E51A93939405C88C49E794FAE912801C842F359137C`).
+
+- The corrected tool scanned 5,530 committed regions and read exactly 1 GB,
+  its hard cap, before recording `SCAN_RAW_HITS=0` and stopping with
+  `VALIDATED_CANDIDATE_COUNT=0`. It stopped before pickup.
+- Offline review classified this as `INCOMPLETE_SCAN_COVERAGE`, not candidate
+  absence. The scan mixed MEM_PRIVATE and MEM_IMAGE regions; the
+  PlayerHsmContext object is a heap object, so private regions should be
+  prioritized.
+- A second corrected tool exists but has not been run:
+  `tools/mpdev087c-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `F4B2DF216AB74FFF8EB02F5865CFD313A6325B69E456133D007A589099F14C5B`).
+  It scans MEM_PRIVATE regions only, raises the byte cap to 4 GB, and records
+  the scan filter. Scope remains read-only with separate
+  `mpdev087c-stop.txt` / `mpdev087c-pickup-go.txt` files.
+- It needs fresh explicit owner authorization before any attach or pickup.
+  All stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`,
+  full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
