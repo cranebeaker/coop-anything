@@ -1710,7 +1710,9 @@ is qualified.
   `0x18`-byte enum-entry stride. `ObjNumberRingSpawner` has two RFL enum arrays:
   `NoType` at `0x14129a8e8` with six values (`No1`-`No5`, `Num_No`) and `Event`
   at `0x14129a900` with three values (`EVENT_NONE`, `EVENT_VISIBLE`,
-  `EVENT_INVISIBLE`). These are spawn-configuration enums, not ring counters.
+  `EVENT_INVISIBLE`). Combined with `mpdev131`, this identifies the bytes copied
+  into `ObjNumberRingInfo+0x290`/`+0x294` as the spawner's `noType` and
+  `EventType` fields. They are spawn-configuration enums, not ring counters.
 - `mpdev153-msgraise-async-dtor-aligned-20261125.txt` (SHA-256
   `4501E1DB258522342D1647CD12E8308E56FF10950BE70762AB8B937E15DB1B75`) aligns
   `0x14008cc30`-`0x14008cc90`, the first slot behind the `MsgRaiseRings`
