@@ -28,8 +28,8 @@ rests at the same place; a player who has left the ship in their pod is gone fro
 mission completes when they dock at home (the end screen pauses only that player); a guest knocked out aboard is
 carried off by the host's guards and thrown out of an airlock on both copies, then floats until it is lost or its own pod picks it up, as the
 game does with its own player, a death no longer crashes the game, and after one the player picks a new character and plays the next shared mission; alarms, the target's death or escape and the
-mission's end are the same on both copies. Not done: grenades and hull damage on both copies, a thrown item's hit on a guard (untested), other mission types, guard
-animations on guests, more than one guest, Steam lobbies, an installer.
+mission's end are the same on both copies. Not done: grenades and hull damage on both copies, other mission types, guard
+animations on guests, a Steam session between two accounts, an installer.
 
 ## Existing work
 
@@ -305,6 +305,6 @@ Not applicable yet.
 
 ## Next steps
 
-- Firing and throwing through the controls in the bot; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; a pod destroyed; the puppet is one of our own roster characters, so (derived, not checked) it looks like that character, not like the other player's.
-- Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
-- Suite with 3 and 4 copies, then an installer.
+- Other mission types; guard states and animations on guests; the puppet is one of our own roster characters, so (derived, not checked) it looks like that character, not like the other player's.
+- A Steam session between two accounts (lobby, invites, the host's traffic to a guest, Valve's relay); mission sharing by a real click at the mission computer.
+- An installer.
