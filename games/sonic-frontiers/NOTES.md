@@ -538,6 +538,34 @@ Targeted scan result:
 - Stage 1 targeted read-only mapping is exhausted. Stage 2 writes/hooks and
   Stage 3 friend/PC B/two-PC/in-game work remain unauthorized; gates stay closed.
 
+## Static Kodama message-ID map (2026-11-25) — CANDIDATE-ONLY
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-static-kodama-message-id-map-20261125.txt`.
+
+Offline read-only disassembly against the pinned exe hash and local SDK-style
+symbol CSV mapped message IDs to exact vtables: `0x21D4`=`MsgHideKodama`,
+`0x230E`=`MsgShowKodama`, `0x224D`=`MsgNotifyNumCollectedKodamas`,
+`0x2249`=`MsgNotifyKodamaCollection`, `0x2333`=`MsgStartQuest`,
+`0x2146`=`MsgEndQuestParameter`, `0x21D5`=`MsgHideMistakeCounter`, and
+`0x2138`=`MsgEndKodamaSticked`. No process, game, save, mod, network, friend or
+PC B was touched for this pass.
+
+- `KodamaManager` vtable slot `+0x10` points to `0x140789050`. That handler
+  increments `KodamaManager +0x290` on `MsgHideKodama` and decrements it on
+  `MsgShowKodama`; the constructor zeroes `+0x290`. This is a hidden-Kodama
+  counter, **not** a collected-Koco count. REJECTED as a co-op sync target.
+- `MsgNotifyNumCollectedKodamas` (`0x224D`) send sites were found in
+  `QuestKodamaCollection01/02` and a Kodama-escort quest loop;
+  `MsgNotifyKodamaCollection` (`0x2249`) in `ObjKodamaQuestInfo`. These are
+  message-construction leads only; no authoritative save field, item id,
+  trigger, resolver, hook point, or authority model was established.
+- Raw byte hits at `0x140BBA75E` and `0x140E9DCBF` are `jmp/call` rel32
+  displacement bytes containing `4D 22 00 00`, not message `0x224D`; PE section
+  labels are obfuscated and are not evidence.
+- `RESULT=CANDIDATE_ONLY_NO_MAPPING`, `KOCO_COUNT_FIELD=NOT_FOUND`. Gates B/C
+  remain closed, QA remains `none`, and PR #429 remains draft.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
