@@ -15377,3 +15377,64 @@
   - https://github.com/MaegIins/CrashNSaneCoop
   checked: '2026-11-02'
   made_with_coop_anything: true
+- game: Shrek 2
+  year: 2004
+  engine: Unreal Engine 2
+  project: Shrek 2 Enhanced
+  url: https://github.com/stxlvn/shrek2-enhanced
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: partial
+    items: shared
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: >-
+    MIT co-op mod for the Russian 1C edition only (the setup checks the Engine.dll hash). It is a script package plus a
+    d3d8.dll engine layer. Players host and join from the book menu (LAN search, direct address, UPnP) and play the story
+    levels in the host's world with shared checkpoints and inventory. Each guest plays a level's opening in his own game
+    while the host waits paused. Enemies, traps and pickups see every player. Guests cannot use potions, shops or posters.
+    Tested only with bots and up to four copies on one PC; no full playthrough and no public release yet. Write-up in
+    games/shrek-2.
+  sources:
+  - https://github.com/stxlvn/shrek2-enhanced
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/shrek-2
+  checked: '2026-11-20'
+  made_with_coop_anything: true
+- game: Shrek 2
+  year: 2004
+  engine: Unreal Engine 2
+  project: Shrek2-Multiplayer (Master_64; fork by Michiocre)
+  url: https://github.com/Master-64/Shrek2-Multiplayer
+  other_urls:
+  - https://github.com/Michiocre/Shrek2-Multiplayer
+  kind: mod
+  status: prototype
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
+  players: unknown
+  networking: unknown
+  open_source: partial
+  last_activity: 2026-08
+  qa: none
+  notes: >-
+    A chat and menu skeleton on Master_64's MPak library for the English edition. It has a lobby page and T-key chat, and
+    sends the local hero's position as text every tick to ghost pawns. Its header lists shared inventory, level transfer,
+    saves and enemy targeting as open tasks. The original's last push was 2025-02. The fork's branch rewrite (last push
+    2026-08) adds its own TCP text link and a Node.js relay with room codes. Public source, no license file.
+  sources:
+  - https://github.com/Master-64/Shrek2-Multiplayer
+  - https://github.com/Michiocre/Shrek2-Multiplayer
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/shrek-2
+  checked: '2026-11-20'
