@@ -32,7 +32,7 @@ QA_BADGE = {
 STATUS_ORDER = ["playable", "official", "partial", "alpha", "prototype", "abandoned", "unknown", "none"]
 
 
-BOOL_FIELDS = {"up_for_adoption"}  # real booleans in the schema, validated as such
+BOOL_FIELDS = {"up_for_adoption", "made_with_coop_anything"}  # real booleans in the schema, validated as such
 
 
 def normalize_yaml(value):
