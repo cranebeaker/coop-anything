@@ -15120,6 +15120,7 @@
   project: Starsector Coop
   url: https://github.com/AyoKeito/starsector-coop
   other_urls:
+  - https://github.com/openmans/starsector-coop
   - https://fractalsoftworks.com/forum/index.php?topic=36148.0
   kind: mod
   status: alpha
@@ -15135,13 +15136,12 @@
   last_activity: 2026-11
   qa: automated
   notes: Full two-player campaign co-op, sharing the sector, NPC fleets, markets, storage, colonies, reputation
-    and the campaign clock; host-authoritative. Battles are solo with an optional AI-ally toggle. CC BY-NC 4.0.
-    Stable 0.1.5 pins game 0.98a-RC8; preview 0.2.1 (2026-11-12) pins 0.98.5a-RC5. No build for RC7/RC8/RC9
-    yet and RC5 is no longer on the official download page, so it is not installable today. Author's automated
-    suite of 3,791 tests passed.
+    and the campaign clock; host-authoritative. CC BY-NC 4.0. Upstream 0.2.1 pins game 0.98.5a-RC5 (no longer
+    downloadable); the openmans fork (0.2.2/0.2.3) ports it to 0.98.5a-RC9 and adds full battle synchronisation
+    through The Wingman Project (guest flies in the host's battles). Author's automated suite of 3,791 tests.
   sources:
   - https://github.com/AyoKeito/starsector-coop#readme
-  - https://github.com/AyoKeito/starsector-coop/releases
+  - https://github.com/openmans/starsector-coop
   - https://github.com/AyoKeito/starsector-coop/blob/main/CHANGELOG.md
   checked: '2026-11-25'
 - game: Starsector

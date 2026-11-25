@@ -4,18 +4,20 @@
 |---|---|
 | Engine | Proprietary Java ("Star Engine"), LWJGL, public mod API |
 | Versions tested | fractalsoftworks.com 0.98.5a-RC9 (2026-11-23 hotfix) |
-| Projects | [The Wingman Project](https://github.com/NEOysod/TheWingmanProject) (battles, RC9) · [Starsector Coop](https://github.com/AyoKeito/starsector-coop) (campaign, 2p) · [Cooperative Multiplayer Combat](https://fractalsoftworks.com/forum/index.php?topic=11598.0) (couch) |
+| Projects | [Starsector Coop](https://github.com/AyoKeito/starsector-coop) + [openmans RC9/Wingman-battles port](https://github.com/openmans/starsector-coop) (campaign, 2p, RC9) · [The Wingman Project](https://github.com/NEOysod/TheWingmanProject) (battles, RC9) · [Cooperative Multiplayer Combat](https://fractalsoftworks.com/forum/index.php?topic=11598.0) (couch) |
 | QA level | community-reports (Wingman: author-tested two players; Starsector Coop: author's automated suite, 3,791 tests) |
 | Last updated | 2026-11-25 |
 
 ## Where things stand
 
-You can play battles together today, and only battles: The Wingman Project 0.9.4-beta (updated
-2026-11-25) tracks the current game build 0.98.5a-RC9 and lets the host plus up to three friends
-each fly a ship from the host's fleet in any battle. The full-shared-campaign mod (Starsector
-Coop) exists and is actively developed, but each release is pinned to one game build and the
-build its previews target (RC5) is no longer offered for download, so it is not installable
-today; the 2-player limit and "one player pilots each battle" design also stand.
+Both halves of the dream now run on the current build (0.98.5a-RC9): a two-player shared
+campaign (sector, markets, colonies, clock) via Starsector Coop, and real-time shared battles
+inside that campaign. The openmans fork ports Starsector Coop 0.2.1 (pinned to RC5, which is no
+longer downloadable) to RC9, and its 0.2.3 adds Wingman battles: the coop host opens a Wingman
+session from the campaign map, the guest joins the host's battles over Wingman and pilots a ship
+in real time, with real losses reconciled back into the shared campaign. Still true: exactly
+two players, story missions are the host's, and battles without Wingman stay solo (AI-ally
+toggle).
 
 ## Existing work
 
@@ -31,7 +33,17 @@ today; the 2-player limit and "one player pilots each battle" design also stand.
   optional AI-ally toggle. Stable 0.1.5 → 0.98a-RC8; preview 0.2.1 (2026-11-12) → 0.98.5a-RC5.
   Version- and seed-locked handshake; launcher (Windows) edits vmparams/enabled_mods with
   backups. Bug reports: GitHub issues (open: COOP-SEED false positive from mods using unseeded
-  RNG post-procgen, #6). No build for RC7+ yet; RC5 download no longer offered officially.
+  RNG post-procgen, #6).
+- **openmans port** (fork of Starsector Coop). 0.2.2 ports the 0.2.1 preview to 0.98.5a-RC9
+  (all 21 forked engine classes verified against the RC9 jars; RC9's added
+  `Misc.hasFunctionalHeavyIndustry` carried into the fork; full-fidelity guest-system drive
+  retargeted to RC9's `BaseLocation.advance` signature). 0.2.3 adds Wingman battles: host opens
+  a Wingman session from the campaign map, guest connects Wingman to the host once and flies in
+  the host's battles; the guest's flagship is reserved via WingmanAPI; the coop battle bridge
+  stays a spectator inside the Wingman join battle while `BATTLE_BEGIN/END` and the shared
+  pause keep driving the campaign clock; a new reliable `WINGMAN_HELLO` message carries the
+  guest's Wingman name. Fully degrades to the solo model without Wingman. Unit tests green
+  (4,5xx); live two-PC battle test pending (owner-run).
 - **Cooperative Multiplayer Combat** v3.10 (2026-05). Shared-screen/couch combat co-op for
   0.98a, up to three friends on one PC. Not remote-play.
 

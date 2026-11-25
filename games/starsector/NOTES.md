@@ -81,3 +81,23 @@ Written 2026-11-25.
 - Unknown: whether friends are on LAN or internet; whether Wingman 0.9.4 RC9 tolerates the
   RC9-since-update game classes in real battles (only author-tested); whether starsector-coop
   will get an RC9 port.
+
+
+## 2026-11-25 (session 2): RC9 port shipped + Wingman battles (0.2.3)
+
+- Forked upstream to openmans/starsector-coop, branch port/rc9 from v0.2.1.
+- Port to 0.98.5a-RC9 (0.2.2): javap -p -s over all 21 fork classes showed identical signatures
+  and field layouts; only real gap was Misc.hasFunctionalHeavyIndustry (added by a 0.98.5a
+  hotfix) — carried into the fork. Full-fidelity driver's ADVANCE_PARAM_CLASS updated to RC9's
+  com.fs.starfarer.util.oOOO$new. StarfarerSettings toggle handles and CampaignState.fastForward
+  verified unchanged. Full gradle suite green (4,546 tests). Two-client run (owner-driven):
+  version check MATCH, forks active, session up, campaign replicated.
+- 0.2.3 Wingman battles (battle sync through The Wingman Project): new coop.wingman package
+  (reflective WingmanAPI access, fails closed), coop.wingmanBattles option (default on),
+  WINGMAN_HELLO reliable message (guest's Wingman name), host openHost/pump/reserveShip of the
+  guest mirror flagship, guest-side bridge latch that keeps the coop bridge a spectator inside
+  the Wingman join battle. 9 new unit tests + policy tables updated. Full suite green.
+- Battle sync verification: NOT yet run live (owner will test). Risks to watch: Wingman's
+  reserveShip matching against the ally-deployed mirror members; the guest-side latch race at
+  battle end (handled by latching until the first campaign frame); Wingman port assumption
+  (24816 default) in the guest hint.
