@@ -118,6 +118,11 @@ Do not assert on exact timing of single packets. Assert on end state and on coun
 - **One client port.** A client that changes its source port looks like a new peer.
 - **Ports.** Use one relay per host, with its own ports, per parallel agent, so agents do not collide.
 - **Do not ship the box inside your game.** It is a test tool.
+- **A stuck game screen looks like a network fault.** Under `bad_wifi` a Shadow of War bot fight showed no client strikes at
+  all; the cause was a captain's introduction that had left the client's copy on a screen, not the link. Check that every
+  player can move before each measured run. The same game then fought fine through `bad_wifi`, `transatlantic` and `hell`
+  (330-380 ms round trip, 8% loss in bursts): hits went both ways and the link never dropped
+  ([notes](../games/shadow-of-war/NOTES.md), session cm).
 
 ## 9. Test the box itself
 
