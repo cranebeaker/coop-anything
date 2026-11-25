@@ -963,6 +963,39 @@ Full record:
   full test closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim,
   and no ETA to online.
 
+## Save-mirror correlation (2026-11-25) — POSITIVE after owner save
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev067-save-mirror-correlation-results-20261125.txt`
+(SHA-256
+`2A3706998033AB8D3375968A8EA36DAE6D9F5C7012654AEC8D276B0DFD989010`).
+
+- Owner explicitly authorized a save-mirror check and performed a normal
+  in-game save. Assistant access remained `VM_READ | QUERY_INFORMATION` plus
+  read-only `Get-FileHash` on save files. No assistant write, hook, detour,
+  inject, DLL load, install, network, friend contact, PC B, or input simulation
+  occurred.
+- Same live chain and pointers as mpdev066, stable across four reads:
+  `CharacterData = 0x1C4F7B220`.
+- `numRings` went `134 -> 138` only after the save. `numPowerSeeds=11`,
+  `numGuardSeeds=11`, and all four fishing/slot fields remained `0`.
+- A new `savedata\manual2\gamedata.sav` appeared with SHA-256
+  `7A50B941A9DC29F4FF6FE99C0A928F3485271C15CC35C3CEC89F07D16B05A9D9`;
+  all six pre-existing `gamedata.sav` hashes were unchanged. This confirms the
+  owner save actually occurred.
+- The `+4` delta is not a controlled one-ring value because gameplay between
+  snapshots was untracked. It establishes `CharacterData+0x0` as a live
+  save-state mirror updated on save, matching the static `OnSave` writer path.
+  It does not establish an immediate gameplay counter, item id, story flag,
+  resolver, authority model, hook point, detour layout, or protocol mapping.
+- `WRITE_TARGET=CANDIDATE_LIVE_SAVE_MIRROR_CORRELATED_AFTER_SAVE`;
+  `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, and
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`. A separate reversible single-field
+  write experiment must be explicitly authorized before any write/hook/install/
+  network step. Stage 2 remains `BUILD_ONLY`, Stage 3 remains `PREP_ONLY` with
+  full test closed, `READY_FOR_INSTALL=NO`, QA `none`, no working co-op claim,
+  and no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
