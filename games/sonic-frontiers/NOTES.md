@@ -485,6 +485,37 @@ one Koco between the before and after scans, then no action before the control.
 - Stage 2 writes/hooks and Stage 3 friend/PC B/two-PC/in-game work remain
   unauthorized. Gates stay closed, QA remains `none`, and PR #429 remains draft.
 
+## Targeted Kodama/Koco read-only lead (2026-11-25)
+
+Full record:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev048-targeted-kodama-mapping-20261125.txt`.
+
+The previous scanner filters (`Item`, `Inventory`, `Story`, `Flag`, `Quest`)
+missed the engine's own Kodama/Koco counter names. A local SDK-style address map
+(`sdk/rangers/addresses.csv`, SHA-256
+`DD645287ECE8149D9B4BFDA97DB5CBB27C63A444AEC84F5565148D7F80C50DF5`) contains
+named candidates including `KodamaManager` (vtable `0x1414f3478`),
+`UIKodamaCounterContext` (vtable `0x1415618e8`),
+`MsgNotifyNumCollectedKodamas` (vtable `0x1414fa490`), `QuestKodamaCollection01/02`,
+`ObjKodamaQuest`, and `MsgSetClearFlag`. These are CANDIDATE-ONLY leads; the
+address CSV's build match is not independently proven and must be checked against
+the pinned exe hash before interpretation.
+
+- Added `tools\mpdev-kodama-readonly-scan.ps1`, which uses the same pinned
+  read-only scanner binary (unchanged SHA-256 `5979B12B...5E`) with added
+  `Kodama`, `Koco`, `Collected`, `Counter`, and `SaveDataAccessor` filters.
+  No writes/injection/network; no gate opened.
+- The first targeted scan attempt stopped before scanning because no
+  `SonicFrontiers.exe` was running (`PROCESS_COUNT=0` at ~05:35Z). The assistant
+  did not launch the game; no trace was produced.
+- Next safe step: owner launches the game themselves, then the targeted read-only
+  scan runs. Only if a live valid-vptr counter/manager hit appears should the
+  owner be asked before any further gameplay action. Promotion requires a
+  repeatable +1 field delta matching HUD +1, a stable no-action control, and a
+  source-vs-UI-copy distinction.
+- Gates remain closed, QA remains `none`, and no friend/PC B/two-PC/in-game work
+  is authorized.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
