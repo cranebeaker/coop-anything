@@ -1294,6 +1294,121 @@ Final result:
   Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full test closed, QA `none`, no
   co-op claim, no ETA.
 
+## Static ring accessor/caller pass after mpdev087h (2026-11-25) — CANDIDATE-ONLY
+
+All files below are offline outputs from the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and the
+local symbol CSV. They are `CANDIDATE-ONLY`; they do not qualify a live counter,
+hook point, authority model, resolver, protocol mapping, or write target.
+
+- `mpdev089-getnumrings-callers-20261125.txt` (SHA-256
+  `520E6F64109D6C93832AD8E3F38FD1585AB6A64A22C04D48DD31CB714A267AFF`) lists
+  direct callers of `GetNumRings@CharacterAc` `0x140afc740`, including two
+  sites inside `Player::AddCallback` `0x140880810`.
+- `mpdev089a-getnumrings-call-context-20261125.txt` (SHA-256
+  `D034EE09371642F5A5852714C1889B64A23E5469D9FE827479204BD7DC8AD465`) and
+  `mpdev089b-player-addcallback-ring-getters-20261125.txt` (SHA-256
+  `6C697E143093984961C87BEEECD3808BE343867B2367E7D327E6382290FF4A29`) show
+  those sites reading boss-rush rings and normal rings into a local save-side
+  structure; no immediate HUD source is established.
+- `mpdev090-setnumrings-callers-20261125.txt` (SHA-256
+  `52DF3503F87D29986EBE09DDE6E68D2DF21E9250E75FDDAF2449282C9A2FB114`) and
+  `mpdev090a-setnumrings-call-context-20261125.txt` (SHA-256
+  `1FFE109E777038E684C643AE67D87FE469337DDA5CA2C1C08064439976B56342`) list
+  seven direct callers of the `numRings` setter `0x140afff30`. Two sites at
+  `0x140918941` and `0x14091d661` are inside the `PlayerStateParameter` region.
+- `mpdev090d-playerstate-rings-path1-aligned-20261125.txt` (SHA-256
+  `53A3F011841771ABE969DCFC089738C0B4592402C05579D8AB298EB50CA28186`) and
+  `mpdev090e-playerstate-rings-path2-aligned-20261125.txt` (SHA-256
+  `760F121101D925C3EBD1D8967008B17775FCA2AF508508505DA07249AAF74281`) are the
+  aligned disassembly replacements. They show a path through
+  `GetContent@Blackboard` `0x140884470`, `GetPlayerObject@PlayerHsmContext`
+  `0x1402484e0`, `GetCharacterAccessor@save` `0x140b0dec0`,
+  `0x1408ac170`, and then `0x140afff30`. This supports a save-mirror write
+  path, not an immediate pickup counter. The earlier unaligned dumps
+  `mpdev090b` (SHA-256
+  `31853DE95A007A1F60D5395380F22996880B7A18D54E869186435E23B16E763E`) and
+  `mpdev090c` (SHA-256
+  `94C7E2BAD7A40F6AA4CB92F6084BF6438967A0D4FB723FF7EC1B36E900A018DD`) are
+  superseded. Hash-search context is in
+  `mpdev090f-playerstate-rings-hash-20261125.txt` (SHA-256
+  `7F32110654EBF8ADF80D4522C0B2A7D6EF204318410B84E5D02BCC346EC21CAB`) and
+  `mpdev090g-playerstate-rings-hash-search-20261125.txt` (SHA-256
+  `9F08DEB39B7B86A088A1097F5825DD64D6330C5EDF15AF97E3122F9B1B393274`).
+- `mpdev091-playerhsm-unknown-getter-20261125.txt` (SHA-256
+  `9CB2E1A1F941052C9165B685588B76874FFBE94A166ACA7D3B3BC0CEDFD04892`)
+  confirms `0x1408ac170` is only:
+  `mov rax,[rcx+0x30]; mov eax,[rax+0x28]; ret`. Combined with the owner's
+  `+1` HUD observation during the `mpdev087h` sampling window and zero delta
+  in that word, this remains `REJECTED_AS_IMMEDIATE_PICKUP_COUNTER`; a
+  save-side/source role remains unqualified.
+
+No new attach, write, hook, install, network, friend contact, input simulation,
+or live pickup occurred for this pass. Stage gates unchanged: Stage 2
+`BUILD_ONLY`, Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim,
+no ETA.
+
+## Static UI counter / number-ring message pass (2026-11-25) — CANDIDATE-ONLY
+
+All files below are offline outputs from the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and the
+local symbol CSV. They remain `CANDIDATE-ONLY`: no immediate HUD/runtime counter,
+hook point, authority model, resolver, protocol mapping, or write target is
+qualified by them.
+
+- `mpdev092-uiring-counter-method-callers-20261125.txt` (SHA-256
+  `4DE656F87ACFEA62458D98AECCB9B6666547E7FFE4B1164C0500A1555E4DAFA2`) finds no
+  direct callers for `UINumberRingCounterContext` methods `0x140a5ad40`,
+  `0x140a5ad50`, or `0x140a5ad80`, and only construction/display-parameter calls
+  from `UIGameCockpit::AddCallback`.
+- `mpdev093-msg2299-handler-callers-20261125.txt` (SHA-256
+  `AF5101EF055E369695FD904EC8270924FCD2C9F030B303CBF46869F9AEC80480`) finds no
+  direct callers for the `MsgRaiseRings` handler addresses `0x14008cbc0` and
+  `0x14008cc30`; calls to `0x14008d680` are generic `UnkFunc1` plumbing shared by
+  many messages.
+- `mpdev094-uigamecockpit-ring-counter-setup-20261125.txt` (SHA-256
+  `CA6123F44A9D9455FC5047F3D5C011EA72FA978612F262DE83396570FC9B48C1`) shows the
+  `UINumberRingCounterContext` construction and digit-parameter calls at
+  `0x140a346c5`/`0x140a3477d` inside `UIGameCockpit::AddCallback`.
+- `mpdev095-uiring-counter-message-handler-20261125.txt` (SHA-256
+  `E4A14CD6F78E1215ED75653A8250B5AF9F924DF3F06E7461562C83DACAB9E168`) shows the
+  handler at `0x140a5ad80` reacting to bit-flag/visibility messages and message ID
+  `0x2419`; it sets a bit at context byte `+0x50` and calls `SetVisible`-style
+  plumbing. It is not an established numeric counter source.
+- `mpdev096-uiring-vtable-address-refs-20261125.txt` (SHA-256
+  `7EC18CB38E29E169CB5418C5ADC1C553DFD2F3CD30E1FA1D9B4D16E216A999CB`) found no
+  raw in-EXE references to the probed UI counter vtable/method address bytes.
+- `mpdev097-uiring-digit-format-20261125.txt` (SHA-256
+  `508DBA513EA3BD14F40C0ECD518C167795028C9B5CD72BCF245833BF11787159`) and
+  `mpdev098-uiring-reset-helper-20261125.txt` (SHA-256
+  `29D847E990C120007682FB763C99B1139E3186ACEFB7AE969B562DE602115184`) confirm
+  `0x140b96600` is `SetParameter@LayerController` display formatting and
+  `0x140b96800` is `SetVisible@LayerController`; neither exposes a gameplay ring
+  value. Some slice starts are unaligned and are not evidence on their own.
+- `mpdev099-msg2299-vtable-ctor-20261125.txt` (SHA-256
+  `BEE2E00B0222BF7ACF08569EA1077CEFD9CCBC39811A017B611EC552611EE161`) shows the
+  `MsgRaiseRings` async-handler construction copying only generic payload fields;
+  no counter write is established.
+- `mpdev100-number-ring-message-vtables-20261125.txt` (SHA-256
+  `5B076549419E9E7BBFF38B6FA6233E2571FA8C6877821FD59681D3E05703E776`) confirms
+  exact classes `MsgTakeNumberRing`, `MsgIsTakeNumberRing`, and
+  `MsgUITakeNumberRing`, plus `ObjNumberRingInfo`/`ObjNumberRing` vtables. Their
+  handlers are `0x14050ffa0`, `0x14050fee0`, `0x1401d1530`, and `0x1401d17f0`.
+- `mpdev101-takenumberring-handlers-20261125.txt` (SHA-256
+  `B82D04C452A15C8BF05D55C84ECC35E6FA2F62B7D3A486954938DD2CDF3736DE`) shows the
+  `MsgTakeNumberRing`/`MsgIsTakeNumberRing` handlers only copying payload fields
+  into an async handler. The slice start is unaligned; aligned continuation is
+  required before drawing field-semantics conclusions.
+- `mpdev102-numberringinfo-methods-20261125.txt` (SHA-256
+  `8CE706B2E76FEF25ED040BD6BE4C0A61B88A0EA6C40283DC671D1BB2C7AD4248`) covers
+  `ObjNumberRingInfo` methods. `0x140510300` is a message handler that dispatches
+  ID `0x304` specially and passes IDs `0x200`, `0x20d6`, and `0x222c` through;
+  this is still generic message plumbing, not a qualified ring counter or hook.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
