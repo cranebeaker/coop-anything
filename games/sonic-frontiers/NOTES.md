@@ -1088,6 +1088,41 @@ Read-only probe draft:
   remains `PREP_ONLY` with full test closed, `READY_FOR_INSTALL=NO`, QA `none`,
   no working co-op claim, and no ETA to online.
 
+## mpdev087 read-only run — tool bug, no candidate result (2026-11-25)
+
+Original result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`B29C46467C34FDFF8F130B234E257B607FC5AEFC44A6120B2D40114B789DFCC1`).
+Diagnostic:
+`RESULTS/mpdev087a-scan-region-bug-diagnostic-20261125.txt`
+(SHA-256
+`9933EEDE2BBAB774CD9504A131444276D51B3CA4B29F395B718491FF147AE7F2`).
+
+- Owner authorized the exact read-only probe. The tool rechecked the pinned
+  EXE, found one responding PID, confirmed module base `0x140000000`, and
+  re-resolved the full save-mirror chain (`CHARACTER_DATA=0x1C4F7B220`,
+  mirror `138`). It then stopped before pickup with
+  `VALIDATED_CANDIDATE_COUNT=0`.
+- Offline review found a tool bug: memory-region enumeration started at address
+  `0`; `VirtualQueryEx(NULL)` returned `BaseAddress=0`, and the stale-progress
+  guard broke immediately. Consequently `SCAN_REGIONS=0`, `SCAN_BYTES=0`, and
+  no memory was ever scanned.
+- The zero-candidate result is therefore `INVALID_FOR_CANDIDATE_ENUMERATION`,
+  not evidence that the runtime candidate is absent. No write, hook, detour,
+  inject, DLL load, install, network, save, input simulation, or owner pickup
+  occurred.
+- A corrected read-only tool exists but has not been run:
+  `tools/mpdev087b-runtime-ring-readonly-probe.py`
+  (SHA-256
+  `93DA258E8BE2E5F0EDEBB1EA16E9A8686C2AFF201A7226508B5F82095E1DD895`).
+  It starts region enumeration at `0x10000` and uses separate
+  `mpdev087b-stop.txt` / `mpdev087b-pickup-go.txt` files.
+- The corrected tool needs fresh explicit owner authorization before any new
+  attach or pickup. All stage gates are unchanged: `LIVE_QUALIFIED=0`,
+  `HOOK_POINT=NOT_FOUND`, `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`,
+  Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
