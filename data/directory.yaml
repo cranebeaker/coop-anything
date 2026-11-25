@@ -9664,7 +9664,9 @@
   engine: Unreal Engine 3
   project: 'XCOM 2: Tactical Co-Op (Team Dragonpunk)'
   url: https://steamcommunity.com/sharedfiles/filedetails/?id=792693587
-  other_urls: []
+  other_urls:
+  - https://github.com/quixotic-cloud/Tactical-Co-Op
+  - https://github.com/quixotic-cloud/Long-War-2-Coop
   kind: mod
   status: abandoned
   coop_scope:
@@ -9674,44 +9676,54 @@
     world_state: unknown
     items: unknown
   players: '2'
-  networking: unknown
-  open_source: 'no'
+  networking: steam-relay
+  open_source: 'yes'
   last_activity: 2017-09
   qa: none
   notes: Two players split the squad on campaign missions (tactical layer only, no shared strategy); soldiers can be imported from the
     friend's game; no Ironman. Workshop status "Final", last update 3 Sep 2017, five days after War of the Chosen came out, so probably
-    for the base game only. No public source found. Write-up in games/xcom-2.
+    for the base game only. Source on GitHub (GPL-3.0 per the repo, last push 2017-03-30, vanilla XCOM 2; its Src/XComGame folder
+    is the Firaxis SDK source copied by the old ModBuddy template, not the mod's own code), plus a Long War 2 variant (one commit, no
+    license). It uses the game's XComGameStateNetworkManager over Steam lobbies. The Workshop item is now removed. Write-up in games/xcom-2.
   sources:
   - https://steamcommunity.com/sharedfiles/filedetails/?id=792693587
-  checked: '2026-10-25'
+  - https://github.com/quixotic-cloud/Tactical-Co-Op
+  - https://steamcommunity.com/sharedfiles/filedetails/comments/792693587
+  checked: '2026-11-11'
 - game: 'XCOM 2: War of the Chosen'
   year: 2017
   engine: Unreal Engine 3
   project: WOTC Co-op Campaign
-  url: https://github.com/EvilMask587/xcom2-wotc-coop-campaign
-  other_urls: []
+  url: https://github.com/Santonus-not-bot/xcom2-wotc-coop-campaign
+  other_urls:
+  - https://github.com/EvilMask587/xcom2-wotc-coop-campaign
   kind: mod
   status: prototype
   coop_scope:
-    players_visible: 'no'
-    story: 'no'
-    enemies: 'no'
-    world_state: partial
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
     items: shared
-  players: '2'
+  players: 2-4
   networking: direct-ip
   open_source: 'yes'
-  last_activity: 2026-10
+  last_activity: 2026-11
   qa: automated
-  notes: Prototype of a shared campaign, strategy layer only, for developers (no player build yet). Both players run the same Avenger; one player at a time
-    holds a baton and edits (research, building, armory, Geoscape...), every frame goes to the partner as a merge game state with a
-    fingerprint; edit screens ask for the baton, HUD panel with "ask for control". Join by full history transfer. Tested with two game
-    instances on one PC over direct IP (Steam buildid 8270065, WotC + DLC) and a scripted suite asserting equal state on both; scope is one PC,
-    no two-PC or Steam session yet; no tactical co-op. Write-up in games/xcom-2.
+  notes: Shared campaign for up to 4 players, for developers (no player build yet). Started as a strategy prototype (shared Avenger, one
+    editor at a time, merge game states with fingerprints; the original repo, in other_urls). The fork in url (2026-11, write-up in
+    games/xcom-2) extends it to missions and 2-4 players - the host makes campaign decisions and gives soldiers to guests, who manage their own; in missions each
+    player moves their own soldiers in turn (host, guests in slot order, aliens) while the others watch; the host takes over a dropped
+    guest's soldiers until it rejoins; host-only saves incl. mid-mission and Ironman; host/join buttons, mod list check, pings, chat,
+    owner tags on unit flags, turn banner. 40 scripted scenarios pass with 2-4 game copies on one PC over direct IP (Steam buildid 8270065,
+    WotC + DLC), including guests moving and shooting, enemy overwatch and AI turns, Chosen missions and 8 missions in a row; on two PCs
+    over a home network (direct IP, one Steam account) join, a mission and its end passed. Not tested - Steam invites, Workshop
+    auto-subscribe, a whole campaign.
   sources:
+  - https://github.com/Santonus-not-bot/xcom2-wotc-coop-campaign
   - https://github.com/EvilMask587/xcom2-wotc-coop-campaign
   - https://github.com/cranebeaker/coop-anything/blob/main/games/xcom-2/README.md
-  checked: '2026-10-25'
+  checked: '2026-11-21'
   made_with_coop_anything: true
 - game: Cult of the Lamb
   year: 2022
