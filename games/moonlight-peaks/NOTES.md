@@ -68,3 +68,7 @@ Remaining: held item/equipment visuals, coins shared through GameMeta, cutscene 
 ## 0.1.2
 
 Guest actors now get a cloned player entity on the host (unique GUID, EntityAsset.IsPlayer patch, registered under its own key) and Director actor ids choose host/guest player vs NPC. Held item GUID is sent and the puppet equipment instantiates it, unverified with real tools. World reload stores and restores local position to reduce rubber-banding. Coins are inventory items and stay per-player. Tested: host and guest startday both advanced to day 4, cutscene graphs ran on both, 16 s stable.
+
+## 0.1.3
+
+Steam launches now share the same default profile as the launcher; existing saves are copied into the isolated profile on first mod launch so the load menu is not empty. Verified on the real install: 0.1.3 loads from a plain exe/Steam launch, profile=default, saves copied, real saves untouched.

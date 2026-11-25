@@ -84,7 +84,9 @@ Owner-facing package: `moonlight-peaks-coop/` at the workspace root. Run `instal
 start with the generated `.bat`, F8 to host or join. Simplest network without router access:
 both players install ZeroTier, join the same free network, and the guest joins the host's
 ZeroTier address (allow the game through Windows Firewall). With port forwarding instead:
-UDP `47110` and TCP `47120`.
+UDP `47110` and TCP `47120`. Launching through Steam also loads the mod; the first mod
+launch copies existing saves into the `default` profile so they still show in the load menu.
+Uninstall to return to vanilla.
 The guest stays on the main menu and joins with the host's IP.
 
 ## Known issues
@@ -106,6 +108,7 @@ The guest stays on the main menu and joins with the host's IP.
 3. Send the sleep transition and day-start state to the guest.
 4. Replace the direct-IP transport with the game's Steamworks session for relay/NAT.
 5. Turn the control-port smoke test into a repeatable harness with assertions.
+
 
 
 
