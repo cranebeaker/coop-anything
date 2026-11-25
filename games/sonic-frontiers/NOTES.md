@@ -651,6 +651,19 @@ Stage 2 permission does not create a safe target. Current status is
 mod install, `ModsDB.ini` change, network action, or friend contact was performed.
 QA remains `none`; no working co-op is claimed.
 
+When asked what Stage 2 should change, the owner chose **build only, no
+install**. The isolated write-capable DLL was rebuilt in the workspace only:
+`build\mpdev-pos-sync.dll` SHA-256
+`1B5FC2E7422CC81A383F0FBECC9617BC2B1F8357E01C938959844D678313C18F`, 540,672
+bytes, with all four loader exports. `run-pos-sync-tests.ps1`,
+`verify-mpdev013-abi.ps1`, and `run-tests.ps1` all passed; the hash changed from
+the preserved historical DLL because the current source carries protocol build 4.
+Post-build baseline stayed he2mp-only with no mpdev mod installed. Full record:
+`RESULTS/mpdev054-stage2-build-only-20261125.txt` (SHA-256
+`2EFF62355CD59241388F4C9AD93EF90C5B9974AA115E16F4278CB48C44CC9544`).
+The DLL was not installed, loaded, attached, hooked, networked, or game-tested;
+`READY_FOR_INSTALL=NO` and `WORKING_CO_OP_CLAIM=NO`.
+
 Offline Stage 1 continuation decoded the `ExtraFlagAc` setter body at
 `0x140AFF350` (`RESULTS/mpdev053-disasm-extraflagac-set-body-20261125.txt`,
 SHA-256 `326009A518A0D1D517C25054189ADA2E97B8FB36BE47442463650E311972E060`).
