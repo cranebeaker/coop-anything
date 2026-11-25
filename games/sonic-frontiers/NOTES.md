@@ -565,6 +565,13 @@ PC B was touched for this pass.
   labels are obfuscated and are not evidence.
 - `RESULT=CANDIDATE_ONLY_NO_MAPPING`, `KOCO_COUNT_FIELD=NOT_FOUND`. Gates B/C
   remain closed, QA remains `none`, and PR #429 remains draft.
+- Follow-up static pass: `MsgUpdateKodamaGroupFlag` (`0x1414FA5E8`) is used by
+  `QuestKodamaCollection01/02Context`, but its numeric id is assigned through a
+  virtual call and was not recovered. `UIKodamaCounterContext` vtable-adjacent
+  strings are `info_kodama_num` / `sysf_num_kodama` (UI layer names); its only
+  constructor caller receives an allocator, not a Koco count. The `[rcx+0x78]`
+  helper is a generic quest-loop bound used by several quest types. All remain
+  CANDIDATE-ONLY.
 
 ## Unknowns / not yet checked
 
