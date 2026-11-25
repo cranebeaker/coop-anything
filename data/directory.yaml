@@ -15643,7 +15643,7 @@
   qa: automated
   notes: Source-only update of the original co-op mod for game 5.2.0.0 (Steam build 26206996), two players over ENet
     direct IP/LAN with independent dimensions and a personal ender chest. No release and no license file; build the PCK
-    from source. This agent's build passed the author's two-client LAN fixture against the real 5.2.0.0 exe (host 8 checks,
+    from source. A build from source passed the author's two-client LAN fixture against the real 5.2.0.0 exe (host 8 checks,
     guest 11, 0 failures) in headless and windowed runs. Steam invite and human playfeel remain untested.
   sources:
   - https://github.com/parkers0405/lucid-blocks-coop/pull/16
