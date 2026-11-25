@@ -15084,3 +15084,87 @@
   - https://github.com/oshoubber/parkasaurus-coop/releases/tag/v0.1.1
   checked: '2026-11-15'
   made_with_coop_anything: true
+
+- game: Starsector
+  year: 2011
+  engine: Proprietary Java (Star Engine)
+  project: The Wingman Project
+  url: https://github.com/NEOysod/TheWingmanProject
+  other_urls:
+  - https://fractalsoftworks.com/forum/index.php?topic=36153.0
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'no'
+    items: 'no'
+  players: 2-4
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: community-reports
+  notes: Online co-op battles; the campaign stays single-player. Host plus up to three friends each fly a ship
+    from the host's fleet (missions, simulator or campaign fights). Ships, fighters, missiles, battle world,
+    loadouts and officers are synced; hits are host-authoritative. Port 24816 TCP (+UDP optional), plaintext
+    with optional password; LAN, virtual LAN or port forward. GPLv3. 0.9.4-beta (2026-11-25) targets game
+    0.98.5a-RC9.
+  sources:
+  - https://github.com/NEOysod/TheWingmanProject#readme
+  - https://github.com/NEOysod/TheWingmanProject/releases
+  checked: '2026-11-25'
+- game: Starsector
+  year: 2011
+  engine: Proprietary Java (Star Engine)
+  project: Starsector Coop
+  url: https://github.com/AyoKeito/starsector-coop
+  other_urls:
+  - https://fractalsoftworks.com/forum/index.php?topic=36148.0
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: Full two-player campaign co-op, sharing the sector, NPC fleets, markets, storage, colonies, reputation
+    and the campaign clock; host-authoritative. Battles are solo with an optional AI-ally toggle. CC BY-NC 4.0.
+    Stable 0.1.5 pins game 0.98a-RC8; preview 0.2.1 (2026-11-12) pins 0.98.5a-RC5. No build for RC7/RC8/RC9
+    yet and RC5 is no longer on the official download page, so it is not installable today. Author's automated
+    suite of 3,791 tests passed.
+  sources:
+  - https://github.com/AyoKeito/starsector-coop#readme
+  - https://github.com/AyoKeito/starsector-coop/releases
+  - https://github.com/AyoKeito/starsector-coop/blob/main/CHANGELOG.md
+  checked: '2026-11-25'
+- game: Starsector
+  year: 2011
+  engine: Proprietary Java (Star Engine)
+  project: Cooperative Multiplayer Combat
+  url: https://fractalsoftworks.com/forum/index.php?topic=11598.0
+  other_urls: []
+  kind: mod
+  status: playable
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'no'
+    items: unknown
+  players: 2-4
+  networking: lan
+  open_source: unknown
+  last_activity: 2026-05
+  qa: community-reports
+  notes: Shared-screen couch co-op for battles, up to three friends on one PC. Targets 0.98a. Shield AI,
+    pushbutton targeting, shared cooldown UI. Not remote play.
+  sources:
+  - https://fractalsoftworks.com/forum/index.php?topic=11598.0
+  checked: '2026-11-25'
