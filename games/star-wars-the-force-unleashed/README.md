@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | LucasArts Ronin: Lua 5.1 scripting (32-bit float numbers), Havok/DMM/Euphoria physics, Aspyr PC port (AWL) |
-| Versions tested | Steam app 32430, build 6522; `SWTFU.exe` SHA-256 `1C156705…2032`, unpacked with Steamless v3.1.0.5 to `2D872CA9…7B8A` |
+| Versions tested | Steam app 32430, build 6522; `SWTFU.exe` SHA-256 `1C156705548FCE9E33FA3423E75B5CBE36248319B96F4B4850BF2E8125692032`, unpacked with Steamless v3.1.0.5 to `2D872CA97BA05C6E9777506549B514AC2DA7E74D5A0AA08DDD4F8299A95D7B8A` |
 | Projects | tfu-coop (code repository not yet published); directory entry "tfu-coop" |
 | QA level | automated |
 | Last updated | 2026-11-02 |
