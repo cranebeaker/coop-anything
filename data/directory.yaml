@@ -5299,18 +5299,18 @@
   kind: mod
   status: abandoned
   coop_scope:
-    story: false
-    enemies: false
-    world_state: false
-    items: false
+    story: 'no'
+    enemies: 'no'
+    world_state: 'no'
+    items: 'no'
     players_visible: partial
   players: 2-4
   networking: direct-ip
   open_source: 'yes'
-  last_activity: '2026-11-09'
+  last_activity: 2026-11
   qa: automated
   notes: 'Abandoned 2026-11-09: the goal was friends shown as real player heroes, which needs code injection into the VMProtect + Denuvo exe (out of scope). What exists and works is ghost co-op only: each player runs their own single-player game, and positions are shared onto an
-    always-on-top minimap and drawn as see-through animated original figures in the game view (camera read from memory; no occlusion). Nobody sees other players in the 3D world, and story, enemies and items do not
+    always-on-top minimap and drawn as see-through animated original figures in the game view (camera read from memory; no occlusion). Other players are never real characters in the 3D world (only overlay figures with no occlusion), and story, enemies and items do not
     sync. Read-only runtime approach for Steam build 17083392: the exe is VMProtect + Denuvo, so there is no
     static RE, no injection and no writes. The player position (x east, y north, z up) is found by a float
     scan, and pointer paths from the exe''s static data survive restarts. UDP host relay at 20 Hz. Automated
