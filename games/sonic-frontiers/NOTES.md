@@ -1262,6 +1262,38 @@ Diagnostic:
   `AUTHORITY_MODEL=NOT_FOUND`, Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full
   test closed, QA `none`, no co-op claim, no ETA.
 
+## mpdev087h successful read-only run — candidate rejected (2026-11-25)
+
+Final result:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev087h-runtime-ring-readonly-probe-results-20261125.txt`
+(SHA-256
+`4D45521AD5A1C6064771CC794B8BF8670B837336A709C0B96C06C5A639B18627`).
+
+- Owner authorized the exact read-only probe. It verified the pinned EXE, one
+  responding PID, module base `0x140000000`, and re-resolved the save chain.
+  Total private memory was 2,224 regions / 7,049,756,672 bytes; the 12 GB cap
+  was not reached.
+- The derived-vtable scan found exactly one validated candidate:
+  `SonicContext`, primary vtable `0x14151CAB8`, root `0x19DAC6258`,
+  GOC `0x19DAC64C8`, plugin `0x19DAB2FD0`. Baseline sampled values were
+  `candidate_u16=141`, `same_slot_u32=141`, `adjacent_u32=999`, and
+  `save_mirror_u16=141`.
+- After the assistant gave the exact instruction **“Pick up one ring now.”**,
+  the owner picked up one ring and reported the HUD increased by `+1` during
+  the ~10-second sampling window. All sampled fields remained unchanged for the
+  entire window: `candidate_u16 delta=0`, `same_slot_u32 delta=0`,
+  `adjacent_u32 delta=0`, `save_mirror_u16 delta=0`.
+- Conclusion: `word [[PlayerHsmContext+0x30]+0x28]` is
+  `REJECTED_AS_IMMEDIATE_PICKUP_COUNTER`. It may still be a save-side/source
+  field, but its live counter role is not qualified and no alternate counter
+  was established by this run.
+- No write, hook, detour, breakpoint, injection, DLL load, install, save,
+  network, friend contact, build-id check, PC B, or input simulation occurred.
+  Stage gates remain unchanged: `LIVE_QUALIFIED=0`, `HOOK_POINT=NOT_FOUND`,
+  `AUTHORITY_MODEL=NOT_FOUND`, `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`,
+  Stage 2 `BUILD_ONLY`, Stage 3 `PREP_ONLY`, full test closed, QA `none`, no
+  co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
