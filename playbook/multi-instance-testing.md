@@ -81,6 +81,11 @@ account in once in the boxed window ("Remember me"); the agent never handles the
 game. Verified on Thronefall (Unity 6000.3, Sandboxie-Plus 1.18.8): each Steam client's `gameprocess_log.txt` lists its
 own copy, and the two accounts connect through Steam lobbies and `SteamNetworkingMessages`.
 
+Unity keys both `persistentDataPath` and PlayerPrefs on the company name in `<Game>_Data/globalgamemanagers`, not on `app.info`. A same-length patch of that
+field in a private copy of the file gives each instance its own save folder and registry key with no plugin. Tale of Immortal (Unity 2020.3) used this for two
+copies, hashing the real saves and PlayerPrefs around every run. Read the game's log as well: its own `RetrieveSavedPrefs` still opened the real key by a hard-coded name,
+so the copies read it while writing nothing there. `tools/gamepool` window values are `minimized`, `hidden` and `normal`, and any other value means hidden.
+
 ## 2. Single-instance checks: named mutex and FindWindow
 
 Many games refuse to start a second copy. Two mechanisms are common:

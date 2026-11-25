@@ -56,6 +56,11 @@ animation checker.
 
 - **Check that the test can fail (mutation twins).** Turn the fix off and run the test:
   it must fail. Several "passing" tests were testing nothing until this check.
+- **Prove the start state before blaming the mod.** A prepared save that lost a mod threw during world load in Tale of Immortal. A per-frame UI timer then threw inside the game's
+  timer loop, so every later save and load stalled, and that looked like a mod merge bug. A control with the mod's session off (time a plain save) and the game's own exception log
+  found it after two wrong theories. Check that a save loads with no exception before building a test on it.
+- **A mod's success flag can be hollow too.** Tale of Immortal Multiplayer logged SHARED WORLD ACTIVE with no merge, because its flag only compares save folder names. A separate check
+  that the two players are different characters caught it.
 - **Hollow passes.** A test that ends early, or a mode that silently fell back to single
   player, still prints PASS. Assert the mode you think you're in at the start (number of
   players, flags, map), and assert that the step you care about actually happened.
