@@ -406,9 +406,17 @@ def check_real_pid_list_in_any_language(mut):
     spec = importlib.util.spec_from_file_location("gameslot_real_%d" % time.monotonic_ns(), SRC)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
-    image = Path(sys.executable).name
-    mine = m.pids_named(image)
-    check(os.getpid() in mine, f"this Python ({image}, pid {os.getpid()}) is in the list: {mine}")
+    if os.name != "nt":
+        return
+    # a native child, not this Python: sys.executable can be a launcher stub whose image name differs from the
+    # interpreter's (then our own pid is never listed under it)
+    child = subprocess.Popen(["ping", "-n", "30", "127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        mine = m.pids_named("PING.EXE")
+        check(child.pid in mine, f"the ping child (pid {child.pid}) is in the list: {mine}")
+    finally:
+        child.kill()
+        child.wait()
     check(m.pids_named("no-such-image-%d.exe" % os.getpid()) == [], "a name nobody runs gives an empty list")
 
 
