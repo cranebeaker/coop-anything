@@ -1744,6 +1744,116 @@ No attach, write, hook, install, network, friend contact, input simulation, or
 live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
 Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
 
+## Static dispatch/send-path continuation, mpdev158-186 (2026-11-25) — CANDIDATE-ONLY
+
+All outputs below are offline, read-only reads of the pinned EXE (`SHA-256
+7E58F45C810A2A8352A451424895B3D543998F3968E7571853F7A080E8E344B6`) and local
+symbols only. They remain `CANDIDATE_ONLY_NO_MAPPING`: no immediate HUD/runtime
+ring counter, hook point, authority model, resolver, protocol mapping, or write
+target is qualified. A new tool, `tools/mpdev-static-immediate-context.py`,
+scans raw aligned imm32 values and confirms no consumer-side `cmp`/`sub` against
+`0x235E`, `0x21E3`, `0x2299`, or `0x2200`; the only real consumer compares are
+three `0x2419` hits inside `UINumberRingCounterContext`, already qualified as the
+number-ring collectible-bit/visibility path, not ring currency.
+
+- `mpdev158-player-blackboard-processmessage-20261125.txt` (SHA-256
+  `6F76871BF69810E5DDDB79255DC77B136F6398505204C75DBC1171554B8EBC51`) and
+  `mpdev159-player-blackboard-processmessage-target-20261125.txt` (SHA-256
+  `4B8C7007177CC4B7EEA2D113DA73BFEC0D0B46853686502D9B95FD7DB12739F2`):
+  `PlayerBlackboardService` dispatch reads; no ring-message branch.
+- `mpdev160-processmessage-id-cmp-refs-20261125.txt` (SHA-256
+  `64A093A1DDE55D2087AC8CAFD5C438AE3CE832D7C98648C8915D043EEACFA32D`): no
+  `cmp [reg+8],<id>` hits for the ring message IDs.
+- `mpdev161-unkfunc1-callers-20261125.txt` (SHA-256
+  `80629109A8F9E07B7A9F83E91D292979859F2C53E2C619B0C23427A5D476FEC6`) and
+  `mpdev163-unkfunc1-body-20261125.txt` (SHA-256
+  `068EFB1E42F580E563880DB640B239EF8D70CEEBFD788C49246AD6C2523B174F`):
+  `0x14008d680` is an identical-code-folded `xor eax,eax; ret` stub shared by
+  many unrelated symbols; it carries no ring semantics.
+- `mpdev162-sendmessage-to-uiobjects-20261125.txt` (SHA-256
+  `9BE6C8A1E42729B5CE4BA1516F4FEE992E7C8ADEF48DE7FD95B8A3AC65CDFA12`):
+  `SendMessageToUIObjects` (`0x1401547b0`) iterates UI object IDs and uses a
+  generic send routine; no ring-specific logic.
+- `mpdev164-message-registration-target-20261125.txt` (SHA-256
+  `440F115A5EDE133BA0794FA2B7FE731C4CB635BCD9E4498D3161EEDE299CE232`),
+  `mpdev169-register-handler-610-20261125.txt` (SHA-256
+  `245E3214C395BC9D78704D3AA911C1C5CE055BC04F33C5D1E47AE0D9384B325E`), and
+  `mpdev170-register-handler-7f0-20261125.txt` (SHA-256
+  `3339ACFE6183B1BBBACECB17BA136782B6B913948DA4DA5DB2ADA6A80ED7A15D`):
+  registration/allocator helpers only; no ring handler qualified.
+- `mpdev165-messenger-send-9760-20261125.txt` (SHA-256
+  `A96EBAD7C9D69ACF02880EB33C33A680FA5BB8944EF7448A7B7F7B47E3625CBC`),
+  `mpdev166-messenger-default-9740-20261125.txt` (SHA-256
+  `24CFE7E1221804E3860F822CAC79DA4BD7A8616C6E57B1D92CB7E2857EB9731A`),
+  `mpdev167-messenger-send-target-20261125.txt` (SHA-256
+  `030C7417B59B1151F5B8B11AA3C692C27C4CEE97F1F78748EDD72C67ADD88341`), and
+  `mpdev168-messenger-default-target-20261125.txt` (SHA-256
+  `882B4B3735C4511AE9A4DDDDB0C636A47C0277D9C9FF42822E7C051BEDE345B3`):
+  `0x140ec9760`/`0x140ec9740` are thunks into `.xtls`; the send path copies a
+  message and calls `MessageManager::AddMessage`, no ring update.
+- `mpdev171-ring-msg-immediate-aligned-20261125.txt` (SHA-256
+  `3C8D182F6C8CD26ED1BD3D2825106FF781ED13B107946545321416AC3E4DD7D0`):
+  371 aligned imm32 hits total, but no consumer compare for `0x235E`,
+  `0x21E3`, `0x2299`, or `0x2200`; only `0x2419` has compares (all
+  `UINumberRingCounterContext`).
+- `mpdev172-objnumberringinfo-vtable-20261125.txt` (SHA-256
+  `B175F6F95F72A93B1BAC8A96CF0E0E6388D284E6FB128C43F7585B0E09DDCB56`),
+  `mpdev176-numberringinfo-vtable-methods-20261125.txt` (SHA-256
+  `41848C24CB8A555BDE50DA2411961AF55185AD248E6F2AD13092DE7B6C57F48F`), and
+  `mpdev177-gameobject-receivemessage-full-20261125.txt` (SHA-256
+  `8ACE15C85F9F0316FBEBAE7A557F1CBB86F19AE222778C97B668D040AC1FEAC9`):
+  `ObjNumberRingInfo::ProcessMessage` compares only `0x200`, `0x304`, `0x20d6`,
+  `0x222c`; the number-ring message IDs are not handled there. Vtable reads
+  over-ran the true table length (later slots are adjacent data).
+- `mpdev173-gameobject-receivemessage-20261125.txt` (SHA-256
+  `0FA551C675BB65FCD39287B71AF77E855911A40286CF5F6F95616CAA5BEBEB75`) and
+  `mpdev179-messenger-receivemessage-20261125.txt` (SHA-256
+  `AA752BFE460DFA5B5D8966BC64B3F3C478F052CB38C9CDC0E8DDBE474D606751`):
+  `GameObject`/`Messenger::ReceiveMessage` dispatch via vtable and a `+0x18`
+  mask; no ring-specific branch.
+- `mpdev174-numberring-createhandler-51e0-20261125.txt` (SHA-256
+  `9EB58B64747E7249614FD8D151BF93140ACC13F6F17ECFA4182220BCAD8EB561`) and
+  `mpdev175-numberring-createhandler-51ff-20261125.txt` (SHA-256
+  `0F51C6A519467E3A9B257253A294124BC74D6742B73954008308F8883A8EE1E1`):
+  number-ring async-handler constructors; allocation/setup only, no currency
+  write.
+- `mpdev178-numrings-setter-callers-20261125.txt` (SHA-256
+  `52DF3503F87D29986EBE09DDE6E68D2DF21E9250E75FDDAF2449282C9A2FB114`):
+  the `numRings` setter (`0x140afff30`) has only seven static callers, all
+  save/UI/portal contexts; no pickup path qualified.
+- `mpdev180-dispatchcallback-20261125.txt` (SHA-256
+  `ED3A03E859D43752A1FF75F0EA226501FDA086A9A5C84F9AB963073C0E431479`),
+  `mpdev181-addmessage-20261125.txt` (SHA-256
+  `C5037A12F2CD9E703A33B582A1482BDB49A6FF3A80DC6CCF422318DD3F92DDBB`), and
+  `mpdev182-msgraise-createhandler-full-20261125.txt` (SHA-256
+  `4ECE4599F3889C332F95E38F41B445164392B716AB03CAC86DE34D483D64E21C`):
+  `MessageManager::DispatchCallback` (`0x1527d9cb0`) re-sends deferred messages
+  through `Messenger::SendMessageImm` (`0x140b7c180`); async handlers are
+  send/defer helpers, not ring-count update sites.
+- `mpdev183-msgraise-vtable-lea-refs-20261125.txt` (SHA-256
+  `FB495D134CB2A240579A853B9C327813B2205AE90DC2F63F096E4FD0BE72F3E2`) and
+  `mpdev184-sendmessageimm-callers-20261125.txt` (SHA-256
+  `9E41F3E2DC1DB65A801F7F14C8403695F23B64F65A72F2DABA4C53844710C289`):
+  all `MsgRaiseRings` vtable LEA refs are construction/send-adjacent; no
+  consumer qualified.
+- `mpdev185-gamemodenumberringextension-vtable-20261125.txt` (SHA-256
+  `A1FB9258FA8370C205428FC8DBB05378B93A7D46B39260BDC6D4CF127682CD8C`) and
+  `mpdev186-gamemodenumberringextension-ctor-20261125.txt` (SHA-256
+  `332EB6305BD58041B38843163D2E7AB29B521B67548CFFB47CC01B44171D7BA7`):
+  `GameModeNumberRingExtension` maintains a 5-bit collectible mask at `+0x1a`;
+  its take method (`0x1401d1630`) `bts`-sets the bit for `noType`, sends
+  `MsgUITakeNumberRing=0x2419` through `SendMessageImmToUIObjects`, and
+  hides/completes the group when all five bits are set. No ring currency write.
+- `mpdev112-numberringinfo-take-flow-aligned-20261125.txt` (tail read this
+  pass): the `0x235F`/`0x235E` path is a `MsgIsTakeNumberRing=0x21E3` query with
+  `noType+1`, a `0x235F` request/send helper, a `MsgTakeNumberRing=0x235E`
+  notification with `noType` payload, then a visual-effect table lookup indexed
+  by `noType`; no ring currency write.
+
+No attach, write, hook, install, network, friend contact, input simulation, or
+live pickup occurred for this pass. Stage gates unchanged: Stage 2 `BUILD_ONLY`,
+Stage 3 `PREP_ONLY`, full test closed, QA `none`, no co-op claim, no ETA.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
