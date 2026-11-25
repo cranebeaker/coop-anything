@@ -15658,3 +15658,82 @@
   - https://github.com/cranebeaker/coop-anything/blob/main/games/the-outer-worlds-2/README.md
   checked: '2026-11-21'
   made_with_coop_anything: true
+- game: Ravenfield
+  year: 2017
+  engine: Unity
+  project: RavenM (community edition)
+  url: https://github.com/RavenfieldCommunity/RavenM
+  other_urls:
+  - https://github.com/iliadsh/RavenM
+  - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: 2-250
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-10
+  qa: community-reports
+  notes: Host-authoritative Instant Action co-op over Steam relay; bots, vehicles, projectiles, destructibles and chat sync. Campaign story is not synced. Continued community fork of the stalled official build and the only one supporting current EA39. Verified 2026-11-18 on EA39 build 39 - host lobby created, a remote player connected and was accepted, match ran. Lobbies are public by default; enable Only Steam Friends Can Join.
+  sources:
+  - https://github.com/RavenfieldCommunity/RavenM
+  - https://github.com/RavenfieldCommunity/RavenM/releases/tag/test
+  - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
+  checked: '2026-11-18'
+- game: Ravenfield
+  year: 2017
+  engine: Unity
+  project: RavenM (official)
+  url: https://github.com/iliadsh/RavenM
+  other_urls:
+  - https://github.com/iliadsh/RavenM/releases/tag/0.7
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: 'yes'
+    world_state: 'yes'
+    items: per-player
+  players: 2-250
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2024-10
+  qa: community-reports
+  notes: Original BepInEx multiplayer plugin. Last release 0.7 (2024-05-15) targets EA29 only; users report it refuses newer builds and no release has followed. The community edition continues it for EA32 and later.
+  sources:
+  - https://github.com/iliadsh/RavenM
+  - https://github.com/iliadsh/RavenM/releases/tag/0.7
+  - https://github.com/iliadsh/RavenM/issues/68
+  checked: '2026-11-18'
+- game: Ravenfield
+  year: 2017
+  engine: Unity
+  project: Ravenfield - Multiplayer Mod (RFMP)
+  url: https://store.steampowered.com/app/1104390
+  other_urls:
+  - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: hosted-relay
+  open_source: 'no'
+  last_activity: 2020-05
+  qa: none
+  notes: Standalone multiplayer game assembled from Ravenfield assets, not a plugin. SteamDB lists the last patch on 2020-05-31. The community docs report that the official servers closed and the developers pointed players to RavenM. Not an option today.
+  sources:
+  - https://store.steampowered.com/app/1104390
+  - https://steamdb.info/app/1104390/patchnotes/
+  - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
+  checked: '2026-11-18'
