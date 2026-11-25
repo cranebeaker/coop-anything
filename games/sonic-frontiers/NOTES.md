@@ -904,6 +904,29 @@ Full record:
   `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, `READY_FOR_INSTALL=NO`, QA remains
   `none`, no working co-op is claimed, and there is no ETA to online.
 
+## Stage 2 collectible read-only probe spec draft (2026-11-25) — NOT AUTHORIZED
+
+Draft:
+`%USERPROFILE%/Desktop/SonicFrontiers-MP-DEV/RESULTS/mpdev065-stage2-collectible-readonly-probe-spec-draft.txt`
+(SHA-256
+`819FC05EA215EDC7AF1C43F1CEF9EEE7DBB88256E92C143D9F48C4841552B0BC`).
+
+- Defines a future READ-ONLY live probe to verify the mpdev063 accessor chain:
+  pinned EXE hash, module base, `CharacterAc+8 == GameData+0x80`, and the seven
+  scalar `CharacterData` fields, using owner-initiated benign actions for
+  before/after correlation. No input simulation.
+- Explicitly prohibits writes, hooks/detours/breakpoints, VirtualProtect,
+  injection, install, assistant launch/restart, network, friend contact, build-id
+  checks, and PC B setup. It is `DRAFT_ONLY_NOT_AUTHORIZED`; it does not grant
+  permission for any live step.
+- Success would only correlate static fields with live values. A separate,
+  explicitly authorized, reversible single-field write experiment would still
+  be required before any co-op state write or protocol change.
+- Current gates unchanged: `STAGE2_SCOPE=BUILD_ONLY`, `STAGE3_SCOPE=PREP_ONLY`,
+  `STAGE3_FULL_TEST=CLOSED`, `GATE_C=CLOSED`, `READY_FOR_INSTALL=NO`,
+  `QUALIFIED_STAGE2_EXPERIMENT=NOT_DEFINED`, QA `none`, no working co-op claim,
+  no ETA to online.
+
 ## Unknowns / not yet checked
 
 - Whether other players have the same Steam build id (16857613).
