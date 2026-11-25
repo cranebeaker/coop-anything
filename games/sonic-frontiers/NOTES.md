@@ -531,6 +531,10 @@ Targeted scan result:
 - Class identity is confirmed for this session only; no count field, item id,
   source-vs-UI-copy distinction, trigger, resolver, write address, hook point,
   or authority model was established. `RESULT=CANDIDATE_ONLY_NO_MAPPING`.
+- A third owner-initiated HUD+1 Koco pickup was also scanned. `KodamaManager +0x088`
+  went `10 -> 10`, `10 -> 6`, and `6 -> 12` across the three trials, never `+1`.
+  `UIItemQuotaContext +0x1b0` moved on trial 1, stayed flat on trial 2/3, and
+  reverted `2 -> 1` during a no-action control: REJECTED.
 - Stage 1 targeted read-only mapping is exhausted. Stage 2 writes/hooks and
   Stage 3 friend/PC B/two-PC/in-game work remain unauthorized; gates stay closed.
 
