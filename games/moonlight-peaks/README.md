@@ -1,4 +1,4 @@
-﻿# Moonlight Peaks (2025)
+# Moonlight Peaks (2025)
 
 | | |
 |---|---|
@@ -59,6 +59,17 @@ All changes are a BepInEx 5 plugin; no game file was edited.
   relationships are per player.
 - Player destroyed by a room unload is re-spawned from the room fallback or next to the
   other player, as local or puppet respectively.
+- Held item entry (GUID, quality, metadata) is sent at 20 Hz; the puppet equips/unequips it
+  and re-applies it after a reload, and the local body re-applies its own item after a
+  respawn.
+- Director subjects are mapped per side (host=1, guest=2, NPC=GUID) and the host's clone is
+  mapped back to the guest, so a guest cutscene resolves to the guest body. A
+  `DirectorVariableRef` postfix swaps player subject overrides to the clone while a guest
+  node runs.
+- Room follows carry a cause, keep one latest target, wait for a safe window, defer director
+  nodes while pending and replay the latest after the room is stable. A stuck switch can be
+  replaced through a synthetic director `SwitchRoomNode`; a 3 s mismatch check repairs
+  `CurrentRoomAsset`/`Room.Instance` disagreement.
 
 ## QA
 
@@ -76,7 +87,13 @@ Checked on 2026-11-24:
 - host `IncrementDay` changed the guest clock from day 2 to day 3 within one second;
 - host and guest Director graph nodes mirrored (12+ nodes on the guest in 6 s) and both clients entered the day-start cutscene;
 - guest and host room changes both loaded on the other client; world persistence was pushed and applied once, with a 6 s cooldown;
-- guest loaded the host save over TCP and had 0 NPC relationships while the host had 62.
+- guest loaded the host save over TCP and had 0 NPC relationships while the host had 62;
+- guest hold → host puppet wand and host hold → guest puppet wand, both cleared by unequip,
+  and both re-applied after a room reload;
+- guest `startday` resolved the host subject to the guest clone and the guest subject to its
+  own player; host `startday` resolved to the host player, and both clients advanced the day;
+- `warp`+`startday`+`move` fired together converged 3/3 runs on both clients with both
+  players alive.
 
 ## How to play
 
@@ -91,12 +108,11 @@ The guest stays on the main menu and joins with the host's IP.
 
 ## Known issues
 
-- World persistence is copied and the receiver reloads the room, so it fades and
-  repositions; rapid farming can rubber-band.
-- Guest actors are mapped to a cloned player entity on the host; most staging works, but
-  some scenes may still choose the wrong actor.
-- Held item visuals are attempted but not verified with real tools. Coins live in the
-  player inventory, so each player pays with their own coins.
+- World persistence is copied and the receiver reloads the room, so it repositions; rapid
+  farming can rubber-band.
+- A follow during a cutscene waits for the wake-up to pass, so it can take ~20-30 s, and the
+  cutscene's own room change may win over a requested warp.
+- Coins live in the player inventory, so each player pays with their own coins.
 - No lobby/NAT punch-through; direct IP only.
 - Only build 25725760 was checked.
 
@@ -104,10 +120,12 @@ The guest stays on the main menu and joins with the host's IP.
 
 1. Route interaction states (harvest, plant, chest, shop) from the guest to host-side
    execution on the guest puppet, then send the resulting world state back.
-2. Mirror Director cutscene begin/stage/end to the guest with staged stand-ins.
-3. Send the sleep transition and day-start state to the guest.
-4. Replace the direct-IP transport with the game's Steamworks session for relay/NAT.
-5. Turn the control-port smoke test into a repeatable harness with assertions.
+2. Send world deltas instead of reloading the whole room, so farming stops repositioning.
+3. Cut cutscene-time room latency: bound the wake-up window and leave the graph resumable
+   instead of waiting out the fallback.
+4. Map the sleep transition.
+5. Replace the direct-IP transport with the game's Steamworks session for relay/NAT.
+6. Turn the control-port smoke test into a repeatable harness with assertions.
 
 
 

@@ -55,7 +55,7 @@ Checked: positions followed in both directions, Room_Exterior_Plot loaded on gue
 
 Not implemented: guest action forwarding (harvest/plant/chests), cutscene staging, sleep transition, equipment visuals, Steam transport.
 
-User-facing package: C:\Users\kopik\projects\moonlight-peaks-coop (install.ps1, uninstall.ps1, dist with pinned BepInEx zip and plugin).
+User-facing package: `projects\moonlight-peaks-coop` (install.ps1, uninstall.ps1, dist with pinned BepInEx zip and plugin).
 
 
 ## Continued work 2026-11-24 (owner away)
@@ -72,3 +72,39 @@ Guest actors now get a cloned player entity on the host (unique GUID, EntityAsse
 ## 0.1.3
 
 Steam launches now share the same default profile as the launcher; existing saves are copied into the isolated profile on first mod launch so the load menu is not empty. Verified on the real install: 0.1.3 loads from a plain exe/Steam launch, profile=default, saves copied, real saves untouched.
+
+## 0.1.4 held item verification 2026-11-24
+
+Held item sync now sends the full ItemEntry (guid, quality, metadata, custom name) and the puppet keeps its own held state. The puppet re-instantiates the held view if it is missing (checked once a second) and retries for up to 0.5 s, so the visual returns after a room reload. New ctl commands: `hold` uses the real `GameInventory.TryGrabItem` path (first non-form tool with a view) and `unhold` uses `TryGrabNone`. Status adds `lheld`, `rheld` and `msg`.
+
+Verified on two local clients: guest hold -> host puppet rheld=ItemView_ToolView_Wand(Clone); guest unhold -> host puppet rheld=no; host hold -> guest puppet rheld=ItemView_ToolView_Axe05(Clone); held visual re-appeared on the other client after two host warps (rheld returned after the room load).
+
+New gap seen: the local player's own held view is gone after the local body is respawned by the room reload (host lheld=no while its persistence still holds the axe, guest lheld=no at first). Puppet visuals are fine.
+
+
+## 0.1.4 room follow 2026-11-24
+
+Room changes from the host now use a forced GameSwitchRoomState with fades and room-enter dispatch off, because both make the switch break out early while a director state/cutscene is active. Only the host sends RoomState now (the guest echo was overwriting a pending host switch). The guest tracks a pending target room and retries every 8 s for up to 30 s if Room.Instance never becomes it. Local held item is also re-applied after a respawn, not just the puppet.
+
+Verified: host warp -> guest followed and loaded Room_Exterior_Plot with both local players respawned, held wand visible on both sides; host home -> both clients back in Room_Interior_HousePlayer; guest hold -> host puppet wand and guest local wand; host unhold cleared host only.
+
+Still racy: if a director wake-up/cutscene state runs during the switch, the load is interrupted and the 30 s watchdog retry has to take over (took 2-3 retries, ~30 s, in one run). Guest log shows DirectorWakeUpState.WakeUpFromCoffinRoutine NREs during the unload. Room=none and a missing local player are the visible symptom until a retry lands.
+
+
+## 0.1.4 actor mapping 2026-11-24
+
+Director actor mapping is now symmetric. ActorFor/Resolve map the shared PlayerEntity by direction (host=1, guest=2), map the host-only guest clone back to actor 2, and only send raw guids for real NPCs. The wire message carries a loiter actor byte too. On the host, guest-originated nodes set DirectorSync.FromGuest; a Harmony postfix on DirectorVariableRef.GetAssetValue swaps a PlayerEntity subject override to the guest clone while that flag is set. A host-initiated GoToNode clears the flag.
+
+Verified: guest startday -> host resolved subject CoopGuestPlayer, guest resolved @Player; both advanced to day 3. Host startday advanced both to day 4 with NPC subjects shared identically. esolve/0..3 mapping: host 1=@Player, 2=CoopGuestPlayer, 3(empty)=null; guest 1=@Player, 2=@Player. efresolve: host override @Player -> CoopGuestPlayer when FromGuest, guest stays @Player. Regression: guest hold -> host puppet wand; guest warp reached Room_Exterior_Plot after retries; guest local and host puppet held wand both restored.
+
+
+## 0.1.4 room arbitration 2026-11-24
+
+RoomState now carries a cause (0 local request, 1 remote forced, 2 director). Only the host sends room, every 2 s as well as on change. The guest keeps one latest pending target. Follows wait for a safe window (not in GameSwitchRoomState, not in a cutscene, not in GameDirectorStateMachine, no director node for 1 s); a pending older than 10 s may replace a stuck switch, and the whole pending expires after 30 s. A 3 s mismatch check reloads when CurrentRoomAsset and Room.Instance disagree for 3 s with the director quiet.
+
+Both clients defer director nodes while a forced follow is pending and replay the latest one only after the target room has been stable for 1 s. The host also routes a replacement switch through a synthetic director SwitchRoomNode so the graph owns completion instead of cancelling it.
+
+Also fixed: per-frame subsystem NREs (GamePersistence.CurrentRoomAsset during unload) used to kill Probe.Tick and stall all room work; each per-frame call is now isolated and the room getter is guarded.
+
+Verified: chaos warp+startday+move x3 converged 3/3, both clients, both rooms, players alive; settled warp 1.8 s; guest hold -> host puppet wand survives a room change; guest lheld kept. During the intro/wake-up cutscene a follow waits and can take ~20-30 s before converging (previously it could stall indefinitely), and the deferred graph switch can legitimately land in the room the cutscene wants rather than the requested warp.
+
