@@ -4,9 +4,8 @@ Owner session start: 2026-11-13. Game: Ubisoft Montpellier, 2024, metroidvania (
 
 ## Observations (checked on this machine)
 
-- Install folder: `D:\Games\Prince of Persia - The Lost Crown` (26.7 GB), *not* in a Steam library.
-  Steam libraries present: `C:\Program Files (x86)\Steam`, `D:\SteamLibrary` (Lords of the Fallen,
-  Steam Linux Runtime 4.0). Game is not a Steam install.
+- Install and Steam-library details are machine-specific and kept in
+  `local/games/prince-of-persia-the-lost-crown/private-notes.md`. The game is not a Steam install.
 - Root files: `TheLostCrown.exe`, `UnityPlayer.dll` (29 MB), `GameAssembly.dll` (250 MB),
   `TheLostCrown_Data\`, `_Redist\`, `unins000.exe`, `voices38.dll`.
 - Engine: **Unity 2021.3.29f1, IL2CPP (x64)**. `UnityPlayer.dll` FileVersion 2021.3.29.0;
@@ -48,13 +47,13 @@ Owner session start: 2026-11-13. Game: Ubisoft Montpellier, 2024, metroidvania (
 ## Progress (M0, 2026-11-13)
 Design: `docs/superpowers/specs/2026-11-13-pop-lost-crown-coop-design.md` (approved).
 Plan: `docs/superpowers/plans/2026-11-13-popcoop-m0-shell-and-discovery.md`.
-Mod repo: `D:\New folder (2)\popcoop`, branch `feat/m0`.
+Mod repo: `https://github.com/Ahmed-Ashraf0ux/popcoop`, branch `feat/m0`.
 
 Done, headless (no game launch, owner's install untouched):
 
 - Workspace-local toolchain pinned with SHA-256 in `local/TOOLCHAIN.md` of the mod repo:
   .NET SDK 8.0.428, BepInEx 6.0.0-be.793 (IL2CPP, win-x64), Il2CppDumper 6.7.46.
-- Test install `D:\popcoop-game`: root files copied (285 MB), `TheLostCrown_Data` junctioned
+- First test install: root files copied (285 MB), `TheLostCrown_Data` junctioned
   to the owner's install, BepInEx core in place.
 - `ContentFingerprint` — `v1-<16 hex>` over game version + `global-metadata.dat` hash +
   `catalog.json` hash. Golden vector for this build: `v1-1184cca478c23412`.
@@ -157,7 +156,7 @@ dump, offline Il2CppInterop generation, and the first in-game plugin boot.
 - In-game commands: `net host <port>`, `net join <ip> <port>`, `net status`, `net stop`. The local
   hero's transform is streamed each frame; the received snapshot drives the cloned body with a lerp.
 - `tools/netprobe.py` acts as a fake peer for testing the receive path with one install.
-- Second install `D:\popcoop-game2` (junction to the same data folder) exists for a two-client test.
+- Second test install (junction to the same data folder) exists for a two-client test.
 - **Not yet demonstrated: two live game clients syncing.** Attempts were blocked by Windows Firewall
   prompts, window-focus fights and one game exit. Firewall rules for `TheLostCrown.exe` are now in
   place, so the next attempt starts clean.
@@ -181,11 +180,11 @@ dump, offline Il2CppInterop generation, and the first in-game plugin boot.
 ### Save store (observation)
 
 - The game's save is `%APPDATA%\GSE Saves\2638890\remote\win64_save\data001Slot.bin`
-  (3,317,100 bytes; header `DSSS`; mtime 2026-11-13 14:18; SHA-256
-  `B34D9065C1893168560A0D600BF426578A160AEA39803717A858F305D445A4AD`).
+  (3,317,100 bytes; header `DSSS`; mtime 2026-11-13 14:18; the SHA-256 is recorded in
+  `local/games/prince-of-persia-the-lost-crown/private-notes.md`).
   Backed up to `popcoop/local/save-backup/data001Slot.bin`.
 - `%APPDATA%\GSE Saves\settings\configs.user.ini` holds the Goldberg emulator account
-  (`account_steamid=76561198745311075`). `GSE Saves` is the Goldberg Steam-emulator save
+  (the account id is recorded in `local/games/prince-of-persia-the-lost-crown/private-notes.md`). `GSE Saves` is the Goldberg Steam-emulator save
   layout, so this repack routes saves through the emulator rather than Ubisoft Connect.
 - `%USERPROFILE%\AppData\LocalLow\Ubisoft\Prince Of Persia The Lost Crown` holds only
   `Player.log`, `Player-prev.log` and `RecordedInputs` (the game's input recorder), no saves.
@@ -221,7 +220,7 @@ dump, offline Il2CppInterop generation, and the first in-game plugin boot.
 
 ## Session 4 (2026-11-13): two live clients, guard solved, remote locomotion animation
 
-Repo: `D:\New folder (2)\popcoop`, branch `feat/m0`, commit `b25a251` (handover:
+Repo: `https://github.com/Ahmed-Ashraf0ux/popcoop`, branch `feat/m0`, commit `b25a251` (handover:
 `HANDOVER-2026-11-13-session4.md`). Build 0 warnings, 28/28 tests.
 
 ### Single-instance guard solved (observation + static RE)
@@ -246,10 +245,10 @@ Repo: `D:\New folder (2)\popcoop`, branch `feat/m0`, commit `b25a251` (handover:
 
 ### Two live clients on one Windows session now work
 
-- `tools\two-client-test.ps1` (PASS): A = `D:\popcoop-game`, B = `D:\popcoop-game2`; both
+- `tools\two-client-test.ps1` (PASS): A = the first test install, B = the second test install; both
   minimised/off-screen 640x360; user foreground window handed back (`givefocus <hwnd>`); both
   enter `KIN_BAT_02` with no clicks; host/join on 27015; both spawn the remote body; A's movement
-  reaches B's clone; cursor and owner save unchanged (`B34D9065...`).
+  reaches B's clone; cursor and owner save unchanged (hash in local/).
 - Background menu entry (game-side, no input): enumerate `UIScreensBehavior.m_UIScreenList[].
   m_UIScriptList` (UIScript is a plain class; `FindObjectsOfType` throws), set
   `UIScriptPressAnyButton.m_hasInputTriggered`, then set static
@@ -277,7 +276,7 @@ Repo: `D:\New folder (2)\popcoop`, branch `feat/m0`, commit `b25a251` (handover:
 
 ## Session 5 (2026-11-13): clone animations/facing + in-game interaction apply
 
-Repo: `D:\New folder (2)\popcoop`, branch `feat/m0`, commit `aef174b` (handover:
+Repo: `https://github.com/Ahmed-Ashraf0ux/popcoop`, branch `feat/m0`, commit `aef174b` (handover:
 `HANDOVER-2026-11-13-session5.md`). Build 0 warnings, 28/28 tests, `tools\two-client-test.ps1` PASS.
 
 ### Remote body animation + facing (works)
@@ -330,7 +329,7 @@ Repo: `D:\New folder (2)\popcoop`, branch `feat/m0`, commit `aef174b` (handover:
 
 ## Session 6 (2026-11-13): level loading, chest apply in a real level, GPE activation sync, late-join replay
 
-Repo: `D:\New folder (2)\popcoop`, branch `feat/m0` (handover: `HANDOVER-2026-11-13-session6.md`).
+Repo: `https://github.com/Ahmed-Ashraf0ux/popcoop`, branch `feat/m0` (handover: `HANDOVER-2026-11-13-session6.md`).
 Build 0 warnings; 28/28 tests; full two-client test + new `two-client-level-chest.ps1` PASS.
 
 ### Level transitions / loading (works for host-initiated loads)
@@ -403,7 +402,7 @@ Build 0 warnings; 28/28 tests; full two-client test + new `two-client-level-ches
 
 ## Session 7 (2026-11-14): client-initiated level sync, loot authority, actor streaming
 
-Repo: `D:\New folder (2)\popcoop`, branch `feat/m0` (handover: `HANDOVER-2026-11-14-session7.md`).
+Repo: `https://github.com/Ahmed-Ashraf0ux/popcoop`, branch `feat/m0` (handover: `HANDOVER-2026-11-14-session7.md`).
 Build 0 warnings; 28/28 tests. Level-sync and actor-wire two-client tests PASS; portal transition
 and real-AI verification remain blocked (details below).
 
@@ -463,7 +462,7 @@ and real-AI verification remain blocked (details below).
   InGame). `tools\two-client-test.ps1` waits for `flow=InGame` and normalises both clients to
   `KIN_BAT_02` (retrying while `level goto` says busy).
 - `KIN_BAT_04` direct loads end in `flow=Respawn`/hang; treat it as broken-for-QA until fixed.
-- Owner save hash unchanged (`B34D9065...A4AD`).
+- Owner save unchanged (hash in local/).
 
 ### Still open
 
@@ -555,7 +554,7 @@ and real-AI verification remain blocked (details below).
 
 ## Session 8 (2026-11-15, round 2): parallel feature lanes, loader fixes, portal limit
 
-Repo `D:\New folder (2)\popcoop`, HEAD `1abb977`, branch `feat/m0`. Build 0 warnings,
+Repo `https://github.com/Ahmed-Ashraf0ux/popcoop`, HEAD `1abb977`, branch `feat/m0`. Build 0 warnings,
 **64/64 tests**. The session was split into parallel Orca lanes and merged back on top of
 `0cdac38`: `4e4e45f` save-authority design + `SaveAuthority` model/tests,
 `199f8dd` combat wire type 8 + `CombatAuthority` model/tests, `3a9d6a3` remote-enemy proxy
@@ -592,7 +591,7 @@ plumbing. Merge commits `435e09f`/`44141e3`.
   `e8d6b97` baseline (`local\evidence\portal-bisect-e8d6b97.log`). Host freezes ~1 s after its
   own `LevelTravel` load of `CIT_LOW_11`; the client reaches `CIT_LOW_11` and stays up.
   Treat as an engine/environment limit, not a merge regression.
-- Owner save unchanged (`B34D9065...A4AD`), guard patch reverted (`74 05`), no game
+- Owner save unchanged (hash in local/), guard patch reverted (`74 05`), no game
   processes after every run.
 
 ### Still open
@@ -657,7 +656,7 @@ two-machine play or a separate Windows profile is needed. Diagnostic evidence:
 - Installer fix: on a fresh folder `BepInEx.cfg` does not exist until the game runs once, so the
   required `UnityLogListening = false` was silently skipped and the chainloader would die.
   `install.ps1` now creates the cfg (or appends the key) and says so. Validated end-to-end on a
-  fresh `D:\popcoop-install-test` built from `tools\make-test-install.ps1` with the pre.2
+  fresh `a fresh test install` built from `tools\make-test-install.ps1` with the pre.2
   BepInEx zip: plugin booted, bridge answered, fingerprint `v1-ca349433644ad8c5`, uninstall
   removed only the mod and left the owner data intact
   (`local\evidence\installer-boot2-2026-11-16.log`). `make-test-install.ps1` now defaults to
@@ -722,7 +721,7 @@ two-machine play or a separate Windows profile is needed. Diagnostic evidence:
 
 ## Handover for the final push (2026-11-16)
 
-`D:\New folder (2)\popcoop\HANDOVER-2026-11-16.md` is the read-me-first for the next agent: current
+The project handover (kept with the project history) is the read-me-first for the next agent: current
 verified state (build 0 warnings, 72/72 tests, live suite PASS), what round 3 changed, the remaining
 work (shared save, story/quest/ability sync, hit events, portal exit 0x3, two-machine), updated
 traps, commands, QA scripts/bridge commands, and a ready-to-paste Orca prompt with three worker
@@ -761,7 +760,7 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
   script suppression point was found, so no raw quest write was risked.
 - Code-3 isolation on a second OS/VM remains untested. Same-machine sessions degraded to exits
   within ~30 s in the last runs; stop live work and let the machine cool.
-- State: 0 warnings, 132/132 tests, save B34D9065...A4AD, guard 74 05, no games. PR #397 remains a
+- State: 0 warnings, 132/132 tests, save unchanged (hash in local/), guard 74 05, no games. PR #397 remains a
   draft with the earlier evidence; this round's text is added to the same branch.
 
 ### Round 6 (2026-11-18): code-3 fixed, two-machine verified, story/save/proxy lanes
@@ -796,7 +795,7 @@ Final tree: **0 warnings, 132/132 tests**. New opt-in features, all live-tested 
   and `mutant-interact-early` (client does not apply the chest completion) both fail the chest gate
   as required (`qa-20261118-155411`, `qa-20261118-160730`).
 - State: 0 warnings, 159/159 unit tests, scorer self-test 15/15, owner save unchanged
-  (`69174FE0...FDBE`), guard patch reverted after every run.
+  (hash in local/), guard patch reverted after every run.
 
 ### Round 7 (2026-11-18): shared character progression, dialogue sync and save content transfer
 

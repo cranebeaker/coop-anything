@@ -11209,24 +11209,26 @@
   year: 2024
   engine: Unity 2021.3.29f1 (IL2CPP)
   project: PopCoop
-  url: https://github.com/cranebeaker/coop-anything/tree/main/games/prince-of-persia-the-lost-crown
+  url: https://github.com/Ahmed-Ashraf0ux/popcoop
   other_urls: []
   kind: mod
   status: alpha
   coop_scope:
     players_visible: 'yes'
-    story: 'no'
+    story: 'partial'
     enemies: partial
     world_state: partial
     items: per-player
   players: '2'
-  networking: direct-ip
-  open_source: 'no'
+  networking: steam-relay
+  open_source: 'yes'
   last_activity: 2026-11
   qa: automated
-  notes: "Build 1.4.3+TU16.421692.3046900 (Unity 2021.3.29f1 IL2CPP, repack/GSE saves). BepInEx 6 pre.2 + HarmonyX, UDP direct-IP, host-authoritative. Verified with two live clients on one machine: second body with locomotion/facing, interactions, chest authority, level sync, reconnect, remote animations, enemy HP/death/position sync, player death visibility, opt-in position-matched hit events both ways, one story ability (Vision) by effect capture, staged save import (no live writes). 132/132 unit tests; tracked qa/ suite with 7 live gates, control, invariants, scorer self-test; chaos lan PASS, good_wifi lost one interaction (3 drops), animcheck found 39% group mismatch and one sliding episode with no bone/yaw data. Quests/cutscenes/other unlocks and live shared saves are not synced. A connected pair can exit with code 0x3 on one machine; actor apply/hide gates did not stop it, so it remains an environment limit. Two-machine play untested. Source not published yet."
+  notes: "Build 1.4.3+TU16.421692.3046900 (Unity 2021.3.29f1 IL2CPP, repack/GSE saves). BepInEx 6 pre.2 + HarmonyX; UDP direct-IP or a Steam Spacewar (480) relay; host-authoritative. Verified with two live clients and a two-machine Win11/Win10 VM: second body with locomotion/facing, interactions, chest authority, level sync, reconnect, remote animations, enemy HP/death/position, player death visibility, hit events both ways, six ability flags plus every unlockable and quest stages, dialogue/cutscene playback with host-authoritative choices, per-player inventory (shared opt-in), save-authority sidecar and hash-verified save pull, remote-enemy proxies. 174/174 unit tests; tracked qa/ suite with live gates and mutation twins. The 0x3 finalizer crash was root-caused and fixed. Source: https://github.com/Ahmed-Ashraf0ux/popcoop"
   sources:
+  - https://github.com/Ahmed-Ashraf0ux/popcoop
+  - https://github.com/Ahmed-Ashraf0ux/popcoop/blob/main/README.md
   - https://github.com/cranebeaker/coop-anything/tree/main/games/prince-of-persia-the-lost-crown/README.md
   - https://github.com/cranebeaker/coop-anything/tree/main/games/prince-of-persia-the-lost-crown/NOTES.md
-  checked: '2026-11-16'
+  checked: '2026-11-26'
   made_with_coop_anything: true

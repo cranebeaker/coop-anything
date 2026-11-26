@@ -4,17 +4,21 @@
 |---|---|
 | Engine | Unity 2021.3.29f1, IL2CPP x64 |
 | Versions tested | `1.4.3+TU16.421692.3046900` (repack with Goldberg/GSE saves; store build untested) |
-| Projects | PopCoop (source not published yet) |
+| Projects | [PopCoop](https://github.com/Ahmed-Ashraf0ux/popcoop) |
 | QA level | automated |
-| Last updated | 2026-11-16 |
+| Last updated | 2026-11-26 |
 
 ## Where things stand
 
 Two players can share one world today: both bodies exist and animate, interactions and chests sync,
 levels follow the host, enemies share HP/positions/deaths, remote attacks are visible, and a client
-reconnects after a drop. It is an early co-op shell, not campaign co-op: story, quests, dialogue,
-cutscenes and ability unlocks are not synchronised, and the game must be entered through an
-automation bridge or the normal menus.
+reconnects after a drop. Six ability flags, every unlockable ability and quest stages sync by effect
+capture; dialogue and cutscenes play on both peers with host-authoritative line changes and choices;
+inventory is per player (shared opt-in); saves have a read-only authority sidecar and a hash-verified
+pull. It is an early co-op mod, not campaign co-op: the second player is a cloned body (no inventory,
+abilities or camera of its own), and the game is entered through the launcher/bridge or the menus.
+
+Source: https://github.com/Ahmed-Ashraf0ux/popcoop
 
 ## Existing work
 
@@ -105,7 +109,7 @@ install is never touched). The bridge drives menus, levels, interactions and pro
 .\tools\dotnet\dotnet.exe build src\PopCoop.Loader -c Release
 .\tools\dotnet\dotnet.exe test PopCoop.sln -c Release
 powershell -NoProfile -ExecutionPolicy Bypass -File qa\run-live-suite.ps1 `
-    -RepoRoot <repo> -GameA D:\popcoop-game -GameB D:\popcoop-game2
+    -RepoRoot <repo> -GameA C:\popcoop-game -GameB C:\popcoop-game2
 ```
 
 `qa/` is the tracked suite (scorer self-test first; regression, chest, reconnect, enemy-damage,
