@@ -81,13 +81,18 @@ account in once in the boxed window ("Remember me"); the agent never handles the
 game. Verified on Thronefall (Unity 6000.3, Sandboxie-Plus 1.18.8): each Steam client's `gameprocess_log.txt` lists its
 own copy, and the two accounts connect through Steam lobbies and `SteamNetworkingMessages`.
 
+Unity keys both `persistentDataPath` and PlayerPrefs on the company name in `<Game>_Data/globalgamemanagers`, not on `app.info`. A same-length patch of that
+field in a private copy of the file gives each instance its own save folder and registry key with no plugin. Tale of Immortal (Unity 2020.3) used this for two
+copies, hashing the real saves and PlayerPrefs around every run. Read the game's log as well: its own `RetrieveSavedPrefs` still opened the real key by a hard-coded name,
+so the copies read it while writing nothing there. `tools/gamepool` window values are `minimized`, `hidden` and `normal`, and any other value means hidden.
+
 ## 2. Single-instance checks: named mutex and FindWindow
 
 Many games refuse to start a second copy. Two mechanisms are common:
 
 | Check | How it works | Symptom |
 |---|---|---|
-| Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a second or two, with a non-zero exit code |
+| Named mutex | The game calls `CreateMutex` with a fixed name at start up and exits if the name already exists (`ERROR_ALREADY_EXISTS`) | The second copy shows an error box or closes within a second or two, usually with a non-zero exit code. Some games exit with code **0** and only bring the first copy's window to the front: Shadow of Mordor's engine main creates `Global\{43570706-DA86-477B-9C2D-2F3D4F95FDE4}` and returns 0, before it ever calls Steam. So a quick exit with code 0 is not a clean start; rename that one mutex per copy ([games/shadow-of-mordor](../games/shadow-of-mordor/README.md)) |
 | Window class or title | The game calls `FindWindow` for its own class or title and exits or activates the old window when it finds one | Same, or the first copy's window jumps to the front |
 | Unity player setting | `<Game>_Data/boot.config` has a `single-instance=` line, and the Unity player exits when a copy is already running. Remove the line in the test copies only; it is a text file, not the exe (Graveyard Keeper, Unity 2020.3) | The second copy closes at once |
 
@@ -239,6 +244,17 @@ a generation number. A test checks that number so it never talks to a freshly re
   for the process. A game that crashes at exit, or shows its own error box, may never flush its log, so
   "no error in the log" proves nothing.
 - Pass log patterns through the environment, not into a command string, when you query the event log.
+- Not every crash leaves a record, and a dead copy can look like a hang. XCOM 2 guests "froze" in about 1 of 40
+  map changes: log cut mid-load, no crash folder, the stall check silent because the process had already
+  exited. Windows had kept minidumps: when the registry key
+  `HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps` exists, it writes one for every crashing
+  process to `%LOCALAPPDATA%\CrashDumps` and keeps the newest 10
+  ([Collecting User-Mode Dumps](https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps)).
+  Launchers and GPU tools often create that key; creating it yourself is a system setting, so ask the owner.
+  Fail any run that leaves a new dump for the game's exe. No debugger is needed for a first look: the exception
+  stream gives code and address, the module list turns it into `exe+offset`, and `llvm-objdump` plus the strings
+  the code near each stack address refers to name the subsystem (there it was the audio engine's event thread,
+  calling back after a map unload).
 
 `gamepool crashlog` does this from the `crash` block of the config.
 

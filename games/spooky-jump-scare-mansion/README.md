@@ -6,7 +6,7 @@
 | Versions tested | Steam (app 577690), buildid 12368455. `SpookyUnity.exe` SHA-256 `ed13875fc3eab0f0afe677c3eee936e1885789b032c78ccab3a59a4c8b79b74a` |
 | Projects | Spooky Together ([spooky-together](https://github.com/multiplayereverything/spooky-together), [v0.2.11 pre-release](https://github.com/multiplayereverything/spooky-together/releases/tag/v0.2.11)); directory entry "Spooky Together" |
 | QA level | automated |
-| Last updated | 2026-10-26 |
+| Last updated | 2026-11-12 |
 
 ## Where things stand
 
@@ -66,6 +66,7 @@ Each fix has a lab-only switch (`-st-mutate <name>`) that turns it off. `scripts
   - the room sequence;
   - the mod's CPU time per frame (budget 2 ms).
 - Lab players act like real players. They open real doors, pick up the axe and chop boards. Forced transfers or fake item ids would break the game and give false failures.
+- **v0.2.11 rerun (2026-10-29), 4 players:** rules tests pass. The quick suite passed 16 of 20. `enemies`, `look`, `lateending` and `stallending` failed on load symptoms (runs that never started, the mod over its frame budget, one 12.5 s host frame) and all four passed when rerun one at a time. An earlier attempt lost every result: the next tour could not delete a log the previous copy still held, and the suite only wrote its summary at the end. The harness now retries the delete and writes the summary after every tour.
 - **v0.2.11, 4 players:**
   - The full suite passed 29/29. It includes 150 ms lag, a soak over the LAN address with 120 ms lag, and full EM, KH and dollhouse mansions.
   - The 7 switches touched in 0.2.10-0.2.11 were rerun, and all were caught.

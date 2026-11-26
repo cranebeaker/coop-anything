@@ -30,7 +30,7 @@ Drawn from six co-op projects (STALKER, Fallout New Vegas, Dungeon Keeper 1, Oca
 
 14. **Clean up after tests or you ship your test files.** A test archive left in an add-on made the server checksum differ, and other players saw "different versions". Remove test files, delete screenshots, and compare the installed patch byte for byte with the shipped one before handing anything over.
 
-15. **Delete the log before each run.** A boot test of many levels showed the next level failing with the previous level's error because the log still held it. Other logs only flush on clean exit or rarely; for data you must have, write your own file and flush it.
+15. **Delete the log before each run.** A boot test of many levels showed the next level failing with the previous level's error because the log still held it. Other logs only flush on clean exit or rarely; for data you must have, write your own file and flush it. The delete can itself fail: a copy stopped by the previous test may still hold its log for a few seconds, so retry the delete briefly instead of letting it abort the suite, and write the suite summary after every test so a crash part-way keeps the results so far. Example: Spooky Together (`scripts/launch-lab.ps1`, `scripts/lab-suite.ps1`).
 
 16. **Find a hook that actually fires.** In STALKER the obvious per-tick hook (the actor binder update) never ran on a dedicated server; an effect attached to an always-online restrictor did. In another game, client-side binders did not fire while server ones did. Probe each hook with a trivial log line on the exact setup (dedicated, listen, client) before building on it.
 
@@ -215,3 +215,41 @@ like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
 93. **Profile before optimizing, and look at the C runtime rows first.** Modern Warfare 2 Enhanced's native FSR 3 path ran at 93 fps; a sampling profiler (the render thread's instruction pointer every 2 ms) put half of the samples in one block of `ucrtbase.dll`: a debug `getenv("...")` called twice for every draw. Reading it once gave 155 fps. The same profile showed a Direct3D 12 texture upload that made a buffer and waited for the GPU for every mip level (20000 per level load, 18 s in total); batching them through a persistent upload buffer made the load as fast as Direct3D 11. Both were plain mistakes, found in minutes by measuring instead of reasoning about the GPU. Example: Modern Warfare 2 (`games/modern-warfare-2/README.md`, "The mod's own Direct3D 11 / 12 renderers").
 
 94. **A rendering "fix" can break a screen you did not look at: compare the same frame against the original renderer.** Alpha to coverage for foliage looked right in levels and passed eight campaign maps on bots; a screenshot of the main menu showed the soft smoke turned into hard patches (the game's default 2x anti-aliasing, and the change also hit alpha-tested draws that blend). Capturing the same menu frame on the old and the new renderer side by side, then skipping one draw at a time by texture size (`MW2COOP_SKIPTEX`), found the draw in two runs. Keep a way to capture one named frame and to switch single draws off before a renderer change is called done. Example: Modern Warfare 2.
+
+95. **Search thoroughly for prior art before starting a new project, and ask your owner who they know.** A co-op mod for a Capcom HD remaster was researched for the engine and for the trainer-based local co-op that already existed, then built for a week and pre-released. The next day the owner heard from a friend that another modder was already developing an online co-op for the same game. The announcement was a video on the game's own Nexus page, and early-access streams were on YouTube days before our release. Our search had stopped at a Steam guide and a trainer: the Nexus videos tab, the same author's other mods and YouTube were never read, the hub clone was weeks out of date, and the owner was never asked. The owner stopped the project and everything was deleted. Run the [research.md](research.md) list in full before starting a new project (a new game or a first public repo), ask the owner whom they know, and stop and ask when anything active turns up. Do not repeat it before each release of an existing, advanced mod: its progress is far ahead of any newcomer. Search again only if a project has been paused for a long time. Nexus (403), Steam (429) and YouTube (a consent page) refuse automated reads, but search result titles still show their pages; say what you could not read. Example: a Resident Evil 0 HD co-op attempt that was stopped (no write-up).
+
+96. **When a game keeps "the player" in one variable, answer it per reader instead of rewriting every reader.** Shrek 2's scripts read `LevelInfo.PlayerHeroActor` 1,399 times in 235 classes (enemies, traps, pickups, save fairies, bosses, HUD), so every one of them saw only the host's hero. Instead of patching 235 classes, the mod hooks the one VM opcode that reads an object's variable (UE2 `GNatives[0x01]`, `EX_InstanceVariable`) and, when the variable is that one, answers by who reads it:
+    - objects that belong to a player (his controller, HUD, camera) get that player's hero;
+    - a hero's own code gets itself;
+    - an event about an actor (`Touch`, `Bump`, `HitSHPawn`) gets that actor for a few seconds;
+    - other actors get the nearest usable hero, kept for 1.5 s so an enemy between two players does not flip;
+    - host-only functions and classes get the real value.
+
+    Two details matter. Key a controller and its pawn on one cache entry, so an enemy's hit check and its damage reach the same hero. Build the host-only list from a decompiled census of every read, not by guessing. Example: Shrek 2 (`native/enhnative.c` in shrek2-enhanced, `games/shrek-2/NOTES.md`).
+
+97. **A copy you spawn misses the values the level set on the original.** Shrek 2 maps set values on the hero they place: double jump 128 for the Steed of one level, fall distance 1000 for Puss in his factory, other run speeds in Castle Siege. Guest heroes spawned from the class got the defaults, so a guest could fail a jump the host made, or die from a fall the host survived. Read the retail maps' placed actors (UELib reads `.unr` exports and their properties) to list such overrides. Copy them from the original at spawn, and send the values the client predicts with (jump heights) to the guest's machine too. Example: Shrek 2 (`EnhancedGame.CopyHeroValues`).
+
+98. **In UE2, a network client that opens a local map can crash while painting the old level's loading screen.** In Shrek 2 a guest sent from the host's level to play the same level's opening alone crashed in `ATerrainInfo::UpdateVertices`, called from `UGameEngine::PaintProgress` <- `LoadingScreen` <- `LoadMap`. A stop in a menu map on the way did not help. Skipping `PaintProgress` (an export of `Engine.dll`, hooked through its jump thunk) while the process is still a network client did. Example: Shrek 2 (`hook_PaintProgress` in shrek2-enhanced).
+
+99. **In lockstep, cosmetic code can draw from the simulation's random generator, and how often it draws can depend on
+rendering.** FTL's sprite animations (random flicker frames, random frame sounds), particle emitters and background
+nebula clouds all call the game's one generator (`random32`). Two copies agreed until one fell behind and caught up by
+running several frames without a render in between; then it drew a different number of values and the copies split,
+with no visible state different at first. A forced hitch (a guest skips a few loops every 97, so it must catch up) made
+it reproducible, and a per-caller count of generator calls between hash checks, diffed between copies, named the three
+functions at once. Saving the generator state before each of them and restoring it after fixed it. Count calls per
+caller, cheaply (a small fixed table, not a map: the slower trace hid the bug), and hash the generator state on its
+own so a stream split shows before the game state splits (games/faster-than-light).
+
+100. **A "pause while a window is open" rule breaks lockstep.** FTL pauses its simulation while any window (store, ship
+screen, map, menu) is open, so a player browsing the store froze only their own copy. Make the pause come only from
+shared things (the explicit pause command, event dialogs every copy opens on the same frame) and let private windows
+leave the simulation running (games/faster-than-light).
+
+101. **Resync by reloading a save works only from a quiet moment, and the host must reload too.** FTL co-op repairs a
+desync and admits late joiners by sending the host's save to everyone and having every copy, the host included, reload
+it and restart lockstep. A save taken one frame into a jump loaded at different beacons on host and guest, so a resync
+now waits until no jump is armed or running and no event dialog is open. Reloading also exposed a use-after-free in a
+mod's screen code (a stale pointer to the previous game's ship) that the normal quit-to-menu path never hits; clear
+such pointers before loading. Version restarts with an epoch number so messages from the old run are dropped, and test
+that the drop is needed: without it, hashes from before the restart were compared with the new run (games/faster-than-light).
