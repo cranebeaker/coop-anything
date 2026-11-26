@@ -15773,3 +15773,30 @@
   - https://steamdb.info/app/1104390/patchnotes/
   - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
   checked: '2026-11-18'
+- game: "Prince of Persia: The Lost Crown"
+  year: 2024
+  engine: Unity 2021.3.29f1 (IL2CPP)
+  project: PopCoop
+  url: https://github.com/Ahmed-Ashraf0ux/popcoop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: 'partial'
+    enemies: partial
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: steam-relay
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: automated
+  notes: "Build 1.4.3+TU16.421692.3046900 (Unity 2021.3.29f1 IL2CPP, repack/GSE saves). BepInEx 6 pre.2 + HarmonyX; UDP direct-IP or a Steam Spacewar (480) relay; host-authoritative. Verified with two live clients and a two-machine Win11/Win10 VM: second body with locomotion/facing, interactions, chest authority, level sync, reconnect, remote animations, enemy HP/death/position, player death visibility, hit events both ways, six ability flags plus every unlockable and quest stages, dialogue/cutscene playback with host-authoritative choices, per-player inventory (shared opt-in), save-authority sidecar and hash-verified save pull, remote-enemy proxies. 174/174 unit tests; tracked qa/ suite with live gates and mutation twins. The 0x3 finalizer crash was root-caused and fixed. Source: https://github.com/Ahmed-Ashraf0ux/popcoop"
+  sources:
+  - https://github.com/Ahmed-Ashraf0ux/popcoop
+  - https://github.com/Ahmed-Ashraf0ux/popcoop/blob/main/README.md
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/prince-of-persia-the-lost-crown/README.md
+  - https://github.com/cranebeaker/coop-anything/tree/main/games/prince-of-persia-the-lost-crown/NOTES.md
+  checked: '2026-11-26'
+  made_with_coop_anything: true
