@@ -63,7 +63,7 @@ cheap to hard. **(judgment)**, except where a link is given.
 | Combat and damage | Attacker's client reports a hit, owner of the target applies it | Avoid double application: key each hit with an id |
 | World objects | Doors, containers, pickups: host decides, broadcast result | Use stable ids (form ids, level+index), never memory addresses |
 | Quest and story flags | Host owns them; mirror every flag/variable write to clients | Hook the engine's single "set variable/flag" function if one exists; this is the highest-value hook. Unsynced quests are the main failure of existing mods |
-| Dialog and cutscenes | One player drives, the others get a "watch" state; gate on all players being present | Hardest area; decide per game whether cutscenes pause for everyone or run for the triggerer only |
+| Dialog and cutscenes | One player drives, the others get a "watch" state; gate on all players being present | Hardest area; decide per game whether cutscenes pause for everyone or run for the triggerer only. Check what the engine's "cutscene ended" message really is before forwarding it: in the Aurora-based Witcher 1 it is a world-pause toggle shared by all players, and forwarding one client's "ON" while losing its "OFF" froze the server for everyone, while running the world during the host's own cutscene crashed the host's client afterwards ([games/witcher-1/NOTES.md](../games/witcher-1/NOTES.md)) |
 | Inventory, gold, XP | Per player by default; shared pool only if the design asks | Shared state needs host arbitration |
 | Time, weather, RNG | Host broadcasts; clients adopt | |
 
