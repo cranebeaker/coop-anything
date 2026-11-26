@@ -63,18 +63,13 @@ def pid_alive(pid: int) -> bool:
 
 
 def list_pids(image_name: str) -> List[int]:
-    """Every running pid with this image name, ours or not. For reading and counting only."""
-    out = subprocess.run(["tasklist", "/FI", f"IMAGENAME eq {image_name}", "/FO", "CSV", "/NH"],
-                         capture_output=True, text=True).stdout
-    pids = []
-    for ln in out.splitlines():
-        parts = [p.strip('"') for p in ln.split('","')]
-        if len(parts) > 1 and parts[0].strip('"').lower() == image_name.lower():
-            try:
-                pids.append(int(parts[1]))
-            except ValueError:
-                pass
-    return pids
+    """Every running pid with this image name, ours or not. For reading and counting only.
+
+    Read from the process snapshot (process_table), not from tasklist: tasklist writes in the console's OEM code
+    page and in the system's language, so on a Russian Windows its text did not decode in Python's UTF-8 mode
+    (run_tests under test_all.py), stdout came back None and every caller failed."""
+    want = image_name.lower()
+    return sorted(pid for pid, _, name in process_table() if name == want)
 
 
 def kill_pid(pid: int) -> None:

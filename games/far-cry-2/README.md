@@ -6,7 +6,7 @@
 | Versions tested | Steam, app id 19900, version 1.03, build id 52164. `Dunia.dll` SHA-256 `6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765` (20,183,176 bytes). Every address in this write-up is for that file. Two PCs (Windows 11) on different networks over Steam since 2026-10-25; most later work on two copies on one PC |
 | Projects | **Far Cry 2 Campaign Coop**, https://github.com/HitchLangley/far-cry-2-campaign-coop (MIT, maintained by HitchLangley; renamed from `fc2-coop-probe` in 2026-11). It started from the research probe https://github.com/MortyRei/fc2-coop-probe (initial import 2026-10-19) |
 | QA level | automated for position and heading (two-copy test on one PC); everything newer was checked by hand on two copies on one PC, with logs. Story and most world state are not synced |
-| Last updated | 2026-11-14 |
+| Last updated | 2026-11-18 |
 
 ## Where things stand
 
@@ -14,8 +14,8 @@ Two players can start the campaign together from the host's save, joining from t
 and see each other as animated avatars with weapons, shots and hit damage; they can share a car. The host runs
 every NPC and the joiner sees the same NPCs as puppets. It is a playable prototype for walking around and fighting
 together, not campaign co-op yet: missions, pickups, destruction, death and revive and most world state are not
-synced, enemies attacking the joiner is an experiment, and the newest work has only run on one PC. The project's
-own estimate is about 38 %. Open problems are tracked in the project's issues:
+synced, enemies attacking the joiner is an experiment (it now works in towns too, see NOTES), and the newest work has
+only run on one PC. The project's own estimate is about 41 %. Open problems are tracked in the project's issues:
 https://github.com/HitchLangley/far-cry-2-campaign-coop/issues
 
 ## Existing work

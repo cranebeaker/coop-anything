@@ -400,12 +400,32 @@ def m_release_any(m, e):
     m.release = release_all
 
 
+def check_real_pid_list_in_any_language(mut):
+    """The real pids_named (every other check uses a fake one) must work on a non-English Windows in Python's UTF-8
+    mode, which test_all.py uses: tasklist's Russian output once came back as None there."""
+    spec = importlib.util.spec_from_file_location("gameslot_real_%d" % time.monotonic_ns(), SRC)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    if os.name != "nt":
+        return
+    # a native child, not this Python: sys.executable can be a launcher stub whose image name differs from the
+    # interpreter's (then our own pid is never listed under it)
+    child = subprocess.Popen(["ping", "-n", "30", "127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        mine = m.pids_named("PING.EXE")
+        check(child.pid in mine, f"the ping child (pid {child.pid}) is in the list: {mine}")
+    finally:
+        child.kill()
+        child.wait()
+    check(m.pids_named("no-such-image-%d.exe" % os.getpid()) == [], "a name nobody runs gives an empty list")
+
+
 REAL = [check_distinct_slots_then_busy, check_exclusive_takes_every_slot, check_all_or_nothing,
         check_reacquire_renews, check_expired_lease_is_taken_over, check_live_lease_is_never_taken_over_or_killed,
         check_fifo_waiter_not_starved, check_wait_blocks_until_released, check_ram_guard, check_ram_guard_edges,
         check_default_slots_is_two, check_register_and_release, check_takeover_kills_only_registered,
         check_pid_reuse_is_not_killed, check_state_lock_is_exclusive, check_stale_lock_is_broken,
-        check_concurrent_cli_only_one_winner, check_real_standins_pid_scoped_kill]
+        check_concurrent_cli_only_one_winner, check_real_standins_pid_scoped_kill, check_real_pid_list_in_any_language]
 
 TWINS = [
     (check_distinct_slots_then_busy, "no_exclusion", m_no_exclusion),

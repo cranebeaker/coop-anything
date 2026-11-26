@@ -30,7 +30,7 @@ Drawn from six co-op projects (STALKER, Fallout New Vegas, Dungeon Keeper 1, Oca
 
 14. **Clean up after tests or you ship your test files.** A test archive left in an add-on made the server checksum differ, and other players saw "different versions". Remove test files, delete screenshots, and compare the installed patch byte for byte with the shipped one before handing anything over.
 
-15. **Delete the log before each run.** A boot test of many levels showed the next level failing with the previous level's error because the log still held it. Other logs only flush on clean exit or rarely; for data you must have, write your own file and flush it.
+15. **Delete the log before each run.** A boot test of many levels showed the next level failing with the previous level's error because the log still held it. Other logs only flush on clean exit or rarely; for data you must have, write your own file and flush it. The delete can itself fail: a copy stopped by the previous test may still hold its log for a few seconds, so retry the delete briefly instead of letting it abort the suite, and write the suite summary after every test so a crash part-way keeps the results so far. Example: Spooky Together (`scripts/launch-lab.ps1`, `scripts/lab-suite.ps1`).
 
 16. **Find a hook that actually fires.** In STALKER the obvious per-tick hook (the actor binder update) never ran on a dedicated server; an effect attached to an always-online restrictor did. In another game, client-side binders did not fire while server ones did. Probe each hook with a trivial log line on the exact setup (dedicated, listen, client) before building on it.
 
@@ -216,60 +216,45 @@ like a pad. Example: `games/thronefall/qa/CoopQaDriver/Bot.cs`.
 
 94. **A rendering "fix" can break a screen you did not look at: compare the same frame against the original renderer.** Alpha to coverage for foliage looked right in levels and passed eight campaign maps on bots; a screenshot of the main menu showed the soft smoke turned into hard patches (the game's default 2x anti-aliasing, and the change also hit alpha-tested draws that blend). Capturing the same menu frame on the old and the new renderer side by side, then skipping one draw at a time by texture size (`MW2COOP_SKIPTEX`), found the draw in two runs. Keep a way to capture one named frame and to switch single draws off before a renderer change is called done. Example: Modern Warfare 2.
 
-95. **One patch whose target does not exist silently disables every patch in the assembly.** Sea of
-Stars: two separate merges each added a Harmony patch class against a method signature the build does
-not have — `Player.GetAxisRaw(string)` (only the `int` overload exists) and `NewDialogBox.PlayDialog`
-(the 3-argument overload is on `NewDialogBoxInstance`; `NewDialogBox` has a 4-argument one taking
-`IDialogCharacter`). `PatchAll` logged one line and aborted, the plugin still loaded, the game ran
-fine, and the only symptom was the pair gate dropping from 19/19 to 18/19 with a failure that read like
-a sync bug: the bot walked and nothing moved. Run the pair gate after **every** merge that adds or
-retargets a patch class — it is one run and it is the only thing that sees this. When an assertion that
-used to pass goes red after a merge, read `harmony PatchAll` in the log before believing the gameplay
-explanation. Complements 90: counting patches catches the wrong overload of `PatchAll`, this catches a
-bad target inside a correct one. Sea of Stars (`games/sea-of-stars`, `A-20261120-205458`, `205655`,
-`210433`, `210616` failed 18/19; `205834`, `210753` passed 19/19 after the fixes).
+95. **Search thoroughly for prior art before starting a new project, and ask your owner who they know.** A co-op mod for a Capcom HD remaster was researched for the engine and for the trainer-based local co-op that already existed, then built for a week and pre-released. The next day the owner heard from a friend that another modder was already developing an online co-op for the same game. The announcement was a video on the game's own Nexus page, and early-access streams were on YouTube days before our release. Our search had stopped at a Steam guide and a trainer: the Nexus videos tab, the same author's other mods and YouTube were never read, the hub clone was weeks out of date, and the owner was never asked. The owner stopped the project and everything was deleted. Run the [research.md](research.md) list in full before starting a new project (a new game or a first public repo), ask the owner whom they know, and stop and ask when anything active turns up. Do not repeat it before each release of an existing, advanced mod: its progress is far ahead of any newcomer. Search again only if a project has been paused for a long time. Nexus (403), Steam (429) and YouTube (a consent page) refuse automated reads, but search result titles still show their pages; say what you could not read. Example: a Resident Evil 0 HD co-op attempt that was stopped (no write-up).
 
-96. **Walking into a door is not using it — wire the buttons reference and press it.** Sea of Stars:
-every interior door is a `Teleporter` whose `Update` registers the player on trigger enter and then
-waits for `GetButtonDown` / `GetInteractDown` before it loads anything. A bot that only walks reaches
-the wall, logs a position change of zero and looks like a navigation bug — three routes and two runs
-were spent on a wall that was a door. Read the door's own code path before blaming pathing, and give
-the bot the press it wants; the same applies to chests, levers and interaction prompts. If the target
-needs a press and the bot has no button, that missing button is the real blocker and worth building
-first. Sea of Stars (`games/sea-of-stars`, `docs/lab-mooncradle-exit.md`, `docs/scripted-input.md`).
+96. **When a game keeps "the player" in one variable, answer it per reader instead of rewriting every reader.** Shrek 2's scripts read `LevelInfo.PlayerHeroActor` 1,399 times in 235 classes (enemies, traps, pickups, save fairies, bosses, HUD), so every one of them saw only the host's hero. Instead of patching 235 classes, the mod hooks the one VM opcode that reads an object's variable (UE2 `GNatives[0x01]`, `EX_InstanceVariable`) and, when the variable is that one, answers by who reads it:
+    - objects that belong to a player (his controller, HUD, camera) get that player's hero;
+    - a hero's own code gets itself;
+    - an event about an actor (`Touch`, `Bump`, `HitSHPawn`) gets that actor for a few seconds;
+    - other actors get the nearest usable hero, kept for 1.5 s so an enemy between two players does not flip;
+    - host-only functions and classes get the real value.
 
-97. **A press you sent is not a press the game received.** Sea of Stars: `PlayerInputs.GetInteract`,
-`GetInteractDown` and `GetHighFive` had only a remote branch, so every scripted `Interact` from the
-bot and from the route driver was consumed by nobody — six runs concluded "pressing does nothing" when
-nothing was ever pressed. Fixed by adding the local branch and proven by counting the getter's own
-answers (`input: GetInteractDown(scripted) -> True`, 157 and 641 times in two runs), not by watching
-the game. Whenever a bot's action has no observable effect, instrument the moment the game *reads* the
-input before concluding anything about the game: a missing local branch looks exactly like a game that
-ignores you.
+    Two details matter. Key a controller and its pawn on one cache entry, so an enemy's hit check and its damage reach the same hero. Build the host-only list from a decompiled census of every read, not by guessing. Example: Shrek 2 (`native/enhnative.c` in shrek2-enhanced, `games/shrek-2/NOTES.md`).
 
-98. **A "limitation" is usually an unsearched format.** Sea of Stars: six runs concluded that the save
-could not be moved between levels because any edit was refused — the file was described as having a
-checksum and a length bound. It has neither. A `.sos` is a **ULEB128 length prefix plus UTF-8 JSON**;
-a one-byte edit was refused only because the prefix went stale. Two searches would have given the
-format on day one: a gist of the format ("the checksum is just the length of the data encoded using
-ULEB128") and a working open-source save editor that also publishes area/checkpoint guids. Search for
-the game's save format, its modding scene and its save editors **before** you write a single line of
-save-handling code, and again the moment a run shows something "refused" or "unsupported". Then test
-the smallest hypothesis: here, re-encode the length and the same edit loads. The cost of not
-searching was a day of work labelled blocked; the cost of searching was four minutes.
+97. **A copy you spawn misses the values the level set on the original.** Shrek 2 maps set values on the hero they place: double jump 128 for the Steed of one level, fall distance 1000 for Puss in his factory, other run speeds in Castle Siege. Guest heroes spawned from the class got the defaults, so a guest could fail a jump the host made, or die from a fall the host survived. Read the retail maps' placed actors (UELib reads `.unr` exports and their properties) to list such overrides. Copy them from the original at spawn, and send the values the client predicts with (jump heights) to the guest's machine too. Example: Shrek 2 (`EnhancedGame.CopyHeroValues`).
 
-99. **A Harmony prefix must speak the game's own types, and a patch set must fail loudly.** Sea of
-Stars (IL2CPP): a save-blocking prefix was declared `ref Task<bool>` from `System.Threading.Tasks`
-while the game's method returns `Il2CppSystem.Threading.Tasks.Task<bool>`. `PatchAll` threw, every
-patch after it was silently dropped — including the whole input layer — and the symptom was a player
-body that ignored the bot, which cost six runs and one wrong conclusion ("the game does not read input
-in this level"). Two habits prevent it: write prefixes against the interop types, and make the plugin
-log `harmony: applied N patches` after `PatchAll`, treat `PatchAll FAILED` as a hard failure in every
-gate script (non-zero exit before any verdict), and self-check that the specific methods you depend on
-are patched. Same family as 90 and 91: a correct-looking build proves nothing about what is actually
-hooked. Sea of Stars (`games/sea-of-stars`; the abort line names `SaveManager::SaveSlotFile`).
+98. **In UE2, a network client that opens a local map can crash while painting the old level's loading screen.** In Shrek 2 a guest sent from the host's level to play the same level's opening alone crashed in `ATerrainInfo::UpdateVertices`, called from `UGameEngine::PaintProgress` <- `LoadingScreen` <- `LoadMap`. A stop in a menu map on the way did not help. Skipping `PaintProgress` (an export of `Engine.dll`, hooked through its jump thunk) while the process is still a network client did. Example: Shrek 2 (`hook_PaintProgress` in shrek2-enhanced).
 
-100. **A checker that greps a log can pass on the last run's bytes.** Sea of Stars: the save gate
+99. **In lockstep, cosmetic code can draw from the simulation's random generator, and how often it draws can depend on
+rendering.** FTL's sprite animations (random flicker frames, random frame sounds), particle emitters and background
+nebula clouds all call the game's one generator (`random32`). Two copies agreed until one fell behind and caught up by
+running several frames without a render in between; then it drew a different number of values and the copies split,
+with no visible state different at first. A forced hitch (a guest skips a few loops every 97, so it must catch up) made
+it reproducible, and a per-caller count of generator calls between hash checks, diffed between copies, named the three
+functions at once. Saving the generator state before each of them and restoring it after fixed it. Count calls per
+caller, cheaply (a small fixed table, not a map: the slower trace hid the bug), and hash the generator state on its
+own so a stream split shows before the game state splits (games/faster-than-light).
+
+100. **A "pause while a window is open" rule breaks lockstep.** FTL pauses its simulation while any window (store, ship
+screen, map, menu) is open, so a player browsing the store froze only their own copy. Make the pause come only from
+shared things (the explicit pause command, event dialogs every copy opens on the same frame) and let private windows
+leave the simulation running (games/faster-than-light).
+
+101. **Resync by reloading a save works only from a quiet moment, and the host must reload too.** FTL co-op repairs a
+desync and admits late joiners by sending the host's save to everyone and having every copy, the host included, reload
+it and restart lockstep. A save taken one frame into a jump loaded at different beacons on host and guest, so a resync
+now waits until no jump is armed or running and no event dialog is open. Reloading also exposed a use-after-free in a
+mod's screen code (a stale pointer to the previous game's ship) that the normal quit-to-menu path never hits; clear
+such pointers before loading. Version restarts with an epoch number so messages from the old run are dropped, and test
+that the drop is needed: without it, hashes from before the restart were compared with the new run (games/faster-than-light).
+
+102. **A checker that greps a log can pass on the last run's bytes.** Sea of Stars: the save gate
 cleared the host's plugin log at deploy but not the guest's, and its detector was a `-match` over a
 200-line tail. The tick that reported `applied=True` ran one second before the new session's first log
 line, so it matched the previous run's `save: applied`. The gate was green about a transfer that never
@@ -277,7 +262,7 @@ happened. Clear every log the checker reads at deploy, latch a positive once tru
 a moving tail, and have the checker print the exact line it matched. A detector's failure mode is a
 false pass, and a false pass is worse than a red gate.
 
-101. **An undeclared flag is a flag the script never received.** Sea of Stars: a gate called
+103. **An undeclared flag is a flag the script never received.** Sea of Stars: a gate called
 `gate-c.ps1 -StopVmAfterGateC`; the script never declared `[switch]$StopVmAfterGateC`, so for a
 non-advanced PowerShell script the unknown token fell into `$args` and the variable was null. The stop
 branch never ran, and three artifacts implied a fix was untested when it had not executed once. Same
@@ -286,7 +271,7 @@ code can both look right while nothing connects them. Make every script error on
 (`[CmdletBinding()]` with no positional `$args` use) and assert that the branch executed — a log line,
 not a silent success.
 
-102. **An invisible prompt is indistinguishable from a permission wall.** Sea of Stars: an elevated
+104. **An invisible prompt is indistinguishable from a permission wall.** Sea of Stars: an elevated
 gate called `Join-Path` with one argument, so its console blocked on `Supply values for the following
 parameters: ChildPath:`. Nobody could see the prompt, the gate wrote no log and no state flag, and the
 symptom — sitting at `lease: acquired` — was read as "the account cannot use Hyper-V". A full day went
@@ -294,7 +279,7 @@ to permissions that were never the problem. When an elevated or headless process
 read its own script for anything that can prompt (missing parameter, `Read-Host`, a cmdlet's mandatory
 argument) before believing the environment refused you.
 
-103. **A mock transport that copies frames must not re-stamp them.** Sea of Stars' lab transport sent
+105. **A mock transport that copies frames must not re-stamp them.** Sea of Stars' lab transport sent
 each reliable frame plus two delayed copies, stamping the copies with the transport's *current*
 sequence number, so a copy that came after any other send slipped past the receiver's dedup. Story
 snapshots were delivered twice (second one skipped), and a save applied 124 ms apart from its own
