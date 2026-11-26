@@ -15773,3 +15773,29 @@
   - https://steamdb.info/app/1104390/patchnotes/
   - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
   checked: '2026-11-18'
+
+- game: Moonlight Peaks
+  year: 2025
+  engine: Unity
+  project: Moonlight Peaks Co-op
+  url: https://github.com/appleknife/moonlight-peaks-coop
+  other_urls: []
+  kind: mod
+  status: alpha
+  coop_scope:
+    players_visible: 'yes'
+    story: partial
+    enemies: unknown
+    world_state: partial
+    items: per-player
+  players: '2'
+  networking: direct-ip
+  open_source: 'yes'
+  last_activity: 2026-11
+  qa: none
+  notes: Host/guest BepInEx plugin. Player 2 joins by IP, loads a copy of the host save, has a separate player record and NPC relationship list, follows room changes and the day clock, and sees the other player's held item. Farming/shop effects transfer by reloading the room; cutscenes mirror. Only build 25725760 checked; scripted smoke tests only.
+  sources:
+  - https://github.com/appleknife/moonlight-peaks-coop
+  - https://store.steampowered.com/app/2209900/Moonlight_Peaks/
+  checked: '2026-11-24'
+  made_with_coop_anything: true
