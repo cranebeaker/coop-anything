@@ -15091,20 +15091,20 @@
   url: https://github.com/cranebeaker/coop-anything/tree/main/games/sea-of-stars
   other_urls: []
   kind: mod
-  status: prototype
+  status: alpha
   coop_scope:
     players_visible: 'yes'
     story: partial
     enemies: partial
-    world_state: 'no'
-    items: 'no'
+    world_state: partial
+    items: partial
   players: '2'
   networking: steam-relay
   open_source: 'no'
   last_activity: 2026-11
-  qa: none
-  notes: "Build 2.0.58728 (Unity 2021.3.25f1 IL2CPP), BepInEx 6 pre.2 plugin, Steam AppID 480. The game already ships local co-op, so the peer's party character is given a real SinglePlayerPlusPlayer slot and that slot's input is replicated at the Rewired layer instead of a puppet clone; each machine owns the character it plays. Verified with two real game clients on two Steam accounts, windows minimized: friends-only lobby joined by an invisible peer (17/17), public-lobby control (17/17), guest's body moves on the host and host's body on the guest with 0.00 end delta, one enemy actor streamed with agreeing positions, and host blackboard/story snapshots applied on the peer with an identical final state. Unproven: combat (an encounter starts but never builds a party on the lab save), actor kill/despawn, dialogue mirroring, chest loot, items, map transitions and saves. One unexplained handshake failure (connected=False once in four identical runs)."
+  qa: automated
+  notes: "Build 2.0.58728 (Unity 2021.3.25f1 IL2CPP), BepInEx 6 pre.2 plugin, Steam AppID 480. The game already ships local co-op, so the peer's party character is given a real SinglePlayerPlusPlayer slot and that slot's input is replicated at the Rewired layer instead of a puppet clone. Automated two-client results: real-Steam friends-only lobby joined by an invisible peer (17/17) and public-lobby control (17/17); both bodies move with 0.00 end delta; story snapshots, chest loot, dialogue show/text/close, one door transition and save transfer all pass (24/24, 25/25, 33/33, 18/18); combat passes with a peer-authored hit the host applies via the engine's own HitHP path (15/15 in two of three consecutive runs, one lost damage application in the third). Not yet proven: actor kill/despawn, dialogue choice, a second chest/fight/door, and a full story playthrough; one unexplained handshake failure (connected=False once in four identical runs). Source is not public yet; when it is, url and sources should point at that repository instead of this write-up."
   sources:
   - https://github.com/cranebeaker/coop-anything/tree/main/games/sea-of-stars/README.md
-  checked: '2026-11-20'
+  checked: '2026-11-23'
   made_with_coop_anything: true

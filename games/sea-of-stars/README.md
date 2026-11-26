@@ -5,8 +5,8 @@
 | Engine | Unity **2021.3.25f1**, IL2CPP (metadata v29), x64; BepInEx **6.0.0-pre.2** IL2CPP plugin |
 | Versions tested | build **2.0.58728** (Windows). `SeaOfStars.exe` SHA-256 `8009b8c8f842e02c12f8576f3b3aefcaddfc76048fe4d5233f5b5055bf08e427`. Both players must run this build |
 | Projects | **Sea of Stars Online** — private repo, source not published yet (see *Where the code is*) |
-| QA level | **none** — automated two-client gates cover the transport, the peer's co-op slot and movement in both directions; combat, the actors' kill path, story, items, transitions and saves have no passing run (see *QA*) |
-| Last updated | 2026-11-20 |
+| QA level | **automated** — two-client gates that ran cover transport, both player bodies, the friends-only lobby, one real fight with peer-authored damage the host applies, chest loot, dialogue (show, text, close), one door transition and save transfer; the actors' kill path, dialogue `choice`, a second chest/fight and a second consecutive clean combat run have no passing result yet, and nobody has played the story through together (see *QA*) |
+| Last updated | 2026-11-21 |
 
 ## Where things stand
 
@@ -17,9 +17,11 @@ game itself moves, animates, casts shadows for and drives both bodies. Two real 
 Steam accounts connect, load the same map, play different characters, and each machine's copy of the
 peer's body ends exactly on the position the peer reports.
 
-Everything outside those two bodies is still two separate worlds. Enemies are streamed but nothing
-kills one; encounters, dialogue, chests, items, map transitions and saves are not replicated. Nobody
-has played the story through together.
+What crosses the wire beyond those two bodies is now most of the world's *state*: the host's story
+progress, chest loot, dialogue, door transitions, combat and a save the guest can take without a file
+copy. Each of those has one controlled run behind it, not a campaign — one fight, one chest, one door,
+one conversation. Enemies are still streamed without a kill, a guest cannot choose a dialogue option,
+and the two-worlds failure mode is still what a player sees if they open a menu the mod does not mirror.
 
 | Layer | Status | Evidence |
 |---|---|---|
@@ -34,11 +36,13 @@ has played the story through together.
 | One enemy actor streamed, position agrees on both sides | works, one actor only | `actorsync: role=…` status lines in `C2-guest-20261120-211415.host.log` / `.guest.log` |
 | Actor kill → despawn on the peer | unproven | `tools/qa-actor-kill.py` scored **3/16** on `C-guest-20261120-190636.{host,guest}.log` (`docs/actor-kill.md`) |
 | Combat: entry, participants, turn order, one mirrored hit, guest apply | **works** (one controlled fight) | `local/qa/battle-full-20261121-010232.qa.out` — `RESULT: PASS (19/19)`. Contact entry into `ENC_01 (TutoMana)`, identical `participants=[P:ZALE,P:VALERE,P:GARL,E:0:TERN]` and turn order, `epoch=1`, guest `apply done`, host `combat: hit seq=36 dmg=1 hp=4/5` mirrored as guest `combat: hp seq=36`, duplicate ignored; both probes `loaded=22 inScene=22 active=10`. Also seen with eyes, not only logged: two windows side by side in that fight, same party HUD (ZALE 12/3, VALERE 11/2, GARL 15/2) and the same enemy at 3 HP on both. Scope: one tutorial fight, one hit — a general combat claim still needs a longer fight and a second encounter |
+| Combat: the peer attacks and the host applies it | **works — 2 of 3 consecutive runs** | `battle-natural3-20261123-0945` and `-natural4-1010` `RESULT: PASS (15/15)` with `armed-by=natural`, `owner=VALERE local=VALERE`: guest `combat: guest hit` → `guest hit sent guestSeq=1` → host `peer hit received hp=4/5` (4 ms) → `host-applied … path=HitHP` → `hp=3/5` on both sides. `-natural5-1100` FAIL 13/15 on one lost damage application. The start sequence that makes it work: join held to the contact so pre-init sees `players=1 currentPlayer=ZALE`, body swap gated on `preinit-done`, sticky `UI_Confirm` |
 | Story state: GPI + blackboard snapshot, host → peer | partial — snapshot only | `local/qa/story-chest-r3-20261120-223200.guest.log:60` — `story: snapshot apply seq=5 gpi=0 bb=2 changed=2`, final `state=` identical on both sides, `diff=0`, `misses=0`, `unsupported=0`; checker `local/qa/story-chest-r3-20261120-223200.strict.story.out` passes every state assertion |
-| Story: dialogue mirroring (presentation only) | proven once — one `show` effect | `local/qa/story-archivist-20261120-231310.strict.story.out` — `RESULT: PASS (24/24)`; host `story: dialog out seq=1 op=show data='f6fe0400…' char='THE_ARCHIVIST'`, guest `story: dialog in seq=1 peerBox=1073741824` with a box remap and no guest graph advance. `line`, `close` and `choice` were not in that dialog, so those assertions passed vacuously |
+| Story: dialogue mirroring (presentation only) | **works** — show, per-line text and close | `local/qa/acceptance-20261121-131232/story/gate-story.qa.out` — `RESULT: PASS (25/25)`: four shows with `each mirrored show carries the same data id (the box text source)` mismatched=0, `peer mirrors arrive in order seqs=[1..6]`, and `every dialog close is mirrored: host closes=2 peer closes=2 missing=[]`. This build never calls `PlayDialog`/`CloseDialogBox` — each line is a new `ShowDialog` box and a box that vanishes is the close — so the mod detects the close on the host side and emits it. `choice` is unproven: the Archivist conversation has none (`no choices in this run`, and no hook was added for an event never seen) |
 | Story: chest loot, mirrored to the peer | **works** (one chest) | `local/qa/story-chest-20261121-093246.qa.out` — `qa-story.py --require-snapshot --require-loot` `PASS (24/24)`. Host `story: interaction done obj=Chest:98940bbb…`, `story: loot out seq=1 grants=1`; guest `story: loot in seq=1 grants=1 applied=1`. Root cause of the peer having no chests at all was a scope bug: the chest/lever scan ran only on the host's snapshot send and once on the peer's apply, so it now runs on the status interval for both roles |
 | Map transitions | **works** (Moorlands → world map) | `local/qa/travel6-20261121-095112.qa.out` — `qa-travel.py --require-apply` `PASS (33/33)`. A real door transition (`commit seq=3 kind=load level=4776b2f6…`), guest `apply … scene='WorldMap_Art'`, and settle lines agreeing on both sides (`host-level=4776b2f6… peer-level=4776b2f6… sameLevel`). A commit that arrives while another applies is deferred, not dropped (`duplicate in-flight seq=3`); Elder Mist's only door zone is inactive, Moorlands has three active ones |
-| Save transfer | written, runtime unproven | `SaveTransfer.cs` (msgs 56-58, 28-byte header, 4 MiB bound); guest takes the host's blob at the title screen into a **memory-only** slot with saving disabled (`saveDisabled` is checked before any write, proved from the binary); 25/25 unit tests, no run |
+| Save transfer | **works** — guest joins an existing run; nothing is written on its machine | `local/qa/save-transfer-shared-20261121-131905.qa.out` — `RESULT: PASS (18/18)`: `requests=1 sends=1 duplicate_seqs=[]`, every blob received and applied with matching wire hash, level guid, party and GPI, `final story state is identical` on both sides, and the guest save folder `before=4 after=4 identical`. Across machines: `local/qa/gate-save-20261121-112920/` shows the VM guest's own save folder byte-identical before and after (`before=4 after=4`), which is where the memory-only property can actually be measured |
+| One command for the whole verdict | works | `tools\acceptance.ps1` with the VM off; two passes because the gates need different slot-0 saves. `local/qa/acceptance-20261121-125936/` (Gate A 19/19 clean, 19/19 loss) and `local/qa/acceptance-20261121-131232/` (story 25/25), each with `SUMMARY.md` where a skipped or blocked gate is never a pass |
 | Three players | out of scope | owner decision on 2026-11-20: two players only; `docs/roadmap-sync-everything.md` still describes the 3-player design |
 
 ## Existing work
@@ -191,13 +195,16 @@ every later patch — see lesson 99).
 
 ### Written, not proven
 
-`ActorSync.cs` (actor stream,
-ownership epochs, despawn path), `StorySync.cs` (GPI/chest state, blackboard flags, dialogue
-presentation, mirrored loot), `BattleEntry.cs` (walk-to-trigger driver) and `TriggerDump.cs` exist and
-are wired into the plugin's tick, and `tools/qa-actor-kill.py` / `tools/qa-battle.py` assert on them.
-None of them has a passing run; see *Known issues*.
+Two things have code and a checker but no passing runtime run: **`ActorSync.cs`'s kill path**
+(`tools/qa-actor-kill.py` scored 3/16 on real logs; the despawn code exists and only a host-side death
+was ever missing) and **dialogue `choice`** (`StorySync` speaks `op=choice`, but no run has produced
+one — the Archivist conversation has no prompt, and `SelectChoice` was never called).
 
-Two of those do have unit coverage, and it is honest to say what it covers: the scripted-input
+Everything else that was on this list a day ago now has a run behind it: actor streaming, GPI/blackboard
+snapshots, chest loot, dialogue show/close, map transitions, save transfer, and combat entry with a
+mirrored hit. See the *Layer* table for the artifact of each.
+
+Unit coverage exists for the pure halves, and it is honest to say what it covers: the scripted-input
 parser/timeline and the story wire format have offline suites that run without the game —
 `local\qa\scriptedinput-tests-20261120.unit.out` (`RESULT: PASS (42/42)`) and
 `local\qa\storysync-tests-20261120.unit.out` (`PASS 28/28`). A unit suite proves the format and the
@@ -205,12 +212,14 @@ timeline logic, not that a battle or a chest syncs.
 
 ## QA
 
-**The level is `none`.** The template's `automated` means the mod's claims are checked by a test
-that ran, and `verified-playthrough` means a human finished the game in co-op; neither is true here.
-What exists is narrower: automated two-client gates for the transport, the peer's co-op slot, peer
-input and movement in both directions, the friends-only lobby and the public-lobby control, plus one
-real dialogue mirrored. Combat, the actors' kill path, chest loot and items, transitions and saves
-have code, unit suites and harnesses, and no passing runtime run.
+**The level is `automated`.** The template's `automated` means the mod's claims are checked by a test
+that ran; `verified-playthrough` means a human finished the game in co-op, and that is not true here.
+What exists: automated two-client gates for the transport, the peer's co-op slot, both player bodies,
+the friends-only lobby, one contact fight with a mirrored hit, one chest's loot, one conversation
+(show, per-line text, close), one door transition, and save transfer in both a shared root and across
+machines. The guest's save folder being byte-identical is measured from runner-captured md5 manifests.
+What is *not* covered is listed per item: a second chest or fight, dialogue `choice`, the actor kill
+path, friends-only host-walks, and a full story playthrough.
 
 **One command for the whole verdict:** `tools/acceptance.ps1` runs the gates in order (Gate A clean,
 Gate A at 10% loss + 80 ms, Gate C2 real Steam friends-only, Gate D forced encounter, the story
@@ -289,7 +298,43 @@ a copy needs `SOSO_TEST_WINDOW=1` (its saved screen state is native 1920x1080 an
 plus `SOSO_LOAD_SLOT=0` (Continue is pressed from inside the plugin via `TitleScreen.OnContinue()`,
 so no key is sent to a background window).
 
-### Last results (all 2026-11-20)
+### Last results
+
+**2026-11-23 — the peer fights back.** Local pair, mock transport, no Steam. The peer now starts its
+own encounter, takes its turn, lands a hit, and the host applies it through the game's own `HitHP`
+path with both sides agreeing on HP. Two of three consecutive runs are clean; the third lost one
+damage application (`guest matches=[]`), so "reliable" is not yet claimed.
+
+| Run | Artifact | Result |
+|---|---|---|
+| Peer-authored damage, first natural run | `battle-natural3-20261123-0945/qa-battle.out` | **PASS 15/15** — `armed-by=natural`, `owner=VALERE local=VALERE`, guest `combat: guest hit` → `guest hit sent guestSeq=1` → host `peer hit received hp=4/5` → `host-applied … path=HitHP` → `hp=3/5` on both sides |
+| Second consecutive natural run | `battle-natural4-20261123-1010/qa-battle.out` | PASS 15/15 |
+| Third consecutive natural run | `battle-natural5-20261123-1100/qa-battle.out` | **FAIL 13/15** — `first damage application reached the peer … guest matches=[]`; the hit was sent, the host applied nothing for that seq. One flake in three |
+| Forced-baseline peer hit (caveat carried in the RESULT line) | `battle-peerhit-forced2-20261121-191758/qa-battle-forced.out` | `RESULT: PASS (15/15) [forced peer hit E:0:TERN; shipping peer->host path]` — the shipping chain proven before the natural start existed |
+
+What makes the natural start work, after 20+ negative runs: the encounter must pre-init with
+`players=1` **before** the remote slot joins (hold the join until the contact, then release), the body
+swap is gated on `preinit-done` so the turn builds for the actor this machine drives, and a sticky
+`UI_Confirm` wins the button edge from the other consumer reading it. An adopted host encounter can
+never start a fight — the game freezes its player set at pre-init.
+
+**2026-11-21 — the day the remaining layers got runs.** All local, two copies, no Steam unless noted;
+package pinned to the tested binary (`out/SeaOfStarsOnline-0.1.0.zip` sha256 `A17EA030…`, plugin DLL
+`9B7E7329…`, identical to the DLL installed in the lab).
+
+| Run | Artifact | Result |
+|---|---|---|
+| Gate A, mock pair, clean | `acceptance-20261121-125936/gate-a/A-20261121-125937.qa.out` | PASS 19/19 |
+| Gate A, 10% loss + 80 ms | `acceptance-20261121-125936/gate-a-loss/loss-20261121-130100.qa.out` | PASS 19/19 |
+| Story: snapshot, dialogue show/text/close | `acceptance-20261121-131232/story/gate-story.qa.out` | PASS 25/25 |
+| Chest + loot | `story-chest-20261121-093246.qa.out` | PASS 24/24 |
+| Travel (one door) | `travel6-20261121-095112.qa.out` | PASS 33/33 |
+| Combat, contact entry | `battle-full-20261121-010232.qa.out` | PASS 19/19 |
+| Save transfer, shared root | `save-transfer-shared-20261121-131905.qa.out` | PASS 18/18 |
+| Save transfer, VM guest (across machines) | `gate-save-20261121-112920/` | FAIL 16/17 — every save assertion passes, guest folder 4 files byte-identical; the failure was the host's story-status lag, which the settle fix now covers in the shared-root run |
+| Gate D, forced encounter | — | BLOCKED: `Encounter_KidsFight` is `activeInHierarchy=0` and needs story state this save has not reached. The battle evidence above is contact entry, not forced |
+
+**2026-11-20** — the movement and lobby day.
 
 | Run | Artifact | Result |
 |---|---|---|
@@ -312,8 +357,9 @@ peer's body" cannot separate the two contributions; it proves that each machine'
 peer says it is, not that input alone carried it there. The loss run's parameters (10%, 80 ms) come
 from the gate command line — the artifact is named `loss-` and records the result, not the settings.
 
-**The last green Gate A predates the two most recent commits** (`7353eb9` changes scripted input and
-encounter detection; `173b697` is its docs follow-up); re-run it before quoting 19/19 for `HEAD`.
+**The green Gate A now dates from 2026-11-21** and was re-run after every commit that changed a patch
+class or a scan scope; the runs that went 18/19 after such a merge, and the `harmony PatchAll` line
+that explained each, are in `NOTES.md`. A green build alone never proved a patch was bound.
 
 ### Where the code is
 
@@ -331,8 +377,9 @@ Private repo at `<lab dir>` (not published):
 
 ## How to play
 
-There is no release yet, and this is not a playable co-op campaign: expect two player bodies and
-nothing else.
+There is a built package but no published release, and this is not yet a full co-op campaign: the
+story state, loot, dialogue, doors, combat and the save are mirrored with the scope stated above, but
+the actors' kill path and dialogue choices are not, and nobody has played the story through together.
 
 Requirements: Sea of Stars build **2.0.58728** on both machines (exe SHA-256 above), Windows 10/11
 x64, and Steam running and logged in on both machines. No Spacewar ownership is needed; both players
@@ -376,13 +423,14 @@ Environment switches the harness uses (not needed to play): `SOSO_TRANSPORT=mock
 
 What a player will notice:
 
-- **Two separate worlds.** Enemies, encounters, dialogue and story flags, chests, item and currency
-  contents, map transitions and saves are per copy. Only the two player bodies cross the wire. A
-  remote player who looks like they are fighting, opening a chest or leaving the map is not doing it
-  on the other machine.
-- **Both players must load the same save themselves.** There is no save transfer, and the only
-  compatibility check is the map: two copies on the same map from *different* saves will bind, then
-  diverge in every story flag.
+- **The story is only partly shared.** Story flags, chest loot, dialogue, door transitions and saves
+  cross the wire; enemies can be shot but not killed on the peer, a dialogue `choice` is not mirrored,
+  and item/currency contents outside the mirrored loot are per copy. A remote player who looks like
+  they are in a menu the mod does not mirror is not in it on the other machine.
+- **The guest must take the host's save once, at the title screen.** Save transfer is memory-only on
+  the guest by design: it loads the host's blob into a slot that cannot be written, so a guest who
+  quits loses it and must take it again. Both copies must also be on the same map before the co-op
+  slot binds; from *different* saves they will bind, then diverge in every story flag.
 - **The co-op slot binds only while both copies are on the same map.** Until they are, the guest's
   character is not handed over and nothing syncs; the log says `co-op slot not bound until the maps
   match`, and the bind retries on every tick once they match. The guest's leader swap is attempted up
@@ -400,6 +448,15 @@ What a player will notice:
 
 Open issues (no known cause, listed so they are not rediscovered as new):
 
+- **A build of the same source does not hash the same twice.** Three builds of one tree gave three PE
+  hashes (`A4083D50…`, `24ECF0B5…`, `98B2EA7F…`) and the cause was not identified. The release is
+  therefore packaged with `package.ps1 -SkipBuild` from the exact DLL the gates ran against
+  (`9B7E7329…`), and that hash is the one to compare against. Do not assume a rebuild reproduces it.
+- **The lab guest VM now hangs before any scene** (`local/qa/guest-warmlog*.txt`): six plugin log
+  lines, process alive, no transition, and Windows reports `Winsrv 10002 … terminated because it was
+  hung`. It is a lab-environment problem, so the real-Steam claims are quoted from the earlier runs
+  that worked and no new VM run has been made since. The VM is out of scope until the local gates are
+  exhausted (owner decision, 2026-11-21).
 - **`C2-guest-20261120-203257` — 10/17, `connected=False`.** One friends-only run has no explanation.
   Both clients joined the lobby (`members=2`, `EResult=1`, `join.EResponse=1`), the session connected
   for a few seconds, then went silent in both directions: the guest logged `session: peer … timed out`
@@ -424,19 +481,16 @@ Open issues (no known cause, listed so they are not rediscovered as new):
 
 ## Next steps
 
-1. **Combat sync.** Needs a save past the Mooncradle tutorial: the training encounter starts
-   (`Encounter_KidsFight`) but never builds a party on this save (`players=0`, `participants=[]`), and
-   `Mooncradle_Art` holds no reachable touch trigger (`docs/battle-entry.md`; that forced-entry
-   observation has no `.qa.out` of its own). Then override `GetAdvanceTime` / `GetRewindTime` and give
-   `EncounterPlayersManager` host authority.
-2. **Actor kill.** Move the host to the village plaza at `(66.8, 1.0, 79.9)` so two actors are inside
-   the 32 m sample radius, produce one death, and drive `tools/qa-actor-kill.py` from 3/16 to 16/16.
-   The despawn path already exists (`CheckLocalDeaths` → `MsgDespawn` → `ApplyRemoteDeath` with
-   duplicate-epoch guards); the missing piece was always a host-side kill to observe.
-3. **Story by effects** (`docs/slice-s4-story.md`): host-side GPI/chest/lever capture, dialogue
-   presentation on the peer, guest-side interaction suppression, and the canonical state hash that
-   makes a desync visible.
-4. **Map transitions and save transfer**, so a guest can follow the host through a door and join an
-   existing run without the host's save file.
-5. **Publish**: source and a release (one install file per OS), then invite-via-lobby support so the
-   guest does not have to copy a lobby id by hand.
+1. **Actor kill.** The despawn path exists (`CheckLocalDeaths` → `MsgDespawn` → `ApplyRemoteDeath` with
+   duplicate-epoch guards) and no host death has ever been observed. Move the host to the village plaza
+   at `(66.8, 1.0, 79.9)` to get two actors inside the 32 m sample radius, produce one death, and drive
+   `tools/qa-actor-kill.py` from 3/16 to 16/16.
+2. **Dialogue `choice`.** Find a conversation with a prompt (the Archivist has none), then mirror the
+   host's `SelectChoice` result and prove it with the existing `op=choice` assertions. No hook exists
+   yet, deliberately: nothing has been seen to fire.
+3. **Combat depth.** One tutorial fight is not combat sync. A longer fight and a second encounter, then
+   `AdvanceTime` / `RewindTime` so a remote player can hit timed attack and block windows.
+4. **Coverage and the second machine.** A second chest, a second door, and a repeat of the real-Steam
+   arms (friends-only host-walks above all) once the lab VM boots a guest again.
+5. **Publish**: source and the release package exist locally (`out/SeaOfStarsOnline-0.1.0.zip`, pinned
+   to the tested DLL); then invite-via-lobby support so the guest does not copy a lobby id by hand.

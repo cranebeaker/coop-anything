@@ -268,3 +268,37 @@ log `harmony: applied N patches` after `PatchAll`, treat `PatchAll FAILED` as a 
 gate script (non-zero exit before any verdict), and self-check that the specific methods you depend on
 are patched. Same family as 90 and 91: a correct-looking build proves nothing about what is actually
 hooked. Sea of Stars (`games/sea-of-stars`; the abort line names `SaveManager::SaveSlotFile`).
+
+100. **A checker that greps a log can pass on the last run's bytes.** Sea of Stars: the save gate
+cleared the host's plugin log at deploy but not the guest's, and its detector was a `-match` over a
+200-line tail. The tick that reported `applied=True` ran one second before the new session's first log
+line, so it matched the previous run's `save: applied`. The gate was green about a transfer that never
+happened. Clear every log the checker reads at deploy, latch a positive once true instead of re-reading
+a moving tail, and have the checker print the exact line it matched. A detector's failure mode is a
+false pass, and a false pass is worse than a red gate.
+
+101. **An undeclared flag is a flag the script never received.** Sea of Stars: a gate called
+`gate-c.ps1 -StopVmAfterGateC`; the script never declared `[switch]$StopVmAfterGateC`, so for a
+non-advanced PowerShell script the unknown token fell into `$args` and the variable was null. The stop
+branch never ran, and three artifacts implied a fix was untested when it had not executed once. Same
+family as a Harmony patch whose target does not exist and a subsystem with no caller: the call and the
+code can both look right while nothing connects them. Make every script error on an unknown parameter
+(`[CmdletBinding()]` with no positional `$args` use) and assert that the branch executed — a log line,
+not a silent success.
+
+102. **An invisible prompt is indistinguishable from a permission wall.** Sea of Stars: an elevated
+gate called `Join-Path` with one argument, so its console blocked on `Supply values for the following
+parameters: ChildPath:`. Nobody could see the prompt, the gate wrote no log and no state flag, and the
+symptom — sitting at `lease: acquired` — was read as "the account cannot use Hyper-V". A full day went
+to permissions that were never the problem. When an elevated or headless process hangs with no output,
+read its own script for anything that can prompt (missing parameter, `Read-Host`, a cmdlet's mandatory
+argument) before believing the environment refused you.
+
+103. **A mock transport that copies frames must not re-stamp them.** Sea of Stars' lab transport sent
+each reliable frame plus two delayed copies, stamping the copies with the transport's *current*
+sequence number, so a copy that came after any other send slipped past the receiver's dedup. Story
+snapshots were delivered twice (second one skipped), and a save applied 124 ms apart from its own
+duplicate tripped a blunt "no message dropped" assertion that then read as data loss. A test double
+must be faithful in the one property the test depends on; here, identity. When a doubled message
+appears, suspect the harness before the protocol, and write the assertion so it distinguishes a benign
+duplicate from a real drop instead of failing on both.

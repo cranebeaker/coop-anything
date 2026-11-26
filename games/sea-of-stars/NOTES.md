@@ -10,7 +10,7 @@ facts, guesses and unknowns are kept apart.
 | Game | Sea of Stars (Sabotage Studio), build **2.0.58728**, Copyright 2023-2025 |
 | Engine | Unity **2021.3.25f1**, IL2CPP, metadata v29 |
 | Exe | `SeaOfStars.exe`, SHA-256 `8009b8c8f842e02c12f8576f3b3aefcaddfc76048fe4d5233f5b5055bf08e427` |
-| Test install | `D:\sos-game` (root copy + junction to `<game dir>\SeaOfStars_Data`), second copy `D:\sos-game2` |
+| Test install | `<lab host install>` (root copy + junction to `<game dir>\SeaOfStars_Data`), second copy `<lab guest install>` |
 | Loader | BepInEx **6.0.0-pre.2** (Unity IL2CPP win-x64), zip SHA-256 `616EC7EB...93CEB` |
 | Steam | real `steam_api64.dll` from Steamworks.NET standalone 2025.164.1, SHA-256 `eb17909a...b75` (playbook pin) |
 | Local co-op | shipped ("Single Player+"): up to 3 local players |
@@ -123,13 +123,13 @@ read the override must answer.
 
 ## Build
 
-Work repo `D:\seaofstars-online` (not the game install). Build with the workspace-local .NET 8 SDK:
+Work repo `<lab dir>` (not the game install). Build with the workspace-local .NET 8 SDK:
 
 ```
-D:\New folder (2)\popcoop\tools\dotnet\dotnet.exe build -c Release
+<dotnet path> build -c Release
 ```
 
-Deploys to `D:\sos-game\BepInEx\plugins\SeaOfStarsOnline\` (and `native\steam_api64.dll`).
+Deploys to `<lab host install>\BepInEx\plugins\SeaOfStarsOnline\` (and `native\steam_api64.dll`).
 
 ## Status / QA level
 
@@ -171,7 +171,7 @@ Test-path lessons worth keeping:
 Owner instruction: **ship 2 players only.** No third Steam account, no third player, no second guest
 VM. S1 (multi-peer slots) was cancelled mid-write for that reason.
 
-Repo hygiene: `D:\seaofstars-online` is now a git repo. Baseline `e96d427` on `main` (a restore
+Repo hygiene: `<lab dir>` is now a git repo. Baseline `e96d427` on `main` (a restore
 point — it contains S1's partial edits), integration on `feat/2p-sync`, green build `1513c09`.
 
 Gate A (the original two-client harness, both copies minimized, `RESULT: PASS (19/19)`, run again
@@ -191,7 +191,7 @@ real-Steam movement (`remotePos` constant, input frames carried zero axes — th
 and input-frame exchange only), 3 players (out of scope).
 
 Lesson worth keeping: the harness's `RESULT:` lines were only ever in an agent's report, not on disk.
-Every gate must write its stdout to `D:\seaofstars-online\local\qa\<gate>-<timestamp>.out`, or the
+Every gate must write its stdout to `<lab dir>\local\qa\<gate>-<timestamp>.out`, or the
 claim cannot be checked later and cannot be quoted in the write-up.
 
 ## 2026-11-20 — Gate C: movement sync verified both directions on real Steam
@@ -258,3 +258,57 @@ Friends-only lobby verified with an **Invisible peer**: host created `k_ELobbyTy
 bound to each other's slots, movement 0.00 end delta. Two runner traps: the lab harness used to force
 `SOSO_LOBBY_PUBLIC=1` (so no run could be friends-only), and the VM needs dynamic memory 1–6 GB plus
 guest Steam started and confirmed after boot.
+
+## 2026-11-21 — save transfer, dialogue close, and four ways a gate lied
+
+The day the remaining layers got runs, and the day four separate "green" mechanisms turned out to be
+unable to fail. Each is recorded here because each cost real time and each will recur.
+
+**Save transfer works, and writes nothing on the guest.** Shared root: `save-transfer-shared-20261121-131905.qa.out`
+`PASS (18/18)` — `requests=1 sends=1 duplicate_seqs=[]`, every blob applied with matching wire hash,
+level guid, party and GPI, `final story state is identical`, guest folder `before=4 after=4 identical`.
+Across machines: `gate-save-20261121-112920/` shows the VM guest's own LocalLow byte-identical before
+and after. The guest's slot is memory-only; the mechanism is worth remembering for any mod that hands a
+save to a peer: take the blob at the title screen, apply into a slot flagged unsavable, and check the
+flag before every write.
+
+**Dialogue in this build is a sequence of `ShowDialog` boxes, not `PlayDialog`/`CloseDialogBox`.**
+Three lines produced three `show` events with three different data GUIDs and zero `PlayDialog` calls;
+a box that vanished was the only observable close. So the mod detects close host-side and emits it.
+`choice` never occurs in the Archivist conversation — `SelectChoice` is never called — so the `op=choice`
+path has no run and no hook. Assertions: `each mirrored show carries the same data id` (text source, not
+event count), `peer mirrors arrive in order`, `every dialog close is mirrored host=2 peer=2 missing=[]`.
+
+**Trap 1 — a gate detector matched the previous session's log.** `gate-c.ps1` cleared the host plugin
+log at deploy but not the guest's, and its save detector was `$gTail -match 'save: applied'` over a
+200-line tail. The tick that printed `applied=True` ran one second *before* the new guest session's
+first line, so it matched the prior run's bytes. The run had transferred nothing. Fix: clear both logs
+at deploy, latch `applied` once true, and print the exact line that matched.
+
+**Trap 2 — an undeclared PowerShell switch is silently ignored.** `gate-c.ps1` was called with
+`-StopVmAfterGateC` but never declared `[switch]$StopVmAfterGateC`; for a non-advanced script the
+unknown switch lands in `$args` and the variable is null, so the VM-stop branch never ran and three
+artefacts implied the fix was untested when it had not executed once. A switch a caller passes is not a
+switch the script received — same family as a patch target that does not exist.
+
+**Trap 3 — a hidden parameter prompt looks like a permissions wall.** `Join-Path` with one argument in
+an elevated run blocks on `Supply values for the following parameters: ChildPath:`; the console is
+invisible, so the gate simply sat at `lease: acquired` with no log and no flag, which was read as
+"elevation is blocked". It cost a day and one wrong conclusion about Hyper-V permissions.
+
+**Trap 4 — the mock transport delivered every reliable frame three times.** `MockTransport.Send` sent a
+frame plus two delayed copies, and the copies were stamped with the transport's *current* `_seq`, so a
+copy arriving after another send passed the receiver's dedup. Story snapshots showed it (`recv seq=20`
+twice, both skipped) and a save applied then a duplicate dropped 124 ms later — which a blunt "no
+message dropped" assertion called data loss. Fix: copies carry the original sequence; the drop assertion
+now separates "duplicate of an applied seq" (benign) from anything else.
+
+**The VM lab guest stopped loading.** Two warm launches, the second on a fresh VM at 5 GiB, hung before
+any scene: six plugin lines, process alive, no transition, no Unity `Player.log`, and Windows reports
+`Winsrv 10002 … terminated because it was hung`. Recorded as a lab limitation. Owner decision the same
+day: **local first** — exhaust what two local copies can prove before spending time on the VM again.
+
+**Builds of the same source do not hash the same.** Three builds, three PE hashes
+(`A4083D50…`, `24ECF0B5…`, `98B2EA7F…`); cause unidentified. The release is packaged from the exact
+tested DLL with `package.ps1 -SkipBuild`: zip `A17EA030…`, plugin `9B7E7329…`, identical to the copy
+installed in the lab. Any "shipped" claim has to name the binary the gates ran, not the commit alone.
