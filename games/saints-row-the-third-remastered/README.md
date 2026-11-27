@@ -64,12 +64,32 @@ a third client is still untested. None of this is runtime-verified; QA remains `
 
 ## What we changed
 
-Nothing in the game yet. Research, claim issue, directory entries and read-only binary
-inspection only. The one-byte cap patch above is a derived candidate, not an applied patch.
+No original game files or saves were changed. Research, claim issue, directory entries and
+read-only binary inspection only. A disposable cap-3 copy of the hash-verified isolated
+install has been created and hash-verified (`SRTTR.exe` SHA-256
+`044815A3901F36EF876481CAE385E3B0E953AD567A055F0977DA061838354BCE`); it patches only the
+one byte above and was not launched. Private test checklist:
+`local/analysis/TEST_PLAN_3P.md`.
 
 ## QA
 
-No tests run. QA level: `none`.
+No tests run. QA level: `none`. A host-plus-two-clients checklist is prepared, but no
+Steam/game launch, friend invite or multi-client run has happened.
+
+## Prepared runtime test (not run)
+
+A host-plus-two-clients checklist is prepared but has not been executed:
+
+1. Use only the disposable cap-3 copy; never the original install or normal save profile.
+2. Host campaign co-op and invite two testers. Verify both join without
+   `MULTI_ERROR_SESSION_FULL`.
+3. Verify all three avatars are visible and that the third player participates in a short
+   mission, not just as a spectator.
+4. Trigger a checkpoint, reload after a death, and confirm all three return to the same
+   checkpoint. Complete the mission and check results/save advancement.
+5. Disconnect one client at a time and confirm the remaining session stays playable.
+6. Record screenshots of any error. Stop on crash, session-full, host-left, error `10`, or
+   save corruption. Try cap `4` only in a separate disposable copy after cap `3` passes.
 
 ## How to play
 
@@ -78,13 +98,13 @@ Not yet possible with 3+ players. Native 2-player co-op remains the only known o
 ## Known issues
 
 - SR3MP's old site `sr3mp.net` did not resolve from the research environment on 2026-11-27; use the GitHub mirrors listed above.
-- No 3+ player build exists to test.
+- No runtime-tested 3+ player build exists; the disposable cap-3 copy is created but unrun.
 - Public sources disagree about LAN/network co-op on the Remastered edition.
 
 ## Next steps
 
 1. Apply the candidate one-byte `CreateLobby` cap change only to a disposable copy of the hash-verified isolated install; never to the original install or saves.
 2. Test host + 2 clients in a native campaign mission, then host + 3 if the 3-player case joins. Verify join, remote avatar visibility, checkpoint sync, mission completion and disconnect handling.
-3. If extra clients join but story scripts ignore them, investigate the single privileged `+0x68` partner pointer and the `game_*_partner_*` bindings; a separate sync layer is the fallback.
+3. If extra clients join but story scripts ignore them, investigate the host/authority `+0x68` pointer, the two-role `+0x60`/`+0x68` reconciliation loop and the `game_*_partner_*` bindings; a separate sync layer is the fallback.
 4. Build automated multi-client assertions before claiming QA above `none`.
 5. Ask the SR3MP authors about licensing only if a specific finding turns out to be necessary (owner permission already given for that limited case).

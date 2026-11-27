@@ -477,3 +477,20 @@ This refines the earlier checkpoint note; it does not restore the retracted
   first test, but a second two-slot assumption now exists in session state
   reconciliation. Keep QA `none` until a real multi-client run.
 
+### Runtime test preparation (2026-11-27)
+
+- Owner approved creating a disposable cap-3 copy from the hash-verified isolated
+  install and explicitly limited runtime scope to "prepare test only". No Steam/game
+  launch, friend invite or account use by the agent is approved.
+- The copy was created with a resumable multi-threaded copy after the first single-shot
+  copy hit the command timeout. All 66 files and the total byte count match the source;
+  then `local/analysis/patch_existing_copy.py` changed only offset `0x46c1fa` from `02`
+  to `03` and verified the resulting `SRTTR.exe` SHA-256
+  `044815A3901F36EF876481CAE385E3B0E953AD567A055F0977DA061838354BCE`. The source
+  install and isolated source copy were not modified. `PATCH_MANIFEST.txt` records
+  `qa_status=none; not runtime tested`.
+- A host-plus-two-clients checklist is kept in `local/analysis/TEST_PLAN_3P.md`
+  (private). It covers join, avatar visibility, mission participation, checkpoint sync,
+  completion, disconnect and the cap-4 follow-up only after cap 3 passes.
+- QA remains `none`; the checklist has not been executed.
+
