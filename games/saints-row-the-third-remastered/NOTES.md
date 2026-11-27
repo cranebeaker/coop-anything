@@ -108,6 +108,14 @@ The helper indexes a table at `0x140d6f610` with a 40-byte stride using the unsi
 
 A second raw-byte decoder (`local/analysis/decode_error_switch.py`) decoded a 15-case error-string switch at `0x140475a20`, with jump table at `0x140475b78`. Input codes 1-15 map, in order, to `MULTI_ERROR_INTERNAL_ERROR`, `MULTI_ERROR_NO_JOIN_INFO`, `MULTI_ERROR_SESSION_ERROR`, `MULTI_ERROR_SESSION_FULL`, `MULTI_ERROR_CANT_FIND_MATCH`, `MULTI_ERROR_HOST_LEFT`, `COOP_KICKED`, `MULTI_ERROR_JOIN_REJECTED`, `MULTI_ERROR_NETWORK_TROUBLE`, `MULTI_NO_ETHERNET`, `MULTI_LOST_CONNECTION`, `MAINMENU_LOGIN_CHANGE_EXPOSITION`, `MAINMENU_DOWNLOADABLE_CONTENT_REMOVED_EXPOSITION`, `PLT_TITLE_COMPATIBILITY_PC` and `NO_NETWORK_CONNECTION`. Direct calls to the switch found so far are at `0x140475cb2`, `0x140475da4` and `0x140475e76`; the first passes a computed code in `ebx`, so the decision that raises `SESSION_FULL` is not yet isolated.
 
+The `game_lobby_*` strings around `0x1403a8008`-`0x1403a8f79` are Lua/script binding names rather than game logic themselves. Decoding the binding descriptors gave these implementation leads:
+
+- `game_lobby_get_local_player_name` -> `0x1403a84a0`; calls common getter `0x140a10b40` then accessor `0x140572a90`.
+- `game_lobby_get_remote_player_name` -> `0x1403a8510`; calls common getter `0x140a10b40` then accessor `0x140453bc0`.
+- Both then copy a `0xc0`-byte name-like structure into a local buffer before pushing it back to scripting.
+
+Raw bytes of `0x140453bc0` show it walking a linked-list-like structure through object field `+0x1758` and reading/writing fields `+0x220` and `+0x228`. That is a promising lead that remote players may be list entries rather than a single hardcoded slot, but the control flow is not decoded and this is **not** evidence that 3+ players work.
+
 ### Broader public-source research (2026-11-27)
 
 A separate read-only research pass found these observations (sources below):
