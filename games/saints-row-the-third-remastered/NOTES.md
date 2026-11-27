@@ -100,6 +100,12 @@ Observed direct xrefs (VA = image base `0x140000000` plus section RVA):
 
 These are observations about code addresses in build 7026541; no function boundaries, control flow, player limit or story authority have been decoded yet.
 
+A follow-up raw-byte decoder (`local/analysis/parse_msg_reg.py`, output in `local/analysis/srttr_msg_ids.txt`) decoded the registration function at `0x14045b9c0`. It makes 33 calls to helper `0x14045b0a0`, one per message ID 0-32, with these names in order:
+
+`ping`, `pong`, `voice`, `voice_info`, `join_rel`, `join_unrel`, `upd_conn`, `conn_left`, `badcon`, `dc_hello`, `dc_rupdate`, `dc_update`, `dc_dirty`, `dc_create`, `dc_detach`, `dc_own`, `qos`, `clock`, `bw_info`, `snd_lmt`, `down_lmt`, `migrate`, `post_migration`, `modify_session`, `ext_data`, `upd_state`, `synced_sys`, `ack_reply`, `hrtbeat`, `no_connect`, `bulltaco`, `acks`, `global`.
+
+The helper indexes a table at `0x140d6f610` with a 40-byte stride using the unsigned-byte message ID. It stores the ID at +0, name pointer at +8, a nonzero occupancy marker at +0x10, a constant `0` at +0x18, `0xff` at +0x20, the sixth argument (a small bitmask: 0, 1, 2, 6 or 7) at +0x24, and the fifth argument `2` at +0x25. The exact meaning of those argument fields is still derived from raw instruction decoding, not confirmed by a decompiler or runtime test. The bitmask values correlate with message purpose (`join_rel`=1, `join_unrel`=0, `voice`/`badcon`/`dc_update`/`dc_dirty`=6, `ack_reply`/`bulltaco`/`acks`=2, most session/control messages=7), but the bit meanings are **unknown**. This gives a concrete packet-ID map for later tracing but still says nothing about the player cap.
+
 ### Broader public-source research (2026-11-27)
 
 A separate read-only research pass found these observations (sources below):
