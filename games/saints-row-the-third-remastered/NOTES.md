@@ -14,6 +14,8 @@ player campaign co-op project.
 - Ran the required checks: `gh issue list --search "Saints Row" --state all` and `gh pr list --search "Saints Row" --state all` in cranebeaker/coop-anything. Both returned no results before the claim.
 - Opened claim issue: https://github.com/cranebeaker/coop-anything/issues/440 (title: "Claim: Saints Row: The Third Remastered (Steam) - 3+ player campaign co-op").
 - Note: the issue template declares label `in-progress`, but that label does not exist in the repo; the issue was created without it. Possible playbook/template fix to send back later.
+- Installed PyYAML 6.0.2 (pinned, owner-approved) and ran `python tools/build_directory.py`; the builder reported "wrote DIRECTORY.md: 590 entries".
+- Forked the hub to the owner's GitHub account and opened draft PR https://github.com/cranebeaker/coop-anything/pull/441 with the research notes, write-up and directory entries. The owner-review checkbox is left unchecked.
 
 ### Identity (private details in local/identity.md)
 
@@ -77,6 +79,6 @@ License facts came from the GitHub repository API (`license` field) on 2026-11-2
 - Read: SR3MP org README, SR3MP forum thread, SR3MP GitBook FAQ/getting-started/changelog 0.1.4, SR3MP-Docs functions.md, SR3R README.
 - Not checked: Discord (needs owner permission/account), Steam discussions body (page rendered without post content through the text fetch), Nexus/ModDB individual file pages (fetches often blocked; only search result text seen), archive.org, YouTube transcripts.
 
-### Owner question still pending
+### Owner question
 
-Research playbook asks the owner who they have heard of working on the game. Ask before closing research as complete.
+Research playbook asks the owner who they have heard of working on the game. On 2026-11-27 the owner did not name a lead, and authorized contacting the SR3MP authors only if a specific finding later proves necessary. No contact has been made.
