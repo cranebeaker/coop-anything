@@ -205,3 +205,26 @@ exited 0. Findings from decompilation, not runtime tests:
 No hard two-player cap has been found in the allocators, join path, message dispatch or
 server-browser list inspected so far. This does **not** contradict the 2014 developer
 warning that gameplay systems assume two players; it only narrows where to look next.
+
+### Ghidra batch 10 and raw message-handler decode (2026-11-27)
+
+- The message table at `0x141d6f610` is in uninitialised static storage: reading it from
+  the file/Ghidra memory gives all zeros until the registration function runs. The stored
+  handler pointers had to be recovered from the registration calls themselves.
+- New raw decoder `local/analysis/decode_msg_handlers.py` reads the `lea r9,[rip+disp]`
+  handler argument before each call to `FUN_14045b0a0`. It confirms all 33 handler
+  addresses from the earlier decompilation **and** resolves the five that Ghidra labelled
+  `_guard_check_icall`: `migrate`, `modify_session`, `ext_data`, `hrtbeat` and `bulltaco`
+  all pass `0x1400486d0`. Bytes at that address are `c2 00 00 cc cc ...`, i.e. `ret`
+  followed by padding. In this build those five message types are registered to a no-op
+  stub; there is no implemented runtime `modify_session` or host-migration handler to
+  reuse for adding slots.
+- `FUN_140475c30` writes the error code to global `DAT_141d7433c` and shows the warning
+  dialog through `FUN_140475a20` (which maps code `4` to `MULTI_ERROR_SESSION_FULL`).
+  A raw scan of all direct calls to `FUN_140475c30` found 12 sites, with immediate codes
+  `1,2,6,7,10,11,12,16,17,18` — no direct call with `4`. The decision that raises
+  `SESSION_FULL` is still not isolated.
+- `FUN_140456de0` frees a per-player array at `+0x181 + i*0x10`, bounded by a count at
+  `+0x1578`. Player initialisation `FUN_140454c30` sets the state byte at `+0x16c` to
+  `3`; the `< 2` tests seen in the join and latency paths are consistent with a state
+  check, not a player-count limit, but the enum is still unverified.
