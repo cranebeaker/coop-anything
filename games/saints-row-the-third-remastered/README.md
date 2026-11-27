@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Engine | Proprietary "Engine Core Technology Group" engine + Havok (reported for the Epic build by SR3R; not yet verified on Steam) |
-| Versions tested | None. Target: Steam edition (owner's copy); build id and exe SHA-256 unknown |
+| Versions tested | None yet. Target: Steam build 7026541; `SRTTR.exe` SHA-256 `F23BE8B32759EC708A896F2F9C8EA35B99213ED3EF1DE9F75B99BEBFEEE7996A` |
 | Projects | Claim: https://github.com/cranebeaker/coop-anything/issues/440 ; no 3+ player campaign co-op project found |
 | QA level | none |
 | Last updated | 2026-11-27 |

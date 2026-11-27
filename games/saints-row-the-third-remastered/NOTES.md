@@ -19,9 +19,11 @@ player campaign co-op project.
 
 ### Identity (private details in local/identity.md)
 
-- Store: Steam (owner confirmed 2026-11-27). Steam app id 978300 appears in SR3MP's own docs/forum links but has not been checked against the owner's install.
-- Exact build, exe SHA-256, engine version: unknown — the install has not been inspected.
+- Store: Steam (owner confirmed 2026-11-27). Steam app id 978300 confirmed from the local `appmanifest_978300.acf`.
+- Steam build id: 7026541 (`TargetBuildID` 7026541 in that manifest).
+- Main exe: `SRTTR.exe`, SHA-256 `F23BE8B32759EC708A896F2F9C8EA35B99213ED3EF1DE9F75B99BEBFEEE7996A`; FileVersion/ProductVersion `1, 0, 0, 1`; ProductName `Saints Rowr: The ThirdT Remastered`; CompanyName `Koch Media GmbH, Austria`. All read read-only from the owner's install on 2026-11-27.
 - Engine family: proprietary "Engine Core Technology Group" engine with Havok physics; SR3R's README says this for the Epic build, SR3MP's forum says the Remastered build is 64-bit. Neither has been verified against the owner's Steam exe.
+- An isolated copy of the install is being made at an owner-specified path outside the repo; private path recorded in `local/identity.md`. The original install and saves are untouched.
   Source: https://github.com/MrReekoFTWxD/SR3R , https://www.saintsrowmods.com/forum/threads/sr3mp-multiplayer-mod.19447/
 
 ## Research 2026-11-27
