@@ -15775,7 +15775,7 @@
   checked: '2026-11-18'
 - game: 'Saints Row: The Third Remastered'
   year: 2020
-  engine: 'Proprietary (Engine Core Technology Group) + Havok; unverified on Steam build'
+  engine: 'Proprietary CTG / Geo-Mod engine + Havok'
   project: (none found)
   url: ''
   other_urls: []
@@ -15787,18 +15787,25 @@
   open_source: unknown
   last_activity: unknown
   qa: none
-  notes: 'The Remastered game ships 2-player campaign co-op. No 3+ player campaign co-op mod was found. SR3MP is a separate sandbox multiplayer project that explicitly does not do co-op missions and is closed source/abandoned.'
-  sources: []
+  notes: 'The Remastered game ships 2-player campaign co-op. No 3+ player campaign co-op mod was found. SR3MP is a separate sandbox multiplayer project that explicitly does not do co-op missions and is closed source/abandoned. A read-only scan of Steam build 7026541 found native multi_core matchmaking/global-sync modules and SteamMatchMaking009/SteamNetworking006 strings; player-slot limit is still untested. Volition said in 2014 that adding players to original SR3/SR4 was a non-starter because gameplay systems assumed two players.'
+  sources:
+  - https://store.steampowered.com/app/978300/Saints_Row_The_Third_Remastered/
+  - https://www.pcgamingwiki.com/wiki/Saints_Row:_The_Third_Remastered
+  - https://www.co-optimus.com/game/7247/pc/saints-row-the-third-remastered.html
+  - https://www.saintsrowmods.com/forum/threads/more-co-op-players-or-any-type-of-multiplayer-support.6196
+  - https://steamdb.info/app/978300/info
   checked: '2026-11-27'
   searched:
   - 'Co-op Anything DIRECTORY.md, games/, issues and PRs; repo-wide grep for Saints Row/SR3MP, 2026-11-27'
   - 'GitHub repo and code search for sr3mp, saints row 3 multiplayer, saints row remastered, 2026-11-27'
   - 'Web searches in English and Russian for 3/4 player campaign co-op mods, 2026-11-27'
   - 'SR3MP forum, org README and GitBook docs read directly, 2026-11-27'
+  - 'Steam, SteamDB, PCGamingWiki, Co-Optimus, guides, Volition forum thread, Portforward and original-SR3 Wireshark article, 2026-11-27'
+  - 'Read-only PE strings/import scan of SRTTR.exe, 2026-11-27'
   - 'Not checked: Discord, archive.org, individual Nexus/ModDB file pages, YouTube transcripts'
 - game: 'Saints Row: The Third Remastered'
   year: 2020
-  engine: 'Proprietary (Engine Core Technology Group) + Havok; unverified on Steam build'
+  engine: 'Proprietary CTG / Geo-Mod engine + Havok'
   project: SR3MP
   url: https://github.com/SR3-MP
   other_urls:
@@ -15826,7 +15833,7 @@
   checked: '2026-11-27'
 - game: 'Saints Row: The Third Remastered'
   year: 2020
-  engine: 'Proprietary (Engine Core Technology Group) + Havok; unverified on Steam build'
+  engine: 'Proprietary CTG / Geo-Mod engine + Havok'
   project: 'sr3mp-Abandoned (prototype)'
   url: https://github.com/RootKiller/sr3mp-Abandoned
   other_urls: []
