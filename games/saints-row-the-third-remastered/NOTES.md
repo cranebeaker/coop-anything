@@ -170,3 +170,38 @@ A separate read-only research pass found these observations (sources below):
 ### Owner question
 
 Research playbook asks the owner who they have heard of working on the game. On 2026-11-27 the owner did not name a lead, and authorized contacting the SR3MP authors only if a specific finding later proves necessary. No contact has been made.
+
+### Ghidra batches 7-9 (2026-11-27)
+
+Scripts `AnalyzeBatch7.java`-`AnalyzeBatch9.java`; outputs `decompiled_batch7.c`-`decompiled_batch9.c`
+and `xrefs_batch7.txt`-`xrefs_batch9.txt` in `%TEMP%\opencode\sr3r\`. All headless runs
+exited 0. Findings from decompilation, not runtime tests:
+
+- `FUN_14045e900` allocates the pool named `findserver_pool` (`0x11a00` bytes) and builds
+  `0x40` free entries of stride `0x468` in the free list at `DAT_141d71f40`. `FUN_14045eb60`
+  (the `pong` handler) only adds an entry while `DAT_141d71f30 < 0x40`, parses a pong payload
+  with `FUN_14045b380(...,0x100)`, de-duplicates with `FUN_14046c4c0`, writes the label
+  `MP_TYPE` / `#Multiplayer` into the new entry, and increments `DAT_141d71f30`.
+  **Correction:** `DAT_141d71f30` / `DAT_141d71f38` / `DAT_141d71f40` are therefore the
+  *find-server / server-browser* list, not the in-game co-op player list. The 64-entry bound
+  is a server-browser cap. `FUN_14045ea60` returns that list's count; `FUN_14045f390`
+  returns an entry by index by walking `+0x458` pointers. Earlier notes that called these
+  "player count/player by index" were a mislabelling, not evidence about player slots.
+- `FUN_14045d5f0` iterates a candidate pool at `DAT_141d73c90` with stride `0x2b0` and
+  gates sends on `*(uint *)(player + 0x16c) < 2` and on `FUN_1402e0cc0()` returning 5 or 6.
+  `FUN_140456de0` frees global remote-player entries whose `+0x16c` is also `< 2`, so
+  `+0x16c` looks like a connection-state field; its exact enum is still unknown.
+- `FUN_140452c30` allocates a `0xb2d8`-byte entry from the global pool `DAT_141d6ef60`
+  using a `ushort` free-index list, then initialises it; no two-entry limit appears in the
+  allocator. `FUN_140453a80` uses it to create a player, sets the name `UNKNOWN` at `+0xce`
+  and calls `FUN_140454c30`. `FUN_1404546f0` finds a free global-pool entry (first byte `1`);
+  `FUN_1404547c0` finds a free entry in the session's circular list at `+0x58` (first byte
+  `0`, stride `0xb2c0`).
+- `FUN_14084b330` is only an rwlock/critical-section initialiser for `DAT_141d6ef60`; it is
+  not a fixed-size pool setup. `FUN_140469ec0(obj)` returns `*(int *)(obj + 0x70)`; it is
+  used both in a join gate (`1 < value`) and in latency-bucket selection (2/0xb/0xd). Its
+  meaning is still unknown.
+
+No hard two-player cap has been found in the allocators, join path, message dispatch or
+server-browser list inspected so far. This does **not** contradict the 2014 developer
+warning that gameplay systems assume two players; it only narrows where to look next.
