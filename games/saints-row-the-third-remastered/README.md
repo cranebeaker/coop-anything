@@ -12,9 +12,9 @@
 
 The Remastered game ships 2-player campaign co-op. No 3+ player campaign co-op mod was
 found in this research pass. The obvious sandbox multiplayer mod, SR3MP, is closed
-source, abandoned, and explicitly not a campaign co-op project. A read-only scan of the
-Steam exe found native matchmaking/global-sync modules, so the next step is to map them
-on an isolated copy of the Steam build.
+source, abandoned, and explicitly not a campaign co-op project. Static analysis of the
+Steam exe found native matchmaking/global-sync modules and located the two-player lobby
+cap; the candidate patch and remaining risks are below. No runtime test has been run.
 
 ## Existing work
 
@@ -30,7 +30,7 @@ on an isolated copy of the Steam build.
 Findings from a read-only scan of the Steam build, not yet runtime-verified:
 
 - `SRTTR.exe` contains original source paths for `multi_core_matchmaking.cpp`, `multi_core_global_sync.cpp`, `delta_compression\dc_objects.cpp` and `multi_game.cpp`, plus `vendor\dsonline` container headers. Nearby strings name `SteamMatchMaking009`, `SteamClient020`, `SteamUtils010`, `SteamNetworking006`, `campaign`, `game_mode`, `horde`, `dlc_mask`, `voice`, `join_rel`, `join_unrel`, `conn_left`, `dc_hello`, `dc_update`, `dc_own`, `migrate`, `modify_session`, `synced_sys`, `hrtbeat`, `MULTI_ERROR_SESSION_FULL`, `MULTI_ERROR_HOST_LEFT`, `MP_JOIN_ACCEPT` and `COOP_SERVER_SAVEGAME_LOADING`.
-- RTTI strings identify `steam_platform` callbacks for `P2PSessionRequest_t`, `P2PSessionConnectFail_t`, `GameLobbyJoinRequested_t`, `LobbyInvite_t` and `LobbyDataUpdate_t`, plus `multi_session_op_create/join/modify/start/end` and typed `LobbyCreated_t`/`LobbyEnter_t` results. The native session layer therefore uses Steam lobbies and Steam P2P session callbacks; the player cap is still unknown.
+- RTTI strings identify `steam_platform` callbacks for `P2PSessionRequest_t`, `P2PSessionConnectFail_t`, `GameLobbyJoinRequested_t`, `LobbyInvite_t` and `LobbyDataUpdate_t`, plus `multi_session_op_create/join/modify/start/end` and typed `LobbyCreated_t`/`LobbyEnter_t` results. The native session layer therefore uses Steam lobbies and Steam P2P session callbacks. Static disassembly later pinned the lobby member cap to 2 (see below); this has not been runtime-tested.
 - A read-only RIP-relative xref scan places the native network message names in one contiguous string table with code references clustered around VA `0x14045b9c0`-`0x14045bf48`. Raw instruction decoding identified that function as a message-ID registration routine: it registers IDs 0-32 (`ping` through `global`) into a 40-byte-stride table at `0x141d6f610` via helper `0x14045b0a0`. Each entry stores the ID, name, handler and two small flags; their meanings are unknown. Ghidra 12.2 decompilation confirmed the registration helper and the message-to-handler map. Lobby-string references cluster around `0x1403a7ed0`-`0x1403a9800`. The `Player slots` string is a memory-pool label near `coop_player cpu/gpu`, not evidence of a player-count limit.
 - The exe imports both Steam interface APIs and direct Winsock functions (`socket`, `bind`, `sendto`, `recvfrom`, `connect`, `listen`, `accept`, `send`, `recv`, `getaddrinfo`, `WSASocketW`). Transport is therefore not proven to be Steam-only.
 - Delta-compression RTTI covers players, humans, vehicles, props, script objects, triggers, cameras, ragdolls and more, suggesting a general object-registration system rather than only a two-player special case.
@@ -40,11 +40,31 @@ Findings from a read-only scan of the Steam build, not yet runtime-verified:
 - Volition Senior Programmer Russell wrote in 2014 that adding players to original SR3/SR4 was "basically a non-starter" because gameplay systems were built for two players. This is about the original games, but it warns that slots alone may not be enough. Source: https://www.saintsrowmods.com/forum/threads/more-co-op-players-or-any-type-of-multiplayer-support.6196
 - SR3MP's public docs say game-state calls must run on the main thread and that its 0.1.4 changelog describes a 50 Hz network thread. Those are SR3MP findings, not native netcode findings.
 
-Native co-op's player-slot limit, replication details, mission triggers and save authority are still unknown.
+### Static cap and patch lead (2026-11-27)
+
+Ghidra 12.2 headless analysis of the hash-pinned Steam build found a concrete two-player
+limit: at VA `0x14046cdf8` the lobby-creation function executes
+`mov r8d,2` before calling SteamMatchmaking vtable offset `0x68`, which matches
+`ISteamMatchmaking::CreateLobby(ELobbyType, int cMaxMembers)`. Source:
+https://partner.steamgames.com/doc/api/ISteamMatchmaking#CreateLobby . The immediate at VA
+`0x14046cdfa` is therefore a one-byte candidate patch (`02` -> `03` or `04`). No
+`SetLobbyMemberLimit` call was seen, and `GetNumLobbyMembers` is used only to enumerate
+lobby data keys, not to reject extra players. The join handler creates remote players by
+byte ID and contains no explicit two-player rejection.
+
+Session fields `+0x138` and `+0x13c` are current/expected **session states**, with observed
+values `1`, `2` and `3`; `2 < value` means “state 3 / started”, not “more than two players”.
+An earlier interpretation of those fields as player counts was wrong; it is corrected in
+the notes. The main risk is above the replication layer: the session keeps one privileged
+remote-player pointer and several script bindings expose a single “partner”, so extra
+clients may join but not participate in story scripts. Mission-checkpoint replication is
+host-only in the inspected path, with no single-partner target visible. None of this is
+runtime-verified; QA remains `none`.
 
 ## What we changed
 
-Nothing in the game yet. Research, claim issue, directory entries and read-only binary inspection only.
+Nothing in the game yet. Research, claim issue, directory entries and read-only binary
+inspection only. The one-byte cap patch above is a derived candidate, not an applied patch.
 
 ## QA
 
@@ -62,8 +82,8 @@ Not yet possible with 3+ players. Native 2-player co-op remains the only known o
 
 ## Next steps
 
-1. Finish Ghidra analysis of the isolated, hash-verified copy (the original install and saves are untouched).
-2. Decompile helper `0x14045b0a0` and the handlers for message IDs 0-32, then the lobby cluster around `0x1403a7ed0`-`0x1403a9800`, and map session, replication and mission-state code.
-3. Measure the player-slot limit and whether a third client can join before designing a patch.
-4. Test with bots in multiple isolated game copies; QA level stays `none` until a test actually runs.
+1. Apply the candidate one-byte `CreateLobby` cap change only to a disposable copy of the hash-verified isolated install; never to the original install or saves.
+2. Test host + 2 clients in a native campaign mission, then host + 3 if the 3-player case joins. Verify join, remote avatar visibility, checkpoint sync, mission completion and disconnect handling.
+3. If extra clients join but story scripts ignore them, investigate the single privileged `+0x68` partner pointer and the `game_*_partner_*` bindings; a separate sync layer is the fallback.
+4. Build automated multi-client assertions before claiming QA above `none`.
 5. Ask the SR3MP authors about licensing only if a specific finding turns out to be necessary (owner permission already given for that limited case).

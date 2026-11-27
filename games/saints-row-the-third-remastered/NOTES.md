@@ -250,6 +250,144 @@ warning that gameplay systems assume two players; it only narrows where to look 
 
 Static analysis has now covered allocators, message dispatch, message handlers,
 matchmaking, server browser, lobby UI, join request and mission-partner notifications
-without finding a two-player slot limit. The remaining likely blockers are gameplay
-systems that assume a single partner (the 2014 developer warning), which can only be
-settled by running the game. No runtime test has been performed.
+without finding a two-player slot limit in the replication layer itself. The remaining
+likely blockers are gameplay systems that assume a single partner (the 2014 developer
+warning), which can only be settled by running the game. No runtime test has been performed.
+
+### Hard lobby cap found (batch 14, 2026-11-27)
+
+- `FUN_14046cd00` calls SteamMatchmaking vtable offset `0x68` with arguments
+  `(lobby type, 2)`. This matches `ISteamMatchmaking::CreateLobby(ELobbyType, int
+  cMaxMembers)`, so the host creates the campaign/horde lobby with a **maximum of two
+  members**. This is the first concrete hard two-player limit found.
+- The same function selects lobby type from a config field (`+0x6c`): `0 -> 2`,
+  `1 -> 1`, otherwise `0`. The `2` passed to `CreateLobby` is separate and is the
+  member cap.
+- `FUN_14046ca20` clamps session field `+0x13c` to `1` when its `param_2 == 2`
+  (a matchmaking callback/leave path). It was first read as a player-count reset;
+  batch 20 reclassified `+0x13c` as an expected-state field, so this is a state
+  reset.
+- **SUPERSEDED by the batch 20 correction below.** Earlier this section read session
+  fields `+0x138` and `+0x13c` as current/expected player counts and treated
+  `2 < value` as a latent 3+ player path. That interpretation was wrong. The hard
+  `CreateLobby` cap in this section remains valid; the state interpretation does not.
+- This does **not** prove 3+ campaign co-op works. It gives a precise first patch
+  candidate: raise the `CreateLobby` member cap, then observe whether extra clients can
+  join and whether gameplay scripts recognise them.
+
+### Exact patch candidate (batch 15, 2026-11-27)
+
+- Disassembly confirms the cap is an immediate operand in
+  `FUN_14046cd00` at VA `0x14046cdf8`: bytes `41 b8 02 00 00 00 8b d7`
+  (`mov r8d,2; mov edx,edi`). The `2` is at VA `0x14046cdfa`, file offset
+  `0x46c1fa` in `SRTTR.exe` (image base `0x140000000`, `.text` raw pointer
+  `0x400`, RVA `0x46cdfa`).
+- Candidate 3-player total patch: change the single byte at file offset
+  `0x46c1fa` from `02` to `03`. Candidate 4-player total patch: change it to
+  `04`. No other bytes in this instruction are believed to need changing.
+- This is a static byte candidate only. It has not been applied to the owner's
+  install, the isolated copy, or any test copy, and it has not been run.
+
+### Join and script bindings (batches 13, 16, 2026-11-27)
+
+- `FUN_14041b240` registers the game Lua bindings. Relevant mappings:
+  `game_get_is_coop_client` -> `FUN_140415b60`,
+  `game_get_is_host` -> `FUN_140415bc0`,
+  `game_kick_coop_player` -> `FUN_1404163b0`,
+  `game_coop_kick_player` -> `FUN_1404156a0`,
+  `game_get_party_member_count` -> `FUN_140415450`,
+  `game_get_coop_ping` -> `FUN_140415ab0`,
+  `game_show_coop_partner_gamercard` -> `FUN_140416d00`,
+  and `coop_is_active` -> `FUN_14063e390`.
+- `FUN_140415b60` returns true only when `FUN_140452750()` is true and session
+  `+0x68 != +0x60`; `FUN_140415bc0` returns true when `+0x68 == +0x60`.
+  These fields behave as remote/local player pointers in the session object.
+  `FUN_14063e390` (`coop_is_active`) simply returns `FUN_140452750()`.
+- `FUN_140452750` gates on session `+0x138`, `+0x13c`, `+0x141` and
+  `FUN_140469ec0`, then walks the remote-player list by byte ID. This is a
+  coop-presence check, not an explicit player-count cap, but its dependence on
+  one `+0x68` pointer is consistent with a single-partner design.
+- `FUN_140415450` (`game_get_party_member_count`) always returns `0`; scripts
+  cannot learn a 3rd player's presence through that binding.
+- `FUN_140469b30` finds a player by byte ID at player `+0x168` in the circular
+  list at session `+0x58` (stride `0xb2c0`). `FUN_140464ad0` maps a byte ID
+  into a packet table at packet `+0x18`, stride 5, bounded by `+0x20`. The
+  replication layer therefore has generic multi-ID machinery, but gameplay use
+  of all IDs is unverified.
+- `FUN_14046b2f0` resets `+0x138` to `1` when `+0x68 == +0x60`; in the coop
+  branch (`1 < +0x138` and `1 < +0x13c`) it walks every `+0x58` list entry and
+  raises error `10` if a non-privileged player has an unexpected state. This is
+  the clearest single-partner assumption seen in session management so far.
+- The join handler `FUN_1404628a0` has cases `0`-`5`; case `5` creates a new
+  remote player from a byte ID with `FUN_140453a80(...,local_38[0],...)` and no
+  explicit two-player rejection. Steam `GetNumLobbyMembers` (`+0xa8`) is used
+  in `FUN_14045a280` only to iterate lobby keys for `dlc_mask`, not to cap
+  joins.
+- `FUN_14028d4d0` loads `mission_checkpoints.xtbl` into a 166-entry
+  `mission_checkpoint_sp` table under `sr3_city`. A co-op-specific checkpoint
+  data path has not been identified. `save_system_cancel_coop_load` is bound
+  to `FUN_140412360` (not yet decompiled). `mission_set_checkpoint` is bound to
+  `FUN_14064e2c0` (not yet decompiled).
+
+### Patch-site verification and state-3 packet path (batches 17-18, 2026-11-27)
+
+- `local/analysis/verify_patch_site.py` verifies the isolated exe hash and the
+  bytes at file offset `0x46c1f8` without writing any file. The pattern
+  `41 b8 02 00 00 00 8b d7` occurs **twice** in the binary (the other offset is
+  `0x7a620b`), so the patch must be applied by exact file offset, never by
+  blind find/replace. No file was modified.
+- In-memory patched hashes (derived, not applied): cap `3` -> SHA-256
+  `044815A3901F36EF876481CAE385E3B0E953AD567A055F0977DA061838354BCE`; cap `4`
+  -> SHA-256 `7E0E31A261C323781D53C45A99FC440433B64EF59C65B08042C7925811724838`.
+- `FUN_140474f20` is just a getter for global packet pointer `DAT_141d74010`.
+  The `2 < value` branches in `FUN_1404750f0` / `FUN_140475140` therefore use
+  the current join packet, not an unimplemented stub. They require the packet
+  to match the current session (`FUN_14046a770`) and all mission-state flags in
+  `FUN_1402e17d0` to be zero. Batch 20 later showed `2 < value` is a session-state
+  check (state 3), not a player-count check.
+- `FUN_1402e17d0` checks eight globals `DAT_1415b3cb1`, `cb2`, `cb3`, `cb4`,
+  `cb5`, `cb6`, `cb7` and `cba`; their xrefs include mission/coop state
+  functions such as `FUN_1402e2dd0`, `FUN_1402e2ec0`, `FUN_1403fee90` and
+  `FUN_1404637a0`. Exact meanings are unknown, but this gate means the state-3
+  packet path is skipped while those states are active.
+- `FUN_140464aa0(packet,player)` returns `0xff` when the packet's ID table is
+  empty or the player's byte ID is not marked valid, otherwise the table byte.
+  `FUN_14047e9c0` only serialises/sends a join packet when that result is `>1`.
+  This is generic player-ID addressing, not a two-player check.
+- `FUN_140412360` (`save_system_cancel_coop_load`) only sets global
+  `DAT_141adfd64 = 5` if it is not already `5`; it has no player-count logic.
+- `FUN_14064e2c0` (`mission_set_checkpoint`) calls `FUN_140283bf0` and exposes
+  no player-count check. `FUN_140283bf0` replicates the checkpoint only when
+  session `+0x68 == +0x60` (host/no remote partner), using `FUN_14045b590`; no
+  single-partner target address is visible in that path. Runtime authority is
+  still unverified.
+- `FUN_14046ca20` resets session field `+0x13c` to `1` on one callback path
+  (`param_2 == 2`) and leaves the lobby. Batch 20 reclassified `+0x13c` as an
+  expected-state field, so this is a state reset, not a player-count reset. No
+  patch is proposed until a 3-client run shows whether it causes a failure.
+
+### CORRECTION: `+0x138` / `+0x13c` are session states, not player counts (batch 20, 2026-11-27)
+
+Earlier entries in this file, and the first draft of the write-up, called
+`+0x138`/`+0x13c` "current/expected total player counts" and read `2 < value` as a
+latent 3+ player path. That was wrong and is superseded by this section.
+
+- The only writes in the network cluster are the literals `1`, `2` and `3`:
+  `+0x138 = 1` in the reset path (`FUN_14046b2f0`), `+0x138 = 2` when join
+  completes (`FUN_14046cad0`), `+0x138 = 3` when the session starts
+  (`FUN_14046dcf0`); `+0x13c = 2` in `FUN_14046d980` / `FUN_140469ed0`, and
+  `+0x13c = 3` in `FUN_14046ba00`. `FUN_140468530` restores `+0x13c` from a
+  saved value at `+0x144`.
+- The pervasive `+0x138 == +0x13c` checks are therefore current-state equals
+  expected-state, not player-count equality. `FUN_14046ce90` explicitly returns
+  `+0x138 == 2`. A plausible enum is `1` idle, `2` joined/loading, `3` started;
+  the exact names are unverified.
+- Consequently `2 < value` means "state 3 / started", not "more than two
+  players". `FUN_140474f20` and the `FUN_1404750f0` / `FUN_140475140` branches
+  are state-3 join-packet paths, not latent 3+ support.
+- The hard `CreateLobby(..., 2)` cap remains a valid static finding and the
+  one-byte patch candidate stands. What is **not** supported is the earlier
+  claim that the native session layer already contains a 3+ player path.
+  Deeper changes are likely needed for the single `+0x68` partner pointer, the
+  state machine and partner-oriented script bindings. No runtime test has run.
+
