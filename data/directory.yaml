@@ -15773,3 +15773,77 @@
   - https://steamdb.info/app/1104390/patchnotes/
   - https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html
   checked: '2026-11-18'
+- game: 'Saints Row: The Third Remastered'
+  year: 2020
+  engine: 'Proprietary (Engine Core Technology Group) + Havok; unverified on Steam build'
+  project: (none found)
+  url: ''
+  other_urls: []
+  kind: gap
+  status: none
+  coop_scope: {}
+  players: unknown
+  networking: unknown
+  open_source: unknown
+  last_activity: unknown
+  qa: none
+  notes: 'The Remastered game ships 2-player campaign co-op. No 3+ player campaign co-op mod was found. SR3MP is a separate sandbox multiplayer project that explicitly does not do co-op missions and is closed source/abandoned.'
+  sources: []
+  checked: '2026-11-27'
+  searched:
+  - 'Co-op Anything DIRECTORY.md, games/, issues and PRs; repo-wide grep for Saints Row/SR3MP, 2026-11-27'
+  - 'GitHub repo and code search for sr3mp, saints row 3 multiplayer, saints row remastered, 2026-11-27'
+  - 'Web searches in English and Russian for 3/4 player campaign co-op mods, 2026-11-27'
+  - 'SR3MP forum, org README and GitBook docs read directly, 2026-11-27'
+  - 'Not checked: Discord, archive.org, individual Nexus/ModDB file pages, YouTube transcripts'
+- game: 'Saints Row: The Third Remastered'
+  year: 2020
+  engine: 'Proprietary (Engine Core Technology Group) + Havok; unverified on Steam build'
+  project: SR3MP
+  url: https://github.com/SR3-MP
+  other_urls:
+  - https://www.saintsrowmods.com/forum/threads/sr3mp-multiplayer-mod.19447/
+  - https://github.com/SR3-MP/.gitbook
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: 'yes'
+    story: 'no'
+    enemies: unknown
+    world_state: partial
+    items: unknown
+  players: 'up to 127 (author claim)'
+  networking: dedicated-server
+  open_source: 'no'
+  last_activity: '2024-08'
+  qa: none
+  notes: 'Custom standalone sandbox multiplayer client for the Remastered game (Steam/Epic/GOG), not campaign co-op. FAQ says it does not use the original netcode; org README says closed source and officially abandoned. Transport uses ENet; 0.1.4 changelog describes a 50 Hz network thread. Latest public docs commit 2024-08-11; sr3mp.net did not resolve on 2026-11-27.'
+  sources:
+  - https://github.com/SR3-MP
+  - https://www.saintsrowmods.com/forum/threads/sr3mp-multiplayer-mod.19447/
+  - https://raw.githubusercontent.com/SR3-MP/.gitbook/main/docs/home/f.a.q.md
+  - https://raw.githubusercontent.com/SR3-MP/.gitbook/main/docs/home/changelogs/alpha/0.1.4.md
+  checked: '2026-11-27'
+- game: 'Saints Row: The Third Remastered'
+  year: 2020
+  engine: 'Proprietary (Engine Core Technology Group) + Havok; unverified on Steam build'
+  project: 'sr3mp-Abandoned (prototype)'
+  url: https://github.com/RootKiller/sr3mp-Abandoned
+  other_urls: []
+  kind: mod
+  status: abandoned
+  coop_scope:
+    players_visible: unknown
+    story: unknown
+    enemies: unknown
+    world_state: unknown
+    items: unknown
+  players: unknown
+  networking: unknown
+  open_source: 'no'
+  last_activity: '2018-12'
+  qa: none
+  notes: 'Older abandoned Saints Row 3 multiplayer prototype, credited by SR3MP for reversed NPC/vehicle spawn functions. Source is visible publicly but the repo declares no license, so code must not be copied without permission. Last commit 2018-12-29.'
+  sources:
+  - https://github.com/RootKiller/sr3mp-Abandoned
+  checked: '2026-11-27'
