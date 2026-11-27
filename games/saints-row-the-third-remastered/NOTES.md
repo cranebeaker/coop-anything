@@ -228,3 +228,28 @@ warning that gameplay systems assume two players; it only narrows where to look 
   `+0x1578`. Player initialisation `FUN_140454c30` sets the state byte at `+0x16c` to
   `3`; the `< 2` tests seen in the join and latency paths are consistent with a state
   check, not a player-count limit, but the enum is still unverified.
+
+### Mission/lobby and join-request strings (batches 11-12, 2026-11-27)
+
+- `MISSION_PARTNER_CONNECTED` is used by `FUN_140471a60`: when its `param_2 == 0` it
+  shows the connected message, otherwise it calls `FUN_140462290`.
+  `MISSION_PARTNER_DISCONNECTED` is used by `FUN_14027dd50` when an 8-byte script value
+  differs from a reference string and a script state equals `5`. These are script/UI
+  notifications, not slot allocation.
+- `FUN_1403a86a0` registers the `game_lobby_*` Lua bindings, including a single-index
+  `game_lobby_get_remote_player_name` (`FUN_1403a8510`), `game_lobby_finished_loading`
+  and `game_lobby_coop_finished`. `FUN_1403a8d50` is the lobby UI script driver: its
+  `*piVar9 != 2` test is still consistent with a coop **mode** enum, not a player count.
+- The join-request dialog `FUN_14046ec40` branches on a state byte `2`, `3` or `4`
+  (`COOP_JOIN_IS_WAITING` is one of its messages). `FUN_1404728d0` builds the
+  `MP_JOIN_DENY` / `MP_JOIN_ACCEPT` prompt; `FUN_140474410` shows `COOP_HOST_BUSY`.
+  No explicit "two players already present" rejection was found in these paths.
+- The error-code global `DAT_141d7433c` is written by `FUN_140475bd0`, `FUN_140475c30`
+  and `FUN_140475d80`/`FUN_140475e70` wrappers; `FUN_140475a20` maps code `4` to
+  `MULTI_ERROR_SESSION_FULL`. The code-4 decision is still not isolated.
+
+Static analysis has now covered allocators, message dispatch, message handlers,
+matchmaking, server browser, lobby UI, join request and mission-partner notifications
+without finding a two-player slot limit. The remaining likely blockers are gameplay
+systems that assume a single partner (the 2014 developer warning), which can only be
+settled by running the game. No runtime test has been performed.
