@@ -31,6 +31,7 @@ Findings from a read-only scan of the Steam build, not yet runtime-verified:
 
 - `SRTTR.exe` contains original source paths for `multi_core_matchmaking.cpp`, `multi_core_global_sync.cpp`, `delta_compression\dc_objects.cpp` and `multi_game.cpp`, plus `vendor\dsonline` container headers. Nearby strings name `SteamMatchMaking009`, `SteamClient020`, `SteamUtils010`, `SteamNetworking006`, `campaign`, `game_mode`, `horde`, `dlc_mask`, `voice`, `join_rel`, `join_unrel`, `conn_left`, `dc_hello`, `dc_update`, `dc_own`, `migrate`, `modify_session`, `synced_sys`, `hrtbeat`, `MULTI_ERROR_SESSION_FULL`, `MULTI_ERROR_HOST_LEFT`, `MP_JOIN_ACCEPT` and `COOP_SERVER_SAVEGAME_LOADING`.
 - RTTI strings identify `steam_platform` callbacks for `P2PSessionRequest_t`, `P2PSessionConnectFail_t`, `GameLobbyJoinRequested_t`, `LobbyInvite_t` and `LobbyDataUpdate_t`, plus `multi_session_op_create/join/modify/start/end` and typed `LobbyCreated_t`/`LobbyEnter_t` results. The native session layer therefore uses Steam lobbies and Steam P2P session callbacks; the player cap is still unknown.
+- A read-only RIP-relative xref scan places the native network message names (`ping`, `voice_info`, `join_rel`, `dc_hello`, `migrate`, `synced_sys`, `hrtbeat`, etc.) in one contiguous string table with code references clustered around VA `0x14045b9d5`-`0x14045bfcd`. That looks like a message registration routine and is the next decompilation target. Lobby-string references cluster around `0x1403a7ed0`-`0x1403a9800`. The `Player slots` string is a memory-pool label near `coop_player cpu/gpu`, not evidence of a player-count limit.
 - The exe imports both Steam interface APIs and direct Winsock functions (`socket`, `bind`, `sendto`, `recvfrom`, `connect`, `listen`, `accept`, `send`, `recv`, `getaddrinfo`, `WSASocketW`). Transport is therefore not proven to be Steam-only.
 - Delta-compression RTTI covers players, humans, vehicles, props, script objects, triggers, cameras, ragdolls and more, suggesting a general object-registration system rather than only a two-player special case.
 - Lobby UI strings show server/client roles, ready states, countdowns, loading handshakes and disconnect/save handling (`game_lobby_*`, `COOP_LOBBY_START_GAME`, `COOP_LOBBY_RECONNECT`, `Pause_menu_save_for_server_drop`, `Completion_should_wait_for_coop`).
@@ -61,8 +62,8 @@ Not yet possible with 3+ players. Native 2-player co-op remains the only known o
 
 ## Next steps
 
-1. Finish the isolated copy of the Steam install (the original install and saves are untouched).
-2. Use Ghidra to find xrefs to the native matchmaking/global-sync strings and map the lobby, session, replication and mission-state code.
+1. Finish Ghidra analysis of the isolated, hash-verified copy (the original install and saves are untouched).
+2. Decompile the message-registration cluster around VA `0x14045b9d5`-`0x14045bfcd`, then the lobby cluster around `0x1403a7ed0`-`0x1403a9800`, and map session, replication and mission-state code.
 3. Measure the player-slot limit and whether a third client can join before designing a patch.
 4. Test with bots in multiple isolated game copies; QA level stays `none` until a test actually runs.
 5. Ask the SR3MP authors about licensing only if a specific finding turns out to be necessary (owner permission already given for that limited case).

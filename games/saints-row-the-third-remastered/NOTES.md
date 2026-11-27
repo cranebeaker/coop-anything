@@ -83,6 +83,23 @@ More string observations from the same scan, adjacent to the `multi_core_matchma
 
 RTTI strings additionally identify `steam_platform` callbacks `P2PSessionRequest_t`, `P2PSessionConnectFail_t`, `GameLobbyJoinRequested_t`, `LobbyInvite_t`, `LobbyDataUpdate_t`, and `ui_game_lobby`; session operations `multi_session_operation`, `multi_session_op_create`, `multi_session_op_delete`, `multi_session_op_join`, `multi_session_op_modify`, `multi_session_op_start`, `multi_session_op_end`; and typed results `CCallResult<multi_session_op_create, LobbyCreated_t>` and `CCallback<multi_session_op_join, LobbyEnter_t>`. That is direct evidence the native session layer uses Steam lobby creation/join callbacks plus Steam P2P session callbacks; it still does not reveal the player cap. Delta-compression RTTI names cover players, humans, vehicles, props, script objects, triggers, cameras, ragdolls, hit points, killed data, component/rig/mover data and more, which suggests a general object-registration system worth inspecting rather than only two hardcoded player slots.
 
+### Read-only RIP-relative xref scan (2026-11-27)
+
+Ghidra's first full analysis attempt ran out of Java heap in `AddressTableAnalyzer`; a retry with a 6 GB heap was started but had not produced reviewed results at the time of this note. As a fallback, `local/analysis/find_rip_refs.py` scans the isolated staged exe for RIP-relative `LEA` references to string addresses. It reads the exe only and does not disassemble instructions or prove function boundaries.
+
+Observed direct xrefs (VA = image base `0x140000000` plus section RVA):
+
+- Source paths `multi_core_matchmaking.cpp` and `multi_core_global_sync.cpp` have no direct RIP-relative xrefs found; they may be debug-only strings or referenced through other instruction forms.
+- `multi_game` at `0x140e0c438` is referenced from `0x140018db4`.
+- `SteamMatchMaking009` at `0x140e07b68` is referenced from `0x14045a1e1`; `SteamNetworking006` at `0x140e08120` from `0x14045c661`.
+- `game_lobby` strings are referenced heavily around `0x1403a7ed0`-`0x1403a9800`, and `COOP_LOBBY` from `0x1403a8e76`, `0x1403a8f5c` and `0x1403a8f79`. That cluster is the next place to inspect for lobby state and slot handling.
+- `MULTI_ERROR_SESSION_FULL` (`0x140e0a1e8`) and `MULTI_ERROR_HOST_LEFT` (`0x140e0a208`) are referenced together from `0x140475a70` and `0x140475a84`; `MP_JOIN_ACCEPT` from `0x140472928`; `COOP_SERVER_SAVEGAME_LOADING` from `0x14046ef22` and `0x14046f4ac`.
+- `Player slots` at `0x140daebd0` is referenced from `0x14016b1c8`, but nearby strings are memory-pool labels (`weapon high res gpu`, `cloth sim runtime cpu`, `coop_player cpu`, `coop_player gpu`, `Vehicle slots`, `Character slots`). It is a memory-budget label, not evidence of a player-count cap.
+- The network names `ping`, `pong`, `voice`, `voice_info`, `join_rel`, `join_unrel`, `upd_conn`, `conn_left`, `badcon`, `dc_hello`, `dc_rupdate`, `dc_update`, `dc_dirty`, `dc_detach`, `dc_own`, `clock`, `bw_info`, `snd_lmt`, `down_lmt`, `migrate`, `post_migration`, `modify_session`, `ext_data`, `upd_state`, `synced_sys`, `ack_reply`, `hrtbeat`, `no_connect`, `bulltaco` and `acks` form one contiguous string table from `0x140e07cd0` to `0x140e07e58`. Their xrefs are concentrated from `0x14045b9d5` to `0x14045bfcd`, which looks like a message-name registration routine. Decompiling that routine is the highest-value next step because it should expose packet IDs and their handlers.
+- `DEFAULT_PLAYER_NAME` is referenced from `0x14045bfcd`, at the end of that same cluster.
+
+These are observations about code addresses in build 7026541; no function boundaries, control flow, player limit or story authority have been decoded yet.
+
 ### Broader public-source research (2026-11-27)
 
 A separate read-only research pass found these observations (sources below):
