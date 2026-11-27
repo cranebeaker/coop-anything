@@ -114,7 +114,7 @@ The `game_lobby_*` strings around `0x1403a8008`-`0x1403a8f79` are Lua/script bin
 - `game_lobby_get_remote_player_name` -> `0x1403a8510`; calls common getter `0x140a10b40` then accessor `0x140453bc0`.
 - Both then copy a `0xc0`-byte name-like structure into a local buffer before pushing it back to scripting.
 
-Raw bytes of `0x140453bc0` show it walking a linked-list-like structure through object field `+0x1758` and reading/writing fields `+0x220` and `+0x228`. That is a promising lead that remote players may be list entries rather than a single hardcoded slot, but the control flow is not decoded and this is **not** evidence that 3+ players work.
+Raw bytes of `0x140453bc0` show it walking a doubly linked-list-like structure through object field `+0x1758`, unlinking entries via fields `+0x220`/`+0x228`, decrementing the byte counter at `+0x04`, and repeating until the list is empty. That is a promising lead that remote players may be list entries with a count, not a single hardcoded slot, but the control flow is not decoded and this is **not** evidence that 3+ players work.
 
 ### Broader public-source research (2026-11-27)
 
