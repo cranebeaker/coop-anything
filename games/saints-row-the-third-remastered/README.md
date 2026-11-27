@@ -55,11 +55,12 @@ byte ID and contains no explicit two-player rejection.
 Session fields `+0x138` and `+0x13c` are current/expected **session states**, with observed
 values `1`, `2` and `3`; `2 < value` means “state 3 / started”, not “more than two players”.
 An earlier interpretation of those fields as player counts was wrong; it is corrected in
-the notes. The main risk is above the replication layer: the session keeps one privileged
-remote-player pointer and several script bindings expose a single “partner”, so extra
-clients may join but not participate in story scripts. Mission-checkpoint replication is
-host-only in the inspected path, with no single-partner target visible. None of this is
-runtime-verified; QA remains `none`.
+the notes. The main risks are above the replication layer: the session uses one host/
+authority player pointer, a state-reconciliation loop that considers only two roles,
+and several script bindings that expose a single “partner”. Extra clients may join but
+not participate in story scripts. Mission checkpoints are created only by the host, but
+the send helper broadcasts them to every remote player in the session list; delivery to
+a third client is still untested. None of this is runtime-verified; QA remains `none`.
 
 ## What we changed
 

@@ -391,3 +391,89 @@ latent 3+ player path. That was wrong and is superseded by this section.
   Deeper changes are likely needed for the single `+0x68` partner pointer, the
   state machine and partner-oriented script bindings. No runtime test has run.
 
+### Checkpoint send is broadcast to the whole remote list (batches 21-22, 2026-11-27)
+
+This refines the earlier checkpoint note; it does not restore the retracted
+"latent 3+ player path" claim.
+
+- `FUN_140283bf0` (`mission_set_checkpoint` path) builds the checkpoint packet
+  only when `FUN_14046a740()->+0x68 == FUN_14046a740()->+0x60`, i.e. on the
+  host/no-privileged-peer path. It then calls
+  `FUN_14045b590(&packet, session, 0, 0)`.
+- With the third argument null, `FUN_14045b590` calls `FUN_140460740(session,
+  packet)` or `FUN_140460820()` according to the packet channel flag. Both
+  helpers walk every entry in the remote-player circular list at session `+0x58`
+  (stride `0xb2c0`) and send to each entry that passes its state checks. There
+  is no single-partner target address in that path.
+- Therefore the earlier wording "replicates the checkpoint only to the single
+  partner" was too strong. Authority is host-only, but delivery is to all
+  remote players registered in the list. Whether a third client actually gets
+  registered and accepts the packet is still untested.
+- `FUN_1404696c0(session, player)` increments session `+0x70` and inserts the
+  player into that same circular list. `FUN_140452750` (used by
+  `coop_is_active` and the `game_get_is_*` bindings) requires `+0x70 >= 2`, so
+  `+0x70` appears to be a session member counter rather than a state field.
+  Its exact baseline and maximum are still being traced.
+- Send helpers use `session->+0x68` as the privileged peer pointer for
+  channel/connection checks even while iterating other players. That remains
+  the clearest single-peer assumption in replication.
+
+### Member counter and send-path checks (batches 23-24, 2026-11-27)
+
+- `FUN_140467d80` initialises a session by creating one player with byte ID `0`,
+  setting `session->+0x68 = session->+0x60 = local_player`, zeroing the 32-bit
+  counter at `+0x70`, then incrementing `+0x70` to `1` and inserting that local
+  player into the `+0x58` circular list.
+- `FUN_1404696c0` increments `+0x70` for every remote player inserted into the
+  list; `FUN_14046b690` decrements it when a player is removed;
+  `FUN_140469ec0` is just a getter. `FUN_140452750` requires `+0x70 >= 2`
+  (local plus at least one remote) for `coop_is_active` and the `game_get_is_*`
+  bindings. No hard limit of `2` was seen in this counter; it is a 32-bit
+  generic member count.
+- `FUN_1404535a0(player)` returns true only when that player equals
+  `session->+0x60` (the local player). `FUN_140460a80(channel,
+  session->+0x68)` checks channel readiness against the privileged peer
+  pointer, while the actual sends in `FUN_1404535b0` and `FUN_1404539d0`
+  operate on the individual player object passed in. The broadcast helpers
+  therefore can target every remote list entry even though the readiness
+  check consults one privileged peer.
+- Reliable send rejects player state `>1`; unreliable send rejects state `>2`.
+  State values `0`, `1`, `3` and `0xc` were already observed; these checks are
+  per-player gates, not player-count limits.
+- Net effect: replication plumbing looks capable of more than one remote
+  player. The unresolved risks are the privileged `+0x68` pointer, the
+  single-partner script bindings and the 2014 developer warning about
+  two-player gameplay assumptions. No runtime test has run.
+
+### Privileged pointer semantics and a two-player reconciliation loop (batch 26, 2026-11-27)
+
+- Correction to the batch 16 label: `FUN_14046a5a0` is not a peer-setter. It is
+  the session teardown path; it removes players, clears `+0x68` to `0`, clears
+  `+0x138`, and returns. The only non-zero initialisation of `+0x68` seen so far
+  is in `FUN_140467d80`.
+- Steam callback `FUN_14046d180` case `2` (lobby-enter/join path) creates a
+  player with `FUN_140453a80(..., *(session + 0x3c), ...)`, assigns it to
+  `session->+0x60`, and inserts it with `FUN_1404696c0`. Case `1`
+  (lobby-created/host path) does not rewrite `+0x60`. Therefore the best
+  current reading is: `+0x60` is the local player and `+0x68` is the
+  host/authority player. They are equal on the host and differ on a client.
+  That fits `FUN_140415bc0` (`game_get_is_host`: equal) and
+  `FUN_140415b60` (`game_get_is_coop_client`: not equal). Earlier wording
+  calling `+0x68` a "remote partner" pointer was imprecise and is superseded.
+- `FUN_140469d00` / `FUN_140469c30` choose identity data from `+0x68` or
+  `+0x60` respectively and return `2` for unsupported mode paths. This
+  supports the host/local role interpretation; it is not a member-count check.
+- New concrete two-player assumption: `FUN_140468dc0` (called from the session
+  reset path) reconciles player state using an explicit loop bounded by
+  `bVar11 < 2` over bit positions in the `+0x48` masks of the `+0x68` and
+  `+0x60` players. It resolves each bit to a player ID by scanning the
+  `+0x58` list. This loop currently considers only two role slots. Raising
+  `CreateLobby` to 3 may therefore not be sufficient; no runtime test has
+  shown whether a third client is excluded here.
+- `FUN_140465210` allocates packet-ID tables as `param_2 * param_3 * 5`; its
+  caller passes `10` and a global, not a literal `2`. No player-cap evidence
+  was found there.
+- Net effect after batch 26: the one-byte lobby cap patch is still the clean
+  first test, but a second two-slot assumption now exists in session state
+  reconciliation. Keep QA `none` until a real multi-client run.
+
